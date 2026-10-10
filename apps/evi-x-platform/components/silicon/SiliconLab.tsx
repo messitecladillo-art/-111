@@ -22,6 +22,8 @@ const PersonaStage = dynamic(() => import('./PersonaStage'), { ssr: false, loadi
 
 export type SiliconRunner = {
   models: ModelOption[];
+  /** Server's per-run call ceiling, when known; the console warns before a run the server would refuse. */
+  maxCalls?: number;
   consentLabel: string;
   run: (request: SiliconRunRequest, onProgress: (progress: RunProgress) => void, signal: AbortSignal) => Promise<SiliconRun>;
 };
@@ -277,7 +279,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       <div className={styles.stepBody} key={step}>
         {step === 'panel' && <PanelDesigner config={config} update={update} personas={personas} selectedId={selectedId} onSelect={id => { setSelectedId(id); window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' }); }}/>}
         {step === 'survey' && <SurveySetup config={config} update={update} design={design} studioDesign={studioDesign} studioPending={!!designSnapshot?.pending}/>}
-        {step === 'run' && <RunConsole config={config} update={update} design={design} personas={personas.length} settings={settings} models={runner?.models ?? null} consentLabel={runner?.consentLabel ?? ''} consent={consent} setConsent={setConsent} blockers={blockers} running={running} progress={progress} error={runError} onRun={() => void startRun()} onCancel={() => { abort.current?.abort(); setRunning(false); setProgress(null); }} hasRun={!!run}/>}
+        {step === 'run' && <RunConsole config={config} update={update} design={design} personas={personas.length} settings={settings} models={runner?.models ?? null} maxCalls={runner?.maxCalls} consentLabel={runner?.consentLabel ?? ''} consent={consent} setConsent={setConsent} blockers={blockers} running={running} progress={progress} error={runError} onRun={() => void startRun()} onCancel={() => { abort.current?.abort(); setRunning(false); setProgress(null); }} hasRun={!!run}/>}
         {step === 'results' && run && runDesign && <ResultsBoard design={runDesign} run={run} stale={stale} expectations={config.expectations} setExpectations={expectations => update({ expectations })} onSendToAnalysis={onSendToAnalysis} onFocusQuestion={focusQuestion}/>}
         <div className={styles.stepNav}>
           {step !== 'panel' && <button type="button" onClick={() => gotoStep(STEPS[STEPS.findIndex(s => s.id === step) - 1].id)}>← 上一步</button>}

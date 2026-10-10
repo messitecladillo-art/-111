@@ -193,7 +193,9 @@ def test_silicon_run_lifecycle_idempotency_scope_and_limits(entered, pg_engine, 
     assert {(r["personaId"], r["scenarioId"]) for r in done["responses"]} == {(f"7-S-00{i}", s) for i in range(1, 4) for s in ("noon", "peak")}
     assert a.post(path, json=data).json()["id"] == view["id"] and provider.calls == 6
     assert a.post(path, json={**data, "shuffleOptions": False}).status_code == 409
-    listed = a.get(path).json()["runs"]
+    listing = a.get(path).json()
+    assert listing["limits"] == {"maxCalls": settings.silicon_max_calls, "hourlyRuns": settings.silicon_hourly_runs, "maxServices": 3}
+    listed = listing["runs"]
     assert listed[0]["id"] == view["id"] and "responses" not in listed[0]
     assert b.get(path).status_code == 404 and b.get(f'{path}/{view["id"]}').status_code == 404
     with pg_engine.connect() as connection:

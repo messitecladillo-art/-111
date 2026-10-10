@@ -9,7 +9,7 @@ import { HostedApiError, downloadQuestionnaire, errorMessage, hostedRequest } fr
 import { LoginRequired } from './HostedFrame';
 import { useHostedSession } from './HostedSession';
 import HostedMembers from './HostedMembers';
-import { createSiliconRunner } from './silicon-runner';
+import { createSiliconRunner, parseSiliconLimits } from './silicon-runner';
 import type { DatasetTransfer } from '@/components/analysis/SurveyLab';
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'), { loading: () => <p role="status">正在打开问卷编辑器…</p> });
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'), { loading: () => <p role="status">正在打开本地分析工具…</p> });
@@ -43,13 +43,19 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [saveUncertain, setSaveUncertain] = useState(cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'silicon' | 'analysis' | 'members'>('design');
   const [transfer, setTransfer] = useState<DesignTransfer | null>(null), [analysisOpened, setAnalysisOpened] = useState(false);
-  const [siliconOpened, setSiliconOpened] = useState(false), [datasetTransfer, setDatasetTransfer] = useState<DatasetTransfer | null>(null);
+  const [siliconOpened, setSiliconOpened] = useState(false), [datasetTransfer, setDatasetTransfer] = useState<DatasetTransfer | null>(null), [siliconMaxCalls, setSiliconMaxCalls] = useState<number | undefined>();
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
   const pendingSave = useRef<SaveRequest | null>(cached?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached?.pendingGeneration||null), operation = useRef(false);
   const writable = role === 'owner' || role === 'editor';
   const questionnaireServices = useMemo(() => services.filter(s => s.capabilities.includes('questionnaire')), [services]);
   // Model-backed runs are a write action on the project; viewers can still rehearse with the offline engine.
-  const siliconRunner = useMemo(() => writable ? createSiliconRunner({ projectId, services, localTest: auth.session?.mode === 'local_test', mutate: auth.mutate }) : null, [writable, projectId, services, auth.session?.mode, auth.mutate]);
+  const siliconRunner = useMemo(() => writable ? createSiliconRunner({ projectId, services, localTest: auth.session?.mode === 'local_test', mutate: auth.mutate, maxCalls: siliconMaxCalls }) : null, [writable, projectId, services, auth.session?.mode, auth.mutate, siliconMaxCalls]);
+  useEffect(() => {
+    if (!siliconOpened || !writable) return;
+    let live = true;
+    hostedRequest(`/api/projects/${projectId}/silicon-runs`).then(value => { if (live) setSiliconMaxCalls(parseSiliconLimits(value)?.maxCalls); }).catch(() => { /* the server still enforces its limit */ });
+    return () => { live = false; };
+  }, [siliconOpened, writable, projectId]);
   const savedFingerprint = head ? fingerprint(head.design) : initial ? fingerprint(initial) : '';
   const dirty = !!snapshot && (snapshot.pending || fingerprint(snapshot.design) !== savedFingerprint);
   const revision = head?.revision || 0;

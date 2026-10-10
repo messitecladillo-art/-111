@@ -42,10 +42,11 @@ const ERRORS: Record<string, string> = {
 const sleep = (ms: number, signal: AbortSignal) => new Promise<void>(resolve => { const t = setTimeout(resolve, ms); signal.addEventListener('abort', () => { clearTimeout(t); resolve(); }, { once: true }); });
 
 /** Model engine for the 硅基样本 lab in a hosted project: the server holds keys, prompts and limits. */
-export function createSiliconRunner({ projectId, services, localTest, mutate }: { projectId: string; services: Service[]; localTest: boolean; mutate: (path: string, body?: unknown, method?: string) => Promise<unknown> }): SiliconRunner {
+export function createSiliconRunner({ projectId, services, localTest, mutate, maxCalls }: { projectId: string; services: Service[]; localTest: boolean; mutate: (path: string, body?: unknown, method?: string) => Promise<unknown>; maxCalls?: number }): SiliconRunner {
   const usable = services.filter(s => s.capabilities.includes('research'));
   return {
     models: usable.map(s => ({ id: s.id, label: `${s.label} · ${s.model}`, detail: `${s.provider} · 配置 v${s.revision}` })),
+    maxCalls,
     consentLabel: localTest ? '确认使用合成模型验收本次运行，不产生真实模型费用。' : '同意把画像设定与问卷内容发送给所选模型供应商，由模型扮演虚构受访者作答，并使用我的 API 额度。',
     async run(request: SiliconRunRequest, onProgress, signal) {
       const base = `/api/projects/${projectId}/silicon-runs`;
@@ -80,4 +81,10 @@ export function createSiliconRunner({ projectId, services, localTest, mutate }: 
       };
     },
   };
+}
+
+/** The run list also reports the server's limits; anything unexpected is ignored rather than guessed. */
+export function parseSiliconLimits(value: unknown): { maxCalls: number } | null {
+  const limits = value && typeof value === 'object' ? (value as { limits?: { maxCalls?: unknown } }).limits : undefined;
+  return limits && Number.isInteger(limits.maxCalls) && (limits.maxCalls as number) > 0 ? { maxCalls: limits.maxCalls as number } : null;
 }

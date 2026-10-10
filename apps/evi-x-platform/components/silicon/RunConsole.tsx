@@ -9,16 +9,17 @@ import styles from './SiliconLab.module.css';
 export type ModelOption = { id: string; label: string; detail: string };
 type Props = {
   config: LabConfig; update: (patch: Partial<LabConfig>) => void; design: Questionnaire; personas: number; settings: RunSettings;
-  models: ModelOption[] | null; consentLabel: string; consent: boolean; setConsent: (v: boolean) => void;
+  models: ModelOption[] | null; maxCalls?: number; consentLabel: string; consent: boolean; setConsent: (v: boolean) => void;
   blockers: string[]; running: boolean; progress: RunProgress | null; error: string; onRun: () => void; onCancel: () => void; hasRun: boolean;
 };
 
-export default function RunConsole({ config, update, design, personas, settings, models, consentLabel, consent, setConsent, blockers, running, progress, error, onRun, onCancel, hasRun }: Props) {
+export default function RunConsole({ config, update, design, personas, settings, models, maxCalls, consentLabel, consent, setConsent, blockers, running, progress, error, onRun, onCancel, hasRun }: Props) {
   const scenarios = Math.max(1, settings.scenarios.length);
   const engines = config.engine === 'model' ? Math.max(1, config.models.length) : 1;
   const responses = personas * scenarios * engines;
   const calls = config.engine === 'model' ? estimateCalls(design, personas, settings) : 0;
-  const modelReady = config.engine === 'demo' || (!!models && config.models.length > 0 && consent);
+  const overLimit = config.engine === 'model' && maxCalls !== undefined && calls > maxCalls;
+  const modelReady = config.engine === 'demo' || (!!models && config.models.length > 0 && consent && !overLimit);
   const toggleModel = (id: string) => update({ models: config.models.includes(id) ? config.models.filter(m => m !== id) : [...config.models, id].slice(0, SILICON_LIMITS.models) });
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-engine">
@@ -53,6 +54,7 @@ export default function RunConsole({ config, update, design, personas, settings,
           {config.engine === 'model' && <div><dt>预计模型调用</dt><dd>{calls}</dd></div>}
         </dl>
         {blockers.length > 0 && <ul className={styles.issueList} role="status">{blockers.map(b => <li key={b}>{b}</li>)}</ul>}
+        {overLimit && <p className={styles.warnNote} role="status"><b>超过单次上限</b>本次需要 {calls} 次模型调用，单次运行最多 {maxCalls} 次。可以减少人数、情境或模型数量，或改用「连续作答」（每位受访者每个情境只调用一次）。</p>}
         {error && <p className={styles.errorNote} role="alert">{error}</p>}
         {running && progress && <div className={styles.progress} role="progressbar" aria-label="运行进度" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}><i style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}/><span>{progress.done}/{progress.total}</span></div>}
         <div className={styles.launchActions}>
