@@ -100,7 +100,7 @@ export default function WorkbenchShell({ panels }: { panels: Record<Panel, React
       <WorkbenchSidebar active={section} inWorkspace open={open} setOpen={setOpen} menuRef={menuRef} onSearch={showCommands}/>
       <div className="workbench-main" data-dialog-background>
         <PageHeading group={current.group} title={current.title} description={current.description} headingRef={headingRef} actions={<>
-          <button type="button" className="wb-search-toggle" onClick={showCommands} aria-label="打开快速导航" title="快速导航（Ctrl / ⌘ K）"><NavIcon kind="search"/><span>快速导航</span><kbd>⌘ K</kbd></button>
+          <button type="button" className="wb-search-toggle" onClick={showCommands} title="快速导航（Ctrl / ⌘ K）"><NavIcon kind="search"/><span>快速导航</span><kbd>⌘ K</kbd></button>
           <AccountStatus/>
           <ThemeToggle theme={theme}/>
           {!["editor", "design", "silicon", "analysis"].includes(section) && <a className="wb-top-cta" href="#diagnose"><NavIcon kind="plus"/>开始诊断</a>}

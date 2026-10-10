@@ -54,7 +54,7 @@
 .agenda li[data-state="current"] .state { background: var(--wb-accent-soft); color: var(--wb-accent); font-weight: 600; }
 .calendarFoot { display: grid; gap: 8px; }
 .calendarFoot p { margin: 0; font-size: 12.5px; color: var(--wb-muted); line-height: 1.7; }
-.calendarFoot a { color: var(--wb-accent); }
+.calendarFoot a { color: var(--wb-accent); text-decoration: underline; text-underline-offset: 3px; }
 .linkButton { justify-self: start; padding: 0; border: 0; background: none; color: var(--wb-accent); font: inherit; font-size: 13px; cursor: pointer; }
 .linkButton:hover { text-decoration: underline; text-underline-offset: 3px; }
 

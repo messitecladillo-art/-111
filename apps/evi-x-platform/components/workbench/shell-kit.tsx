@@ -124,10 +124,10 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
   const brand = <><BrandMark size={34} className="wb-brand-mark"/><span><strong>证见 EVI-X</strong><small>正大杯研究工作台</small></span></>;
   return <aside className="workbench-sidebar" data-open={open} data-dialog-background onKeyDown={onKeyDown}>
     {inWorkspace
-      ? <a className="wb-brand" href="#overview" aria-label="证见 EVI-X 工作台概览" onClick={close}>{brand}</a>
-      : <Link className="wb-brand" href="/workspace" aria-label="证见 EVI-X 工作台概览" onClick={close}>{brand}</Link>}
+      ? <a className="wb-brand" href="#overview" title="返回工作台概览" onClick={close}>{brand}</a>
+      : <Link className="wb-brand" href="/workspace" title="返回工作台概览" onClick={close}>{brand}</Link>}
     <button className="wb-menu" ref={menuRef} type="button" aria-controls="workbench-navigation" aria-expanded={open} onClick={() => setOpen(value => !value)} aria-label={open ? "关闭导航" : "打开导航"}><NavIcon kind={open ? "close" : "menu"}/></button>
-    {onSearch && <button type="button" className="wb-sidebar-search" onClick={onSearch} aria-label="搜索工作台功能"><NavIcon kind="search"/><span>快速导航</span><kbd>Ctrl K</kbd></button>}
+    {onSearch && <button type="button" className="wb-sidebar-search" onClick={onSearch} title="搜索工作台功能"><NavIcon kind="search"/><span>快速导航</span><kbd>Ctrl K</kbd></button>}
     <nav className="wb-navigation" id="workbench-navigation" aria-label="主要导航">
       {NAV_GROUPS.map(group => <div className="wb-nav-group" key={group}>
         <p className="wb-nav-label">{group}</p>

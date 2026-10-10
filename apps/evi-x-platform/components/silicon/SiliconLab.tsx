@@ -338,7 +338,7 @@ function PersonaInspector({ persona, attributes, run, runDesign, response, share
       <label className={styles.inlineField}><span>身高</span><input type="range" min={0.86} max={1.14} step={0.01} value={look.height} onChange={e => set({ height: Number(e.target.value) })}/></label>
       <button type="button" className={styles.linkButton} onClick={onReset}>恢复默认外观与背景</button>
     </div>}
-    {tab === 'answers' && run && runDesign && <div className={styles.inspectorBody}>
+    {tab === 'answers' && run && runDesign && <div className={styles.inspectorBody} tabIndex={0} role="region" aria-label={`${persona.code} 的作答记录`}>
       {!response ? <p className={styles.hint}>这位受访者没有参加当前情境 / 模型的运行。</p> : response.status === 'failed' ? <p className={styles.errorNote}>本次调用失败：{response.error || '未返回原因'}</p> :
         <ol className={styles.transcript}>{runDesign.questions.map(q => {
           const a = response.answers.find(x => x.questionId === q.id);
