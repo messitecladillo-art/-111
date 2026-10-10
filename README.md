@@ -26,7 +26,7 @@
 
 网页内测改造直接在现有 `apps/evi-x-platform` 中进行。新的 Next + FastAPI + PostgreSQL 启动、测试、原工程保留方式及部署配置见 [P0 运行说明](docs/p0-running.md)。下面的 CLI 仍用于研究项目的阶段与证据管理。
 
-GitHub 克隆后的依赖安装、源码范围与本地资料保留说明见 [GitHub 源码与首次运行](docs/github-publishing.md)；公开寻证首页与独立演示页见 [首页说明](docs/landing-page.md)。
+GitHub 克隆后的依赖安装、源码范围与本地资料保留说明见 [GitHub 源码与首次运行](docs/github-publishing.md)；公开「循证三千年」首页与独立演示页见 [首页说明](docs/landing-page.md)。
 
 从仓库根目录运行：
 

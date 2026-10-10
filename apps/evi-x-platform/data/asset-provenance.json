@@ -25,6 +25,22 @@
         "approvedBrandMaster": true,
         "officialMarkSafety": "pass"
       }
+    },
+    {
+      "path": "public/brand/evi-x-character-anchor-v2-960.webp",
+      "role": "landing_character_plate",
+      "visualMode": "public_promo",
+      "origin": "skill/zhengda-cup-champion/assets/brand/raster/evi-x-character-anchor-v2.png",
+      "sourceSha256": "4eacb2653020e8475837962bc67767a7bf4fd32a8a99e29699bc718486805b6d",
+      "derivation": "Pillow LANCZOS resize to 960x640, WebP quality 86; no repainting or cropping",
+      "sha256": "d8cf0957d690d645d708d614b4d8109f113d5501ba1cedfecb00c656863eda44",
+      "review": {
+        "approvedBrandMaster": true,
+        "identityInvariants": "inherited_from_production_anchor",
+        "conceptualLabelOnPage": "AI 辅助生成、经人工验收的原创概念角色",
+        "officialMarkSafety": "pass",
+        "humanReview": "required_before_any_competition_submission_reuse"
+      }
     }
   ]
 }
