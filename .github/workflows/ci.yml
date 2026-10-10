@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**", "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web · tests, types, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit and contract tests
+        working-directory: apps/evi-x-platform
+        run: npm run test:unit
+      - name: Shared package tests
+        run: npm run test:shared
+      - name: Typecheck
+        working-directory: apps/evi-x-platform
+        run: npm run typecheck
+      - name: Lint
+        working-directory: apps/evi-x-platform
+        run: npm run lint
+      - name: Production build
+        working-directory: apps/evi-x-platform
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+  api:
+    name: API · pytest on PostgreSQL 16
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: evix_admin
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: evix_p0_test
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U evix_admin -d evix_p0_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: apps/evi-x-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Unprivileged application role (synthetic test database only)
+        run: psql -h 127.0.0.1 -p 55432 -U evix_admin -d evix_p0_test -c "CREATE ROLE evix_app LOGIN PASSWORD 'local-p0-app-only' NOSUPERUSER NOBYPASSRLS"
+      - run: uv sync --locked
+      - name: Tests against the real migrations and RLS
+        env:
+          EVIX_TEST_DATABASE_URL: postgresql+psycopg://evix_admin@127.0.0.1:55432/evix_p0_test
+        run: uv run pytest -q

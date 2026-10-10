@@ -31,11 +31,15 @@ const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio')
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
 const DefenseStudio = dynamic(() => import('@/components/defense/DefenseStudio'));
+const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
 import HostedServices from '@/components/hosted/HostedServices';
 import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
 import DiagnosisActions from "@/components/DiagnosisActions";
+import CompetitionCalendar from '@/components/overview/CompetitionCalendar';
+import ResearchPipeline from '@/components/overview/ResearchPipeline';
 import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-actions';
 import type { DesignSnapshot, DesignTransfer } from '@/lib/questionnaire-mapping';
+import type { DatasetHandoff } from '@/components/silicon/ResultsBoard';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -1358,6 +1362,7 @@ function ProjectWorkbench() {
 export default function EviXPlatform() {
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
+  const [datasetTransfer,setDatasetTransfer]=useState<DatasetHandoff|null>(null);
   const [briefSource,setBriefSource]=useState<DiagnosisBriefSource|null>(null);
   const [agentProposal,setAgentProposal]=useState<AgentQuestionnaireProposal|null>(null);
   return (
@@ -1384,6 +1389,9 @@ export default function EviXPlatform() {
         <div className="independent-notice"><span>独立 · 非官方</span><p>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p></div>
       </section>
 
+      <CompetitionCalendar />
+      <ResearchPipeline />
+
       <section className="section qdia-section" aria-labelledby="qdia-title">
         <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">不是写作捷径，是证据生产系统</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关 Gate 必须在受信任控制面中重新评估。</p></div>
         <div className="qdia-cards">{QDIA.map((item, index) => <article key={item.code}><span className="step-number">0{index + 1}</span><div className="step-code">{item.code}</div><h3>{item.name} <small>{item.english}</small></h3><p>{item.detail}</p><span className="step-check">{["决策主体 · 目标人群 · 证据缺口", "来源 · 样本 · 清洗 · 台账", "方法适配 · 结果 · 限制", "负责人 · 优先级 · KPI"][index]}</span></article>)}</div>
@@ -1395,7 +1403,8 @@ export default function EviXPlatform() {
       cases: <CaseLibrary />,
       editor: <EditingStudio localOnly />,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab designSnapshot={designSnapshot} designTransfer={designTransfer}/>,
+      analysis: <SurveyLab designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer}/>,
+      silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={setBriefSource} />,
       workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>使用我的项目创建团队研究，生成、编辑并保存问卷版本。原有生命周期控制程序和证据文件继续保留。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,

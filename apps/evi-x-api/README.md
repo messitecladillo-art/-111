@@ -87,6 +87,29 @@ membership; stale running reservations become outcome_unknown without another
 provider call. HTTP 408 and provider 5xx responses also retain this uncertain
 outcome. A proposal never silently replaces a later questionnaire edit.
 
+### 硅基样本 runs (simulated respondents)
+
+`POST /api/projects/{id}/silicon-runs` lets a project owner/editor run a
+questionnaire pretest in which the user's own models (1–3 services with the
+`research` capability) play fictional personas. The body carries the design,
+persona attributes and panel, scenarios (≤4), memory mode (`carry`: one call
+per persona × scenario × model; `independent`: one call per shown item),
+option shuffling, `expectedCalls` and explicit `consent`. The server
+recomputes the call count and rejects any mismatch (409 `estimate_conflict`),
+runs above `SILICON_MAX_CALLS` (default 240), a second active run, or more than
+`SILICON_HOURLY_RUNS` per hour. The reservation is committed before any provider
+call; work then continues in the background with `SILICON_CONCURRENCY`
+(default 3) parallel calls of at most `SILICON_CALL_SECONDS` each.
+
+Poll `GET /api/projects/{id}/silicon-runs/{runId}` for progress and responses;
+`POST …/cancel` stops unsent calls (calls already sent may still be billed).
+A run without progress for `SILICON_STALE_SECONDS` becomes `outcome_unknown`
+and is never replayed. Rows are RLS-scoped to their creator. Every view carries
+`classification:"simulated"`; responses are answers from fictional personas,
+never survey data. Routing, piping and answer normalisation mirror the browser
+(`lib/silicon/run.ts`); `tests/fixtures/silicon-parity.json` is checked by both
+test suites. Fixture providers return conspicuously synthetic answers.
+
 The editor's 40-step undo limit does not limit immutable server history. Saved
 versions continue until the PostgreSQL integer revision limit. Request bodies
 are fully bounded and parsed before row locks are acquired; duplicate keys,

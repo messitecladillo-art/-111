@@ -8,11 +8,3 @@ export function legacyLandingDestination(hash: string): string | null {
   return ['overview', 'cases', 'diagnose', 'lifecycle', 'rules', 'editor', 'analysis', 'design', 'defense'].includes(name) ? `/workspace#${name}` : null;
 }
 
-export function timelineProgress(top: number, height: number, viewport: number): number {
-  if (![top, height, viewport].every(Number.isFinite) || height <= viewport) return 0;
-  return Math.max(0, Math.min(3, (-top / (height - viewport)) * 3));
-}
-
-export function timelineChapter(progress: number): number {
-  return Number.isFinite(progress) ? Math.max(0, Math.min(3, Math.floor(progress + .45))) : 0;
-}

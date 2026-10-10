@@ -26,9 +26,10 @@ type SessionDesignDraft={history:History;numericDrafts:NumericDrafts;activeId:st
 export type HostedDesignBridge = { initialDesign: Questionnaire; cacheKey?:string; load?: { id: string; design: Questionnaire }; savedFingerprint?: string; onLoaded?: () => void; onDetachProposal?: () => void };
 export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,onBriefHandled,agentProposal,onAgentHandled,onAgentApplied,localOnly=false,hosted}:{onSnapshot?:(value:DesignSnapshot)=>void;onAnalyze?:(value:DesignSnapshot)=>void;briefSource?:DiagnosisBriefSource|null;onBriefHandled?:()=>void;agentProposal?:AgentQuestionnaireProposal|null;onAgentHandled?:()=>void;onAgentApplied?:(value:AgentQuestionnaireProposal)=>void;localOnly?:boolean;hosted?:HostedDesignBridge}={}) {
   const session=useHostedSession();
-  const cached=useRef((hosted?.cacheKey?session.getDraft(hosted.cacheKey):undefined) as SessionDesignDraft|undefined);
-  const [history, setHistory] = useState<History>(()=>cached.current?.history||(hosted?initialRevisionHistory(hosted.initialDesign):initial()));
-  const [activeId, setActiveId] = useState(()=>cached.current?.activeId||hosted?.initialDesign.questions[0]?.id || "initial-question");
+  // Read once at mount; state rather than a ref so the initializers below may use it during render.
+  const [cached]=useState(()=>(hosted?.cacheKey?session.getDraft(hosted.cacheKey):undefined) as SessionDesignDraft|undefined);
+  const [history, setHistory] = useState<History>(()=>cached?.history||(hosted?initialRevisionHistory(hosted.initialDesign):initial()));
+  const [activeId, setActiveId] = useState(()=>cached?.activeId||hosted?.initialDesign.questions[0]?.id || "initial-question");
   const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -49,7 +50,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const [libraryResetKey,setLibraryResetKey]=useState(0);
   const libraryIdentity=useRef(0);
   function detachLibrary(){libraryIdentity.current++;setLibraryResetKey(libraryIdentity.current);}
-  const [numericDrafts, setNumericDrafts] = useState<NumericDrafts>(()=>cached.current?.numericDrafts||{});
+  const [numericDrafts, setNumericDrafts] = useState<NumericDrafts>(()=>cached?.numericDrafts||{});
   const editRevision = useRef(0), readEpoch = useRef(0);
   const agentProposalRef=useRef(agentProposal);
   useLayoutEffect(()=>{agentProposalRef.current=agentProposal;},[agentProposal]);
@@ -74,7 +75,10 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     const safe=parseQuestionnaire(JSON.stringify(hosted.load.design));loadedIntent.current=hosted.load.id;
     setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');hosted.onLoaded?.();
   },[hosted?.load,hosted?.onLoaded]);
-  useEffect(()=>{if(hosted?.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers)setDirty(false);},[hosted?.savedFingerprint,design,hasPendingNumbers]);
+  // When the design comes back to the saved version, it is clean again (adjusted during render, not in an effect).
+  const savedMatch=useMemo(()=>!!hosted&&hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers,[hosted,design,hasPendingNumbers]);
+  const [lastSavedMatch,setLastSavedMatch]=useState(savedMatch);
+  if(savedMatch!==lastSavedMatch){setLastSavedMatch(savedMatch);if(savedMatch)setDirty(false);}
   const activeIssueId = active ? `design-${active.id}-issues` : undefined;
   const hasIssue = (...codes: string[]) => issues.some(i=>i.questionId===active?.id && codes.includes(i.code));
   const mapped = design.questions.filter(questionIsMapped).length;
@@ -309,7 +313,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
       {([["objective","决策目标",600],["recruitment","招募与抽样方案",600],["introduction","告知与自愿参与说明",2000],["pilotNotes","预试计划 / 已完成预试的证据与修改",2000]] as const).map(([key,label,max])=><label key={key}>{label}<textarea data-brief-field={key} rows={3} value={design[key]} maxLength={max} onChange={e=>commit({...design,[key]:e.target.value})}/></label>)}
     </div><p>说明研究目的、预计时长、退出与拒答权利、数据用途和咨询渠道；按实际要求完成伦理审查。填写预试记录不等于系统已验证预试。</p></details>
     <div className={styles.workspaceBar}><div className={styles.viewTabs} role="group" aria-label="问卷工作区视图"><button type="button" aria-pressed={view==='edit'} onClick={()=>{setView('edit');setMobilePane('edit');}}>题目编辑</button><button type="button" aria-pressed={view==='assemble'} onClick={()=>setView('assemble')}>模块拼装</button><button type="button" aria-pressed={view==='review'} onClick={()=>showReview()}>映射与检查</button></div>
-      <div className={styles.summary} aria-label="设计检查概况"><button type="button" onClick={()=>{clearFilters();setView('edit');setMobilePane('edit');}} aria-label={`题目总数 ${design.questions.length} / 80`}><b>{design.questions.length}</b><span>题</span></button><button type="button" onClick={()=>{setQuery('');setFilter('unmapped');setView('edit');setMobilePane('edit');}} aria-label={`研究用途已映射 ${mapped} / ${design.questions.length}，查看未映射题目`}><b>{mapped}/{design.questions.length}</b><span>已映射</span></button><button type="button" data-tone={blockers.length?'risk':undefined} onClick={()=>showReview('blocker')}><b>{blockers.length}</b><span>结构问题</span></button><button type="button" onClick={()=>showReview('review')}><b>{issues.length-blockers.length}</b><span>待复核</span></button></div>
+      <div className={styles.summary} aria-label="设计检查概况"><button type="button" onClick={()=>{clearFilters();setView('edit');setMobilePane('edit');}} ><b>{design.questions.length}</b><span>题</span><span className="sr-only">，上限 80 题</span></button><button type="button" onClick={()=>{setQuery('');setFilter('unmapped');setView('edit');setMobilePane('edit');}} ><b>{mapped}/{design.questions.length}</b><span>已映射</span><span className="sr-only">，查看未映射题目</span></button><button type="button" data-tone={blockers.length?'risk':undefined} onClick={()=>showReview('blocker')}><b>{blockers.length}</b><span>结构问题</span></button><button type="button" onClick={()=>showReview('review')}><b>{issues.length-blockers.length}</b><span>待复核</span></button></div>
     </div>
     <div hidden={view!=='assemble'}><QuestionBlocks design={design} onAppend={next=>{const first=next.questions[design.questions.length];commit(next,`已追加 ${next.questions.length-design.questions.length} 道自编草稿题；研究用途、选项与显示条件需继续核对。`);clearFilters();if(first)selectQuestion(first.id);}}/></div>
     {view==='assemble'?null:view==='edit'?<><div className={styles.mobileTabs} role="group" aria-label="小屏工作区"><button type="button" aria-pressed={mobilePane==='edit'} onClick={()=>setMobilePane('edit')}>编辑题目</button><button type="button" aria-pressed={mobilePane==='preview'} onClick={()=>setMobilePane('preview')}>查看预览</button></div><div className={styles.workspace} data-mobile-pane={mobilePane}>

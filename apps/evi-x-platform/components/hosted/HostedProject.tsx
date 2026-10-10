@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { newQuestionnaire, parseCollection, parseHeadResponse, parseProjectResponse, parseProposal, parseProposalSummary, summarizeProposal, parseVersionPage, parseQuestionnaireHead, parseQuestionnaireVersion, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersion, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
 import type { DesignSnapshot, DesignTransfer } from '@/lib/questionnaire-mapping';
 import { parseQuestionnaireLibraryContent } from '@/lib/questionnaire-library';
@@ -9,8 +9,11 @@ import { HostedApiError, downloadQuestionnaire, errorMessage, hostedRequest } fr
 import { LoginRequired } from './HostedFrame';
 import { useHostedSession } from './HostedSession';
 import HostedMembers from './HostedMembers';
+import { createSiliconRunner } from './silicon-runner';
+import type { DatasetTransfer } from '@/components/analysis/SurveyLab';
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'), { loading: () => <p role="status">正在打开问卷编辑器…</p> });
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'), { loading: () => <p role="status">正在打开本地分析工具…</p> });
+const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'), { loading: () => <p role="status">正在搭建硅基样本舞台…</p> });
 type SaveRequest = { design: Questionnaire; expectedRevision: number; idempotencyKey: string; sourceProposalId?: string };
 type GenerationRequest = { serviceId: string; serviceRevision: number; brief: string; expectedQuestionnaireRevision: number; idempotencyKey: string; consent: true };
 type CachedProject={head:QuestionnaireHead|null;initial:Questionnaire;snapshot:DesignSnapshot|null;sourceProposal?:string;proposal:Proposal|null;brief:string;pendingSave:SaveRequest|null;pendingGeneration:GenerationRequest|null;saveUncertain:boolean;generationUncertain:boolean;conflict:boolean};
@@ -22,25 +25,31 @@ export default function HostedProject({ projectId }: { projectId: string }) {
 }
 function ProjectEditor({ projectId }: { projectId: string }) {
   const auth = useHostedSession();
-  const cacheKey=`project:${projectId}`, cached=useRef(auth.getDraft(cacheKey) as CachedProject|undefined);
+  const cacheKey=`project:${projectId}`;
+  // The tab-local draft is read once at mount; state (not a ref) so initializers may use it during render.
+  const [cached] = useState(() => auth.getDraft(cacheKey) as CachedProject|undefined);
   const [project, setProject] = useState<Project | null>(null), [role, setRole] = useState<MembershipRole>('viewer');
-  const [head, setHead] = useState<QuestionnaireHead | null>(cached.current?.head||null), [initial, setInitial] = useState<Questionnaire | null>(cached.current?.initial||null);
-  const [snapshot, setSnapshot] = useState<DesignSnapshot | null>(cached.current?.snapshot||null), [load, setLoad] = useState<{ id: string; design: Questionnaire }>();
+  const [head, setHead] = useState<QuestionnaireHead | null>(cached?.head||null), [initial, setInitial] = useState<Questionnaire | null>(cached?.initial||null);
+  const [snapshot, setSnapshot] = useState<DesignSnapshot | null>(cached?.snapshot||null), [load, setLoad] = useState<{ id: string; design: Questionnaire }>();
   const [versions, setVersions] = useState<QuestionnaireVersionSummary[]>([]), [services, setServices] = useState<Service[]>([]);
-  const [serviceId, setServiceId] = useState(''), [brief, setBrief] = useState(cached.current?.brief||''), [consent, setConsent] = useState(false);
-  const [proposal, setProposal] = useState<Proposal | null>(cached.current?.proposal||null), [sourceProposal, setSourceProposal] = useState<string|undefined>(cached.current?.sourceProposal);
+  const [serviceId, setServiceId] = useState(''), [brief, setBrief] = useState(cached?.brief||''), [consent, setConsent] = useState(false);
+  const [proposal, setProposal] = useState<Proposal | null>(cached?.proposal||null), [sourceProposal, setSourceProposal] = useState<string|undefined>(cached?.sourceProposal);
   const [proposals,setProposals] = useState<ProposalSummary[]>([]);
   const [nextBeforeRevision,setNextBeforeRevision] = useState<number|null>(null);
   const [historyError,setHistoryError] = useState(''), [callsError,setCallsError] = useState('');
   const [loadingHistory,setLoadingHistory] = useState(false);
   const [readonlyDesign,setReadonlyDesign]=useState<Questionnaire|null>(null);
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [generating, setGenerating] = useState(false), [reading, setReading] = useState(false);
-  const [saveUncertain, setSaveUncertain] = useState(cached.current?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached.current?.generationUncertain||false), [conflict, setConflict] = useState(cached.current?.conflict||false);
-  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'analysis' | 'members'>('design');
+  const [saveUncertain, setSaveUncertain] = useState(cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
+  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'silicon' | 'analysis' | 'members'>('design');
   const [transfer, setTransfer] = useState<DesignTransfer | null>(null), [analysisOpened, setAnalysisOpened] = useState(false);
-  const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached.current?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached.current?.head||null);
-  const pendingSave = useRef<SaveRequest | null>(cached.current?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached.current?.pendingGeneration||null), operation = useRef(false);
+  const [siliconOpened, setSiliconOpened] = useState(false), [datasetTransfer, setDatasetTransfer] = useState<DatasetTransfer | null>(null);
+  const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
+  const pendingSave = useRef<SaveRequest | null>(cached?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached?.pendingGeneration||null), operation = useRef(false);
   const writable = role === 'owner' || role === 'editor';
+  const questionnaireServices = useMemo(() => services.filter(s => s.capabilities.includes('questionnaire')), [services]);
+  // Model-backed runs are a write action on the project; viewers can still rehearse with the offline engine.
+  const siliconRunner = useMemo(() => writable ? createSiliconRunner({ projectId, services, localTest: auth.session?.mode === 'local_test', mutate: auth.mutate }) : null, [writable, projectId, services, auth.session?.mode, auth.mutate]);
   const savedFingerprint = head ? fingerprint(head.design) : initial ? fingerprint(initial) : '';
   const dirty = !!snapshot && (snapshot.pending || fingerprint(snapshot.design) !== savedFingerprint);
   const revision = head?.revision || 0;
@@ -69,12 +78,12 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     void (async () => {
       try {
         const [p, q, s] = await Promise.all([hostedRequest(`/api/projects/${projectId}`), hostedRequest(`/api/projects/${projectId}/questionnaire`), hostedRequest('/api/services').catch(() => ({services:[]}))]);
-        const data = parseProjectResponse(p), saved = parseHeadResponse(q), connections = parseCollection(s, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire'));
+        const data = parseProjectResponse(p), saved = parseHeadResponse(q), connections = parseCollection(s, 'services', parseService, 8);
         if (!alive.current || cancelled) return;
         setProject(data.project); setRole(data.membershipRole);
-        if(cached.current){if((saved?.revision||0)!==(cached.current.head?.revision||0)){setConflict(true);setNotice('已恢复本标签页的草稿；云端版本已变化，请先核对最新版本。');}else setNotice('已恢复本标签页的编辑与撤销历史。未保存内容仅在当前登录会话内保留。');}
+        if(cached){if((saved?.revision||0)!==(cached.head?.revision||0)){setConflict(true);setNotice('已恢复本标签页的草稿；云端版本已变化，请先核对最新版本。');}else setNotice('已恢复本标签页的编辑与撤销历史。未保存内容仅在当前登录会话内保留。');}
         else{rememberHead(saved);setInitial(saved?.design||newQuestionnaire());}
-        setServices(connections); setServiceId(connections[0]?.id || '');
+        setServices(connections); setServiceId(connections.find(s => s.capabilities.includes('questionnaire'))?.id || '');
         void reloadVersions(); void reloadProposals();
       } catch (e) { if (alive.current && !cancelled) setError(errorMessage(e)); }
       finally { if (alive.current && !cancelled) setLoading(false); }
@@ -173,20 +182,21 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
   return <>
     <div className="hosted-project-heading"><div><Link href="/projects">← 我的项目</Link><h2>{project.title}</h2><span className="hosted-small">{ROLE_LABELS[role]} · 问卷 {revision ? `v${revision}` : '尚未保存'}</span></div><div className="hosted-actions"><button onClick={() => snapshot && downloadQuestionnaire(snapshot.design)} disabled={!snapshot}>下载当前设计</button><button className="hosted-primary" onClick={() => void save()} disabled={!writable || !snapshot || snapshot.pending || saving || reading || conflict || saveUncertain || !dirty}>{saving ? '正在保存…' : '保存新版本'}</button></div></div>
-    <div className="hosted-tabs" role="group" aria-label="项目工作区"><button aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>本地分析</button><button aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
+    <div className="hosted-tabs" role="group" aria-label="项目工作区"><button aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>本地分析</button><button aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
     {error && <p className="hosted-alert" role="alert">{error}</p>}{notice && <p className="hosted-notice" role="status">{notice}</p>}
     {(proposal || generationUncertain) && tab !== 'design' && <p className="hosted-notice"><span>{generationUncertain?'模型调用待核对，原请求已保留。':'模型提案已保留，可返回问卷设计查看。'}</span><button onClick={()=>setTab('design')}>查看生成结果与状态</button></p>}
     {saveUncertain && <div className="hosted-notice"><p>上次保存尚待核对。重试会使用原内容和原请求标识；本页新编辑仍保留。</p><button disabled={saving} onClick={() => void save()}>核对并重试原保存</button></div>}
     {conflict && <div className="hosted-conflict" role="alert"><strong>云端版本已更新，当前草稿已保留。</strong><p>可以先下载本页设计，再载入云端版本。也可以确认以最新版本为基础保留手工草稿。</p><div className="hosted-actions"><button disabled={reading} onClick={() => void refreshHead(false)}>载入最新云端版本</button><button disabled={reading} onClick={() => void refreshHead(true)}>保留当前草稿并核对版本</button></div></div>}
     <div hidden={tab !== 'design'}>
-      <div className="hosted-project-tools"><details className="hosted-project-tool" open={!head || generationUncertain}><summary><span>生成问卷建议</span><small>{generationUncertain?'请求待核对':generating?'正在生成…':'按需使用模型'}</small></summary><div className="hosted-project-tool-body"><span className="hosted-kicker">提出需求 → 预览建议 → 确认应用</span>{writable ? <><label>模型服务<select value={serviceId} disabled={generating || generationUncertain} onChange={e => { setServiceId(e.target.value); setConsent(false); }}>{!services.length && <option value="">请先配置个人模型服务</option>}{services.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model} · v{s.revision}</option>)}</select></label><Link href="/services">管理我的模型服务 →</Link><label>研究需求<textarea rows={4} maxLength={6000} disabled={generating || generationUncertain} value={brief} placeholder="说明研究目标、目标群体，以及希望支持的决策。" onChange={e => { setBrief(e.target.value); setConsent(false); }}/></label><label className="hosted-consent"><input type="checkbox" checked={consent} disabled={generating || generationUncertain} onChange={e => setConsent(e.target.checked)}/><span>{auth.session?.mode === 'local_test' ? '确认使用合成模型验收本次需求，不产生真实模型费用。' : `同意将上方研究需求发送到 ${services.find(s => s.id === serviceId)?.provider || '所选供应商'}，用于生成问卷建议，并使用我的 API 额度。`}</span></label><button className="hosted-primary" disabled={generating || generationUncertain || !serviceId || !consent || !brief.trim() || saving || saveUncertain || conflict} onClick={() => void generate()}>{generating ? '正在等待回执…' : '生成问卷建议'}</button>{generationUncertain && <div className="hosted-notice"><p>请求回执未到，原请求已保留。</p><button disabled={generating} onClick={() => void generate()}>核对原生成请求</button></div>}</> : <p>当前角色可查看问卷和历史版本。生成与编辑由负责人或编辑成员进行。</p>}</div></details>
+      <div className="hosted-project-tools"><details className="hosted-project-tool" open={!head || generationUncertain}><summary><span>生成问卷建议</span><small>{generationUncertain?'请求待核对':generating?'正在生成…':'按需使用模型'}</small></summary><div className="hosted-project-tool-body"><span className="hosted-kicker">提出需求 → 预览建议 → 确认应用</span>{writable ? <><label>模型服务<select value={serviceId} disabled={generating || generationUncertain} onChange={e => { setServiceId(e.target.value); setConsent(false); }}>{!questionnaireServices.length && <option value="">请先配置个人模型服务</option>}{questionnaireServices.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model} · v{s.revision}</option>)}</select></label><Link href="/services">管理我的模型服务 →</Link><label>研究需求<textarea rows={4} maxLength={6000} disabled={generating || generationUncertain} value={brief} placeholder="说明研究目标、目标群体，以及希望支持的决策。" onChange={e => { setBrief(e.target.value); setConsent(false); }}/></label><label className="hosted-consent"><input type="checkbox" checked={consent} disabled={generating || generationUncertain} onChange={e => setConsent(e.target.checked)}/><span>{auth.session?.mode === 'local_test' ? '确认使用合成模型验收本次需求，不产生真实模型费用。' : `同意将上方研究需求发送到 ${services.find(s => s.id === serviceId)?.provider || '所选供应商'}，用于生成问卷建议，并使用我的 API 额度。`}</span></label><button className="hosted-primary" disabled={generating || generationUncertain || !serviceId || !consent || !brief.trim() || saving || saveUncertain || conflict} onClick={() => void generate()}>{generating ? '正在等待回执…' : '生成问卷建议'}</button>{generationUncertain && <div className="hosted-notice"><p>请求回执未到，原请求已保留。</p><button disabled={generating} onClick={() => void generate()}>核对原生成请求</button></div>}</> : <p>当前角色可查看问卷和历史版本。生成与编辑由负责人或编辑成员进行。</p>}</div></details>
         <details className="hosted-project-tool"><summary><span>版本历史</span><small>{historyError?'读取未完成':revision?`当前 v${revision}`:'尚未保存'}</small></summary><div className="hosted-project-tool-body"><div className="hosted-section-title"><h3>已保存版本</h3><button disabled={loadingHistory || reading || saving || saveUncertain} onClick={() => void reloadVersions().catch(e => setError(errorMessage(e)))}>刷新</button></div><p className="hosted-small">历史载入只影响本页；保存后新增版本。每次读取 100 条。</p>{historyError&&<p role="alert">{historyError}</p>}<div className="hosted-history">{versions.length ? versions.map(v => <div key={v.id}><span><strong>v{v.revision} · {v.title || '未命名问卷'}</strong><small>{new Date(v.createdAt).toLocaleString('zh-CN')}</small></span><button disabled={reading || saving || saveUncertain} onClick={() => void history(v)}>载入编辑器</button></div>) : <p>第一次保存后，版本会出现在这里。</p>}</div>{nextBeforeRevision!==null&&<button disabled={loadingHistory || reading || saving} onClick={()=>void reloadVersions(nextBeforeRevision)}>加载更早版本</button>}<button disabled={reading || saving || saveUncertain} onClick={() => void refreshHead(false)}>核对并载入最新版本</button></div></details>
       <details className="hosted-project-tool"><summary><span>近期模型调用</span><small>{proposals.length} 条记录{callsError?' · 读取未完成':''}</small></summary><div className="hosted-project-tool-body"><p className="hosted-small">这里保留本项目由你发起的提案与待核对状态，重新登录后仍可查看。</p><button disabled={generating} onClick={()=>void reloadProposals().catch(e=>setError(errorMessage(e)))}>刷新调用记录</button>{callsError&&<p role="alert">{callsError}</p>}<div className="hosted-history">{proposals.map(p=><div key={p.id}><span><strong>{p.title || ({running:'运行中',outcome_unknown:'结果待核对',failed:'生成失败',ready:'已生成'}[p.status])}</strong><small>{new Date(p.createdAt).toLocaleString('zh-CN')} · 基于 v{p.inputRevision}</small></span><button disabled={generating} onClick={()=>void openProposal(p.id)}>查看提案与状态</button></div>)}{!proposals.length&&<p>尚无模型调用记录。</p>}</div></div></details></div>
       {proposal && <section className="hosted-card hosted-proposal" aria-label="模型问卷提案"><span className="hosted-kicker">模型提案 · 基于问卷 v{proposal.inputRevision}</span><h3>{proposal.design?.title || '调用状态'}</h3>{proposal.design ? <><p>{proposal.design.objective}</p><ol>{proposal.design.questions.map(q => <li key={q.id}><strong>{q.text}</strong>{q.choices.length > 0 && <p>{q.choices.map(c => c.label).join(' / ')}</p>}</li>)}</ol>{proposal.inputRevision !== revision && <p className="hosted-alert">这份提案基于较早版本，保留供参考。请按当前版本重新生成。</p>}<div className="hosted-actions"><button className="hosted-primary" disabled={!writable || proposal.inputRevision !== revision || reading || saving || saveUncertain || conflict} onClick={() => loadDesign(proposal.design!, '已应用拟议设计，仍需检查与预测试；点击保存才会写入云端。', proposal.id)}>确认应用提案</button><button onClick={() => downloadQuestionnaire(proposal.design, '模型问卷提案.json')}>下载提案</button><button onClick={() => setProposal(null)}>收起提案</button></div></> : <><p>{proposal.status === 'failed' ? '本次生成失败。可以核对配置后再次发起。' : '调用结果尚未明确，当前设计没有改变。核对只查询已保存状态。'}</p>{proposal.errorCode && <small>状态代码：{proposal.errorCode}</small>}<button disabled={generating} onClick={() => void refreshProposal()}>核对调用状态</button></>}</section>}
       <p className="hosted-edit-status" role="status">{dirty ? '有未保存的修改' : revision ? `已与云端 v${revision} 对齐` : '从空白设计开始'}{snapshot?.pending && ' · 请修正暂存数值后保存'}</p>
       {writable?<fieldset className="hosted-editor-fieldset" disabled={reading}><legend className="hosted-sr-only">项目问卷编辑器</legend><QuestionnaireStudio localOnly onSnapshot={onSnapshot} onAnalyze={value => { setTransfer({ id: crypto.randomUUID(), snapshot: value }); setAnalysisOpened(true); setTab('analysis'); }} hosted={{ initialDesign: initial,cacheKey:`questionnaire:${projectId}`, load, savedFingerprint, onLoaded: acknowledgeLoad, onDetachProposal: detach }}/></fieldset>:<ReadonlyQuestionnaire design={readonlyDesign||head?.design||initial}/>}
     </div>
-    {analysisOpened && <div hidden={tab !== 'analysis'}><p className="hosted-notice">本地分析沿用现有统计工具，数据在浏览器处理；本期尚未写入项目云端分析记录。</p><SurveyLab designSnapshot={snapshot} designTransfer={transfer}/></div>}
+    {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { setDatasetTransfer(handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><p className="hosted-notice">本地分析沿用现有统计工具，数据在浏览器处理；本期尚未写入项目云端分析记录。</p><SurveyLab designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
   </>;
 }

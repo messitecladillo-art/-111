@@ -12,11 +12,15 @@ from sqlalchemy import create_engine, select, func, text as sql_text, update
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy.exc import SQLAlchemyError
 from .settings import Settings, BASES, normalize_email, validate_base
-from .contracts import ApiError, body, uuid_string, text, integer, fingerprint, questionnaire, canonical
-from .models import User, Challenge, RateEvent, Session, Team, Member, Project, Service, Operation, Version, Proposal, now, new_id
+from .contracts import ApiError, body, uuid_string, text, integer, fingerprint, questionnaire, canonical, object_fields
+from .models import User, Challenge, RateEvent, Session, Team, Member, Project, Service, Operation, Version, Proposal, SiliconRun, now, new_id
 from .security import keyed, random_token, code_verifier, config_view, encrypt, decrypt
 from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_proposal
+from . import silicon
 from .mail import FixtureMail, ResendMail, MailFailure
+
+
+SCHEMA_REVISION = "0002_silicon_runs"
 
 
 def iso(value):
@@ -41,6 +45,20 @@ def proposal_view(p):
     return result
 
 
+def silicon_view(run, full=False):
+    result = {"id": run.id, "projectId": run.project_id, "status": run.status, "done": run.done, "total": run.total,
+              "services": run.services, "classification": "simulated", "createdAt": iso(run.created_at),
+              "personas": len(run.plan["personas"]), "scenarios": len(run.plan["scenarios"]), "memory": run.plan["memory"],
+              "title": run.plan["design"]["title"]}
+    if run.finished_at:
+        result["finishedAt"] = iso(run.finished_at)
+    if run.error_code:
+        result["errorCode"] = run.error_code
+    if full:
+        result["responses"] = run.responses
+    return result
+
+
 def create_app(settings: Settings | None = None, mail=None, provider=None, engine=None):
     settings = settings or Settings()
     if settings.mode == "production" and (mail is not None or provider is not None or engine is not None):
@@ -56,13 +74,19 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                 privileged = connection.execute(sql_text("SELECT r.rolsuper OR r.rolbypassrls FROM pg_roles r WHERE r.rolname=current_user")).scalar_one()
                 owner = connection.execute(sql_text("SELECT count(*) FROM pg_tables WHERE schemaname=current_schema() AND tableowner=current_user")).scalar_one()
                 revision = connection.execute(sql_text("SELECT version_num FROM alembic_version")).scalar_one()
-                if privileged or owner or revision != "0001_p0":
+                if privileged or owner or revision != SCHEMA_REVISION:
                     raise RuntimeError("API requires current migrations and an unprivileged non-owner database role")
         yield
+        loop = asyncio.get_running_loop()
+        tasks = [task for task in application.state.silicon_tasks if task.get_loop() is loop]
+        for task in tasks:
+            task.cancel()  # Rows stay "running" and later read as outcome_unknown; nothing is replayed.
+        await asyncio.gather(*tasks, return_exceptions=True)
         if owns_engine:
             engine.dispose()
     app = FastAPI(title="EVI-X API", lifespan=lifespan, docs_url=None if settings.mode == "production" else "/docs", redoc_url=None, openapi_url=None if settings.mode == "production" else "/openapi.json")
     app.state.settings, app.state.engine, app.state.provider = settings, engine, generator
+    app.state.silicon_tasks = set()
 
     @app.middleware("http")
     async def security_headers(request, call_next):
@@ -572,5 +596,190 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
             raise ApiError(404, "not_found", "建议不存在。")
         session.commit()
         return proposal_view(result)
+
+    # ───────────── 硅基样本 · simulated respondents ─────────────
+    def expire_silicon(session, user):
+        session.execute(update(SiliconRun).where(SiliconRun.user_id == user.id, SiliconRun.status == "running", SiliconRun.updated_at < now() - timedelta(seconds=settings.silicon_stale_seconds)).values(status="outcome_unknown", error_code="interrupted_run", finished_at=now()))
+
+    def scoped(session, user_id):
+        session.execute(sql_text("SELECT set_config('evix.user_id', :user_id, true)"), {"user_id": user_id})
+
+    async def silicon_unit(plan, persona, scenario, service, dead):
+        """Run one persona × scenario × model; returns (response, provider calls). Never raises."""
+        meta, config, key = service
+        design, calls = plan["design"], 0
+        response = {"personaId": persona["id"], "scenarioId": scenario["id"] if scenario else "base", "model": meta["name"], "status": "ok", "answers": []}
+
+        async def ask(message, spec):
+            nonlocal calls
+            if meta["serviceId"] in dead:
+                raise ProviderFailure(dead[meta["serviceId"]])
+            calls += 1
+            try:
+                async with asyncio.timeout(settings.silicon_call_seconds):
+                    raw = await generator.answer(config, key, message, spec)
+            except ProviderFailure as error:
+                if error.code in ("authentication_failed", "redirect_blocked", "input_too_large"):
+                    dead[meta["serviceId"]] = error.code  # Further calls to this service cannot succeed.
+                raise
+            except (TimeoutError, asyncio.TimeoutError):
+                raise ProviderFailure("provider_timeout", unknown=True) from None
+            if not isinstance(raw, str) or key in raw:
+                raise ProviderFailure("invalid_response")
+            return raw
+        try:
+            if plan["memory"] == "carry":
+                raw = await ask(silicon.carry_prompt(plan, persona, scenario), {"mode": "carry", "questions": [silicon.question_spec(q) for q in design["questions"]]})
+                response["answers"] = silicon.assemble_carry(design, silicon.parse_carry(raw, design))
+            else:
+                answers = {}
+                for question in design["questions"]:
+                    shown = silicon.is_shown(question, answers)
+                    value, unclear = (None, "")
+                    if shown:
+                        value, unclear = silicon.parse_single(await ask(silicon.single_prompt(plan, persona, scenario, question, answers), {"mode": "single", "questions": [silicon.question_spec(question)]}))
+                    answers[question["id"]] = silicon.make_answer(question, shown, value, unclear)
+                response["answers"] = [answers[q["id"]] for q in design["questions"]]
+        except ProviderFailure as error:
+            response.update(status="failed", answers=[], error=error.code)
+        except ApiError:
+            response.update(status="failed", answers=[], error="invalid_response")
+        except Exception:
+            response.update(status="failed", answers=[], error="provider_failure")
+        return response, calls
+
+    async def silicon_worker(run_id, user_id, plan, services):
+        stop, dead, lock = asyncio.Event(), {}, asyncio.Semaphore(settings.silicon_concurrency)
+        per_unit = len(plan["design"]["questions"]) if plan["memory"] == "independent" else 1
+
+        def persist(response):
+            with DBSession(engine, expire_on_commit=False) as session:
+                scoped(session, user_id)
+                row = session.execute(select(SiliconRun).where(SiliconRun.id == run_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
+                if row is None or row.status != "running":
+                    stop.set()  # Cancelled or expired: keep what is stored, schedule nothing more.
+                    return
+                row.responses = [*row.responses, response]
+                row.done, row.updated_at = min(row.total, row.done + per_unit), now()
+                session.commit()
+
+        async def unit(persona, scenario, service):
+            async with lock:
+                if stop.is_set():
+                    return
+                response, _ = await silicon_unit(plan, persona, scenario, service, dead)
+                await asyncio.to_thread(persist, response)
+
+        try:
+            await asyncio.gather(*(unit(p, sc, sv) for p in plan["personas"] for sc in (plan["scenarios"] or [None]) for sv in services))
+
+            def finish():
+                with DBSession(engine, expire_on_commit=False) as session:
+                    scoped(session, user_id)
+                    row = session.execute(select(SiliconRun).where(SiliconRun.id == run_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
+                    if row is not None and row.status == "running":
+                        failed = sum(r["status"] == "failed" for r in row.responses)
+                        row.status = "failed" if row.responses and failed == len(row.responses) else "ready"
+                        row.error_code = next((r["error"] for r in row.responses if r["status"] == "failed"), None) if failed else None
+                        row.done, row.finished_at, row.updated_at = row.total, now(), now()
+                        session.commit()
+            await asyncio.to_thread(finish)
+        finally:
+            services.clear()  # Drop decrypted keys with the task.
+
+    @app.post("/api/projects/{project_id}/silicon-runs", status_code=202)
+    async def start_silicon_run(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
+        p, _ = owned_project(session, user, project_id, edit=True)
+        data = await body(request, ("design", "attributes", "personas", "scenarios", "memory", "shuffleOptions", "services", "expectedCalls", "idempotencyKey", "consent"), limit=400_000)
+        key_id = uuid_string(data["idempotencyKey"])
+        digest = keyed(settings, "silicon-consent/v1", canonical(data))
+        lock_user(session, user)
+        expire_silicon(session, user)
+        old = session.execute(select(SiliconRun).where(SiliconRun.project_id == p.id, SiliconRun.user_id == user.id, SiliconRun.idempotency_key == key_id)).scalar_one_or_none()
+        if old:
+            if old.payload_hash != digest:
+                raise ApiError(409, "idempotency_conflict", "操作标识已用于不同请求。")
+            session.commit()
+            return silicon_view(old)
+        if data["consent"] is not True:
+            raise ApiError(422, "consent_required", "运行前需要明确确认外部调用。")
+        if not callable(getattr(generator, "answer", None)):
+            raise ApiError(503, "capability_unavailable", "当前部署未启用硅基样本。")
+        plan = silicon.silicon_plan(data)
+        refs = data["services"]
+        if not isinstance(refs, list) or not 1 <= len(refs) <= silicon.LIMITS["services"]:
+            raise ApiError()
+        chosen = []
+        for ref in refs:
+            r = object_fields(ref, ("serviceId", "serviceRevision"))
+            s = owned_service(session, user, r["serviceId"])
+            if any(s.id == c.id for c in chosen):
+                raise ApiError()
+            if integer(r["serviceRevision"], 1) != s.revision:
+                raise ApiError(409, "revision_conflict", "服务配置已变化。")
+            if "research" not in s.capabilities:
+                raise ApiError(422, "capability_unavailable", "所选服务未启用研究能力。")
+            chosen.append(s)
+        total = silicon.planned_calls(plan, len(chosen))
+        if total > settings.silicon_max_calls:
+            raise ApiError(422, "run_too_large", f"本次运行需要 {total} 次模型调用，超过上限 {settings.silicon_max_calls}。")
+        if integer(data["expectedCalls"], 1, 1000) != total:
+            raise ApiError(409, "estimate_conflict", "调用次数估计已变化，请重新确认。")
+        p, _ = owned_project(session, user, project_id, edit=True, lock=True)
+        if session.scalar(select(func.count()).select_from(SiliconRun).where(SiliconRun.user_id == user.id, SiliconRun.status == "running")):
+            raise ApiError(429, "call_active", "已有硅基样本运行正在进行。")
+        if session.scalar(select(func.count()).select_from(SiliconRun).where(SiliconRun.user_id == user.id, SiliconRun.created_at > now() - timedelta(hours=1))) >= settings.silicon_hourly_runs:
+            raise ApiError(429, "call_rate_limit", f"每小时最多 {settings.silicon_hourly_runs} 次硅基样本运行。")
+        names, services = [], []
+        for s in chosen:
+            config, key = config_view(s), decrypt(settings, s)
+            if key in canonical(plan):
+                raise ApiError(422, "sensitive_input", "画像或问卷内容不能包含服务密钥。")
+            name = f"{s.label} · {s.model}"
+            name = name if name not in names else f"{name} #{names.count(name) + 1}"
+            names.append(name)
+            services.append(({"serviceId": s.id, "serviceRevision": s.revision, "name": name}, config, key))
+        run = SiliconRun(id=new_id(), user_id=user.id, project_id=p.id, idempotency_key=key_id, payload_hash=digest, status="running",
+                         services=[meta for meta, _, _ in services], plan=plan, total=total, done=0, responses=[])
+        session.add(run)
+        session.commit()  # Durable reservation BEFORE any provider call; never replayed automatically.
+        task = asyncio.create_task(silicon_worker(run.id, user.id, plan, services))
+        app.state.silicon_tasks.add(task)
+        task.add_done_callback(app.state.silicon_tasks.discard)
+        return silicon_view(run)
+
+    @app.get("/api/projects/{project_id}/silicon-runs")
+    def list_silicon_runs(project_id: str, user=Depends(auth), session=Depends(db)):
+        p, _ = owned_project(session, user, project_id)
+        expire_silicon(session, user)
+        rows = session.execute(select(SiliconRun).where(SiliconRun.project_id == p.id, SiliconRun.user_id == user.id)
+                               .order_by(SiliconRun.created_at.desc(), SiliconRun.id.desc()).limit(30)).scalars().all()
+        session.commit()
+        return {"runs": [silicon_view(row) for row in rows]}
+
+    def silicon_row(session, user, project_id, run_id, lock=False):
+        p, _ = owned_project(session, user, project_id)
+        uuid_string(run_id)
+        expire_silicon(session, user)
+        query = select(SiliconRun).where(SiliconRun.id == run_id, SiliconRun.project_id == p.id, SiliconRun.user_id == user.id).execution_options(populate_existing=True)
+        row = session.execute(query.with_for_update() if lock else query).scalar_one_or_none()
+        if not row:
+            raise ApiError(404, "not_found", "运行记录不存在。")
+        return row
+
+    @app.get("/api/projects/{project_id}/silicon-runs/{run_id}")
+    def get_silicon_run(project_id: str, run_id: str, user=Depends(auth), session=Depends(db)):
+        row = silicon_row(session, user, project_id, run_id)
+        session.commit()
+        return silicon_view(row, full=True)
+
+    @app.post("/api/projects/{project_id}/silicon-runs/{run_id}/cancel")
+    def cancel_silicon_run(project_id: str, run_id: str, user=Depends(auth), session=Depends(db)):
+        row = silicon_row(session, user, project_id, run_id, lock=True)
+        if row.status == "running":
+            # Calls already sent may still be billed; only unsent ones are skipped.
+            row.status, row.error_code, row.finished_at, row.updated_at = "cancelled", "cancelled_by_user", now(), now()
+        session.commit()
+        return silicon_view(row, full=True)
 
     return app
