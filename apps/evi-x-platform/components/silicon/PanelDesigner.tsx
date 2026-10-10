@@ -34,7 +34,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
 
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-template">
-      <div className={styles.blockHead}><h3 id="sx-template">从一个起点开始</h3><p>模板只提供常见属性，所有名称与比例都可改；比例是你的研究假设，不是人口统计。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-template">选择画像模板</h3><p>属性与比例均可修改；配额为研究假设，不代表真实人口结构。</p></div>
       <div className={styles.templateRow} role="radiogroup" aria-label="画像模板">
         {Object.entries(PANEL_TEMPLATES).map(([key, t]) => <button type="button" key={key} role="radio" aria-checked={config.template === key} className={styles.templateCard} onClick={() => applyTemplate(key)}>
           <strong>{t.label}</strong><small>{t.description}</small><span>{t.attributes.map(a => a.label).join(' · ')}</span>
@@ -43,7 +43,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
     </section>
 
     <section className={styles.block} aria-labelledby="sx-size">
-      <div className={styles.blockHead}><h3 id="sx-size">样本规模与分配</h3><p>预测试通常 12–40 位就足以暴露题目问题；更多并不意味着更“真实”。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-size">样本规模与分配</h3><p>可先用少量画像走查题目；增加模拟人数不能证明结果更真实。</p></div>
       <div className={styles.sizeRow}>
         <label className={styles.sizeField}><span>硅基受访者人数</span>
           <span className={styles.sizeControl}><input type="range" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Number(e.target.value) })} aria-describedby="sx-size-hint"/><input type="number" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Math.max(1, Math.min(SILICON_LIMITS.personas, Number(e.target.value) || 1)) })} aria-label="人数"/></span>
@@ -53,7 +53,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
           <label><input type="radio" name="sx-allocation" checked={config.allocation === 'quota'} onChange={() => update({ allocation: 'quota' })}/><span>精确配额<small>每个属性的边际比例严格对齐</small></span></label>
           <label><input type="radio" name="sx-allocation" checked={config.allocation === 'random'} onChange={() => update({ allocation: 'random' })}/><span>独立抽取<small>按比例随机，会有波动</small></span></label>
         </fieldset>
-        <div className={styles.seedBox}><span>随机种子 <code>{config.seed}</code></span><button type="button" onClick={() => update({ seed: Math.floor(Math.random() * 2 ** 31) })}>换一批画像</button><small>同一种子总得到同一批人，便于复现。</small></div>
+        <div className={styles.seedBox}><span>随机种子 <code>{config.seed}</code></span><button type="button" onClick={() => update({ seed: Math.floor(Math.random() * 2 ** 31) })}>换一批画像</button><small>相同设定与种子可复现同一批画像。</small></div>
       </div>
       <label className={styles.wideField}><span>共同背景（可选）</span><textarea rows={2} maxLength={SILICON_LIMITS.background} value={config.background} onChange={e => update({ background: e.target.value })} placeholder="例如：就读于华东某综合性大学，住在校内宿舍。会写进每位硅基受访者的设定。"/></label>
     </section>
@@ -86,8 +86,8 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
     </section>
 
     <section className={styles.block} aria-labelledby="sx-roster">
-      <div className={styles.blockHead}><h3 id="sx-roster">硅基受访者名册</h3><p>点选任一位，可在舞台旁调整外观与个人背景。外观只用于辨认，不进入模型设定。</p></div>
-      {elevated > 0 && <p className={styles.riskNote}><b>保真度提示</b>{elevated} 位画像涉及{reasons.join('、')}。语言模型对这些人群的模拟通常更不可靠，结果只能作为题目表述的参考，不能代表他们的真实看法。</p>}
+      <div className={styles.blockHead}><h3 id="sx-roster">硅基受访者名册</h3><p>点选人物可调整外观与背景；外观只供辨认，不进入模型设定。</p></div>
+      {elevated > 0 && <p className={styles.riskNote}><b>保真度提示</b>{elevated} 位画像涉及{reasons.join('、')}。请用真人预调查核验；模拟结果仅供检查题目表述，不代表这些人群的观点。</p>}
       <ul className={styles.roster}>
         {(showAll ? personas : personas.slice(0, ROSTER_PREVIEW)).map((p, i) => <li key={p.id}>
           <button type="button" aria-pressed={selectedId === p.id} onClick={() => onSelect(p.id)}>

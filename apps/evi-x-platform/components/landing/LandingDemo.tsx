@@ -149,7 +149,7 @@ export default function LandingDemo() {
         </div>
 
         {view === 'questionnaire' && <div className={styles.questionnaire} role="region" aria-label="问卷设计示例">
-          <div className={styles.viewHeading}><span className={styles.eyebrow}>01 / ASK A BETTER QUESTION</span><h4>把一个好奇，写成可回答的问题。</h4><p>点击题目或选项就能改写。这里编辑的是调查工具。</p></div>
+          <div className={styles.viewHeading}><span className={styles.eyebrow}>01 / ASK A BETTER QUESTION</span><h4>把一个好奇，写成可回答的问题。</h4><p>点击题目或选项即可改写。</p></div>
           <div className={styles.questionIndex} role="group" aria-label="选择示例题目">{state.questions.map((q, index) => <button type="button" key={q.id} aria-pressed={selected === index} onClick={() => { setSelected(index); dispatch({ type: 'end-edit' }); setNotice(`正在编辑第 ${index + 1} 题：${q.short}。`); }}><span>0{index + 1}</span>{q.short}</button>)}</div>
           <div className={styles.questionEditor}>
             <div className={styles.questionMeta}><span>Q{selected + 1}</span><span>单选题</span><span>{question.options.length} 个选项</span></div>
@@ -171,7 +171,7 @@ export default function LandingDemo() {
             {sample.rows.map(row => <div className={styles.chartRow} key={row.label}><div className={styles.chartLabel}><strong>{row.label}</strong><span>午间 {row.noon} · 晚间 {row.evening}</span></div><div className={styles.barTrack} role="img" aria-label={`${row.label}：午间 ${row.noon} 条，晚间 ${row.evening} 条，共 ${row.noon + row.evening} 条`}><span className={styles.noonBar} style={{ width: `${row.noon / sample.total * 100}%` }}/><span className={styles.eveningBar} style={{ width: `${row.evening / sample.total * 100}%` }}/></div></div>)}
             <div className={styles.chartAxis} aria-hidden="true"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
           </figure>
-          <div className={styles.sampleReading}><span>{distributed ? '覆盖更分散，仍需检查代表性。' : '先看见了谁，也要问漏掉了谁。'}</span><p>{distributed ? '同样 24 条记录，分布到 3 个区域和 2 个时段。时空覆盖增加了，但它仍不是随机样本，也不能直接代表所有消费者。下一步还需核对招募方式、拒访与未到店人群。' : '记录集中在雨天午间、已经来到这家店的人。其他区域、其他时段，以及没有选择它的人都未被覆盖。此时直接总结“人们为什么选择”，范围就超出了记录本身。'}</p></div>
+          <div className={styles.sampleReading}><span>{distributed ? '覆盖更分散，仍需检查代表性。' : '先看见了谁，也要问漏掉了谁。'}</span><p>{distributed ? '24 条记录覆盖 3 个区域、2 个时段，仍属非随机样本。判断代表性还需核对招募方式、拒访与未到店人群。' : '记录仅覆盖雨天午间的到店者，遗漏其他区域、时段与未到店人群，结论只能描述这批记录。'}</p></div>
         </div>}
 
         {view === 'report' && <div className={styles.report} role="region" aria-label="研究报告结构示例">

@@ -289,7 +289,7 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
         <div className={styles.title}><span className={styles.eyebrow}>ONLYOFFICE · {file.kind.toUpperCase()} · v{file.revision}</span><h2>{file.filename}</h2><p>{statusText}</p></div>
         <button ref={closeButton} className={styles.close} type="button" disabled={effectivePhase === "waiting"} onClick={requestClose} aria-label="关闭编辑器并检查保存状态">关闭编辑器</button>
       </header>
-      <div className={styles.notice} role="status"><span className={busy ? styles.pulse : styles.dot} aria-hidden="true"/><strong>{statusText}</strong><span>原文件库只在服务器回调通过校验并生成不可变版本后显示“已保存”。</span></div>
+      <div className={styles.notice} role="status"><span className={busy ? styles.pulse : styles.dot} aria-hidden="true"/><strong>{statusText}</strong><span>服务器确认保存回调并生成新版本后，文件库才显示“已保存”。</span></div>
       {frozen && launch && <p className={styles.liveError} role="alert">当前身份正在切换。已打开的旧会话会继续保留，保存目标仍是原身份，绝不会自动转入新身份。请确认保存状态后再关闭；如状态无法查询，请下载旧版并联系管理员核对。</p>}
       {error && iframeVisible && <p className={styles.liveError} role="alert">{error} 当前编辑界面仍保留；请先检查文档状态，不要直接关闭或刷新。</p>}
       {iframeVisible && launch && <iframe ref={iframe} className={styles.frame} title={`ONLYOFFICE 编辑 ${file.filename}`} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads" referrerPolicy="no-referrer" src={launch.shellUrl} onLoad={initFrame}/>}
@@ -302,12 +302,12 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
         {effectivePhase === "unconfirmed" && <p>没有得到新版本确认。不要把这次编辑视为已保存；请保留原件并稍后在文件库刷新核对。</p>}
         {effectivePhase === "conflict" && recovery && <><p>服务器已保留一个独立的编辑副本，{recovery.expiresAt ? `可下载至 ${new Date(recovery.expiresAt).toLocaleString("zh-CN")}` : "当前不自动清理"}。{recoveryRemaining !== null && recoveryRemaining <= 0 ? "已到期，不能再下载。" : recoveryRemaining !== null && recoveryRemaining <= 48 * 60 * 60 * 1000 ? "已接近到期，请立即下载。" : "请及时下载核对。"}它不是当前正式版本。</p><button type="button" className={styles.primary} disabled={recoveryBusy || (recoveryRemaining !== null && recoveryRemaining <= 0)} onClick={() => void downloadRecovery()}>{recoveryBusy ? "校验并下载中…" : recoveryDownloaded ? "重新下载冲突副本" : "下载冲突编辑副本"}</button></>}
         {effectivePhase === "closed" && <p>文档服务报告本次没有变更，原有版本保持不变。</p>}
-        {effectivePhase === "saved" && <p>新版本由服务端存储并经版本竞争检查；旧版本未覆盖。返回后请下载核对排版。</p>}
+        {effectivePhase === "saved" && <p>新版本已保存，旧版本保留。返回后请下载核对排版。</p>}
         {effectivePhase === "frozen" && <p>身份变化后不会自动把旧会话内容写入新身份。请刷新并重新确认文件归属。</p>}
         {effectivePhase === "unconfirmed" && <button type="button" onClick={() => { setError(""); setPollAttempt(0); view("waiting"); }}>重新检查保存状态</button>}
         {!busy && <button type="button" className={styles.primary} onClick={requestClose}>{effectivePhase === "saved" ? "刷新文件库并返回" : "返回文件库"}</button>}
       </div>}
-      <footer className={styles.footer}><span>当前接入为受限单人编辑；暂不承诺协同、实时自动入库或赛事官方提交。</span><span>文件将交给本部署配置的 ONLYOFFICE 服务处理；请确认其部署位置与权限。旧版本不可覆盖。</span></footer>
+      <footer className={styles.footer}><span>当前支持单人编辑，关闭后确认保存；赛事材料需另行提交。</span><span>文件将发送至本部署的 ONLYOFFICE 服务，请核对部署位置与权限。旧版本保留。</span></footer>
     </section>
   </div>, document.body);
 }

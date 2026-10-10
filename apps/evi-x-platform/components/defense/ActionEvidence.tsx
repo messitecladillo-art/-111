@@ -12,7 +12,7 @@ import styles from './ActionEvidence.module.css';
 const groups: {title:string; hint:string; fields:ActionField[]}[] = [
   {title:'从哪条发现出发', hint:'把研究依据、对象和责任人放在同一张卡里。', fields:['title','finding','audience','owner','artifactVersion']},
   {title:'这次最多能说到哪里', hint:'写下有限的成果声明，不用演示或认可代替真实实施记录。', fields:['claim','periodScope','evidence']},
-  {title:'留下反证与下一步', hint:'指标、对照和限制服务于复核，不是填满就通过的证明。', fields:['metrics','comparison','counterEvidence','limitations','nextStep']},
+  {title:'留下反证与下一步', hint:'用指标、对照和限制说明如何复核。', fields:['metrics','comparison','counterEvidence','limitations','nextStep']},
 ];
 
 /** A local, user-authored worksheet. No file resolution, review approval or Gate transition. */
@@ -64,7 +64,7 @@ export default function ActionEvidence() {
     if(!removeId||!records.current.some(item=>item.id===removeId))return;
     const next=records.current.filter(item=>item.id!==removeId);
     invalidate();publish(next);setSelected(next[0]?.id||'');
-    setNotice('已移除此卡的页面内存副本；其他卡片、答辩笔记和彩排记录未变。可从此前导出的文件恢复。');
+    setNotice('已移除此卡。可从此前导出的文件恢复；其他卡片、答辩笔记和彩排记录保留。');
   };
   const cancelImport = () => {
     readToken.current++;setReading(false);setPending(null);setError('');
@@ -104,10 +104,10 @@ export default function ActionEvidence() {
 
   return <section className={styles.panel} aria-labelledby="action-evidence-title">
     <header className={styles.heading}>
-      <div><span className={styles.kicker}>从建议到记录</span><h3 id="action-evidence-title">建议落地证据卡</h3><p>一项行动，一张卡。把“做到了哪一步”和“凭什么这样说”放在一起。</p></div>
+      <div><span className={styles.kicker}>从建议到记录</span><h3 id="action-evidence-title">建议落地证据卡</h3><p>每张卡记录一项行动的进展与依据。</p></div>
       <span className={styles.badge}>用户声明 · 证据未核验</span>
     </header>
-    <p className={styles.boundary}>这不是进度等级或成果认证。填写材料版本、日期或页码不会打开或验证文件，也不绑定项目修订。原型、反馈、采纳、实施与效果各自需要依据，不能自动互相推出。</p>
+    <p className={styles.boundary}>材料版本、日期和页码由你填写，未核验文件或绑定项目修订。原型、反馈、采纳、实施与效果各需依据，不能互相推出。</p>
     <div className={styles.toolbar}>
       <strong>{cards.length} / {MAX_ACTION_CARDS} 张卡</strong>
       <button type="button" className={styles.primary} onClick={add} disabled={cards.length>=MAX_ACTION_CARDS}>新增成果卡</button>
@@ -128,10 +128,10 @@ export default function ActionEvidence() {
     </section>}
     {error&&<p role="alert" className={styles.error}>{error} 当前卡片未被导入覆盖。</p>}
     <p className={styles.notice} role="status">{notice}</p>
-    {!card?<div className={styles.empty}><strong>先挑一条你最想在答辩中展示的建议</strong><p>新增空白卡，从支撑发现开始。系统不会填入虚构的实施、合作或效果。</p></div>:<div className={styles.workspace}>
+    {!card?<div className={styles.empty}><strong>选择一条准备在答辩中展示的建议</strong><p>新增成果卡，填写支撑这条建议的发现。</p></div>:<div className={styles.workspace}>
       <aside className={styles.cards} aria-label="成果卡列表">{cards.map((item,index)=><button type="button" key={item.id} aria-pressed={card.id===item.id} onClick={()=>{setSelected(item.id);setRemoveId('');}}><span>行动 {String(index+1).padStart(2,'0')}</span><strong>{item.title||'未命名成果卡'}</strong><small>{ACTION_STAGES.find(s=>s.id===item.stage)?.label} · 未核验</small></button>)}</aside>
       <article className={styles.editor} aria-label="成果卡编辑区">
-        <fieldset className={styles.stages}><legend>选择声明类别 · 由你填写，不是升级路线</legend><div>{ACTION_STAGES.map(item=><label key={item.id} data-selected={card.stage===item.id}><input type="radio" name={`action-stage-${card.id}`} value={item.id} checked={card.stage===item.id} onChange={()=>patch({stage:item.id as ActionStage})}/><span>{item.label}</span></label>)}</div></fieldset>
+        <fieldset className={styles.stages}><legend>选择声明类别 · 自报</legend><div>{ACTION_STAGES.map(item=><label key={item.id} data-selected={card.stage===item.id}><input type="radio" name={`action-stage-${card.id}`} value={item.id} checked={card.stage===item.id} onChange={()=>patch({stage:item.id as ActionStage})}/><span>{item.label}</span></label>)}</div></fieldset>
         <div className={styles.stageNote}><strong>{stage?.prompt}</strong><p>{stage?.boundary}</p></div>
         {groups.map(group=><section key={group.title} className={styles.group}><h4>{group.title}</h4><p>{group.hint}</p><div className={styles.fields}>{group.fields.map(id=>{
           const field=ACTION_FIELDS.find(item=>item.id===id)!;

@@ -12,7 +12,7 @@ type ApiBody={configured:boolean;connected:boolean;identityMode?:'local_demo'|'e
 async function api(path:string, options:RequestInit={}) {
   const response=await fetch(path,{...options,credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(45000),headers:{'content-type':'application/json',...options.headers}});
   const body=await response.json() as ApiBody;
-  if(!response.ok)throw new Error(body.result?.error?.message||body.error?.message||'操作暂时未完成，请先检查当前配置或调用记录。');
+  if(!response.ok)throw new Error(body.result?.error?.message||body.error?.message||'操作未完成，请检查配置或调用记录。');
   return body;
 }
 export default function AgentServiceStudio({onProposal}:{onProposal:(proposal:AgentQuestionnaireProposal)=>void}) {
@@ -44,21 +44,21 @@ export default function AgentServiceStudio({onProposal}:{onProposal:(proposal:Ag
   function edit(service:ServiceConfig){if(busy)return;setForm({...service});setKey('');clearResult();setNotice('修改配置时，留空密钥表示保留原密钥；更换服务商须重新填写。');}
   async function save(event:FormEvent){event.preventDefault();await action(async()=>{
     const service={id:form.id||crypto.randomUUID(),label:form.label,provider:form.provider,baseUrl:form.baseUrl,model:form.model,capabilities:form.capabilities,maxOutputTokens:form.maxOutputTokens,...(key?{apiKey:key}:{})};
-    try{const result=await api('/api/agent/services',{method:'POST',body:JSON.stringify({service,expectedRevision:form.revision})});setForm({...result.service});await reload();clearResult();setNotice('配置已保存。密钥不会回传；保存不会调用模型。');}finally{setKey('');}
+    try{const result=await api('/api/agent/services',{method:'POST',body:JSON.stringify({service,expectedRevision:form.revision})});setForm({...result.service});await reload();clearResult();setNotice('配置已保存，未调用模型。');}finally{setKey('');}
   });}
   async function call(service:ServiceConfig,kind:'test'|'questionnaire') {await action(async()=>{
     clearResult();
     const body=await api(`/api/agent/services/${service.id}/call`,{method:'POST',body:JSON.stringify({callId:crypto.randomUUID(),serviceRevision:service.revision,kind,...(kind==='questionnaire'?{brief,confirmSharing:consent}:{})})});
-    if(kind==='test'){setNotice('模型列表连接成功，服务商接受鉴权且列出所选模型；尚未验证实际生成。');return;}
+    if(kind==='test'){setNotice('鉴权通过，模型列表包含所选模型；实际生成尚未验证。');return;}
     setOutput(body.result.text);setConsent(false);
     const tokens=body.result.usage;
     setUsage(tokens?`服务商报告：输入 ${tokens.inputTokens}，输出 ${tokens.outputTokens} tokens。费用以服务商账单为准。`:'服务商未提供可核验的 token 用量，费用以账单为准。');
     try{setProposal({id:body.callId,serviceId:service.id,serviceRevision:service.revision,model:service.model,design:parseAgentQuestionnaire(body.result.text)});setNotice('问卷草案已生成。请核对题项后带入问卷工作台。');}
-    catch{setNotice('已收到文本建议，但结构不符合导入契约。请审阅文本；没有改动现有问卷。');}
+    catch{setNotice('建议格式无法导入，请查看原始文本。现有问卷未改动。');}
     if(body.auditWarning)setNotice(previous=>`${previous} 调用记录未完整保存，请先核查服务商用量，勿重复发起同一请求。`);
   });}
   return <section className={styles.studio} aria-label="服务接入工作台">
-    <header className={styles.hero}><span>YOUR SERVICES · YOUR RESEARCH</span><h2>为研究能力接入你的模型</h2><p>选题、问卷、报告与答辩可以共用一份配置，也可以分别选择服务。统计计算继续由工作台的工具完成。</p><div className={styles.steps}><b>01 配置服务</b><b>02 检查连接</b><b>03 生成建议</b><b>04 确认应用</b></div></header>
+    <header className={styles.hero}><span>YOUR SERVICES · YOUR RESEARCH</span><h2>接入你的模型</h2><p>为选题、问卷、报告和答辩绑定模型服务。统计数值由工作台工具计算。</p><div className={styles.steps}><b>01 配置服务</b><b>02 检查连接</b><b>03 生成建议</b><b>04 确认应用</b></div></header>
     <div className={styles.session}><div><strong>{connected?'你的服务工作区已连接':identityMode==='local_demo'?'本地合成验收模式':'受邀邮箱登录'}</strong><p>{identityMode==='local_demo'?'此站点使用独立合成数据库，按浏览器会话隔离。请勿填写真实密钥。正式站点使用受邀邮箱登录。':'邮箱验证后，服务配置绑定你的账号。登录会话有效期 30 天，可主动退出；你的密钥不会在页面显示。'}</p></div>{(connected||identityMode==='local_demo')&&<div className={styles.buttons}><button type="button" disabled={busy||!configured} onClick={()=>action(async()=>{if(!connected)await api('/api/agent/session',{method:'POST'});setConnected(true);await reload();setNotice('工作区已连接，可以配置你的模型服务。');})}>{connected?'刷新配置':'连接合成工作区'}</button>{connected&&<button type="button" disabled={busy} onClick={()=>action(async()=>{await api('/api/agent/session',{method:'DELETE'});setConnected(false);setServices([]);setForm(blank());setKey('');setSelected('');clearResult();setNotice('已退出。');})}>退出登录</button>}</div>}</div>
     {!connected&&identityMode==='email_account'&&<form className={styles.card} onSubmit={event=>{event.preventDefault();void action(async()=>{await api('/api/agent/auth/verify',{method:'POST',body:JSON.stringify({email,code})});setCode('');setKey('');clearResult();setForm(blank());setConnected(true);await reload();setNotice('邮箱已验证，可以接入你的模型服务。');});}}><fieldset disabled={busy||!configured||!emailAvailable} className={styles.fields}><label>受邀邮箱<input type="email" autoComplete="email" required maxLength={254} value={email} onChange={e=>{setEmail(e.target.value);setCode('');}}/></label><div className={styles.buttons}><button type="button" disabled={!email.trim()} onClick={()=>action(async()=>{const result=await api('/api/agent/auth/code',{method:'POST',body:JSON.stringify({email})});setNotice(result.message||'如该邮箱已受邀，验证码会发送到邮箱。');})}>发送验证码</button></div><label>六位验证码<input autoComplete="one-time-code" inputMode="numeric" required pattern="[0-9]{6}" maxLength={6} value={code} onChange={e=>setCode(e.target.value)}/></label><button type="submit" className={styles.primary}>验证邮箱并登录</button></fieldset>{!emailAvailable&&<p className={styles.hint}>管理员需要先配置发信服务和受邀邮箱名单，才能开放登录。</p>}</form>}
     {error&&<p role="alert" className={styles.error}>{error}</p>}{notice&&<p role="status" className={styles.notice}>{notice}</p>}
@@ -72,7 +72,7 @@ export default function AgentServiceStudio({onProposal}:{onProposal:(proposal:Ag
           <label>API Key<input type="password" required={!form.id} autoComplete="new-password" maxLength={512} placeholder={form.id?'留空保留原密钥':'只在这里填写，保存后清空'} value={key} onChange={e=>setKey(e.target.value)}/></label>
           <p className={styles.hint}>密钥由服务端加密保管，不写入浏览器存储或生成日志。更换地址时须提供新密钥。</p>
           <label>单次输出上限<input type="number" min={128} max={4096} step={128} value={form.maxOutputTokens} onChange={e=>setForm({...form,maxOutputTokens:Number(e.target.value)})}/></label>
-          <div><span>这份配置服务哪些能力</span><div className={styles.choices}>{SERVICE_CAPABILITIES.map(capability=><label key={capability}><input type="checkbox" checked={form.capabilities.includes(capability)} onChange={e=>setForm({...form,capabilities:e.target.checked?[...form.capabilities,capability]:form.capabilities.filter(c=>c!==capability)})}/>{NAMES[capability]}</label>)}</div><p className={styles.hint}>本阶段开放问卷草案执行，其余能力先保存绑定。最多保存 8 份配置。</p></div>
+          <div><span>能力绑定</span><div className={styles.choices}>{SERVICE_CAPABILITIES.map(capability=><label key={capability}><input type="checkbox" checked={form.capabilities.includes(capability)} onChange={e=>setForm({...form,capabilities:e.target.checked?[...form.capabilities,capability]:form.capabilities.filter(c=>c!==capability)})}/>{NAMES[capability]}</label>)}</div><p className={styles.hint}>此入口可生成问卷草案，其余能力仅保存绑定。最多 8 份配置。</p></div>
           <button type="submit" className={styles.primary} disabled={!form.capabilities.length}>保存配置</button>
         </fieldset>
       </form>

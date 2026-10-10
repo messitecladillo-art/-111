@@ -427,7 +427,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       <span className={styles.saveStatus}>全文排版引擎待接入 · 原文件独立保存</span>
     </div>
     {!localOnly&&<EditorRecovery onBeforeRestore={beforeRestore}/>}
-    {localOnly&&<div className={styles.notice}><span>本地报告与 PPT 编辑 · 原有编辑、分镜、撤销和原生导出继续可用。云端作品与 Office 文件库将在成果编辑阶段接入。</span><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
+    {localOnly&&<div className={styles.notice}><span>本地编辑模式，支持分镜、撤销和 Word / PPTX 导出。请下载 JSON 保存进度。</span><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
     {identityFrozen && <div className={styles.notice} role="alert"><span>身份切换保护已开启：当前页不再读写服务器作品。请先导出未保存内容，再手动刷新；页面不会自动丢弃正文。</span><button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载当前正文备份</button></div>}
     {!localOnly&&fileLibraryOpen&&<div><OfficeFileLibrary/></div>}
     <div hidden={fileLibraryOpen}>
@@ -444,7 +444,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       <button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载 JSON 备份</button>
       <button type="button" disabled={locked} onClick={() => importInput.current?.click()}>恢复备份</button>
       <input ref={importInput} type="file" accept="application/json,.json" hidden onChange={e => { void importBackup(e.target.files?.[0]); e.target.value = ""; }}/>
-      <details className={styles.storageNote}><summary>保存与隐私</summary><p>正文与讲稿保存到服务器草稿库。登录用户按账户隔离；未登录时使用此浏览器的私密会话。请提前在“身份与恢复”保存恢复密钥，以便清除 Cookie 或会话过期后找回同一文件库；未保存密钥时只能用自行下载的备份恢复内容。密钥不是文件备份，服务器数据仍需保留。请定期导出 JSON 备份，不填写原始问卷、个人信息或未授权资料。此处为单人实时预览，不是多人协同编辑。</p></details>
+      <details className={styles.storageNote}><summary>保存与隐私</summary><p>正文与讲稿保存到服务器，按账户或浏览器私密会话隔离。匿名用户请提前在“身份与恢复”保存恢复密钥，以便 Cookie 丢失或会话过期后找回文件库；未设置密钥时只能导入自行下载的备份。密钥不能代替文件备份，服务器数据仍需保留。请定期导出 JSON，不填写原始问卷、个人信息或未授权资料。当前支持单人编辑。</p></details>
     </div>
     <div className={styles.versionManager}>
       <div><strong>命名版本</strong><p>自动保存当前进度；在关键节点保留独立版本。每份作品最多 20 个，不自动删除。</p></div>
@@ -506,7 +506,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
         <div className={styles.previewFoot}><span>{mode === "report" ? `${content.report.reduce((n, s) => n + s.body.length, 0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span><span>预览为版式参考 · 导出后复核分页与字体</span></div>
       </div>
     </div>
-    <p className={styles.boundary}>模板是写作提示，不是实际调研结果。导出保留文字和讲稿，不自动加入系统品牌；提交前仍需核对当届规则、匿名要求和 AI 披露。此版本不导入原有 Word / PowerPoint 排版。</p>
+    <p className={styles.boundary}>模板仅作写作提示。导出保留文字和讲稿，不添加系统品牌；提交前请核对当届规则、匿名要求和 AI 披露。此处不支持导入原有 Word / PowerPoint 排版。</p>
     <dialog ref={presentRef} className={styles.presentation} aria-label="幻灯片演示预览" onCancel={() => setPresenting(false)} onKeyDown={event => {
       if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }

@@ -120,10 +120,10 @@ export function diagnoseProject(input: DiagnosisInput): DiagnosisResult {
       requiredGates: nextTransition ? [...nextTransition.requiredGates] : [],
       requiredArtifacts: nextTransition ? [...nextTransition.requiredArtifacts] : [],
       authority: "canonical_contract_read_only",
-      note: "这是权威工作流契约中的只读材料清单，不代表 Gate 已通过或阶段已推进。",
+      note: "只读材料清单；Gate 与阶段状态以本机控制程序为准。",
     },
     disclaimer:
-      "该分数是依据自报阶段、自报证据成熟度、文字长度与关键词生成的启发式准备度提示，未核验内容、来源、田野或数据；不是获奖概率、质量认证或 Gate 结论。",
+      "分数依据自报阶段、证据成熟度、文字长度与关键词提示准备度；内容、来源、田野与数据未核验，不代表获奖概率、质量认证或 Gate 结论。",
   };
 }
 

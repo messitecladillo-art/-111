@@ -25,11 +25,11 @@ export default function DiagnosisBriefProposal({source,design,revision,pending,o
     }catch(e){setError(e instanceof Error?e.message:'提案未应用，当前设计保留。');}
   }
   return <section className={styles.panel} aria-label="诊断到问卷的待确认提案">
-    <div className={styles.heading}><div><span>诊断 → 设计 · 待确认</span><h3>先看变化，再写入问卷</h3></div><button type="button" onClick={onCancel}>取消提案</button></div>
-    <p>来自本轮自报项目“{source.input.title}”。决策主体：{source.input.decisionOwner}。仅整理输入，不证明证据已核验。</p>
-    <p>只改变勾选的简介字段；保留现有题目、显示条件、抽样和预试记录。应用后可撤销；设计仍是待实施草稿。</p>
+    <div className={styles.heading}><div><span>诊断 → 设计 · 待确认</span><h3>核对简介字段变化</h3></div><button type="button" onClick={onCancel}>取消提案</button></div>
+    <p>来自本轮项目输入“{source.input.title}”。决策主体：{source.input.decisionOwner}。内容按输入整理，证据仍待核验。</p>
+    <p>应用勾选的简介字段后可撤销；题目、显示条件、抽样和预试记录保留，设计仍为待实施草稿。</p>
     {preview&&!current&&<p className={styles.warning} role="status">预览后设计发生过修改，旧提案已失效。即使撤销到原文，也需重新预览。</p>}
-    {pending&&<p className={styles.warning}>请先完成问卷中未结束的输入、导入或确认操作；不会丢弃未应用输入。</p>}
+    {pending&&<p className={styles.warning}>请先完成问卷中的输入、导入或确认操作；未应用输入仍保留。</p>}
     <button type="button" disabled={pending} onClick={previewChanges}>{preview?'重新预览字段变化':'比较当前设计与提案'}</button>
     {preview&&current&&<><div className={styles.fields}>{preview.proposal.fields.map(field=><article key={field.key}>
       <label className={styles.choose}><input type="checkbox" checked={selected.includes(field.key)} disabled={!!field.error||field.before===field.after} onChange={e=>setSelected(old=>e.target.checked?[...old,field.key]:old.filter(k=>k!==field.key))}/><strong>{field.label}</strong><span>{field.before===field.after?'内容相同':field.before.trim()?'需明确选择覆盖':'当前为空'}</span></label>

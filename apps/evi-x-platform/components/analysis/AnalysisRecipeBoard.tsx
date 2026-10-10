@@ -142,7 +142,7 @@ export default function AnalysisRecipeBoard({ table, profile, missingCodes, hash
     return { schema: ANALYSIS_PLAN_VERSION, title: planTitle, template, nodes: cards.map(nodeOnly), source, missingCodes };
   }
   function savePlan() {
-    try { download(serializePlan(buildPlan()), '分析方案.json'); setNotice('已生成方案下载。文件保存模块配置、变量名和筛选取值；不含答卷或计算结果。重开时先读取同一数据及相同解析、缺失设置，再导入方案。'); }
+    try { download(serializePlan(buildPlan()), '分析方案.json'); setNotice('已生成方案文件，含模块配置、变量名和筛选取值，不含答卷或结果。重开时先读取原数据，恢复原解析与缺失设置，再导入方案。'); }
     catch (e) { setNotice((e as Error).message); }
   }
   async function readPlan(file: File) {
@@ -167,20 +167,20 @@ export default function AnalysisRecipeBoard({ table, profile, missingCodes, hash
     try {
       const plan = restorePlan(serializePlan(preview.plan), source, missingCodes);
       touch(); setCards(plan.nodes); setPlanTitle(plan.title); setTemplate(plan.template); setDeleted(null); setActiveId(plan.nodes[0]?.id || ''); setMode('free'); setPreview(null);
-      setNotice('已载入模块配置，请核对后逐项计算。文件中的旧结果与批准状态不会载入。');
+      setNotice('已载入模块配置，请核对后逐项计算；旧结果与批准状态不载入。');
     } catch (e) { setNotice((e as Error).message); }
   }
   function saveResults() {
     const record = { schema: 'survey-recipes/v3', engine: 'analysis-plan/v1', createdAt: new Date().toISOString(), title: planTitle, source: { sha256: hash, classification: simulated ? 'simulated' : 'user_provided', interpretationHash: identity.interpretationHash }, processing: { missingCodes, weighting: 'none', imputation: 'none', duplicates: 'not removed', inference: 'not performed' }, recipes: cards.map(c => ({ method: c.method, question: c.question, branch: c.branch, filter: c.filter, scale: c.scale, variables: (c.scale?.columns || [c.x, c.y].filter((i): i is number => i !== null)).map(i => ({ index: i, name: table.headers[i] })), status: current(c) ? 'computed' : 'not_current', computedAt: current(c) ? c.result?.computedAt : null, sample: current(c) ? { ...c.result?.sample, eligibleRows: c.result?.eligibleRows, analysisRows: current(c)!.n } : null, eligibility: current(c) ? c.result?.eligibility : null, filterEligibility: current(c) ? c.result?.filterEligibility : null, result: current(c) ? exportPlanResult(current(c)!) : null })), questionnaire: mapping ? { link: activeLink, status: activeLink ? 'confirmed_by_user' : 'not_current', classification: 'proposed' } : null, limits: ['No raw rows. Result category labels replaced with aliases; branch filter values, variable names and small aggregates may disclose sensitive information.', 'Eligibility is checked on the original dataset. Custom branch conditions are then intersected with eligible rows.', 'No p-values, confidence intervals, causal or population claims.'] };
     download(JSON.stringify(record, null, 2), '组合分析记录.json');
-    setNotice('已生成计算汇总下载。结果分类标签已替换为代号；分支筛选条件、变量名和小样本汇总仍需检查。此文件不含原始答卷。');
+    setNotice('已生成计算汇总文件，不含原始答卷。分类标签已替换为代号；分享前请检查筛选条件、变量名和小样本信息。');
   }
 
   return <div className={styles.board}>
     {invalidMissing && <p className={styles.error} role="alert">缺失代码无效：模块设置已保留，修复后才可计算或下载。</p>}
-    <div className={styles.title}><div><span className={styles.eyebrow}>ANALYSIS PLAN</span><h3>{cards.length ? '我的分析方案' : '从问题，组织你的分析'}</h3></div><details className={styles.fileMenu}><summary>方案与记录</summary><div><button type="button" onClick={() => fileInput.current?.click()} disabled={invalidMissing}>导入方案文件</button><button type="button" disabled={!cards.length || invalidMissing} onClick={savePlan}>下载方案配置</button><button type="button" disabled={!cards.length || invalidMissing} onClick={saveResults}>下载计算汇总</button><button type="button" onClick={onReliability}>打开量表工作区</button></div></details><input ref={fileInput} hidden type="file" accept=".json,application/json" aria-label="选择分析方案文件" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readPlan(file); }}/></div>
+    <div className={styles.title}><div><span className={styles.eyebrow}>ANALYSIS PLAN</span><h3>{cards.length ? '我的分析方案' : '从研究问题开始'}</h3></div><details className={styles.fileMenu}><summary>方案与记录</summary><div><button type="button" onClick={() => fileInput.current?.click()} disabled={invalidMissing}>导入方案文件</button><button type="button" disabled={!cards.length || invalidMissing} onClick={savePlan}>下载方案配置</button><button type="button" disabled={!cards.length || invalidMissing} onClick={saveResults}>下载计算汇总</button><button type="button" onClick={onReliability}>打开量表工作区</button></div></details><input ref={fileInput} hidden type="file" accept=".json,application/json" aria-label="选择分析方案文件" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readPlan(file); }}/></div>
 
-    <div className={styles.entryModes} data-compact={!!cards.length} aria-label="分析方案起步方式"><button type="button" aria-pressed={mode === 'routes'} onClick={() => setMode(mode === 'routes' && cards.length ? 'free' : 'routes')}><span>01</span><strong>选择研究路线</strong>{!cards.length && <small>从研究目标出发，调整一组已有模块</small>}</button><button type="button" aria-pressed={mode === 'free'} onClick={() => setMode('free')}><span>02</span><strong>自由搭建</strong>{!cards.length && <small>按自己的问题，逐块添加与排序</small>}</button></div>
+    <div className={styles.entryModes} data-compact={!!cards.length} aria-label="分析方案起步方式"><button type="button" aria-pressed={mode === 'routes'} onClick={() => setMode(mode === 'routes' && cards.length ? 'free' : 'routes')}><span>01</span><strong>选择研究路线</strong>{!cards.length && <small>按研究目标选择并调整模块</small>}</button><button type="button" aria-pressed={mode === 'free'} onClick={() => setMode('free')}><span>02</span><strong>自由搭建</strong>{!cards.length && <small>按自己的问题，逐块添加与排序</small>}</button></div>
 
     {mode === 'routes' && <section className={styles.routeChooser} aria-label="研究路线预览"><div className={styles.routeTabs}>{PLAN_TEMPLATES.map(item => <button type="button" key={item.id} aria-pressed={item.id === templateId} onClick={() => setTemplateId(item.id)}>{item.title}</button>)}</div><div className={styles.routePreview}><div><h4>{selectedTemplate.title}</h4><p>{selectedTemplate.description}</p></div><ol>{selectedTemplate.steps.map((step, index) => <li key={index}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{blocks.find(item => item.id === step.method)?.title}</strong><small>{step.branch} · {step.question}</small></div></li>)}</ol><button type="button" className={styles.primary} onClick={() => add(createTemplateNodes(templateId, () => crypto.randomUUID()), { id: templateId, version: 1 })}>{cards.length ? '追加到当前方案' : '使用这条路线'} · {selectedTemplate.steps.length} 个模块</button><p className={styles.note}>{cards.length ? `当前 ${cards.length} / ${PLAN_LIMITS.nodes} 个模块。追加保留已有模块与结果。` : '路线提供起点；变量与人群筛选由你确认后计算。'}</p></div></section>}
 

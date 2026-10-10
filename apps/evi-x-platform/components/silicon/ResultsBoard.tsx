@@ -68,7 +68,7 @@ export default function ResultsBoard({ design, run, stale, expectations, setExpe
 }
 
 function FindingsList({ findings, design, onFocusQuestion }: { findings: Finding[]; design: Questionnaire; onFocusQuestion: (id: string) => void }) {
-  if (!findings.length) return <div className={styles.emptyState}><strong>本轮没有发现明显问题</strong><p>这只说明模拟受访者没有遇到障碍，不代表问卷对真实受访者同样清楚。请继续做真人认知访谈。</p></div>;
+  if (!findings.length) return <div className={styles.emptyState}><strong>本轮没有发现明显问题</strong><p>模拟中未见明显障碍，仍需通过真人认知访谈核验。</p></div>;
   const number = new Map(design.questions.map((q, i) => [q.id, i + 1]));
   return <ol className={styles.findings}>
     {findings.map((f, i) => {
@@ -93,11 +93,11 @@ function Fidelity({ report, design, run, expectations, setExpectations }: { repo
   const [a, setA] = useState(refs[0]?.value ?? ''), [b, setB] = useState(refs[1]?.value ?? ''), [direction, setDirection] = useState<'positive' | 'negative'>('positive');
   const maxV = Math.max(0.3, ...report.backward.attributes.map(x => x.v));
   return <div className={styles.fidelity}>
-    <p className={styles.lead}>按 Argyle 等人提出的四项标准检验“像不像”。通过只说明模拟内部自洽，不能证明它代表真实人群。</p>
+    <p className={styles.lead}>参考 Argyle 等人的四项标准检查模拟回答。下列指标仅为诊断线索，代表性仍需真人数据验证。</p>
     <div className={styles.criteria}>
       <article><header><span>01</span><h4>社会科学图灵测试</h4><VerdictBadge verdict="manual"/></header><p>{report.turing.note}</p></article>
       <article><header><span>02</span><h4>反向连续性</h4><VerdictBadge verdict={report.backward.verdict}/></header>
-        <p>从回答能否看出设定的身份？下面是每个画像属性与回答的最大关联（Cramér V）。全都接近 0，说明设定没有起作用。</p>
+        <p>画像属性与回答的最大关联（Cramér V），用于检查设定是否反映在回答中。</p>
         <ul className={styles.vBars} aria-label="各属性与回答的最大 Cramér V">
           {report.backward.attributes.map(x => <li key={x.key}><span>{x.label}</span><span className={styles.vTrack}><i style={{ width: `${(x.v / maxV) * 100}%` }}/></span><b>{x.v.toFixed(2)}</b><small>{x.question ? `对应 ${x.question}` : '无可比题目'}</small></li>)}
         </ul>
@@ -111,7 +111,7 @@ function Fidelity({ report, design, run, expectations, setExpectations }: { repo
         {report.forward.notes.map(n => <p key={n} className={styles.small}>{n}</p>)}
       </article>
       <article><header><span>04</span><h4>模式对应性</h4><VerdictBadge verdict={report.pattern.verdict}/></header>
-        <p>先写下你根据文献或常识预期的关系，再看模拟结果是否一致。预期必须在看结果之前写好。</p>
+        <p>根据文献或常识预先记录关系方向，再与模拟结果比较。</p>
         {report.pattern.checks.length > 0 && <ul className={styles.checks}>{report.pattern.checks.map(c => <li key={c.id} data-result={c.result}>
           <span>{c.label}</span><small>预期{c.expected === 'positive' ? '正相关' : '负相关'} · ρ = {c.rho.toFixed(2)} · n = {c.n}</small>
           <b>{c.result === 'match' ? '一致' : c.result === 'mismatch' ? '相反' : '不明确'}</b>
@@ -126,10 +126,10 @@ function Fidelity({ report, design, run, expectations, setExpectations }: { repo
       </article>
     </div>
     <div className={styles.statRow}>
-      <article><span>重复答卷比例</span><strong>{pct(report.diversity.duplicateRate)}</strong><small>完全相同的整份回答；过高说明模型回答趋同</small></article>
+      <article><span>重复答卷比例</span><strong>{pct(report.diversity.duplicateRate)}</strong><small>整份回答完全相同的比例，提示回答趋同</small></article>
       <article><span>回答多样性</span><strong>{report.diversity.entropy === null ? '—' : report.diversity.entropy.toFixed(2)}</strong><small>封闭题标准化熵，0 = 全部相同，1 = 均匀分散</small></article>
       <article><span>多模型一致率</span><strong>{report.agreement.models >= 2 ? pct(report.agreement.rate) : '—'}</strong><small>{report.agreement.models >= 2 ? `${report.agreement.models} 个模型对同一画像的封闭题答案相同的比例` : '同时运行 2–3 个模型才可比较'}</small></article>
-      <article><span>高风险画像</span><strong>{report.risk.elevated}/{report.risk.total}</strong><small>{report.risk.reasons.length ? report.risk.reasons.join('、') : '未发现训练数据覆盖较弱的人群标记'}</small></article>
+      <article><span>高风险画像</span><strong>{report.risk.elevated}/{report.risk.total}</strong><small>{report.risk.reasons.length ? report.risk.reasons.join('、') : '未命中预设覆盖风险关键词'}</small></article>
     </div>
   </div>;
 }

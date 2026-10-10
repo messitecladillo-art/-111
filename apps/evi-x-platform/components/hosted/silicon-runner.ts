@@ -29,7 +29,7 @@ export function parseRunView(v: unknown): RunView {
     });
     return { id: v.id, status: v.status as Status, done: v.done as number, total: v.total as number, services, responses, createdAt: v.createdAt, ...(isText(v.errorCode, 64) ? { errorCode: v.errorCode } : {}) };
   } catch {
-    throw new HostedApiError(200, 'invalid_server_receipt', '未收到可核对的运行回执。已发出的调用可能已计费，请在稍后核对。');
+    throw new HostedApiError(200, 'invalid_server_receipt', '运行回执待核对，已发出的调用可能已计费。请稍后查询。');
   }
 }
 
@@ -83,7 +83,7 @@ export function createSiliconRunner({ projectId, services, localTest, mutate, ma
         questionnaire: { title: request.design.title, fingerprint: designFingerprint(request.design), questions: request.design.questions.length },
         attributes: request.attributes, personas: request.personas, settings: { ...request.settings, scenarios: request.settings.scenarios.length ? request.settings.scenarios : [NO_SCENARIO], models: names }, responses: view.responses ?? [],
         notes: [
-          '由语言模型扮演虚构受访者生成的模拟回答，只用于问卷预测试；不是调查数据，不得填补或扩充真实样本。',
+          '语言模型生成的虚构受访者回答，仅用于问卷预测试，不得填补或扩充真实样本。',
           ...(view.status !== 'ready' ? [ERRORS[view.errorCode ?? ''] || `运行状态：${view.status}`] : []),
         ],
       };

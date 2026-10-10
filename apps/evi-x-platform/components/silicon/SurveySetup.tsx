@@ -23,7 +23,7 @@ export default function SurveySetup({ config, update, design, studioDesign, stud
 
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-source">
-      <div className={styles.blockHead}><h3 id="sx-source">要预测试的问卷</h3><p>硅基样本读取问卷的题干、选项与跳转逻辑，不改动你的设计。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-source">要预测试的问卷</h3><p>使用当前题干、选项与跳转逻辑，保留原设计。</p></div>
       <div className={styles.sourceRow} role="radiogroup" aria-label="问卷来源">
         <button type="button" role="radio" aria-checked={config.designSource === 'studio'} disabled={!studioDesign} className={styles.sourceCard} onClick={() => update({ designSource: 'studio' })}>
           <span className={styles.sourceKicker}>问卷设计 · 当前草稿</span>
@@ -67,10 +67,10 @@ export default function SurveySetup({ config, update, design, studioDesign, stud
     <section className={styles.block} aria-labelledby="sx-memory">
       <div className={styles.blockHead}><h3 id="sx-memory">记忆与答案传递</h3><p>在题干中写 <mark className={styles.token}>{'{变量名}'}</mark>（如 <mark className={styles.token}>{'{FREQ}'}</mark>），会替换成这位受访者此前对该题的回答。</p></div>
       <fieldset className={styles.segmented}><legend>作答方式</legend>
-        <label><input type="radio" name="sx-memory" checked={config.memory === 'carry'} onChange={() => update({ memory: 'carry' })}/><span>连续作答<small>像真人一样带着前面的问答继续回答，适合整卷走查</small></span></label>
+        <label><input type="radio" name="sx-memory" checked={config.memory === 'carry'} onChange={() => update({ memory: 'carry' })}/><span>连续作答<small>保留前序问答，适合整卷走查</small></span></label>
         <label><input type="radio" name="sx-memory" checked={config.memory === 'independent'} onChange={() => update({ memory: 'independent' })}/><span>逐题独立<small>每题单独提问、互不影响，便于检查单题表述；模型调用次数更多</small></span></label>
       </fieldset>
-      <label className={styles.checkLine}><input type="checkbox" checked={config.shuffleOptions} onChange={e => update({ shuffleOptions: e.target.checked })}/><span>向模型展示选项时随机排序（按编码回收），减少位置偏好</span></label>
+      <label className={styles.checkLine}><input type="checkbox" checked={config.shuffleOptions} onChange={e => update({ shuffleOptions: e.target.checked })}/><span>随机展示选项顺序，按原编码回收答案</span></label>
       {tokens.length > 0 && <ul className={styles.issueList} role="status">{tokens.map(t => <li key={t}>{t}</li>)}</ul>}
     </section>
   </div>;

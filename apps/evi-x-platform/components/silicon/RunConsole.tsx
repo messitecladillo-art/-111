@@ -23,28 +23,28 @@ export default function RunConsole({ config, update, design, personas, settings,
   const toggleModel = (id: string) => update({ models: config.models.includes(id) ? config.models.filter(m => m !== id) : [...config.models, id].slice(0, SILICON_LIMITS.models) });
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-engine">
-      <div className={styles.blockHead}><h3 id="sx-engine">选择作答引擎</h3><p>两种引擎得到的都是模拟回答，导出时一律标记为模拟数据。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-engine">选择作答引擎</h3><p>两种引擎均生成模拟回答，导出时保留来源标记。</p></div>
       <div className={styles.sourceRow} role="radiogroup" aria-label="作答引擎">
         <button type="button" role="radio" aria-checked={config.engine === 'demo'} className={styles.sourceCard} disabled={running} onClick={() => update({ engine: 'demo' })}>
           <span className={styles.sourceKicker}>离线演示引擎 · 无需密钥</span>
           <strong>走查流程与界面</strong>
-          <small>在浏览器内按种子生成可复现的随机答案，用来检查跳转、答案传递和分析流程。答案不代表任何人，不能当作预测试结论。</small>
+          <small>在浏览器生成可复现的随机答案，检查跳转、答案传递与分析流程；不能作为预测试结论。</small>
         </button>
         <button type="button" role="radio" aria-checked={config.engine === 'model'} className={styles.sourceCard} disabled={running || !models} onClick={() => update({ engine: 'model' })}>
           <span className={styles.sourceKicker}>语言模型 · 使用你的 API 额度</span>
-          <strong>真正的硅基预测试</strong>
-          <small>{models ? '由你在「我的模型服务」中配置的模型扮演每位受访者，最多同时比较 3 个模型。' : '在「我的项目」中打开项目后可用：调用经服务端转发，密钥不经过浏览器。'}</small>
+          <strong>模型预测试</strong>
+          <small>{models ? '由你在「我的模型服务」中配置的模型扮演每位受访者，最多同时比较 3 个模型。' : '请在「我的项目」中打开项目使用；运行由服务端转发，密钥不发送至本页。'}</small>
         </button>
       </div>
       {config.engine === 'model' && models && <div className={styles.modelPick}>
-        <p className={styles.small}>选择 1–{SILICON_LIMITS.models} 个模型。多模型可检验结论是否依赖某一个模型。</p>
+        <p className={styles.small}>选择 1–{SILICON_LIMITS.models} 个模型。多模型可比较回答对模型选择的敏感性。</p>
         {models.length ? <ul>{models.map(m => <li key={m.id}><label className={styles.checkLine}><input type="checkbox" checked={config.models.includes(m.id)} disabled={running || (!config.models.includes(m.id) && config.models.length >= SILICON_LIMITS.models)} onChange={() => toggleModel(m.id)}/><span><strong>{m.label}</strong><small>{m.detail}</small></span></label></li>)}</ul> : <p className={styles.hint}>还没有可用的模型服务。<a href="/services">去配置我的模型服务 →</a></p>}
         <label className={styles.checkLine}><input type="checkbox" checked={consent} disabled={running} onChange={e => setConsent(e.target.checked)}/><span>{consentLabel}</span></label>
       </div>}
     </section>
 
     <section className={styles.block} aria-labelledby="sx-launch">
-      <div className={styles.blockHead}><h3 id="sx-launch">运行</h3><p>运行不会修改问卷，也不会把模拟回答写入任何真实数据集。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-launch">运行</h3><p>原问卷保留，模拟回答单独展示；离线结果请导出备份。</p></div>
       <div className={styles.launch}>
         <dl className={styles.facts}>
           <div><dt>硅基受访者</dt><dd>{personas}</dd></div>
