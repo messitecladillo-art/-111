@@ -668,7 +668,7 @@ function CaseLibrary() {
       <div className="section-heading">
         <div>
           <span className="eyebrow">获奖案例证据库</span>
-          <h2 id="cases-title">只呈现证据，不补写故事</h2>
+          <h2 id="cases-title">从案例中找到研究思路</h2>
         </div>
         <p>检索已收录案例，查看公告信息、材料分析与核验范围。</p>
       </div>
@@ -676,13 +676,7 @@ function CaseLibrary() {
       {libraryMeta && libraryNotice && (
         <aside className="case-scope-note" aria-labelledby="case-scope-title">
           <div className="case-scope-main">
-            <span className="case-scope-kicker">收录边界</span>
-            <h3 id="case-scope-title">{libraryNotice.title}</h3>
-            <p>{libraryNotice.coverage}</p>
-            <details>
-              <summary>查看核验口径</summary>
-              <p>{libraryNotice.body}</p>
-            </details>
+            <h3 id="case-scope-title">案例收录</h3>
           </div>
           <dl className="case-scope-stats">
             <div><dt>当前收录</dt><dd>{libraryMeta.total}</dd></div>
@@ -780,16 +774,15 @@ function CaseLibrary() {
             <h3 id="case-drawer-title">{selected.title}</h3>
             <p className="drawer-context">{selected.institution} · {selected.region} · {selected.track}</p>
             <p className="drawer-depth">{caseDepthLabel(selected.caseDepth)} · {sourceTierLabel(selected.sourceTier)}</p>
-            {selected.sourceStatus === "user_attested" && <p className="drawer-status error">具体奖次、组别、赛道与阶段尚未独立核验；下列结构化亮点来自材料分析，不代表评委意见或获奖原因。</p>}
             <p className="drawer-summary">{selected.summary}</p>
             {detailLoading && <p className="drawer-status" role="status">正在核对案例详情…</p>}
             {detailError && <div className="drawer-status error" role="alert"><p>{detailError}，当前展示列表中的已核验元数据。</p><button className="text-button" type="button" onClick={() => void openCase(selected)}>重新读取详情</button></div>}
-            {selected.caseDepth === "listing_only" && <div className="drawer-block evidence-scope-block"><h4>本卡核验范围</h4><p>仅核验公开公告中的题名、学校、组别、奖项与届次。方法、样本、结论和评委意见未公开，不据题名补写。</p></div>}
+            {selected.caseDepth === "listing_only" && <div className="drawer-block evidence-scope-block"><h4>公告信息</h4><p>题名、学校、组别、奖项与届次。</p></div>}
             {selected.problem && <div className="drawer-block"><h4>决策问题</h4><p>{selected.problem}</p></div>}
             {selected.method && <div className="drawer-block"><h4>研究方法</h4><p>{selected.method}</p></div>}
             {selected.result && <div className="drawer-block"><h4>结果边界</h4><p>{selected.result}</p></div>}
             {selected.caseDepth === "listing_only" && selected.keywords.length > 0 && <div className="drawer-block"><h4>题名关键词</h4><ul className="keyword-list">{selected.keywords.map((item) => <li key={item}>{item}</li>)}</ul></div>}
-            {selected.caseDepth === "artifact_deep_dive" && selected.takeaways.length > 0 && <div className="drawer-block"><h4>材料分析：可迁移结构（非获奖因果）</h4><ul>{selected.takeaways.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+            {selected.caseDepth === "artifact_deep_dive" && selected.takeaways.length > 0 && <div className="drawer-block"><h4>研究设计启发</h4><ul>{selected.takeaways.map((item) => <li key={item}>{item}</li>)}</ul></div>}
             {selected.risks.length > 0 && <div className="drawer-block risk-block"><h4>限制与风险</h4><ul>{selected.risks.map((item) => <li key={item}>{item}</li>)}</ul></div>}
             {selected.sourceRefs.length > 0 && <div className="drawer-block source-ledger"><h4>证据来源与核验字段</h4>{selected.sourceRefs.map((sourceRef, index) => <article className="source-card" key={`${sourceRef.label}-${index}`}><div><strong>{sourceRef.label}</strong><span>{sourceTierLabel(sourceRef.sourceTier)}</span></div><p>已登记：{sourceRef.verifiedFields.length > 0 ? sourceRef.verifiedFields.map(verifiedFieldLabel).join("、") : "核验字段未标注"}</p>{sourceRef.url.startsWith("http") ? <a className="source-link" href={sourceRef.url} target="_blank" rel="noreferrer">打开公开来源（新窗口） <span aria-hidden="true">↗</span></a> : sourceRef.repositoryPath ? <span className="source-local">站内来源登记已绑定</span> : null}</article>)}</div>}
             {selected.sourceRefs.length === 0 && selected.sourceUrl.startsWith("http") && <a className="source-link" href={selected.sourceUrl} target="_blank" rel="noreferrer">打开来源记录（新窗口） <span aria-hidden="true">↗</span></a>}
@@ -873,10 +866,9 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
             <label><span>真实决策问题</span><textarea required rows={4} value={form.problem} onChange={(event) => update("problem", event.target.value)} placeholder="谁要在什么期限内，依据哪些证据，在什么选项间作何取舍？" /></label>
             <button className="primary-button gold-button" type="submit">{submitting ? "正在检查…" : "检查缺口与下一步"}</button>
           </fieldset>
-          <p className="form-note">依据自报信息检查准备度，不核验报告或田野证据，不更新项目状态或 Gate。结果不代表研究质量或获奖概率。请勿提交个人信息或未授权商业资料。</p>
         </form>
         <div className="diagnosis-result" aria-live="polite" aria-busy={submitting}>
-          {submitting && <div className="result-placeholder" role="status"><span className="evidence-orbit" aria-hidden="true">…</span><h3>正在检查自报信息</h3><p>按固定规则提示缺口，不代表证据审查。</p></div>}
+          {submitting && <div className="result-placeholder" role="status"><span className="evidence-orbit" aria-hidden="true">…</span><h3>正在检查研究准备度</h3></div>}
           {!submitting && !result && !error && <div className="result-placeholder"><span className="evidence-orbit" aria-hidden="true">Q</span><h3>等待真实输入</h3><p>诊断结果将按“分数—风险—下一步”呈现，并保留未知项。</p></div>}
           {!submitting && error && <div className="result-placeholder error-state" role="alert"><span className="evidence-orbit">!</span><h3>暂时无法完成诊断</h3><p>{error}。表单内容仍保留，可稍后重试。</p></div>}
           {!submitting && result && <>
@@ -1039,7 +1031,6 @@ export default function EviXPlatform() {
           </div>
           <EvidenceFlight />
         </div>
-        <div className="independent-notice"><span>独立 · 非官方</span><p>证见 EVI-X 为独立研究辅助工具，与赛事主办、承办及冠名单位无隶属、授权或合作关系。</p></div>
       </section>
 
       <CompetitionCalendar />

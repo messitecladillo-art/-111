@@ -128,7 +128,6 @@
 .secondary { color: var(--paper); border-color: rgba(247, 244, 237, 0.24); background: rgba(247, 244, 237, 0.025); }
 .primary:focus-visible, .secondary:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; box-shadow: 0 0 0 6px #0a1f33; }
 .primary:disabled, .secondary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.note { margin: 18px 0 0; padding-top: 13px; border-top: 1px solid rgba(247, 244, 237, 0.12); color: var(--flight-muted); font-size: 14px; line-height: 1.75; }
 .keyboardHint { margin: 6px 0 0; color: var(--flight-muted); font-size: 14px; line-height: 1.7; }
 .completed { border-color: rgba(244, 185, 66, 0.55); }
 .completed .statusDot { background: var(--gold); box-shadow: 0 0 8px rgba(244, 185, 66, 0.3); }

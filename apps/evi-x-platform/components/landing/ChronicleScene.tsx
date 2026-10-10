@@ -3,7 +3,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import * as THREE from 'three';
 import {
-  blendStageLayout, buildChronicleField, resolveChronicleProgress, CHRONICLE_GLYPHS, CHRONICLE_LAST_STAGE,
+  blendStageLayout, buildChronicleField, chronicleVisualState, CHRONICLE_GLYPHS, CHRONICLE_LAST_STAGE,
   CHRONICLE_MAX_DPR, CHRONICLE_MOBILE_PARTICLE_COUNT, CHRONICLE_PARTICLE_COUNT, type GlyphMask,
 } from '../../lib/landing-chronicle';
 
@@ -31,16 +31,17 @@ const vertexShader = /* glsl */ `
   uniform float uProgress;
   uniform float uTime;
   uniform float uMotion;
+  uniform vec3 uTransition;
   uniform float uPointSize;
   uniform float uPixelRatio;
   uniform vec4 uLayout;
   uniform vec2 uView;
-  uniform float uSpin;
   uniform vec2 uPointer;
   uniform float uPointerForce;
   uniform vec3 uRipple;
   varying vec3 vColor;
   varying float vAlpha;
+  varying float vPixel;
   const float PI = 3.14159265;
   void main() {
     float p = clamp(uProgress, 0.0, 6.0);
@@ -50,6 +51,8 @@ const vertexShader = /* glsl */ `
     f = mix(f, aP4, smoothstep(3.0, 4.0, p));
     f = mix(f, aP5, smoothstep(4.0, 5.0, p));
     f = mix(f, aP6, smoothstep(5.0, 6.0, p));
+    float directed = step(0.5, uTransition.x);
+    float focus = uTransition.z;
     float phase = aSeed.x * 6.2831853;
     vec3 world;
     if (aKind > 0.5) {
@@ -57,46 +60,74 @@ const vertexShader = /* glsl */ `
       world.x += cos(uTime * 0.05 + phase) * 0.06 * uMotion;
       world.y += sin(uTime * 0.07 + phase) * 0.08 * uMotion;
     } else {
-      // Mid-morph, particles leave the old figure in a swirling burst and settle into the next.
-      float travel = sin(fract(p) * PI) * uMotion;
-      float turn = travel * (0.7 + aSeed.y * 0.9) * (aSeed.z > 0.5 ? 1.0 : -1.0);
-      float c = cos(turn), s = sin(turn);
-      f.xy = vec2(c * f.x - s * f.y, s * f.x + c * f.y);
-      f.xy *= 1.0 + travel * (0.12 + aSeed.w * 0.55);
-      f.z += travel * (aSeed.x - 0.5) * 2.6;
-      f.xy += vec2(sin(uTime * 0.55 + phase), cos(uTime * 0.47 + phase * 1.3)) * 0.0035 * uMotion;
-      float cs = cos(uSpin), sn = sin(uSpin);
-      f.xy = vec2(cs * f.x - sn * f.y, sn * f.x + cs * f.y);
+      // Each route follows persistent particle IDs using only the current scroll position.
+      // Keep these offsets in step with chronicleParticlePosition's CPU reference.
+      if (directed > 0.5) {
+        vec3 from = position, to = aP1;
+        if (uTransition.x > 1.5) { from = aP1; to = aP2; }
+        if (uTransition.x > 2.5) { from = aP2; to = aP3; }
+        if (uTransition.x > 3.5) { from = aP3; to = aP4; }
+        if (uTransition.x > 4.5) { from = aP4; to = aP5; }
+        if (uTransition.x > 5.5) { from = aP5; to = aP6; }
+        f = mix(from, to, uTransition.y);
+        if (uTransition.x < 1.5 || (uTransition.x > 4.5 && uTransition.x < 5.5)) {
+          vec2 delta = to.xy - from.xy;
+          vec2 normal = length(delta) > 0.0001 ? vec2(-delta.y, delta.x) / length(delta) : vec2(0.0);
+          f.xy += normal * focus * (uTransition.x < 1.5 ? 0.10 : 0.18) * (0.35 + aSeed.w * 0.65);
+          f.z += focus * sin(phase) * 0.06;
+        } else if (uTransition.x < 2.5) {
+          f.x += sin(from.y * PI + phase * 0.2) * focus * 0.09;
+          f.y += cos(phase) * focus * 0.025;
+          f.z += focus * (aSeed.y - 0.5) * 0.12;
+        } else if (uTransition.x < 3.5) {
+          f.x += sign(from.x + 0.00001) * focus * 0.15;
+          f.y += sin(phase) * focus * 0.035;
+          f.z += focus * cos(phase) * 0.08;
+        } else if (uTransition.x < 4.5) {
+          f.x += focus * sin(from.y * PI) * 0.08;
+          f.y += focus * sin(phase) * 0.02;
+          f.z += focus * (abs(from.x) - 0.4) * 0.24;
+        } else {
+          float angle = atan(to.y, to.x) + (1.0 - uTransition.y) * 0.7;
+          f.xy += vec2(cos(angle), sin(angle)) * focus * 0.14;
+          f.z += focus * sin(phase) * 0.04;
+        }
+      }
       world = vec3(f.xy * uLayout.z + uLayout.xy, f.z * uLayout.z * 0.4);
     }
     // The cursor parts the dust like a lamp passed over gold leaf; a click sends out one ring.
     vec2 toPointer = world.xy - uPointer;
     float pointerDistance = length(toPointer);
     vec2 away = pointerDistance > 0.0001 ? toPointer / pointerDistance : vec2(0.0);
-    float near = uPointerForce * (1.0 - smoothstep(0.0, 0.72, pointerDistance));
+    float near = uPointerForce * step(0.5, aKind) * (1.0 - smoothstep(0.0, 0.72, pointerDistance));
     near *= near;
     world.xy += (away * 0.26 + vec2(-away.y, away.x) * 0.1 * (aSeed.z - 0.5)) * near;
     world.z += near * 0.5 * aSeed.w;
     vec2 toRipple = world.xy - uRipple.xy;
     float rippleDistance = length(toRipple);
-    float wave = step(0.0, uRipple.z) * exp(-pow((rippleDistance - uRipple.z * 2.8) * 4.0, 2.0)) * exp(-uRipple.z * 1.5);
+    float wave = step(0.5, aKind) * step(0.0, uRipple.z) * exp(-pow((rippleDistance - uRipple.z * 2.8) * 4.0, 2.0)) * exp(-uRipple.z * 1.5);
     world.xy += (rippleDistance > 0.0001 ? toRipple / rippleDistance : vec2(0.0)) * wave * 0.3;
     vec4 view = modelViewMatrix * vec4(world, 1.0);
     gl_Position = projectionMatrix * view;
     float dust = step(0.5, aKind);
+    vPixel = focus * (1.0 - dust);
     // A few larger motes read as sparks against the fine dust.
     float spark = step(0.972, aSeed.y) * (1.0 - dust);
-    float size = uPointSize * (0.55 + aSeed.y * 0.9 + spark * 1.6) * mix(1.0, 0.85, dust);
+    float size = uPointSize * mix(0.55 + aSeed.y * 0.9 + spark * 1.6, 0.85, vPixel) * mix(1.0, 0.85, dust);
     gl_PointSize = size * uPixelRatio * (${CAMERA_Z.toFixed(1)} / max(0.5, -view.z));
     vec3 gold = vec3(0.957, 0.725, 0.259);
     vec3 pale = vec3(1.0, 0.89, 0.66);
     vec3 teal = vec3(0.0, 0.70, 0.64);
     vec3 colour = aSeed.z < 0.1 ? teal : (aSeed.z < 0.3 ? pale : gold);
     vColor = mix(colour, mix(pale, teal, step(0.62, aSeed.z)) * 0.8, dust);
-    float twinkle = mix(1.0, 0.7 + 0.3 * sin(uTime * (0.7 + aSeed.w * 1.7) + phase * 3.0), uMotion);
+    vColor = mix(vColor, gold, vPixel);
+    float twinkle = mix(1.0, 0.7 + 0.3 * sin(uTime * (0.7 + aSeed.w * 1.7) + phase * 3.0), uMotion * (1.0 - directed));
     float lit = clamp(near * 1.8 + wave * 1.6, 0.0, 2.0);
     vColor = mix(vColor, pale, clamp(lit, 0.0, 1.0) * 0.6);
     vAlpha = mix(0.82 * uLayout.w, 0.34, dust) * twinkle * (1.0 + lit);
+    // A sparse gold trace carries the morph; surrounding dust recedes instead of bursting out.
+    float sparse = mix(0.06, 1.0, step(aSeed.x, 0.22));
+    vAlpha *= mix(1.0, mix(sparse, 0.12, dust), focus);
   }
 `;
 
@@ -104,11 +135,12 @@ const fragmentShader = /* glsl */ `
   precision highp float;
   varying vec3 vColor;
   varying float vAlpha;
+  varying float vPixel;
   void main() {
     vec2 d = gl_PointCoord - 0.5;
-    float r = length(d);
+    float r = mix(length(d), max(abs(d.x), abs(d.y)), vPixel);
     if (r > 0.5) discard;
-    float glow = pow(1.0 - r * 2.0, 1.7);
+    float glow = mix(pow(1.0 - r * 2.0, 1.7), 1.0 - smoothstep(0.34, 0.5, r), vPixel);
     gl_FragColor = vec4(vColor * (0.85 + glow * 0.5), glow * vAlpha);
   }
 `;
@@ -162,7 +194,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
     let material: THREE.ShaderMaterial | null = null;
     let disposed = false, lost = false, ready = false;
     let width = 0, height = 0, raf = 0, pendingFrames = 0, lastTime = 0, activeTime = 0;
-    let pointerX = 0, pointerY = 0, smoothX = 0, smoothY = 0, frameCount = 0;
+    let pointerX = 0, pointerY = 0, frameCount = 0;
     let pointerInside = false, pointerForce = 0, rippleX = 0, rippleY = 0, rippleStart = -1;
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     const layout = new Float32Array(4);
@@ -195,7 +227,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
         vertexShader, fragmentShader,
         transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
         uniforms: {
-          uProgress: { value: 0 }, uTime: { value: 0 }, uMotion: { value: 1 }, uPointSize: { value: small ? 2.5 : 2.35 }, uSpin: { value: 0 },
+          uProgress: { value: 0 }, uTime: { value: 0 }, uMotion: { value: 1 }, uTransition: { value: new THREE.Vector3() }, uPointSize: { value: small ? 2.5 : 2.35 },
           uPointer: { value: new THREE.Vector2(99, 99) }, uPointerForce: { value: 0 }, uRipple: { value: new THREE.Vector3(0, 0, -1) },
           uPixelRatio: { value: 1 }, uLayout: { value: new THREE.Vector4(0, 0, 1, 1) }, uView: { value: new THREE.Vector2(1, 1) },
         },
@@ -224,7 +256,11 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
       const dt = lastTime ? Math.min(0.05, Math.max(0, (now - lastTime) / 1000)) : 0;
       lastTime = now;
       if (animating) activeTime += dt;
-      const progress = resolveChronicleProgress(progressRef.current ?? 0, settings.reducedMotion);
+      const visual = chronicleVisualState(progressRef.current ?? 0, width, settings.reducedMotion);
+      const progress = visual.progress;
+      // Mouse light affects only background dust. The six formations remain independent
+      // of elapsed time, pointer history and scrolling direction, including the closing ring.
+      const idleWeight = 1 - visual.emphasis;
       const visibleH = 2 * Math.tan((FOV * Math.PI) / 360) * CAMERA_Z;
       const visibleW = visibleH * camera.aspect;
       blendStageLayout(progress, visibleW, visibleH, layout);
@@ -232,23 +268,18 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
       u.uProgress.value = progress;
       u.uTime.value = activeTime;
       u.uMotion.value = settings.reducedMotion ? 0 : 1;
-      // Only the ring (prologue and finale) turns; the weight eases it out as it morphs away.
-      const ringWeight = 1 - Math.min(1, Math.max(0, progress)) + Math.min(1, Math.max(0, progress - (CHRONICLE_LAST_STAGE - 1)));
-      u.uSpin.value = settings.reducedMotion ? 0 : activeTime * 0.022 * ringWeight;
+      (u.uTransition.value as THREE.Vector3).set(visual.segment, visual.mix, visual.emphasis);
       (u.uLayout.value as THREE.Vector4).set(layout[0], layout[1], layout[2], layout[3]);
       (u.uView.value as THREE.Vector2).set(visibleW / 2, visibleH / 2);
-      if (animating) {
-        smoothX += (pointerX - smoothX) * 0.04;
-        smoothY += (pointerY - smoothY) * 0.04;
-      }
       pointerForce += ((animating && pointerInside ? 1 : 0) - pointerForce) * (animating ? 0.08 : 1);
-      u.uPointerForce.value = pointerForce;
+      u.uPointerForce.value = pointerForce * idleWeight;
       (u.uPointer.value as THREE.Vector2).set(pointerX * visibleW / 2, pointerY * visibleH / 2);
       const rippleAge = rippleStart < 0 ? -1 : (now - rippleStart) / 1000;
       if (rippleAge > 2.6) rippleStart = -1;
-      (u.uRipple.value as THREE.Vector3).set(rippleX * visibleW / 2, rippleY * visibleH / 2, animating ? rippleAge : -1);
-      const sway = animating ? Math.sin(activeTime * 0.13) * 0.06 : 0;
-      group.rotation.set(settings.reducedMotion ? 0 : -smoothY * 0.05, settings.reducedMotion ? 0 : sway + smoothX * 0.09, 0);
+      (u.uRipple.value as THREE.Vector3).set(rippleX * visibleW / 2, rippleY * visibleH / 2, animating && idleWeight > 0.99 ? rippleAge : -1);
+      canvas.dataset.chronicleProgress = progress.toFixed(4);
+      canvas.dataset.chronicleTransition = visual.transition;
+      canvas.dataset.chronicleMode = visual.mode;
       try {
         renderer.render(scene, camera);
         if (!lost) {

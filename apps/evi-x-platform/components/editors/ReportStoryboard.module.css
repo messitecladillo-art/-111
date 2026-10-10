@@ -30,3 +30,9 @@
 .linkNotice[data-warning=true] { border-color:var(--wb-risk); }
 @media(max-width:1100px){.grid{grid-template-columns:160px minmax(0,1fr)}.source{grid-column:1/-1;border-left:0;border-top:1px solid var(--wb-line)}}
 @media(max-width:650px){.grid{display:block}.grid nav{max-height:220px;overflow:auto}.pair{grid-template-columns:1fr}.board header{display:block}.board header button{margin-top:12px}.fields,.source,.preview{padding:16px}.previews{grid-template-columns:1fr}.board h3{font-size:21px}}
+
+.grid nav { position:relative; }
+.motionMarker { position:absolute; top:0; left:0; width:3px; height:0; background:var(--wb-gold,#b39757); border-radius:2px; pointer-events:none; }
+.grid nav button { transition:background-color 180ms ease,border-color 180ms ease; }
+.previews article { box-shadow:0 3px 12px #15212a06; }
+@media(prefers-reduced-motion:reduce) { .board *,.board *::before { animation:none!important; transition:none!important; } }

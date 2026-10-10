@@ -87,7 +87,6 @@
 .library .primary:hover:not(:disabled) { color: var(--wb-accent-text); filter: brightness(.96); }
 .submitRow span { flex: 1; min-width: 170px; color: var(--wb-muted); font-size: 12px; }
 .conflict { color: var(--wb-risk); font-size: 13px; margin-top: 12px !important; }
-.boundary { color: var(--wb-muted); font-size: 12px; margin: 12px 4px 0 !important; }
 .recoverySection { margin-top: 20px; border: 1px solid var(--wb-line); border-radius: 10px; background: var(--wb-solid); overflow: hidden; }
 .recoverySection > p { padding: 14px 18px; color: var(--wb-muted); }
 .recoverySection > p[role=alert] { color: var(--wb-risk); }
@@ -100,3 +99,8 @@
 .recoverySection li button { flex: 0 0 auto; }
 @media (max-width:1000px) { .engineNote { display: block; } .engineNote p { margin-top: 6px; } .uploadPanel { grid-template-columns: minmax(0,1fr); } .uploadIntro { border-right: 0; border-bottom: 1px solid var(--wb-line); padding: 20px; } .uploadControls { padding: 20px; } }
 @media (max-width:700px) { .heading { flex-wrap: wrap; gap: 12px; } .workspace { grid-template-columns: minmax(0,1fr); } .catalog { border-right: 0; border-bottom: 1px solid var(--wb-line); } .fileList { max-height: 250px; } .engineNote { padding: 14px 16px; } .paneHeading { padding: 14px 16px; } .versionList { padding-inline: 16px; } .versionList li { flex-wrap: wrap; } .versionList li > div { flex-basis: calc(100% - 50px); } .versionList button { margin-left: 46px; } .uploadIntro,.uploadControls { padding: 18px 16px; } .submitRow { align-items: stretch; } .submitRow button { width: 100%; } .selection { align-items: flex-start; } .empty { padding: 24px 20px; min-height: 180px; } .recoverySection li { align-items: flex-start; flex-wrap: wrap; } .recoverySection li button { width: 100%; } }
+
+.fileList { position:relative; }
+.fileList li.motionMarker { position:absolute; top:0; left:0; width:3px; height:0; padding:0; border:0; margin:0; background:var(--wb-gold,#b39757); pointer-events:none; }
+.fileButton { transition:background-color 180ms ease,border-color 180ms ease; }
+@media(prefers-reduced-motion:reduce) { .library * { animation:none!important; transition:none!important; } }

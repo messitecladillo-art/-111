@@ -5,6 +5,7 @@ import type { LabConfig } from '@/lib/silicon/config';
 import { PANEL_TEMPLATES, SILICON_LIMITS, attributeIssues, fidelityRisk, panelMarginals, quotaCounts, type Persona, type PersonaAttribute } from '@/lib/silicon/persona';
 import PersonaAvatar from './PersonaAvatar';
 import styles from './SiliconLab.module.css';
+import { useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 
 type Props = {
   config: LabConfig;
@@ -19,6 +20,9 @@ const ROSTER_PREVIEW = 18;
 
 export default function PanelDesigner({ config, update, personas, selectedId, onSelect }: Props) {
   const [showAll, setShowAll] = useState(false);
+  const visiblePersonas = showAll ? personas : personas.slice(0, ROSTER_PREVIEW);
+  const rosterRef = useKeyedListMotion<HTMLUListElement>({ ids: visiblePersonas.map(p => p.id), activeId: selectedId });
+  const templateRef = useKeyedListMotion<HTMLDivElement>({ ids: Object.keys(PANEL_TEMPLATES), activeId: config.template, markerAxis: 'horizontal' });
   const issues = attributeIssues(config.attributes);
   const marginals = panelMarginals(personas, config.attributes);
   const risks = personas.map(fidelityRisk);
@@ -34,16 +38,16 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
 
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-template">
-      <div className={styles.blockHead}><h3 id="sx-template">选择画像模板</h3><p>属性与比例均可修改；配额为研究假设，不代表真实人口结构。</p></div>
-      <div className={styles.templateRow} role="radiogroup" aria-label="画像模板">
-        {Object.entries(PANEL_TEMPLATES).map(([key, t]) => <button type="button" key={key} role="radio" aria-checked={config.template === key} className={styles.templateCard} onClick={() => applyTemplate(key)}>
+      <div className={styles.blockHead}><h3 id="sx-template">选择画像模板</h3><p>按研究对象调整画像属性与配额。</p></div>
+      <div ref={templateRef} className={styles.templateRow} role="radiogroup" aria-label="画像模板"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
+        {Object.entries(PANEL_TEMPLATES).map(([key, t]) => <button type="button" key={key} data-motion-id={key} role="radio" aria-checked={config.template === key} className={styles.templateCard} onClick={() => applyTemplate(key)}>
           <strong>{t.label}</strong><small>{t.description}</small><span>{t.attributes.map(a => a.label).join(' · ')}</span>
         </button>)}
       </div>
     </section>
 
     <section className={styles.block} aria-labelledby="sx-size">
-      <div className={styles.blockHead}><h3 id="sx-size">样本规模与分配</h3><p>可先用少量画像走查题目；增加模拟人数不能证明结果更真实。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-size">样本规模与分配</h3><p>从少量画像开始，检查题目与作答流程。</p></div>
       <div className={styles.sizeRow}>
         <label className={styles.sizeField}><span>硅基受访者人数</span>
           <span className={styles.sizeControl}><input type="range" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Number(e.target.value) })} aria-describedby="sx-size-hint"/><input type="number" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Math.max(1, Math.min(SILICON_LIMITS.personas, Number(e.target.value) || 1)) })} aria-label="人数"/></span>
@@ -87,9 +91,9 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
 
     <section className={styles.block} aria-labelledby="sx-roster">
       <div className={styles.blockHead}><h3 id="sx-roster">硅基受访者名册</h3><p>点选人物可调整外观与背景；外观只供辨认，不进入模型设定。</p></div>
-      {elevated > 0 && <p className={styles.riskNote}><b>保真度提示</b>{elevated} 位画像涉及{reasons.join('、')}。请用真人预调查核验；模拟结果仅供检查题目表述，不代表这些人群的观点。</p>}
-      <ul className={styles.roster}>
-        {(showAll ? personas : personas.slice(0, ROSTER_PREVIEW)).map((p, i) => <li key={p.id}>
+      {elevated > 0 && <p className={styles.riskNote}><b>画像核验</b>{elevated} 位画像涉及{reasons.join('、')}，需结合真人预调查核对。</p>}
+      <ul ref={rosterRef} className={styles.roster}>
+        {visiblePersonas.map((p, i) => <li key={p.id} data-motion-id={p.id}>
           <button type="button" aria-pressed={selectedId === p.id} onClick={() => onSelect(p.id)}>
             <PersonaAvatar appearance={p.appearance} size={42}/>
             <span><strong>{p.code}{risks[i].level === 'elevated' && <i className={styles.riskDot} title={`保真度风险：${risks[i].reasons.join('、')}`} aria-label="保真度风险较高"/>}</strong><small>{config.attributes.map(a => p.traits[a.key]).filter(Boolean).join(' · ')}</small></span>

@@ -1,0 +1,32 @@
+.guide { --surface: var(--wb-solid); --line: var(--wb-line); --gold: var(--wb-gold-text); --gold-dim: var(--wb-gold-soft); --muted: var(--wb-muted); --text: var(--wb-text); --panel: var(--wb-well); margin-top: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: clip; }
+.guide > summary { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; cursor: pointer; padding: 20px 24px; list-style: none; }
+.guide > summary::-webkit-details-marker { display: none; }
+.guide > summary > span { font-weight: 700; font-size: 15px; }
+.guide > summary > span::before { content: '+'; margin-right: 12px; color: var(--gold); }
+.guide[open] > summary > span::before { content: '−'; }
+.guide > summary small { color: var(--muted); font-size: 12px; }
+.guide > summary:focus-visible,.directory > button:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
+.workspace { display: grid; grid-template-columns: 230px minmax(0,1fr); border-top: 1px solid var(--line); }
+.directory { position: relative; padding: 14px 0; border-right: 1px solid var(--line); align-self: start; }
+.directory > button { position: relative; width: 100%; border: 0; border-radius: 0; text-align: left; display: flex; align-items: center; gap: 10px; padding: 13px 20px; cursor: pointer; color: var(--muted); background: transparent; transition: color 180ms,background-color 180ms; }
+.directory > button > span { font-size: 10px; font-variant-numeric: tabular-nums; opacity: .6; }
+.directory > button strong { font-size: 12px; font-weight: 500; }
+.directory > button:hover,.directory > button[aria-pressed=true] { color: var(--text); background: var(--gold-dim); }
+.marker { position: absolute; top: 0; left: 0; width: 3px; height: 0; background: var(--gold); pointer-events: none; z-index: 2; }
+.content { min-width: 0; padding: 26px 30px; }
+.scope { display: inline-flex; padding: 4px 8px; background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px; font-size: 10px; }
+.scope[data-available=true] { color: var(--gold); background: var(--gold-dim); }
+.content h4 { font-size: 22px; font-weight: 600; margin: 14px 0 8px; letter-spacing: -.02em; }
+.content header > p { font-size: 14px; color: var(--text); margin: 0; line-height: 1.8; }
+.implementation { font-size: 12px; line-height: 1.8; color: var(--muted); padding-bottom: 18px; margin: 10px 0 20px; border-bottom: 1px solid var(--line); }
+.columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px 32px; }
+.content h5 { font-size: 12px; margin: 0 0 8px; color: var(--gold); font-weight: 600; }
+.content ul,.content ol { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.content li + li { margin-top: 5px; }
+.limits { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.sources { margin-top: 20px; font-size: 11px; color: var(--muted); }
+.sources > summary { cursor: pointer; width: fit-content; }
+.sources ul { padding-top: 12px; font-size: 11px; }
+.sources span { display: block; }
+.sources a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+@media(prefers-reduced-motion:reduce) { .directory > button { transition: none; } }

@@ -12,6 +12,8 @@
 .close { flex-shrink: 0; }
 .notice { display: flex; align-items: center; gap: 10px; min-height: 39px; padding: 7px 22px; background: var(--wb-well); border-bottom: 1px solid var(--wb-line); color: var(--wb-muted); font-size: 14px; }
 .notice strong { color: var(--wb-text); font-weight: 650; }
+.notice[data-phase=saved] { border-bottom-color:var(--wb-accent); }
+.notice[data-phase=conflict],.notice[data-phase=unconfirmed],.notice[data-phase=error] { border-bottom-color:var(--wb-amber); }
 .notice span:last-child { margin-left: auto; }
 .liveError { margin: 0; padding: 10px 22px; border-bottom: 1px solid var(--wb-line); background: #fff3f0; color: var(--wb-risk); font-size: 14px; line-height: 1.5; }
 .dot,.pulse { display: inline-block; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--wb-accent); }

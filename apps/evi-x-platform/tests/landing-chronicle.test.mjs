@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  blendStageLayout, buildChronicleField, chainFormation, chronicleProgress, chronicleStage, maskFormation, oracleFormation,
+  blendStageLayout, buildChronicleField, chainFormation, chronicleChapterFrame, chronicleParticlePosition, chronicleProgress, chronicleStage, chronicleVisualState, maskFormation, matchChronicleFormation, oracleFormation,
   resolveChronicleProgress, ringFormation, seededRandom, stageLayout, CHRONICLE_DUST_RATIO, CHRONICLE_GLYPHS, CHRONICLE_STAGE_PLACEMENT,
-  CHRONICLE_LAST_STAGE, CHRONICLE_MIN_PARTICLES, CHRONICLE_MOBILE_PARTICLE_COUNT, CHRONICLE_PARTICLE_COUNT, CHRONICLE_STAGE_COUNT,
+  CHRONICLE_LAST_STAGE, CHRONICLE_MIN_PARTICLES, CHRONICLE_MOBILE_PARTICLE_COUNT, CHRONICLE_PARTICLE_COUNT, CHRONICLE_STAGE_COUNT, CHRONICLE_TRANSITIONS,
 } from '../lib/landing-chronicle.ts';
 
 const finite = array => array.every(Number.isFinite);
@@ -114,6 +114,106 @@ test('stage index and reduced-motion progress snap to finished formations', () =
   assert.equal(resolveChronicleProgress(2.6, true), 3);
   assert.equal(resolveChronicleProgress(2.6, false), 2.6);
   assert.equal(resolveChronicleProgress(NaN, false), 0);
+});
+
+test('directed transitions seek the same state after reversal or a fast jump, with exact endpoints', () => {
+  const forward = Array.from({ length: 121 }, (_, i) => i / 20);
+  const snapshots = new Map(forward.map(p => [p, chronicleVisualState(p, 1440, false)]));
+  // Deliberately jump across unselected chapters, then revisit both routes in reverse.
+  for (const p of [5.8, 0.5, 3.2, 4.75, ...forward.toReversed()]) {
+    const state = chronicleVisualState(p, 1440, false);
+    if (snapshots.has(p)) assert.deepEqual(state, snapshots.get(p));
+    assert.ok(state.mix >= 0 && state.mix <= 1 && state.emphasis >= 0 && state.emphasis <= 1);
+  }
+  for (let start = 0; start < CHRONICLE_LAST_STAGE; start++) {
+    const end = start + 1, segment = start + 1, transition = CHRONICLE_TRANSITIONS[start];
+    assert.ok(chronicleVisualState(start + 0.0001, 1440, false).mix < 1e-6);
+    assert.equal(chronicleVisualState(end, 1440, false).mix, 1);
+    assert.equal(chronicleVisualState(start, 1440, false).emphasis, 0);
+    assert.equal(chronicleVisualState(end, 1440, false).emphasis, 0);
+    const middle = chronicleVisualState((start + end) / 2, 1440, false);
+    assert.equal(middle.segment, segment);
+    assert.equal(middle.transition, transition);
+    assert.equal(middle.emphasis, 1);
+    // Near the endpoints both the position and curved offset converge without a snap.
+    assert.ok(chronicleVisualState(start + 0.0001, 1440, false).mix < 1e-6);
+    assert.ok(chronicleVisualState(end - 0.0001, 1440, false).emphasis < 1e-6);
+  }
+  assert.deepEqual(CHRONICLE_TRANSITIONS, ['oracle', 'documents', 'balance', 'citations', 'evidence-chain', 'return-ring']);
+  assert.equal(chronicleVisualState(Infinity, 1440, false).progress, 0);
+  assert.equal(chronicleVisualState(-2, 1440, false).progress, 0);
+  assert.equal(chronicleVisualState(99, 1440, false).progress, 6);
+});
+
+test('every particle route meets the actual stage buffers exactly and stays continuous across every join', () => {
+  const field = buildChronicleField(1024, [squareMask(64, 8, 56), squareMask(64, 12, 52), squareMask(64, 16, 48)]);
+  const seek = (p, i) => {
+    const state = chronicleVisualState(p, 1440, false), from = state.segment - 1, to = state.segment;
+    return chronicleParticlePosition(field.stages[from].subarray(i * 3, i * 3 + 3), field.stages[to].subarray(i * 3, i * 3 + 3), field.seeds.subarray(i * 4, i * 4 + 4), state.segment, state.mix);
+  };
+  for (let i = 0; i < field.formationCount; i += 7) {
+    for (let stage = 0; stage <= CHRONICLE_LAST_STAGE; stage++) {
+      assert.deepEqual(seek(stage, i), Array.from(field.stages[stage].subarray(i * 3, i * 3 + 3)));
+      if (stage > 0 && stage < CHRONICLE_LAST_STAGE) {
+        const before = seek(stage - 0.00001, i), after = seek(stage + 0.00001, i);
+        assert.ok(before.every((v, axis) => Math.abs(v - after[axis]) < 1e-7), `join ${stage}, particle ${i}`);
+      }
+    }
+    const forward = Array.from({ length: 121 }, (_, step) => seek(step / 20, i));
+    for (let step = 120; step >= 0; step--) {
+      assert.deepEqual(seek(step / 20, i), forward[step], 'reverse/fast seek has no accumulated state');
+      assert.ok(finite(forward[step]));
+      assert.ok(forward[step].every(v => Math.abs(v) < 2));
+    }
+  }
+});
+
+test('stationary and invalid scroll positions keep readable, reversible chapter frames', () => {
+  for (let stage = 0; stage <= CHRONICLE_LAST_STAGE; stage++) {
+    const active = chronicleChapterFrame(stage, stage);
+    assert.deepEqual(active, { enter: 1, exit: 0, opacity: 1, shift: 0, artifactShift: 0 });
+    const values = Array.from({ length: 121 }, (_, i) => chronicleChapterFrame(i / 20, stage));
+    for (let i = 120; i >= 0; i--) {
+      assert.deepEqual(chronicleChapterFrame(i / 20, stage), values[i]);
+      assert.ok(Object.values(values[i]).every(Number.isFinite));
+      assert.ok(values[i].opacity >= 0.5 && values[i].opacity <= 1, 'copy is never fully hidden');
+      assert.deepEqual(chronicleChapterFrame(i / 20, stage, true), active, 'static/reduced mode stays readable');
+    }
+  }
+  assert.deepEqual(chronicleChapterFrame(NaN, 3), chronicleChapterFrame(0, 3));
+});
+
+test('phone threshold and reduced motion choose completed, immediately readable stages', () => {
+  for (const width of [320, 390, 700]) for (const p of [0.4, 0.6, 4.25, 4.8]) {
+    const state = chronicleVisualState(p, width, false);
+    assert.equal(state.mode, 'static-mobile');
+    assert.equal(state.progress, Math.round(p));
+    assert.equal(state.segment, 0);
+    assert.equal(state.emphasis, 0);
+  }
+  assert.equal(chronicleVisualState(0.4, 701, false).progress, 0.4);
+  const reduced = chronicleVisualState(4.8, 1440, true);
+  assert.equal(reduced.mode, 'static-reduced');
+  assert.equal(reduced.progress, 5);
+  assert.equal(reduced.transition, 'none');
+  assert.equal(chronicleVisualState(4.8, 390, true).mode, 'static-reduced');
+});
+
+test('persistent particle matching preserves silhouettes and joins neighbouring destinations', () => {
+  const source = new Float32Array([0, 1, 0, -1, 0, 0, 1, 0, 0, 0, -1, 0]);
+  const target = new Float32Array([0, -0.7, 0.1, 0.5, 0, 0.2, -0.5, 0, 0.3, 0, 0.7, 0.4]);
+  const originalSource = source.slice(), originalTarget = target.slice();
+  const matched = matchChronicleFormation(source, target, 'radial');
+  const points = array => Array.from({ length: array.length / 3 }, (_, i) => Array.from(array.subarray(i * 3, i * 3 + 3)).join(',')).sort();
+  assert.deepEqual(points(matched), points(target), 'no target point is added, removed or altered');
+  assert.deepEqual(source, originalSource);
+  assert.deepEqual(target, originalTarget);
+  for (let i = 0; i < source.length; i += 3) assert.ok(Math.abs(Math.atan2(source[i + 1], source[i]) - Math.atan2(matched[i + 1], matched[i])) < 1e-6);
+  const from = new Float32Array([1, 1, 0, -1, -1, 0, 0, 0, 0]);
+  const to = new Float32Array([0, 0, 0.2, 0.8, 0.8, 0.3, -0.8, -0.8, 0.1]);
+  const diagonal = matchChronicleFormation(from, to, 'diagonal');
+  for (let i = 0; i < from.length; i += 3) assert.equal(Math.sign(diagonal[i] + diagonal[i + 1]), Math.sign(from[i] + from[i + 1]));
+  assert.throws(() => matchChronicleFormation(from, target, 'diagonal'), RangeError);
 });
 
 test('layouts centre the ring, place chapters beside the copy and stay continuous', () => {

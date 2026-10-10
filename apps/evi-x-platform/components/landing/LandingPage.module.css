@@ -38,6 +38,14 @@
 .landing[data-webgl=fallback]:is([data-stage="0"],[data-stage="6"]) .fallback{opacity:1}
 .fallbackRing{width:min(112vh,84vw);height:min(112vh,84vw)}
 
+/* All six routes share the same focus envelope; decoration clears the formation immediately. */
+.landing[data-chronicle-mode=scroll] .sky::before{opacity:calc(1 - var(--chronicle-emphasis,0) * .9)}
+.landing[data-chronicle-mode=scroll] .vignette::after{opacity:calc(.55 * (1 - var(--chronicle-emphasis,0)))}
+.landing[data-chronicle-transition=oracle][data-stage="0"] .halo{opacity:calc(1 - var(--chronicle-emphasis,0));transition:none}
+.landing[data-chronicle-transition=return-ring][data-stage="6"] .halo{opacity:calc(1 - var(--chronicle-emphasis,0));transition:none}
+.landing[data-chronicle-mode=scroll][data-cursor=on] .lamp{opacity:calc(1 - var(--chronicle-emphasis,0));transition:none}
+.landing[data-chronicle-mode=scroll] :is(.bigYear,.marquee){opacity:calc(1 - var(--chronicle-emphasis,0) * .9)}
+
 /* ——— Cursor aura (fine pointers only) ——— */
 .cursor{position:fixed;left:0;top:0;z-index:95;width:0;height:0;pointer-events:none;opacity:0;transition:opacity .35s;will-change:transform}
 .landing[data-cursor=on] .cursor{opacity:1}
@@ -50,6 +58,7 @@
 /* ——— Header ——— */
 .header{position:fixed;inset:0 0 auto;z-index:30;height:76px;padding:0 var(--gutter);display:flex;align-items:center;justify-content:space-between;gap:24px;background:linear-gradient(rgba(4,8,14,.9),rgba(4,8,14,0));border-bottom:1px solid transparent;transition:background .4s,border-color .4s}
 .landing[data-scrolled=true] .header{background:rgba(4,8,14,.84);border-bottom-color:var(--line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,var(--gold-deep),var(--gold-pale));transform:scaleX(var(--journey-position,0));transform-origin:left;pointer-events:none}
 .brand{display:flex;align-items:center;gap:12px;white-space:nowrap}
 .brand svg{border-radius:7px;transition:transform .5s var(--ease)}
 .brand:hover svg{transform:rotate(-8deg) scale(1.06)}
@@ -261,33 +270,14 @@
 .footerTop>span{margin-right:auto;font-weight:700;letter-spacing:.2em;color:var(--ivory)}
 .footerTop>a:hover{color:var(--gold-pale)}
 .footer p{max-width:980px;margin-top:6px}
-.footer .disclaimer{font-size:13px;color:#d6dde2}
 
-/* ——— Reveal: IntersectionObserver fallback ——— */
-.landing[data-reveal=on] .reveal{opacity:0;translate:0 26px;transition:opacity 1s ease,translate 1.2s var(--ease)}
-.landing[data-reveal=on] [data-seen=true] .reveal{opacity:1;translate:none}
-.landing[data-reveal=on] .chapterCopy>:nth-child(2){transition-delay:.08s}
-.landing[data-reveal=on] .chapterCopy>:nth-child(3){transition-delay:.16s}
-.landing[data-reveal=on] .chapterCopy>:nth-child(4){transition-delay:.24s}
-.landing[data-reveal=on] .chapterCopy>:nth-child(n+5){transition-delay:.32s}
-.landing[data-reveal=on] .finale>:nth-child(2){transition-delay:.15s}
-.landing[data-reveal=on] .finale>:nth-child(3){transition-delay:.3s}
-.landing[data-reveal=on] [data-seen=true] .gates li>span{animation:stamp .7s cubic-bezier(.2,.9,.2,1.2) both}
-.landing[data-reveal=on] [data-seen=true] .slipRow>span{animation:slip .9s var(--ease) both;animation-delay:calc(var(--i,0) * .08s + .2s)}
-.gates li:nth-child(1)>span{animation-delay:.3s!important}.gates li:nth-child(2)>span{animation-delay:.36s!important}.gates li:nth-child(3)>span{animation-delay:.42s!important}.gates li:nth-child(4)>span{animation-delay:.48s!important}.gates li:nth-child(5)>span{animation-delay:.54s!important}.gates li:nth-child(6)>span{animation-delay:.6s!important}.gates li:nth-child(7)>span{animation-delay:.66s!important}.gates li:nth-child(8)>span{animation-delay:.72s!important}.gates li:nth-child(9)>span{animation-delay:.78s!important}
-@keyframes stamp{from{opacity:0;transform:scale(1.6)}60%{opacity:1}to{opacity:1;transform:none}}
-@keyframes slip{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:none}}
-
-/* Scroll-linked stage frames: blocks fade, scale and un-blur as they cross the viewport. */
-@supports (animation-timeline: view()){@media (min-aspect-ratio:9/10){
-  .landing[data-reveal=on] .reveal{opacity:1;translate:none;transition:none;animation:frameIn linear both,frameOut linear forwards;animation-timeline:view(),view();animation-range:entry 0% cover 20%,exit 25% exit 100%}
-  .landing[data-reveal=on] .bigYear{animation:yearDrift linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
-  .landing[data-reveal=on] .chapter[data-layout=center] .bigYear{animation-name:yearDriftCentered}
-  @keyframes frameIn{from{opacity:0;translate:0 40px;scale:.96;filter:blur(7px)}to{opacity:1;translate:none;scale:none;filter:blur(0)}}
-  @keyframes frameOut{from{opacity:1;filter:blur(0)}to{opacity:.15;translate:0 -30px;scale:.98;filter:blur(6px)}}
-  @keyframes yearDrift{from{translate:-6vw 0}to{translate:6vw 0}}
-  @keyframes yearDriftCentered{from{translate:-6% 0}to{translate:6% 0}}
-}}
+/* ——— Scroll-linked copy and read-only artefacts ——— */
+/* Default values are the readable final state before hydration or when scripts fail. */
+.landing[data-reveal=on] .reveal{opacity:var(--stage-copy-opacity,1);translate:0 var(--stage-copy-shift,0px);transition:none;animation:none;filter:none}
+.landing[data-reveal=on] .chapterTitle{letter-spacing:calc(.05em + (1 - var(--stage-enter,1)) * .015em)}
+.landing[data-reveal=on] :is(.slipRow>span,.chain>li){translate:0 calc(var(--stage-artifact-shift,0px) * (1 + var(--i,0) * .15))}
+.landing[data-reveal=on] .gates li>span{scale:calc(.96 + var(--stage-enter,1) * .04)}
+.landing[data-reveal=on] .bigYear{translate:calc((var(--stage-enter,1) - var(--stage-exit,0) - .5) * 10vw) 0}
 
 /* ——— Layout: medium landscape ——— */
 @media (max-width:1100px) and (min-aspect-ratio:9/10){
@@ -298,7 +288,7 @@
   .rail{display:none}
 }
 /* ——— Layout: portrait (matches the scene's portrait framing) ——— */
-@media (max-aspect-ratio:9/10){
+@media (max-aspect-ratio:9/10), (max-width:700px){
   .halo{background:radial-gradient(circle at 50% 51%,transparent 52vw,rgba(244,185,66,.08) 63vw,transparent 78vw)}
   .header{height:64px;padding:0 20px}
   .brand strong{font-size:18px}.brand>span{display:none}
@@ -362,3 +352,32 @@
 }
 .landing[data-reduced-motion=true] :is(.heroTitle>span,.heroSource,.heroLead,.heroFoot){animation:none}
 .landing[data-reduced-motion=true] .hero .actions{animation:none}
+
+/* Static reading on phones and immediate finished states for reduced motion, including SSR. */
+@media (max-width:700px), (prefers-reduced-motion:reduce){
+  .landing *,.landing *::before,.landing *::after{animation:none!important;transition:none!important}
+  .landing .reveal{opacity:1!important;translate:none!important;scale:none!important;filter:none!important}
+  .landing :is(.slipRow>span,.chain>li,.bigYear){translate:none!important}
+  .landing .gates li>span{scale:none!important}
+  .landing [data-tilt]{transform:none!important}
+  .cursor,.lamp{display:none}
+}
+.landing[data-static-visual=true] *,.landing[data-static-visual=true] *::before,.landing[data-static-visual=true] *::after{animation:none!important;transition:none!important}
+.landing[data-static-visual=true] .reveal{opacity:1!important;translate:none!important;scale:none!important;filter:none!important}
+.landing[data-static-visual=true] :is(.slipRow>span,.chain>li,.bigYear){translate:none!important}
+.landing[data-static-visual=true] .gates li>span{scale:none!important}
+@media (max-width:700px){
+  .sky>canvas{display:none}
+  .heroLead{display:block!important}
+  .glyph{position:absolute;top:7svh;left:50%;transform:translateX(-50%);opacity:.72}
+  .chapter[data-layout=center] .glyph{opacity:.4}
+  .steles{grid-template-columns:1fr}
+  .steles li{min-height:0;display:grid;gap:0}
+  .steleFront,.steleBack{position:relative;inset:auto;backface-visibility:visible;transform:none!important}
+  .steleFront{padding:22px;gap:12px;align-items:flex-start}
+  .steleFront strong{writing-mode:horizontal-tb;font-size:22px;letter-spacing:.1em}
+  .steleFront strong span{display:inline}
+  .steleFront strong span+span{margin-block-start:0;margin-left:.5em}
+  .steleBack{padding:22px;border-top:0}
+  .steleBack p{font-size:14px;line-height:1.9}
+}

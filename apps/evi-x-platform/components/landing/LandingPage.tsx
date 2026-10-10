@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Reac
 import BrandMark from '@/components/brand/BrandMark';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { legacyLandingDestination } from '@/lib/landing-navigation';
-import { chronicleProgress, chronicleStage, CHRONICLE_LAST_STAGE } from '@/lib/landing-chronicle';
+import { chronicleChapterFrame, chronicleProgress, chronicleVisualState, CHRONICLE_LAST_STAGE, CHRONICLE_STATIC_WIDTH } from '@/lib/landing-chronicle';
 import styles from './LandingPage.module.css';
 
 const ChronicleScene = dynamic(() => import('./ChronicleScene'), { ssr: false });
@@ -142,6 +142,7 @@ function usePointerEffects(rootRef: React.RefObject<HTMLDivElement | null>, curs
     };
     const leave = () => {
       root.dataset.cursor = 'off';
+      root.dataset.cursorPress = 'false';
       if (tilt) releaseTilt(tilt);
       if (magnet) releaseMagnet(magnet);
       tilt = magnet = null;
@@ -152,6 +153,7 @@ function usePointerEffects(rootRef: React.RefObject<HTMLDivElement | null>, curs
     window.addEventListener('pointermove', move, { passive: true });
     window.addEventListener('pointerdown', down, { passive: true });
     window.addEventListener('pointerup', up, { passive: true });
+    window.addEventListener('pointercancel', up, { passive: true });
     document.documentElement.addEventListener('pointerleave', leave);
     window.addEventListener('blur', leave);
     return () => {
@@ -161,6 +163,7 @@ function usePointerEffects(rootRef: React.RefObject<HTMLDivElement | null>, curs
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', down);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
       document.documentElement.removeEventListener('pointerleave', leave);
       window.removeEventListener('blur', leave);
     };
@@ -174,22 +177,26 @@ export default function LandingPage() {
   const railFillRef = useRef<HTMLSpanElement>(null);
   const [stage, setStage] = useState(0), [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false), [ready, setReady] = useState(false), [mounted, setMounted] = useState(false);
+  const [narrowViewport, setNarrowViewport] = useState(false);
+  const staticVisual = reducedMotion || narrowViewport;
   const loginHref = auth.session?.authenticated ? '/projects' : '/login';
   const startLabel = auth.session?.authenticated ? '继续我的研究' : '开始我的研究';
   const onReady = useCallback((value: boolean) => setReady(value), []);
   const sections = () => Array.from(rootRef.current?.querySelectorAll<HTMLElement>('main > [data-stage]') ?? []);
-  usePointerEffects(rootRef, cursorRef, mounted && !reducedMotion);
+  usePointerEffects(rootRef, cursorRef, mounted && !staticVisual && !paused);
 
   useEffect(() => {
     const destination = legacyLandingDestination(window.location.hash);
     if (destination) { window.location.replace(destination); return; }
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onMotion = () => setReducedMotion(media.matches);
+    const narrow = window.matchMedia(`(max-width: ${CHRONICLE_STATIC_WIDTH}px)`);
+    const onMotion = () => { setReducedMotion(media.matches); setNarrowViewport(narrow.matches); };
     const mountFrame = requestAnimationFrame(() => { onMotion(); setMounted(true); });
     media.addEventListener('change', onMotion);
+    narrow.addEventListener('change', onMotion);
     const onHash = () => { const target = legacyLandingDestination(window.location.hash); if (target) window.location.replace(target); };
     window.addEventListener('hashchange', onHash);
-    return () => { cancelAnimationFrame(mountFrame); media.removeEventListener('change', onMotion); window.removeEventListener('hashchange', onHash); };
+    return () => { cancelAnimationFrame(mountFrame); media.removeEventListener('change', onMotion); narrow.removeEventListener('change', onMotion); window.removeEventListener('hashchange', onHash); };
   }, []);
 
   useEffect(() => {
@@ -202,9 +209,24 @@ export default function LandingPage() {
       for (let i = 1; i <= CHRONICLE_LAST_STAGE; i++) boundaries.push(nodes[i] ? nodes[i].getBoundingClientRect().top : Number.POSITIVE_INFINITY);
       const progress = chronicleProgress(boundaries, viewport * 0.5, viewport * 0.5);
       progressRef.current = progress;
-      if (rootRef.current) rootRef.current.dataset.scrolled = String(window.scrollY > 24);
+      const visual = chronicleVisualState(progress, window.innerWidth, reducedMotion);
+      if (rootRef.current) {
+        rootRef.current.dataset.scrolled = String(window.scrollY > 24);
+        rootRef.current.dataset.chronicleProgress = visual.progress.toFixed(4);
+        rootRef.current.dataset.chronicleTransition = visual.transition;
+        rootRef.current.style.setProperty('--chronicle-emphasis', visual.emphasis.toFixed(4));
+        rootRef.current.style.setProperty('--journey-position', (visual.progress / CHRONICLE_LAST_STAGE).toFixed(4));
+      }
+      for (const node of nodes) {
+        const copy = chronicleChapterFrame(visual.progress, Number(node.dataset.stage), staticVisual);
+        node.style.setProperty('--stage-enter', copy.enter.toFixed(4));
+        node.style.setProperty('--stage-exit', copy.exit.toFixed(4));
+        node.style.setProperty('--stage-copy-opacity', copy.opacity.toFixed(4));
+        node.style.setProperty('--stage-copy-shift', `${copy.shift.toFixed(2)}px`);
+        node.style.setProperty('--stage-artifact-shift', `${copy.artifactShift.toFixed(2)}px`);
+      }
       if (railFillRef.current) railFillRef.current.style.transform = `scaleY(${Math.min(1, progress / (ERAS.length - 1))})`;
-      const next = chronicleStage(progress);
+      const next = visual.stage;
       if (next !== stageRef.current) { stageRef.current = next; setStage(next); }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
@@ -214,26 +236,17 @@ export default function LandingPage() {
     window.addEventListener('resize', schedule);
     update();
     return () => { observer.disconnect(); cancelAnimationFrame(frame); window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); };
-  }, []);
-
-  useEffect(() => {
-    // Copy reveals once per section; content stays visible when scripts or observers are unavailable.
-    if (!mounted || reducedMotion || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) if (entry.isIntersecting) { (entry.target as HTMLElement).dataset.seen = 'true'; observer.unobserve(entry.target); }
-    }, { threshold: 0.12 });
-    for (const node of rootRef.current?.querySelectorAll<HTMLElement>('main > [data-stage]') ?? []) if (node.dataset.seen !== 'true') observer.observe(node);
-    return () => observer.disconnect();
-  }, [mounted, reducedMotion]);
+  }, [reducedMotion, narrowViewport, staticVisual]);
 
   const goTo = (index: number) => {
     const node = sections()[index];
     if (!node) return;
-    node.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
+    node.scrollIntoView({ behavior: staticVisual ? 'instant' : 'smooth', block: 'start' });
   };
   const railIndex = Math.min(stage, ERAS.length - 1);
+  const pauseLabel = reducedMotion ? '已按系统设置减少动态效果' : narrowViewport ? '小屏已使用静态画面' : paused ? '继续动效' : '暂停动效';
 
-  return <div ref={rootRef} className={styles.landing} data-landing="evidence-journey" data-webgl={ready ? 'ready' : 'fallback'} data-reveal={mounted && !reducedMotion ? 'on' : 'off'} data-reduced-motion={reducedMotion} data-paused={paused} data-stage={stage}>
+  return <div ref={rootRef} className={styles.landing} data-landing="evidence-journey" data-webgl={ready && !narrowViewport ? 'ready' : 'fallback'} data-reveal={mounted && !staticVisual ? 'on' : 'off'} data-reduced-motion={reducedMotion} data-static-visual={staticVisual} data-chronicle-mode={reducedMotion ? 'static-reduced' : narrowViewport ? 'static-mobile' : 'scroll'} data-paused={paused} data-stage={stage}>
     <a className={styles.skip} href={loginHref}>跳过旅程，进入证见</a>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="证见 EVI-X 首页"><BrandMark/><strong>证见</strong><span>EVI-X</span></Link>
@@ -248,7 +261,7 @@ export default function LandingPage() {
     <div className={styles.sky} aria-hidden="true">
       <div className={styles.halo}/>
       <div className={styles.fallback}><FallbackRing/></div>
-      {mounted && <ChronicleScene progressRef={progressRef} paused={paused} reducedMotion={reducedMotion} onReady={onReady}/>}
+      {mounted && !narrowViewport && <ChronicleScene progressRef={progressRef} paused={paused} reducedMotion={reducedMotion} onReady={onReady}/>}
       <div className={styles.lamp}/>
       <div className={styles.vignette}/>
     </div>
@@ -262,8 +275,8 @@ export default function LandingPage() {
         </button>
       </li>)}</ol>
     </nav>
-    <button type="button" className={styles.pause} aria-pressed={paused || reducedMotion} disabled={reducedMotion} onClick={() => setPaused(!paused)} title={reducedMotion ? '已按系统设置减少动态效果' : paused ? '继续动效' : '暂停动效'} aria-label={reducedMotion ? '已按系统设置减少动态效果' : paused ? '继续动效' : '暂停动效'}>
-      {paused || reducedMotion ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 7 5-7 5Z" fill="currentColor"/></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2"/></svg>}
+    <button type="button" className={styles.pause} aria-pressed={paused || staticVisual} disabled={staticVisual} onClick={() => setPaused(!paused)} title={pauseLabel} aria-label={pauseLabel}>
+      {paused || staticVisual ? <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 7 5-7 5Z" fill="currentColor"/></svg> : <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2"/></svg>}
     </button>
 
     <main>
@@ -278,7 +291,7 @@ export default function LandingPage() {
             <a href="#era-oracle" className={styles.ghost} data-magnetic>循证三千年<span aria-hidden="true">↓</span></a>
           </div>
         </div>
-        <p className={styles.heroHint} aria-hidden="true"><span>移动鼠标拨开金尘 · 点击泛起涟漪</span></p>
+        <p className={styles.heroHint} aria-hidden="true"><span>向下滚动 · 让金尘化作甲骨</span></p>
         <p className={styles.heroFoot} aria-hidden="true"><span>约公元前 1300</span><i/><span>2026</span></p>
       </section>
 
@@ -353,9 +366,7 @@ export default function LandingPage() {
 
     <footer className={styles.footer}>
       <div className={styles.footerTop}><span>证见 EVI-X</span><Link href="/explore">产品与说明</Link><Link href="/workspace">研究工具 ↗</Link></div>
-      <p className={styles.disclaimer}>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p>
       <p>引文出处：《礼记·中庸》；《论语·八佾》及朱熹《论语集注》；许慎《说文解字》；《后汉书·舆服志》；《汉书·河间献王传》（实事求是）；梁启超《清代学术概论》。引文据通行本，繁简依所引原文。</p>
-      <p>视觉说明：历史章节为概念性叙事。圆环、甲骨、文字与证据链粒子由代码实时生成，不是文物复原，也不代表任何调查数据。獬见为 AI 辅助生成、经人工验收的原创概念角色。</p>
     </footer>
   </div>;
 }

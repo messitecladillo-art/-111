@@ -10,6 +10,7 @@ export const CHRONICLE_MOBILE_PARTICLE_COUNT = 9000;
 export const CHRONICLE_MIN_PARTICLES = 512;
 export const CHRONICLE_DUST_RATIO = 0.16;
 export const CHRONICLE_MAX_DPR = 1.75;
+export const CHRONICLE_STATIC_WIDTH = 700;
 export const CHRONICLE_SEED = 0x5a484e47;
 /** Glyph-backed stages in order: 春秋 徵, 东汉 灋, 清 證. */
 export const CHRONICLE_GLYPHS = ['徵', '灋', '證'] as const;
@@ -258,6 +259,22 @@ export function scatterFormation(n: number, rng: Rng): Float32Array {
   return sink.out;
 }
 
+/** Preserve every target point while giving persistent particles neighbouring destinations. */
+export function matchChronicleFormation(source: Float32Array, target: Float32Array, order: 'radial' | 'diagonal' | 'vertical' | 'horizontal'): Float32Array {
+  if (source.length !== target.length || source.length % 3 !== 0) throw new RangeError('Formation sizes must match');
+  const n = source.length / 3;
+  const indices = (points: Float32Array) => Array.from({ length: n }, (_, i) => i).sort((a, b) => {
+    const key = (i: number) => order === 'radial' ? Math.atan2(points[i * 3 + 1], points[i * 3])
+      : order === 'vertical' ? points[i * 3] + points[i * 3 + 1] * 0.07
+      : order === 'horizontal' ? points[i * 3 + 1] + points[i * 3] * 0.07
+      : points[i * 3] + points[i * 3 + 1];
+    return key(a) - key(b) || a - b;
+  });
+  const from = indices(source), to = indices(target), matched = new Float32Array(target.length);
+  for (let rank = 0; rank < n; rank++) for (let axis = 0; axis < 3; axis++) matched[from[rank] * 3 + axis] = target[to[rank] * 3 + axis];
+  return matched;
+}
+
 export function buildChronicleField(requested: number, masks: readonly (GlyphMask | null)[] = [], seed = CHRONICLE_SEED): ChronicleField {
   const count = clampParticleCount(requested);
   const formationCount = Math.round(count * (1 - CHRONICLE_DUST_RATIO));
@@ -268,6 +285,11 @@ export function buildChronicleField(requested: number, masks: readonly (GlyphMas
   };
   const ring = ringFormation(formationCount, rng);
   const formations = [ring, oracleFormation(formationCount, rng), glyph(0), glyph(1), glyph(2), chainFormation(formationCount, rng), ring];
+  formations[1] = matchChronicleFormation(formations[0], formations[1], 'radial');
+  formations[2] = matchChronicleFormation(formations[1], formations[2], 'vertical');
+  formations[3] = matchChronicleFormation(formations[2], formations[3], 'horizontal');
+  formations[4] = matchChronicleFormation(formations[3], formations[4], 'vertical');
+  formations[5] = matchChronicleFormation(formations[4], formations[5], 'diagonal');
   const dust = new Float32Array((count - formationCount) * 3);
   for (let i = 0; i < dust.length; i += 3) {
     dust[i] = rng() * 2 - 1;
@@ -309,6 +331,80 @@ export function chronicleStage(progress: number, last = CHRONICLE_LAST_STAGE): n
 export function resolveChronicleProgress(progress: number, reducedMotion: boolean, last = CHRONICLE_LAST_STAGE): number {
   const value = Number.isFinite(progress) ? Math.max(0, Math.min(last, progress)) : 0;
   return reducedMotion ? chronicleStage(value, last) : value;
+}
+
+export const CHRONICLE_TRANSITIONS = ['oracle', 'documents', 'balance', 'citations', 'evidence-chain', 'return-ring'] as const;
+export type ChronicleVisualState = {
+  mode: 'scroll' | 'static-mobile' | 'static-reduced';
+  progress: number;
+  stage: number;
+  transition: 'none' | (typeof CHRONICLE_TRANSITIONS)[number];
+  /** Shader uniforms: selected segment, eased position, bend/pixel emphasis. */
+  segment: number;
+  mix: number;
+  emphasis: number;
+};
+
+/** Directly seek the current scroll position; no animation queue or direction-dependent state. */
+export function chronicleVisualState(progress: number, viewportWidth: number, reducedMotion: boolean): ChronicleVisualState {
+  const mobile = Number.isFinite(viewportWidth) && viewportWidth > 0 && viewportWidth <= CHRONICLE_STATIC_WIDTH;
+  const mode = reducedMotion ? 'static-reduced' : mobile ? 'static-mobile' : 'scroll';
+  const p = resolveChronicleProgress(progress, mode !== 'scroll');
+  // At a boundary keep the preceding route's exact endpoint. The next route starts
+  // from that same buffer, so scroll reversal and a direct rail jump cannot snap.
+  const segment = mode !== 'scroll' ? 0 : Math.max(1, Math.ceil(p));
+  const local = segment ? p - (segment - 1) : 0;
+  const mix = local * local * (3 - 2 * local);
+  return {
+    mode, progress: p, stage: chronicleStage(p), segment, mix,
+    transition: segment ? CHRONICLE_TRANSITIONS[segment - 1] : 'none',
+    emphasis: segment ? 4 * mix * (1 - mix) : 0,
+  };
+}
+
+/** CPU reference for the GPU's six scroll-only routes, used to check the actual path boundaries. */
+export function chronicleParticlePosition(from: ArrayLike<number>, to: ArrayLike<number>, seeds: ArrayLike<number>, segment: number, mix: number): [number, number, number] {
+  const t = Math.max(0, Math.min(1, Number.isFinite(mix) ? mix : 0));
+  const focus = 4 * t * (1 - t), phase = seeds[0] * TAU;
+  const x = from[0] + (to[0] - from[0]) * t, y = from[1] + (to[1] - from[1]) * t, z = from[2] + (to[2] - from[2]) * t;
+  let dx = 0, dy = 0, dz = 0;
+  if (segment === 1 || segment === 5) {
+    const vx = to[0] - from[0], vy = to[1] - from[1], length = Math.hypot(vx, vy);
+    const bend = focus * (segment === 1 ? 0.10 : 0.18) * (0.35 + seeds[3] * 0.65);
+    if (length > 0.0001) { dx = -vy / length * bend; dy = vx / length * bend; }
+    dz = focus * Math.sin(phase) * 0.06;
+  } else if (segment === 2) {
+    // Crack marks become orderly vertical slips before resolving into 徵.
+    dx = Math.sin(from[1] * Math.PI + phase * 0.2) * focus * 0.09;
+    dy = Math.cos(phase) * focus * 0.025;
+    dz = focus * (seeds[1] - 0.5) * 0.12;
+  } else if (segment === 3) {
+    // Two sides of the evidence fan out equally, then meet in 灋.
+    dx = Math.sign(from[0] + 0.00001) * focus * 0.15;
+    dy = Math.sin(phase) * focus * 0.035;
+    dz = focus * Math.cos(phase) * 0.08;
+  } else if (segment === 4) {
+    // A shallow paper fold turns judgement into a layered citation surface.
+    dx = focus * Math.sin(from[1] * Math.PI) * 0.08;
+    dy = focus * Math.sin(phase) * 0.02;
+    dz = focus * (Math.abs(from[0]) - 0.4) * 0.24;
+  } else if (segment === 6) {
+    // The four-node chain gathers along a short spiral back to the original ring.
+    const angle = Math.atan2(to[1], to[0]) + (1 - t) * 0.7;
+    dx = Math.cos(angle) * focus * 0.14;
+    dy = Math.sin(angle) * focus * 0.14;
+    dz = focus * Math.sin(phase) * 0.04;
+  }
+  return [x + dx, y + dy, z + dz];
+}
+
+/** Presentational copy frames share the particle progress; none of the readable content is hidden. */
+export function chronicleChapterFrame(progress: number, stage: number, staticVisual = false) {
+  if (staticVisual) return { enter: 1, exit: 0, opacity: 1, shift: 0, artifactShift: 0 };
+  const p = resolveChronicleProgress(progress, false), index = chronicleStage(stage);
+  const ease = (v: number) => { const t = Math.max(0, Math.min(1, v)); return t * t * (3 - 2 * t); };
+  const enter = ease((p - index + 0.85) / 0.65), exit = ease((p - index - 0.65) / 0.7);
+  return { enter, exit, opacity: 0.7 + enter * 0.3 - exit * 0.18, shift: 18 * (1 - enter) - 10 * exit, artifactShift: 12 * (1 - enter) };
 }
 
 /** Horizontal placement of each stage in landscape layouts: art beside, behind or opposite the copy. */

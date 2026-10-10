@@ -28,8 +28,6 @@
 .windowDots i { width: 7px; height: 7px; border: 1px solid #6a808d; border-radius: 50%; }
 .windowDots i:first-child { background: #88b3a5; border-color: #88b3a5; }
 .windowLabel { font: 10px/1.4 Consolas, monospace; letter-spacing: 1.3px; }
-.localBadge { display: flex; align-items: center; gap: 7px; margin-left: auto; font-size: 10px; color: #c4d7d3; }
-.localBadge i { width: 5px; height: 5px; background: #00b3a4; border-radius: 50%; }
 .projectBar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 28px 34px; background: #102a3d; color: #f7f4ed; }
 .projectBar > div { min-width: 0; }
 .projectEyebrow { display: block; margin-bottom: 8px; font-size: 11px; color: #8caab6; letter-spacing: 2px; }
@@ -138,8 +136,6 @@
 .reportEnd a { display: inline-flex; align-items: center; gap: 12px; min-height: 42px; color: #00796f; text-decoration: none; font-size: 12px; font-weight: 600; }
 .statusLine { display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding: 12px 30px; min-height: 43px; border-top: 1px solid #dedfd7; background: #eeefe6; color: #637b6e; font-size: 10px; line-height: 1.7; }
 .statusLine > span { flex: 0 0 4px; width: 4px; height: 4px; background: #6a9c88; border-radius: 50%; }
-.demoFooter { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; padding: 14px 24px; background: #0a1f33; border-top: 1px solid #203d4a; color: #b5c8c6; font-size: 10px; }
-.demoFooter > span:last-child { color: #8faab5; }
 @media (hover:hover) {
   .navigation button:hover { color: #e3f5ed; background: #143445; }
   .historyActions button:hover:not(:disabled), .questionIndex button:hover, .addOption:hover:not(:disabled), .reportEnd a:hover { color: #004b47; }
@@ -158,7 +154,6 @@
   .demo { border-radius: 9px; }
   .chrome { padding: 10px 15px; gap: 12px; flex-wrap: wrap; }
   .windowLabel { font-size: 8px; letter-spacing: 1px; }
-  .localBadge { font-size: 9px; }
   .projectBar { padding: 23px 19px; }
   .projectBar h3 { font-size: 21px; }
   .projectEyebrow { font-size: 10px; letter-spacing: 1px; }
@@ -189,12 +184,10 @@
   .reportTitle h4 { font-size: 27px; }
   .reportSection { gap: 10px; grid-template-columns: 24px minmax(0,1fr); }
   .statusLine { padding: 11px 20px; }
-  .demoFooter { padding: 13px 19px; font-size: 9px; }
 }
 @media (max-width:360px) {
   .windowDots { gap: 4px; }
   .windowDots i { width: 5px; height: 5px; }
-  .localBadge { margin-left: 0; }
   .chrome { gap: 9px; }
   .questionnaire, .sample, .report { padding-inline: 16px; }
   .toolbar { padding-inline: 16px; }

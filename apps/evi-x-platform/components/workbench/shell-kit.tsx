@@ -144,14 +144,13 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
     <div className="wb-sidebar-footer">
       <div className="wb-evidence-path" aria-label="问题、数据、洞察、行动"><span>Q</span><i/><span>D</span><i/><span>I</span><i/><span>A</span></div>
       <strong>问有据，见有策。</strong>
-      <p>独立研究辅助工具 · 非官方</p>
       <span className="wb-sidebar-version">EVI-X RESEARCH WORKSPACE</span>
     </div>
   </aside>;
 }
 
 export function WorkbenchFooter() {
-  return <footer className="wb-footer"><span>证见 EVI-X · 循证研究，稳步前行</span><span>独立研究辅助工具 · 不承诺奖项结果</span></footer>;
+  return <footer className="wb-footer"><span>证见 EVI-X · 循证研究，稳步前行</span></footer>;
 }
 
 export function PageHeading({ group, title, description, headingRef, actions }: { group: string; title: string; description: string; headingRef?: RefObject<HTMLHeadingElement | null>; actions: ReactNode }) {

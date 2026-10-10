@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ACCENTS, createEditorContent, EDITOR_LIMITS, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { useContentReveal, useKeyedListMotion } from '../motion/useWorkspaceMotion';
 import ReportStoryboard, { ReportLinkNotice } from './ReportStoryboard';
 import { LINK_LABELS, reportExportWarnings } from '@/lib/report-storyboard';
 import styles from "./EditingStudio.module.css";
@@ -296,7 +297,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       }
       const blob = kind === "docx" || kind === "appendix" ? await buildDocx(data,{...reportFormat,part:kind==='appendix'?'appendix':'main'}) : kind === "pptx" ? await buildPptx(data) : new Blob([JSON.stringify(data)], { type: "application/json" });
       downloadBlob(blob, `${fileName(data.title)}${kind==='docx'?'-报告正文':kind==='appendix'?'-附录':''}.${kind==='appendix'?'docx':kind}`);
-      setMessage(kind==='docx'||kind==='appendix'?`已按公开格式范本生成${kind==='appendix'?'独立附录':'报告正文'}。请在 Word/WPS 更新目录并核对实际分页、匿名和引用。${reportFormatNotices(data.report).join('')}`:"已生成下载文件。导出的是编辑草稿，不代表已通过赛事合规检查。");
+      setMessage(kind==='docx'||kind==='appendix'?`已按公开格式范本生成${kind==='appendix'?'独立附录':'报告正文'}。请在 Word/WPS 更新目录并核对实际分页、匿名和引用。${reportFormatNotices(data.report).join('')}`:"已生成下载文件。");
     } catch (e) { setMessage(e instanceof Error ? e.message : "导出失败，请重试。"); }
     finally { setExporting(false); }
   }
@@ -418,22 +419,26 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
   const visibleItems = items.map((item, index) => ({ item, index })).filter(({ item }) => item.title.toLocaleLowerCase().includes(outlineQuery.trim().toLocaleLowerCase()));
   const presentationSlide = content.slides[presentIndex] || content.slides[0];
 
+  const outlineMotion = useKeyedListMotion<HTMLDivElement>({ ids: visibleItems.map(({item}) => `${mode}:${item.id}`), activeId: `${mode}:${selectedId}` });
+  const modeMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['report','slides'], activeId: mode, markerAxis: 'horizontal' });
+  const viewMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['write','split','preview'], activeId: view, markerAxis: 'horizontal' });
+  const versionMotion = useKeyedListMotion<HTMLDivElement>({ ids: versions.map(v=>v.id), enabled: !localOnly && libraryOpen });
+
   return <section className={styles.studio} id="editor" ref={studioRef} data-view={view} data-outline={outlineOpen} aria-label="报告与 PPT 实时编辑工作区">
     <div className={styles.documentBar} aria-label="选择文档工作区">
       <div className={styles.modeGroup}>
         <button type="button" aria-pressed={!fileLibraryOpen} onClick={() => setFileLibraryOpen(false)}>文本草稿</button>
         {!localOnly&&<button type="button" aria-pressed={fileLibraryOpen} onClick={() => setFileLibraryOpen(true)}>Office 原文件</button>}
       </div>
-      <span className={styles.saveStatus}>全文排版引擎待接入 · 原文件独立保存</span>
+      {localOnly&&<div className={styles.backupActions}><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
     </div>
     {!localOnly&&<EditorRecovery onBeforeRestore={beforeRestore}/>}
-    {localOnly&&<div className={styles.notice}><span>本地编辑模式，支持分镜、撤销和 Word / PPTX 导出。请下载 JSON 保存进度。</span><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
     {identityFrozen && <div className={styles.notice} role="alert"><span>身份切换保护已开启：当前页不再读写服务器作品。请先导出未保存内容，再手动刷新；页面不会自动丢弃正文。</span><button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载当前正文备份</button></div>}
     {!localOnly&&fileLibraryOpen&&<div><OfficeFileLibrary/></div>}
     <div hidden={fileLibraryOpen}>
     <div className={styles.documentBar}>
       <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
-      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-warning={phase === "error" || phase === "conflict"}>{localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
+      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
     </div>
     <div className={styles.libraryPanel} id="editor-library" hidden={localOnly||!libraryOpen}>
     <div className={styles.libraryBar}>
@@ -444,20 +449,20 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       <button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载 JSON 备份</button>
       <button type="button" disabled={locked} onClick={() => importInput.current?.click()}>恢复备份</button>
       <input ref={importInput} type="file" accept="application/json,.json" hidden onChange={e => { void importBackup(e.target.files?.[0]); e.target.value = ""; }}/>
-      <details className={styles.storageNote}><summary>保存与隐私</summary><p>正文与讲稿保存到服务器，按账户或浏览器私密会话隔离。匿名用户请提前在“身份与恢复”保存恢复密钥，以便 Cookie 丢失或会话过期后找回文件库；未设置密钥时只能导入自行下载的备份。密钥不能代替文件备份，服务器数据仍需保留。请定期导出 JSON，不填写原始问卷、个人信息或未授权资料。当前支持单人编辑。</p></details>
+      <details className={styles.storageNote}><summary>保存与隐私</summary><p>正文与讲稿按账户或私密会话保存。匿名会话可在“身份与恢复”设置恢复密钥；下载 JSON 备份可保存当前作品。</p></details>
     </div>
     <div className={styles.versionManager}>
       <div><strong>命名版本</strong><p>自动保存当前进度；在关键节点保留独立版本。每份作品最多 20 个，不自动删除。</p></div>
       <div className={styles.versionForm}><input aria-label="版本名称" maxLength={80} placeholder="例如：初稿完成、答辩前定稿" value={versionLabel} disabled={locked} onChange={e => setVersionLabel(e.target.value)}/><button type="button" title={phase === "error" ? "请先点立即保存，成功后再保存命名版本" : "保存当前已确认的正文和幻灯片"} onClick={() => void createVersion()} disabled={locked || phase === "conflict" || phase === "error" || !versionLabel.trim()}>保存命名版本</button><button type="button" onClick={() => void loadVersions()} disabled={!activeDraftId || versionLoading || locked}>刷新版本</button></div>
-      <div className={styles.versionList} aria-busy={versionLoading}>{versions.map(v => <article key={v.id}><div><strong>{v.label}</strong><span>{new Date(v.createdAt).toLocaleString("zh-CN")} · 修订 {v.sourceRevision}</span></div><button type="button" disabled={locked} onClick={() => void restoreVersion(v)}>打开为新作品</button></article>)}{!versions.length && <p>{versionLoading ? "正在读取版本…" : "尚无命名版本。自动保存不会创建历史快照。"}</p>}</div>
+      <div ref={versionMotion} className={styles.versionList} aria-busy={versionLoading}>{versions.map(v => <article key={v.id} data-motion-id={v.id}><div><strong>{v.label}</strong><span>{new Date(v.createdAt).toLocaleString("zh-CN")} · 修订 {v.sourceRevision}</span></div><button type="button" disabled={locked} onClick={() => void restoreVersion(v)}>打开为新作品</button></article>)}{!versions.length && <p>{versionLoading ? "正在读取版本…" : "尚无命名版本。自动保存不会创建历史快照。"}</p>}</div>
     </div></div>
     {message && <div className={styles.notice} role={phase === "error" || phase === "conflict" ? "alert" : "status"}><span>{message}</span>{phase === "conflict" && <button type="button" disabled={locked} onClick={() => void save(true)}>保留当前内容为副本</button>}<button type="button" aria-label="关闭提示" onClick={() => setMessage("")}>×</button></div>}
     <div className={styles.toolbar}>
-      <div className={styles.modeGroup} role="group" aria-label="编辑内容类型"><button type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button></div>
+      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button></div>
       <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       <div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>
     </div>
-    {mode==='report'&&<details className={styles.reportFormat}><summary>报告排版范本与导出设置 · {REPORT_FORMAT.label}</summary><p><a href={REPORT_FORMAT.sourceUrl} target="_blank" rel="noopener noreferrer">{REPORT_FORMAT.sourceTitle}</a> · 核验日期 {REPORT_FORMAT.verifiedAt}</p><p>{REPORT_FORMAT.sourceScope}</p><ul>{Object.values(REPORT_FORMAT.verified).map(value=><li key={value}>{value}</li>)}</ul><p>正文导出依次排列标题页、已有摘要、自动目录、普通正文、参考文献，各类章节保持原有顺序；明确命名为“附录”的章节单独导出。正文中“一、”“（一）”“1.”等编号开头的短行映射为对应层级标题。旧“参考文献与附录”章节会完整保留，请先拆分。</p><label>首行缩进（原附件未规定，可调整）<select value={reportFormat.firstLineChars} onChange={e=>setReportFormat(f=>({...f,firstLineChars:Number(e.target.value) as 0|2}))}><option value={2}>2 字符</option><option value={0}>不缩进</option></select></label><label><input type="checkbox" checked={reportFormat.numberPages} onChange={e=>setReportFormat(f=>({...f,numberPages:e.target.checked}))}/>加入页码（版式选项）：标题页不编号；摘要与目录用罗马数字；正文从 1 起，参考文献续编；独立附录从 1 起。</label><p>这些选项用于本次导出，不改写旧备份结构。网页是内容预览，Word/WPS 排版为最终分页依据。65 页上限、图表题位置、参考文献著录及匿名需在最终文件中核对；系统不会把样式应用当作提交验收通过。</p>{reportFormatNotices(content.report).map(message=><p key={message}>{message}</p>)}</details>}
+    {mode==='report'&&<details className={styles.reportFormat}><summary>报告排版范本与导出设置 · {REPORT_FORMAT.label}</summary><p><a href={REPORT_FORMAT.sourceUrl} target="_blank" rel="noopener noreferrer">{REPORT_FORMAT.sourceTitle}</a> · 核验日期 {REPORT_FORMAT.verifiedAt}</p><p>{REPORT_FORMAT.sourceScope}</p><ul>{Object.values(REPORT_FORMAT.verified).map(value=><li key={value}>{value}</li>)}</ul><p>正文导出依次排列标题页、已有摘要、自动目录、普通正文、参考文献，各类章节保持原有顺序；明确命名为“附录”的章节单独导出。正文中“一、”“（一）”“1.”等编号开头的短行映射为对应层级标题。旧“参考文献与附录”章节会完整保留，请先拆分。</p><label>首行缩进（原附件未规定，可调整）<select value={reportFormat.firstLineChars} onChange={e=>setReportFormat(f=>({...f,firstLineChars:Number(e.target.value) as 0|2}))}><option value={2}>2 字符</option><option value={0}>不缩进</option></select></label><label><input type="checkbox" checked={reportFormat.numberPages} onChange={e=>setReportFormat(f=>({...f,numberPages:e.target.checked}))}/>加入页码（版式选项）：标题页不编号；摘要与目录用罗马数字；正文从 1 起，参考文献续编；独立附录从 1 起。</label><p>导出后在 Word/WPS 中更新目录，检查分页、图表、引用和匿名信息。</p>{reportFormatNotices(content.report).map(message=><p key={message}>{message}</p>)}</details>}
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
       if(identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
@@ -468,12 +473,12 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
         setMessage('已按确认分镜更新 PPT，报告原文未改变。可在本页撤销；请核对保存状态或下载 JSON 备份。');return true;
       } catch(e){setMessage((e as Error).message);return false;}
     }}/></div>
-    <div className={styles.viewBar}><button type="button" aria-pressed={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)}>{outlineOpen ? "收起目录" : "展开目录"}</button><div role="group" aria-label="工作区视图"><button type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>专注写作</button><button type="button" aria-pressed={view === "split"} onClick={() => setView("split")}><span className={styles.wideLabel}>编辑与预览</span><span className={styles.compactLabel}>编辑</span></button><button type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>仅预览</button></div><span>{mode === "report" ? `${content.report.reduce((n,s) => n+s.body.length,0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span></div>
+    <div className={styles.viewBar}><button type="button" aria-pressed={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)}>{outlineOpen ? "收起目录" : "展开目录"}</button><div ref={viewMotion} role="group" aria-label="工作区视图"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="write" type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>专注写作</button><button data-motion-id="split" type="button" aria-pressed={view === "split"} onClick={() => setView("split")}><span className={styles.wideLabel}>编辑与预览</span><span className={styles.compactLabel}>编辑</span></button><button data-motion-id="preview" type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>仅预览</button></div><span>{mode === "report" ? `${content.report.reduce((n,s) => n+s.body.length,0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span></div>
     <div className={styles.editorGrid}>
       <aside className={styles.outline} aria-label={mode === "report" ? "报告目录" : "幻灯片列表"}>
         <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / 40</span></div>
         <input className={styles.outlineSearch} aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={e => setOutlineQuery(e.target.value)}/>
-        <div className={styles.itemList}>{visibleItems.map(({ item, index }) => <button type="button" key={item.id} data-mode={mode} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => mode === "report" ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span><span>{item.title || "未命名"}</span></span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>)}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
+        <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => mode === "report" ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span><span>{item.title || "未命名"}</span></span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>)}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
         <button type="button" className={styles.addItem} disabled={items.length >= 40 || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
       </aside>
       <fieldset className={styles.fields} disabled={phase === "loading" || versionBusy}>
@@ -506,7 +511,6 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
         <div className={styles.previewFoot}><span>{mode === "report" ? `${content.report.reduce((n, s) => n + s.body.length, 0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span><span>预览为版式参考 · 导出后复核分页与字体</span></div>
       </div>
     </div>
-    <p className={styles.boundary}>模板仅作写作提示。导出保留文字和讲稿，不添加系统品牌；提交前请核对当届规则、匿名要求和 AI 披露。此处不支持导入原有 Word / PowerPoint 排版。</p>
     <dialog ref={presentRef} className={styles.presentation} aria-label="幻灯片演示预览" onCancel={() => setPresenting(false)} onKeyDown={event => {
       if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }
@@ -517,5 +521,6 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
 }
 
 function SlidePreview({ slide, accent, index, label }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string }) {
-  return <div className={styles.slideCanvas} data-layout={slide.layout} style={{ "--slide-accent": `#${ACCENTS[accent]}` } as React.CSSProperties} aria-label={label}><h2>{slide.title}</h2><div className={styles.slideBody}><p>{slide.body}</p>{slide.layout === "two-column" && <aside>{slide.aside}</aside>}</div><span className={styles.slideNumber}>{String(index + 1).padStart(2,"0")}</span></div>;
+  const reveal = useContentReveal<HTMLDivElement>({ token: slide.id });
+  return <div ref={reveal} className={styles.slideCanvas} data-layout={slide.layout} style={{ "--slide-accent": `#${ACCENTS[accent]}` } as React.CSSProperties} aria-label={label}><h2>{slide.title}</h2><div className={styles.slideBody}><p>{slide.body}</p>{slide.layout === "two-column" && <aside>{slide.aside}</aside>}</div><span className={styles.slideNumber}>{String(index + 1).padStart(2,"0")}</span></div>;
 }

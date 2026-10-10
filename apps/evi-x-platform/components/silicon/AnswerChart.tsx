@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import type { Distribution } from '@/lib/silicon/assess';
 import styles from './SiliconLab.module.css';
+import { useContentReveal } from '@/components/motion/useWorkspaceMotion';
 
 /**
  * Answer distribution for one closed item. Single choice and scales: one 100% stacked bar per group
@@ -24,6 +25,7 @@ export default function AnswerChart({ data, kind, title }: { data: Distribution;
   const frame = useRef<HTMLDivElement>(null);
   const id = useId();
   const groups = data.groups.filter(g => g.n > 0);
+  const chartRef = useContentReveal<HTMLDivElement>({ token: JSON.stringify([kind, title, data.categories, data.groups, table]) });
   if (!groups.length) return <p className={styles.chartEmpty}>本题在当前结果中没有可统计的回答（未显示、拒答或无效）。</p>;
   const tooMany = kind === 'likert' && data.categories.length > ORDINAL_STEPS;
 
@@ -51,6 +53,7 @@ export default function AnswerChart({ data, kind, title }: { data: Distribution;
       <span id={`${id}-title`}>{title}</span>
       <button type="button" aria-pressed={table || tooMany} disabled={tooMany} onClick={() => setTable(v => !v)}>{table || tooMany ? '图表视图' : '表格视图'}</button>
     </figcaption>
+    <div ref={chartRef} className={styles.chartBody}>
     {(kind !== 'multi' ? categories.length > 1 : groups.length > 1) && !(table || tooMany) && <ul className={styles.legend} aria-label="图例">
       {(kind !== 'multi' ? categories.map((c, i) => ({ label: c.label, color: colorOf(i) })) : groups.map((g, i) => ({ label: g.label, color: groupColor(i) }))).map(item => <li key={item.label}><i style={{ background: item.color }}/>{item.label}</li>)}
     </ul>}
@@ -86,5 +89,6 @@ export default function AnswerChart({ data, kind, title }: { data: Distribution;
         {tip.rows.map(r => <p key={r.label}><i style={{ background: r.color }}/><strong>{r.value}</strong><small>{r.label}</small></p>)}
       </div>}
     </div>}
+    </div>
   </figure>;
 }

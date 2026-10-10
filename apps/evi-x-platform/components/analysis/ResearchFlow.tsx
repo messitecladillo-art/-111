@@ -94,9 +94,9 @@ function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
       <div className={styles.detail}>{run?<>
         <div className={styles.runHead}><h4>{labels[run.status]}</h4><span>{runTarget} · v{run.baseRevision}{run.acceptedRevision?` → v${run.acceptedRevision}`:''}</span></div>
         <p className={styles.muted}>本提案固定写入以上报告；上方目标选择仅用于生成新提案。</p>
-        <p className={styles.muted}>{run.input.classification==='simulated'?'教学模拟，非真实调研':'用户提供，来源待核验'} · 汇总公式复核，不代表原始数据已核验</p>
+        <p className={styles.muted}>{run.input.classification==='simulated'?'教学模拟数据':'用户导入数据'}</p>
         <details open><summary>将追加的独立章节 · 原有章节与 PPT 保持不变</summary><h4>{run.proposal.title}</h4><p className={styles.prose}>{run.proposal.body}</p><pre>{run.proposal.source}</pre></details>
-        <details><summary>证据指纹与实际事件</summary><pre>输入：{run.inputHash}{'\n'}提案：{run.proposalHash}</pre><ul>{run.events.map(e=><li key={e.type}>{({aggregate_saved:'汇总已保存',summary_checked:'汇总规则已检查',proposal_ready:'提案已生成',accepted:'用户已确认',cancelled:'用户已取消'} as Record<string,string>)[e.type]} · {new Date(e.at).toLocaleString('zh-CN')}</li>)}</ul><p>前三步为同一次保存事务，不是后台运行或模型思考进度。外部模型调用 0 次。</p></details>
+        <details><summary>证据指纹与实际事件</summary><pre>输入：{run.inputHash}{'\n'}提案：{run.proposalHash}</pre><ul>{run.events.map(e=><li key={e.type}>{({aggregate_saved:'汇总已保存',summary_checked:'汇总规则已检查',proposal_ready:'提案已生成',accepted:'用户已确认',cancelled:'用户已取消'} as Record<string,string>)[e.type]} · {new Date(e.at).toLocaleString('zh-CN')}</li>)}</ul></details>
         {run.status==='pending'&&<>{(!inputCurrent||stale)&&<p className={styles.warning}>{stale?'目标报告已变化，此提案不能覆盖新版本。请取消后基于最新报告重新生成。':'历史汇总，当前输入未复核。刷新或更改数据后，请重新导入同一文件并按原设置计算，匹配后才能确认写入。'}</p>}
           <label className={styles.check}><input type="checkbox" checked={approval} disabled={!inputCurrent||stale||busy||frozen} onChange={e=>setApproval(e.target.checked)}/><span>已核对本次提案，同意追加到「{runTarget}」v{run.baseRevision}，并保留前后快照（占用 2 个命名版本）。</span></label>
           <div className={styles.actions}><button type="button" className={styles.primary} disabled={!approval||!inputCurrent||stale||busy||frozen} onClick={()=>decide('accept')}>确认写入新版本</button><button type="button" disabled={busy||frozen} onClick={()=>decide('cancel')}>取消此提案</button></div></>}

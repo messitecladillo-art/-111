@@ -123,7 +123,6 @@ export default function LandingDemo() {
     <div className={styles.chrome}>
       <div className={styles.windowDots} aria-hidden="true"><i/><i/><i/></div>
       <span className={styles.windowLabel}>EVI-X / EXAMPLE PROJECT</span>
-      <span className={styles.localBadge}><i aria-hidden="true"/>交互草稿 · 仅本页</span>
     </div>
     <div className={styles.projectBar}>
       <div><span className={styles.projectEyebrow}>一个关于日常选择的研究</span><h3>人们为什么选择这家店？</h3></div>
@@ -154,8 +153,8 @@ export default function LandingDemo() {
           <div className={styles.questionEditor}>
             <div className={styles.questionMeta}><span>Q{selected + 1}</span><span>单选题</span><span>{question.options.length} 个选项</span></div>
             <label className={styles.titleLabel} htmlFor={`${id}-question`}>题目文字</label>
-            <textarea id={`${id}-question`} className={styles.questionTitle} value={question.title} rows={2} maxLength={180} placeholder="写下一个清楚、具体的问题" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'title', id: question.id, value: event.target.value }); setNotice('题目已在本页修改。离开输入框后，可按一次撤销恢复这次编辑。'); }}/>
-            <div className={styles.options}>{question.options.map((option, index) => <label key={`${question.id}-${index}`} className={styles.option}><span aria-hidden="true">{String.fromCharCode(65 + index)}</span><input aria-label={`第 ${selected + 1} 题选项 ${String.fromCharCode(65 + index)}`} value={option} maxLength={80} placeholder="填写选项内容" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'option', id: question.id, index, value: event.target.value }); setNotice('选项已在本页修改。'); }}/></label>)}</div>
+            <textarea id={`${id}-question`} className={styles.questionTitle} value={question.title} rows={2} maxLength={180} placeholder="写下一个清楚、具体的问题" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'title', id: question.id, value: event.target.value }); setNotice('题目已修改，可撤销。'); }}/>
+            <div className={styles.options}>{question.options.map((option, index) => <label key={`${question.id}-${index}`} className={styles.option}><span aria-hidden="true">{String.fromCharCode(65 + index)}</span><input aria-label={`第 ${selected + 1} 题选项 ${String.fromCharCode(65 + index)}`} value={option} maxLength={80} placeholder="填写选项内容" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'option', id: question.id, index, value: event.target.value }); setNotice('选项已修改。'); }}/></label>)}</div>
             <div className={styles.optionFooter}><button type="button" className={styles.addOption} disabled={question.options.length >= DEMO_OPTION_LIMIT} onClick={() => { dispatch({ type: 'add', id: question.id }); setNotice('已添加一个可编辑选项。'); }}><span aria-hidden="true">＋</span>{question.options.length >= DEMO_OPTION_LIMIT ? '已达到 6 个选项' : '添加选项'}</button><span>最多 6 项 · 可撤销</span></div>
           </div>
           <div className={styles.reason}><span>原题设计思路</span><p>{question.purpose}</p></div>
@@ -178,7 +177,7 @@ export default function LandingDemo() {
           <div className={styles.reportMeta}><span>RESEARCH NOTE / 01</span><span>结构化报告片段 · 合成示例</span></div>
           <div className={styles.reportTitle}><span>关于一家店的选择研究</span><h4>先确认看见了谁，<br/>再解释为什么选择。</h4><p>研究备忘录 · 当前示例输入</p></div>
           <div className={styles.reportBody}>
-            <div className={styles.reportSection}><span>01</span><div><h5>研究问题</h5><p>比较具体到店情境下的选择因素，为门店改善确定值得进一步验证的方向。</p><details className={styles.evidence}><summary>查看题目依据 Q1</summary><blockquote>{state.questions[0].title || 'Q1 题目正在编辑，尚未填写。'}</blockquote><p>当前选项：{state.questions[0].options.map(option => option || '待填写').join('；')}。</p><small>这里只展示问题设计，尚无真实作答结果。</small></details></div></div>
+            <div className={styles.reportSection}><span>01</span><div><h5>研究问题</h5><p>比较具体到店情境下的选择因素，为门店改善确定值得进一步验证的方向。</p><details className={styles.evidence}><summary>查看题目依据 Q1</summary><blockquote>{state.questions[0].title || '待填写题目'}</blockquote><p>当前选项：{state.questions[0].options.map(option => option || '待填写').join('；')}。</p></details></div></div>
             <div className={styles.reportSection}><span>02</span><div><h5>证据与适用范围</h5><p>当前 {sample.total} 条合成记录覆盖 {sample.areas} 个区域、{sample.periods} 个时段。{distributed ? '区域与时段更分散，仍需验证招募方式和目标人群覆盖。' : '记录全部来自门店周边的雨天午间，无法描述其他情境。'}</p><details className={styles.evidence}><summary>查看样本依据 S1</summary><ul>{sample.rows.map(row => <li key={row.label}>{row.label}：午间 {row.noon} 条，晚间 {row.evening} 条。</li>)}</ul><small>来源：本页固定合成数据；与“样本核验”所选方式同步。</small></details></div></div>
             <div className={styles.reportSection}><span>03</span><div><h5>下一步行动</h5><p>{distributed ? '检查未到店人群与拒访记录，再决定是否追加样本。收到真实作答后，按情境比较选择因素。' : '先补充其他时段、其他区域及未到店人群的观察，再比较不同情境下的选择因素。'}</p></div></div>
           </div>
@@ -187,6 +186,5 @@ export default function LandingDemo() {
         <div className={styles.statusLine} role="status" aria-live="polite"><span aria-hidden="true"/> {notice}</div>
       </div>
     </div>
-    <div className={styles.demoFooter}><span>动手试一试，理解证见如何工作。</span><span>示例修改不入云 · 无需 API Key · 刷新即重置</span></div>
   </div>;
 }

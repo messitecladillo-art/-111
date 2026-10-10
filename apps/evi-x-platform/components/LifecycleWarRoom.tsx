@@ -1415,7 +1415,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                     ))}
                   </ul>
                 ) : (
-                  <p style={pageStyles.helper}>本次结果未列出缺失材料；不代表质量检查已经通过。</p>
+                  <p style={pageStyles.helper}>本次结果未列出缺失材料。</p>
                 )}
               </div>
 

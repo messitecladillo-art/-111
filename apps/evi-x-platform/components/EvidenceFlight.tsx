@@ -273,7 +273,6 @@ export default function EvidenceFlight() {
         <button className={styles.secondary} type="button" onClick={reset}>重置</button>
       </div>
       <p className={styles.keyboardHint} id="flight-keyboard-help">{reducedMotion ? "已遵循减少动态效果设置，节点直接点亮。" : "也可点击发射 · 方向键调整 · Enter 发射 · Esc 取消蓄力"}</p>
-      <p className={styles.note}>仅为交互演示，不代表真实项目进度。</p>
     </section>
   );
 }
