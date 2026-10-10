@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "skip_transition_rejected",
+  "description": "A direct intake to problem_framing request is invalid and cannot mutate revision or status.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Skip Transition"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "initial_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "reject_skip",
+      "run": ["advance", "--to", "problem_framing", "--expect-revision", "${capture.initial_revision}"],
+      "expect_exit": 2,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "intake"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "intake"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "initial_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "validation"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

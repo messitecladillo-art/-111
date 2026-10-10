@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "id": "forged_pass_gate_rejected",
+  "description": "Doctor rejects a forged pass Gate that retains null evaluation metadata and an empty evidence list.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Forged Pass Gate Rejection"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "agent_state", "pointer": "/gates/rule/status", "op": "eq", "value": "not_run"},
+        {"source": "agent_state", "pointer": "/gates/rule/evidence_refs", "op": "length_eq", "value": 0},
+        {"source": "agent_state", "pointer": "/gates/rule/input_fingerprint", "op": "eq", "value": null}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "forge_rule_pass_without_evidence",
+      "json_set": {
+        "path": ".agent/state.json",
+        "updates": [
+          {"pointer": "/gates/rule/status", "value": "pass"}
+        ]
+      }
+    },
+    {
+      "id": "doctor_rejects_forged_gate_record",
+      "run": ["doctor"],
+      "expect_exit": 2,
+      "contract": false,
+      "assert": [
+        {"source": "json", "pointer": "/exit_code", "op": "eq", "value": 2},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "validation"},
+        {"source": "stdout", "op": "regex", "value": "schema|evidence|fingerprint|Gate"}
+      ]
+    }
+  ]
+}

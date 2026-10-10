@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "extends": "_final_artifacts_registered.json",
+  "id": "final_artifact_requires_approved_review",
+  "description": "A draft artifact cannot be finalized merely by naming a review ID; it requires a matching version-bound approved review record.",
+  "steps": [
+    {
+      "id": "finalize_rejects_missing_approved_review",
+      "run": [
+        "artifact", "finalize", "ART-EVAL-FINAL-REPORT",
+        "--review-id", "REV-EVAL-NOT-RECORDED",
+        "--rights-status", "cleared",
+        "--anonymity-status", "pass"
+      ],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "stdout", "op": "regex", "value": "approved.{0,30}review|review.{0,30}record"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    },
+    {
+      "id": "missing_review_keeps_artifact_draft",
+      "run": ["artifact", "list"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifacts/0/artifact_id", "op": "eq", "value": "ART-EVAL-FINAL-REPORT"},
+        {"source": "json", "pointer": "/artifacts/0/status", "op": "eq", "value": "draft"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    }
+  ]
+}

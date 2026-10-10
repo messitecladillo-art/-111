@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "abstract": true,
+  "extends": "_submission_ready.json",
+  "steps": [
+    {
+      "id": "register_final_report_for_handoff",
+      "run": [
+        "artifact", "register", "deliverables/report/report.md",
+        "--id", "ART-EVAL-FINAL-REPORT",
+        "--title", "Reviewed final evaluation report",
+        "--type", "report",
+        "--classification", "derived",
+        "--stage", "submission_ready",
+        "--gate", "submission",
+        "--provenance", "human-authored deterministic test fixture",
+        "--status", "draft",
+        "--producer-role", "narrative_strategist",
+        "--owner-name", "report_owner"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/artifact_id", "op": "eq", "value": "ART-EVAL-FINAL-REPORT"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "final_report_sha256": {"source": "json", "pointer": "/artifact/sha256"}
+      }
+    },
+    {
+      "id": "register_final_presentation_for_handoff",
+      "run": [
+        "artifact", "register", "deliverables/ppt/deck.md",
+        "--id", "ART-EVAL-FINAL-PRESENTATION",
+        "--title", "Reviewed final evaluation presentation",
+        "--type", "presentation",
+        "--classification", "derived",
+        "--stage", "submission_ready",
+        "--gate", "submission",
+        "--provenance", "human-authored deterministic test fixture",
+        "--status", "draft",
+        "--producer-role", "visual_director",
+        "--owner-name", "presentation_owner"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/artifact_id", "op": "eq", "value": "ART-EVAL-FINAL-PRESENTATION"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "final_presentation_sha256": {"source": "json", "pointer": "/artifact/sha256"}
+      }
+    },
+    {
+      "id": "register_final_defense_for_handoff",
+      "run": [
+        "artifact", "register", "deliverables/defense/script.md",
+        "--id", "ART-EVAL-FINAL-DEFENSE",
+        "--title", "Reviewed final evaluation defense script",
+        "--type", "defense",
+        "--classification", "derived",
+        "--stage", "submission_ready",
+        "--gate", "submission",
+        "--provenance", "human-authored deterministic test fixture",
+        "--status", "draft",
+        "--producer-role", "captain",
+        "--owner-name", "defense_owner"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/artifact_id", "op": "eq", "value": "ART-EVAL-FINAL-DEFENSE"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "final_defense_sha256": {"source": "json", "pointer": "/artifact/sha256"}
+      }
+    }
+  ]
+}

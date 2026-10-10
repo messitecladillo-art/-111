@@ -1,0 +1,24 @@
+{
+  "id": "edition17-main-notice-20260930",
+  "record_kind": "notice-intelligence-not-a-rule-snapshot",
+  "edition": "第十七届",
+  "document_number": "中商统〔2026〕33号",
+  "document_signed_date": "2026-09-20",
+  "primary_website_publication_date": "2026-09-21",
+  "verified_at": "2026-09-30",
+  "scope": {"groups": ["专科组", "本科组", "研究生组", "在华留学生组"], "region": "全国", "track": "总通知；具体企业命题另行发布", "stage": "报名、知识赛、实践赛总体安排"},
+  "primary_html": "http://www.china-cssc.org/show-304-2179-1.html",
+  "primary_pdf": "http://www.china-cssc.org/uploadfile/20260921/1789954305238737.pdf",
+  "archived_primary_pdf": {"path": "corpus-source/official-rules/edition17-main-notice-20260921.pdf", "bytes": 271470, "sha256": "e334bed6a76a7a75131eed7d3d2b996b2ab63d4d9e2ce2821b1ebaae5b499b65", "transport": "HTTP; bytes alone do not authenticate origin"},
+  "https_republication_page": "https://tjjy.zjgsu.edu.cn/2026/0923/c4419a231899/page.htm",
+  "https_republication_pdf": "https://tjjy.zjgsu.edu.cn/_upload/article/files/1e/80/192f24e5488eb01e7d37c4504776/cf72fd67-01f1-48e1-a214-dc5598bb59fc.pdf",
+  "verification": "Researcher and coordinator independently read the HTTPS national-notice PDF via the university attachment link; checked document identity, page 2 team requirements, page 3 practice notice schedule and page 8 signature. No university-specific credit rule promoted nationally. The raw bytes of HTTP and HTTPS copies were not compared.",
+  "observed_facts": [
+    {"id": "team", "page": 2, "paraphrase": "每队3至5人，同校组队；学生限1队，指导教师最多带5队。"},
+    {"id": "exam-prerequisite", "page": 2, "paraphrase": "专科和本科通过知识赛网考后才能组队参加实践赛。"},
+    {"id": "practice-notice-schedule", "page": 3, "paraphrase": "总通知安排2026年11月17日发布实践赛文件和企业命题，需在该阶段重新核验。"}
+  ],
+  "complete_rule_snapshot_available": false,
+  "not_established_by_this_source": ["第十七届报告页数", "第十七届匿名违规处理后果", "第十七届AI工具使用细则", "各赛区及后续阶段补充规则"],
+  "limitations": ["中国商业统计学会HTTPS本轮获取失败；HTTP官网与HTTPS高校转载正文交叉核对。", "只确认本条总通知，不代表穷尽官网全部最新通知。", "学校转载HTML包含本校补充事项；全国规则以附件组委会正式文件为准。"]
+}

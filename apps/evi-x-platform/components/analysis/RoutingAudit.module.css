@@ -1,0 +1,37 @@
+.panel{border:1px solid var(--wb-line);border-radius:16px;margin:24px 0;background:var(--wb-solid);color:var(--wb-text);font-size:15px;line-height:1.65;overflow:hidden}
+.panel *{min-width:0;box-sizing:border-box}
+.header{padding:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;background:var(--wb-accent-soft)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--wb-accent)}
+.panel .header h3{font-size:23px;margin:6px 0;color:var(--wb-text);line-height:1.4}
+.header p{margin:0}
+.state{white-space:nowrap;border:1px solid var(--wb-line);border-radius:30px;font-size:14px;padding:5px 12px;background:var(--wb-solid);color:var(--wb-muted)}
+.state[data-ready=true]{border-color:var(--wb-accent);color:var(--wb-accent)}
+.body{padding:24px}
+.inspect{display:grid;grid-template-columns:minmax(220px,1fr) 1fr;gap:24px;align-items:end;margin-bottom:20px}
+.inspect label{display:grid;gap:7px;font-weight:600}
+.inspect select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--wb-line);background:var(--wb-solid);color:var(--wb-text);font-size:15px;min-height:44px}
+.inspect p{margin:0;overflow-wrap:anywhere}
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.counts article{border:1px solid var(--wb-line);border-radius:12px;padding:18px;background:var(--wb-well)}
+.counts span{font-weight:600}.counts strong{display:block;font-size:32px;font-variant-numeric:tabular-nums;line-height:1.3;margin:8px 0;color:var(--wb-text)}
+.counts p{font-size:14px;margin:0;color:var(--wb-muted)}
+.note,.sources p{font-size:14px;color:var(--wb-muted)}
+.panel summary{cursor:pointer;min-height:36px;line-height:36px}
+.table{max-width:100%;overflow-x:auto}.table table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}.table :is(th,td){text-align:left;border-bottom:1px solid var(--wb-line);padding:9px;white-space:nowrap}
+.policies{border:0;padding:0;margin:24px 0;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.policies legend{font-weight:600;padding:0 0 12px}
+.panel .policies label{display:flex;gap:10px;border:1px solid var(--wb-line);border-radius:12px;padding:18px;cursor:pointer}
+.policies label[data-selected=true]{border-color:var(--wb-accent);background:var(--wb-accent-soft)}
+.panel .policies input[type=radio]{margin:4px 0 0;padding:0;accent-color:var(--wb-accent);width:18px;max-width:18px;height:18px;min-height:18px;flex:0 0 18px}
+.policies label>span{flex:1;overflow-wrap:anywhere}
+.policies small{display:block;font-size:14px;color:var(--wb-muted);margin-top:7px;line-height:1.65}
+.confirm{border-top:1px solid var(--wb-line);padding-top:18px;display:flex;align-items:center;gap:20px;justify-content:space-between}
+.confirm p{font-size:14px;margin:0;max-width:650px}
+.confirm button{border:1px solid var(--wb-accent);background:var(--wb-accent);color:var(--wb-accent-text);border-radius:9px;padding:10px 16px;min-height:44px;font-size:14px;font-weight:600;flex-shrink:0;cursor:pointer}
+.confirm button:disabled{opacity:.55;cursor:not-allowed}
+.panel .confirm button:hover:not(:disabled){color:var(--wb-accent-text);background:var(--wb-accent);filter:brightness(.95)}
+.warning{padding:14px;border:1px solid #bc655b;border-radius:8px;background:var(--wb-well);overflow-wrap:anywhere}
+.sources{margin-top:18px;font-size:14px}.sources a{display:block;color:var(--wb-accent);padding:5px 0;overflow-wrap:anywhere}
+.panel :is(button,select,input,summary,a):focus-visible{outline:3px solid var(--wb-accent);outline-offset:3px}
+@media(max-width:750px){.header,.confirm{flex-direction:column;align-items:stretch}.header,.body{padding:18px}.state{align-self:flex-start}.inspect,.policies{grid-template-columns:1fr;gap:12px}.counts{gap:8px}.counts article{padding:12px 9px}.counts strong{font-size:27px}.counts p{font-size:14px}.panel .header h3{font-size:21px}.confirm p{max-width:none}}
+@media(max-width:410px){.counts{grid-template-columns:1fr}.counts article{display:grid;grid-template-columns:1fr auto;column-gap:15px}.counts strong{grid-column:2;grid-row:1 / span 2;margin:0}.counts p{grid-column:1}}

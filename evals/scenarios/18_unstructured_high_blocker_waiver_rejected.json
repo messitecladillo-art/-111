@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "unstructured_high_blocker_waiver_rejected",
+  "description": "A high blocker whose CSV status is forged to waived remains open unless a current structured governance record proves the waiver.",
+  "steps": [
+    {
+      "id": "inject_unstructured_high_waiver",
+      "append": {
+        "path": "evidence/blockers.csv",
+        "content": "BLK-EVAL-HIGH-UNSTRUCTURED,${capture.project_id},Unstructured high waiver,TASK-EVAL-HIGH-WAIVER,submission,high,Final cross-file review is unresolved,Submission claims may conflict,,Continue archival checks,Structured waiver or completed review,evaluation harness,,2099-12-31,Attach governance record and rerun handoff,waived,,,,,2026-08-03T00:00:00Z,2026-08-03T00:00:00Z,Status text alone is not a valid waiver\n"
+      }
+    },
+    {
+      "id": "handoff_rejects_unstructured_high_waiver",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "stdout", "op": "regex", "value": "BLK-EVAL-HIGH-UNSTRUCTURED"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evi-x.local/schemas/rules.schema.json",
+  "title": "Scoped Zhengda Cup Rule Snapshot",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["snapshot", "sources", "scopes", "rules"],
+  "properties": {
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edition", "group", "region", "track", "stage", "verified_at", "source_ids"],
+      "properties": {
+        "edition": {"$ref": "#/$defs/nonBlank"},
+        "group": {"$ref": "#/$defs/nonBlank"},
+        "region": {"$ref": "#/$defs/nonBlank"},
+        "track": {"$ref": "#/$defs/nonBlank"},
+        "stage": {"$ref": "#/$defs/nonBlank"},
+        "verified_at": {"type": "string", "format": "date"},
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/source"}
+    },
+    "scopes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/ruleScope"}
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/rule"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nonBlank": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S).+$",
+      "not": {"pattern": "(?i)^(unknown|tbd|unverified|未确认|待确认|待补)$"}
+    },
+    "nonEmptyPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*:)(?!.*(?:^|[/\\\\])\\.\\.?($|[/\\\\]))(?!.*[. ](?:$|[/\\\\]))[^\\x00-\\x1F]+$"
+    },
+    "httpsUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "not": {"pattern": "^https://(www\\.)?example\\.(com|org)(/|$)"}
+    },
+    "authorityLevel": {
+      "enum": [
+        "national-organizing-committee",
+        "regional-organizing-committee",
+        "university-organizing-committee",
+        "organizer-training-material"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "title", "url", "authority_level", "authority_name",
+        "official_status", "published_date", "verified_at", "local_path", "sha256"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "title": {"$ref": "#/$defs/nonBlank"},
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "authority_level": {"$ref": "#/$defs/authorityLevel"},
+        "authority_name": {"$ref": "#/$defs/nonBlank"},
+        "official_status": {"enum": ["official-primary", "official-republication", "official-university-notice"]},
+        "published_date": {"type": "string", "format": "date"},
+        "verified_at": {"type": "string", "format": "date"},
+        "local_path": {"$ref": "#/$defs/nonEmptyPath"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "scopeDimension": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {"mode": {"const": "all"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "values"],
+          "properties": {
+            "mode": {"const": "values"},
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/nonBlank"}
+            }
+          }
+        }
+      ]
+    },
+    "ruleScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "edition", "group", "region", "track", "stage"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "edition": {"$ref": "#/$defs/scopeDimension"},
+        "group": {"$ref": "#/$defs/scopeDimension"},
+        "region": {"$ref": "#/$defs/scopeDimension"},
+        "track": {"$ref": "#/$defs/scopeDimension"},
+        "stage": {"$ref": "#/$defs/scopeDimension"}
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "scope_id", "rule", "rule_type", "severity", "source_id",
+        "source_title", "source_url", "published_date", "verified_at", "authority", "status"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "scope_id": {"$ref": "#/$defs/identifier"},
+        "rule_type": {"$ref": "#/$defs/nonBlank"},
+        "rule": {"$ref": "#/$defs/nonBlank"},
+        "severity": {"enum": ["advisory", "soft", "hard", "fatal", "disqualifying"]},
+        "source_id": {"$ref": "#/$defs/identifier"},
+        "source_title": {"$ref": "#/$defs/nonBlank"},
+        "source_url": {"$ref": "#/$defs/httpsUrl"},
+        "published_date": {"type": "string", "format": "date"},
+        "verified_at": {"type": "string", "format": "date"},
+        "authority": {"$ref": "#/$defs/authorityLevel"},
+        "status": {"enum": ["active", "active-for-edition", "superseded", "provisional"]}
+      }
+    }
+  }
+}

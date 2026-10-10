@@ -1,0 +1,6 @@
+check_id,scope,item,severity,status,source,artifact_evidence,owner,deadline,notes
+SUB-META,submission,最终DOCX/PPTX/PDF的文件名及核心属性和自定义属性满足匿名要求,fatal,unknown,audit_submission_files.py,,submission lead,before finalization,匿名规则未知时不得标记pass
+SUB-REVIEW,submission,批注和修订痕迹已清除并在冻结副本上复核,high,unknown,audit_submission_files.py,,report lead,before finalization,保留内部审阅母版但不得误交
+SUB-HIDDEN,submission,最终冻结提交PPT不含隐藏页和演讲者备注且嵌入对象和外部链接均完成逐项检查,high,unknown,audit_submission_files.py,,presentation lead,before finalization,答辩提示应另存为受控defense工件；提交PPT中的任何非空备注均阻断finalization
+SUB-VERSION,submission,冻结版本的路径和SHA-256及字节数与页数或幻灯片数匹配已审版本,fatal,unknown,artifact registry and rendered-output review,,submission lead,before handoff,任何重导出都会使旧审阅失效
+SUB-FACT,submission,摘要正文PPT答辩中的样本量分母方法来源和关键数值来自同一事实账本,fatal,unknown,evidence-ledger.csv and check_traceability.py,,analysis lead,before handoff,逐条核对事实键和输出位置

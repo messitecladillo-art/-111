@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "modified_closed_checkpoint_blocks_handoff",
+  "description": "A closed project cannot remain Go after its latest recovery checkpoint record is modified, even when the final manifest itself is untouched.",
+  "steps": [
+    {
+      "id": "handoff_before_checkpoint_modify",
+      "run": ["handoff"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "close_before_checkpoint_modify",
+      "run": ["advance", "--to", "closed", "--expect-revision", "${capture.submission_revision}"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "capture_closed_checkpoint_modify_state",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "closed_checkpoint_modify_id": {"source": "agent_state", "pointer": "/latest_checkpoint/checkpoint_id"},
+        "closed_checkpoint_modify_revision": {"source": "json", "pointer": "/status_revision"},
+        "closed_checkpoint_modify_event_sequence": {"source": "json", "pointer": "/event_stream/last_sequence"},
+        "closed_checkpoint_modify_manifest_sha256": {"source": "file_sha256", "path": "reviews/final-manifest.json"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "modify_current_closed_checkpoint",
+      "json_set": {
+        "path": ".agent/checkpoints/${capture.closed_checkpoint_modify_id}.json",
+        "updates": [
+          {"pointer": "/node_id", "value": "checkpoint:tampered-after-close"}
+        ]
+      }
+    },
+    {
+      "id": "closed_handoff_rejects_modified_checkpoint",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "closed_checkpoint_modify_revision"}},
+        {"source": "json", "pointer": "/failure/details/checkpoint_errors/0/code", "op": "eq", "value": "checkpoint_missing_or_invalid"},
+        {"source": "json", "pointer": "/event_stream/last_sequence", "op": "eq", "value_from": {"capture": "closed_checkpoint_modify_event_sequence"}},
+        {"source": "file_sha256", "path": "reviews/final-manifest.json", "op": "eq", "value_from": {"capture": "closed_checkpoint_modify_manifest_sha256"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    }
+  ]
+}

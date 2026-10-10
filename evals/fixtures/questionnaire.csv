@@ -1,0 +1,4 @@
+question_id,text,question_type,required,construct,variable,scale,options,analysis_use,source
+Q1,最近您是否认为我们的产品质量很好并且价格合理？,likert,是,感知价值,value_score,5点,非常不同意|不同意|一般|同意|非常同意,驱动因素分析,
+Q1,您通常多久购买一次？,single,是,购买频率,purchase_frequency,,每周|每月|偶尔|其他,用户分层,
+Q3,请提出建议,open,是,,,,,探索补充,

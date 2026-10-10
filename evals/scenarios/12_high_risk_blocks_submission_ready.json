@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "extends": "_defense_ready.json",
+  "id": "high_risk_blocks_submission_ready",
+  "description": "A current high project risk blocks defense to submission_ready even when every Gate is freshly recorded as pass.",
+  "steps": [
+    {
+      "id": "declare_high_project_risk",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {"old": "  high: []", "new": "  high: [\"Unresolved respondent-privacy risk\"]"}
+        ]
+      }
+    },
+    {
+      "id": "refresh_submission_gate_after_risk_change",
+      "run": [
+        "gate", "set", "submission", "pass",
+        "--evidence", "evidence/preflight-checklist.csv",
+        "--evidence", "deliverables/report/report.md",
+        "--evidence", "deliverables/ppt/deck.md",
+        "--evidence", "deliverables/defense/script.md",
+        "--evidence", "evidence/cross-file-consistency-report.json",
+        "--evidence", "evidence/anonymity-scan-report.json",
+        "--evidence", "reviews/final-artifact-manifest.json"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/submission/status", "/gates/submission"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "risk_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "high_risk_blocks_boundary",
+      "run": ["advance", "--to", "submission_ready", "--expect-revision", "${capture.risk_revision}"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "risk_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/fatal_or_high_risks/0/severity", "op": "eq", "value": "high"},
+        {"source": "json", "pointer": "/failure/details/fatal_or_high_risks/0/summary", "op": "regex", "value": "privacy"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

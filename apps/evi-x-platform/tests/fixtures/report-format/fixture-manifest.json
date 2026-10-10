@@ -1,0 +1,14 @@
+[
+  {
+    "path": "C:\\Users\\zyy20\\Documents\\ChatGPT\\正大杯2\\apps\\evi-x-platform\\tests\\fixtures\\report-format\\synthetic-main.docx",
+    "sha256": "d68177a8a31c0c6cd5abf26a7f896e464b999eb255491eb8eb099facb36ca58a",
+    "bytes": 16993,
+    "classification": "synthetic-layout-test"
+  },
+  {
+    "path": "C:\\Users\\zyy20\\Documents\\ChatGPT\\正大杯2\\apps\\evi-x-platform\\tests\\fixtures\\report-format\\synthetic-appendix.docx",
+    "sha256": "3b44707ac1d40a2a5be1e76027a69c448dfbf02274ffce0f531888a7fd5af785",
+    "bytes": 11174,
+    "classification": "synthetic-layout-test"
+  }
+]

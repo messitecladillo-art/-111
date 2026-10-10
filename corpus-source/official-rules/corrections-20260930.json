@@ -1,0 +1,12 @@
+{
+  "reviewed_at": "2026-09-30",
+  "source": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+  "source_document": "中商统〔2025〕36号；署期2025-11-15；第十六届本科组校赛及企业命题赛通知",
+  "old_snapshot_archive": "archive/edition16-undergrad-rules-20260802.json",
+  "corrections": [
+    {"id": "undergrad-report-anonymity", "page": 4, "before": "disqualifying", "after": "hard", "reason": "注1明示提交可能失败或评审扣分，未明示因此取消资格；仍为必须遵守的匿名要求，不放松提交审核。"},
+    {"id": "undergrad-stage-format", "pages": [4,5], "before": "省赛和国赛初赛采用报告加PPT评审，决赛采用报告加现场展示答辩", "after": "省赛和国赛均分初审和决赛，初赛采用报告加PPT评审，决赛采用报告加现场展示答辩", "reason": "保留省赛也区分初审和决赛的原文范围。"}
+  ],
+  "unchanged": "原始来源身份记录、原核验日期、其他规则和第十六届五维范围保持不变。该记录是独立补充复核；未认证第十七届实践赛细则。",
+  "review_roles": ["official-source researcher", "coordinator independent PDF-body check"]
+}

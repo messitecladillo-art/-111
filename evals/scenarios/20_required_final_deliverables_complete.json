@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "extends": "_submission_ready.json",
+  "id": "required_final_deliverables_complete",
+  "description": "Handoff requires final registered report, presentation, and defense deliverables rather than accepting one independently approved final artifact.",
+  "steps": [
+    {
+      "id": "register_only_report_draft",
+      "run": [
+        "artifact", "register", "deliverables/report/report.md",
+        "--id", "ART-EVAL-ONLY-REPORT",
+        "--title", "Only final report candidate",
+        "--type", "report",
+        "--classification", "derived",
+        "--stage", "submission_ready",
+        "--gate", "submission",
+        "--provenance", "human-authored deterministic test fixture",
+        "--status", "draft",
+        "--producer-role", "narrative_strategist",
+        "--owner-name", "report_owner"
+      ],
+      "expect_exit": 0,
+      "capture": {
+        "only_report_sha256": {"source": "json", "pointer": "/artifact/sha256"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_only_report_review_evidence",
+      "write": {
+        "path": "reviews/eval-only-report-review.json",
+        "content": "{\"artifact_id\":\"ART-EVAL-ONLY-REPORT\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.only_report_sha256}\",\"artifact_type\":\"report\",\"producer_role\":\"narrative_strategist\",\"owner_name\":\"report_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"independent_report_reviewer\",\"acceptance_test\":\"Artifact hash and rendered output remain current\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"report_structure_reviewed\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:10:00Z\",\"findings\":\"No blocking findings\"}\n"
+      }
+    },
+    {
+      "id": "approve_only_report_review",
+      "run": [
+        "review", "approve", "ART-EVAL-ONLY-REPORT",
+        "--evidence", "reviews/eval-only-report-review.json",
+        "--reviewer-role", "red_team_judge",
+        "--reviewer-name", "independent_report_reviewer",
+        "--review-id", "REV-EVAL-ONLY-REPORT"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/review/status", "op": "eq", "value": "approved"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_only_report",
+      "run": [
+        "artifact", "finalize", "ART-EVAL-ONLY-REPORT",
+        "--review-id", "REV-EVAL-ONLY-REPORT",
+        "--rights-status", "cleared",
+        "--anonymity-status", "pass"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/status", "op": "eq", "value": "final"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "handoff_rejects_incomplete_final_set",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/missing_required_final_artifact_types", "op": "contains", "value": "presentation"},
+        {"source": "json", "pointer": "/failure/details/missing_required_final_artifact_types", "op": "contains", "value": "defense"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

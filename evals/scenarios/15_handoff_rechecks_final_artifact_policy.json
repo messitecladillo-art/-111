@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "extends": "_defense_ready.json",
+  "id": "handoff_rechecks_final_artifact_policy",
+  "description": "Handoff defensively rejects a registry row injected after Gate approval when it combines synthetic actual evidence, unresolved assurances, and a forged review link.",
+  "steps": [
+    {
+      "id": "enter_submission_ready",
+      "run": ["advance", "--to", "submission_ready", "--expect-revision", "${capture.defense_revision}"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "submission_zero_fatal_high", "event_stream_consistent"],
+      "capture": {
+        "submission_ready_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "write_malicious_final_artifact",
+      "write": {
+        "path": "deliverables/report/synthetic-final.txt",
+        "content": "AI-generated synthetic respondent statements intentionally masquerading as actual field evidence.\n"
+      }
+    },
+    {
+      "id": "capture_malicious_artifact_hash",
+      "run": ["status"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "malicious_sha256": {"source": "file_sha256", "path": "deliverables/report/synthetic-final.txt"}
+      }
+    },
+    {
+      "id": "inject_malicious_final_registry_row",
+      "append": {
+        "path": "evidence/artifact-registry.csv",
+        "content": "ART-EVAL-MAL-001,${capture.project_id},Synthetic final evidence,raw_data,actual,submission_ready,submission,deliverables/report/synthetic-final.txt,text/plain,,,,ai-generated synthetic respondents,actual,v1,${capture.malicious_sha256},999,,same_person,same_person,REV-EVAL-FORGED,red_team_judge,same_person,final,unknown,unverified,,,2026-08-03T00:00:00Z,2026-08-03T00:00:00Z,adversarial injected row\n"
+      }
+    },
+    {
+      "id": "handoff_rejects_injected_policy_violations",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_ready_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/artifact_errors/0/artifact_id", "op": "eq", "value": "ART-EVAL-MAL-001"},
+        {"source": "json", "pointer": "/failure/details/artifact_errors/0/policy_issues", "op": "contains", "value": "synthetic_claimed_as_actual"},
+        {"source": "json", "pointer": "/failure/details/artifact_errors/0/policy_issues", "op": "contains", "value": "rights_unresolved"},
+        {"source": "json", "pointer": "/failure/details/artifact_errors/0/policy_issues", "op": "contains", "value": "anonymity_unresolved"},
+        {"source": "json", "pointer": "/failure/details/artifact_errors/0/policy_issues", "op": "contains", "value": "approved_review_missing"},
+        {"source": "json", "pointer": "/failure/details/no_go_audit", "op": "regex", "value": "^\\.agent/audits/handoff-no-go-.*\\.json$"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

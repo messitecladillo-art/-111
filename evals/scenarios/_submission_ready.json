@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "abstract": true,
+  "extends": "_defense_ready.json",
+  "steps": [
+    {
+      "id": "enter_submission_ready_for_handoff",
+      "run": ["advance", "--to", "submission_ready", "--expect-revision", "${capture.defense_revision}"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "submission_zero_fatal_high", "event_stream_consistent"],
+      "capture": {
+        "submission_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    }
+  ]
+}

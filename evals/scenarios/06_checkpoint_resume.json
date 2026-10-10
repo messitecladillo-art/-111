@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "id": "checkpoint_resume",
+  "description": "Resume verifies checkpoint artifact hashes; changed rule evidence invalidates the gate and cannot advance status.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Checkpoint Integrity Resume"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "enter_rule_lock",
+      "run": ["advance", "--to", "rule_lock"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "install_scoped_rules",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-rules.json",
+        "to": "evidence/rules.json"
+      }
+    },
+    {
+      "id": "install_scoped_rule_source",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-practice-source.txt",
+        "to": "evidence/rule-sources/edition16-undergrad-practice-source.txt"
+      }
+    },
+    {
+      "id": "scope_project",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {"old": "  edition: unknown", "new": "  edition: \"第十六届\""},
+          {"old": "  group: unknown", "new": "  group: \"本科组\""},
+          {"old": "  region: unknown", "new": "  region: \"全国\""},
+          {"old": "  stage: unknown", "new": "  stage: \"校赛及企业命题赛\""},
+          {"old": "  track: unknown", "new": "  track: \"自主选题\""},
+          {"old": "  applicable_notice: unknown", "new": "  applicable_notice: \"evidence/rule-sources/edition16-undergrad-practice-source.txt\""}
+        ]
+      }
+    },
+    {
+      "id": "pass_rule_gate",
+      "run": ["gate", "set", "rule", "pass", "--evidence", "project.yaml", "--evidence", "evidence/rules.json"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/rule/status", "/gates/rule"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "checkpoint",
+      "run": ["checkpoint", "--label", "behavior-eval-rule-evidence"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/checkpoint_id", "op": "type", "value": "string"},
+        {"source": "json", "pointer": "/checkpoint_id", "op": "truthy"},
+        {"source": "agent_state", "pointer": "/latest_checkpoint/resumable", "op": "eq", "value": true},
+        {"source": "agent_state", "pointer": "/latest_checkpoint/input_fingerprint", "op": "regex", "value": "^[a-f0-9]{64}$"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent", "checkpoint_artifacts_match", "checkpoint_event_recorded"],
+      "capture": {
+        "checkpoint_id": {"source": "json", "pointer": "/checkpoint_id"},
+        "checkpoint_revision": {"source": "json", "pointer": "/status_revision"},
+        "checkpoint_event_sequence": {"source": "json", "pointer": "/event_stream/last_sequence"}
+      }
+    },
+    {
+      "id": "change_checkpointed_rule_evidence",
+      "append": {
+        "path": "evidence/rules.json",
+        "content": "\n"
+      }
+    },
+    {
+      "id": "resume_detects_stale_checkpoint",
+      "run": ["resume", "--checkpoint", "latest"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "rule_lock"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "rule_lock"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "checkpoint_revision"}},
+        {"source": "json", "pointer": "/checkpoint_id", "op": "eq", "value_from": {"capture": "checkpoint_id"}},
+        {"source": "agent_state", "pointer": "/latest_checkpoint/checkpoint_id", "op": "eq", "value_from": {"capture": "checkpoint_id"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointers": ["/gates/rule/status", "/gates/rule"], "op": "eq", "value": "stale"},
+        {"source": "json", "pointer": "/event_stream/last_sequence", "op": "gt", "value_from": {"capture": "checkpoint_event_sequence"}},
+        {"source": "agent_state", "pointer": "/recovery/status", "op": "in", "value": ["needed", "idle"]}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent", "resume_event_recorded"]
+    }
+  ]
+}

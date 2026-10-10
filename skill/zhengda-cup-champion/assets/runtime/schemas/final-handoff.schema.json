@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evi-x.local/schemas/final-handoff.schema.json",
+  "title": "Verified Final Handoff Manifest",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "manifest_kind",
+    "project_id",
+    "handoff_id",
+    "handoff_type",
+    "created_at",
+    "scope",
+    "current_state",
+    "quality_gates",
+    "open_blockers",
+    "open_fatal_or_high_risks",
+    "artifact_snapshots",
+    "aggregate_audit",
+    "control_fingerprint",
+    "delivery"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "manifest_kind": {"const": "final_delivery"},
+    "project_id": {"$ref": "#/$defs/identifier"},
+    "handoff_id": {"$ref": "#/$defs/identifier"},
+    "handoff_type": {"const": "final"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edition", "group", "region", "track", "stage"],
+      "properties": {
+        "edition": {"$ref": "#/$defs/nonBlank"},
+        "group": {"$ref": "#/$defs/nonBlank"},
+        "region": {"$ref": "#/$defs/nonBlank"},
+        "track": {"$ref": "#/$defs/nonBlank"},
+        "stage": {"$ref": "#/$defs/nonBlank"}
+      }
+    },
+    "current_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_status", "status_revision", "checkpoint_id", "checkpoint_record_sha256", "outcome"],
+      "properties": {
+        "project_status": {"enum": ["submission_ready", "closed"]},
+        "status_revision": {"type": "integer", "minimum": 0},
+        "checkpoint_id": {"$ref": "#/$defs/identifier"},
+        "checkpoint_record_sha256": {"$ref": "#/$defs/sha256"},
+        "outcome": {"const": "done"}
+      }
+    },
+    "quality_gates": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "status", "input_fingerprint", "result_path", "result_sha256", "evidence_refs"],
+        "properties": {
+          "gate": {"enum": ["rule", "problem", "design", "fieldwork", "data", "inference", "action", "visual", "submission"]},
+          "status": {"enum": ["pass", "warning"]},
+          "input_fingerprint": {"$ref": "#/$defs/sha256"},
+          "result_path": {"$ref": "#/$defs/nonEmptyPath"},
+          "result_sha256": {"$ref": "#/$defs/sha256"},
+          "evidence_refs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"$ref": "#/$defs/nonEmptyPath"}
+          }
+        }
+      }
+    },
+    "open_blockers": {"type": "array", "maxItems": 0},
+    "open_fatal_or_high_risks": {"type": "array", "maxItems": 0},
+    "artifact_snapshots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifact_id", "artifact_type", "version", "file_path", "sha256", "bytes",
+          "rights_status", "anonymity_status", "producer_role", "owner_name",
+          "reviewer_role", "reviewer_name", "review_id", "acceptance_checks",
+          "review_evidence_path", "review_evidence_sha256"
+        ],
+        "properties": {
+          "artifact_id": {"$ref": "#/$defs/identifier"},
+          "artifact_type": {"enum": ["report", "presentation", "defense", "appendix", "data_package", "code_package"]},
+          "version": {"$ref": "#/$defs/nonBlank"},
+          "file_path": {"$ref": "#/$defs/nonEmptyPath"},
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "bytes": {"type": "integer", "minimum": 1},
+          "rights_status": {"enum": ["cleared", "owned", "licensed", "authorized", "permission_obtained", "public_domain", "not_applicable"]},
+          "anonymity_status": {"enum": ["pass", "safe", "cleared", "anonymous", "not_applicable"]},
+          "producer_role": {"enum": ["captain", "rule_gatekeeper", "research_architect", "fieldwork_lead", "data_auditor", "methods_reviewer", "narrative_strategist", "visual_director", "red_team_judge"]},
+          "owner_name": {"$ref": "#/$defs/nonBlank"},
+          "reviewer_role": {"enum": ["captain", "rule_gatekeeper", "research_architect", "fieldwork_lead", "data_auditor", "methods_reviewer", "narrative_strategist", "visual_director", "red_team_judge"]},
+          "reviewer_name": {"$ref": "#/$defs/nonBlank"},
+          "review_id": {"$ref": "#/$defs/identifier"},
+          "acceptance_checks": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"$ref": "#/$defs/nonBlank"}
+          },
+          "review_evidence_path": {"$ref": "#/$defs/nonEmptyPath"},
+          "review_evidence_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "aggregate_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/nonEmptyPath"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "control_fingerprint": {"$ref": "#/$defs/sha256"},
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["go_no_go", "reasons", "final_artifact_ids", "required_final_artifact_types", "manifest_sha256"],
+      "properties": {
+        "go_no_go": {"const": "go"},
+        "reasons": {"type": "array", "maxItems": 0},
+        "final_artifact_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "required_final_artifact_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["report", "presentation", "defense", "appendix", "data_package", "code_package"]}
+        },
+        "manifest_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nonBlank": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S).+$"
+    },
+    "nonEmptyPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*:)(?!.*(?:^|[/\\\\])\\.\\.?($|[/\\\\]))(?!.*[. ](?:$|[/\\\\]))[^\\x00-\\x1F]+$"
+    }
+  }
+}

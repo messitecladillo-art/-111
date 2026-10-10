@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0.0",
+  "manifest_kind": "checkpoint_handoff",
+  "project_id": "{{PROJECT_ID}}",
+  "handoff_id": "unknown",
+  "handoff_type": "checkpoint",
+  "created_at": "unknown",
+  "created_by": {
+    "role_id": "captain",
+    "name": "unknown"
+  },
+  "recipient": {
+    "role_id": "unknown",
+    "name": "unknown"
+  },
+  "scope": {
+    "edition": "unknown",
+    "group": "unknown",
+    "region": "unknown",
+    "track": "unknown",
+    "stage": "unknown"
+  },
+  "current_state": {
+    "project_status": "intake",
+    "current_stage": "intake",
+    "current_gate": "rule",
+    "checkpoint_id": "unknown",
+    "outcome": "partial"
+  },
+  "state_files": {
+    "project": "project.yaml",
+    "tasks": "evidence/team-tasks.csv",
+    "blockers": "evidence/blockers.csv",
+    "artifacts": "evidence/artifact-registry.csv",
+    "reviews": "evidence/review-queue.csv",
+    "evidence_ledger": "evidence/evidence-ledger.csv",
+    "decision_log": "evidence/decision-log.md"
+  },
+  "verified_inputs": [],
+  "completed_task_ids": [],
+  "open_task_ids": [],
+  "open_blocker_ids": [],
+  "artifact_snapshots": [],
+  "reviews": {
+    "approved_review_ids": [],
+    "pending_review_ids": [],
+    "rejected_review_ids": []
+  },
+  "decisions": {
+    "resolved": [],
+    "pending": []
+  },
+  "unknowns": [],
+  "quality_gates": [
+    {"gate": "rule", "status": "unknown", "evidence_ids": []},
+    {"gate": "problem", "status": "unknown", "evidence_ids": []},
+    {"gate": "design", "status": "unknown", "evidence_ids": []},
+    {"gate": "fieldwork", "status": "unknown", "evidence_ids": []},
+    {"gate": "data", "status": "unknown", "evidence_ids": []},
+    {"gate": "inference", "status": "unknown", "evidence_ids": []},
+    {"gate": "action", "status": "unknown", "evidence_ids": []},
+    {"gate": "visual", "status": "unknown", "evidence_ids": []},
+    {"gate": "submission", "status": "unknown", "evidence_ids": []}
+  ],
+  "next_action": {
+    "task_id": "unknown",
+    "owner_role": "captain",
+    "dependency_task_ids": [],
+    "due_at": "unknown",
+    "definition_of_done": "unknown"
+  },
+  "delivery": {
+    "go_no_go": "no_go",
+    "reasons": ["Required gates are not yet verified"],
+    "final_artifact_ids": [],
+    "manifest_sha256": "unknown"
+  },
+  "signoff": [
+    {"role_id": "captain", "name": "unknown", "status": "pending", "signed_at": "unknown"},
+    {"role_id": "rule_gatekeeper", "name": "unknown", "status": "pending", "signed_at": "unknown"},
+    {"role_id": "red_team_judge", "name": "unknown", "status": "pending", "signed_at": "unknown"}
+  ],
+  "notes": []
+}

@@ -1,0 +1,41 @@
+{
+  "verified_at": "2026-08-02",
+  "sources": [
+    {
+      "source_id": "edition16-main-notice",
+      "title": "关于正大杯第十六届全国大学生市场调查与分析大赛的通知",
+      "authority": "中国商业统计学会",
+      "scope": "第十六届总体通知",
+      "url": "https://www.china-cssc.org/show-568-1912-1.html",
+      "status": "official"
+    },
+    {
+      "source_id": "edition16-undergrad-practice",
+      "title": "第十六届本科组校赛及企业命题赛通知",
+      "authority": "中国商业统计学会全国大学生市场调查与分析大赛组委会",
+      "scope": "第十六届本科组校赛及企业命题赛",
+      "published_date": "2025-11-15",
+      "url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "status": "official-copy",
+      "local_provenance_record": "official-rules/edition16-undergrad-practice-source.txt",
+      "local_provenance_sha256": "7bca601071854c06ca74a50ce7f1a20bd3208c735f662e51792aeb71fc054196"
+    },
+    {
+      "source_id": "edition16-knowledge-test",
+      "title": "第十六届理论知识赛网考说明",
+      "authority": "全国大学生市场调查与分析大赛组委会",
+      "scope": "第十六届本科及专科知识赛",
+      "url": "https://infadm.shisu.edu.cn/_upload/article/files/51/fb/dc67c4d74f2283cb5c47733076d7/0575ef8d-6f17-43cc-ad81-1270be2ee12c.pdf",
+      "status": "official-copy"
+    },
+    {
+      "source_id": "edition16-undergrad-final",
+      "title": "第十六届本科组全国总决赛圆满落幕",
+      "authority": "大连理工大学经济管理学院",
+      "scope": "第十六届本科组全国总决赛结果与规模",
+      "published_date": "2026-06-01",
+      "url": "https://sem.dlut.edu.cn/info/1005/27571.htm",
+      "status": "official-host-report"
+    }
+  ]
+}

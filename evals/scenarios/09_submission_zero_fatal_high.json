@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "extends": "_defense_ready.json",
+  "id": "submission_zero_fatal_high",
+  "description": "Submission handoff cannot enter submission_ready while either fatal or high findings remain unresolved.",
+  "steps": [
+    {
+      "id": "install_open_submission_blockers",
+      "write": {
+        "path": "evidence/blockers.csv",
+        "content": "blocker_id,project_id,title,source_task_id,gate,severity,cause,impact,blocked_task_ids,safe_parallel_work,required_input,input_owner,decision_owner,due_at,unblock_test,status,resolution_evidence,resolved_by,resolved_at,checkpoint_id,created_at,updated_at,notes\nBLK-EVAL-FATAL-001,${capture.project_id},Fatal submission finding,TASK-EVAL-002,submission,fatal,Anonymous identity scan is unresolved,Submission would be disqualified,,Continue archival checks,Passing anonymity scan,evaluation harness,evaluation owner,2099-12-31,Attach passing scan and rerun handoff,open,,,,,2026-08-03T00:00:00Z,2026-08-03T00:00:00Z,Deterministic test-only blocker\nBLK-EVAL-HIGH-002,${capture.project_id},High submission finding,TASK-EVAL-003,submission,high,Cross-file consistency review is unresolved,Submission claims may conflict,,Continue archival checks,Passing consistency report,evaluation harness,evaluation owner,2099-12-31,Attach passing report and rerun handoff,open,,,,,2026-08-03T00:00:00Z,2026-08-03T00:00:00Z,Deterministic test-only blocker\n"
+      }
+    },
+    {
+      "id": "reject_nonzero_fatal_high",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "defense_revision"}},
+        {"source": "stdout", "op": "regex", "value": "BLK-EVAL-FATAL-001"},
+        {"source": "stdout", "op": "regex", "value": "BLK-EVAL-HIGH-002"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

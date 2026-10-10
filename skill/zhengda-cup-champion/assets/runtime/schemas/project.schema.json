@@ -1,0 +1,583 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evi-x.local/schemas/project.schema.json",
+  "title": "Zhengda Cup Champion Project",
+  "description": "Domain project state. project.stage is the competition stage; project.status mirrors the control-plane workflow status.",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "control_plane",
+    "project",
+    "competition",
+    "decision_problem",
+    "research",
+    "visual",
+    "deliverables",
+    "risks",
+    "open_decisions",
+    "integrity"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "project_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "control_plane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_version",
+        "gate_contract_version",
+        "state_path",
+        "status_mirror_revision"
+      ],
+      "properties": {
+        "workflow_version": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "gate_contract_version": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "state_path": {
+          "const": ".agent/state.json"
+        },
+        "status_mirror_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "created_at",
+        "updated_at",
+        "edition",
+        "group",
+        "region",
+        "stage",
+        "track",
+        "status"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "$ref": "#/$defs/dateOrDateTime"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/dateOrDateTime"
+        },
+        "edition": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "group": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "region": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "stage": {
+          "$ref": "#/$defs/knownOrUnknown",
+          "description": "Competition stage such as school, regional, enterprise-track, or national final. This is not the control workflow status."
+        },
+        "track": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "status": {
+          "$ref": "#/$defs/controlStatus",
+          "description": "Read-through mirror of agent-state.status. The runtime state is authoritative."
+        }
+      }
+    },
+    "competition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_deadline",
+        "applicable_notice",
+        "rule_snapshot",
+        "anonymity_required",
+        "forbidden_identity_terms"
+      ],
+      "properties": {
+        "official_deadline": {
+          "anyOf": [
+            {
+              "const": "unknown"
+            },
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "applicable_notice": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "rule_snapshot": {
+          "const": "evidence/rules.json"
+        },
+        "anonymity_required": {
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ]
+        },
+        "forbidden_identity_terms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "decision_problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_owner",
+        "decision_to_make",
+        "target_population",
+        "geography",
+        "evidence_gap",
+        "expected_action"
+      ],
+      "properties": {
+        "decision_owner": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "decision_to_make": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "target_population": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "geography": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "evidence_gap": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "expected_action": {
+          "$ref": "#/$defs/knownOrUnknown"
+        }
+      }
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_question",
+        "secondary_questions",
+        "design",
+        "sampling_frame",
+        "achieved_sample",
+        "fieldwork_status",
+        "data_status"
+      ],
+      "properties": {
+        "primary_question": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "secondary_questions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "design": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "sampling_frame": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "achieved_sample": {
+          "oneOf": [
+            {
+              "const": "unknown"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ]
+        },
+        "fieldwork_status": {
+          "enum": [
+            "not_started",
+            "planned",
+            "piloting",
+            "active",
+            "paused",
+            "completed",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "data_status": {
+          "enum": [
+            "unavailable",
+            "raw",
+            "processing",
+            "processed",
+            "analyzed",
+            "frozen",
+            "blocked",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "visual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "audience",
+        "narrative_metaphor",
+        "brief",
+        "tokens",
+        "asset_ledger",
+        "preflight",
+        "source_directory",
+        "export_directory",
+        "rights_status",
+        "anonymity_safe"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "agent_ui",
+            "public_promo",
+            "competition_submission"
+          ]
+        },
+        "audience": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "narrative_metaphor": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "brief": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "tokens": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "asset_ledger": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "preflight": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "source_directory": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "export_directory": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "rights_status": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "anonymity_safe": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "const": "unknown"
+            }
+          ]
+        }
+      }
+    },
+    "deliverables": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "next_required",
+        "required_final_artifact_types",
+        "report_status",
+        "ppt_status",
+        "defense_status",
+        "visuals_status"
+      ],
+      "properties": {
+        "next_required": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "required_final_artifact_types": {
+          "oneOf": [
+            {"const": "unknown"},
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": ["report", "presentation", "defense", "appendix", "data_package", "code_package"]
+              }
+            }
+          ]
+        },
+        "report_status": {
+          "$ref": "#/$defs/artifactStatus"
+        },
+        "ppt_status": {
+          "$ref": "#/$defs/artifactStatus"
+        },
+        "defense_status": {
+          "$ref": "#/$defs/artifactStatus"
+        },
+        "visuals_status": {
+          "$ref": "#/$defs/artifactStatus"
+        }
+      }
+    },
+    "risks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fatal",
+        "high",
+        "medium"
+      ],
+      "properties": {
+        "fatal": {
+          "$ref": "#/$defs/fatalRiskList"
+        },
+        "high": {
+          "$ref": "#/$defs/riskList"
+        },
+        "medium": {
+          "$ref": "#/$defs/riskList"
+        }
+      }
+    },
+    "open_decisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decisionItem"
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_data_provenance",
+        "consent_status",
+        "ai_use_ledger",
+        "evidence_ledger",
+        "visual_asset_ledger"
+      ],
+      "properties": {
+        "raw_data_provenance": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "consent_status": {
+          "$ref": "#/$defs/knownOrUnknown"
+        },
+        "ai_use_ledger": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "evidence_ledger": {
+          "$ref": "#/$defs/nonEmptyPath"
+        },
+        "visual_asset_ledger": {
+          "$ref": "#/$defs/nonEmptyPath"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "knownOrUnknown": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S).+$"
+    },
+    "nonEmptyPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*:)(?!.*(?:^|[/\\\\])\\.\\.?($|[/\\\\]))(?!.*[. ](?:$|[/\\\\]))[^\\x00-\\x1F]+$"
+    },
+    "dateOrDateTime": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        }
+      ]
+    },
+    "controlStatus": {
+      "enum": [
+        "intake",
+        "rule_lock",
+        "problem_framing",
+        "exploratory_research",
+        "survey_design",
+        "fieldwork",
+        "data_analysis",
+        "insight_action",
+        "report_visual",
+        "defense",
+        "submission_ready",
+        "closed"
+      ]
+    },
+    "artifactStatus": {
+      "enum": [
+        "not_started",
+        "proposed",
+        "drafting",
+        "review",
+        "blocked",
+        "approved",
+        "final",
+        "unknown"
+      ]
+    },
+    "fatalRiskList": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "allOf": [
+              {"$ref": "#/$defs/riskObject"},
+              {
+                "properties": {
+                  "status": {"enum": ["open", "mitigating", "resolved"]}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "riskList": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {"$ref": "#/$defs/riskObject"}
+        ]
+      }
+    },
+    "riskObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "summary", "status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "summary": {"type": "string", "minLength": 1},
+        "status": {"enum": ["open", "mitigating", "resolved", "accepted"]},
+        "owner": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "decision_owner": {"type": "string", "minLength": 1},
+        "acceptance_reason": {"type": "string", "minLength": 1},
+        "acceptance_scope": {"type": "string", "minLength": 1},
+        "compensating_controls": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "acceptance_evidence": {"$ref": "#/$defs/nonEmptyPath"},
+        "acceptance_evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "accepted_at": {"type": "string", "format": "date-time"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "accepted"}}, "required": ["status"]},
+          "then": {
+            "required": [
+              "decision_owner",
+              "acceptance_reason",
+              "acceptance_scope",
+              "compensating_controls",
+              "acceptance_evidence",
+              "acceptance_evidence_sha256",
+              "accepted_at"
+            ]
+          }
+        }
+      ]
+    },
+    "decisionItem": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "question",
+            "owner",
+            "status"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "question": {
+              "type": "string",
+              "minLength": 1
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "enum": [
+                "open",
+                "resolved",
+                "deferred"
+              ]
+            },
+            "deadline": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

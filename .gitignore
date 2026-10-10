@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.tmp/
+tmp/
+audit-output/
+.evi-x-smoke-*/
+# Local orchestration, screenshots and source snapshots
+.collab/
+.openai/
+node_modules/
+.next/
+.venv/
+.local/
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+!*.env.example
+.ruff_cache/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Local research captures and generated delivery bundles (preserved on disk)
+/research/xhs-direct-20261007/
+/exports/
+/outputs/
+/evaluations/frontend-design-production/

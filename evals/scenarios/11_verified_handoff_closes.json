@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "verified_handoff_closes",
+  "description": "A complete set of current final deliverables with independent approved reviews passes aggregate audit, creates a self-verifying handoff, and alone permits closure.",
+  "steps": [
+    {
+      "id": "verified_handoff_go",
+      "run": ["handoff"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/go_no_go", "op": "eq", "value": "go"},
+        {"source": "json", "pointer": "/manifest", "op": "eq", "value": "reviews/final-manifest.json"},
+        {"source": "json", "pointer": "/manifest_sha256", "op": "regex", "value": "^[a-f0-9]{64}$"},
+        {"source": "file_text", "path": "reviews/final-manifest.json", "op": "regex", "value": "handoff_completed|ART-EVAL-FINAL-REPORT|ART-EVAL-FINAL-PRESENTATION|ART-EVAL-FINAL-DEFENSE|manifest_sha256"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "close_with_committed_manifest",
+      "run": ["advance", "--to", "closed", "--expect-revision", "${capture.submission_revision}"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "closed"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent", "submission_zero_fatal_high"]
+    }
+  ]
+}

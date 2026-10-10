@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "extends": "_defense_ready.json",
+  "id": "high_blocker_blocks_handoff",
+  "description": "An unresolved high-severity blocker prevents defense handoff and preserves defense revision.",
+  "steps": [
+    {
+      "id": "install_open_high_blocker",
+      "write": {
+        "path": "evidence/blockers.csv",
+        "content": "blocker_id,project_id,title,source_task_id,gate,severity,cause,impact,blocked_task_ids,safe_parallel_work,required_input,input_owner,decision_owner,due_at,unblock_test,status,resolution_evidence,resolved_by,resolved_at,checkpoint_id,created_at,updated_at,notes\nBLK-EVAL-HIGH-001,${capture.project_id},Unresolved high handoff blocker,TASK-EVAL-001,submission,high,Required source verification is incomplete,Submission safety cannot be confirmed,,Continue non-submission checks,Verified source record,evaluation harness,evaluation owner,2099-12-31,Attach source and rerun handoff,open,,,,,2026-08-03T00:00:00Z,2026-08-03T00:00:00Z,Deterministic test-only blocker\n"
+      }
+    },
+    {
+      "id": "high_blocker_blocks_submission_ready",
+      "run": ["advance", "--to", "submission_ready", "--expect-revision", "${capture.defense_revision}"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "defense_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/fatal_or_high_blockers/0/blocker_id", "op": "eq", "value": "BLK-EVAL-HIGH-001"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    },
+    {
+      "id": "handoff_no_go",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "defense"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "defense_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "stdout", "op": "regex", "value": "BLK-EVAL-HIGH-001|high.*blocker|blocker.*high"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

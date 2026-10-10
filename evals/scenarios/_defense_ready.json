@@ -1,0 +1,486 @@
+{
+  "schema_version": "1.0",
+  "abstract": true,
+  "steps": [
+    {
+      "id": "bootstrap_defense_candidate",
+      "run": ["bootstrap", "--title", "Behavior Eval Defense Candidate"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "intake"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value": 0},
+        {"source": "file_text", "path": "project.yaml", "op": "regex", "value": "(?m)^  mode: competition_submission$"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "bootstrap_revision": {"source": "json", "pointer": "/status_revision"},
+        "project_id": {"source": "agent_state", "pointer": "/project_id"}
+      }
+    },
+    {
+      "id": "install_scoped_rules",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-rules.json",
+        "to": "evidence/rules.json"
+      }
+    },
+    {
+      "id": "install_scoped_rule_source",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-practice-source.txt",
+        "to": "evidence/rule-sources/edition16-undergrad-practice-source.txt"
+      }
+    },
+    {
+      "id": "scope_competition_context",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {"old": "  edition: unknown", "new": "  edition: \"第十六届\""},
+          {"old": "  group: unknown", "new": "  group: \"本科组\""},
+          {"old": "  region: unknown", "new": "  region: \"全国\""},
+          {"old": "  stage: unknown", "new": "  stage: \"校赛及企业命题赛\""},
+          {"old": "  track: unknown", "new": "  track: \"自主选题\""},
+          {"old": "  applicable_notice: unknown", "new": "  applicable_notice: \"evidence/rule-sources/edition16-undergrad-practice-source.txt\""},
+          {"old": "  anonymity_required: unknown", "new": "  anonymity_required: \"yes\""},
+          {"old": "  forbidden_identity_terms: []", "new": "  forbidden_identity_terms: [\"Forbidden School\", \"Forbidden Team\"]"},
+          {"old": "  decision_owner: unknown", "new": "  decision_owner: \"behavior-eval harness\""},
+          {"old": "  decision_to_make: unknown", "new": "  decision_to_make: \"verify submission handoff safety\""},
+          {"old": "  target_population: unknown", "new": "  target_population: \"synthetic test records only\""},
+          {"old": "  geography: unknown", "new": "  geography: \"non-geographic test fixture\""},
+          {"old": "  evidence_gap: unknown", "new": "  evidence_gap: \"control-plane transition invariant\""},
+          {"old": "  expected_action: unknown", "new": "  expected_action: \"return deterministic go or no-go\""},
+          {"old": "  primary_question: unknown", "new": "  primary_question: \"Does the control plane enforce every submission boundary?\""},
+          {"old": "  design: unknown", "new": "  design: \"deterministic behavior evaluation\""},
+          {"old": "  sampling_frame: unknown", "new": "  sampling_frame: \"declared synthetic fixture records\""},
+          {"old": "  achieved_sample: unknown", "new": "  achieved_sample: 1"},
+          {"old": "  fieldwork_status: not_started", "new": "  fieldwork_status: completed"},
+          {"old": "  data_status: unavailable", "new": "  data_status: analyzed"},
+          {"old": "  audience: unknown", "new": "  audience: \"evaluation harness\""},
+          {"old": "  narrative_metaphor: unknown", "new": "  narrative_metaphor: \"none\""},
+          {"old": "  rights_status: unknown", "new": "  rights_status: \"cleared test-only content\""},
+          {"old": "  anonymity_safe: unknown", "new": "  anonymity_safe: true"},
+          {"old": "  next_required: unknown", "new": "  next_required: \"submission_ready\""},
+          {"old": "  report_status: not_started", "new": "  report_status: final"},
+          {"old": "  ppt_status: not_started", "new": "  ppt_status: final"},
+          {"old": "  defense_status: not_started", "new": "  defense_status: final"},
+          {"old": "  visuals_status: not_started", "new": "  visuals_status: final"},
+          {"old": "  required_final_artifact_types: unknown", "new": "  required_final_artifact_types: [report, presentation, defense]"},
+          {"old": "  raw_data_provenance: unknown", "new": "  raw_data_provenance: \"declared deterministic test fixture\""},
+          {"old": "  consent_status: unknown", "new": "  consent_status: \"not applicable to synthetic test records\""}
+        ]
+      }
+    },
+    {
+      "id": "write_problem_evidence",
+      "write": {
+        "path": "project-brief.md",
+        "content": "# Behavior-eval decision brief\n\nClassification: deterministic test fixture, not a claim about real fieldwork.\n\nDecision owner: evaluation harness.\nDecision: verify adjacent control-plane transitions.\nTarget population: synthetic test records only.\nExpected action: accept or reject the transition according to the contract.\n"
+      }
+    },
+    {
+      "id": "write_design_evidence",
+      "write": {
+        "path": "research/research-design.md",
+        "content": "# Behavior-eval research design\n\nTest-only fixture. Population, frame, instrument, variables, and analysis plan are internally aligned for control-plane testing; no real respondents or findings are represented.\n"
+      }
+    },
+    {
+      "id": "write_instrument_evidence",
+      "write": {
+        "path": "research/instruments/eval-questionnaire.csv",
+        "content": "question_id,text,question_type,required,construct,variable,scale,options,analysis_use,source\nQ1,Did the declared invariant hold?,single_choice,yes,control_integrity,control_hold,categorical,yes|no,exact invariant check,test fixture\n"
+      }
+    },
+    {
+      "id": "write_variable_analysis_mapping",
+      "write": {
+        "path": "research/question-variable-analysis-mapping.csv",
+        "content": "question_id,variable,analysis,decision_use\nQ1,control_integrity,exact deterministic check,accept or reject state transition\n"
+      }
+    },
+    {
+      "id": "write_sampling_plan",
+      "write": {
+        "path": "research/sampling-plan.md",
+        "content": "# Sampling plan\n\nClassification: deterministic test fixture. Frame contains exactly T-001; selection is a census of that fixture; no human respondent or external population is claimed.\n"
+      }
+    },
+    {
+      "id": "write_fieldwork_evidence",
+      "write": {
+        "path": "evidence/eval-fieldwork.json",
+        "content": "{\n  \"classification\": \"test_fixture\",\n  \"real_respondents\": false,\n  \"purpose\": \"control-plane behavior evaluation\",\n  \"pilot_recorded\": true,\n  \"consent_not_applicable\": true,\n  \"quality_control_recorded\": true\n}\n"
+      }
+    },
+    {
+      "id": "write_pilot_record",
+      "write": {
+        "path": "research/fieldwork/pilot-record.json",
+        "content": "{\"classification\":\"test_fixture\",\"instrument\":\"research/instruments/eval-questionnaire.csv\",\"records_checked\":1,\"result\":\"pass\"}\n"
+      }
+    },
+    {
+      "id": "write_consent_record",
+      "write": {
+        "path": "research/fieldwork/consent-record.md",
+        "content": "# Consent record\n\nNot applicable: the only record is a declared deterministic fixture and no person or personal data is involved.\n"
+      }
+    },
+    {
+      "id": "write_fieldwork_protocol",
+      "write": {
+        "path": "research/fieldwork/fieldwork-protocol.md",
+        "content": "# Test fixture protocol\n\nCreate T-001 once; preserve it unchanged under data/raw; record SHA-256 at checkpoint; never describe it as a respondent.\n"
+      }
+    },
+    {
+      "id": "write_quality_control_rules",
+      "write": {
+        "path": "research/fieldwork/quality-control-rules.json",
+        "content": "{\"duplicate_policy\":\"reject duplicate record_id\",\"missing_policy\":\"reject missing classification\",\"provenance_required\":true}\n"
+      }
+    },
+    {
+      "id": "write_raw_provenance",
+      "write": {
+        "path": "evidence/raw-data-provenance.json",
+        "content": "{\"classification\":\"test_fixture\",\"source\":\"evals/scenarios/_defense_ready.json\",\"real_respondents\":false,\"raw_path\":\"data/raw/eval.csv\"}\n"
+      }
+    },
+    {
+      "id": "write_raw_test_data",
+      "write": {
+        "path": "data/raw/eval.csv",
+        "content": "record_id,classification,value\nT-001,synthetic_test_fixture,1\n"
+      }
+    },
+    {
+      "id": "write_processed_test_data",
+      "write": {
+        "path": "data/processed/eval.csv",
+        "content": "record_id,classification,value\nT-001,synthetic_test_fixture,1\n"
+      }
+    },
+    {
+      "id": "write_data_dictionary",
+      "write": {
+        "path": "data/data-dictionary.csv",
+        "content": "field,type,allowed_values,meaning\nrecord_id,string,T-001,stable test record identifier\nclassification,string,synthetic_test_fixture,prevents real-evidence confusion\nvalue,integer,1,deterministic control value\n"
+      }
+    },
+    {
+      "id": "write_cleaning_log",
+      "write": {
+        "path": "data/cleaning-log.csv",
+        "content": "step,input,output,rule,rows_before,rows_after\n1,data/raw/eval.csv,data/processed/eval.csv,identity transform for deterministic fixture,1,1\n"
+      }
+    },
+    {
+      "id": "write_analysis_code_fixture",
+      "write": {
+        "path": "analysis/code/eval.py",
+        "content": "# Deterministic test fixture; no external data or real respondents.\nEXPECTED = {\"record_id\": \"T-001\", \"classification\": \"synthetic_test_fixture\", \"value\": 1}\n"
+      }
+    },
+    {
+      "id": "write_inference_evidence",
+      "write": {
+        "path": "analysis/outputs/eval.json",
+        "content": "{\"classification\":\"test_fixture\",\"reproducible\":true,\"causal_claim\":false,\"limitations\":[\"not competition evidence\"]}\n"
+      }
+    },
+    {
+      "id": "write_model_diagnostics",
+      "write": {
+        "path": "analysis/outputs/model-diagnostics.json",
+        "content": "{\"classification\":\"test_fixture\",\"model\":\"exact identity check\",\"expected\":1,\"observed\":1,\"result\":\"pass\"}\n"
+      }
+    },
+    {
+      "id": "write_robustness_record",
+      "write": {
+        "path": "analysis/outputs/robustness-or-sensitivity-record.json",
+        "content": "{\"classification\":\"test_fixture\",\"test\":\"change value from 1 to 0\",\"expected_effect\":\"invariant fails\",\"result\":\"pass\"}\n"
+      }
+    },
+    {
+      "id": "write_evidence_ledger",
+      "write": {
+        "path": "evidence/evidence-ledger.csv",
+        "content": "claim_id,claim,content_class,population,analysis_sample_n,numerator,denominator,unit,reported_value,evidence_source,data_field,transformation,method,result,limitation,recommendation,output_location,confidence,status\nCLM-EVAL-001,T-001 preserves the declared value,actual,deterministic evaluation fixture,1,,,count,1,data/processed/eval.csv,value,identity,exact comparison,1,synthetic fixture only,enforce adjacent transition contract,analysis/outputs/eval.json,high,verified\n"
+      }
+    },
+    {
+      "id": "write_action_evidence",
+      "write": {
+        "path": "evidence/decision-log.md",
+        "content": "# Decision log\n\n- ID: DEC-EVAL-001\n- Classification: test fixture\n- Evidence: analysis/outputs/eval.json\n- Owner: evaluation harness\n- Action: enforce the declared transition contract\n- Metric: all required behavior assertions pass\n"
+      }
+    },
+    {
+      "id": "write_action_table",
+      "write": {
+        "path": "analysis/outputs/action-table.csv",
+        "content": "action_id,evidence_id,owner,action,priority,metric\nACT-EVAL-001,CLM-EVAL-001,evaluation harness,enforce no-skip transition,high,invalid skip returns exit 2\n"
+      }
+    },
+    {
+      "id": "write_ai_use_ledger",
+      "write": {
+        "path": "evidence/ai-use-ledger.csv",
+        "content": "entry_id,date,tool_model,purpose,input_category,output_used,human_verification,final_owner,disclosure_location\nAI-EVAL-000,2026-08-03,none,Declare that deterministic fixture content is test-only,test fixture,no,yes,evaluation harness,evidence/preflight-checklist.csv\n"
+      }
+    },
+    {
+      "id": "write_visual_evidence",
+      "write": {
+        "path": "evidence/rendered-output-review.json",
+        "content": "{\"classification\":\"test_fixture\",\"visual_mode\":\"competition_submission\",\"rendered_output_reviewed\":true,\"brand_leakage\":false,\"synthetic_as_actual\":false}\n"
+      }
+    },
+    {
+      "id": "install_final_visual_fixture",
+      "copy": {
+        "from": "evals/fixtures/behavior/synthetic-evidence.svg",
+        "to": "design/exports/eval-figure.svg"
+      }
+    },
+    {
+      "id": "write_visual_asset_ledger",
+      "write": {
+        "path": "evidence/visual-asset-ledger.csv",
+        "content": "asset_id,mode,asset_type,title,purpose,content_class,source_evidence_ids,ai_generated,ai_use_ledger_id,concept_only,third_party_mark_status,anonymity_checked,competition_approved,accessibility_status,print_status,width,height,unit,file_path,sha256,version,owner,reviewer,status,created_at,updated_at,notes\nCOMP-EVAL-001,competition_submission,diagram,Control-plane fixture,Verify final visual preflight,conceptual,,no,,yes,cleared,yes,yes,approved,approved,120,80,px,design/exports/eval-figure.svg,ceaf10f1cfbef072c01af98db1ad76bad41c313b784b4b90386d0fdcefce5eb0,v1,evaluation harness,independent reviewer,final,2026-08-03T00:00:00Z,2026-08-03T00:00:00Z,Deterministic concept fixture only\n"
+      }
+    },
+    {
+      "id": "pass_visual_preflight_fixture",
+      "write": {
+        "path": "evidence/visual-preflight-checklist.csv",
+        "content": "check_id,applies_to_modes,scope,item,severity,status,required_evidence,artifact_evidence,owner,notes\nVIS-EVAL-MODE,competition_submission,mode,Neutral mode fixed,fatal,pass,project.yaml,project.yaml,evaluation harness,test fixture\nVIS-EVAL-TRACE,competition_submission,evidence,No substantive untraced visual,fatal,pass,evidence/visual-asset-ledger.csv,evidence/visual-asset-ledger.csv,evaluation harness,test fixture\nVIS-EVAL-RENDER,competition_submission,render,Rendered outputs reviewed,high,pass,rendered_output_review,evidence/rendered-output-review.json,evaluation harness,test fixture\n"
+      }
+    },
+    {
+      "id": "write_report_artifact",
+      "copy": {
+        "from": "evals/fixtures/report.md",
+        "to": "deliverables/report/report.md"
+      }
+    },
+    {
+      "id": "write_ppt_artifact",
+      "write": {
+        "path": "deliverables/ppt/deck.md",
+        "content": "# Behavior Evaluation Deck\n\n1. Scope: deterministic test fixture.\n2. Evidence: CLM-EVAL-001.\n3. Decision: enforce state and Gate invariants.\n4. Limitation: no real-world inference.\n"
+      }
+    },
+    {
+      "id": "write_defense_artifact",
+      "write": {
+        "path": "deliverables/defense/script.md",
+        "content": "# Defense Script\n\nQ: Are these real respondents?\nA: No. T-001 is explicitly a synthetic behavior-evaluation fixture and supports no market claim.\n"
+      }
+    },
+    {
+      "id": "pass_submission_preflight",
+      "write": {
+        "path": "evidence/preflight-checklist.csv",
+        "content": "check_id,scope,item,severity,status,source,artifact_evidence,owner,deadline,notes\nSUB-EVAL-RULE,submission,Scoped rule snapshot,fatal,pass,evidence/rules.json,evidence/rules.json,evaluation harness,2099-12-31,test fixture\nSUB-EVAL-ANON,submission,Anonymous output,fatal,pass,evidence/anonymity-scan-report.json,evidence/anonymity-scan-report.json,evaluation harness,2099-12-31,test fixture\nSUB-EVAL-CROSS,submission,Cross-file values agree,high,pass,evidence/cross-file-consistency-report.json,evidence/cross-file-consistency-report.json,evaluation harness,2099-12-31,test fixture\nSUB-EVAL-AI,submission,AI use disclosed,high,pass,evidence/ai-use-ledger.csv,evidence/ai-use-ledger.csv,evaluation harness,2099-12-31,test fixture\n"
+      }
+    },
+    {
+      "id": "write_cross_file_consistency",
+      "write": {
+        "path": "evidence/cross-file-consistency-report.json",
+        "content": "{\"classification\":\"test_fixture\",\"record_id\":\"T-001\",\"value_by_artifact\":{\"report\":1,\"ppt\":1,\"defense\":1},\"conflicts\":0}\n"
+      }
+    },
+    {
+      "id": "write_anonymity_scan",
+      "write": {
+        "path": "evidence/anonymity-scan-report.json",
+        "content": "{\"classification\":\"test_fixture\",\"files_scanned\":[\"deliverables/report/report.md\",\"deliverables/ppt/deck.md\",\"deliverables/defense/script.md\"],\"identity_hits\":0,\"result\":\"pass\"}\n"
+      }
+    },
+    {
+      "id": "write_final_artifact_manifest",
+      "write": {
+        "path": "reviews/final-artifact-manifest.json",
+        "content": "{\"schema_version\":\"1.0.0\",\"classification\":\"test_fixture\",\"artifacts\":[\"deliverables/report/report.md\",\"deliverables/ppt/deck.md\",\"deliverables/defense/script.md\"],\"fatal_count\":0,\"high_count\":0}\n"
+      }
+    },
+    {
+      "id": "write_submission_evidence",
+      "write": {
+        "path": "evidence/eval-submission.json",
+        "content": "{\"classification\":\"test_fixture\",\"fatal_count\":0,\"high_count\":0,\"anonymity_safe\":true,\"cross_file_consistent\":true}\n"
+      }
+    },
+    {
+      "id": "advance_to_rule_lock",
+      "run": ["advance", "--to", "rule_lock", "--expect-revision", "${capture.bootstrap_revision}"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "rule_lock"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "bootstrap_revision", "add": 1}}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_rule_gate",
+      "run": ["gate", "set", "rule", "pass", "--evidence", "project.yaml", "--evidence", "evidence/rules.json"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/rule/status", "/gates/rule"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_problem_framing",
+      "run": ["advance", "--to", "problem_framing"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "problem_framing"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_problem_gate",
+      "run": ["gate", "set", "problem", "pass", "--evidence", "project.yaml", "--evidence", "project-brief.md", "--evidence", "evidence/decision-log.md"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/problem/status", "/gates/problem"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_exploratory_research",
+      "run": ["advance", "--to", "exploratory_research"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "exploratory_research"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_survey_design",
+      "run": ["advance", "--to", "survey_design"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "survey_design"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_design_gate",
+      "run": ["gate", "set", "design", "pass", "--evidence", "research/research-design.md", "--evidence", "research/instruments/eval-questionnaire.csv", "--evidence", "research/question-variable-analysis-mapping.csv", "--evidence", "research/sampling-plan.md"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/design/status", "/gates/design"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_fieldwork",
+      "run": ["advance", "--to", "fieldwork"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "fieldwork"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_fieldwork_gate",
+      "run": ["gate", "set", "fieldwork", "pass", "--evidence", "research/fieldwork/pilot-record.json", "--evidence", "research/fieldwork/consent-record.md", "--evidence", "research/fieldwork/fieldwork-protocol.md", "--evidence", "research/fieldwork/quality-control-rules.json", "--evidence", "evidence/raw-data-provenance.json"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/fieldwork/status", "/gates/fieldwork"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_data_analysis",
+      "run": ["advance", "--to", "data_analysis"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "data_analysis"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_data_gate",
+      "run": ["gate", "set", "data", "pass", "--evidence", "data/raw/eval.csv", "--evidence", "data/processed/eval.csv", "--evidence", "data/data-dictionary.csv", "--evidence", "data/cleaning-log.csv", "--evidence", "analysis/code/eval.py"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/data/status", "/gates/data"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_inference_gate",
+      "run": ["gate", "set", "inference", "pass", "--evidence", "analysis/code/eval.py", "--evidence", "analysis/outputs/eval.json", "--evidence", "analysis/outputs/model-diagnostics.json", "--evidence", "analysis/outputs/robustness-or-sensitivity-record.json", "--evidence", "evidence/evidence-ledger.csv"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/inference/status", "/gates/inference"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_insight_action",
+      "run": ["advance", "--to", "insight_action"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "insight_action"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_action_gate",
+      "run": ["gate", "set", "action", "pass", "--evidence", "evidence/evidence-ledger.csv", "--evidence", "analysis/outputs/action-table.csv", "--evidence", "evidence/decision-log.md"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/action/status", "/gates/action"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_report_visual",
+      "run": ["advance", "--to", "report_visual"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "report_visual"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_visual_gate",
+      "run": ["gate", "set", "visual", "pass", "--evidence", "project.yaml", "--evidence", "design/visual-tokens.json", "--evidence", "evidence/visual-asset-ledger.csv", "--evidence", "evidence/visual-preflight-checklist.csv", "--evidence", "evidence/rendered-output-review.json"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/visual/status", "/gates/visual"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "advance_to_defense",
+      "run": ["advance", "--to", "defense"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "defense"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"]
+    },
+    {
+      "id": "pass_submission_gate",
+      "run": ["gate", "set", "submission", "pass", "--evidence", "evidence/preflight-checklist.csv", "--evidence", "deliverables/report/report.md", "--evidence", "deliverables/ppt/deck.md", "--evidence", "deliverables/defense/script.md", "--evidence", "evidence/cross-file-consistency-report.json", "--evidence", "evidence/anonymity-scan-report.json", "--evidence", "reviews/final-artifact-manifest.json"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointers": ["/gates/submission/status", "/gates/submission"], "op": "eq", "value": "pass"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "defense_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    }
+  ]
+}

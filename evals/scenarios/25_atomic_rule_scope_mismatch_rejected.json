@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+  "id": "atomic_rule_scope_mismatch_rejected",
+  "description": "Every atomic rule, including advisory rules, must match its referenced five-dimensional scope; an inapplicable rule cannot remain in a passing snapshot.",
+  "steps": [
+    {
+      "id": "bootstrap_atomic_scope_mismatch",
+      "run": ["bootstrap", "--title", "Atomic Rule Scope Mismatch"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "enter_rule_lock_for_atomic_scope",
+      "run": ["advance", "--to", "rule_lock"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"],
+      "capture": {
+        "rule_lock_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "install_atomic_scope_rules",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-rules.json",
+        "to": "evidence/rules.json"
+      }
+    },
+    {
+      "id": "install_atomic_scope_rule_source",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-practice-source.txt",
+        "to": "evidence/rule-sources/edition16-undergrad-practice-source.txt"
+      }
+    },
+    {
+      "id": "scope_project_for_atomic_rule",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {"old": "  edition: unknown", "new": "  edition: \"第十六届\""},
+          {"old": "  group: unknown", "new": "  group: \"本科组\""},
+          {"old": "  region: unknown", "new": "  region: \"全国\""},
+          {"old": "  stage: unknown", "new": "  stage: \"校赛及企业命题赛\""},
+          {"old": "  track: unknown", "new": "  track: \"自主选题\""},
+          {"old": "  applicable_notice: unknown", "new": "  applicable_notice: \"evidence/rule-sources/edition16-undergrad-practice-source.txt\""}
+        ]
+      }
+    },
+    {
+      "id": "make_atomic_scope_exclude_project_track",
+      "json_set": {
+        "path": "evidence/rules.json",
+        "updates": [
+          {
+            "pointer": "/scopes/0/track",
+            "value": {"mode": "values", "values": ["企业命题"]}
+          },
+          {
+            "pointer": "/rules",
+            "value": [
+              {
+                "id": "undergrad-practice-eligibility-knowledge-test",
+                "scope_id": "edition16-undergrad-practice-current-stage",
+                "rule_type": "eligibility",
+                "rule": "仅知识赛网考通过的参赛选手可以校内自由组队参加实践赛",
+                "severity": "advisory",
+                "source_id": "edition16-undergrad-practice",
+                "source_title": "第十六届本科组校赛及企业命题赛通知",
+                "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+                "published_date": "2025-11-15",
+                "verified_at": "2026-08-02",
+                "authority": "national-organizing-committee",
+                "status": "active-for-edition"
+              },
+              {
+                "id": "undergrad-stage-format",
+                "scope_id": "edition16-undergrad-multi-stage",
+                "rule_type": "format",
+                "rule": "校赛可采用报告加PPT评审或报告加答辩；企业命题赛采用报告评审；省赛和国赛初赛采用报告加PPT评审，决赛采用报告加现场展示答辩",
+                "severity": "hard",
+                "source_id": "edition16-undergrad-practice",
+                "source_title": "第十六届本科组校赛及企业命题赛通知",
+                "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+                "published_date": "2025-11-15",
+                "verified_at": "2026-08-02",
+                "authority": "national-organizing-committee",
+                "status": "active-for-edition"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "reject_advisory_atomic_rule_scope_mismatch",
+      "run": ["gate", "set", "rule", "pass", "--evidence", "project.yaml", "--evidence", "evidence/rules.json"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "rule_lock"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "rule_lock_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/rule_id", "op": "eq", "value": "undergrad-practice-eligibility-knowledge-test"},
+        {"source": "json", "pointer": "/failure/details/scope_id", "op": "eq", "value": "edition16-undergrad-practice-current-stage"},
+        {"source": "stdout", "op": "regex", "value": "does not apply|scope"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

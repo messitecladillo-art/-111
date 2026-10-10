@@ -1,0 +1,392 @@
+{
+  "contract_id": "zhengda-cup-champion.gates",
+  "version": "1.0.0",
+  "workflow_contract": "workflow.json",
+  "gate_ids": [
+    "rule",
+    "problem",
+    "design",
+    "fieldwork",
+    "data",
+    "inference",
+    "action",
+    "visual",
+    "submission"
+  ],
+  "result_statuses": [
+    "not_run",
+    "running",
+    "pass",
+    "warning",
+    "fail",
+    "unknown",
+    "stale"
+  ],
+  "severity_levels": [
+    "fatal",
+    "high",
+    "medium",
+    "low",
+    "info"
+  ],
+  "global_policy": {
+    "fatal_is_non_overridable": true,
+    "fatal_or_unknown_blocks_transition": true,
+    "not_run_running_and_stale_block_transition": true,
+    "warning_requires_acknowledgement": true,
+    "warning_acknowledgement_fields": [
+      "decision_log_entry",
+      "owner",
+      "deadline"
+    ],
+    "result_must_include_input_fingerprint": true,
+    "result_must_include_evidence_refs": true,
+    "input_change_invalidates_result": true,
+    "recovery_may_rerun_but_may_not_bypass_gate": true
+  },
+  "gates": [
+    {
+      "id": "rule",
+      "ordinal": 1,
+      "owner_status": "rule_lock",
+      "prerequisite_gates": [],
+      "required_evidence": [
+        "project.yaml#project.edition",
+        "project.yaml#project.group",
+        "project.yaml#project.region",
+        "project.yaml#project.track",
+        "project.yaml#project.stage",
+        "project.yaml#competition.applicable_notice",
+        "evidence/rules.json"
+      ],
+      "fatal_conditions": [
+        "competition_scope_unresolved",
+        "applicable_official_source_missing",
+        "hard_rule_without_scoped_source",
+        "source_conflict_affecting_eligibility_or_submission_unresolved",
+        "disqualifying_rule_unknown"
+      ],
+      "invalidated_by": [
+        "edition_change",
+        "group_change",
+        "region_change",
+        "track_change",
+        "competition_stage_change",
+        "notice_change",
+        "rule_snapshot_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "problem_framing"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "problem",
+      "ordinal": 2,
+      "owner_status": "problem_framing",
+      "prerequisite_gates": [
+        "rule"
+      ],
+      "required_evidence": [
+        "project.yaml#decision_problem",
+        "project-brief.md",
+        "evidence/decision-log.md"
+      ],
+      "fatal_conditions": [
+        "decision_owner_unknown",
+        "decision_to_make_unknown",
+        "target_population_unknown",
+        "evidence_gap_unknown",
+        "expected_action_unknown",
+        "topic_requires_inaccessible_or_unverifiable_evidence"
+      ],
+      "invalidated_by": [
+        "decision_owner_change",
+        "decision_change",
+        "target_population_change",
+        "geography_change",
+        "evidence_gap_change",
+        "expected_action_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "exploratory_research"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "design",
+      "ordinal": 3,
+      "owner_status": "survey_design",
+      "prerequisite_gates": [
+        "rule",
+        "problem"
+      ],
+      "required_evidence": [
+        "research/research-design.md",
+        "research/instruments",
+        "question_variable_analysis_mapping",
+        "sampling_plan"
+      ],
+      "fatal_conditions": [
+        "population_or_sampling_unit_unresolved",
+        "sampling_frame_or_nonprobability_boundary_undisclosed",
+        "required_questionnaire_item_unmapped",
+        "planned_model_variable_unmeasured",
+        "consent_or_sensitive_data_design_blocker_unresolved",
+        "analysis_plan_incompatible_with_design"
+      ],
+      "invalidated_by": [
+        "research_question_change",
+        "population_change",
+        "sampling_change",
+        "instrument_change",
+        "variable_change",
+        "analysis_plan_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "fieldwork"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "fieldwork",
+      "ordinal": 4,
+      "owner_status": "fieldwork",
+      "prerequisite_gates": [
+        "design"
+      ],
+      "required_evidence": [
+        "pilot_record",
+        "consent_record",
+        "fieldwork_protocol",
+        "quality_control_rules",
+        "raw_data_provenance"
+      ],
+      "fatal_conditions": [
+        "fabricated_or_backfilled_fieldwork",
+        "consent_or_privacy_blocker_unresolved",
+        "pilot_required_but_undocumented",
+        "raw_data_provenance_missing",
+        "quality_control_rules_undefined",
+        "actual_and_proposed_fieldwork_conflated"
+      ],
+      "invalidated_by": [
+        "instrument_change_after_pilot",
+        "sampling_execution_change",
+        "collection_channel_change",
+        "consent_change",
+        "quality_control_rule_change",
+        "raw_data_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "data_analysis"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "data",
+      "ordinal": 5,
+      "owner_status": "data_analysis",
+      "prerequisite_gates": [
+        "fieldwork"
+      ],
+      "required_evidence": [
+        "data/raw",
+        "data/processed",
+        "data_dictionary",
+        "cleaning_log",
+        "analysis/code"
+      ],
+      "fatal_conditions": [
+        "raw_data_overwritten_or_missing",
+        "cleaning_not_reproducible",
+        "exclusion_or_transformation_log_missing",
+        "sample_count_conflict_unresolved",
+        "processed_data_not_traceable_to_raw",
+        "material_missingness_or_duplicate_risk_unassessed"
+      ],
+      "invalidated_by": [
+        "raw_data_change",
+        "cleaning_rule_change",
+        "exclusion_change",
+        "weighting_change",
+        "processed_data_change",
+        "data_dictionary_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "insight_action"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "inference",
+      "ordinal": 6,
+      "owner_status": "data_analysis",
+      "prerequisite_gates": [
+        "data"
+      ],
+      "required_evidence": [
+        "analysis/code",
+        "analysis/outputs",
+        "model_diagnostics",
+        "robustness_or_sensitivity_record",
+        "evidence/evidence-ledger.csv"
+      ],
+      "fatal_conditions": [
+        "method_design_mismatch",
+        "causal_claim_without_identification",
+        "reported_result_not_reproducible",
+        "assumption_or_diagnostic_failure_concealed",
+        "material_claim_exceeds_evidence_strength",
+        "material_limitation_boundary_missing"
+      ],
+      "invalidated_by": [
+        "processed_data_change",
+        "method_change",
+        "model_specification_change",
+        "analysis_code_change",
+        "result_change",
+        "limitation_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "insight_action"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "action",
+      "ordinal": 7,
+      "owner_status": "insight_action",
+      "prerequisite_gates": [
+        "inference"
+      ],
+      "required_evidence": [
+        "evidence/evidence-ledger.csv",
+        "action_table",
+        "evidence/decision-log.md"
+      ],
+      "fatal_conditions": [
+        "material_recommendation_without_evidence",
+        "material_recommendation_owner_missing",
+        "action_or_priority_not_operationalized",
+        "implementation_metric_missing",
+        "finding_interpretation_and_recommendation_conflated"
+      ],
+      "invalidated_by": [
+        "material_finding_change",
+        "evidence_strength_change",
+        "recommendation_change",
+        "owner_change",
+        "priority_change",
+        "metric_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "report_visual"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "visual",
+      "ordinal": 8,
+      "owner_status": "report_visual",
+      "prerequisite_gates": [
+        "action"
+      ],
+      "required_evidence": [
+        "project.yaml#visual.mode",
+        "design/visual-tokens.json",
+        "evidence/visual-asset-ledger.csv",
+        "evidence/visual-preflight-checklist.csv",
+        "rendered_output_review"
+      ],
+      "fatal_conditions": [
+        "visual_mode_unresolved_or_inconsistent",
+        "substantive_visual_without_evidence_trace",
+        "synthetic_content_presented_as_actual_evidence",
+        "rights_or_third_party_mark_status_unresolved",
+        "anonymity_status_unresolved",
+        "rendered_output_not_inspected",
+        "material_chart_distortion_or_cross_file_numeric_conflict"
+      ],
+      "invalidated_by": [
+        "visual_mode_change",
+        "substantive_data_change",
+        "asset_change",
+        "render_change",
+        "rights_status_change",
+        "anonymity_rule_change",
+        "deliverable_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "defense"
+        ],
+        "cannot_override": true
+      }
+    },
+    {
+      "id": "submission",
+      "ordinal": 9,
+      "owner_status": "defense",
+      "prerequisite_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork",
+        "data",
+        "inference",
+        "action",
+        "visual"
+      ],
+      "required_evidence": [
+        "evidence/preflight-checklist.csv",
+        "deliverables/report",
+        "deliverables/ppt",
+        "deliverables/defense",
+        "cross_file_consistency_report",
+        "anonymity_scan_report",
+        "final_artifact_manifest"
+      ],
+      "fatal_conditions": [
+        "any_prerequisite_gate_not_current",
+        "anonymous_identity_leak",
+        "page_word_format_or_naming_violation",
+        "cross_file_material_inconsistency",
+        "ai_use_disclosure_unresolved",
+        "map_or_third_party_rights_violation",
+        "unresolved_disqualifying_rule",
+        "final_artifact_hash_or_render_review_missing"
+      ],
+      "invalidated_by": [
+        "any_prerequisite_gate_invalidated",
+        "report_change",
+        "appendix_change",
+        "presentation_change",
+        "defense_material_change",
+        "submission_rule_change",
+        "final_manifest_change"
+      ],
+      "fatal_boundary": {
+        "blocks_entry_to": [
+          "submission_ready",
+          "closed"
+        ],
+        "cannot_override": true
+      }
+    }
+  ]
+}

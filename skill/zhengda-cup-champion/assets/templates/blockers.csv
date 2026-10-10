@@ -1,0 +1,1 @@
+blocker_id,project_id,title,source_task_id,gate,severity,cause,impact,blocked_task_ids,safe_parallel_work,required_input,input_owner,decision_owner,due_at,unblock_test,status,resolution_evidence,resolved_by,resolved_at,checkpoint_id,created_at,updated_at,notes

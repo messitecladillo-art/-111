@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "id": "synthetic_evidence_rejected",
+  "description": "Audit rejects AI-generated visual material classified as actual field evidence.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Synthetic Evidence Rejection"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "initial_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "install_synthetic_visual",
+      "copy": {
+        "from": "evals/fixtures/behavior/synthetic-evidence.svg",
+        "to": "design/exports/synthetic-evidence.svg"
+      }
+    },
+    {
+      "id": "install_adversarial_visual_ledger",
+      "copy": {
+        "from": "evals/fixtures/behavior/synthetic-evidence-visual-ledger.csv",
+        "to": "evidence/visual-asset-ledger.csv"
+      }
+    },
+    {
+      "id": "install_ai_use_disclosure",
+      "copy": {
+        "from": "evals/fixtures/behavior/synthetic-evidence-ai-use-ledger.csv",
+        "to": "evidence/ai-use-ledger.csv"
+      }
+    },
+    {
+      "id": "audit_rejects_masquerade",
+      "run": ["audit", "--all"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "intake"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "initial_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointers": ["/gates/visual/status", "/gates/visual"], "op": "eq", "value": "fail"},
+        {"source": "agent_state", "pointer": "/gates/visual/fatal_count", "op": "ge", "value": 1},
+        {"source": "agent_state", "pointer": "/gates/visual/result_path", "op": "type", "value": "string"},
+        {"source": "agent_state", "pointer": "/gates/visual/input_fingerprint", "op": "regex", "value": "^[a-f0-9]{64}$"},
+        {"source": "agent_state", "pointer": "/gates/visual/evidence_refs", "op": "contains", "value": "evidence/visual-asset-ledger.csv"},
+        {"source": "stdout", "op": "regex", "value": "synthetic|ai.generated|合成|生成.*真实|真实.*生成|masquerad"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

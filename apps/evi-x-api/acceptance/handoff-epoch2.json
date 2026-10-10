@@ -1,0 +1,109 @@
+{
+  "protocol_version": "agent-collab/v1",
+  "run_id": "20261007-p0",
+  "task_id": "api",
+  "attempt": 2,
+  "sender_id": "/root/runtime2",
+  "recipient_id": "/root",
+  "nonce": "p0-api-02-result-01",
+  "idempotency_key": "20261007-p0/api/epoch2/result1",
+  "issued_at": "2026-10-07T09:15:52.102831+00:00",
+  "expires_at": "2026-10-07T13:00:00Z",
+  "data_classification": "internal-source-and-synthetic-fixtures",
+  "capabilities_used": {
+    "read": [
+      "apps/evi-x-api",
+      "skill",
+      " .collab/runs/20261007-p0"
+    ],
+    "write": [
+      "apps/evi-x-api"
+    ],
+    "network": "loopback PostgreSQL synthetic database only",
+    "secrets": "synthetic only"
+  },
+  "input_revision": "manifest:8b4432b217cb6becbd9d2f94aaa5ce7bcbd925538da2651dc63f61f05a4b37f1",
+  "base_worktree_revision": "manifest:8b4432b217cb6becbd9d2f94aaa5ce7bcbd925538da2651dc63f61f05a4b37f1",
+  "target_worktree_revision": "api-manifest:7f983df39bf2038ca757d9bd027718e83bf0975453bfdca6b1d3c916d890eb04",
+  "production_revision": "src-and-migrations-manifest:a323b676c979e0330c376e0ce47fa0b28d00f3334fb595b15bc394540a972928",
+  "status": "READY_FOR_REVIEW",
+  "changed_paths": [
+    "src/evix_api/app.py",
+    "src/evix_api/contracts.py",
+    "src/evix_api/provider.py",
+    "migrations/env.py",
+    "tests/conftest.py",
+    "tests/test_concurrency.py",
+    "tests/test_contracts.py",
+    "tests/test_postgres.py",
+    "tests/test_provider.py",
+    "alembic.ini",
+    "README.md",
+    "acceptance/"
+  ],
+  "claims": [
+    {
+      "kind": "observed",
+      "text": "33 acceptance tests passed with actual PostgreSQL; 15 PostgreSQL-marked tests use real Alembic migrations and a non-owner, non-BYPASSRLS role.",
+      "evidence_refs": [
+        "acceptance/pytest-epoch2.log"
+      ]
+    },
+    {
+      "kind": "observed",
+      "text": "Saved 41 immutable versions, blocked stale provenance and replay, preserved concurrent edits when proposal completed late, revoked team/session access during active provider call.",
+      "evidence_refs": [
+        "acceptance/pytest-epoch2.log"
+      ]
+    },
+    {
+      "kind": "observed",
+      "text": "GET proposal history restores private ready and unknown records, with current membership validation. HTTP408/5xx remain outcome_unknown; no automatic retry.",
+      "evidence_refs": [
+        "src/evix_api/app.py",
+        "tests/test_postgres.py",
+        "tests/test_provider.py"
+      ]
+    },
+    {
+      "kind": "observed",
+      "text": "No real email/model calls or production deployment were performed. All test inputs are synthetic.",
+      "evidence_refs": [
+        "tests/conftest.py",
+        "tests/test_provider.py"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "command": ".venv/Scripts/python.exe -X utf8 -m pytest -vv -ra --basetemp=.local/pytest-receipt-20261007-0930 -p no:cacheprovider",
+      "exit_code": 0,
+      "log_ref": "acceptance/pytest-epoch2.log",
+      "environment": "EVIX_TEST_DATABASE_URL points to evix_p0_test localhost55432; default app test role evix_app"
+    }
+  ],
+  "environment": {
+    "os": "Windows",
+    "python": "3.12.14",
+    "pytest": "9.1.1",
+    "dependency_lock": "uv.lock"
+  },
+  "not_done": [
+    "Live mail/provider acceptance",
+    "Browser roundtrip owned by coordinator",
+    "P1-P4 capabilities"
+  ],
+  "known_unknowns": [
+    "Real provider account and model compatibility await configured credentials"
+  ],
+  "risks": [
+    {
+      "severity": "P3",
+      "text": "Installed Starlette TestClient emits a deprecation warning for httpx; assertions passed."
+    }
+  ],
+  "next_actions": [
+    "Independent reviewer verifies frozen source and coordinator completes browser acceptance"
+  ],
+  "signature_or_mac": null
+}

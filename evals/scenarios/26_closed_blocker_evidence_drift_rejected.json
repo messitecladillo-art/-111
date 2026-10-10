@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "closed_blocker_evidence_drift_rejected",
+  "description": "A structured high-blocker waiver binds every cited evidence file by SHA-256; changing a cited file after closure makes repeated handoff fail closed without rewriting history.",
+  "steps": [
+    {
+      "id": "write_waiver_supporting_evidence",
+      "write": {
+        "path": "evidence/governance/waiver-support.txt",
+        "content": "Verified compensating control evidence, version one.\n"
+      }
+    },
+    {
+      "id": "capture_waiver_support_hash",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "waiver_support_sha256": {"source": "file_sha256", "path": "evidence/governance/waiver-support.txt"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "add_high_blocker_for_governed_waiver",
+      "run": [
+        "blocker", "add",
+        "--title", "Governed external dependency",
+        "--severity", "high",
+        "--gate", "submission",
+        "--cause", "A documented external dependency cannot be removed before submission",
+        "--impact", "The final decision needs an explicit compensating control",
+        "--required-input", "Current control evidence and accountable decision",
+        "--owner", "captain",
+        "--unblock-test", "Verify the compensating control evidence hash"
+      ],
+      "expect_exit": 0,
+      "capture": {
+        "waived_blocker_id": {"source": "json", "pointer": "/blocker/blocker_id"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_hash_bound_waiver",
+      "write": {
+        "path": "evidence/governance/high-waiver.json",
+        "content": "{\"blocker_id\":\"${capture.waived_blocker_id}\",\"decision\":\"waive\",\"decision_owner\":\"captain\",\"reason\":\"The verified compensating control keeps the submission boundary safe\",\"scope\":\"This submission package only\",\"compensating_controls\":[\"Recheck the cited evidence before every handoff\"],\"approved_at\":\"2026-08-03T00:30:00Z\",\"evidence_refs\":[{\"path\":\"evidence/governance/waiver-support.txt\",\"sha256\":\"${capture.waiver_support_sha256}\"}]}\n"
+      }
+    },
+    {
+      "id": "waive_high_blocker_with_current_hash",
+      "run": [
+        "blocker", "waive", "${capture.waived_blocker_id}",
+        "--evidence", "evidence/governance/high-waiver.json",
+        "--decision-owner", "captain"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/blocker/status", "op": "eq", "value": "waived"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "handoff_with_current_waiver_evidence",
+      "run": ["handoff"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/go_no_go", "op": "eq", "value": "go"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "close_hash_bound_waiver_project",
+      "run": ["advance", "--to", "closed", "--expect-revision", "${capture.submission_revision}"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "capture_closed_waiver_state",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "closed_waiver_revision": {"source": "json", "pointer": "/status_revision"},
+        "closed_waiver_event_sequence": {"source": "json", "pointer": "/event_stream/last_sequence"},
+        "closed_waiver_manifest_sha256": {"source": "file_sha256", "path": "reviews/final-manifest.json"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "modify_waiver_support_after_closure",
+      "append": {
+        "path": "evidence/governance/waiver-support.txt",
+        "content": "Tampered after final closure.\n"
+      }
+    },
+    {
+      "id": "closed_handoff_rejects_waiver_evidence_drift",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "closed"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "closed_waiver_revision"}},
+        {"source": "json", "pointer": "/failure/details/fatal_or_high_blockers/0/blocker_id", "op": "eq", "value_from": {"capture": "waived_blocker_id"}},
+        {"source": "json", "pointer": "/event_stream/last_sequence", "op": "eq", "value_from": {"capture": "closed_waiver_event_sequence"}},
+        {"source": "file_sha256", "path": "reviews/final-manifest.json", "op": "eq", "value_from": {"capture": "closed_waiver_manifest_sha256"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    }
+  ]
+}

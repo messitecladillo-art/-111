@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "handoff_rejects_stale_rule",
+  "description": "After entering submission_ready with a complete reviewed final set, tampering a passed rule snapshot makes direct handoff No-Go and persists the rule Gate as stale.",
+  "steps": [
+    {
+      "id": "tamper_passed_rule_snapshot",
+      "append": {
+        "path": "evidence/rules.json",
+        "content": "\n "
+      }
+    },
+    {
+      "id": "direct_handoff_persists_stale_no_go",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/stale_gates", "op": "contains", "value": "rule"},
+        {"source": "json", "pointer": "/failure/details/blocking_gates", "op": "contains", "value": "rule"},
+        {"source": "json", "pointer": "/failure/details/no_go_audit", "op": "regex", "value": "^\\.agent/audits/handoff-no-go-.*\\.json$"},
+        {"source": "agent_state", "pointer": "/gates/rule/status", "op": "eq", "value": "stale"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

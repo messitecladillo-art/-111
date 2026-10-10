@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">证见单色标志</title>
+  <desc id="desc">四节点证据角与洞察棱镜的单色版本</desc>
+  <g fill="none" stroke="#111111" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 54 L314 302 L256 344 L198 302 Z"/>
+    <circle cx="256" cy="122" r="15" fill="#FFFFFF"/>
+    <circle cx="256" cy="180" r="15" fill="#FFFFFF"/>
+    <circle cx="256" cy="238" r="15" fill="#FFFFFF"/>
+    <circle cx="256" cy="296" r="15" fill="#FFFFFF"/>
+    <path d="M256 326 L336 388 L306 470 L206 470 L176 388 Z"/>
+    <path d="M256 326 L256 470 M176 388 L336 388 M206 470 L256 388 L306 470" stroke-width="12"/>
+  </g>
+</svg>

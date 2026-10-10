@@ -1,0 +1,2 @@
+entry_id,date,tool_model,purpose,input_category,output_used,human_verification,final_owner,disclosure_location
+AI-EVAL-001,2026-08-03,deterministic-test-generator,Create an adversarial synthetic visual,test fixture,yes,yes,evaluation harness,eval-only fixture metadata

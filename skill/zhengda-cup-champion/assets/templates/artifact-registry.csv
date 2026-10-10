@@ -1,0 +1,1 @@
+artifact_id,project_id,title,artifact_type,classification,stage,gate,file_path,mime_type,source_artifact_ids,supersedes_artifact_id,evidence_ids,provenance,content_state,version,sha256,bytes,page_row_or_slide_count,created_by_role,owner_name,review_id,reviewer_role,reviewer_name,status,rights_status,anonymity_status,ai_use_ledger_ids,checkpoint_id,created_at,updated_at,notes

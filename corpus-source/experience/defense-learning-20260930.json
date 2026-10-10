@@ -1,0 +1,40 @@
+{
+  "schema": "evix-experience-corpus/v1",
+  "version": "2026-10-02.2",
+  "status": "reviewed",
+  "reviewScope": "原文页锚核对与独立改写安全性复核；不代表官方规则、奖项认证或软件部署验收。",
+  "classification": "analyst_inference_from_informal_training",
+  "notice": "以下为用户提供的非官方培训材料经独立改写的练习方法，不是官方规则、获奖原因或获奖保证。奖项描述仅为资料自述；原文、讲稿、联系方式、案例数值与图片不向网站复制。",
+  "sourceLimitations": ["指南第5页只呈现所称十类问题中的三类，其余未提供；不能补造缺失内容。", "指南第16页说明语音转录可能有误；模型名称、案例数值和原话须回到原报告或视频核验。", "本文13个训练主题为EVI-X独立组织，不等同于资料未提供的十类原文。", "路演拆解第30页明确包含专科组案例；不同组别、转录及作者归纳不能当作同组排名或当前统一评分、时长要求。"],
+  "sources": [
+    {"id":"guide","label":"第十六届省决赛备赛指南 2.0","pages":84,"sha256":"cfe93c5bca16edc8ea52f9886aa0753f18090b7af989b0e5b136f49da7e928f5","kind":"informal_training","scope":"封面称第十六届，正文含第十四、十五届问答；非当届规则","awardProvenance":"artifact_claimed","rights":"原件仅私下阅读；禁止原文与截图公开再分发"},
+    {"id":"answers","label":"市调答辩回答模板","pages":2,"sha256":"8912313d79ebc255cc121abb8534db3c57be102f80ff07ff677f4d3e8e342c35","kind":"informal_training","scope":"未核验届次与组别的通用经验","awardProvenance":"unknown","rights":"未确认公开复用授权；仅独立抽象方法"},
+    {"id":"roadshows","label":"第十五届七场路演拆解","pages":40,"sha256":"2805937109483bc0d47a98cd5611216ff77a0a3a8453e9460f7f08c8d9737a72","kind":"informal_training","scope":"资料自述第十五届获奖路演；转录文本并非原始报告或评委评分","awardProvenance":"artifact_claimed","rights":"未确认公开复用授权；不复制原讲稿、案例数据与图片"}
+  ],
+  "verificationReferences": [
+    {"id":"aapor","label":"AAPOR 调查披露要求","url":"https://aapor.org/standards-and-ethics/disclosure-standards/","checkedAt":"2026-09-30","use":"抽样、招募、加权与推断假设应分别披露，不以样本量替代设计说明"},
+    {"id":"nist","label":"NIST 模型验证","url":"https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd44.htm","checkedAt":"2026-09-30","use":"不能只报 R²；应按模型与用途检查残差及相关诊断"}
+  ],
+  "cards": [
+    {"id":"decision","category":"选题与价值","title":"把选题说成一个可改变的决定","question":"这项研究具体帮助谁，在什么范围内，做出哪一个原本难以做出的决定？","evidencePrompts":["目标人群与关键概念的操作定义","研究前的证据缺口及可定位来源","结论改变决策的对应关系"],"pitfall":"热点、故事和口号都不能替代研究对象与决策边界。","followUp":"如果删掉题目的修辞，研究对象和问题还清楚吗？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[5,6]},{"id":"answers","pages":[1]}]},
+    {"id":"sampling","category":"抽样与代表性","title":"把抽样的每一步讲清楚","question":"从目标总体到最终答卷，哪些人有机会进入样本，哪些人没有？这如何限制结论？","evidencePrompts":["抽样框、招募渠道与实际入样规则","概率与非概率阶段、未覆盖人群","加权依据与未解决的选择偏差"],"pitfall":"样本大、做过加权或补充访谈，不会自动让便利样本具有总体代表性。","followUp":"从未参与的人是否被遗漏？你能回答参与者的问题，还是整个市场的问题？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[6]},{"id":"answers","pages":[1]}]},
+    {"id":"instrument","category":"问卷与预调查","title":"说明一道题为什么留下或改动","question":"是否实际做过预调查？若做过，发现了什么问题、改了哪道题，又怎样复核？若没有，下一步准备怎么做？","evidencePrompts":["构念—题项—变量映射","前后版本、日期和修改理由","实际预调查记录及改后复核；未执行则只写计划"],"pitfall":"只报信效度指标不能替代题意、目标资格、跳题和选项检查；没有做过的预调查不能补写。","followUp":"量表内部一致性与测量是否覆盖目标概念，有什么不同？","disposition":"adapt","sourceRefs":[{"id":"roadshows","pages":[1,2]},{"id":"answers","pages":[1]}]},
+    {"id":"method","category":"方法与验证","title":"解释方法的任务，而不是堆模型名","question":"这个方法处理什么变量、回答什么问题？更简单的方法为何不够，哪些诊断支持当前解释？","evidencePrompts":["研究问题、变量类型和方法前提","真实代码、参数与输出位置","与用途匹配的诊断、对照或验证"],"pitfall":"高 R²、显著性或信效度结果不能单独证明所有结论稳健，也不能把相关性说成因果。","followUp":"若一种合理替代设定改变了结论，你会缩小哪一条建议？","disposition":"adapt","sourceRefs":[{"id":"answers","pages":[1]},{"id":"roadshows","pages":[2,3]}]},
+    {"id":"sample-unit","category":"数据口径","title":"让人数、户数与答卷数对得上","question":"你的统计单位是什么？发放、回收、有效、分支样本和模型样本，怎样逐步核对？","evidencePrompts":["受访资格、独立单位数、记录数与户/群组标识","分子、分母和模型样本清单","纳入、排除或汇总规则及跨文件一致数值"],"pitfall":"一户多人作答不自动等于多个独立家庭；也不能无依据删掉记录。跳题子样本与全体答卷须分别说明分母。","followUp":"先核对问题前提与条件人群，再从原始记录复算一项关键比例，并指出所有展示位置。","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[6,58]},{"id":"roadshows","pages":[1,2]}]},
+    {"id":"action","category":"建议与落地","title":"让一项发现对应一项有主人的行动","question":"如果只能实施一条建议，你选哪条？谁负责，资源从哪里来，怎样判断值得继续？","evidencePrompts":["直接支持建议的发现与人群；负责人、资源依据和实施顺序","指标基线、试点计划与停止条件","逐项区分方案、原型、反馈、采纳、实施、观察变化与效果归因；注明日期、范围和记录位置"],"pitfall":"反馈不等于采纳，采纳不等于实施，观察到变化不等于方案导致；表演、关注或感谢不能替代对应记录。没有落地就如实说明，不补造合作或效果。","followUp":"当不同利益相关者的目标冲突，你会怎样排序？当前材料最多能支持哪一种成果声明？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[5,6]},{"id":"answers","pages":[1]},{"id":"roadshows","pages":[2,3,13,28,37]}]},
+    {"id":"limitations","category":"质疑与纠错","title":"正面回答问题，再缩小主张","question":"评委指出的缺口影响哪一条结论？现在能诚实回答到哪里，补哪项证据才能继续？","evidencePrompts":["被质疑结论的准确位置","已完成与尚未完成的工作","限制影响、修复动作与责任人"],"pitfall":"转向其他亮点不能替代回答；研究投入多不代表核心缺陷已经解决。","followUp":"若该问题触及核心推断，应修改结论还是只补一句致谢？","disposition":"adapt","sourceRefs":[{"id":"answers","pages":[2]}]},
+    {"id":"team","category":"团队配合","title":"主答、补充与证据定位各司其职","question":"谁负责给出结论，谁补充方法细节，谁能快速定位证据？分歧如何在上台前解决？","evidencePrompts":["按能力分配的主答与备份角色","统一事实表和待核实清单","彩排发现的问题及修订记录"],"pitfall":"分工不等于只懂自己的章节；不要用团队共识替代数据依据。","followUp":"主答遗漏限制条件时，队友怎样准确补足而不改口径？","disposition":"adopt","sourceRefs":[{"id":"guide","pages":[3,4]},{"id":"answers","pages":[2]}]},
+    {"id":"story","category":"路演叙事","title":"让开场问题贯穿发现与行动","question":"开场提出的矛盾，在哪条证据里得到解释，又如何落到最终行动？","evidencePrompts":["开场情境的真实来源或演绎标记","支撑主洞察的少量关键发现，以及不能省略的样本口径与限制","报告版本和页码/表号 → 本页判断 → 支撑证据 → 下一问题或行动含义"],"pitfall":"情景表演是可选表达，不是获奖条件；不能把演绎人物、台词或历史案例数据冒充本项目调查。填写页码也不代表系统已核验报告。","followUp":"压缩一页时，哪条决策证据必须保留，哪些细节可以移到备用说明？拿掉表演后，论证是否仍然成立？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[4]},{"id":"roadshows","pages":[1,2,3,8,37]}]},
+    {"id":"rehearsal","category":"计时与彩排","title":"按段落设置时间检查点","question":"如果被提醒即将超时，你会删掉哪些说明，保留哪些证据和结论？","evidencePrompts":["本届本赛段正式时限来源","逐段实测耗时与预留时间","主讲交接、设备检查和备用方案"],"pitfall":"练习时长、纸张建议与演讲方式不能当成统一赛事规则；以适用通知为准。","followUp":"临时缩短时长时，怎样保住最重要的发现、限制与建议？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[3,4]}]},
+    {"id":"exposure","category":"体验与概念","title":"把概念意向和体验评价分开","question":"受访者评价的是介绍中的设想、演示中的原型，还是真正用过的产品？这允许你得出什么结论？","evidencePrompts":["每类受访者实际接触的介绍、原型或产品版本","体验任务、时间、访问员指导方式及未完成情况","概念意向、实际体验和未体验人群各自的题目、分母与解释边界"],"pitfall":"看过介绍后的意向不是实际使用效果；不要补写未发生的试用，也不要把不同接触条件的评价直接混为同一口径。","followUp":"如果只有概念调查，哪一句使用效果表述需要收缩？下一次体验验证准备怎样做？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[8,9]}]},
+    {"id":"contribution","category":"创新与贡献","title":"说清新增贡献，而不只报模型名称","question":"相较已有研究或方案，你们新增了什么证据、解释或决策价值？哪部分来自前人，哪部分由本项目完成？","evidencePrompts":["已有研究或方案的可定位来源与未解决问题","本项目实际新增的设计、材料、发现或应用及其记录","与基线的具体比较、验证方式和仍未知的部分"],"pitfall":"使用现有模型、AI工具或定性定量组合不自动构成方法原创；应用价值可以真实陈述，但不能夸大为首创。","followUp":"拿掉模型名和创新口号，还能用一项可核对的变化说明贡献吗？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[8]}]},
+    {"id":"mixed-evidence","category":"多源证据","title":"让访谈与问卷各自回答清楚","question":"访谈与问卷分别回答哪一部分问题？两者一致、互补或冲突时，你如何决定能说到哪里？","evidencePrompts":["各类材料的研究任务、对象、时间与抽样边界","访谈主题到题项或解释的映射，以及对应的问卷结果位置","一致、互补、冲突和缺失的对照记录；保留未解决问题"],"pitfall":"多种方法并用不等于互相验证；个别访谈不能代表总体，也不能抹去不利的问卷结果。后期访谈不能倒写成前期问卷依据。","followUp":"若两类材料不一致，应先核对哪些口径和时间差异？哪一项结论暂时不能合并？","disposition":"adapt","sourceRefs":[{"id":"guide","pages":[13]}]}
+  ],
+  "rejectedShortcuts": [
+    {"id":"fit-equals-robust","reason":"用单个拟合指标或信效度指标宣称整体结论稳健","replacement":"检查测量、抽样、模型前提与用途对应的验证；逐项说明证据边界。","sourceRefs":[{"id":"answers","pages":[1]}]},
+    {"id":"assumed-pilot","reason":"预设已获得试点反馈或已做偏差修正","replacement":"未执行的动作只能作为计划；声称已执行时必须提供记录。","sourceRefs":[{"id":"answers","pages":[1]}]},
+    {"id":"deflect","reason":"以别处优势转移被问到的核心问题","replacement":"先解释缺口影响，再给出对应修复，不掩盖高风险限制。","sourceRefs":[{"id":"answers","pages":[2]}]},
+    {"id":"blind-transform","reason":"未经变量类型、模型与目的检查便统一做对数变换","replacement":"先确认测量尺度和分析任务，验证变换前提及解释变化。","sourceRefs":[{"id":"guide","pages":[5]}]},
+    {"id":"prestige-proves","reason":"以资料标题中的奖项、样本量或复杂术语替代真实性与方法验证","replacement":"奖项、数据、方法与结论分别核验；转录异常只记为待查。","sourceRefs":[{"id":"roadshows","pages":[1,2,3]}]}
+  ]
+}

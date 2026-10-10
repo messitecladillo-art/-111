@@ -1,0 +1,320 @@
+{
+  "research_date": "2026-10-07",
+  "scope": "24 directly read notes; text and partial visuals; no full videos or complete carousels; two other seeds excluded",
+  "notes": [
+    {
+      "sequence": 1,
+      "id": "6a9b941c000000002601f851",
+      "title": "前端网页设计风格参考",
+      "category": "静态设计与审美",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a9b941c000000002601f851",
+      "observation_summary": "作者规划看板重构；首张图对比极简、瑞士、编辑、玻璃拟态和便当盒风格。",
+      "visual_scope": "首张图；1/4"
+    },
+    {
+      "sequence": 2,
+      "id": "6a90259d000000001f003421",
+      "title": "分享几个我觉得很有taste的设计灵感网站",
+      "category": "静态设计与审美",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a90259d000000001f003421",
+      "observation_summary": "作者按用途介绍灵感、获奖案例、动效和风格资料入口；首图为分类浏览界面。",
+      "visual_scope": "首张图；1/4"
+    },
+    {
+      "sequence": 3,
+      "id": "69e2bbc2000000001a02debf",
+      "title": "如何coding出你的第一个漂亮网站",
+      "category": "静态设计与审美",
+      "source_url": "https://www.xiaohongshu.com/search_result/69e2bbc2000000001a02debf",
+      "observation_summary": "正文建议从一个小范围、审美明确的页面开始；观察到讲解视频的开头画面。",
+      "visual_scope": "视频开头局部画面；00:03/03:28"
+    },
+    {
+      "sequence": 4,
+      "id": "6ab4f68d0000000002010d8a",
+      "title": "清爽版工作台｜浅色系Dashboard设计参考",
+      "category": "产品界面与信息架构",
+      "source_url": "https://www.xiaohongshu.com/search_result/6ab4f68d0000000002010d8a",
+      "observation_summary": "浅色财务工作台把关键指标、图表、交易列表分层；首图标注素材来自网络。",
+      "visual_scope": "首张图；1/5"
+    },
+    {
+      "sequence": 5,
+      "id": "6a5b2401000000000101d33a",
+      "title": "分流式工作台UI界面｜CRM｜SaaS系统",
+      "category": "产品界面与信息架构",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a5b2401000000000101d33a",
+      "observation_summary": "正文谈自动化工作台，但首图实际是网络监控拓扑、筛选及时间序列，二者口径有差异。",
+      "visual_scope": "首张图；1/9"
+    },
+    {
+      "sequence": 6,
+      "id": "6a1412a200000000060348f0",
+      "title": "多品类 B 端后台赏析",
+      "category": "产品界面与信息架构",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a1412a200000000060348f0",
+      "observation_summary": "正文比较多个后台品类；实际画面是深色节点式 AI 工作流及绿色操作按钮。",
+      "visual_scope": "节点式工作流的局部画面"
+    },
+    {
+      "sequence": 7,
+      "id": "6a42957e0000000016027e37",
+      "title": "前端高级动效库Reactbits 背景编辑器功能",
+      "category": "UI组件与设计系统",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a42957e0000000016027e37",
+      "observation_summary": "作者介绍 React Bits 背景编辑；画面可见 Beams 示例及颜色、速度等参数区域。",
+      "visual_scope": "背景编辑示例的局部画面"
+    },
+    {
+      "sequence": 8,
+      "id": "6a453671000000000f02bb16",
+      "title": "用好这5种卡片样式，让你的网站瞬间变高级",
+      "category": "UI组件与设计系统",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a453671000000000f02bb16",
+      "observation_summary": "正文将景深、人物视差、镜面、追光、发光边框分别对应不同卡片用途；画面为人物卡片。",
+      "visual_scope": "人物视差卡片的局部画面"
+    },
+    {
+      "sequence": 9,
+      "id": "6a9840030000000028032a15",
+      "title": "每天认识一个前端项目：React Bits",
+      "category": "UI组件与设计系统",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a9840030000000028032a15",
+      "observation_summary": "首图展示源码接入、BlurText 参数和许可证；正文将它定位为可复制的视觉效果集合。",
+      "visual_scope": "首张图；1/15"
+    },
+    {
+      "sequence": 10,
+      "id": "69169fe5000000000d03d429",
+      "title": "GSAP的滚动插件",
+      "category": "滚动与动画编排",
+      "source_url": "https://www.xiaohongshu.com/search_result/69169fe5000000000d03d429",
+      "observation_summary": "正文几乎只有标题和标签；视频开头展示分段视差页面，本轮没有读完教学内容。",
+      "visual_scope": "视频开头局部画面；00:02/11:01"
+    },
+    {
+      "sequence": 11,
+      "id": "6aaa49f20000000011032dc7",
+      "title": "一个 GSAP Skill，做出这 5 种高级动效",
+      "category": "滚动与动画编排",
+      "source_url": "https://www.xiaohongshu.com/search_result/6aaa49f20000000011032dc7",
+      "observation_summary": "正文分别列出滚动、时间轴、拆字、SVG 路径与布局转场；观察到五类效果的概览画面。",
+      "visual_scope": "五类效果概览画面"
+    },
+    {
+      "sequence": 12,
+      "id": "69a8350b000000001a027bea",
+      "title": "我把产品视频做成了高级官网，步骤全公开",
+      "category": "滚动与动画编排",
+      "source_url": "https://www.xiaohongshu.com/search_result/69a8350b000000001a027bea",
+      "observation_summary": "正文给出分析视频、抽帧、搭页面、绑定滚动和调节文字的制作链；画面为搅拌机产品页。",
+      "visual_scope": "产品页的局部视频画面"
+    },
+    {
+      "sequence": 13,
+      "id": "6aa91201000000002b00026f",
+      "title": "17 个网页光标效果，调好参数复制走",
+      "category": "鼠标与局部反馈",
+      "source_url": "https://www.xiaohongshu.com/search_result/6aa91201000000002b00026f",
+      "observation_summary": "正文区分即时定位点与延迟装饰环，并介绍参数编辑；具体 Cursor Lab 工具未独立核验。",
+      "visual_scope": "编辑器局部画面"
+    },
+    {
+      "sequence": 14,
+      "id": "6a6571a2000000000101eac6",
+      "title": "VibeCoding教程：让角色跟着鼠标转头",
+      "category": "鼠标与局部反馈",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a6571a2000000000101eac6",
+      "observation_summary": "正文讲左右姿态图、插值视频和网页接入；画面是毛绒角色首屏，核心提示词未在正文给出。",
+      "visual_scope": "角色首屏的局部视频画面"
+    },
+    {
+      "sequence": 15,
+      "id": "6a7986c900000000320211b0",
+      "title": "这6款炫酷的hover特效，你最喜欢哪一个？",
+      "category": "鼠标与局部反馈",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a7986c900000000320211b0",
+      "observation_summary": "正文仅标签；画面列出 Ripple、Scratch、Grass、Heat、Lantern、Helix，旁边是概念式伪代码。",
+      "visual_scope": "六种按钮效果概览画面"
+    },
+    {
+      "sequence": 16,
+      "id": "6a8f8cbd0000000008012e37",
+      "title": "丝滑的卡片拖拽合并交互",
+      "category": "拖拽与手势",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a8f8cbd0000000008012e37",
+      "observation_summary": "正文提供 Event Swatch 作者线索；画面为日历内的彩色事件卡片，未实测合并行为。",
+      "visual_scope": "日历卡片局部画面"
+    },
+    {
+      "sequence": 17,
+      "id": "6a88dce5000000002901971e",
+      "title": "用大白话向AI描述6种拖拽动画指令",
+      "category": "拖拽与手势",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a88dce5000000002901971e",
+      "observation_summary": "画面区分排序、落区、占位、跨列表转移、边缘滚动、回弹六种行为；正文未给完整指令。",
+      "visual_scope": "六种拖拽行为概览画面"
+    },
+    {
+      "sequence": 18,
+      "id": "6ab23d450000000031006c47",
+      "title": "UI交互 | 拖动卡片交互制作教程来啦",
+      "category": "拖拽与手势",
+      "source_url": "https://www.xiaohongshu.com/search_result/6ab23d450000000031006c47",
+      "observation_summary": "正文用两个 Frame、拖拽触发和智能动画表达原型转场；画面为叠放卡片的原型。",
+      "visual_scope": "卡片原型局部画面"
+    },
+    {
+      "sequence": 19,
+      "id": "69cf6bc90000000022003a5f",
+      "title": "前端3D交互+实时排版，pretext太好玩【教程】",
+      "category": "三维与实时排版",
+      "source_url": "https://www.xiaohongshu.com/search_result/69cf6bc90000000022003a5f",
+      "observation_summary": "直接读取正文并采样视频：21 秒为城堡与分栏文字，39.8 秒显示 feitangyuan/pretext-3d 仓库。",
+      "visual_scope": "视频采样；1、7.9、21、39.8 秒 / 总长约 83 秒"
+    },
+    {
+      "sequence": 20,
+      "id": "6aa925ce0000000025035e00",
+      "title": "Three.js 配合 Blender 3D 网页 01",
+      "category": "三维与实时排版",
+      "source_url": "https://www.xiaohongshu.com/search_result/6aa925ce0000000025035e00",
+      "observation_summary": "正文仅标签；看到带中英字幕的 Blender 入门课程开头，未观看完整课程。",
+      "visual_scope": "带字幕课程的开头画面"
+    },
+    {
+      "sequence": 21,
+      "id": "6aa412cc000000002601b9c0",
+      "title": "一张 2D 图，怎么变成能玩的 3D 交互网页？",
+      "category": "三维与实时排版",
+      "source_url": "https://www.xiaohongshu.com/search_result/6aa412cc000000002601b9c0",
+      "observation_summary": "作者明确以图层、视差和显影表现空间；画面为楼兰场景，并有作者的三层结构说明。",
+      "visual_scope": "楼兰场景局部画面及可见作者评论"
+    },
+    {
+      "sequence": 22,
+      "id": "6864d282000000000b02c5c6",
+      "title": "UI组件｜UX 必看！上传下载走心设计技巧✨",
+      "category": "文件上传与状态反馈",
+      "source_url": "https://www.xiaohongshu.com/search_result/6864d282000000000b02c5c6",
+      "observation_summary": "正文列出进度、格式错误、重复文件、续传和批量任务建议；首图为聊天附件的拖放入口。",
+      "visual_scope": "首张图；1/18"
+    },
+    {
+      "sequence": 23,
+      "id": "67f9f8d0000000000b01c252",
+      "title": "超精致文件导入弹窗设计",
+      "category": "文件上传与状态反馈",
+      "source_url": "https://www.xiaohongshu.com/search_result/67f9f8d0000000000b01c252",
+      "observation_summary": "首图纵向展示选择、等待、完成三个导入弹窗状态，含模板入口、限制、重新上传和确认。",
+      "visual_scope": "首张图；1/5"
+    },
+    {
+      "sequence": 24,
+      "id": "6a7e91f90000000033034232",
+      "title": "优雅的导入文件夹",
+      "category": "文件上传与状态反馈",
+      "source_url": "https://www.xiaohongshu.com/search_result/6a7e91f90000000033034232",
+      "observation_summary": "正文描述文件夹拖入无限画布并识别 Markdown；画面可见批量任务计数与文档卡片。",
+      "visual_scope": "局部视频画面；00:04/00:15"
+    }
+  ],
+  "primary_sources": [
+    {
+      "id": "D01",
+      "title": "标题结构",
+      "url": "https://www.w3.org/WAI/tutorials/page-structure/headings/",
+      "fact": "标题应表示实际内容层级，支持结构与导航。"
+    },
+    {
+      "id": "D02",
+      "title": "GSAP ScrollTrigger",
+      "url": "https://gsap.com/docs/v3/Plugins/ScrollTrigger/",
+      "fact": "支持时间轴、pin 和 scrub；应动画固定容器的内部元素，并处理清理和重新测量。"
+    },
+    {
+      "id": "D03",
+      "title": "React Bits 上游",
+      "url": "https://github.com/DavidHDev/react-bits",
+      "fact": "提供多类效果及 JS/TS、CSS/Tailwind 变体，可按组件接入和修改。"
+    },
+    {
+      "id": "D04",
+      "title": "React Bits 许可",
+      "url": "https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md",
+      "fact": "MIT 加 Commons Clause；保留许可，并核对组件本身销售和再分发限制。"
+    },
+    {
+      "id": "D05",
+      "title": "Pointer Events",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events",
+      "fact": "统一多种指针输入；capture、cancel、touch-action 影响拖动与页面滚动。"
+    },
+    {
+      "id": "D06",
+      "title": "不用拖动的替代操作",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html",
+      "fact": "拖拽功能通常需要无需拖动的单指针替代；键盘替代还需单独考虑。"
+    },
+    {
+      "id": "D07",
+      "title": "Three.js OrbitControls",
+      "url": "https://threejs.org/docs/pages/OrbitControls.html",
+      "fact": "支持相机旋转、缩放与平移；阻尼和自动旋转需要循环更新。"
+    },
+    {
+      "id": "D08",
+      "title": "上传事件",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/upload",
+      "fact": "有 progress、error、abort、timeout 等事件；loadend 不区分成功和失败。"
+    },
+    {
+      "id": "D09",
+      "title": "减少动态效果",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion",
+      "fact": "按用户偏好减少非必要动态，同时保持内容和功能。"
+    },
+    {
+      "id": "D10",
+      "title": "状态消息",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html",
+      "fact": "反馈应能被辅助技术获知，通常无须抢走焦点。"
+    },
+    {
+      "id": "D11",
+      "title": "作者 pretext-3d",
+      "url": "https://github.com/feitangyuan/pretext-3d",
+      "fact": "作者示例将 Three.js、Pretext 与掩码断行结合；模型资产需另备。"
+    },
+    {
+      "id": "D12",
+      "title": "作者依赖",
+      "url": "https://github.com/feitangyuan/pretext-3d/blob/main/package.json",
+      "fact": "声明 @chenglou/pretext ^0.0.3 和 three ^0.166.1。"
+    },
+    {
+      "id": "D13",
+      "title": "作者主流程",
+      "url": "https://github.com/feitangyuan/pretext-3d/blob/main/main.mjs",
+      "fact": "渲染黑白模型掩码、读取像素、按行槽断行并定位 DOM 文本。"
+    },
+    {
+      "id": "D14",
+      "title": "行槽算法",
+      "url": "https://github.com/feitangyuan/pretext-3d/blob/main/mask-layout.mjs",
+      "fact": "每个行带采用左右包络；每行选一个最宽可用槽，不能充分利用所有内部空洞。"
+    },
+    {
+      "id": "D15",
+      "title": "Pretext 上游",
+      "url": "https://github.com/chenglou/pretext",
+      "fact": "文字测量与排版；layoutNextLine 可按每行指定宽度推进。"
+    },
+    {
+      "id": "D16",
+      "title": "Pretext 包元数据",
+      "url": "https://github.com/chenglou/pretext/blob/main/package.json",
+      "fact": "上游 main 显示 0.0.9；未取得作者锁文件，不能假定 API 完全兼容。"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+name: evix-p0
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: evix_owner
+      POSTGRES_PASSWORD: local-p0-owner-only
+      POSTGRES_DB: evix_p0
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/001-app-role.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evix_owner -d evix_p0"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 1g
+    cpus: 1.5
+    restart: unless-stopped
+volumes:
+  pg_data:

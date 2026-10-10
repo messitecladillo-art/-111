@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0",
+  "extends": "_submission_ready.json",
+  "id": "duplicate_final_artifact_content_rejected",
+  "description": "Required final types need distinct deliverable content; byte-identical files at different paths cannot nominally satisfy report, presentation, and defense coverage.",
+  "steps": [
+    {
+      "id": "write_same_content_as_three_deliverables",
+      "write": {
+        "path": "deliverables/report/duplicate.md",
+        "content": "One byte-identical artifact cannot satisfy three final deliverable types.\n"
+      }
+    },
+    {
+      "id": "copy_duplicate_to_presentation",
+      "copy": {
+        "from": "evals/fixtures/report.md",
+        "to": "deliverables/ppt/duplicate.md"
+      }
+    },
+    {
+      "id": "make_presentation_byte_identical",
+      "write": {
+        "path": "deliverables/ppt/duplicate.md",
+        "content": "One byte-identical artifact cannot satisfy three final deliverable types.\n"
+      }
+    },
+    {
+      "id": "make_defense_byte_identical",
+      "write": {
+        "path": "deliverables/defense/duplicate.md",
+        "content": "One byte-identical artifact cannot satisfy three final deliverable types.\n"
+      }
+    },
+    {
+      "id": "register_duplicate_report",
+      "run": ["artifact", "register", "deliverables/report/duplicate.md", "--id", "ART-DUP-REPORT", "--title", "Duplicate report", "--type", "report", "--classification", "derived", "--stage", "submission_ready", "--gate", "submission", "--provenance", "deterministic duplicate test", "--status", "draft", "--producer-role", "narrative_strategist", "--owner-name", "duplicate_report_owner"],
+      "expect_exit": 0,
+      "capture": {"duplicate_sha256": {"source": "json", "pointer": "/artifact/sha256"}},
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "register_duplicate_presentation",
+      "run": ["artifact", "register", "deliverables/ppt/duplicate.md", "--id", "ART-DUP-PRESENTATION", "--title", "Duplicate presentation", "--type", "presentation", "--classification", "derived", "--stage", "submission_ready", "--gate", "submission", "--provenance", "deterministic duplicate test", "--status", "draft", "--producer-role", "visual_director", "--owner-name", "duplicate_presentation_owner"],
+      "expect_exit": 0,
+      "assert": [{"source": "json", "pointer": "/artifact/sha256", "op": "eq", "value_from": {"capture": "duplicate_sha256"}}],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "register_duplicate_defense",
+      "run": ["artifact", "register", "deliverables/defense/duplicate.md", "--id", "ART-DUP-DEFENSE", "--title", "Duplicate defense", "--type", "defense", "--classification", "derived", "--stage", "submission_ready", "--gate", "submission", "--provenance", "deterministic duplicate test", "--status", "draft", "--producer-role", "captain", "--owner-name", "duplicate_defense_owner"],
+      "expect_exit": 0,
+      "assert": [{"source": "json", "pointer": "/artifact/sha256", "op": "eq", "value_from": {"capture": "duplicate_sha256"}}],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_duplicate_report_review",
+      "write": {"path": "reviews/duplicate-report-review.json", "content": "{\"artifact_id\":\"ART-DUP-REPORT\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.duplicate_sha256}\",\"artifact_type\":\"report\",\"producer_role\":\"narrative_strategist\",\"owner_name\":\"duplicate_report_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"duplicate_report_reviewer\",\"acceptance_test\":\"Hash-bound duplicate attack regression\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"report_structure_reviewed\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:40:00Z\"}\n"}
+    },
+    {
+      "id": "write_duplicate_presentation_review",
+      "write": {"path": "reviews/duplicate-presentation-review.json", "content": "{\"artifact_id\":\"ART-DUP-PRESENTATION\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.duplicate_sha256}\",\"artifact_type\":\"presentation\",\"producer_role\":\"visual_director\",\"owner_name\":\"duplicate_presentation_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"duplicate_presentation_reviewer\",\"acceptance_test\":\"Hash-bound duplicate attack regression\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"slide_render_inspected\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:40:00Z\"}\n"}
+    },
+    {
+      "id": "write_duplicate_defense_review",
+      "write": {"path": "reviews/duplicate-defense-review.json", "content": "{\"artifact_id\":\"ART-DUP-DEFENSE\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.duplicate_sha256}\",\"artifact_type\":\"defense\",\"producer_role\":\"captain\",\"owner_name\":\"duplicate_defense_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"duplicate_defense_reviewer\",\"acceptance_test\":\"Hash-bound duplicate attack regression\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"defense_timing_checked\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:40:00Z\"}\n"}
+    },
+    {
+      "id": "approve_duplicate_report",
+      "run": ["review", "approve", "ART-DUP-REPORT", "--evidence", "reviews/duplicate-report-review.json", "--reviewer-role", "red_team_judge", "--reviewer-name", "duplicate_report_reviewer", "--review-id", "REV-DUP-REPORT"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "approve_duplicate_presentation",
+      "run": ["review", "approve", "ART-DUP-PRESENTATION", "--evidence", "reviews/duplicate-presentation-review.json", "--reviewer-role", "red_team_judge", "--reviewer-name", "duplicate_presentation_reviewer", "--review-id", "REV-DUP-PRESENTATION"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "approve_duplicate_defense",
+      "run": ["review", "approve", "ART-DUP-DEFENSE", "--evidence", "reviews/duplicate-defense-review.json", "--reviewer-role", "red_team_judge", "--reviewer-name", "duplicate_defense_reviewer", "--review-id", "REV-DUP-DEFENSE"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_duplicate_report",
+      "run": ["artifact", "finalize", "ART-DUP-REPORT", "--review-id", "REV-DUP-REPORT", "--rights-status", "cleared", "--anonymity-status", "pass"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_duplicate_presentation",
+      "run": ["artifact", "finalize", "ART-DUP-PRESENTATION", "--review-id", "REV-DUP-PRESENTATION", "--rights-status", "cleared", "--anonymity-status", "pass"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_duplicate_defense",
+      "run": ["artifact", "finalize", "ART-DUP-DEFENSE", "--review-id", "REV-DUP-DEFENSE", "--rights-status", "cleared", "--anonymity-status", "pass"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "handoff_rejects_duplicate_final_content",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "stdout", "op": "regex", "value": "duplicate_final_artifact_sha256"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

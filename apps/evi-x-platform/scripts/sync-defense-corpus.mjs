@@ -1,0 +1,11 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+const app=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const input=readFileSync(resolve(app,'../../corpus-source/experience/defense-learning-20260930.json'),'utf8');
+const doc=JSON.parse(input);
+if(doc.status!=='reviewed')throw Error('Defense corpus requires human/independent review before publishing a snapshot');
+const target=resolve(app,'data/defense-corpus.json');
+if(process.argv.includes('--write'))writeFileSync(target,input);
+else if(readFileSync(target,'utf8')!==input)throw Error('Defense corpus snapshot is stale');
+console.log(JSON.stringify({status:'pass',cards:doc.cards.length,mode:process.argv.includes('--write')?'write':'check'}));

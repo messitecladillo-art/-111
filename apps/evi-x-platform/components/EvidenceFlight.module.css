@@ -1,0 +1,170 @@
+.panel {
+  --flight-muted: rgba(247, 244, 237, 0.72);
+  position: relative;
+  isolation: isolate;
+  container-type: inline-size;
+  width: 100%;
+  max-width: 560px;
+  min-width: 0;
+  padding: clamp(16px, 2.2vw, 26px);
+  border: 1px solid rgba(0, 179, 164, 0.3);
+  border-radius: 24px;
+  color: var(--paper);
+  background: radial-gradient(ellipse at 88% 4%, rgba(0, 179, 164, 0.1), transparent 52%), #0a1f33;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(247, 244, 237, 0.05);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  z-index: -1;
+  border: 1px solid rgba(247, 244, 237, 0.045);
+  border-radius: 17px;
+  pointer-events: none;
+}
+.topline { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.wordmark { color: var(--flight-muted); font: 500 14px/1.5 var(--font-geist-mono), monospace; letter-spacing: -0.025em; }
+.badge { padding: 3px 9px; border: 1px solid rgba(0, 179, 164, 0.35); border-radius: 999px; color: var(--teal); font-size: 14px; line-height: 1.5; }
+.heading { margin: 22px 0 8px; font-size: clamp(22px, 2.3vw, 30px); font-weight: 650; line-height: 1.4; letter-spacing: -0.04em; text-wrap: balance; }
+.subtitle { margin: 0; color: var(--flight-muted); font-size: 14px; line-height: 1.8; }
+.stageStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 20px; }
+.stageChip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  min-width: 0;
+  padding: 6px 3px;
+  border: 1px solid rgba(247, 244, 237, 0.16);
+  border-radius: 7px;
+  color: var(--flight-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+.stageCurrent { border-color: var(--gold); color: var(--gold); background: rgba(244, 185, 66, 0.07); box-shadow: inset 0 -2px 0 var(--gold); }
+.stageDone { border-style: dashed; border-color: rgba(0, 179, 164, 0.65); color: var(--teal); }
+.arena {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 420 / 378;
+  margin: 8px 0;
+  background-image: radial-gradient(circle, rgba(231, 238, 243, 0.13) 0.7px, transparent 0.9px);
+  background-size: 24px 24px;
+}
+.drawing { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.rail { fill: none; stroke: rgba(231, 238, 243, 0.33); stroke-width: 1.2; stroke-linecap: round; }
+.railFill { fill: none; stroke: var(--teal); stroke-width: 2; stroke-linecap: round; }
+.railLabel { fill: var(--paper); font-size: 18px; font-weight: 600; }
+.railCode { fill: var(--gold); font: 600 18px var(--font-geist-mono), monospace; }
+.railMeta { fill: var(--flight-muted); font-size: 16px; }
+.aimPath { fill: none; stroke: var(--gold); stroke-width: 1.3; stroke-dasharray: 3 7; stroke-linecap: round; opacity: 0.72; }
+.tether { fill: none; stroke: var(--teal); stroke-width: 1.5; stroke-linecap: round; }
+.trail { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; opacity: 0.62; }
+.projectile { fill: var(--paper); stroke: var(--gold); stroke-width: 2; filter: drop-shadow(0 0 6px rgba(244, 185, 66, 0.65)); }
+.targetRing { fill: none; stroke: var(--teal); stroke-width: 1.2; stroke-dasharray: 3 5; }
+.targetPoint { fill: var(--gold); }
+.impact { fill: none; stroke: var(--gold); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: impact 620ms ease-out both; }
+.handle {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--paper);
+  transform: translate(-50%, -50%);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.handleDot {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: #0a1f33;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.handleActive .handleDot { width: 16px; height: 16px; border-color: var(--gold); background: var(--gold); box-shadow: 0 0 0 5px rgba(244, 185, 66, 0.1), 0 0 22px rgba(244, 185, 66, 0.38); }
+.handleVisited .handleDot { border-color: var(--teal); background: var(--teal); box-shadow: 0 0 0 4px rgba(0, 179, 164, 0.08); }
+.handleDormant { cursor: default; }
+.handleDormant .handleDot { width: 10px; height: 10px; border-color: rgba(231, 238, 243, 0.65); }
+.handleDragging { z-index: 3; cursor: grabbing; }
+.handleDragging .handleDot { transform: scale(1.12); box-shadow: 0 0 0 7px rgba(244, 185, 66, 0.13), 0 0 26px rgba(244, 185, 66, 0.5); }
+.handle:disabled { cursor: default; }
+.handle:focus-visible { outline: 2px solid var(--paper); outline-offset: 1px; box-shadow: 0 0 0 5px rgba(0, 179, 164, 0.4); }
+.caption { margin: 0; color: var(--paper); font-size: 14px; line-height: 1.8; }
+.statusLine { display: flex; align-items: flex-start; gap: 8px; min-height: 25px; margin: 10px 0 0; color: var(--flight-muted); font-size: 14px; line-height: 1.7; }
+.statusDot { flex: 0 0 6px; width: 6px; height: 6px; margin-top: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px rgba(0, 179, 164, 0.35); }
+.powerTrack { height: 3px; margin: 14px 0 16px; overflow: hidden; border-radius: 999px; background: rgba(247, 244, 237, 0.12); }
+.powerFill { display: block; height: 100%; max-width: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--teal), var(--gold)); transition: width 60ms linear; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.primary, .secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+.primary { color: var(--ink); background: var(--gold); }
+.secondary { color: var(--paper); border-color: rgba(247, 244, 237, 0.24); background: rgba(247, 244, 237, 0.025); }
+.primary:focus-visible, .secondary:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; box-shadow: 0 0 0 6px #0a1f33; }
+.primary:disabled, .secondary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.note { margin: 18px 0 0; padding-top: 13px; border-top: 1px solid rgba(247, 244, 237, 0.12); color: var(--flight-muted); font-size: 14px; line-height: 1.75; }
+.keyboardHint { margin: 6px 0 0; color: var(--flight-muted); font-size: 14px; line-height: 1.7; }
+.completed { border-color: rgba(244, 185, 66, 0.55); }
+.completed .statusDot { background: var(--gold); box-shadow: 0 0 8px rgba(244, 185, 66, 0.3); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+@keyframes impact {
+  from { opacity: 0.85; transform: scale(0.6); }
+  to { opacity: 0; transform: scale(1.9); }
+}
+
+@media (hover: hover) {
+  .handleActive:not(:disabled):hover .handleDot { transform: scale(1.14); }
+  .primary:not(:disabled):hover { background: var(--paper); transform: translateY(-1px); }
+  .secondary:not(:disabled):hover { border-color: var(--teal); background: rgba(0, 179, 164, 0.08); }
+}
+
+@container (max-width: 350px) {
+  .railLabel, .railCode { font-size: 21px; }
+  .railMeta { font-size: 19px; }
+}
+
+@container (max-width: 285px) {
+  .railLabel, .railCode { font-size: 25px; }
+  .railMeta { font-size: 24px; }
+  .primary { flex-basis: 100%; }
+  .heading { font-size: 22px; }
+}
+
+@media (max-width: 380px) {
+  .panel { padding: 14px; border-radius: 20px; }
+  .wordmark { font-size: 14px; }
+  .stageStrip { gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel *, .panel *::before, .panel *::after { animation: none !important; transition: none !important; }
+  .impact { opacity: 0; }
+  .primary:not(:disabled):hover, .handleActive:not(:disabled):hover .handleDot, .handleDragging .handleDot { transform: none; }
+}

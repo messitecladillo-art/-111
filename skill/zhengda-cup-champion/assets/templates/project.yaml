@@ -1,0 +1,78 @@
+schema_version: "1.0.0"
+project_id: "{{PROJECT_ID}}"
+
+control_plane:
+  workflow_version: "1.0.0"
+  gate_contract_version: "1.0.0"
+  state_path: ".agent/state.json"
+  status_mirror_revision: 0
+
+project:
+  title: "{{TITLE}}"
+  created_at: "{{CREATED_DATE}}"
+  updated_at: "{{CREATED_DATE}}"
+  edition: unknown
+  group: unknown
+  region: unknown
+  stage: unknown
+  track: unknown
+  status: intake
+
+competition:
+  official_deadline: unknown
+  applicable_notice: unknown
+  rule_snapshot: "evidence/rules.json"
+  anonymity_required: unknown
+  forbidden_identity_terms: []
+
+decision_problem:
+  decision_owner: unknown
+  decision_to_make: unknown
+  target_population: unknown
+  geography: unknown
+  evidence_gap: unknown
+  expected_action: unknown
+
+research:
+  primary_question: unknown
+  secondary_questions: []
+  design: unknown
+  sampling_frame: unknown
+  achieved_sample: unknown
+  fieldwork_status: not_started
+  data_status: unavailable
+
+visual:
+  mode: competition_submission
+  audience: unknown
+  narrative_metaphor: unknown
+  brief: "design/visual-brief.md"
+  tokens: "design/visual-tokens.json"
+  asset_ledger: "evidence/visual-asset-ledger.csv"
+  preflight: "evidence/visual-preflight-checklist.csv"
+  source_directory: "design/source"
+  export_directory: "design/exports"
+  rights_status: unknown
+  anonymity_safe: unknown
+
+deliverables:
+  next_required: unknown
+  required_final_artifact_types: unknown
+  report_status: not_started
+  ppt_status: not_started
+  defense_status: not_started
+  visuals_status: not_started
+
+risks:
+  fatal: []
+  high: []
+  medium: []
+
+open_decisions: []
+
+integrity:
+  raw_data_provenance: unknown
+  consent_status: unknown
+  ai_use_ledger: "evidence/ai-use-ledger.csv"
+  evidence_ledger: "evidence/evidence-ledger.csv"
+  visual_asset_ledger: "evidence/visual-asset-ledger.csv"

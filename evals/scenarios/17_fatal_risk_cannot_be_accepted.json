@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "fatal_risk_cannot_be_accepted",
+  "description": "A fatal risk cannot be converted into an accepted exception even when an apparently complete acceptance record is injected.",
+  "steps": [
+    {
+      "id": "write_fatal_acceptance_evidence",
+      "write": {
+        "path": "evidence/fatal-risk-acceptance.md",
+        "content": "# Rejected fatal-risk acceptance fixture\n\nThis record must never make a fatal boundary waivable.\n"
+      }
+    },
+    {
+      "id": "capture_fatal_acceptance_hash",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "fatal_acceptance_sha256": {"source": "file_sha256", "path": "evidence/fatal-risk-acceptance.md"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "inject_structured_accepted_fatal_risk",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {
+            "old": "  fatal: []",
+            "new": "  fatal:\n    - id: RISK-EVAL-FATAL-ACCEPTED\n      summary: Anonymous identity leakage would disqualify the entry\n      status: accepted\n      owner: compliance_owner\n      source: evidence/anonymity-scan-report.json\n      decision_owner: project_sponsor\n      acceptance_reason: Schedule pressure\n      acceptance_scope: Final submission\n      compensating_controls:\n        - Manual spot check\n      acceptance_evidence: evidence/fatal-risk-acceptance.md\n      acceptance_evidence_sha256: ${capture.fatal_acceptance_sha256}\n      accepted_at: 2026-08-03T00:00:00Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "reject_fatal_risk_acceptance",
+      "run": ["handoff"],
+      "expect_exit": 2,
+      "contract": false,
+      "assert": [
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "validation"},
+        {"source": "stdout", "op": "regex", "value": "fatal|accepted|schema|risks"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ]
+    }
+  ]
+}

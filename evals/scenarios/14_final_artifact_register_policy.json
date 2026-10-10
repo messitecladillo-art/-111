@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0",
+  "id": "final_artifact_register_policy",
+  "description": "Artifact policy rejects synthetic-as-actual evidence at registration, unresolved rights or anonymity at finalization, and owner self-review.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Final Artifact Registration Policy"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_candidate_artifact",
+      "write": {
+        "path": "deliverables/report/policy-test.txt",
+        "content": "Non-empty deterministic policy test artifact.\n"
+      }
+    },
+    {
+      "id": "reject_synthetic_claimed_actual",
+      "run": [
+        "artifact", "register", "deliverables/report/policy-test.txt",
+        "--title", "Synthetic respondents",
+        "--type", "raw_data",
+        "--classification", "actual",
+        "--stage", "intake",
+        "--gate", "submission",
+        "--provenance", "ai-generated synthetic respondents",
+        "--status", "draft",
+        "--producer-role", "data_auditor",
+        "--owner-name", "synthetic_data_owner"
+      ],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/policy_issues", "op": "contains", "value": "synthetic_claimed_as_actual"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    },
+    {
+      "id": "register_legitimate_draft",
+      "run": [
+        "artifact", "register", "deliverables/report/policy-test.txt",
+        "--id", "ART-EVAL-POLICY-001",
+        "--title", "Policy test report",
+        "--type", "report",
+        "--classification", "submission_candidate",
+        "--stage", "intake",
+        "--gate", "submission",
+        "--provenance", "team-authored",
+        "--status", "draft",
+        "--producer-role", "narrative_strategist",
+        "--owner-name", "policy_report_owner"
+      ],
+      "expect_exit": 0,
+      "capture": {
+        "policy_artifact_sha": {"source": "json", "pointer": "/artifact/sha256"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_independent_review_evidence",
+      "write": {
+        "path": "evidence/reviews/policy-independent-review.json",
+        "content": "{\"artifact_id\":\"ART-EVAL-POLICY-001\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.policy_artifact_sha}\",\"artifact_type\":\"report\",\"producer_role\":\"narrative_strategist\",\"owner_name\":\"policy_report_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"independent_reviewer\",\"acceptance_test\":\"Artifact hash remains current\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"report_structure_reviewed\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:10:00Z\",\"findings\":\"No blocking findings\"}\n"
+      }
+    },
+    {
+      "id": "approve_independent_review",
+      "run": [
+        "review", "approve", "ART-EVAL-POLICY-001",
+        "--evidence", "evidence/reviews/policy-independent-review.json",
+        "--reviewer-role", "red_team_judge",
+        "--reviewer-name", "independent_reviewer",
+        "--review-id", "REV-EVAL-POLICY-001"
+      ],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "reject_unresolved_rights_and_anonymity",
+      "run": [
+        "artifact", "finalize", "ART-EVAL-POLICY-001",
+        "--review-id", "REV-EVAL-POLICY-001",
+        "--rights-status", "unknown",
+        "--anonymity-status", "unverified"
+      ],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/failure/details/policy_issues", "op": "contains", "value": "rights_unresolved"},
+        {"source": "json", "pointer": "/failure/details/policy_issues", "op": "contains", "value": "anonymity_unresolved"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    },
+    {
+      "id": "write_owner_self_review_evidence",
+      "write": {
+        "path": "evidence/reviews/policy-self-review.json",
+        "content": "{\"artifact_id\":\"ART-EVAL-POLICY-001\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.policy_artifact_sha}\",\"artifact_type\":\"report\",\"producer_role\":\"narrative_strategist\",\"owner_name\":\"policy_report_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"policy_report_owner\",\"acceptance_test\":\"Artifact hash remains current\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"report_structure_reviewed\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:20:00Z\",\"findings\":\"No blocking findings\"}\n"
+      }
+    },
+    {
+      "id": "reject_owner_self_review",
+      "run": [
+        "review", "approve", "ART-EVAL-POLICY-001",
+        "--evidence", "evidence/reviews/policy-self-review.json",
+        "--reviewer-role", "red_team_judge",
+        "--reviewer-name", "policy_report_owner",
+        "--review-id", "REV-EVAL-SELF-REVIEW"
+      ],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "stdout", "op": "regex", "value": "owner cannot approve|same final artifact|independent"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    },
+    {
+      "id": "registry_preserves_only_draft",
+      "run": ["artifact", "list"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifacts", "op": "length_eq", "value": 1},
+        {"source": "json", "pointer": "/artifacts/0/artifact_id", "op": "eq", "value": "ART-EVAL-POLICY-001"},
+        {"source": "json", "pointer": "/artifacts/0/status", "op": "eq", "value": "draft"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    }
+  ]
+}

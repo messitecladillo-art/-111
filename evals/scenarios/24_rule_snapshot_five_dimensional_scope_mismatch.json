@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "id": "rule_snapshot_five_dimensional_scope_mismatch",
+  "description": "The rule gate compares edition, group, region, track, and stage; a region mismatch between project and snapshot is blocking.",
+  "steps": [
+    {
+      "id": "bootstrap_five_dimensional_scope",
+      "run": ["bootstrap", "--title", "Five-dimensional Rule Scope Mismatch"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "enter_rule_lock_for_scope_mismatch",
+      "run": ["advance", "--to", "rule_lock"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent"],
+      "capture": {
+        "rule_lock_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "install_five_dimensional_rules",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-rules.json",
+        "to": "evidence/rules.json"
+      }
+    },
+    {
+      "id": "install_five_dimensional_rule_source",
+      "copy": {
+        "from": "corpus-source/official-rules/edition16-undergrad-practice-source.txt",
+        "to": "evidence/rule-sources/edition16-undergrad-practice-source.txt"
+      }
+    },
+    {
+      "id": "scope_project_for_region_mismatch",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {"old": "  edition: unknown", "new": "  edition: \"第十六届\""},
+          {"old": "  group: unknown", "new": "  group: \"本科组\""},
+          {"old": "  region: unknown", "new": "  region: \"北京赛区\""},
+          {"old": "  stage: unknown", "new": "  stage: \"校赛及企业命题赛\""},
+          {"old": "  track: unknown", "new": "  track: \"自主选题\""},
+          {"old": "  applicable_notice: unknown", "new": "  applicable_notice: \"evidence/rule-sources/edition16-undergrad-practice-source.txt\""}
+        ]
+      }
+    },
+    {
+      "id": "reject_snapshot_region_mismatch",
+      "run": ["gate", "set", "rule", "pass", "--evidence", "project.yaml", "--evidence", "evidence/rules.json"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "rule_lock"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "rule_lock_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/mismatches/region/project", "op": "eq", "value": "北京赛区"},
+        {"source": "json", "pointer": "/failure/details/mismatches/region/snapshot", "op": "eq", "value": "全国"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

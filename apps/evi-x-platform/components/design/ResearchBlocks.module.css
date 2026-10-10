@@ -1,0 +1,20 @@
+.builder { display:grid; gap:18px; min-width:0; }
+.heading,.tray { display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap; }
+.heading h3 { margin:0 0 6px; font-size:21px; }
+.builder p { margin:0; color:var(--wb-muted); font-size:14px; line-height:1.7; }
+.heading>span { font-size:12px; color:var(--wb-accent); background:var(--wb-accent-soft); padding:6px 10px; border-radius:5px; }
+.topic { display:grid; grid-template-columns: minmax(220px,1fr) 2fr; gap:20px; align-items:end; }
+.tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.tiles>button { display:flex; flex-direction:column; text-align:left; align-items:stretch; gap:10px; border:1px solid var(--wb-line); border-left:4px solid var(--wb-line); border-radius:9px; padding:18px; background:var(--wb-solid); color:var(--wb-text); }
+.tiles>button[aria-pressed=true] { border-color:var(--wb-accent); background:var(--wb-accent-soft); }
+.tiles span { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--wb-muted); }
+.tiles b { color:var(--wb-accent); }
+.tiles strong { font-size:18px; }
+.tiles small { font-size:12px; color:var(--wb-muted); margin-top:auto; }
+.tray { border:1px solid var(--wb-line); padding:18px; background:var(--wb-solid); border-radius:8px; }
+.tray strong { font-size:16px; }.tray p { margin-top:5px; }
+.builder .primary { background:var(--wb-accent); color:var(--wb-accent-text); }
+.scale,.guide { background:var(--wb-solid); padding:18px; border:1px solid var(--wb-line); border-radius:8px; }
+.scale summary,.guide summary { cursor:pointer; font-weight:650; font-size:16px; }.scale>p,.scale>label,.scale>button,.fields { margin-top:16px; }.fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; }.guide ol { padding-left:24px; font-size:14px; line-height:1.8; color:var(--wb-muted); }.guide li+li{margin-top:8px;}.error{color:var(--wb-risk)!important;}
+@media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:650px){.tiles,.topic,.fields{grid-template-columns:minmax(0,1fr);}.tray>button{width:100%;}.tiles>button{padding:16px;}}

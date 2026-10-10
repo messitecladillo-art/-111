@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "id": "status_idempotent",
+  "description": "Repeated status calls preserve revision and every byte in the temporary project.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Status Idempotency"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "intake"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "status_first",
+      "run": ["status"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "status_revision": {"source": "json", "pointer": "/status_revision"},
+        "tree_after_first_status": {"source": "tree_sha256", "path": "."}
+      }
+    },
+    {
+      "id": "status_second",
+      "run": ["status"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "status_revision"}},
+        {"source": "tree_sha256", "path": ".", "op": "eq", "value_from": {"capture": "tree_after_first_status"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    }
+  ]
+}

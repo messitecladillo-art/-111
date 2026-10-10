@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.1.0",
+  "pattern_set_id": "national-award-patterns-2026-08-04",
+  "source_intake_id": "user-case-intake-2026-08-04",
+  "award_provenance": {
+    "status": "user_attested",
+    "tier": "national_first_or_second_prize",
+    "specific_case_mapping": "unknown",
+    "independently_verified": false
+  },
+  "inference_boundary": {
+    "classification": "analyst_inference",
+    "causal_award_claim": false,
+    "judge_feedback_available": false,
+    "non_award_comparison_group_available": false,
+    "interpretation": "Patterns co-occur in the supplied award artifacts; they are candidate award-associated mechanisms, not identified causes of winning."
+  },
+  "scope": {
+    "report_cases": 3,
+    "deck_cases": 2,
+    "defense_cases": 0,
+    "speaker_notes_with_substantive_content": 0,
+    "missing_deck_case_ids": [
+      "CASE-NEW-BLUE-COLLAR"
+    ],
+    "use_boundary": "Abstract mechanisms only. Do not copy protected expression, data, questionnaire wording, code, images, or visual assets."
+  },
+  "patterns": [
+    {
+      "id": "NAP-01",
+      "name": "hook_plus_boundary",
+      "support": "3_of_3_reports",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "A memorable cultural or linguistic hook attracts attention while the full title narrows the population and object and may also state geography or decision context.",
+      "agent_rule": "Score title recall and narrowing separately, then require the problem statement to complete the operational boundary."
+    },
+    {
+      "id": "NAP-02",
+      "name": "decision_tension",
+      "support": "3_of_3_reports",
+      "evidence_status": "analyst_inference",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "The topic contains a consequential contradiction or friction that a named actor must resolve.",
+      "agent_rule": "Write the decision owner, decision, affected population, evidence gap, and core tension before selecting methods."
+    },
+    {
+      "id": "NAP-03",
+      "name": "bounded_hot_topic",
+      "support": "3_of_3_reports",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "A broad social or market trend is narrowed to a reachable local population, event, occupation, or consumption domain.",
+      "agent_rule": "Reject a fashionable topic until respondent access and an operational boundary are explicit."
+    },
+    {
+      "id": "NAP-04",
+      "name": "exploration_to_instrument",
+      "support": "3_of_3_reported_architectures",
+      "evidence_status": "artifact_reported",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "Literature plus interviews, observation, or social listening is reported as supplying constructs and questionnaire modules; this is not verified chronology, and one case contains a disclosed date conflict.",
+      "agent_rule": "Require a dated trace from exploratory evidence to each survey construct; chronology conflicts remain blocking."
+    },
+    {
+      "id": "NAP-05",
+      "name": "visible_research_labor",
+      "support": "3_of_3_reports",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "Pilot work, quality control, achieved sample, fieldwork process, and supporting artifacts are visibly disclosed; visibility is not independent authentication.",
+      "agent_rule": "Treat fieldwork credibility as a designed evidence product, not a prose assurance."
+    },
+    {
+      "id": "NAP-06",
+      "name": "two_axis_segmentation",
+      "support": "3_of_3_reports",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "A population or experience-status split is combined with a context, category, occupation, region, service, or profile split.",
+      "agent_rule": "Test two meaningful segmentation axes when supported; reject decorative or unstable personas."
+    },
+    {
+      "id": "NAP-07",
+      "name": "analysis_ladder",
+      "support": "3_of_3_reports",
+      "evidence_status": "analyst_inference",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "Analysis advances from baseline description to differences or drivers, segmentation, mechanism or priority, and action.",
+      "agent_rule": "Every method declares one narrative job, upstream input, downstream output, and decision use."
+    },
+    {
+      "id": "NAP-08",
+      "name": "mother_insight",
+      "support": "3_of_3_reports",
+      "evidence_status": "analyst_inference",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "One explanatory idea integrates otherwise separate model outputs and remains stable across conclusion and action.",
+      "agent_rule": "Require a concise evidence-bounded mother insight; reject slogan-only synthesis."
+    },
+    {
+      "id": "NAP-09",
+      "name": "finding_action_correspondence",
+      "support": "3_of_3_reports",
+      "evidence_status": "analyst_inference",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "Most headline findings and segments have a clear recommendation counterpart.",
+      "agent_rule": "Maintain a finding-to-action coverage map and remove orphan findings or unsupported actions."
+    },
+    {
+      "id": "NAP-10",
+      "name": "report_deck_role_separation",
+      "support": "2_of_2_supplied_decks",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "The report carries the proof burden while the deck rebuilds a decision story instead of shrinking the table of contents.",
+      "agent_rule": "Freeze facts first, then plan the deck from decision tension, proof set, named conclusions, and action."
+    },
+    {
+      "id": "NAP-11",
+      "name": "analysis_first_deck_allocation",
+      "support": "2_of_2_supplied_decks",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "Differentiated findings occupy the largest content block; routine background and validity checks are compressed.",
+      "agent_rule": "Allocate the largest deck block to non-obvious findings without hiding material limitations."
+    },
+    {
+      "id": "NAP-12",
+      "name": "topic_bound_visual_identity",
+      "support": "3_of_3_reports_and_2_of_2_supplied_decks",
+      "evidence_status": "artifact_observed",
+      "award_provenance": "user_attested",
+      "causal_status": "descriptive_association_only",
+      "mechanism": "A topic-specific cover, palette, navigation, and synthesis graphic reinforce recall while evidence pages remain formal.",
+      "agent_rule": "Define a project-specific visual grammar and verify that decoration never displaces evidence or anonymity controls."
+    }
+  ],
+  "observed_deck_content_allocation": {
+    "basis": "two supplied decks; excludes cover, agenda, section dividers, and closing slides",
+    "context_and_problem_percent_range": [18, 21],
+    "research_design_and_credibility_percent_range": [11, 17],
+    "differentiated_findings_and_mechanisms_percent_range": [42, 53],
+    "named_conclusions_and_actions_percent_range": [18, 21],
+    "interpretation": "Observed pattern, not a mandatory slide-count template."
+  },
+  "reuse_safety_classes": [
+    "sampling_to_inference_mismatch",
+    "questionnaire_dictionary_data_code_drift",
+    "method_name_contract_failure",
+    "simulated_or_scenario_output_presented_as_observed_or_predicted",
+    "numerator_denominator_sample_count_conflict",
+    "segment_label_or_table_narrative_conflict",
+    "incomplete_owner_cost_kpi_pilot_stop_rule",
+    "unreadable_or_decoratively_obscured_visual",
+    "visible_or_hidden_identity_leak"
+  ]
+}

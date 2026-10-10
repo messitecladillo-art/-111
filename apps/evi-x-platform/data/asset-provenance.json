@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0.0",
+  "assets": [
+    {
+      "path": "public/og.png",
+      "role": "social_preview",
+      "visualMode": "public_promo",
+      "origin": "OpenAI image generation",
+      "generatedAt": "2026-08-04T14:01:46+08:00",
+      "sha256": "2396547f50477c16348c6f6edff2c5400b56f17c946e27beb68b778d1aecc57f",
+      "review": {
+        "textRendering": "pass",
+        "officialMarkSafety": "pass",
+        "awardImplicationSafety": "pass",
+        "humanReview": "required_before_any_competition_submission_reuse"
+      }
+    },
+    {
+      "path": "app/icon.svg",
+      "role": "site_icon",
+      "visualMode": "agent_ui",
+      "origin": "skill/zhengda-cup-champion/assets/brand/logo/mark.svg",
+      "sourceSha256": "03f95209a62728fc56cac5b5b518ebbaa830bd2ed12162e27de0f9556638e759",
+      "review": {
+        "approvedBrandMaster": true,
+        "officialMarkSafety": "pass"
+      }
+    }
+  ]
+}

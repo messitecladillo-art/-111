@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=69", "wheel>=0.43"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zhengda-cup-champion-agent"
+version = "2.0.0"
+description = "Executable, auditable control plane for a Zhengda Cup market-research competition agent"
+requires-python = ">=3.9"
+dependencies = [
+  "PyYAML>=6.0,<7",
+  "jsonschema>=4.20,<5",
+  "Pillow>=10,<13",
+  "pypdf>=5,<7",
+  "defusedxml>=0.7,<1",
+]
+
+[project.scripts]
+zhengda-agent = "agent_runtime.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "skill/zhengda-cup-champion/scripts"}
+
+[tool.setuptools.packages.find]
+where = ["skill/zhengda-cup-champion/scripts"]
+include = ["agent_runtime*"]
+
+[tool.setuptools.data-files]
+"share/zhengda-cup-champion" = [
+  "README.md",
+  "skill/zhengda-cup-champion/SKILL.md",
+]
+"share/zhengda-cup-champion/agents" = [
+  "skill/zhengda-cup-champion/agents/*.yaml",
+]
+"share/zhengda-cup-champion/references" = [
+  "skill/zhengda-cup-champion/references/*.md",
+]
+"share/zhengda-cup-champion/assets/runtime" = [
+  "skill/zhengda-cup-champion/assets/runtime/*.json",
+]
+"share/zhengda-cup-champion/assets/runtime/schemas" = [
+  "skill/zhengda-cup-champion/assets/runtime/schemas/*.json",
+]
+"share/zhengda-cup-champion/assets/templates" = [
+  "skill/zhengda-cup-champion/assets/templates/*",
+]
+"share/zhengda-cup-champion/assets/brand" = [
+  "skill/zhengda-cup-champion/assets/brand/*.json",
+]
+"share/zhengda-cup-champion/assets/brand/derivatives" = [
+  "skill/zhengda-cup-champion/assets/brand/derivatives/*",
+]
+"share/zhengda-cup-champion/assets/brand/logo" = [
+  "skill/zhengda-cup-champion/assets/brand/logo/*",
+]
+"share/zhengda-cup-champion/assets/brand/prompts" = [
+  "skill/zhengda-cup-champion/assets/brand/prompts/*.md",
+]
+"share/zhengda-cup-champion/assets/brand/raster" = [
+  "skill/zhengda-cup-champion/assets/brand/raster/*",
+]
+"share/zhengda-cup-champion/assets/brand/ui" = [
+  "skill/zhengda-cup-champion/assets/brand/ui/*",
+]
+"share/zhengda-cup-champion/scripts" = [
+  "skill/zhengda-cup-champion/scripts/*.py",
+]

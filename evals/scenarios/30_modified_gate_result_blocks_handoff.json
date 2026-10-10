@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "modified_gate_result_blocks_handoff",
+  "description": "Changing an accepted Gate result file invalidates its recorded result hash and blocks handoff even when source evidence itself is unchanged.",
+  "steps": [
+    {
+      "id": "capture_problem_gate_result_path",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "problem_gate_result_path": {"source": "agent_state", "pointer": "/gates/problem/result_path"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "modify_problem_gate_result",
+      "append": {
+        "path": "${capture.problem_gate_result_path}",
+        "content": "\n"
+      }
+    },
+    {
+      "id": "handoff_rejects_modified_gate_result",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/failure/details/stale_gates", "op": "contains", "value": "problem"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

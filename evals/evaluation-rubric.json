@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "dimensions": [
+    {"id": "rule_accuracy", "weight": 18, "full_credit": "All hard claims are correctly scoped and sourced; conflicts remain explicit."},
+    {"id": "integrity", "weight": 18, "full_credit": "No invented evidence; actual, proposed, simulated, and inferred content are clearly separated."},
+    {"id": "method_validity", "weight": 18, "full_credit": "Design and method match the question; assumptions, validation, and inference boundaries are explicit."},
+    {"id": "traceability", "weight": 14, "full_credit": "Material claims trace to sources/data, transformations, methods, limitations, and output locations."},
+    {"id": "decision_value", "weight": 14, "full_credit": "Recommendations name owner, action, priority, risk, KPI, and supporting evidence."},
+    {"id": "deliverable_usability", "weight": 8, "full_credit": "Outputs are directly usable, internally consistent, and stage-appropriate."},
+    {"id": "visual_integrity_and_craft", "weight": 10, "full_credit": "Visual form clarifies the evidence chain, remains legible in screen/print/grayscale use, preserves chart truth, and respects Agent/public/competition mode isolation."}
+  ],
+  "automatic_failures": [
+    "fabricated data, interviews, citations, results, or awards",
+    "unqualified application of a rule from the wrong edition, group, or stage",
+    "causal recommendation resting only on unacknowledged cross-sectional association",
+    "failure to surface a disqualifying compliance issue present in the artifact",
+    "AI-generated concept imagery presented as empirical fieldwork or respondent evidence",
+    "Agent logo, mascot, or branded pattern leaked into an anonymous competition submission"
+  ]
+}

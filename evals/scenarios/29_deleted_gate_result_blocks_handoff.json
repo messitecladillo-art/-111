@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "deleted_gate_result_blocks_handoff",
+  "description": "Every accepted Gate binds its immutable result file by SHA-256; deleting a Gate result makes handoff fail closed.",
+  "steps": [
+    {
+      "id": "capture_rule_gate_result_path",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "rule_gate_result_path": {"source": "agent_state", "pointer": "/gates/rule/result_path"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "delete_rule_gate_result",
+      "delete": {"path": "${capture.rule_gate_result_path}"}
+    },
+    {
+      "id": "handoff_rejects_deleted_gate_result",
+      "run": ["handoff"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/failure/details/stale_gates", "op": "contains", "value": "rule"},
+        {"source": "file_exists", "path": "reviews/final-manifest.json", "op": "eq", "value": false}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

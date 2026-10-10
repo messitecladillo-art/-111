@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "abstract": true,
+  "extends": "_final_artifacts_registered.json",
+  "steps": [
+    {
+      "id": "write_final_report_review_evidence",
+      "write": {
+        "path": "reviews/eval-final-report-review.json",
+        "content": "{\"artifact_id\":\"ART-EVAL-FINAL-REPORT\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.final_report_sha256}\",\"artifact_type\":\"report\",\"producer_role\":\"narrative_strategist\",\"owner_name\":\"report_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"independent_report_reviewer\",\"acceptance_test\":\"Artifact hash and rendered output remain current\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"report_structure_reviewed\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:10:00Z\",\"findings\":\"No blocking findings\"}\n"
+      }
+    },
+    {
+      "id": "approve_final_report_review",
+      "run": [
+        "review", "approve", "ART-EVAL-FINAL-REPORT",
+        "--evidence", "reviews/eval-final-report-review.json",
+        "--reviewer-role", "red_team_judge",
+        "--reviewer-name", "independent_report_reviewer",
+        "--review-id", "REV-EVAL-FINAL-REPORT"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/review/status", "op": "eq", "value": "approved"},
+        {"source": "json", "pointer": "/review/artifact_sha256", "op": "eq", "value_from": {"capture": "final_report_sha256"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_final_report",
+      "run": [
+        "artifact", "finalize", "ART-EVAL-FINAL-REPORT",
+        "--review-id", "REV-EVAL-FINAL-REPORT",
+        "--rights-status", "cleared",
+        "--anonymity-status", "pass"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/status", "op": "eq", "value": "final"},
+        {"source": "json", "pointer": "/artifact/review_id", "op": "eq", "value": "REV-EVAL-FINAL-REPORT"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_final_presentation_review_evidence",
+      "write": {
+        "path": "reviews/eval-final-presentation-review.json",
+        "content": "{\"artifact_id\":\"ART-EVAL-FINAL-PRESENTATION\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.final_presentation_sha256}\",\"artifact_type\":\"presentation\",\"producer_role\":\"visual_director\",\"owner_name\":\"presentation_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"independent_presentation_reviewer\",\"acceptance_test\":\"Artifact hash and rendered output remain current\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"slide_render_inspected\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:10:00Z\",\"findings\":\"No blocking findings\"}\n"
+      }
+    },
+    {
+      "id": "approve_final_presentation_review",
+      "run": [
+        "review", "approve", "ART-EVAL-FINAL-PRESENTATION",
+        "--evidence", "reviews/eval-final-presentation-review.json",
+        "--reviewer-role", "red_team_judge",
+        "--reviewer-name", "independent_presentation_reviewer",
+        "--review-id", "REV-EVAL-FINAL-PRESENTATION"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/review/status", "op": "eq", "value": "approved"},
+        {"source": "json", "pointer": "/review/artifact_sha256", "op": "eq", "value_from": {"capture": "final_presentation_sha256"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_final_presentation",
+      "run": [
+        "artifact", "finalize", "ART-EVAL-FINAL-PRESENTATION",
+        "--review-id", "REV-EVAL-FINAL-PRESENTATION",
+        "--rights-status", "cleared",
+        "--anonymity-status", "pass"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/status", "op": "eq", "value": "final"},
+        {"source": "json", "pointer": "/artifact/review_id", "op": "eq", "value": "REV-EVAL-FINAL-PRESENTATION"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_final_defense_review_evidence",
+      "write": {
+        "path": "reviews/eval-final-defense-review.json",
+        "content": "{\"artifact_id\":\"ART-EVAL-FINAL-DEFENSE\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.final_defense_sha256}\",\"artifact_type\":\"defense\",\"producer_role\":\"captain\",\"owner_name\":\"defense_owner\",\"decision\":\"approved\",\"reviewer_role\":\"red_team_judge\",\"reviewer_name\":\"independent_defense_reviewer\",\"acceptance_test\":\"Artifact hash and rendered output remain current\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"defense_timing_checked\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:10:00Z\",\"findings\":\"No blocking findings\"}\n"
+      }
+    },
+    {
+      "id": "approve_final_defense_review",
+      "run": [
+        "review", "approve", "ART-EVAL-FINAL-DEFENSE",
+        "--evidence", "reviews/eval-final-defense-review.json",
+        "--reviewer-role", "red_team_judge",
+        "--reviewer-name", "independent_defense_reviewer",
+        "--review-id", "REV-EVAL-FINAL-DEFENSE"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/review/status", "op": "eq", "value": "approved"},
+        {"source": "json", "pointer": "/review/artifact_sha256", "op": "eq", "value_from": {"capture": "final_defense_sha256"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "finalize_final_defense",
+      "run": [
+        "artifact", "finalize", "ART-EVAL-FINAL-DEFENSE",
+        "--review-id", "REV-EVAL-FINAL-DEFENSE",
+        "--rights-status", "cleared",
+        "--anonymity-status", "pass"
+      ],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/artifact/status", "op": "eq", "value": "final"},
+        {"source": "json", "pointer": "/artifact/review_id", "op": "eq", "value": "REV-EVAL-FINAL-DEFENSE"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    }
+  ]
+}

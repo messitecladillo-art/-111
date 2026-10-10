@@ -1,0 +1,51 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\zyy20\Documents\ChatGPT\正大杯2\apps\evi-x-api\.venv\Scripts\python.exe
+rootdir: C:\Users\zyy20\Documents\ChatGPT\正大杯2\apps\evi-x-api
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.15.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 33 items
+
+tests/test_concurrency.py::test_concurrent_cas_and_exact_idempotency PASSED [  3%]
+tests/test_concurrency.py::test_running_duplicate_active_limit_and_logout_during_dispatch PASSED [  6%]
+tests/test_concurrency.py::test_provider_failure_unknown_is_persistent_not_replayed PASSED [  9%]
+tests/test_concurrency.py::test_membership_revoked_during_dispatch_blocks_result_and_replay PASSED [ 12%]
+tests/test_concurrency.py::test_late_proposal_preserves_concurrent_edit_and_exact_base PASSED [ 15%]
+tests/test_contracts.py::test_duplicate_json_depth_nonfinite_and_extra_fields_rejected PASSED [ 18%]
+tests/test_contracts.py::test_nested_full_design_and_generator_shape_are_distinct PASSED [ 21%]
+tests/test_contracts.py::test_vault_authenticates_every_config_field_owner_revision_and_key_id PASSED [ 24%]
+tests/test_contracts.py::test_operator_exact_allowlist_and_production_fixture_fail_closed PASSED [ 27%]
+tests/test_postgres.py::test_auth_replay_attempts_rate_uniform_and_logout PASSED [ 30%]
+tests/test_postgres.py::test_invitation_removal_and_undelivered_code_fail PASSED [ 33%]
+tests/test_postgres.py::test_team_isolation_roles_revocation_and_personal_services PASSED [ 36%]
+tests/test_postgres.py::test_vault_service_cas_idempotency_keyless_destination_and_delete PASSED [ 39%]
+tests/test_postgres.py::test_immutable_versions_cas_precise_retry_and_restore PASSED [ 42%]
+tests/test_postgres.py::test_version_history_continues_beyond_local_undo_capacity PASSED [ 45%]
+tests/test_postgres.py::test_nonfinite_and_invalid_unicode_are_rejected_before_operation_hash PASSED [ 48%]
+tests/test_postgres.py::test_database_trigger_rejects_owner_mutation_and_rls_resets_between_transactions PASSED [ 51%]
+tests/test_postgres.py::test_proposal_list_personal_scope_restart_expiry_and_revocation PASSED [ 54%]
+tests/test_postgres.py::test_proposal_duplicate_unknown_restart_and_stale_provenance PASSED [ 57%]
+tests/test_provider.py::test_live_adapter_request_contract_and_no_retry PASSED [ 60%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[400-provider_rejected] PASSED [ 63%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[401-authentication_failed] PASSED [ 66%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[403-authentication_failed] PASSED [ 69%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[429-rate_limited] PASSED [ 72%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[408-provider_rejected] PASSED [ 75%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[500-provider_rejected] PASSED [ 78%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[503-provider_rejected] PASSED [ 81%]
+tests/test_provider.py::test_provider_status_never_echoes_raw_error_or_follows_redirect[302-redirect_blocked] PASSED [ 84%]
+tests/test_provider.py::test_provider_rejects_secret_echo_truncation_and_tools[choice0] PASSED [ 87%]
+tests/test_provider.py::test_provider_rejects_secret_echo_truncation_and_tools[choice1] PASSED [ 90%]
+tests/test_provider.py::test_provider_rejects_secret_echo_truncation_and_tools[choice2] PASSED [ 93%]
+tests/test_provider.py::test_streamed_response_byte_cap_and_network_unknown PASSED [ 96%]
+tests/test_provider.py::test_network_failure_is_unknown_without_upstream_text PASSED [100%]
+
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\zyy20\Documents\ChatGPT\正大杯2\apps\evi-x-api\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 33 passed, 1 warning in 3.79s ========================
+

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "closed_repeat_handoff_is_immutable",
+  "description": "Once closed, another handoff request is a read-only idempotent success that cannot rewrite the manifest, audit tree, or event stream.",
+  "steps": [
+    {
+      "id": "create_initial_final_handoff",
+      "run": ["handoff"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/go_no_go", "op": "eq", "value": "go"}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "close_after_initial_handoff",
+      "run": ["advance", "--to", "closed", "--expect-revision", "${capture.submission_revision}"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "closed"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "capture_closed_manifest_identity",
+      "run": ["status"],
+      "expect_exit": 0,
+      "capture": {
+        "closed_revision": {"source": "json", "pointer": "/status_revision"},
+        "closed_event_sequence": {"source": "json", "pointer": "/event_stream/last_sequence"},
+        "closed_manifest_sha256": {"source": "file_sha256", "path": "reviews/final-manifest.json"},
+        "closed_manifest_declared_sha256": {"source": "file_json", "path": "reviews/final-manifest.json", "pointer": "/delivery/manifest_sha256"},
+        "closed_audit_tree_sha256": {"source": "tree_sha256", "path": ".agent/audits"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "repeat_handoff_after_closed_is_read_only",
+      "run": ["handoff"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "closed"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "closed"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "closed_revision"}},
+        {"source": "json", "pointer": "/go_no_go", "op": "eq", "value": "go"},
+        {"source": "json", "pointer": "/idempotent", "op": "eq", "value": true},
+        {"source": "json", "pointer": "/manifest_sha256", "op": "eq", "value_from": {"capture": "closed_manifest_declared_sha256"}},
+        {"source": "json", "pointer": "/event_stream/last_sequence", "op": "eq", "value_from": {"capture": "closed_event_sequence"}},
+        {"source": "file_sha256", "path": "reviews/final-manifest.json", "op": "eq", "value_from": {"capture": "closed_manifest_sha256"}},
+        {"source": "tree_sha256", "path": ".agent/audits", "op": "eq", "value_from": {"capture": "closed_audit_tree_sha256"}}
+      ],
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    }
+  ]
+}

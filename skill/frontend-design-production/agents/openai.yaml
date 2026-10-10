@@ -1,0 +1,4 @@
+interface:
+  display_name: "前端设计与交互生产"
+  short_description: "以任务和视觉规则驱动前端实现，覆盖动效、交互、状态反馈与浏览器验收"
+  default_prompt: "使用 $frontend-design-production 完成当前前端页面的设计与实现，保留项目约定，并验证关键流程与交互。"

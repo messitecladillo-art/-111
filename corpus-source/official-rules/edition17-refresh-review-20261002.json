@@ -1,0 +1,38 @@
+{
+  "id": "edition17-source-attempt-20261002",
+  "record_kind": "source-attempt-not-a-rule-snapshot",
+  "attempted_at": "2026-10-02",
+  "edition": "第十七届",
+  "scope": "全国总通知正文的有限复核；不是官网全量更新或具体赛区、组别、阶段规则核验",
+  "previous_review": "corpus-source/official-rules/edition17-source-review-20260930.json",
+  "preserved_verified_at": "2026-09-30",
+  "organizer": {
+    "url": "https://www.china-cssc.org/show-304-2179-1.html",
+    "result": "inaccessible_via_web_tool",
+    "latest_notice_completeness": "unknown",
+    "root_recheck": "同轮 coordinator 重新打开该正式通知地址，工具亦返回 not accessible；未绕过访问保护。"
+  },
+  "republication": {
+    "page": "https://tjjy.zjgsu.edu.cn/2026/0923/c4419a231899/page.htm",
+    "pdf": "https://tjjy.zjgsu.edu.cn/_upload/article/files/1e/80/192f24e5488eb01e7d37c4504776/cf72fd67-01f1-48e1-a214-dc5598bb59fc.pdf",
+    "result": "body_rechecked",
+    "document_number": "中商统〔2026〕33号",
+    "method": "来源 agent 与 coordinator 分别打开正式高校页面并通过附件链接重读组委会通知正文，核对第 2 页组队与网考前置、第 3 页实践赛文件拟发布日期。coordinator 另看本地历史存档第 2、3 页渲染；未比对远端实时 PDF 字节。",
+    "existing_highlights_consistent": true,
+    "university_only_items_not_promoted": true
+  },
+  "evidence": {
+    "path": "corpus-source/official-rules/edition17-refresh-evidence-20261002.json",
+    "sha256": "86f4f65e2e00b294d00a3d68040f52464775c5c8fcb82ca51897b5e31cbf04a7"
+  },
+  "decisions": [
+    "只追加核查尝试及正文复核记录，不改第十六届规则快照。",
+    "第十七届仍为 general_notice_only，完整规则快照仍缺失。",
+    "官网不可访问不是没有更新的证据；不将日期更新为全部规则已核验。"
+  ],
+  "unknowns": [
+    "主办方是否已在其他页面发布更新",
+    "第十七届实践赛页数、匿名处理及 AI 使用细则",
+    "用户具体学校、赛区、组别、赛道、阶段的补充通知"
+  ]
+}

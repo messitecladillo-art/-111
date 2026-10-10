@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">证见 EVI-X 横向组合标志</title>
+  <desc id="desc">证见独立循证市场调查智能体横向品牌组合</desc>
+  <rect width="1200" height="320" rx="44" fill="#F7F4ED"/>
+  <g transform="translate(34 24) scale(.53)">
+    <circle cx="256" cy="256" r="222" fill="#0A1F33"/>
+    <path d="M256 64 L316 304 L256 348 L196 304 Z" fill="#F4B942" stroke="#F7F4ED" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M256 78 L286 286 L256 314 L226 286 Z" fill="#0A1F33" opacity="0.82"/>
+    <g fill="#F7F4ED" stroke="#F4B942" stroke-width="8">
+      <circle cx="256" cy="126" r="17"/><circle cx="256" cy="184" r="17"/>
+      <circle cx="256" cy="242" r="17"/><circle cx="256" cy="300" r="17"/>
+    </g>
+    <path d="M256 322 L330 382 L302 458 L210 458 L182 382 Z" fill="#00B3A4" stroke="#F4B942" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M256 322 L256 458 M182 382 L330 382 M210 458 L256 382 L302 458" fill="none" stroke="#F7F4ED" stroke-width="6" opacity="0.9"/>
+  </g>
+  <g fill="#0A1F33">
+    <text x="352" y="145" font-family="Source Han Sans SC, Noto Sans CJK SC, Microsoft YaHei, sans-serif" font-size="104" font-weight="800" letter-spacing="10">证见</text>
+    <text x="695" y="137" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="750" letter-spacing="12">EVI-X</text>
+    <text x="357" y="218" font-family="Source Han Sans SC, Noto Sans CJK SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="600" letter-spacing="3">循证市场调查智能体</text>
+    <text x="357" y="267" font-family="Source Han Sans SC, Noto Sans CJK SC, Microsoft YaHei, sans-serif" font-size="22" font-weight="400" fill="#536677" letter-spacing="2">问有据 · 见有策</text>
+  </g>
+  <path d="M695 162 H1118" stroke="#00B3A4" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="750" cy="162" r="12" fill="#F4B942"/><circle cx="850" cy="162" r="12" fill="#F4B942"/>
+  <circle cx="950" cy="162" r="12" fill="#F4B942"/><circle cx="1050" cy="162" r="12" fill="#F4B942"/>
+</svg>

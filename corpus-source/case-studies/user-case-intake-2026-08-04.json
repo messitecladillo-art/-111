@@ -1,0 +1,191 @@
+{
+  "schema_version": "1.0.0",
+  "intake_id": "user-case-intake-2026-08-04",
+  "intake_date": "2026-08-04",
+  "provenance": {
+    "source_type": "user_provided_local_files",
+    "original_files_copied_into_repository": false,
+    "source_location_class": "user_downloads",
+    "rights_status": "unknown",
+    "retention_permission": "unknown",
+    "allowed_current_use": "read_only_analysis_and_abstracted_agent_improvement",
+    "award_or_ranking_verified": false,
+    "award_status": "user_attested",
+    "award_tier": "national_first_or_second_prize",
+    "specific_award_mapping": "unknown",
+    "award_attestation_date": "2026-08-04",
+    "award_attestation_source": "user_message",
+    "official_rule_scope_verified": false,
+    "warning": "Treat all three works as user-attested national first-or-second-prize cases. The exact prize mapping and official notice evidence remain unknown. Extract mechanisms without copying protected expression, and do not retain raw binaries without explicit authorization."
+  },
+  "cases": [
+    {
+      "case_id": "CASE-FOOTBALL-DUAL-TRACK",
+      "title": "足梦前行，绝不蒜鸟——武汉城市足球超级联赛城区—高校双轨赛道赛事反馈与优化路径",
+      "artifact_claimed_edition": "第十六届",
+      "group": "unknown",
+      "region": "unknown",
+      "track": "unknown",
+      "stage": "unknown",
+      "award": "national_first_or_second_prize",
+      "award_status": "user_attested",
+      "specific_award": "unknown",
+      "artifacts": [
+        {
+          "filename": "5.8 足”梦前行，绝不“蒜鸟”——武汉城市足球超级联赛城区-高校双轨赛道赛事反馈与优化路径 (1).pptx",
+          "format": "pptx",
+          "role": "presentation",
+          "bytes": 44640559,
+          "sha256": "7c45a1e0d3f525c5fe0e63479898e576529a2715cd8e0c1e89e6b72a01ca9ac1",
+          "slides": 26,
+          "identity_metadata_detected": true,
+          "embedded_files_detected": true
+        },
+        {
+          "filename": "5.9更新版完整版（正文+附录）报告书 (1).docx",
+          "format": "docx",
+          "role": "report_and_appendix",
+          "bytes": 25224105,
+          "sha256": "14c3d612adbdb57dada2fd0a183746719700d14a080d8d2e1efffdea6da181a9",
+          "rendered_pages": 320,
+          "identity_metadata_detected": true,
+          "embedded_files_detected": true
+        }
+      ]
+    },
+    {
+      "case_id": "CASE-NEW-BLUE-COLLAR",
+      "title": "脱下长衫之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究",
+      "artifact_claimed_edition": "第十六届",
+      "group": "unknown",
+      "region": "unknown",
+      "track": "unknown",
+      "stage": "unknown",
+      "award": "national_first_or_second_prize",
+      "award_status": "user_attested",
+      "specific_award": "unknown",
+      "artifacts": [
+        {
+          "filename": "脱下“长衫”之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究 (2) (1).docx",
+          "format": "docx",
+          "role": "editable_report",
+          "bytes": 16578002,
+          "sha256": "65c6efba92816b25a81922aa31047a00dae96bb0c1bb8ea1c86522c34863d30f",
+          "rendered_pages": 97,
+          "identity_metadata_detected": true,
+          "embedded_files_detected": true
+        },
+        {
+          "filename": "脱下“长衫”之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究（国赛).pdf",
+          "format": "pdf",
+          "role": "frozen_report",
+          "bytes": 4000478,
+          "sha256": "fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300",
+          "pages": 95,
+          "identity_metadata_detected": true,
+          "embedded_files_detected": false
+        }
+      ],
+      "version_comparison": {
+        "normalized_text_similarity": 0.9890555997476479,
+        "normalized_characters_docx_render": 72846,
+        "normalized_characters_pdf": 72982,
+        "numeric_token_count_each": 774,
+        "unique_numeric_tokens_in_either": 0,
+        "interpretation": "Near-equivalent content but not an identical frozen artifact; pagination and small textual or rendering differences require explicit version locking."
+      }
+    },
+    {
+      "case_id": "CASE-Z-GENERATION-OFFLINE-ENTERTAINMENT",
+      "title": "娱你相遇，因为心动——Z世代线下观演类娱乐的消费态度、行为和体验研究",
+      "artifact_claimed_edition": "第十六届",
+      "group": "unknown",
+      "region": "unknown",
+      "track": "unknown",
+      "stage": "unknown",
+      "award": "national_first_or_second_prize",
+      "award_status": "user_attested",
+      "specific_award": "unknown",
+      "artifacts": [
+        {
+          "filename": "“娱”你相遇，因为心动--Z世代线下观演类娱乐的消费态度、行为和体验研究+报告.pdf",
+          "format": "pdf",
+          "role": "report",
+          "bytes": 4512522,
+          "sha256": "20bc459f9b2e45c3f33019fe2ad9ef3b007bd8733107e535316291c7cd55f75f",
+          "pages": 65,
+          "identity_metadata_detected": true,
+          "embedded_files_detected": false
+        },
+        {
+          "filename": "“娱”你相遇，因为心动--Z世代线下观演类娱乐的消费态度、行为和体验研究+PPT.pptx",
+          "format": "pptx",
+          "role": "presentation",
+          "bytes": 10830169,
+          "sha256": "a61de53d5dfb60744d1994db4610c2d656c5d5fe412842582f184829208d2e5d",
+          "slides": 45,
+          "identity_metadata_detected": true,
+          "embedded_files_detected": true
+        }
+      ]
+    }
+  ],
+  "derived_outputs": [
+    {
+      "path": "corpus-source/case-studies/national-award-patterns-2026-08-04.json",
+      "type": "abstracted_cross_case_pattern_set",
+      "contains_source_binaries": false
+    },
+    {
+      "path": "三件国奖作品共性提炼与Agent升级-2026-08-04.md",
+      "type": "human_readable_cross_case_synthesis",
+      "contains_source_binaries": false
+    }
+  ],
+  "intake_checks": {
+    "audit_snapshot": {
+      "checked_at": "2026-08-04T02:55:51.5819457+08:00",
+      "tool": "skill/zhengda-cup-champion/scripts/audit_submission_files.py",
+      "tool_sha256": "c77acd91592f71933c668b3c57ba6cca82ebcfecc3994b5babf1607edee0ae05",
+      "output_schema_version": "1.0.0",
+      "strict": true,
+      "forbidden_identity_terms_supplied": false,
+      "scope_note": "Current reproducible snapshot for the exact six hashes above. No case-specific forbidden identity terms were supplied because the authoritative term lists are unknown."
+    },
+    "tracked_changes_exact_ooxml_elements_detected": false,
+    "strict_submission_audit_files": 6,
+    "strict_submission_audit_errors": 37,
+    "strict_submission_audit_warnings": 2,
+    "primary_error_classes": [
+      "identity_metadata",
+      "active_content_present",
+      "embedded_files_present",
+      "custom_xml_parts_present",
+      "image_identity_metadata_present",
+      "package_thumbnail_present"
+    ],
+    "primary_warning_classes": [
+      "software_metadata_present"
+    ],
+    "error_counts_by_class": {
+      "identity_metadata": 24,
+      "active_content_present": 4,
+      "embedded_files_present": 4,
+      "custom_xml_parts_present": 2,
+      "image_identity_metadata_present": 2,
+      "package_thumbnail_present": 1
+    },
+    "warning_counts_by_class": {
+      "software_metadata_present": 2
+    },
+    "per_file_error_warning_counts": {
+      "5.8 足”梦前行，绝不“蒜鸟”——武汉城市足球超级联赛城区-高校双轨赛道赛事反馈与优化路径 (1).pptx": [8, 0],
+      "5.9更新版完整版（正文+附录）报告书 (1).docx": [8, 0],
+      "脱下“长衫”之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究 (2) (1).docx": [12, 0],
+      "脱下“长衫”之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究（国赛).pdf": [1, 1],
+      "“娱”你相遇，因为心动--Z世代线下观演类娱乐的消费态度、行为和体验研究+报告.pdf": [1, 1],
+      "“娱”你相遇，因为心动--Z世代线下观演类娱乐的消费态度、行为和体验研究+PPT.pptx": [7, 0]
+    },
+    "note": "The initial byte-pattern heuristic was discarded. Exact XML tag inspection found no tracked-change elements in either DOCX. The frozen audit additionally detects active OLE/package relationship semantics and identity-bearing image metadata; these explain the increase from the superseded 31-error snapshot to 37 errors. Strict final-stage policy treats each hidden layer as a blocking class even when findings overlap on the same file."
+  }
+}

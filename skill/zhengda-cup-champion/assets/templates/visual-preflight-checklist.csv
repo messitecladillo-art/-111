@@ -1,0 +1,31 @@
+check_id,applies_to_modes,scope,item,severity,status,required_evidence,artifact_evidence,owner,notes
+VIS-MODE-001,all,mode,"已且仅已选择一个合法模式代码：agent_ui / public_promo / competition_submission",fatal,not_checked,design/visual-tokens.json,,,模式未知时按competition_submission处理
+VIS-MODE-002,all,mode,资产ID前缀与模式一致：AGUI / PUB / COMP,high,not_checked,evidence/visual-asset-ledger.csv,,,
+VIS-MODE-003,all,mode,跨模式迁移已创建新版本并记录重新审查人和依据,high,not_checked,视觉资产台账中的原资产ID和批准记录,,,
+VIS-MODE-004,competition_submission,mode,进入正式提交物的资产已在Competition白名单中批准,fatal,not_checked,visual-asset-ledger.csv中competition_approved=yes,,,
+VIS-RULE-001,competition_submission,rules,已锁定当届组别赛区赛道和阶段的适用正式通知,fatal,not_checked,project.yaml与evidence/rules.json,,,
+VIS-RULE-002,competition_submission,rules,匿名页数地图Logo和AI披露要求均已逐项检查,fatal,not_checked,正式规则和预检证据,,,
+VIS-INTEGRITY-001,all,integrity,每项资产已标记actual proposed simulated inferred或conceptual,high,not_checked,design/visual-brief.md与视觉资产台账,,,
+VIS-INTEGRITY-002,all,integrity,所有事实照片和数值均能回链到证据台账或计算文件,fatal,not_checked,source_evidence_ids与文件路径,,,
+VIS-INTEGRITY-003,all,integrity,AI图的内容分类为conceptual且不会被误认成真实证据,fatal,not_checked,视觉简报和人工审查记录,,,
+VIS-INTEGRITY-004,all,integrity,AI图未用作田野受访者数据模型输出地图边界或已实施结果,fatal,not_checked,资产用途审查记录,,,
+VIS-INTEGRITY-005,all,integrity,每项AI资产均关联AI使用台账且记录提示词和人工验证,high,not_checked,evidence/ai-use-ledger.csv中的关联ID,,,
+VIS-INTEGRITY-006,all,integrity,最终图像不存在模型生成文字乱码水印虚构奖项或第三方IP,fatal,not_checked,100%缩放人工检查记录,,,
+VIS-BRAND-001,all,brand,品牌名称为证见 / EVI-X且主色为#0A1F33,high,not_checked,design/visual-tokens.json与颜色抽样,,,
+VIS-BRAND-002,all,brand,第三方和官方标识仅使用获授权原件且未被AI重绘,fatal,not_checked,授权文件和原始标识来源,,,
+VIS-BRAND-003,public_promo,brand,公开传播已显示规范中的完整非官方声明且未承诺获奖,high,not_checked,页面或物料中的完整声明及位置,,,
+VIS-BRAND-004,competition_submission,brand,EVI-X标志IP水印和宣传语默认隐藏或有明确规则许可,high,not_checked,提交物逐页检查与批准依据,,,
+VIS-DATA-001,all,chart,实质性图表均含标题单位样本基数n时间范围来源和必要方法,fatal,not_checked,图表逐图审查记录,,,
+VIS-DATA-002,all,chart,图表数值分母口径与报告PPT讲稿附录完全一致,fatal,not_checked,复算结果与跨文件核对表,,,
+VIS-DATA-003,all,chart,没有装饰性3D面积失真无依据双轴未说明截轴或伪精度,high,not_checked,图表方法审查记录,,,
+VIS-A11Y-001,all,accessibility,正文对比度至少4.5比1且大字和关键图形至少3比1,high,not_checked,对比度计算结果,,,
+VIS-A11Y-002,all,accessibility,颜色不是唯一编码且灰度和常见色觉缺陷下仍可辨认,high,not_checked,灰度与色觉模拟截图,,,
+VIS-A11Y-003,all,accessibility,informative图片有替代文本且关键图表有数据表,medium,not_checked,替代文本和数据表位置,,,
+VIS-A11Y-004,competition_submission,accessibility,PDF保留可搜索文字标题层级阅读顺序书签和字体嵌入,high,not_checked,PDF可访问性预检结果,,,
+VIS-TECH-001,all,technical,画布比例安全区尺寸透明通道和目标格式均与简报一致,high,not_checked,文件属性和设计简报,,,
+VIS-TECH-002,agent_ui;public_promo,technical,头像图标或IP已通过32px灰度和纯黑剪影测试,medium,not_checked,三种测试导出图,,,
+VIS-PRINT-001,all,print,最终尺寸位图至少300ppi且Logo图标图表文字优先矢量,high,not_checked,有效分辨率和源文件清单,,仅在存在印刷交付时适用
+VIS-PRINT-002,all,print,出血安全区正向和反白最小线宽满足生产要求,high,not_checked,1比1预检图和刀模,,仅在存在印刷交付时适用
+VIS-PRINT-003,all,print,目标印厂ICC转换PDF/X-4字体嵌入叠印透明和打样已检查,high,not_checked,印前报告与打样确认,,仅在存在印刷交付时适用
+VIS-FINAL-001,all,handoff,最终版本路径SHA-256尺寸页数或像素已登记,high,not_checked,视觉资产台账和交付清单,,,
+VIS-FINAL-002,all,handoff,不存在未关闭的fatal或high视觉问题,fatal,not_checked,本预检表已完成状态,,,

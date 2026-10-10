@@ -1,0 +1,241 @@
+{
+  "contractId": "evi-x.rule-corpus",
+  "version": "1.0.0",
+  "source": {
+    "repositoryPath": "corpus-source/official-rules/edition16-undergrad-rules.json",
+    "rawSha256": "53fed8ba552e0faa9c1d25f3f7a069330094a80f841a52611591130ec93c86e0",
+    "provenance": [
+      {
+        "id": "edition16-undergrad-practice",
+        "repositoryPath": "corpus-source/official-rules/edition16-undergrad-practice-source.txt",
+        "sha256": "7bca601071854c06ca74a50ce7f1a20bd3208c735f662e51792aeb71fc054196"
+      }
+    ]
+  },
+  "snapshot": {
+    "edition": "第十六届",
+    "group": "本科组",
+    "region": "全国",
+    "track": "自主选题",
+    "stage": "校赛及企业命题赛",
+    "verified_at": "2026-08-02",
+    "source_ids": [
+      "edition16-undergrad-practice"
+    ]
+  },
+  "sources": [
+    {
+      "id": "edition16-undergrad-practice",
+      "title": "第十六届本科组校赛及企业命题赛通知",
+      "url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "authority_level": "national-organizing-committee",
+      "authority_name": "中国商业统计学会全国大学生市场调查与分析大赛组委会",
+      "official_status": "official-republication",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "local_path": "evidence/rule-sources/edition16-undergrad-practice-source.txt",
+      "sha256": "7bca601071854c06ca74a50ce7f1a20bd3208c735f662e51792aeb71fc054196"
+    }
+  ],
+  "scopes": [
+    {
+      "id": "edition16-undergrad-practice-current-stage",
+      "edition": {
+        "mode": "values",
+        "values": [
+          "第十六届"
+        ]
+      },
+      "group": {
+        "mode": "values",
+        "values": [
+          "本科组"
+        ]
+      },
+      "region": {
+        "mode": "all"
+      },
+      "track": {
+        "mode": "all"
+      },
+      "stage": {
+        "mode": "values",
+        "values": [
+          "校赛及企业命题赛"
+        ]
+      }
+    },
+    {
+      "id": "edition16-undergrad-multi-stage",
+      "edition": {
+        "mode": "values",
+        "values": [
+          "第十六届"
+        ]
+      },
+      "group": {
+        "mode": "values",
+        "values": [
+          "本科组"
+        ]
+      },
+      "region": {
+        "mode": "all"
+      },
+      "track": {
+        "mode": "all"
+      },
+      "stage": {
+        "mode": "values",
+        "values": [
+          "校赛及企业命题赛",
+          "省赛",
+          "国赛初赛",
+          "国赛决赛"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "undergrad-practice-eligibility-knowledge-test",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "eligibility",
+      "rule": "仅知识赛网考通过的参赛选手可以校内自由组队参加实践赛",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-practice-team-composition",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "eligibility",
+      "rule": "每队由3至5名本科生和1至3名指导教师组成，每名学生只能参加1个团队",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-practice-topic-choice",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "topic",
+      "rule": "参赛团队可自主选题，也可选择组委会发布的企业命题",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-report-body-appendix-separation",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "submission",
+      "rule": "参赛报告正文与附录分开提交，正文包含标题页、摘要页、目录页和正文页",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-report-page-limit",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "submission",
+      "rule": "参赛报告正文不超过65页",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-report-anonymity",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "anonymity",
+      "rule": "参赛报告任何一页不得出现参赛校及指导教师相关信息",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-map-compliance",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "map",
+      "rule": "报告和PPT中的中国地图必须使用信息完整的最新版地图，信息不完整将取消参赛资格",
+      "severity": "disqualifying",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-similarity-threshold",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "integrity",
+      "rule": "参赛报告查重率超过20%取消成绩和资格，超过40%视为学术不端并在大赛官网通报",
+      "severity": "disqualifying",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-ai-use",
+      "scope_id": "edition16-undergrad-practice-current-stage",
+      "rule_type": "ai",
+      "rule": "竞赛期间可以使用人工智能工具，但必须公开透明，核心调查与分析必须由参赛队独立完成，并按规范说明AI使用情况",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    },
+    {
+      "id": "undergrad-stage-format",
+      "scope_id": "edition16-undergrad-multi-stage",
+      "rule_type": "format",
+      "rule": "校赛可采用报告加PPT评审或报告加答辩；企业命题赛采用报告评审；省赛和国赛均分初审和决赛，初赛采用报告加PPT评审，决赛采用报告加现场展示答辩",
+      "severity": "hard",
+      "source_id": "edition16-undergrad-practice",
+      "source_title": "第十六届本科组校赛及企业命题赛通知",
+      "source_url": "https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf",
+      "published_date": "2025-11-15",
+      "verified_at": "2026-08-02",
+      "authority": "national-organizing-committee",
+      "status": "active-for-edition"
+    }
+  ]
+}

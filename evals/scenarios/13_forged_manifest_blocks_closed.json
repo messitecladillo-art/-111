@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "extends": "_defense_ready.json",
+  "id": "forged_manifest_blocks_closed",
+  "description": "An arbitrary final-manifest file without a successful handoff identity, self-hash, snapshots, and completion event cannot enter closed.",
+  "steps": [
+    {
+      "id": "enter_submission_ready",
+      "run": ["advance", "--to", "submission_ready", "--expect-revision", "${capture.defense_revision}"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"}
+      ],
+      "invariants": ["project_status_mirror", "adjacent_transition_only", "submission_zero_fatal_high", "event_stream_consistent"],
+      "capture": {
+        "submission_ready_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "install_forged_final_manifest",
+      "write": {
+        "path": "reviews/final-manifest.json",
+        "content": "{\"schema_version\":\"1.0.0\",\"project_id\":\"${capture.project_id}\",\"handoff_id\":\"forged-handoff\",\"artifact_snapshots\":[],\"delivery\":{\"go_no_go\":\"go\",\"manifest_sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}\n"
+      }
+    },
+    {
+      "id": "reject_forged_manifest_close",
+      "run": ["advance", "--to", "closed", "--expect-revision", "${capture.submission_ready_revision}"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_ready_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "json", "pointer": "/failure/details/manifest_errors", "op": "truthy"},
+        {"source": "stdout", "op": "regex", "value": "manifest_self_hash_invalid|artifact_snapshots_missing|handoff_completion_event_missing"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "submission_zero_fatal_high", "event_stream_consistent"]
+    }
+  ]
+}

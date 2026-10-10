@@ -1,0 +1,14 @@
+SOURCE_ID: edition16-undergrad-practice
+TITLE: 第十六届本科组校赛及企业命题赛通知
+AUTHORITY_LEVEL: national-organizing-committee
+AUTHORITY_NAME: 中国商业统计学会全国大学生市场调查与分析大赛组委会
+OFFICIAL_STATUS: official-republication
+PUBLISHED_DATE: 2025-11-15
+VERIFIED_AT: 2026-08-02
+SOURCE_URL: https://som.bit.edu.cn/docs/2026-02/f49cf03dad0840688f9565acd3a70bb6.pdf
+
+PROVENANCE_NOTE:
+This UTF-8 record preserves the source identity used by the machine-comparable
+rule snapshot. It is an extracted provenance record, not a substitute for the
+original PDF. Before a real submission, the project team must retain or verify
+the applicable official notice and refresh its source record and hash.

@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "extends": "_submission_ready.json",
+  "id": "same_producer_role_review_rejected",
+  "description": "Producer role and accountable owner are separate fields; a different person acting in the same producer role cannot approve that final artifact.",
+  "steps": [
+    {
+      "id": "register_role_separation_report",
+      "run": [
+        "artifact", "register", "deliverables/report/report.md",
+        "--id", "ART-ROLE-SEPARATION",
+        "--title", "Role separation report",
+        "--type", "report",
+        "--classification", "derived",
+        "--stage", "submission_ready",
+        "--gate", "submission",
+        "--provenance", "human-authored role separation fixture",
+        "--status", "draft",
+        "--producer-role", "narrative_strategist",
+        "--owner-name", "producer_person"
+      ],
+      "expect_exit": 0,
+      "capture": {
+        "role_separation_sha256": {"source": "json", "pointer": "/artifact/sha256"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent"]
+    },
+    {
+      "id": "write_same_role_review_evidence",
+      "write": {
+        "path": "reviews/same-role-review.json",
+        "content": "{\"artifact_id\":\"ART-ROLE-SEPARATION\",\"artifact_version\":\"v1\",\"artifact_sha256\":\"${capture.role_separation_sha256}\",\"artifact_type\":\"report\",\"producer_role\":\"narrative_strategist\",\"owner_name\":\"producer_person\",\"decision\":\"approved\",\"reviewer_role\":\"narrative_strategist\",\"reviewer_name\":\"different_person_same_role\",\"acceptance_test\":\"Attempted same-role approval\",\"acceptance_checks\":[\"file_hash_current\",\"content_type_match\",\"report_structure_reviewed\",\"cross_file_consistency\"],\"completed_at\":\"2026-08-03T00:50:00Z\"}\n"
+      }
+    },
+    {
+      "id": "reject_same_producer_role_review",
+      "run": [
+        "review", "approve", "ART-ROLE-SEPARATION",
+        "--evidence", "reviews/same-role-review.json",
+        "--reviewer-role", "narrative_strategist",
+        "--reviewer-name", "different_person_same_role",
+        "--review-id", "REV-SAME-PRODUCER-ROLE"
+      ],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "stdout", "op": "regex", "value": "producer role cannot approve|same final artifact"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+claim_id,claim,content_class,population,analysis_sample_n,numerator,denominator,unit,reported_value,evidence_source,data_field,transformation,method,result,limitation,recommendation,output_location,confidence,status
+C001,样本中高频用户满意度更高,actual,完成满意度题的达成样本,200,,,likert_mean_difference,0.5,data/processed/survey.csv,frequency;satisfaction,按清洗日志排除无效问卷,组间比较并报告效应量,高频组均值更高0.5分,非概率样本限制总体外推,对高频用户测试会员权益,report-section-6,medium,verified

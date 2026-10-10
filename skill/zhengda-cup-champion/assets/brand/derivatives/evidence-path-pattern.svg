@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 240" role="img" aria-labelledby="title desc">
+  <title id="title">Q-D-I-A 证据路径纹样</title>
+  <desc id="desc">由问题、数据、洞察与行动四节点构成的装饰性路径，不承载真实数据</desc>
+  <rect width="1600" height="240" fill="#0A1F33"/>
+  <path d="M110 126 C360 34 548 210 790 112 S1220 28 1490 116" fill="none" stroke="#00B3A4" stroke-width="14" stroke-linecap="round"/>
+  <g fill="#F7F4ED" stroke="#F4B942" stroke-width="10">
+    <circle cx="230" cy="92" r="26"/><circle cx="610" cy="146" r="26"/>
+    <circle cx="990" cy="79" r="26"/><circle cx="1370" cy="100" r="26"/>
+  </g>
+  <path d="M1490 116 l-70 -48 v96 z" fill="#F4B942"/>
+</svg>

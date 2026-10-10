@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0.0",
+  "project_visual_system": {
+    "brand_name_zh": "证见",
+    "brand_name_en": "EVI-X",
+    "master_token_source": "skill/zhengda-cup-champion/assets/brand/tokens.json",
+    "master_token_version": "1.0.0",
+    "pinned_at": "unknown",
+    "mode": "competition_submission",
+    "allowed_mode_values": [
+      "agent_ui",
+      "public_promo",
+      "competition_submission"
+    ],
+    "edition": "unknown",
+    "group": "unknown",
+    "region": "unknown",
+    "track": "unknown",
+    "stage": "unknown",
+    "applicable_notice": "unknown"
+  },
+  "canonical_colors": {
+    "ink_navy": "#0A1F33",
+    "insight_teal": "#00B3A4",
+    "insight_teal_dark": "#00796F",
+    "evidence_gold": "#F4B942",
+    "action_coral": "#FF5A5F",
+    "risk_red_dark": "#B83239",
+    "proof_blue": "#2367E8",
+    "paper_ivory": "#F7F4ED",
+    "mist_blue_gray": "#E7EEF3",
+    "slate_gray": "#536677"
+  },
+  "project_overrides": {
+    "topic_accent": null,
+    "approved_font_substitution": null,
+    "approved_layout_exception": null,
+    "approval_owner": null,
+    "approval_reason": null,
+    "approval_date": null
+  },
+  "mode_controls": {
+    "agent_ui": {
+      "label": "Product",
+      "brand_mark": "allowed",
+      "mascot": "allowed",
+      "ai_concept_image": "allowed_with_ledger",
+      "official_or_third_party_mark": "authorized_original_only"
+    },
+    "public_promo": {
+      "label": "Public",
+      "brand_mark": "allowed_reduced",
+      "mascot": "allowed_when_relevant",
+      "non_official_disclosure": "required",
+      "ai_concept_image": "label_if_fact_confusion_is_possible",
+      "official_or_third_party_mark": "authorized_original_only",
+      "non_official_disclosure_text_zh": "证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。"
+    },
+    "competition_submission": {
+      "label": "Competition",
+      "brand_mark": "hidden_by_default",
+      "mascot": "hidden_by_default",
+      "watermark": "forbidden_by_default",
+      "asset_admission": "explicit_whitelist_only",
+      "ai_concept_image": "exception_only_after_rule_and_evidence_review",
+      "anonymity_review": "required",
+      "official_or_third_party_mark": "current_scoped_rule_and_authorization_required"
+    }
+  },
+  "content_controls": {
+    "allowed_class_values": [
+      "actual",
+      "proposed",
+      "simulated",
+      "inferred",
+      "conceptual"
+    ],
+    "ai_image_required_class": "conceptual",
+    "ai_image_as_fieldwork_evidence": false,
+    "ai_image_as_data_or_model_output": false,
+    "generated_text_in_final_art": false,
+    "ai_redraw_of_official_marks": false,
+    "ai_use_ledger_required": true
+  },
+  "accessibility_controls": {
+    "normal_text_contrast_ratio_min": 4.5,
+    "large_text_contrast_ratio_min": 3,
+    "non_text_contrast_ratio_min": 3,
+    "color_only_encoding": false,
+    "alt_text_for_informative_images": true,
+    "data_table_for_key_charts": true,
+    "grayscale_check": true,
+    "color_vision_deficiency_check": true,
+    "tagged_pdf_and_reading_order": true
+  },
+  "print_controls": {
+    "raster_ppi_min_at_final_size": 300,
+    "bleed_mm": 3,
+    "safe_margin_from_trim_mm": 5,
+    "positive_stroke_min_mm": 0.3,
+    "reverse_stroke_min_mm": 0.4,
+    "preferred_pdf_standard": "PDF/X-4",
+    "embed_fonts": true,
+    "target_printer_icc_required": true,
+    "proof_required": true
+  },
+  "chart_controls": {
+    "required_metadata": [
+      "title",
+      "unit",
+      "sample_base_n",
+      "time_scope",
+      "source",
+      "method_if_needed"
+    ],
+    "categorical_palette": [
+      "#00796F",
+      "#2367E8",
+      "#F4B942",
+      "#B83239",
+      "#536677",
+      "#00B3A4"
+    ],
+    "direct_labels_preferred": true,
+    "three_dimensional_charts": false,
+    "vector_output_preferred": true,
+    "cross_file_numeric_consistency_required": true
+  },
+  "unresolved": [
+    "Confirm the safe default competition_submission mode or record an approved change before visual production.",
+    "Resolve applicable edition group region track and stage rules.",
+    "Record any approved override without replacing canonical colors."
+  ]
+}

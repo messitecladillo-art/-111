@@ -1,0 +1,54 @@
+{
+  "source": "evi-x-avatar-v1.png",
+  "method": "Pillow LANCZOS deterministic resize",
+  "outputs": [
+    {
+      "path": "icon-large-1024.png",
+      "width": 1024,
+      "height": 1024,
+      "sha256": "991c227cc5c4edfc17758206d0b485066f8853f11bb725421ca5310e0979d039"
+    },
+    {
+      "path": "icon-512.png",
+      "width": 512,
+      "height": 512,
+      "sha256": "e92d4e16eb4244a4bab0ec60b96ea1868e3fda9659187960c9edd5f841e054b3"
+    },
+    {
+      "path": "icon-small-400.png",
+      "width": 400,
+      "height": 400,
+      "sha256": "b892065aa504fa76d4ba147728ff6e7c7f4351e6ed02990a217279c087bb337a"
+    },
+    {
+      "path": "icon-256.png",
+      "width": 256,
+      "height": 256,
+      "sha256": "4755cf1c5bf796d07b3d2c5dba49e5c5d6d0fdc0a149d7fba60ef8e1d1b0958e"
+    },
+    {
+      "path": "icon-128.png",
+      "width": 128,
+      "height": 128,
+      "sha256": "1e41ff3a6bf4f1d3f824c20c4125aa4176fefb2710d6774eb405058fc9eb7d77"
+    },
+    {
+      "path": "icon-64.png",
+      "width": 64,
+      "height": 64,
+      "sha256": "73080ff7d763fd8c23bf5b43882e409c9439015e28fd204723b6f14ca2f291fa"
+    },
+    {
+      "path": "icon-32.png",
+      "width": 32,
+      "height": 32,
+      "sha256": "71c8f31b066458fd2c8cc1535196c3046a0aafc71083506cb64d42ef2e43de78"
+    },
+    {
+      "path": "icon-16.png",
+      "width": 16,
+      "height": 16,
+      "sha256": "3fb006c8ddf2042e5f392ee7fae918a6230c2174849f7af726694a67639f2fb0"
+    }
+  ]
+}

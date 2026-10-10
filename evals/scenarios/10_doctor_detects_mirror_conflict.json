@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "id": "doctor_detects_mirror_conflict",
+  "description": "Doctor detects an out-of-band project.status edit and reports a revision/mirror conflict without advancing authoritative state.",
+  "steps": [
+    {
+      "id": "bootstrap",
+      "run": ["bootstrap", "--title", "Mirror Conflict"],
+      "expect_exit": 0,
+      "invariants": ["project_status_mirror", "event_stream_consistent"],
+      "capture": {
+        "initial_revision": {"source": "json", "pointer": "/status_revision"}
+      }
+    },
+    {
+      "id": "tamper_project_status",
+      "replace": {
+        "path": "project.yaml",
+        "replacements": [
+          {"old": "  status: intake", "new": "  status: report_visual"}
+        ]
+      }
+    },
+    {
+      "id": "doctor_rejects_conflict",
+      "run": ["doctor"],
+      "allow_project_mirror_conflict": true,
+      "expect_exit": 5,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "intake"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "intake"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "initial_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "concurrency"},
+        {"source": "stdout", "op": "regex", "value": "mirror|status.*conflict|conflict.*status"}
+      ],
+      "invariants": ["blocked_preserves_status", "event_stream_consistent"]
+    }
+  ]
+}

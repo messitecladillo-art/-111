@@ -1,0 +1,1 @@
+task_id,project_id,title,stage,gate,owner_role,owner_name,reviewer_role,reviewer_name,input_artifact_ids,output_artifact_id,output_path,dependency_task_ids,priority,status,started_at,due_at,definition_of_done,acceptance_evidence,blocker_ids,checkpoint_id,created_at,updated_at,notes

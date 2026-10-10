@@ -1,0 +1,7 @@
+interface:
+  display_name: "证见 EVI-X｜正大杯研策智能体"
+  short_description: "循证完成正大杯调研、分析、报告、答辩与合规审计"
+  icon_small: "./assets/brand/ui/icon-small-400.png"
+  icon_large: "./assets/brand/logo/mark.svg"
+  brand_color: "#0A1F33"
+  default_prompt: "使用 $zhengda-cup-champion 诊断我的正大杯项目，并产出下一份证据可追溯、合规且视觉完成度高的交付物。"

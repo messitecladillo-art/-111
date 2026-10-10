@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "extends": "_handoff_ready.json",
+  "id": "deleted_aggregate_audit_blocks_closed",
+  "description": "The aggregate audit referenced by a final manifest remains part of the closure trust chain; deleting it after handoff blocks closed.",
+  "steps": [
+    {
+      "id": "create_handoff_before_audit_delete",
+      "run": ["handoff"],
+      "expect_exit": 0,
+      "assert": [
+        {"source": "json", "pointer": "/go_no_go", "op": "eq", "value": "go"}
+      ],
+      "capture": {
+        "aggregate_audit_path": {"source": "json", "pointer": "/aggregate_audit"}
+      },
+      "invariants": ["project_status_mirror", "event_stream_consistent", "submission_zero_fatal_high"]
+    },
+    {
+      "id": "delete_committed_aggregate_audit",
+      "delete": {
+        "path": "${capture.aggregate_audit_path}"
+      }
+    },
+    {
+      "id": "reject_close_after_audit_delete",
+      "run": ["advance", "--to", "closed", "--expect-revision", "${capture.submission_revision}"],
+      "expect_exit": 1,
+      "assert": [
+        {"source": "json", "pointer": "/status_before", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_after", "op": "eq", "value": "submission_ready"},
+        {"source": "json", "pointer": "/status_revision", "op": "eq", "value_from": {"capture": "submission_revision"}},
+        {"source": "json", "pointer": "/failure/class", "op": "eq", "value": "gate"},
+        {"source": "stdout", "op": "regex", "value": "aggregate_audit_missing"}
+      ],
+      "invariants": ["project_status_mirror", "blocked_preserves_status", "event_stream_consistent", "submission_zero_fatal_high"]
+    }
+  ]
+}

@@ -1,0 +1,365 @@
+{
+  "contract_id": "zhengda-cup-champion.workflow",
+  "version": "1.0.0",
+  "status_field": "project.status",
+  "competition_stage_field": "project.stage",
+  "initial_status": "intake",
+  "terminal_statuses": [
+    "closed"
+  ],
+  "stages": [
+    {
+      "id": "intake",
+      "ordinal": 0,
+      "terminal": false,
+      "description": "Inspect available artifacts, establish provenance, and create or validate project state."
+    },
+    {
+      "id": "rule_lock",
+      "ordinal": 1,
+      "terminal": false,
+      "description": "Resolve edition, group, region, track, competition stage, and applicable official notices."
+    },
+    {
+      "id": "problem_framing",
+      "ordinal": 2,
+      "terminal": false,
+      "description": "Define the decision owner, decision, affected population, evidence gap, and expected action."
+    },
+    {
+      "id": "exploratory_research",
+      "ordinal": 3,
+      "terminal": false,
+      "description": "Establish the desk-research and qualitative basis for constructs and hypotheses."
+    },
+    {
+      "id": "survey_design",
+      "ordinal": 4,
+      "terminal": false,
+      "description": "Align population, sampling frame, instrument, variables, analysis plan, and decision use."
+    },
+    {
+      "id": "fieldwork",
+      "ordinal": 5,
+      "terminal": false,
+      "description": "Pilot and execute documented, consent-aware, provenance-preserving fieldwork."
+    },
+    {
+      "id": "data_analysis",
+      "ordinal": 6,
+      "terminal": false,
+      "description": "Clean, analyze, validate, and document the data without exceeding the design's inference strength."
+    },
+    {
+      "id": "insight_action",
+      "ordinal": 7,
+      "terminal": false,
+      "description": "Turn supported findings into owned, prioritized, measurable actions."
+    },
+    {
+      "id": "report_visual",
+      "ordinal": 8,
+      "terminal": false,
+      "description": "Produce synchronized report, appendix, presentation, and evidence-led visual artifacts."
+    },
+    {
+      "id": "defense",
+      "ordinal": 9,
+      "terminal": false,
+      "description": "Prepare and rehearse concise, technically owned responses to final-round scrutiny."
+    },
+    {
+      "id": "submission_ready",
+      "ordinal": 10,
+      "terminal": false,
+      "description": "Hold a fully audited, internally consistent, anonymity-safe submission candidate."
+    },
+    {
+      "id": "closed",
+      "ordinal": 11,
+      "terminal": true,
+      "description": "Record final handoff, immutable manifests, unresolved owner actions, and closure evidence."
+    }
+  ],
+  "transition_policy": {
+    "forward_only": true,
+    "adjacent_only": true,
+    "allow_self_transition": false,
+    "allow_skip": false,
+    "allow_manual_fatal_override": false,
+    "recovery_changes_status": false,
+    "required_global_preconditions": [
+      "project_schema_valid",
+      "agent_state_schema_valid",
+      "current_status_matches_transition_from",
+      "project_status_mirror_matches_agent_state",
+      "expected_status_revision_matches",
+      "single_writer_lock_held",
+      "required_gate_results_are_current",
+      "no_unresolved_fatal_finding",
+      "checkpoint_committed_before_status_advance"
+    ]
+  },
+  "gate_result_acceptance": {
+    "accepted": [
+      "pass",
+      "warning"
+    ],
+    "warning_requires": [
+      "decision_log_entry",
+      "owner",
+      "deadline"
+    ],
+    "blocking": [
+      "not_run",
+      "running",
+      "fail",
+      "unknown",
+      "stale"
+    ]
+  },
+  "allowed_transitions": [
+    {
+      "id": "intake_to_rule_lock",
+      "from": "intake",
+      "to": "rule_lock",
+      "required_gates": [],
+      "required_artifacts": [
+        "project.yaml",
+        "agent-state.json"
+      ]
+    },
+    {
+      "id": "rule_lock_to_problem_framing",
+      "from": "rule_lock",
+      "to": "problem_framing",
+      "required_gates": [
+        "rule"
+      ],
+      "required_artifacts": [
+        "project.yaml",
+        "evidence/rules.json"
+      ]
+    },
+    {
+      "id": "problem_framing_to_exploratory_research",
+      "from": "problem_framing",
+      "to": "exploratory_research",
+      "required_gates": [
+        "rule",
+        "problem"
+      ],
+      "required_artifacts": [
+        "project-brief.md",
+        "evidence/decision-log.md"
+      ]
+    },
+    {
+      "id": "exploratory_research_to_survey_design",
+      "from": "exploratory_research",
+      "to": "survey_design",
+      "required_gates": [
+        "rule",
+        "problem"
+      ],
+      "required_artifacts": [
+        "research/research-design.md"
+      ]
+    },
+    {
+      "id": "survey_design_to_fieldwork",
+      "from": "survey_design",
+      "to": "fieldwork",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design"
+      ],
+      "required_artifacts": [
+        "research/research-design.md",
+        "research/instruments"
+      ]
+    },
+    {
+      "id": "fieldwork_to_data_analysis",
+      "from": "fieldwork",
+      "to": "data_analysis",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork"
+      ],
+      "required_artifacts": [
+        "data/raw",
+        "evidence/evidence-ledger.csv"
+      ]
+    },
+    {
+      "id": "data_analysis_to_insight_action",
+      "from": "data_analysis",
+      "to": "insight_action",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork",
+        "data",
+        "inference"
+      ],
+      "required_artifacts": [
+        "data/processed",
+        "analysis/code",
+        "analysis/outputs",
+        "evidence/evidence-ledger.csv"
+      ]
+    },
+    {
+      "id": "insight_action_to_report_visual",
+      "from": "insight_action",
+      "to": "report_visual",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork",
+        "data",
+        "inference",
+        "action"
+      ],
+      "required_artifacts": [
+        "evidence/evidence-ledger.csv",
+        "evidence/decision-log.md"
+      ]
+    },
+    {
+      "id": "report_visual_to_defense",
+      "from": "report_visual",
+      "to": "defense",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork",
+        "data",
+        "inference",
+        "action",
+        "visual"
+      ],
+      "required_artifacts": [
+        "deliverables/report",
+        "deliverables/ppt",
+        "evidence/visual-asset-ledger.csv",
+        "evidence/visual-preflight-checklist.csv"
+      ]
+    },
+    {
+      "id": "defense_to_submission_ready",
+      "from": "defense",
+      "to": "submission_ready",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork",
+        "data",
+        "inference",
+        "action",
+        "visual",
+        "submission"
+      ],
+      "required_artifacts": [
+        "deliverables/report",
+        "deliverables/ppt",
+        "deliverables/defense",
+        "evidence/preflight-checklist.csv"
+      ]
+    },
+    {
+      "id": "submission_ready_to_closed",
+      "from": "submission_ready",
+      "to": "closed",
+      "required_gates": [
+        "rule",
+        "problem",
+        "design",
+        "fieldwork",
+        "data",
+        "inference",
+        "action",
+        "visual",
+        "submission"
+      ],
+      "required_artifacts": [
+        "reviews/final-manifest.json",
+        "evidence/decision-log.md"
+      ]
+    }
+  ],
+  "fatal_boundaries": [
+    {
+      "gate": "rule",
+      "blocks_transition_ids": [
+        "rule_lock_to_problem_framing"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "problem",
+      "blocks_transition_ids": [
+        "problem_framing_to_exploratory_research"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "design",
+      "blocks_transition_ids": [
+        "survey_design_to_fieldwork"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "fieldwork",
+      "blocks_transition_ids": [
+        "fieldwork_to_data_analysis"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "data",
+      "blocks_transition_ids": [
+        "data_analysis_to_insight_action"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "inference",
+      "blocks_transition_ids": [
+        "data_analysis_to_insight_action"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "action",
+      "blocks_transition_ids": [
+        "insight_action_to_report_visual"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "visual",
+      "blocks_transition_ids": [
+        "report_visual_to_defense"
+      ],
+      "skippable": false
+    },
+    {
+      "gate": "submission",
+      "blocks_transition_ids": [
+        "defense_to_submission_ready",
+        "submission_ready_to_closed"
+      ],
+      "skippable": false
+    }
+  ]
+}
