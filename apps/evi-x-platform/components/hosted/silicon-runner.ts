@@ -29,7 +29,7 @@ export function parseRunView(v: unknown): RunView {
     });
     return { id: v.id, status: v.status as Status, done: v.done as number, total: v.total as number, services, responses, createdAt: v.createdAt, ...(isText(v.errorCode, 64) ? { errorCode: v.errorCode } : {}) };
   } catch {
-    throw new HostedApiError(200, 'invalid_server_receipt', '未收到可核对的运行回执。已发出的调用可能已计费，请在稍后核对。');
+    throw new HostedApiError(200, 'invalid_server_receipt', '运行回执待核对，已发出的调用可能已计费。请稍后查询。');
   }
 }
 
@@ -41,11 +41,20 @@ const ERRORS: Record<string, string> = {
 };
 const sleep = (ms: number, signal: AbortSignal) => new Promise<void>(resolve => { const t = setTimeout(resolve, ms); signal.addEventListener('abort', () => { clearTimeout(t); resolve(); }, { once: true }); });
 
+/** Display names for services; identical label + model pairs get a short id so they can be told apart. */
+export function serviceNames(services: Service[]): Map<string, string> {
+  const base = (s: Service) => `${s.label} · ${s.model}`;
+  const counts = new Map<string, number>();
+  for (const s of services) counts.set(base(s), (counts.get(base(s)) ?? 0) + 1);
+  return new Map(services.map(s => [s.id, (counts.get(base(s)) ?? 0) > 1 ? `${base(s)} · ${s.id.slice(0, 6)}` : base(s)]));
+}
+
 /** Model engine for the 硅基样本 lab in a hosted project: the server holds keys, prompts and limits. */
-export function createSiliconRunner({ projectId, services, localTest, mutate }: { projectId: string; services: Service[]; localTest: boolean; mutate: (path: string, body?: unknown, method?: string) => Promise<unknown> }): SiliconRunner {
-  const usable = services.filter(s => s.capabilities.includes('research'));
+export function createSiliconRunner({ projectId, services, localTest, mutate, maxCalls }: { projectId: string; services: Service[]; localTest: boolean; mutate: (path: string, body?: unknown, method?: string) => Promise<unknown>; maxCalls?: number }): SiliconRunner {
+  const usable = services.filter(s => s.capabilities.includes('research')), names = serviceNames(usable);
   return {
-    models: usable.map(s => ({ id: s.id, label: `${s.label} · ${s.model}`, detail: `${s.provider} · 配置 v${s.revision}` })),
+    models: usable.map(s => ({ id: s.id, label: names.get(s.id)!, detail: `${s.provider} · 配置 v${s.revision}` })),
+    maxCalls,
     consentLabel: localTest ? '确认使用合成模型验收本次运行，不产生真实模型费用。' : '同意把画像设定与问卷内容发送给所选模型供应商，由模型扮演虚构受访者作答，并使用我的 API 额度。',
     async run(request: SiliconRunRequest, onProgress, signal) {
       const base = `/api/projects/${projectId}/silicon-runs`;
@@ -74,10 +83,16 @@ export function createSiliconRunner({ projectId, services, localTest, mutate }: 
         questionnaire: { title: request.design.title, fingerprint: designFingerprint(request.design), questions: request.design.questions.length },
         attributes: request.attributes, personas: request.personas, settings: { ...request.settings, scenarios: request.settings.scenarios.length ? request.settings.scenarios : [NO_SCENARIO], models: names }, responses: view.responses ?? [],
         notes: [
-          '由语言模型扮演虚构受访者生成的模拟回答，只用于问卷预测试；不是调查数据，不得填补或扩充真实样本。',
+          '语言模型生成的虚构受访者回答，仅用于问卷预测试，不得填补或扩充真实样本。',
           ...(view.status !== 'ready' ? [ERRORS[view.errorCode ?? ''] || `运行状态：${view.status}`] : []),
         ],
       };
     },
   };
+}
+
+/** The run list also reports the server's limits; anything unexpected is ignored rather than guessed. */
+export function parseSiliconLimits(value: unknown): { maxCalls: number } | null {
+  const limits = value && typeof value === 'object' ? (value as { limits?: { maxCalls?: unknown } }).limits : undefined;
+  return limits && Number.isInteger(limits.maxCalls) && (limits.maxCalls as number) > 0 ? { maxCalls: limits.maxCalls as number } : null;
 }

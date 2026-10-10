@@ -129,7 +129,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       const raw = file ? await file.arrayBuffer() : new TextEncoder().encode(handoff ? handoff.csv.replace(/^\uFEFF/, "") : sample ? DEMO_SURVEY_CSV : paste).buffer;
       const usedEncoding = file ? encoding : "utf-8";
       let text: string;
-      try { text = new TextDecoder(usedEncoding, { fatal: true }).decode(raw); } catch { throw new Error("当前编码无法完整读取文件，请核对 UTF-8 / GB18030 后重新选择；没有用乱码替换原值。"); }
+      try { text = new TextDecoder(usedEncoding, { fatal: true }).decode(raw); } catch { throw new Error("当前编码无法完整读取文件，请核对 UTF-8 / GB18030 后重新选择。"); }
       const usedDelimiter = sample || handoff ? "," : delimiter;
       let table: SurveyTable;
       try {
@@ -216,7 +216,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       <button type="button" aria-pressed={inResults} aria-controls="analysis-results" disabled={!dataset} onClick={() => setSection("recipes")}><span>03</span>分析结果</button>
     </nav>
     {error && <div className={styles.error} role="alert">{error}{dataset && " 当前已载入的数据仍保留。"}<button type="button" onClick={() => { setSection("data"); setImportOpen(true); }}>检查读取选项</button></div>}
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
+    {notice && <p className={styles.notice} data-tone={dataset?.silicon && notice.startsWith('已按模拟数据载入') ? 'caution' : undefined} role="status">{notice}</p>}
     {missing.error && <div className={styles.error} role="alert">{missing.error}{section !== "data" && <button type="button" onClick={() => setSection("data")}>修改缺失代码</button>}</div>}
     {mappingStale && section !== "mapping" && <div className={styles.warning} role="status">源问卷已变化，请重新核对对应后再分析。<button type="button" onClick={() => setSection("mapping")}>核对题目对应</button></div>}
     <div id="analysis-data" hidden={section !== "data"}>
@@ -234,7 +234,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       {profile.columns.length === 1 && <p className={styles.warning}>只识别到一列。如原表不止一列，请核对分隔符后重新读取。</p>}
       {profile.columns.some(c => c.likelyIdentifier) && <p className={styles.warning}>发现疑似标识列：{profile.columns.filter(c => c.likelyIdentifier).map(c => c.name).join("、")}。已隐藏其取值和数值统计，不参与量表选择。此提示仅依据列名，不等同于完成去标识审查。</p>}
 <div className={styles.overviewGrid}><div className={styles.card}><h3>原文件编码检查</h3><p>此表包含所有原始记录和正常跳题，不是有效率或漏答率。点击列名后按已确认的题项应答范围查看分布。</p><div className={styles.tableScroll} tabIndex={0} aria-label="变量概览，可横向滚动"><table><thead><tr><th>变量</th><th>数值 n</th><th>非数值</th><th>缺失</th><th>不同值</th></tr></thead><tbody>{profile.columns.map(c => <tr key={c.index} data-selected={detail === c.index}><th><button type="button" onClick={() => { setDetail(c.index); setInterpretation(c.nonNumeric || c.likelyIdentifier ? "category" : "numeric"); }}>{c.name}</button></th><td>{c.numeric}</td><td>{c.nonNumeric}</td><td>{c.missing}</td><td>{c.distinct}</td></tr>)}</tbody></table></div></div><div className={styles.card}>
-        {!column ? <div className={styles.emptyDetail}><span>变量检查</span><h3>选择一个变量，查看它的分布</h3><p>缺失、混合编码和极端值应先解释，再进入后续分析。系统不会替你删除答卷。</p></div> : <><SourceBadge simulated={dataset.kind === "simulated"}/><div className={styles.cardHeading}><h3>{column.name}</h3><select aria-label="变量解释方式" value={overviewMode} disabled={column.likelyIdentifier||!!mapping} onChange={e => setInterpretation(e.target.value as "numeric" | "category")}><option value="numeric">按数值解释</option><option value="category">按分类解释</option></select></div>
+        {!column ? <div className={styles.emptyDetail}><span>变量检查</span><h3>选择一个变量，查看它的分布</h3><p>先核对缺失、混合编码和极端值；原始答卷保留，剔除需另行决定。</p></div> : <><SourceBadge simulated={dataset.kind === "simulated"}/><div className={styles.cardHeading}><h3>{column.name}</h3><select aria-label="变量解释方式" value={overviewMode} disabled={column.likelyIdentifier||!!mapping} onChange={e => setInterpretation(e.target.value as "numeric" | "category")}><option value="numeric">按数值解释</option><option value="category">按分类解释</option></select></div>
           {overviewPrepared?.eligibility&&<p className={styles.note}>{routingSummary(overviewPrepared.eligibility)}</p>}
           {overviewErrors.length?<p className={styles.warning}>{overviewErrors.join(" ")}</p>:overviewMode === "numeric" ? <><p>仅采用 {column.numeric} 个可解析数值；另有缺失 {column.missing}、非数值 {column.nonNumeric}。绝对值超过 10¹² 视为不可计算值。</p>{column.stats ? <dl className={styles.statsGrid}>{[["均值", column.stats.mean],["样本标准差",column.stats.sd],["中位数",column.stats.median],["最小值",column.stats.min],["Q1",column.stats.q1],["Q3",column.stats.q3],["最大值",column.stats.max]].map(([label, value]) => <div key={String(label)}><dt>{label}</dt><dd>{format(value as number | null)}</dd></div>)}</dl> : <p>没有可计算的数值。</p>}<p className={styles.note}>标准差使用 n−1；Q1/Q3 使用 Type 7 插值。满意度单题的均值解释需结合有序测量假设。</p></> : <><p>分母为非缺失记录 n={frequencies?.n}；缺失 {frequencies?.missing} 条不进入比例。</p>{column.likelyIdentifier ? <p className={styles.warning}>疑似标识列不展示取值标签，请先在原文件去标识。</p> : <div className={styles.bars}>{frequencies?.values.slice(0, 12).map(v => <div className={styles.barRow} key={v.label}><span>{v.label}</span><strong>{v.count} · {pct(v.count, frequencies.n)}</strong><div className={styles.barTrack}><i style={{ width: `${v.count / Math.max(1, frequencies.n) * 100}%` }}/></div></div>)}{(frequencies?.values.length || 0) > 12 && <p>另有 {frequencies!.values.length - 12} 类，合计 {frequencies!.values.slice(12).reduce((n,v) => n+v.count,0)} 条；只显示频数最高的 12 类。</p>}</div>}</>}
         </>}
@@ -269,7 +269,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       </>}
       <details className={styles.evidenceDrawer}><summary>整理为报告段落 <span>{evidenceCandidates.length ? `${evidenceCandidates.length} 项当前有效结果` : "计算后可用"}</span></summary><ResearchFlow candidates={evidenceCandidates} localOnly/></details>
     </div>
-    <details className={styles.methodNotes}><summary>方法、来源与尚未完成的检验</summary><p>本页支持未加权描述、分组汇总、交叉关联强度、Pearson / Spearman 相关与内部一致性计算；尚未进行显著性检验、KMO、Bartlett、EFA/CFA、回归或因果推断。原始 α = k/(k−1) × [1−各题方差之和/总分方差]，所有题项使用同一完整案例集合。</p><div>{SOURCES.map(s => <article key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title} ↗</a><p>{s.note}</p></article>)}</div><p className={styles.note}>来源核查：2026-09-26。方法说明不是当届赛事官方规则；有权重、复杂抽样或正式效度验证需求时，应使用适合设计的分析流程。</p></details>
+    <details className={styles.methodNotes}><summary>方法、来源与适用范围</summary><p>本页支持未加权描述、分组汇总、交叉关联强度、Pearson / Spearman 相关与内部一致性计算；尚未进行显著性检验、KMO、Bartlett、EFA/CFA、回归或因果推断。原始 α = k/(k−1) × [1−各题方差之和/总分方差]，所有题项使用同一完整案例集合。</p><div>{SOURCES.map(s => <article key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title} ↗</a><p>{s.note}</p></article>)}</div><p className={styles.note}>来源核查：2026-09-26。方法说明不是当届赛事官方规则；有权重、复杂抽样或正式效度验证需求时，应使用适合设计的分析流程。</p></details>
   </section>;
 }
 function Metric({ label, value, note }: { label: string; value: string; note: string }) { return <article><span>{label}</span><strong>{value}</strong><small>{note}</small></article>; }

@@ -286,7 +286,7 @@ export default function OfficeFileLibrary() {
       activeRef.current = saved.file; setActive(saved.file); setFiles(list => [saved.file, ...list.filter(f => f.id !== saved.file.id)]);
       setVersions(list => [saved.version, ...list.filter(v => v.fileId === saved.file.id && v.id !== saved.version.id)]);
       pickedRef.current = null; setPicked(null); pending.current = null; setLabel("");
-      setNotice(`服务器已确认保存：${saved.version.filename} · v${saved.version.revision}。原文件字节已校验；这不是浏览器全文编辑或自动保存。`);
+      setNotice(`服务器已确认保存：${saved.version.filename} · v${saved.version.revision}。已校验上传文件字节。`);
     } catch (failure) {
       if (current(task)) {
         if (failure instanceof FileServiceError && failure.status === 409 && !isScopeError(failure)) { conflict.current = "refresh"; setConflictStep("refresh"); pending.current = null; setError("版本或重试状态发生冲突，未覆盖已有版本。请先刷新，再重新选择本地文件并核对目标版本。"); }
@@ -345,8 +345,8 @@ export default function OfficeFileLibrary() {
   const unavailable = connection !== "ready", blocked = connection === "scope-blocked";
   const canUpload = !!picked && !!label.trim() && !busy && !unavailable && !blocked && conflictStep === "none" && (mode === "new" || !!active);
   return <section className={styles.library} aria-label="Office 原文件库">
-    <header className={styles.heading}><div><span className={styles.kicker}>ORIGINAL FILES · VERSIONED</span><h2>原文件，按版本保留。</h2><p>DOCX 与 PPTX 独立文件库，不替换结构化草稿，也不将原稿转换为 JSON 文本模型。</p></div><span className={styles.storage} data-ready={connection === "ready"}>{connection === "loading" ? "正在连接存储" : connection === "ready" ? storage === "local-r2" ? "本地开发存储" : "对象存储已连接" : "存储连接待恢复"}</span></header>
-    <div className={styles.engineNote} data-configured={nativeConfigured}><strong>{nativeStatus === "ready" ? "ONLYOFFICE 接口已配置" : "浏览器全文编辑引擎尚未连接"}</strong><p>{nativeStatus === "ready" ? "选择一个 DOCX 或 PPTX，打开真正的文档编辑界面。只有关闭后的服务端回调被确认，才会生成新版本；是否能实际编辑仍取决于文档服务是否运行。" : nativeStatus === "checking" ? "正在检查 ONLYOFFICE 接入状态；原文件上传和下载不受影响。" : "当前仍可上传、下载和保留不可变版本；部署 ONLYOFFICE 文档服务并完成签名配置后，才开放浏览器内编辑。"}</p></div>
+    <header className={styles.heading}><div><span className={styles.kicker}>ORIGINAL FILES · VERSIONED</span><h2>原文件，按版本保留。</h2><p>独立保存完整 DOCX 与 PPTX，与文本草稿分开管理。</p></div><span className={styles.storage} data-ready={connection === "ready"}>{connection === "loading" ? "正在连接存储" : connection === "ready" ? storage === "local-r2" ? "本地开发存储" : "对象存储已连接" : "存储连接待恢复"}</span></header>
+    <div className={styles.engineNote} data-configured={nativeConfigured}><strong>{nativeStatus === "ready" ? "ONLYOFFICE 接口已配置" : "浏览器全文编辑引擎尚未连接"}</strong><p>{nativeStatus === "ready" ? "选择 DOCX 或 PPTX 开始编辑。文档服务需运行；关闭编辑器后，服务器确认保存回调才会生成新版本。" : nativeStatus === "checking" ? "正在检查 ONLYOFFICE 接入状态；原文件上传和下载不受影响。" : "可先上传、下载和保存版本。浏览器内编辑需部署并配置 ONLYOFFICE。"}</p></div>
     {storage === "local-r2" && <p className={styles.localNote}>当前为本地开发存储。请提前在上方“身份与恢复”保存恢复密钥，才能在 Cookie 丢失后恢复同一草稿与文件库。密钥不是文件备份；请同时保留本地原件和下载备份。未提前设置密钥且会话丢失时，无法凭文件名找回身份。</p>}
     {error && <div className={styles.error} role="alert"><p>{error}</p>{blocked && !identityFrozen && <button type="button" disabled={!!busy} onClick={reconnectIdentity}>清空选择并连接当前身份</button>}</div>}
     {notice && <p className={styles.notice} role="status">{notice}</p>}

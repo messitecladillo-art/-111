@@ -17,7 +17,7 @@ export default function ResearchPipeline() {
     <div className={styles.pipelineHead}>
       <span className={styles.eyebrow}>研究流水线</span>
       <h2 id="ov-pipeline-title">从问题到答辩，每一步都留下证据</h2>
-      <p>硅基样本放在问卷定稿之前：它帮你在真人作答前修好问卷，而不是代替真人作答。</p>
+      <p>先用硅基样本检查题目，再开展真人调研。</p>
     </div>
     <ol className={styles.steps}>
       {STEPS.map((s, i) => {

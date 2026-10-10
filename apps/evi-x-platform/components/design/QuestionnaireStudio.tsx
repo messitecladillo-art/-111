@@ -45,7 +45,9 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const confirmOperation = useRef<{resolve: (answer: boolean)=>void; revision: number; returnFocus: HTMLElement | null} | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
-  useEffect(()=>{if(localOnly&&!hosted)session.setUnsaved('local-questionnaire',dirty);return()=>{if(!hosted)session.setUnsaved('local-questionnaire',false);};},[dirty,localOnly,!!hosted,session.setUnsaved]);
+  const {setUnsaved,cacheDraft}=session, isHosted=!!hosted, userId=session.session?.user?.id;
+  const cacheKey=hosted?.cacheKey, savedFingerprint=hosted?.savedFingerprint, hostedLoad=hosted?.load, onLoaded=hosted?.onLoaded;
+  useEffect(()=>{if(localOnly&&!isHosted)setUnsaved('local-questionnaire',dirty);return()=>{if(!isHosted)setUnsaved('local-questionnaire',false);};},[dirty,localOnly,isHosted,setUnsaved]);
   const [previewRevision,setPreviewRevision]=useState(0);
   const [libraryResetKey,setLibraryResetKey]=useState(0);
   const libraryIdentity=useRef(0);
@@ -58,6 +60,16 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const input = useRef<HTMLInputElement>(null);
   const variableInput = useRef<HTMLInputElement>(null), pendingFocus = useRef(false);
   const editorRef = useRef<HTMLDivElement>(null), briefRef = useRef<HTMLDetailsElement>(null);
+  // Dropdown menus are <details>; close them once an item is chosen, on an outside click and on Escape.
+  const closeMenuAfterAction = (event: React.MouseEvent<HTMLDivElement>) => { if ((event.target as HTMLElement).closest('button')) event.currentTarget.closest('details')?.removeAttribute('open'); };
+  useEffect(() => {
+    const close = (keep: EventTarget | null) => document.querySelectorAll<HTMLDetailsElement>('details[data-menu][open]').forEach(menu => { if (!(keep instanceof Node && menu.contains(keep))) menu.open = false; });
+    const onPointer = (event: PointerEvent) => close(event.target);
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close(null); };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onPointer); document.removeEventListener('keydown', onKey); };
+  }, []);
   const design = history.present.content;
   const repairOrigin = history.present.repairOrigin;
   const active = design.questions.find(q => q.id === activeId) || design.questions[0];
@@ -67,14 +79,14 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const blockers = issues.filter(i => i.level === "blocker");
   const pendingNumbers = Object.entries(numericDrafts).filter(([,draft])=>draft.error);
   const hasPendingNumbers=pendingNumbers.length>0;
-  useLayoutEffect(()=>{if(hosted?.cacheKey&&session.session?.user?.id)session.cacheDraft(hosted.cacheKey,{history,numericDrafts,activeId},hasPendingNumbers||hosted.savedFingerprint!==parseQuestionnaireLibraryContent(design).serialized,session.session.user.id);},[history,numericDrafts,activeId,hasPendingNumbers,design,hosted?.cacheKey,hosted?.savedFingerprint,session.session?.user?.id,session.cacheDraft]);
+  useLayoutEffect(()=>{if(cacheKey&&userId)cacheDraft(cacheKey,{history,numericDrafts,activeId},hasPendingNumbers||savedFingerprint!==parseQuestionnaireLibraryContent(design).serialized,userId);},[history,numericDrafts,activeId,hasPendingNumbers,design,cacheKey,savedFingerprint,userId,cacheDraft]);
   useLayoutEffect(()=>{onSnapshot?.({design,pending:hasPendingNumbers});},[design,hasPendingNumbers,onSnapshot]);
   const loadedIntent=useRef('');
   useEffect(()=>{
-    if(!hosted?.load || hosted.load.id===loadedIntent.current)return;
-    const safe=parseQuestionnaire(JSON.stringify(hosted.load.design));loadedIntent.current=hosted.load.id;
-    setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');hosted.onLoaded?.();
-  },[hosted?.load,hosted?.onLoaded]);
+    if(!hostedLoad || hostedLoad.id===loadedIntent.current)return;
+    const safe=parseQuestionnaire(JSON.stringify(hostedLoad.design));loadedIntent.current=hostedLoad.id;
+    setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');onLoaded?.();
+  },[hostedLoad,onLoaded]);
   // When the design comes back to the saved version, it is clean again (adjusted during render, not in an effect).
   const savedMatch=useMemo(()=>!!hosted&&hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers,[hosted,design,hasPendingNumbers]);
   const [lastSavedMatch,setLastSavedMatch]=useState(savedMatch);
@@ -264,7 +276,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     try{
       if(pendingNumbers.length)throw Error('请先完成或恢复尚未应用的数值输入，再发送问卷快照。');
       onAnalyze?.({design:parseQuestionnaire(JSON.stringify(design)),pending:false});
-      setNotice('已将本版快照发送到分析页；仍需核对数据列并确认对应。不是实际施测版本认证。');
+      setNotice('已将本版快照发送到分析页，请核对数据列并确认对应；实际施测版本仍需另行核验。');
       window.location.hash='analysis';
     }catch(e){setError((e as Error).message);}
   }
@@ -275,9 +287,9 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
       <div className={styles.documentTitle}><div className={styles.documentState}><span>问卷设计</span><small>待实施草稿</small><small>{hosted?(hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers?'已保存到项目':'有未保存修改'):'本页编辑 · 不自动保存'}</small></div><h2>{design.title || '未命名问卷设计'}</h2></div>
       <div className={styles.toolbar} role="group" aria-label="问卷文件与编辑操作">
         <div className={styles.toolGroup}><button type="button" disabled={!history.past.length} onClick={()=>travel(true)}>撤销</button><button type="button" disabled={!history.future.length} onClick={()=>travel(false)}>重做</button></div>
-        <details className={styles.fileMenu}><summary>文件</summary><div>
+        <details className={styles.fileMenu} data-menu><summary>文件</summary><div onClick={closeMenuAfterAction}>
           <button type="button" onClick={()=>replace(newQuestionnaire(),"已新建空白设计，可撤销恢复上一版。")}>新建空白问卷</button>
-          <button type="button" onClick={()=>replace(exampleQuestionnaire(),"已载入自编教学示例，不是获奖原问卷或成熟量表。")}>载入教学示例</button>
+          <button type="button" onClick={()=>replace(exampleQuestionnaire(),"已载入自编教学示例，使用前需修改与预试。")}>载入教学示例</button>
           <button type="button" disabled={reading} onClick={()=>input.current?.click()}>{reading?"正在读取…":"恢复备份"}</button>
           <hr/><button type="button" onClick={()=>exportFile('text')}>导出问卷草稿</button><button type="button" onClick={()=>exportFile('dictionary')}>导出变量字典</button>
         </div></details>
@@ -317,10 +329,10 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     </div>
     <div hidden={view!=='assemble'}><QuestionBlocks design={design} onAppend={next=>{const first=next.questions[design.questions.length];commit(next,`已追加 ${next.questions.length-design.questions.length} 道自编草稿题；研究用途、选项与显示条件需继续核对。`);clearFilters();if(first)selectQuestion(first.id);}}/></div>
     {view==='assemble'?null:view==='edit'?<><div className={styles.mobileTabs} role="group" aria-label="小屏工作区"><button type="button" aria-pressed={mobilePane==='edit'} onClick={()=>setMobilePane('edit')}>编辑题目</button><button type="button" aria-pressed={mobilePane==='preview'} onClick={()=>setMobilePane('preview')}>查看预览</button></div><div className={styles.workspace} data-mobile-pane={mobilePane}>
-      <nav className={styles.outline} aria-label="问卷题目目录"><h3><span>题目目录 <small>{directory.length} / {design.questions.length}</small></span><button type="button" aria-label="添加题目" disabled={design.questions.length>=80} onClick={()=>{clearFilters();add();}}>＋</button></h3><details className={styles.directoryFilters}><summary>查找与筛选{query||filter!=='all'?' · 已启用':''}</summary><label className={styles.searchLabel}>查找题目<input type="search" value={query} maxLength={160} onChange={e=>setQuery(e.target.value)} placeholder="搜索题干、变量或构念"/></label><label className={styles.filterLabel}>筛选题目<select value={filter} onChange={e=>setFilter(e.target.value as QuestionFilter)}><option value="all">全部题目</option><option value="blocker">有结构问题</option><option value="unmapped">研究用途未映射</option><option value="conditional">有显示条件</option><option value="pending">有未应用数值</option></select></label></details><div className={styles.questionList}>{directory.map(({question:q,number,blockers:count,pending})=><button type="button" key={q.id} aria-current={q.id===active?.id?'true':undefined} onClick={()=>{setActiveId(q.id);setError('');}}><span>{String(number).padStart(2,'0')} · {q.variable || '未编码'}{pending?<em>数值待应用</em>:count>0?<em>{count} 项结构问题</em>:null}</span><strong>{q.text || '填写题干'}</strong><small>{QUESTION_TYPES[q.type]}{q.condition?' · 条件显示':''}</small></button>)}</div>{!directory.length&&<p className={styles.noResults}>没有匹配的题目。筛选不会删除或修改设计。</p>}{(query||filter!=='all')&&<button type="button" className={styles.clearFilter} onClick={clearFilters}>清除搜索与筛选</button>}</nav>
+      <nav className={styles.outline} aria-label="问卷题目目录"><h3><span>题目目录 <small>{directory.length} / {design.questions.length}</small></span><button type="button" aria-label="添加题目" disabled={design.questions.length>=80} onClick={()=>{clearFilters();add();}}>＋</button></h3><details className={styles.directoryFilters}><summary>查找与筛选{query||filter!=='all'?' · 已启用':''}</summary><label className={styles.searchLabel}>查找题目<input type="search" value={query} maxLength={160} onChange={e=>setQuery(e.target.value)} placeholder="搜索题干、变量或构念"/></label><label className={styles.filterLabel}>筛选题目<select value={filter} onChange={e=>setFilter(e.target.value as QuestionFilter)}><option value="all">全部题目</option><option value="blocker">有结构问题</option><option value="unmapped">研究用途未映射</option><option value="conditional">有显示条件</option><option value="pending">有未应用数值</option></select></label></details><div className={styles.questionList}>{directory.map(({question:q,number,blockers:count,pending})=><button type="button" key={q.id} aria-current={q.id===active?.id?'true':undefined} onClick={()=>{setActiveId(q.id);setError('');}}><span>{String(number).padStart(2,'0')} · {q.variable || '未编码'}{pending?<em>数值待应用</em>:count>0?<em>{count} 项结构问题</em>:null}</span><strong>{q.text || '填写题干'}</strong><small>{QUESTION_TYPES[q.type]}{q.condition?' · 条件显示':''}</small></button>)}</div>{!directory.length&&<p className={styles.noResults}>没有匹配的题目，请调整搜索或筛选。</p>}{(query||filter!=='all')&&<button type="button" className={styles.clearFilter} onClick={clearFilters}>清除搜索与筛选</button>}</nav>
       <div className={styles.card} ref={editorRef} aria-label="当前题项编辑">{active?<>
         {!directory.some(entry=>entry.question.id===active.id)&&<p className={styles.filteredActive}>当前题目不在筛选结果中，编辑内容仍保留。<button type="button" onClick={clearFilters}>显示全部</button></p>}
-        <div className={styles.cardHeading}><h3>第 {activeIndex+1} 题 <small>/ {design.questions.length}</small></h3><details className={styles.fileMenu}><summary>题目操作</summary><div><button type="button" disabled={activeIndex===0} onClick={()=>move(-1)}>上移</button><button type="button" disabled={activeIndex===design.questions.length-1} onClick={()=>move(1)}>下移</button><button type="button" onClick={()=>add(true)}>复制</button><button type="button" onClick={remove}>移除</button></div></details></div>
+        <div className={styles.cardHeading}><h3>第 {activeIndex+1} 题 <small>/ {design.questions.length}</small></h3><details className={styles.fileMenu} data-menu><summary>题目操作</summary><div onClick={closeMenuAfterAction}><button type="button" disabled={activeIndex===0} onClick={()=>move(-1)}>上移</button><button type="button" disabled={activeIndex===design.questions.length-1} onClick={()=>move(1)}>下移</button><button type="button" onClick={()=>add(true)}>复制</button><button type="button" onClick={remove}>移除</button></div></details></div>
         <label>题干<textarea data-design-field="text" aria-invalid={hasIssue('text_missing')} aria-describedby={hasIssue('text_missing')?activeIssueId:undefined} rows={3} value={active.text} maxLength={600} placeholder="一次只询问一个明确的问题" onChange={e=>updateQuestion({text:e.target.value})}/></label>
         <div className={styles.fields}><label>变量编码<input data-design-field="variable" ref={variableInput} aria-invalid={hasIssue('variable_invalid','variable_duplicate')} aria-describedby={hasIssue('variable_invalid','variable_duplicate')?activeIssueId:undefined} value={active.variable} maxLength={32} onChange={e=>updateQuestion({variable:e.target.value})}/></label><label>题型<select value={active.type} onChange={e=>changeType(e.target.value as QuestionType)}>{Object.entries(QUESTION_TYPES).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>
         <div className={styles.fields}><label>题目角色<select value={active.purpose} onChange={e=>updateQuestion({purpose:e.target.value as DesignQuestion['purpose']})}><option value="research">研究题</option><option value="screening">筛选 / 路由题</option><option value="background">背景信息题</option></select></label><label className={styles.check}><input data-design-field="required" type="checkbox" checked={active.required} onChange={e=>updateQuestion({required:e.target.checked})}/>拟设为必答</label></div>
@@ -341,7 +353,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
       </aside>
     </div></>:<div className={styles.review}>
       <div className={styles.card}><h3>问题—变量—分析—行动</h3><p>映射齐全不代表方法适配。点击变量返回题目，补足具体的研究依据。</p><div className={styles.tableScroll} tabIndex={0} aria-label="研究用途映射表，可横向滚动"><table><thead><tr><th>变量 / 题型</th><th>研究问题</th><th>构念</th><th>拟分析</th><th>决策用途</th><th>来源 / 改编</th></tr></thead><tbody>{design.questions.map(q=><tr key={q.id}><th><button type="button" onClick={()=>selectQuestion(q.id,'question_unmapped')}>{q.variable || '未编码'}</button><small>{QUESTION_TYPES[q.type]}</small></th><td>{q.researchQuestion || (q.purpose==='screening'?'筛选 / 路由':'待补充')}</td><td>{q.construct || '未填写'}</td><td>{ANALYSIS_PLANS[q.analysis]}</td><td>{q.decisionUse || '待补充'}</td><td>{q.source || '待补充'}</td></tr>)}</tbody></table></div></div>
-      <div className={styles.card}><h3>结构问题与人工复核</h3><p>结构检查不认证信度、效度、内容准确性、伦理合规或可正式发放；也不会自动通过赛事 Gate。</p><div className={styles.reviewFilters} role="group" aria-label="检查项筛选">{([['all','全部'],['blocker','结构问题'],['review','人工复核']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={reviewFilter===value} onClick={()=>setReviewFilter(value)}>{label}</button>)}</div>{reviewIssues.length?<ul className={styles.issueList}>{reviewIssues.map(i=><li key={`${i.questionId}-${i.code}`} data-level={i.level}><span>{i.level==='blocker'?'结构问题':'人工复核'}</span><div><button type="button" onClick={()=>i.questionId?selectQuestion(i.questionId,i.code):i.code==='empty'?add():openBrief(i.code)}>{i.questionId?`定位 ${design.questions.find(q=>q.id===i.questionId)?.variable || '未编码题'}`:i.code==='empty'?'添加第一道题':'补充研究简介'}</button><p>{i.message}</p></div></li>)}</ul>:<p className={styles.notice}>{issues.length?'此分类下没有检查项，可切换至其他分类。':'未检出当前规则能识别的问题。仍需专家审查与预试，不等于问卷已有效。'}</p>}</div>
+      <div className={styles.card}><h3>结构问题与人工复核</h3><p>结构检查后，仍须复核信度、效度、内容与伦理，开展预试；发放与赛事 Gate 均需单独确认。</p><div className={styles.reviewFilters} role="group" aria-label="检查项筛选">{([['all','全部'],['blocker','结构问题'],['review','人工复核']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={reviewFilter===value} onClick={()=>setReviewFilter(value)}>{label}</button>)}</div>{reviewIssues.length?<ul className={styles.issueList}>{reviewIssues.map(i=><li key={`${i.questionId}-${i.code}`} data-level={i.level}><span>{i.level==='blocker'?'结构问题':'人工复核'}</span><div><button type="button" onClick={()=>i.questionId?selectQuestion(i.questionId,i.code):i.code==='empty'?add():openBrief(i.code)}>{i.questionId?`定位 ${design.questions.find(q=>q.id===i.questionId)?.variable || '未编码题'}`:i.code==='empty'?'添加第一道题':'补充研究简介'}</button><p>{i.message}</p></div></li>)}</ul>:<p className={styles.notice}>{issues.length?'此分类下没有检查项，可切换至其他分类。':'当前规则未发现问题，仍须专家审查与预试。'}</p>}</div>
     </div>}
     <details className={styles.sources}><summary>保存说明与设计依据</summary><p className={styles.storage}>编辑保留在本页，本页不收集受访者答卷。{hosted?'云端保存与历史版本见项目工作台；请明确保存当前设计。':localOnly?'请下载本地备份；也可到“我的项目”编辑并保存云端版本。':'可下载本地备份，或在问卷库中明确保存。'}刷新会丢失未保存编辑和暂存输入。最多 80 题，支持最近 40 步撤销。</p><p>自动检查只核对结构与少量措辞线索；合理选项是否齐全、题意是否被正确理解、量表是否适用，都需要实际研究。默认值、容量限制和提示不是赛事硬规则。</p><ul><li><a href="https://aapor.org/standards-and-ethics/best-practices/" target="_blank" rel="noopener noreferrer">AAPOR · 调查设计与预试</a></li><li><a href="https://www.pewresearch.org/writing-survey-questions/" target="_blank" rel="noopener noreferrer">Pew Research Center · 题目措辞与顺序</a></li><li><a href="https://www.census.gov/about/policies/quality/standards/standarda2.html" target="_blank" rel="noopener noreferrer">U.S. Census · 工具预试与功能测试参考</a></li></ul><p>核查日期：2026-09-27。以上作为方法参考，不将其他机构内部规范当作本届比赛要求。</p></details>
     <dialog className={styles.confirmDialog} ref={confirmDialog} aria-labelledby="design-confirm-title" aria-describedby="design-confirm-description" onCancel={event=>{event.preventDefault();finishConfirmation(false);}}>

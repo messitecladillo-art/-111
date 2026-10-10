@@ -236,7 +236,7 @@ export default function EditorRecovery({ onBeforeRestore }: { onBeforeRestore: (
   const candidateLocked = candidate?.state === "pending" || (candidate?.state === "conflict" && !conflictRead);
   return <section className={styles.panel} aria-label="编辑文件访问恢复" aria-busy={Boolean(busy)}>
     <button className={styles.disclosure} type="button" aria-expanded={expanded} aria-controls={panelId} onClick={toggle}>
-      <span className={styles.symbol} aria-hidden="true">↗</span><span className={styles.heading}><strong>身份与恢复</strong><span>给文件留一把恢复钥匙：换浏览器或清除 Cookie 后，用自己保管的密钥恢复访问。</span></span>
+      <span className={styles.symbol} aria-hidden="true">↗</span><span className={styles.heading}><strong>身份与恢复</strong><span>用恢复密钥在换浏览器或清除 Cookie 后找回文件访问权限。</span></span>
       <span className={styles.badge}>{terminal ? "本页已保护" : status?.recovery.configured ? "已设置" : "恢复设置"}</span><span aria-hidden="true">{expanded ? "−" : "+"}</span>
     </button>
     <div id={panelId} hidden={!expanded} className={styles.body}>
@@ -244,7 +244,7 @@ export default function EditorRecovery({ onBeforeRestore }: { onBeforeRestore: (
       <div className={styles.statusBar}><span>{busy === "status" ? "正在读取恢复状态…" : status ? `当前身份${status.recovery.configured ? `已设置 · 第 ${status.recovery.revision} 版` : "尚未设置恢复密钥"}` : "展开后读取当前会话"}</span><button type="button" disabled={Boolean(busy)} onClick={() => void refresh()}>{terminal || connection === "scope-blocked" ? "检查当前会话状态" : "刷新状态"}</button></div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
-      {(terminal || connection === "scope-blocked") && <div className={styles.protection}><strong>先保存手边的工作，再手动刷新</strong><p>本页不会自动切换文件或重新加载。请使用编辑器原有的导出功能备份未保存内容，并保留已选本地文件；完成后，由你手动刷新浏览器。检查状态不会解除本页保护。</p></div>}
+      {(terminal || connection === "scope-blocked") && <div className={styles.protection}><strong>先备份，再手动刷新</strong><p>请导出未保存内容，并保留已选本地文件，再手动刷新浏览器。本页不会自动切换文件；检查状态不会解除保护。</p></div>}
       <div className={styles.grid}>
         <div className={styles.card}>
           <span className={styles.step}>01 / 留好备份</span><h3>{status?.recovery.configured ? "更换恢复密钥" : "创建恢复密钥"}</h3>

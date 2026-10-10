@@ -17,7 +17,7 @@ function LocalEvidenceSummary({candidates}:{candidates:EvidenceCandidate[]}){
   const [selected,setSelected]=useState('');
   const candidate=candidates.find(c=>c.key===selected), preview=candidate?evidenceSection(candidate.input,'本地汇总'):null;
   function download(){if(!preview||!candidate)return;const url=URL.createObjectURL(new Blob([JSON.stringify({schema:'evix-local-evidence/v1',input:candidate.input,proposal:preview},null,2)],{type:'application/json;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='统计证据提案.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  return <section className={styles.flow} aria-label="本地统计证据提案"><header className={styles.head}><div><span className={styles.eyebrow}>计算 → 证据 → 报告</span><h3>把统计结果整理成报告段落</h3><p>固定程序根据本页实际计算生成段落，可预览与下载。云端报告写入将在成果编辑阶段接入。</p></div></header><div className={styles.compose}><div><label>选择当前有效结果<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">{candidates.length?'选择统计结果':'先计算频数卡片或量表 α'}</option>{candidates.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label><button type="button" disabled={!preview} onClick={download}>下载统计证据提案</button></div><div className={styles.preview}>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p><details><summary>依据与计算口径</summary><pre>{preview.source}</pre></details></>:<p>选择本页计算后形成的结果，查看可以写入报告的内容。</p>}</div></div></section>;
+  return <section className={styles.flow} aria-label="本地统计证据提案"><header className={styles.head}><div><span className={styles.eyebrow}>计算 → 证据 → 报告</span><h3>把统计结果整理成报告段落</h3><p>根据本页计算生成报告段落，可预览与下载。云端写入将在成果编辑阶段接入。</p></div></header><div className={styles.compose}><div><label>选择当前有效结果<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">{candidates.length?'选择统计结果':'先计算频数卡片或量表 α'}</option>{candidates.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label><button type="button" disabled={!preview} onClick={download}>下载统计证据提案</button></div><div className={styles.preview}>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p><details><summary>依据与计算口径</summary><pre>{preview.source}</pre></details></>:<p>选择已计算的结果，预览报告段落。</p>}</div></div></section>;
 }
 function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
   const [runs,setRuns]=useState<ResearchRun[]>([]),[drafts,setDrafts]=useState<DraftSummary[]>([]),[scope,setScope]=useState('');
@@ -78,7 +78,7 @@ function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
   }
   const preview=candidate?evidenceSection(candidate.input,'本地预览'):null;
   return <section className={styles.flow} aria-label="证据写入报告" id="research-flow">
-    <header className={styles.head}><div><span className={styles.eyebrow}>研究执行 · P0</span><h3>让计算结果，带着依据进入报告</h3><p>首版接入频数比例与 Cronbach α。自动形成提案，由你决定是否写入。</p></div><button type="button" disabled={busy||frozen} onClick={()=>void operation(reload)}>刷新记录</button></header>
+    <header className={styles.head}><div><span className={styles.eyebrow}>统计结果 → 报告</span><h3>将统计结果写入报告</h3><p>支持频数比例与 Cronbach α；核对提案后确认写入。</p></div><button type="button" disabled={busy||frozen} onClick={()=>void operation(reload)}>刷新记录</button></header>
     <ol className={styles.steps}><li><b>01</b> 本页计算</li><li><b>02</b> 保存汇总</li><li><b>03</b> 核对提案</li><li><b>04</b> 确认新版本</li></ol>
     {error&&<p className={styles.error} role="alert">{error} 如遇响应超时，先刷新记录核对；重复同一请求不会重复写入。</p>}{notice&&<p className={styles.notice} role="status">{notice}</p>}
     <div className={styles.compose}><div>
@@ -89,7 +89,7 @@ function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
       {candidate&&<details className={styles.payload}><summary>将保存哪些信息？查看完整汇总</summary><p>数据指纹、来源分类、研究问题、变量名、缺失设置、样本数与汇总数值。关联问卷时还包含问卷/解析/对应指纹，以及所选题目的 ID、变量、题型、构念、范围和反向设置。条件题还保存处理策略、资格范围、排除和逐题六类计数（含条件父题 ID）。不上传题干、选项文字、答卷行、行位置或原文件。汇总和构念名称仍可能敏感，尤其是小样本。</p><pre>{JSON.stringify(candidate.input,null,2)}</pre></details>}
       <label className={styles.check}><input type="checkbox" checked={consent} disabled={!candidate||busy||frozen} onChange={e=>setConsent(e.target.checked)}/><span>我已检查隐私，同意将上述汇总保存到当前系统，不上传原始答卷。</span></label>
       <button type="button" className={styles.primary} disabled={!candidate||!draft||!consent||busy||frozen||!scope} onClick={propose}>{busy?'正在处理…':'保存汇总并生成提案'}</button>
-    </div><div className={styles.preview}><span className={styles.eyebrow}>写入前预览 · 不自动修改报告</span>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p></>:<div className={styles.empty}><h4>这里呈现实际结果，不预填结论</h4><p>完成上方计算后选择结果，即可看到报告段落。每条数字由固定公式形成，不调用大模型，也不自动联网。</p></div>}</div></div>
+    </div><div className={styles.preview}><span className={styles.eyebrow}>写入前预览 · 不自动修改报告</span>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p></>:<div className={styles.empty}><h4>计算后预览报告段落</h4><p>选择已计算的结果预览段落。数字由固定公式计算，不调用大模型或联网。</p></div>}</div></div>
     <div className={styles.history}><aside><h4>已保存的执行记录 <small>{runs.length} / 80</small></h4>{!runs.length?<p>确认保存汇总后，记录可在刷新后恢复。未上传的答卷仍只在本页内存。</p>:runs.map(r=><button type="button" key={r.id} data-active={r.id===runId} onClick={()=>{setRunId(r.id);setApproval(false);}}><span>{r.input.classification==='simulated'?'模拟 · ':''}{r.proposal.title}</span><small>{labels[r.status]} · {new Date(r.createdAt).toLocaleString('zh-CN')}</small></button>)}</aside>
       <div className={styles.detail}>{run?<>
         <div className={styles.runHead}><h4>{labels[run.status]}</h4><span>{runTarget} · v{run.baseRevision}{run.acceptedRevision?` → v${run.acceptedRevision}`:''}</span></div>
@@ -101,6 +101,6 @@ function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
           <label className={styles.check}><input type="checkbox" checked={approval} disabled={!inputCurrent||stale||busy||frozen} onChange={e=>setApproval(e.target.checked)}/><span>已核对本次提案，同意追加到「{runTarget}」v{run.baseRevision}，并保留前后快照（占用 2 个命名版本）。</span></label>
           <div className={styles.actions}><button type="button" className={styles.primary} disabled={!approval||!inputCurrent||stale||busy||frozen} onClick={()=>decide('accept')}>确认写入新版本</button><button type="button" disabled={busy||frozen} onClick={()=>decide('cancel')}>取消此提案</button></div></>}
         {run.status==='accepted'&&<p className={styles.notice}>版本回执：v{run.acceptedRevision}。<a href="#editor">前往报告编辑器</a>，从草稿库打开目标报告；已有未保存编辑不会被自动替换。</p>}
-      </>:<div className={styles.empty}><h4>每一次确认，都留有版本</h4><p>生成提案不会改稿。取消不会触碰报告；其他页面先改了报告时，系统会拒绝过期提案。</p></div>}</div></div>
+      </>:<div className={styles.empty}><h4>确认后保存新版本</h4><p>核对提案后再确认写入；取消会保留原稿。报告已被其他页面修改时，请基于新版本重新生成。</p></div>}</div></div>
   </section>;
 }

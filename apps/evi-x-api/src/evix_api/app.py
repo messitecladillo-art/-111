@@ -755,7 +755,9 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
         rows = session.execute(select(SiliconRun).where(SiliconRun.project_id == p.id, SiliconRun.user_id == user.id)
                                .order_by(SiliconRun.created_at.desc(), SiliconRun.id.desc()).limit(30)).scalars().all()
         session.commit()
-        return {"runs": [silicon_view(row) for row in rows]}
+        # Limits let the browser warn before a request the server would refuse.
+        return {"runs": [silicon_view(row) for row in rows],
+                "limits": {"maxCalls": settings.silicon_max_calls, "hourlyRuns": settings.silicon_hourly_runs, "maxServices": silicon.LIMITS["services"]}}
 
     def silicon_row(session, user, project_id, run_id, lock=False):
         p, _ = owned_project(session, user, project_id)

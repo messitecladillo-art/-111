@@ -24,7 +24,7 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
     try { const value = parseSession(await hostedRequest('/api/session')); if (epoch === requestEpoch.current) accept(value); return value; }
     catch (e) { if (epoch === requestEpoch.current) { setError(errorMessage(e)); setLoading(false); } throw e; }
   }, [accept]);
-  useEffect(() => { void refresh().catch(() => {}); const c = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('evix-hosted-account-v1'); channel.current = c; if (c) c.onmessage = e => { if (e.data === 'changed') void refresh().catch(() => {}); }; return () => { requestEpoch.current++; c?.close(); channel.current = null; }; }, [refresh]);
+  useEffect(() => { const counter = requestEpoch; void refresh().catch(() => {}); const c = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('evix-hosted-account-v1'); channel.current = c; if (c) c.onmessage = e => { if (e.data === 'changed') void refresh().catch(() => {}); }; return () => { counter.current++; c?.close(); channel.current = null; }; }, [refresh]);
   useEffect(() => { locationRef.current = { url: location.href, state: history.state }; }, [pathname]);
   useEffect(() => {
     const focus = () => { void refresh().catch(() => {}); };
@@ -33,13 +33,13 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
       const previous = locationRef.current;
       const alreadyAccepted = acceptedTraversal === location.href;
       acceptedTraversal = null;
-      if (!alreadyAccepted && previous && dirty.current.size && new URL(previous.url).pathname !== location.pathname && !window.confirm('当前有未保存的修改。取消可留在本页；继续返回后，本标签页仍保留草稿，再次进入项目可恢复。')) {
+      if (!alreadyAccepted && previous && dirty.current.size && new URL(previous.url).pathname !== location.pathname && !window.confirm('有未保存的修改，是否返回？本标签页会保留草稿，再次进入项目可恢复。')) {
         event.stopImmediatePropagation(); history.pushState(previous.state, '', previous.url); return;
       }
       locationRef.current = { url: location.href, state: history.state };
     };
     const navigation=(window as unknown as {navigation?:EventTarget}).navigation;
-    const traversal=(event:Event)=>{const e=event as Event&{navigationType?:string;destination?:{url:string}};acceptedTraversal=null;if(e.navigationType==='traverse'&&e.cancelable&&dirty.current.size&&e.destination&&new URL(e.destination.url).pathname!==location.pathname){if(!window.confirm('当前有未保存的修改。取消可留在本页；继续返回后，本标签页仍保留草稿，再次进入项目可恢复。'))e.preventDefault();else acceptedTraversal=e.destination.url;}};
+    const traversal=(event:Event)=>{const e=event as Event&{navigationType?:string;destination?:{url:string}};acceptedTraversal=null;if(e.navigationType==='traverse'&&e.cancelable&&dirty.current.size&&e.destination&&new URL(e.destination.url).pathname!==location.pathname){if(!window.confirm('有未保存的修改，是否返回？本标签页会保留草稿，再次进入项目可恢复。'))e.preventDefault();else acceptedTraversal=e.destination.url;}};
     navigation?.addEventListener('navigate',traversal);
     window.addEventListener('focus', focus); window.addEventListener('pageshow', focus); window.addEventListener('popstate', back, true);
     return () => { navigation?.removeEventListener('navigate',traversal);window.removeEventListener('focus', focus); window.removeEventListener('pageshow', focus); window.removeEventListener('popstate', back, true); };
@@ -50,7 +50,7 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
       if (!dirty.current.size || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const link = (e.target as Element | null)?.closest('a[href]'); if (!(link instanceof HTMLAnchorElement) || link.target === '_blank' || link.hasAttribute('download')) return;
       const next = new URL(link.href); if (next.origin !== location.origin || next.pathname === location.pathname) return;
-      if (!window.confirm('当前有未保存的修改。取消可留在本页；继续离开后，本标签页仍保留草稿，再次进入项目可恢复。')) { e.preventDefault(); e.stopImmediatePropagation(); }
+      if (!window.confirm('有未保存的修改，是否离开？本标签页会保留草稿，再次进入项目可恢复。')) { e.preventDefault(); e.stopImmediatePropagation(); }
     };
     window.addEventListener('beforeunload', unload); document.addEventListener('click', click, true);
     return () => { window.removeEventListener('beforeunload', unload); document.removeEventListener('click', click, true); };
@@ -58,7 +58,7 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
   const setUnsaved = useCallback((key: string, changed: boolean) => { if (changed) dirty.current.add(key); else dirty.current.delete(key); }, []);
   const getDraft=useCallback((key:string)=>draftCache.current.get(key)?.value,[]);
   const cacheDraft=useCallback((key:string,value:unknown,changed:boolean,ownerId:string)=>{if(sessionRef.current?.user?.id===ownerId)draftCache.current.set(key,{value,changed});},[]);
-  const navigate = useCallback((path: string) => { if (dirty.current.size && !window.confirm('当前有未保存的修改。取消可留在本页；继续离开后，本标签页仍保留草稿，再次进入项目可恢复。')) return false; router.push(path); return true; }, [router]);
+  const navigate = useCallback((path: string) => { if (dirty.current.size && !window.confirm('有未保存的修改，是否离开？本标签页会保留草稿，再次进入项目可恢复。')) return false; router.push(path); return true; }, [router]);
   const mutate = useCallback(async (path: string, body?: unknown, method = 'POST') => {
     const current = sessionRef.current;
     if (!current?.authenticated || !current.csrfToken) throw Error('请先完成邮箱登录。');
@@ -67,7 +67,7 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
     return value;
   }, []);
   const logout = useCallback(async () => {
-    if ((dirty.current.size||Array.from(draftCache.current.values()).some(d=>d.changed)) && !window.confirm('当前标签页有未保存的研究草稿。请先保存或下载备份；确认退出会清除会话内草稿。')) return;
+    if ((dirty.current.size||Array.from(draftCache.current.values()).some(d=>d.changed)) && !window.confirm('退出将清除本标签页未保存的草稿。请先保存或下载备份，确认退出？')) return;
     await mutate('/api/auth/logout'); accept({ authenticated: false, mode: sessionRef.current?.mode || 'production' }); channel.current?.postMessage('changed'); router.push('/login');
   }, [accept, mutate, router]);
   return <Context.Provider value={{ session, loading, error, identityEpoch, refresh, accept, announce, logout, setUnsaved, getDraft,cacheDraft,navigate, mutate }}><Fragment key={identityEpoch}>{children}</Fragment></Context.Provider>;

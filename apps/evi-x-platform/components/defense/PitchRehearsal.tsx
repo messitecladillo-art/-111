@@ -71,7 +71,7 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
       const at = performance.now();
       const next = startPitchSession({id:crypto.randomUUID(), reportVersion, startedAt:new Date().toISOString(), corpusVersion, total, reserve, weights}, at);
       publish([...records.current, next]); setNow(at); setError('');
-      setNotice('计时已开始，按下“完成本段”才会进入下一段。计划、材料版本已冻结；不录音，也不读取报告内容。');
+      setNotice('计时已开始，按“完成本段”进入下一段。本轮计划和版本标签已固定；不采集音频或报告内容。');
     } catch (reason) {setError(reason instanceof Error ? reason.message : '无法开始，请检查本轮设置。');}
   };
   const act = (action:'pause'|'resume'|'complete-block'|'stop') => {
@@ -106,7 +106,7 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
       const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], {type:'application/json;charset=utf-8'}));
       const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'EVI-X-彩排记录-非官方.json'; anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice('已发起彩排记录下载，请确认文件已保存。这是独立的复盘 JSON，不支持从“导入练习笔记”恢复，也不是赛事计时证明。'); setError('');
+      setNotice('已发起下载，请确认文件已保存。彩排 JSON 仅供复盘，无法通过“导入练习笔记”恢复，不能用作赛事计时证明。'); setError('');
     } catch {setError('导出失败，页面内的记录仍保留，请重试。');}
   };
   const clear = () => {
@@ -116,8 +116,8 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
   };
 
   return <section ref={panel} className={styles.panel} aria-labelledby="rehearsal-title">
-    <header className={styles.heading}><div><span className={styles.kicker}>把计划练一遍</span><h3 id="rehearsal-title">分段实测彩排</h3><p>用一次真实练习，找到该压缩的说明和不能省略的证据。</p></div><span className={styles.tag}>仅本地 · 非官方计时</span></header>
-    <p className={styles.boundary}>记录只在当前页面内存中；刷新或关闭会丢失，同页切换模块会暂停并保留。彩排与答辩笔记需分别导出；彩排 JSON 仅供复盘，暂不支持导入恢复。浏览器计时仅作练习参考；切到后台自动暂停，不采集音视频，不验证报告或获奖水平。</p>
+    <header className={styles.heading}><div><span className={styles.kicker}>把计划练一遍</span><h3 id="rehearsal-title">分段实测彩排</h3><p>逐段记录用时，对照计划复盘。</p></div><span className={styles.tag}>仅本地 · 非官方计时</span></header>
+    <p className={styles.boundary}>记录仅存于当前页面；刷新或关闭会丢失。切换模块或进入后台会自动暂停，返回后手动继续。彩排与答辩笔记需分别导出；彩排 JSON 暂不支持导入恢复。计时仅供练习，不采集音视频，不核验报告。</p>
     <div className={styles.setup}><label>本轮报告 / 讲稿版本<input maxLength={120} value={reportVersion} onChange={e => setReportVersion(e.target.value)} disabled={active} placeholder="例如：讲稿 v3 · 10 月 2 日修订（自行填写）"/></label><button type="button" onClick={start} disabled={active || !!planError || !reportVersion.trim() || sessions.length >= MAX_ROUNDS}>{sessions.length ? '按当前计划再练一轮' : '开始本轮计时'}</button></div>
     {!!planError && <p className={styles.warning}>先修正上方时间设置，才能开始新一轮；已有记录不受影响。</p>}
     {sessions.length >= MAX_ROUNDS && <p className={styles.warning}>本页已记录 20 轮，不会自动删除旧记录。请先导出并确认保存，再清空以继续。</p>}

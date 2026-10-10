@@ -198,7 +198,7 @@ export function fidelityReport(design: Questionnaire, run: SiliconRun, expectati
 
   const risks = run.personas.map(fidelityRisk);
   return {
-    turing: { verdict: 'manual', note: '需要人工盲评：把模拟开放回答与少量真实预调查回答混排，请未参与设计的同学判断来源。系统不替代这一步。' },
+    turing: { verdict: 'manual', note: '需人工盲评：将模拟开放回答与少量真实预调查回答混排，由未参与设计者判断来源。' },
     backward: { verdict: backwardVerdict, attributes },
     forward: { verdict: forwardVerdict, straightlining: straight, reversePairs: reverse, routingViolations: violations, notes },
     pattern: { verdict: patternVerdict, checks },

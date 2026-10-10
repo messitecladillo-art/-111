@@ -3,20 +3,15 @@
 import {
   FormEvent,
   KeyboardEvent,
-  useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  ALLOWED_TRANSITIONS,
-  CONTROL_CONTRACT_META,
   GATE_NAMES,
-  GATE_VALUES,
   PROJECT_STAGES,
   type GateName,
-  type GateValue,
   type ProjectStage,
 } from "@/data/control-plane-contract.generated";
 import { RULE_CORPUS_META } from "@/data/rule-corpus.generated";
@@ -86,32 +81,6 @@ type CaseLibraryNotice = {
   body: string;
   coverage: string;
   capturedAt: string;
-};
-
-type GateStatus = GateValue;
-
-type GateRecord = {
-  id: GateName;
-  status: GateStatus;
-};
-
-type ProjectRecord = {
-  id: string;
-  title: string;
-  controlStatus: ProjectStage;
-  competitionStage: string;
-  statusRevision: number;
-  authority: "web_registry" | "agentctl_verified" | "legacy_unverified";
-  integrity: "current" | "stale" | "contract_mismatch" | "needs_revalidation";
-  gates: GateRecord[];
-  contract: {
-    workflowVersion: string;
-    workflowSha256: string;
-    gatesVersion: string;
-    gatesSha256: string;
-  };
-  legacyControlStatus: string;
-  updatedAt: string;
 };
 
 type DiagnosisResult = {
@@ -190,10 +159,6 @@ const GATE_LABELS = {
   submission: "提交",
 } satisfies Record<GateName, string>;
 
-const GATE_DEFINITIONS = GATE_NAMES.map(
-  (id) => [id, GATE_LABELS[id]] as const,
-);
-
 const STAGE_LABELS = {
   intake: "项目接入",
   rule_lock: "规则锁定",
@@ -212,19 +177,6 @@ const STAGE_LABELS = {
 const STAGES = PROJECT_STAGES.map(
   (stage) => [stage, STAGE_LABELS[stage]] as const,
 );
-
-const AUTHORITY_LABELS: Record<ProjectRecord["authority"], string> = {
-  web_registry: "门户登记态 · 未接入本地证据控制程序",
-  agentctl_verified: "本地证据控制程序已核验",
-  legacy_unverified: "历史记录 · 待重新验证",
-};
-
-const INTEGRITY_LABELS: Record<ProjectRecord["integrity"], string> = {
-  current: "契约一致",
-  stale: "状态已失效",
-  contract_mismatch: "契约不匹配",
-  needs_revalidation: "需要重新验证",
-};
 
 const DEFAULT_GROUP_OPTIONS = ["全部组别"];
 const DEFAULT_AWARD_OPTIONS = ["全部奖项"];
@@ -361,107 +313,6 @@ function readFacetValues(payload: unknown, key: string) {
   return payload.facets[key]
     .map((item) => isRecord(item) ? readString(item, ["value"], "") : "")
     .filter(Boolean);
-}
-
-function normalizeGateStatus(value: unknown): GateStatus {
-  const status = typeof value === "string" ? value.toLowerCase() : "not_run";
-  return (GATE_VALUES as readonly string[]).includes(status)
-    ? (status as GateStatus)
-    : "not_run";
-}
-
-function normalizeGates(value: unknown): GateRecord[] {
-  const found = new Map<GateName, GateStatus>();
-  if (Array.isArray(value)) {
-    value.forEach((item) => {
-      if (!isRecord(item)) return;
-      const id = readString(item, ["id", "gate", "gateId", "gate_id"], "").toLowerCase();
-      if ((GATE_NAMES as readonly string[]).includes(id)) {
-        found.set(id as GateName, normalizeGateStatus(item.status));
-      }
-    });
-  } else if (isRecord(value)) {
-    Object.entries(value).forEach(([id, item]) => {
-      const normalizedId = id.toLowerCase();
-      if ((GATE_NAMES as readonly string[]).includes(normalizedId)) {
-        found.set(
-          normalizedId as GateName,
-          normalizeGateStatus(isRecord(item) ? item.status : item),
-        );
-      }
-    });
-  }
-  return GATE_DEFINITIONS.map(([id]) => ({ id, status: found.get(id) ?? "not_run" }));
-}
-
-function normalizeProject(value: unknown, index: number): ProjectRecord | null {
-  if (!isRecord(value)) return null;
-  const rawControlStatus = readString(
-    value,
-    ["controlStatus", "control_status", "stage"],
-    "intake",
-  );
-  const canonicalControlStatus = (PROJECT_STAGES as readonly string[]).includes(
-    rawControlStatus,
-  );
-  const rawAuthority = readString(value, ["authority"], "web_registry");
-  const authority = ["web_registry", "agentctl_verified", "legacy_unverified"].includes(rawAuthority)
-    ? (rawAuthority as ProjectRecord["authority"])
-    : "legacy_unverified";
-  const rawIntegrity = readString(value, ["integrity"], "needs_revalidation");
-  const integrity = !canonicalControlStatus
-    ? "contract_mismatch"
-    : ["current", "stale", "contract_mismatch", "needs_revalidation"].includes(rawIntegrity)
-      ? (rawIntegrity as ProjectRecord["integrity"])
-      : "needs_revalidation";
-  const contract = isRecord(value.contract) ? value.contract : {};
-  const workflow = isRecord(contract.workflow) ? contract.workflow : {};
-  const gates = isRecord(contract.gates) ? contract.gates : {};
-  const legacy = isRecord(value.legacy) ? value.legacy : {};
-  return {
-    id: readString(value, ["id", "projectId", "project_id"], `project-${index}`),
-    title: readString(value, ["title", "name", "projectTitle", "project_title"], "未命名项目"),
-    controlStatus: canonicalControlStatus
-      ? (rawControlStatus as ProjectStage)
-      : "intake",
-    competitionStage: readString(
-      value,
-      ["competitionStage", "competition_stage"],
-      "unknown",
-    ),
-    statusRevision: readNumber(value, ["statusRevision", "status_revision"], 0),
-    authority,
-    integrity,
-    gates: normalizeGates(value.gates ?? value.gateStatus ?? value.gateResults ?? value.gate_results),
-    contract: {
-      workflowVersion: readString(
-        workflow,
-        ["version"],
-        CONTROL_CONTRACT_META.workflowVersion,
-      ),
-      workflowSha256: readString(
-        workflow,
-        ["sha256"],
-        CONTROL_CONTRACT_META.workflowSha256,
-      ),
-      gatesVersion: readString(
-        gates,
-        ["version"],
-        CONTROL_CONTRACT_META.gatesVersion,
-      ),
-      gatesSha256: readString(
-        gates,
-        ["sha256"],
-        CONTROL_CONTRACT_META.gatesSha256,
-      ),
-    },
-    legacyControlStatus: readString(
-      legacy,
-      ["controlStatus", "control_status"],
-      "",
-    ),
-    updatedAt: readString(value, ["updatedAt", "updated_at"], ""),
-  };
 }
 
 function safeScore(value: unknown): number | null {
@@ -649,26 +500,6 @@ function verifiedFieldLabel(field: string) {
   return labels[field] ?? field;
 }
 
-function GatePill({ gate }: { gate: GateRecord }) {
-  const labels: Record<GateStatus, string> = {
-    not_run: "未运行",
-    running: "运行中",
-    pass: "通过",
-    warning: "警告",
-    fail: "阻断",
-    unknown: "未知",
-    stale: "已失效",
-  };
-  const gateName = GATE_DEFINITIONS.find(([id]) => id === gate.id)?.[1] ?? gate.id;
-  return (
-    <div className={`gate-pill gate-${gate.status}`} title={`${gateName} Gate：${labels[gate.status]}`}>
-      <span className="gate-dot" aria-hidden="true" />
-      <span>{gateName}</span>
-      <small>{labels[gate.status]}</small>
-    </div>
-  );
-}
-
 function CaseLibrary() {
   const theme = useWorkbenchTheme();
   const [query, setQuery] = useState("");
@@ -839,7 +670,7 @@ function CaseLibrary() {
           <span className="eyebrow">获奖案例证据库</span>
           <h2 id="cases-title">只呈现证据，不补写故事</h2>
         </div>
-        <p>检索已收录项目，区分公告元数据与材料深读；每张详情卡说明核验字段、来源层级和复用边界。</p>
+        <p>检索已收录案例，查看公告信息、材料分析与核验范围。</p>
       </div>
 
       {libraryMeta && libraryNotice && (
@@ -913,7 +744,7 @@ function CaseLibrary() {
         <div className="empty-state" role="status">
           <span className="empty-mark">0</span>
           <h3>没有匹配案例</h3>
-          <p>换一个关键词或放宽筛选条件。未核验案例不会被自动补造成结果。</p>
+          <p>换一个关键词或放宽筛选条件。</p>
           <button className="text-button" type="button" onClick={clearCaseFilters}>清除全部筛选</button>
         </div>
       ) : (
@@ -1019,7 +850,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
     <section className="section section-diagnose" id="diagnose" aria-labelledby="diagnose-title">
       <div className="section-heading inverted">
         <div><span className="eyebrow">Agent 诊断</span><h2 id="diagnose-title">先暴露证据缺口，再安排最短修复路径</h2></div>
-        <p>输入当前真实状态。缺失就写未知，诊断不会用复杂术语掩盖资料不足。</p>
+        <p>填写当前项目状态，缺失信息可标为未知。</p>
       </div>
       <div className="diagnose-grid">
         <form className="diagnose-form" onSubmit={submit} aria-busy={submitting}>
@@ -1042,7 +873,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
             <label><span>真实决策问题</span><textarea required rows={4} value={form.problem} onChange={(event) => update("problem", event.target.value)} placeholder="谁要在什么期限内，依据哪些证据，在什么选项间作何取舍？" /></label>
             <button className="primary-button gold-button" type="submit">{submitting ? "正在检查…" : "检查缺口与下一步"}</button>
           </fieldset>
-          <p className="form-note">仅按自报信息进行启发式检查，未读取报告或核验田野证据；不是质量评分或获奖概率。不写入 Gate、不推进项目状态。请勿提交受访者个人信息或未授权企业机密。</p>
+          <p className="form-note">依据自报信息检查准备度，不核验报告或田野证据，不更新项目状态或 Gate。结果不代表研究质量或获奖概率。请勿提交个人信息或未授权商业资料。</p>
         </form>
         <div className="diagnosis-result" aria-live="polite" aria-busy={submitting}>
           {submitting && <div className="result-placeholder" role="status"><span className="evidence-orbit" aria-hidden="true">…</span><h3>正在检查自报信息</h3><p>按固定规则提示缺口，不代表证据审查。</p></div>}
@@ -1115,12 +946,12 @@ function RuleWorkbench() {
     <section className="section rules-section" id="rules" aria-labelledby="rules-title">
       <div className="section-heading">
         <div><span className="eyebrow">五维赛事规则解析器</span><h2 id="rules-title">五个维度同时匹配，规则才可进入项目</h2></div>
-        <p>按届次、组别、赛区、赛道与阶段核对本地哈希锁定的来源快照。没有匹配就返回未知并阻断，不会拿旧规则补位。</p>
+        <p>按届次、组别、赛区、赛道与阶段匹配来源快照；五维不匹配时标为未知，停止套用。</p>
       </div>
 
       <aside className="rule-scope-banner" aria-label="规则快照使用边界">
         <div><strong>当前证据快照</strong><span>{RULE_CORPUS_META.snapshot.edition} · {RULE_CORPUS_META.snapshot.group} · 核验于 {RULE_CORPUS_META.snapshot.verified_at}</span></div>
-        <p>这是独立工具保存的历史核验快照，不代表赛事官方实时通知。正式提交前必须重新核对适用于当前项目的原始通知及补充文件。</p>
+        <p>历史核验快照。正式提交前，请重新核对当前项目适用的官方通知及补充文件。</p>
       </aside>
 
       <aside className="rule-scope-banner" aria-label="新届次官方通知核验">
@@ -1138,7 +969,7 @@ function RuleWorkbench() {
             <label><span>阶段</span><input required value={form.stage} onChange={(event) => update("stage", event.target.value)} /></label>
           </div>
           <button className="primary-button" type="submit" disabled={loading}>{loading ? "正在核对五维范围…" : "解析适用规则"}</button>
-          <p>可修改任一维度验证边界；不匹配结果不会回退到相近届次或组别。</p>
+          <p>仅采用五维精确匹配的规则。</p>
         </form>
 
         <div className="rule-result" aria-live="polite" aria-busy={loading}>
@@ -1181,184 +1012,6 @@ function ruleTypeLabel(value: string) {
   } as Record<string, string>)[value] ?? "其他规则";
 }
 
-function ProjectWorkbench() {
-  const [clientKey, setClientKey] = useState("");
-  const [clientKeyVisible, setClientKeyVisible] = useState(false);
-  const [keyFeedback, setKeyFeedback] = useState("");
-  const [projectTitle, setProjectTitle] = useState("");
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [operation, setOperation] = useState<"load" | "create" | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  const selected = projects.find((item) => item.id === selectedId) ?? projects[0] ?? null;
-  const selectedStageIndex = selected
-    ? PROJECT_STAGES.indexOf(selected.controlStatus)
-    : -1;
-  const nextTransition = selected
-    ? ALLOWED_TRANSITIONS.find((item) => item.from === selected.controlStatus)
-    : undefined;
-  const passCount = selected?.gates.filter((gate) => gate.status === "pass").length ?? 0;
-  const warningCount = selected?.gates.filter((gate) => gate.status === "warning").length ?? 0;
-  const blockingCount = selected ? selected.gates.length - passCount - warningCount : 0;
-
-  const ingestProjects = useCallback((payload: unknown) => {
-    const collection = extractCollection(payload, ["projects", "items", "results"]);
-    if (collection.found) return collection.items.map(normalizeProject).filter((item): item is ProjectRecord => item !== null);
-    if (isRecord(payload)) {
-      const candidate = payload.project ?? (isRecord(payload.data) ? payload.data.project : undefined);
-      const normalized = normalizeProject(candidate, 0);
-      return normalized ? [normalized] : [];
-    }
-    return [];
-  }, []);
-
-  function changeClientKey(value: string) {
-    setClientKey(value);
-    setKeyFeedback("");
-    setProjects([]);
-    setSelectedId("");
-    setHasLoaded(false);
-    setMessage("");
-    setError("");
-  }
-
-  function generateClientKey() {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    const token = btoa(String.fromCharCode(...bytes))
-      .replaceAll("+", "-")
-      .replaceAll("/", "_")
-      .replaceAll("=", "");
-    const nextKey = `evx_${token}`;
-    changeClientKey(nextKey);
-    setClientKeyVisible(true);
-    setKeyFeedback("已生成新的匿名访问密钥，请复制并安全保存。");
-  }
-
-  async function copyClientKey() {
-    if (!clientKey) return;
-    try {
-      await navigator.clipboard.writeText(clientKey);
-      setKeyFeedback("访问密钥已复制，请保存到可信的密码管理工具中。");
-    } catch {
-      setClientKeyVisible(true);
-      setKeyFeedback("浏览器未允许自动复制，密钥已显示，请手动复制并安全保存。");
-    }
-  }
-
-  async function loadProjects(event?: FormEvent) {
-    event?.preventDefault();
-    setOperation("load"); setError(""); setMessage("");
-    try {
-      const key = clientKey.trim();
-      const payload = await apiRequest("/api/projects", {
-        headers: key ? { "x-client-key": key } : {},
-      });
-      const next = ingestProjects(payload);
-      setProjects(next);
-      setSelectedId(next[0]?.id ?? "");
-      setHasLoaded(true);
-      setMessage(next.length ? `已读取 ${next.length} 个登记项` : "当前工作区暂无登记项，可在下方创建。");
-    } catch (requestError) {
-      const detail = requestError instanceof Error ? requestError.message : "项目服务暂时不可用";
-      setError(projects.length ? `${detail}；当前仍展示上次成功读取的结果` : detail);
-    } finally { setOperation(null); }
-  }
-
-  async function createProject(event: FormEvent) {
-    event.preventDefault();
-    if (!projectTitle.trim()) return;
-    setOperation("create"); setError(""); setMessage("");
-    try {
-      const payload = await apiRequest("/api/projects", {
-        method: "POST",
-        headers: clientKey.trim() ? { "x-client-key": clientKey.trim() } : {},
-        body: JSON.stringify({ title: projectTitle.trim() }),
-      });
-      const created = ingestProjects(payload);
-      if (created.length) {
-        setProjects((current) => [...created, ...current.filter((item) => !created.some((newItem) => newItem.id === item.id))]);
-        setSelectedId(created[0].id);
-      } else {
-        throw new Error("项目已提交，但服务没有返回可识别的登记项，请重新读取");
-      }
-      setProjectTitle("");
-      setMessage("登记项已创建，固定从“项目接入”开始，九道质量门禁均为“未运行”；这不代表已由本地证据控制程序正式初始化。");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "登记项创建失败");
-    } finally { setOperation(null); }
-  }
-
-  return (
-    <section className="section section-workspace" id="workspace" aria-labelledby="workspace-title">
-      <div className="section-heading">
-        <div><span className="eyebrow">项目控制门户</span><h2 id="workspace-title">读取项目登记态，控制执行保持关闭</h2></div>
-        <p>门户只登记和读取状态；质量门禁判定、阶段推进与最终交接必须由受信任的本地证据控制程序（agentctl）执行。</p>
-      </div>
-      <div className="workspace-shell">
-        <aside className="project-sidebar">
-          <div className="mvp-notice"><strong>工作区隔离说明</strong><p>登录态按账户隔离；匿名访问密钥仅在本页会话持有，请自行安全保存。禁止填写原始问卷、个人信息、敏感数据或未授权商业资料。</p></div>
-          <form onSubmit={loadProjects} className="client-key-form">
-            <label><span>匿名访问密钥 <small>登录用户可留空</small></span><input type={clientKeyVisible ? "text" : "password"} minLength={47} maxLength={48} pattern="(?:evx_[A-Za-z0-9_\-]{43}|[0-9A-Fa-f]{48})" value={clientKey} onChange={(event) => changeClientKey(event.target.value)} placeholder="使用本页生成的高强度密钥" autoComplete="off" spellCheck={false} aria-describedby="client-key-help client-key-status" /></label>
-            <div className="key-actions">
-              <button className="key-generator" type="button" onClick={generateClientKey}>生成新密钥</button>
-              <button className="key-generator" type="button" disabled={!clientKey} onClick={() => setClientKeyVisible((current) => !current)}>{clientKeyVisible ? "隐藏密钥" : "显示密钥"}</button>
-              <button className="key-generator" type="button" disabled={!clientKey} onClick={() => void copyClientKey()}>复制密钥</button>
-            </div>
-            <p id="client-key-help" className="key-help">密钥不写入浏览器存储；请求时仅通过请求头传输，服务端只保存不可逆摘要。生成后请立即安全保存。</p>
-            <p id="client-key-status" className="key-status" role="status">{keyFeedback}</p>
-            <button className="secondary-button" disabled={operation !== null}>{operation === "load" ? "正在读取…" : "读取登记项"}</button>
-          </form>
-          <div className="project-list" aria-label="项目登记项列表">
-            {projects.map((project) => <button key={project.id} aria-pressed={project.id === selected?.id} className={project.id === selected?.id ? "project-list-item active" : "project-list-item"} onClick={() => setSelectedId(project.id)}><span>{project.title}</span><small>{STAGE_LABELS[project.controlStatus]}</small></button>)}
-            {!projects.length && <p className="sidebar-empty">读取后在这里选择登记项。</p>}
-          </div>
-          <form className="new-project-form" onSubmit={createProject}>
-            <label><span>新登记项</span><input value={projectTitle} onChange={(event) => setProjectTitle(event.target.value)} placeholder="输入项目名称" /></label>
-            <button className="text-button" disabled={operation !== null || !projectTitle.trim()}>{operation === "create" ? "正在创建…" : "＋ 创建登记项"}</button>
-          </form>
-        </aside>
-        <div className="project-main">
-          {error && <div className="inline-alert" role="alert"><strong>服务暂时不可用</strong><span>{error}。访问密钥和输入内容仍保留。</span></div>}
-          {message && !error && <div className="inline-message" role="status">{message}</div>}
-          {!selected ? <div className="workspace-empty"><span className="empty-mark">Q</span><h3>{hasLoaded ? "当前暂无登记项" : "先读取一个登记项"}</h3><p>{hasLoaded ? "使用左侧表单创建第一个登记项；它只会进入项目接入状态。" : "输入匿名访问密钥读取已有登记项，或在登录态下直接读取账户项目。"}</p></div> : <>
-            <div className="project-head">
-              <div><span className="eyebrow">{AUTHORITY_LABELS[selected.authority]}</span><h3>{selected.title}</h3><p>赛事阶段：{selected.competitionStage === "unknown" ? "未确认" : selected.competitionStage} · 状态修订 r{selected.statusRevision}</p></div>
-              <span className={`project-status integrity-${selected.integrity}`}>{INTEGRITY_LABELS[selected.integrity]}</span>
-            </div>
-            {selected.legacyControlStatus && <div className="inline-alert legacy-alert" role="status"><strong>历史记录待复核</strong><span>旧控制值 {selected.legacyControlStatus} 已保留作审计，但未映射为当前阶段。</span></div>}
-            <div className="stage-progress" aria-label={`当前控制状态：${STAGE_LABELS[selected.controlStatus]}`}>
-              <div className="stage-track"><i style={{ width: `${((selectedStageIndex + 1) / PROJECT_STAGES.length) * 100}%` }} /></div>
-              <div className="stage-copy"><span>当前控制状态</span><strong>{STAGE_LABELS[selected.controlStatus]}</strong><small>12 阶段中的第 {selectedStageIndex + 1} 阶段</small></div>
-            </div>
-            <div className="contract-strip" aria-label="控制契约版本">
-              <span>workflow v{selected.contract.workflowVersion} · {selected.contract.workflowSha256.slice(0, 8)}</span>
-              <span>gates v{selected.contract.gatesVersion} · {selected.contract.gatesSha256.slice(0, 8)}</span>
-            </div>
-            <div className="workspace-block">
-              <div className="block-heading"><div><span className="mini-label">质量门禁</span><h4>9 道质量门禁（Gate）当前状态</h4></div><span className="gate-summary">通过 {passCount} · 警告 {warningCount} · 阻断或未就绪 {blockingCount}</span></div>
-              <div className="gate-grid">{selected.gates.map((gate) => <GatePill gate={gate} key={gate.id} />)}</div>
-            </div>
-            <div className="workspace-block control-lock-card">
-              <div className="block-heading"><div><span className="mini-label">可信执行边界</span><h4>控制执行器未连接</h4></div><span className="control-lock-status">默认拒绝</span></div>
-              <p>当前门户不能评估质量门禁、推进控制状态或签发最终交接（handoff）。浏览器输入不会被当成本地证据控制程序的有效证据。</p>
-              {nextTransition ? <div className="next-transition">
-                <span><small>下一合法状态</small><strong>{STAGE_LABELS[nextTransition.to]}</strong></span>
-                <span><small>所需 Gate</small><strong>{nextTransition.requiredGates.length ? nextTransition.requiredGates.map((gate) => GATE_LABELS[gate]).join("、") : "无"}</strong></span>
-                <span><small>所需产物</small><strong>{nextTransition.requiredArtifacts.join("、")}</strong></span>
-              </div> : <p className="closed-state-note">该状态没有下一相邻转换；正式封存仍以本地证据控制程序给出的通过/不通过（Go/No-Go）结果为准。</p>}
-              <a className="primary-button" href="#lifecycle">读取本机权威状态</a>
-            </div>
-          </>}
-        </div>
-      </div>
-      <LifecycleWarRoom portalProject={selected} />
-    </section>
-  );
-}
-
 export default function EviXPlatform() {
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
@@ -1372,7 +1025,7 @@ export default function EviXPlatform() {
         <div className="hero-grid" aria-hidden="true" />
         <div className="hero-content">
           <div className="hero-copy">
-            <span className="hero-kicker"><i /> 正大杯全流程循证竞赛智能体</span>
+            <span className="hero-kicker"><i /> 市场调查与分析研究工作台</span>
             <h1 id="hero-title">让每个问题，<br /><em>都循证抵达行动。</em></h1>
             <p>从规则锁定、获奖案例证据、研究设计到报告答辩，证见把问题、数据、洞察和行动收进一条可复核的证据链。</p>
             <div className="hero-actions"><Link className="primary-button gold-button" href="/projects">进入我的项目</Link><a className="ghost-button" href="#cases">查看获奖案例 <span aria-hidden="true">↗</span></a></div>
@@ -1386,18 +1039,18 @@ export default function EviXPlatform() {
           </div>
           <EvidenceFlight />
         </div>
-        <div className="independent-notice"><span>独立 · 非官方</span><p>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p></div>
+        <div className="independent-notice"><span>独立 · 非官方</span><p>证见 EVI-X 为独立研究辅助工具，与赛事主办、承办及冠名单位无隶属、授权或合作关系。</p></div>
       </section>
 
       <CompetitionCalendar />
       <ResearchPipeline />
 
       <section className="section qdia-section" aria-labelledby="qdia-title">
-        <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">不是写作捷径，是证据生产系统</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关 Gate 必须在受信任控制面中重新评估。</p></div>
+        <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">让问题、数据、洞察与行动对应</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关 Gate 必须在受信任控制面中重新评估。</p></div>
         <div className="qdia-cards">{QDIA.map((item, index) => <article key={item.code}><span className="step-number">0{index + 1}</span><div className="step-code">{item.code}</div><h3>{item.name} <small>{item.english}</small></h3><p>{item.detail}</p><span className="step-check">{["决策主体 · 目标人群 · 证据缺口", "来源 · 样本 · 清洗 · 台账", "方法适配 · 结果 · 限制", "负责人 · 优先级 · KPI"][index]}</span></article>)}</div>
       </section>
 
-      <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>先诊断，再进入工作台。未知不会被包装成完成，风险不会被一句“基本没问题”带过。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>
+      <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>梳理当前证据缺口，生成下一步行动清单。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>
 
       </>,
       cases: <CaseLibrary />,
@@ -1407,7 +1060,7 @@ export default function EviXPlatform() {
       silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={setBriefSource} />,
-      workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>使用我的项目创建团队研究，生成、编辑并保存问卷版本。原有生命周期控制程序和证据文件继续保留。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
+      workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>创建团队项目，生成、编辑并保存问卷版本。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
     }} />

@@ -67,12 +67,12 @@ export default function DefenseStudio(){
       const content=defenseExport(corpus.cards,drafts,plan,Number(total),Number(reserve),corpus.version);
       const url=URL.createObjectURL(new Blob([JSON.stringify(content,null,2)],{type:'application/json;charset=utf-8'}));
       const link=document.createElement('a');link.href=url;link.download='EVI-X-答辩练习-未核验.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-      setFeedback('已发起下载，请确认练习包已保存后再刷新页面。依据状态是你的声明，仍需人工核验；请勿把未执行计划写成既成事实。');
+      setFeedback('已发起下载，请确认练习包已保存后再刷新。依据状态由你声明，仍需人工核验。');
     }catch{setFeedback('导出失败，当前页面内容仍在，请稍后重试。');}
   };
   return <section className={styles.studio} id="defense" aria-labelledby="defense-title">
     <header className={styles.heading}>
-      <div><span className={styles.eyebrow}>演练 · 定位 · 修订</span><h2 id="defense-title">路演与答辩</h2><p>先回答问题，再打开证据。把难题练成清楚、诚实的回应。</p></div>
+      <div><span className={styles.eyebrow}>演练 · 定位 · 修订</span><h2 id="defense-title">路演与答辩</h2><p>选择问题，记录回答与证据，再分段彩排。</p></div>
       <div className={styles.export}><span>{filled} / {corpus.cards.length} 题已记笔记</span><button ref={importButton} className={styles.secondary} type="button" onClick={()=>fileInput.current?.click()} disabled={reading}>导入练习笔记</button><button type="button" onClick={exportNotes} disabled={!filled||!!planError}>导出练习笔记</button></div>
     </header>
     <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择答辩练习 JSON 文件" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readImport(file);}}/>
@@ -103,7 +103,7 @@ export default function DefenseStudio(){
           <label>当前依据状态<select value={draft.evidenceState} onChange={e=>patch({evidenceState:e.target.value as EvidenceState})}><option value="missing">缺少证据，暂不能确认</option><option value="documented">有记录可定位，尚待人工核验</option><option value="proposed">仅为计划，尚未执行</option></select></label>
           <div className={styles.scaffold} aria-label="按依据状态组织回答">
             <strong>{scaffold.title}</strong><ol>{scaffold.steps.map(step=><li key={step}>{step}</li>)}</ol>
-            <p>这是组织思路的支架，不是万能答案。切换状态不会改写你的笔记，也不会核验任何证据。</p>
+            <p>切换状态只调整提示，笔记保留；证据需人工核验。</p>
           </div>
           {DEFENSE_FIELDS.map((field,index)=><label key={field.id}><span><i>{index+1}</i>{field.label}</span>{field.id==='owner'?<input maxLength={120} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>:<textarea rows={field.id==='answer'?4:2} maxLength={1800} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>}</label>)}
         </div>
@@ -113,7 +113,7 @@ export default function DefenseStudio(){
     </div>
     <ActionEvidence/>
     <section className={styles.timing} aria-labelledby="pitch-timing-title">
-      <div className={styles.timingHeading}><div><span className={styles.eyebrow}>自由编排</span><h3 id="pitch-timing-title">让时间跟着你的重点走</h3><p>这是可调整的练习分配，不是官方时限。总时长请先核对适用通知。</p></div><a href="#rules">核对赛事规则</a></div>
+      <div className={styles.timingHeading}><div><span className={styles.eyebrow}>自由编排</span><h3 id="pitch-timing-title">分配讲述时间</h3><p>练习时长可调整；赛事时限请核对适用通知。</p></div><a href="#rules">核对赛事规则</a></div>
       <div className={styles.timeInputs}><label>练习总时长（秒）<input type="number" min={120} max={1800} step={1} value={total} onChange={e=>{invalidateImport();setTotal(e.target.value);}}/></label><label>预留时间（秒）<input type="number" min={0} max={90} step={1} value={reserve} onChange={e=>{invalidateImport();setReserve(e.target.value);}}/></label><p>初始比例只是编排起点。重点可以改变，关键证据和限制不能被压掉。</p></div>
       {planError&&<p className={styles.error} role="alert">{planError}</p>}
       <div className={styles.timeline}>{PITCH_BLOCKS.map((block,i)=><div key={block.id}><span>0{i+1}</span><h4>{block.label}</h4><p>{block.prompt}</p><label>相对权重<input aria-label={`${block.label}权重`} type="number" min={1} max={100} value={weights[i]} onChange={e=>{invalidateImport();setWeights(values=>values.map((value,j)=>j===i?e.target.value:value));}}/></label><strong>{plan[i]?formatDuration(plan[i].seconds):'—'}</strong><small>{plan[i]?`${formatDuration(plan[i].start)} 至 ${formatDuration(plan[i].end)}`:'等待有效设置'}</small></div>)}</div>

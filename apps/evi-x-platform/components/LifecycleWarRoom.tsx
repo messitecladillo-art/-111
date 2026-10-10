@@ -853,7 +853,7 @@ async function fetchBridgeJson(path: string, token: string, timeoutMs: number): 
         throw new Error("当前本机页面地址未获服务授权，请核对桥接配置中的页面地址和端口");
       }
       if (response.status === 404) throw new Error("本地服务中没有这个项目别名");
-      if (response.status === 409) throw new Error("读取期间项目状态发生变化，系统没有拼接新旧结果，请重新读取");
+      if (response.status === 409) throw new Error("读取期间项目状态已变化，请重新读取");
       if (response.status === 422) throw new Error("该项目尚未初始化或本机状态不完整，请先在本机修复");
       if (response.status === 429) throw new Error("读取过于频繁，请稍后再试");
       throw new Error(`本地只读服务暂时无法完成读取（${response.status}）`);
@@ -1122,7 +1122,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
       }
       setSnapshot(nextSnapshot);
       setSnapshotStale(false);
-      setMessage("本地权威状态已更新。该页面仍为只读，不会改变质量检查、阶段或交付状态。");
+      setMessage("已读取最新本地权威状态。");
     } catch (caught) {
       markExistingSnapshotStale();
       setError(caught instanceof Error ? caught.message : "读取本地权威状态失败");
@@ -1137,8 +1137,8 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
         <span style={pageStyles.eyebrow}>生命周期作战室 · 本地只读</span>
         <h2 id={`${id}-title`} style={pageStyles.title}>把登记信息与真实 Agent 进度分开看</h2>
         <p style={pageStyles.description}>
-          门户只保存协作登记；本地权威卡只读取证据控制程序的三项安全摘要。
-          本页没有质量检查修改、阶段推进或最终交接入口。
+          左侧为协作登记，右侧为本机证据控制程序的只读摘要。
+          质量检查、阶段推进与最终交接均在本机控制程序中执行。
         </p>
       </div>
 
@@ -1174,7 +1174,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
             style={pageStyles.input}
           />
           <p id={`${id}-token-help`} style={pageStyles.helper}>
-            口令只保存在当前组件内存，不写入浏览器存储、Cookie 或网址。
+            口令仅在当前页面内存中保存。
           </p>
           <div style={pageStyles.buttonRow}>
             <button
@@ -1275,10 +1275,10 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
               <p style={pageStyles.helper}>
                 最后登记：<time dateTime={portalProject.updatedAt}>{formatTime(portalProject.updatedAt)}</time>
               </p>
-              <p style={pageStyles.warning}>这些值不能证明质量门禁证据仍然有效，也不能授权阶段推进或最终交接。</p>
+              <p style={pageStyles.warning}>登记值仅供协作参考；阶段推进与交接以本机完整校验为准。</p>
             </>
           ) : (
-            <p style={pageStyles.warning}>当前没有选中的门户项目。此处保持空白，不会据此创建或推断真实项目状态。</p>
+            <p style={pageStyles.warning}>尚未选择门户项目。</p>
           )}
         </article>
 
@@ -1286,7 +1286,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
           <div style={pageStyles.cardHead}>
             <div>
               <h3 id={`${id}-local-title`} style={pageStyles.cardTitle}>本地权威态｜只读</h3>
-              <p style={pageStyles.helper}>来自本机证据控制程序的安全摘要，不包含原始命令输出。</p>
+              <p style={pageStyles.helper}>本机证据控制程序的只读摘要。</p>
             </div>
             {snapshotStale ? <span style={pageStyles.staleBadge}>旧快照 · 已过期</span> : <span style={pageStyles.badge}>只读</span>}
           </div>
@@ -1304,10 +1304,10 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
               </div>
 
               {!sameProject && portalProject ? (
-                <p style={pageStyles.warning}>两张卡的项目 ID 不一致，页面不会把它们当作同一个项目比较。</p>
+                <p style={pageStyles.warning}>项目 ID 不一致，已暂停比较。</p>
               ) : null}
               {!snapshot.consistent ? (
-                <p style={pageStyles.error}>三项本机只读检查的摘要不一致；仅展示原始状态，不解释下一转换。</p>
+                <p style={pageStyles.error}>本机检查摘要不一致，仅展示原始状态。</p>
               ) : null}
               {!contractMatches ? (
                 <div role="alert" style={pageStyles.error}>
@@ -1325,7 +1325,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                 <p role="alert" style={pageStyles.error}>运行健康检查未通过，已停止解释下一转换与推进建议。</p>
               ) : null}
               {presentation.showRawTechnicalDetails ? (
-                <p role="alert" style={pageStyles.warning}>以下为保留快照，仅供核查，不代表当前可用状态；所有行动建议均已暂停。</p>
+                <p role="alert" style={pageStyles.warning}>以下为旧快照，仅供核查；行动建议已暂停。</p>
               ) : null}
 
               <dl style={pageStyles.facts}>
@@ -1407,7 +1407,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
               <div>
                 <h4 style={pageStyles.subheading}>缺失材料</h4>
                 {!presentation.showMaterials ? (
-                  <p style={pageStyles.warning}>当前状态不可解释，材料建议已暂停；请刷新快照或先修复本机检查。</p>
+                  <p style={pageStyles.warning}>材料建议已暂停，请刷新快照或修复本机检查。</p>
                 ) : snapshot.status.materialsNeeded.length > 0 ? (
                   <ul style={pageStyles.list}>
                     {snapshot.status.materialsNeeded.map((material) => (
@@ -1440,7 +1440,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
               <div>
                 <h4 style={pageStyles.subheading}>可安全并行工作</h4>
                 {!presentation.showParallelWork ? (
-                  <p style={pageStyles.warning}>当前状态不可解释，并行建议已暂停；请刷新快照或先修复本机检查。</p>
+                  <p style={pageStyles.warning}>并行建议已暂停，请刷新快照或修复本机检查。</p>
                 ) : snapshot.status.safeParallelWork.length > 0 ? (
                   <ul style={pageStyles.list}>
                     {snapshot.status.safeParallelWork.map((item) => <li key={item}>{item}</li>)}
@@ -1465,7 +1465,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                 {snapshot.doctor.failedChecks.length > 0 ? (
                   <p style={pageStyles.helper}>未通过项目：{snapshot.doctor.failedChecks.map((item) => DOCTOR_LABELS[item] ?? "未知检查项").join("、")}</p>
                 ) : null}
-                <p style={pageStyles.warning}>检查健康只说明本次只读核验完成，不构成阶段推进或最终交接许可。</p>
+                <p style={pageStyles.warning}>本次只读核验已完成；阶段推进与最终交接仍需本机完整校验。</p>
                 <details>
                   <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 800 }}>查看技术状态</summary>
                   <p style={{ ...pageStyles.mono, marginTop: 6 }}>本机检查退出码：{snapshot.doctor.exitCode}</p>
@@ -1493,7 +1493,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
               ) : null}
             </>
           ) : (
-            <p style={pageStyles.notice}>尚未读取本地权威状态。门户登记值不会自动复制到这里。</p>
+            <p style={pageStyles.notice}>尚未读取本地权威状态，请选择本地项目并读取。</p>
           )}
         </article>
       </div>

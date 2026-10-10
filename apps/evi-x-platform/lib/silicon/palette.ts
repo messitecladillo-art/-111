@@ -16,6 +16,7 @@ export function ordinalIndex(i: number, k: number): number {
 }
 
 export function stageCategoryColor(ordered: boolean, i: number, k: number): string {
-  if (ordered && k <= ORDINAL_DARK.length) return ORDINAL_DARK[ordinalIndex(i, k)];
+  // Long scales share the five validated steps (neighbours may match); group labels still name every point.
+  if (ordered) return ORDINAL_DARK[ordinalIndex(i, k)];
   return i < CATEGORICAL_DARK.length ? CATEGORICAL_DARK[i] : NEUTRAL_HALO;
 }
