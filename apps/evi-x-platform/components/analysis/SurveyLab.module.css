@@ -36,6 +36,7 @@
 .lab .error { color: var(--wb-risk); background: var(--wb-solid); border-left: 4px solid var(--wb-risk); }
 .lab .warning { color: var(--wb-text); background: var(--wb-well); border-left: 3px solid var(--wb-amber); font-size: 14px; }
 .lab .notice { color: var(--wb-accent); background: var(--wb-accent-soft); }
+.lab .notice[data-tone="caution"] { color: var(--wb-gold-text); background: var(--wb-gold-soft); border-color: var(--wb-gold-line); }
 .datasetBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 0 0 8px; padding: 8px 0; border-block: 1px solid var(--wb-line); }
 .datasetBar > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .datasetBar strong { overflow-wrap: anywhere; }

@@ -89,7 +89,8 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
   const section = content.report.find(s => s.id === sectionId) || content.report[0];
   const slide = content.slides.find(s => s.id === slideId) || content.slides[0];
   const dirty = JSON.stringify(content) !== savedSnapshot;
-  useEffect(() => { if(localOnly) hostedSession.setUnsaved('local-report',dirty); return () => hostedSession.setUnsaved('local-report',false); },[localOnly,dirty,hostedSession.setUnsaved]);
+  const { setUnsaved } = hostedSession;
+  useEffect(() => { if(localOnly) setUnsaved('local-report',dirty); return () => setUnsaved('local-report',false); },[localOnly,dirty,setUnsaved]);
 
   const resetVersions = useCallback(() => { versionEpoch.current += 1; setVersions([]); setVersionLoading(false); pendingVersion.current = null; }, []);
   // Refs coordinate async operations; state is the sole source for rendered status.

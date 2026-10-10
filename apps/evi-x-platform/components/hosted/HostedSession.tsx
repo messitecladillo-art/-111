@@ -24,7 +24,7 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
     try { const value = parseSession(await hostedRequest('/api/session')); if (epoch === requestEpoch.current) accept(value); return value; }
     catch (e) { if (epoch === requestEpoch.current) { setError(errorMessage(e)); setLoading(false); } throw e; }
   }, [accept]);
-  useEffect(() => { void refresh().catch(() => {}); const c = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('evix-hosted-account-v1'); channel.current = c; if (c) c.onmessage = e => { if (e.data === 'changed') void refresh().catch(() => {}); }; return () => { requestEpoch.current++; c?.close(); channel.current = null; }; }, [refresh]);
+  useEffect(() => { const counter = requestEpoch; void refresh().catch(() => {}); const c = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('evix-hosted-account-v1'); channel.current = c; if (c) c.onmessage = e => { if (e.data === 'changed') void refresh().catch(() => {}); }; return () => { counter.current++; c?.close(); channel.current = null; }; }, [refresh]);
   useEffect(() => { locationRef.current = { url: location.href, state: history.state }; }, [pathname]);
   useEffect(() => {
     const focus = () => { void refresh().catch(() => {}); };

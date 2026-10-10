@@ -14,7 +14,7 @@ function ServicePanel() {
   const reload = useCallback(async () => { const n = ++epoch.current; setLoading(true); try { const rows = parseCollection(await hostedRequest('/api/services'), 'services', parseService, 8); if (n === epoch.current) setServices(rows); } catch (e) { if (n === epoch.current) setError(errorMessage(e)); } finally { if (n === epoch.current) setLoading(false); } }, []);
   // An identity change remounts this panel (HostedSession keys children by identityEpoch), so state starts fresh;
   // only the fetch is needed, deferred until after the effect commits.
-  useEffect(() => { pending.current = null; const timer = setTimeout(() => void reload(), 0); return () => { clearTimeout(timer); epoch.current++; pending.current = null; }; }, [reload, auth.identityEpoch]);
+  useEffect(() => { const counter = epoch; pending.current = null; const timer = setTimeout(() => void reload(), 0); return () => { clearTimeout(timer); counter.current++; pending.current = null; }; }, [reload, auth.identityEpoch]);
   function edit(service: Service) { if (busy || uncertain) return; setEditing(service); setForm({ ...service, maxOutputTokens: String(service.maxOutputTokens) }); setKey(''); setError(''); setNotice('密钥留空会保留原密钥；更换服务商或地址需重新填写。'); }
   function provider(value: ServiceProvider) { setForm(f => ({ ...f, provider: value, baseUrl: value === 'compatible' ? '' : PROVIDER_BASES[value] })); }
   async function submit(e?: FormEvent) {

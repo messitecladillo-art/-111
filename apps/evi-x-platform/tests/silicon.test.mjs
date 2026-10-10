@@ -252,7 +252,8 @@ test('stage halo colours follow the validated ramps and never generate a ninth h
   assert.deepEqual([0, 1, 2, 3, 4].map(i => stageCategoryColor(true, i, 5)), [...ORDINAL_DARK]);
   assert.equal(stageCategoryColor(false, 7, 9), CATEGORICAL_DARK[7]);
   assert.equal(stageCategoryColor(false, 8, 9), NEUTRAL_HALO);
-  assert.equal(stageCategoryColor(true, 6, 7), CATEGORICAL_DARK[6]);
+  assert.equal(stageCategoryColor(true, 6, 7), ORDINAL_DARK[4]);
+  assert.equal(stageCategoryColor(true, 0, 11), ORDINAL_DARK[0]);
 });
 
 test('answer normalisation agrees with the server twin on the shared parity fixture', async () => {

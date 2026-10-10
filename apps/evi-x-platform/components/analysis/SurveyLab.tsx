@@ -216,7 +216,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       <button type="button" aria-pressed={inResults} aria-controls="analysis-results" disabled={!dataset} onClick={() => setSection("recipes")}><span>03</span>分析结果</button>
     </nav>
     {error && <div className={styles.error} role="alert">{error}{dataset && " 当前已载入的数据仍保留。"}<button type="button" onClick={() => { setSection("data"); setImportOpen(true); }}>检查读取选项</button></div>}
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
+    {notice && <p className={styles.notice} data-tone={dataset?.silicon && notice.startsWith('已按模拟数据载入') ? 'caution' : undefined} role="status">{notice}</p>}
     {missing.error && <div className={styles.error} role="alert">{missing.error}{section !== "data" && <button type="button" onClick={() => setSection("data")}>修改缺失代码</button>}</div>}
     {mappingStale && section !== "mapping" && <div className={styles.warning} role="status">源问卷已变化，请重新核对对应后再分析。<button type="button" onClick={() => setSection("mapping")}>核对题目对应</button></div>}
     <div id="analysis-data" hidden={section !== "data"}>

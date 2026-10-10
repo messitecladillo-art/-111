@@ -45,7 +45,9 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const confirmOperation = useRef<{resolve: (answer: boolean)=>void; revision: number; returnFocus: HTMLElement | null} | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
-  useEffect(()=>{if(localOnly&&!hosted)session.setUnsaved('local-questionnaire',dirty);return()=>{if(!hosted)session.setUnsaved('local-questionnaire',false);};},[dirty,localOnly,!!hosted,session.setUnsaved]);
+  const {setUnsaved,cacheDraft}=session, isHosted=!!hosted, userId=session.session?.user?.id;
+  const cacheKey=hosted?.cacheKey, savedFingerprint=hosted?.savedFingerprint, hostedLoad=hosted?.load, onLoaded=hosted?.onLoaded;
+  useEffect(()=>{if(localOnly&&!isHosted)setUnsaved('local-questionnaire',dirty);return()=>{if(!isHosted)setUnsaved('local-questionnaire',false);};},[dirty,localOnly,isHosted,setUnsaved]);
   const [previewRevision,setPreviewRevision]=useState(0);
   const [libraryResetKey,setLibraryResetKey]=useState(0);
   const libraryIdentity=useRef(0);
@@ -77,14 +79,14 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const blockers = issues.filter(i => i.level === "blocker");
   const pendingNumbers = Object.entries(numericDrafts).filter(([,draft])=>draft.error);
   const hasPendingNumbers=pendingNumbers.length>0;
-  useLayoutEffect(()=>{if(hosted?.cacheKey&&session.session?.user?.id)session.cacheDraft(hosted.cacheKey,{history,numericDrafts,activeId},hasPendingNumbers||hosted.savedFingerprint!==parseQuestionnaireLibraryContent(design).serialized,session.session.user.id);},[history,numericDrafts,activeId,hasPendingNumbers,design,hosted?.cacheKey,hosted?.savedFingerprint,session.session?.user?.id,session.cacheDraft]);
+  useLayoutEffect(()=>{if(cacheKey&&userId)cacheDraft(cacheKey,{history,numericDrafts,activeId},hasPendingNumbers||savedFingerprint!==parseQuestionnaireLibraryContent(design).serialized,userId);},[history,numericDrafts,activeId,hasPendingNumbers,design,cacheKey,savedFingerprint,userId,cacheDraft]);
   useLayoutEffect(()=>{onSnapshot?.({design,pending:hasPendingNumbers});},[design,hasPendingNumbers,onSnapshot]);
   const loadedIntent=useRef('');
   useEffect(()=>{
-    if(!hosted?.load || hosted.load.id===loadedIntent.current)return;
-    const safe=parseQuestionnaire(JSON.stringify(hosted.load.design));loadedIntent.current=hosted.load.id;
-    setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');hosted.onLoaded?.();
-  },[hosted?.load,hosted?.onLoaded]);
+    if(!hostedLoad || hostedLoad.id===loadedIntent.current)return;
+    const safe=parseQuestionnaire(JSON.stringify(hostedLoad.design));loadedIntent.current=hostedLoad.id;
+    setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');onLoaded?.();
+  },[hostedLoad,onLoaded]);
   // When the design comes back to the saved version, it is clean again (adjusted during render, not in an effect).
   const savedMatch=useMemo(()=>!!hosted&&hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers,[hosted,design,hasPendingNumbers]);
   const [lastSavedMatch,setLastSavedMatch]=useState(savedMatch);
