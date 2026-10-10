@@ -6,6 +6,7 @@ import { QUESTION_TYPES, questionnaireIssues, type Questionnaire } from '@/lib/q
 import { SILICON_LIMITS } from '@/lib/silicon/persona';
 import { SCENARIO_TOKEN, placeholderIssues, type Scenario } from '@/lib/silicon/run';
 import styles from './SiliconLab.module.css';
+import { useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 
 type Props = { config: LabConfig; update: (patch: Partial<LabConfig>) => void; design: Questionnaire; studioDesign: Questionnaire | null; studioPending: boolean };
 
@@ -16,6 +17,7 @@ function Highlighted({ text }: { text: string }) {
 
 export default function SurveySetup({ config, update, design, studioDesign, studioPending }: Props) {
   const scenarios = config.scenarios;
+  const sourceRef = useKeyedListMotion<HTMLDivElement>({ ids: ['studio', 'example'], activeId: config.designSource, markerAxis: 'horizontal' });
   const setScenarios = (next: Scenario[]) => update({ scenarios: next });
   const blockers = questionnaireIssues(design).filter(i => i.level === 'blocker');
   const tokens = placeholderIssues(design, scenarios);
@@ -24,13 +26,13 @@ export default function SurveySetup({ config, update, design, studioDesign, stud
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-source">
       <div className={styles.blockHead}><h3 id="sx-source">要预测试的问卷</h3><p>使用当前题干、选项与跳转逻辑，保留原设计。</p></div>
-      <div className={styles.sourceRow} role="radiogroup" aria-label="问卷来源">
-        <button type="button" role="radio" aria-checked={config.designSource === 'studio'} disabled={!studioDesign} className={styles.sourceCard} onClick={() => update({ designSource: 'studio' })}>
+      <div ref={sourceRef} className={styles.sourceRow} role="radiogroup" aria-label="问卷来源"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
+        <button type="button" data-motion-id="studio" role="radio" aria-checked={config.designSource === 'studio'} disabled={!studioDesign} className={styles.sourceCard} onClick={() => update({ designSource: 'studio' })}>
           <span className={styles.sourceKicker}>问卷设计 · 当前草稿</span>
           <strong>{studioDesign ? studioDesign.title || '未命名问卷' : '尚未打开问卷设计'}</strong>
           <small>{studioDesign ? `${studioDesign.questions.length} 道题${studioPending ? ' · 有未提交的编辑，按当前内容预测试' : ''}` : '先在「问卷设计」中编辑或载入问卷，这里会自动同步。'}</small>
         </button>
-        <button type="button" role="radio" aria-checked={config.designSource === 'example'} className={styles.sourceCard} onClick={() => update({ designSource: 'example' })}>
+        <button type="button" data-motion-id="example" role="radio" aria-checked={config.designSource === 'example'} className={styles.sourceCard} onClick={() => update({ designSource: 'example' })}>
           <span className={styles.sourceKicker}>教学示例</span>
           <strong>校园快递取件体验</strong>
           <small>8 道题，演示情境、答案传递、反向题与跳转；不是经过验证的量表。</small>

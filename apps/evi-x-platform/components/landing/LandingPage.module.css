@@ -71,7 +71,7 @@
 .textLink:hover{color:var(--ivory)}
 
 /* ——— Hero: sky, motes, eclipse, headline ——— */
-.hero{position:relative}
+.hero{--hero-window-overlap:clamp(150px,24vh,250px);position:relative}
 .heroStage{position:relative;min-height:max(740px,100svh);overflow:hidden;display:flex;flex-direction:column;align-items:center;padding:clamp(118px,18vh,184px) var(--gutter) 0;text-align:center}
 .heroSky{position:absolute;inset:0;z-index:0;overflow:hidden;background:radial-gradient(120% 75% at 50% 0%,#0c2135 0%,#060f1a 52%,#03070d 100%)}
 .heroGrid{position:absolute;inset:0;background:linear-gradient(rgba(247,244,237,.045) 1px,transparent 1px) 0 0/72px 72px,linear-gradient(90deg,rgba(247,244,237,.045) 1px,transparent 1px) 0 0/72px 72px;-webkit-mask:radial-gradient(60% 50% at 50% 34%,#000,transparent 78%);mask:radial-gradient(60% 50% at 50% 34%,#000,transparent 78%)}
@@ -116,7 +116,7 @@
 @keyframes windowRise{from{opacity:0;transform:translateY(120px)}to{opacity:1;transform:none}}
 
 /* ——— Hero window ——— */
-.heroWindowWrap{position:relative;z-index:4;max-width:1120px;margin:calc(-1 * clamp(150px,24vh,250px)) auto 0;padding:0 var(--gutter);perspective:2200px}
+.heroWindowWrap{position:relative;z-index:4;max-width:1120px;margin:calc(-1 * var(--hero-window-overlap)) auto 0;padding:0 var(--gutter);perspective:2200px}
 .heroBeam{position:absolute;left:50%;top:-38%;z-index:-1;width:76%;height:100%;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(255,226,160,.3),rgba(79,209,193,.14) 48%,transparent 72%);filter:blur(34px);pointer-events:none}
 .heroWindow{--p:0;position:relative;border-radius:18px;padding:1px;background:linear-gradient(160deg,rgba(255,227,166,.75),rgba(79,209,193,.32) 26%,rgba(247,244,237,.08) 58%,rgba(127,182,255,.38));box-shadow:0 70px 160px -40px rgba(0,0,0,.95),0 0 140px -30px rgba(244,185,66,.4);transform-origin:50% 0;transform:rotateX(calc((1 - var(--p)) * 22deg)) scale(calc(.9 + var(--p) * .1));will-change:transform}
 .heroWindow>img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:top left;background:#07101b}
@@ -423,6 +423,10 @@
 .pause:hover{color:var(--gold);border-color:rgba(244,185,66,.5)}
 
 /* ——— Responsive ——— */
+/* Reserve the window's overlap after the natural copy height so short desktop viewports keep both entry buttons clear. */
+@media (min-width:981px){
+  .heroStage{padding-bottom:calc(var(--hero-window-overlap) + 40px)}
+}
 @media (max-width:1240px){
   .floatA{left:4px}.floatB{right:4px}.floatC{right:8px}
 }

@@ -17,12 +17,11 @@ export default function ExplorePage() {
       <section id="demo" className={styles.demo} aria-label="产品交互演示"><LandingDemo/></section>
       <section id="questions" className={styles.questions} aria-labelledby="questions-title"><h2 id="questions-title">开始之前</h2>{[
         ['证见适合谁？', '面向市场调查与分析大赛参赛团队，以及需要设计问卷、分析数据、撰写研究报告的小团队。'],
-        ['需要自己的 API Key 吗？', '模型生成使用你配置的个人 API Key；密钥由服务器加密保管，不随项目共享。本页演示无需 Key。'],
+        ['如何连接模型？', '在个人模型服务中配置 API Key，再为问卷生成等任务选择模型。'],
         ['现在可以使用哪些功能？', '邮箱登录、团队项目、个人模型连接、问卷提案、云端问卷版本和硅基样本预测试。本地可分析数据、编辑并导出报告与 PPT；调查回收与云端 Office 待开放。'],
         ['如何加入内测？', '当前面向受邀团队开放。获得邀请后，使用对应邮箱验证码登录即可。'],
       ].map(([q,a]) => <details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</section>
       <div className={styles.tools}><p>已有研究，继续向前。</p><Link href="/workspace">打开研究工具 ↗</Link></div>
     </main>
-    <footer className={styles.footer}><p>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p><p>本页使用合成示例。</p></footer>
   </div>;
 }

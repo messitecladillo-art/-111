@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { EDITOR_RECOVERY_EVENT } from "@/lib/editor-recovery";
 import styles from "./OnlyOfficeEditor.module.css";
+import { useContentReveal } from '../motion/useWorkspaceMotion';
 
 type OfficeFile = { id: string; filename: string; kind: "docx" | "pptx"; revision: number };
 type NativeSession = { key: string; fileId: string; revision: number };
@@ -280,6 +281,7 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
   const effectivePhase = frozen && !launch ? "frozen" : phase;
   const recoveryRemaining = recovery?.expiresAt ? Date.parse(recovery.expiresAt) - recoveryClock : null;
   const busy = ["opening", "loading", "waiting"].includes(effectivePhase);
+  const statusReveal = useContentReveal<HTMLElement>({ token: `${effectivePhase}:${savedRevision ?? ''}` });
   const statusText = effectivePhase === "opening" ? "正在建立受限编辑会话" : effectivePhase === "loading" ? "正在载入 ONLYOFFICE 文档引擎" : effectivePhase === "editing" ? "正在编辑 · 尚未提交新版本" : effectivePhase === "waiting" ? "正在等待关闭后的保存回调" : effectivePhase === "saved" ? `服务器已确认新版本${savedRevision ? ` v${savedRevision}` : ""}` : effectivePhase === "closed" ? "已关闭 · 文档无修改" : effectivePhase === "frozen" ? "身份正在恢复 · 编辑请求已暂停" : effectivePhase === "unconfirmed" ? "保存仍未确认" : "编辑或保存遇到问题";
 
   if (typeof document === "undefined") return null;
@@ -289,7 +291,7 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
         <div className={styles.title}><span className={styles.eyebrow}>ONLYOFFICE · {file.kind.toUpperCase()} · v{file.revision}</span><h2>{file.filename}</h2><p>{statusText}</p></div>
         <button ref={closeButton} className={styles.close} type="button" disabled={effectivePhase === "waiting"} onClick={requestClose} aria-label="关闭编辑器并检查保存状态">关闭编辑器</button>
       </header>
-      <div className={styles.notice} role="status"><span className={busy ? styles.pulse : styles.dot} aria-hidden="true"/><strong>{statusText}</strong><span>服务器确认保存回调并生成新版本后，文件库才显示“已保存”。</span></div>
+      <div className={styles.notice} role="status" data-phase={effectivePhase}><span className={busy ? styles.pulse : styles.dot} aria-hidden="true"/><strong ref={statusReveal}>{statusText}</strong><span>服务器确认保存回调并生成新版本后，文件库才显示“已保存”。</span></div>
       {frozen && launch && <p className={styles.liveError} role="alert">当前身份正在切换。已打开的旧会话会继续保留，保存目标仍是原身份，绝不会自动转入新身份。请确认保存状态后再关闭；如状态无法查询，请下载旧版并联系管理员核对。</p>}
       {error && iframeVisible && <p className={styles.liveError} role="alert">{error} 当前编辑界面仍保留；请先检查文档状态，不要直接关闭或刷新。</p>}
       {iframeVisible && launch && <iframe ref={iframe} className={styles.frame} title={`ONLYOFFICE 编辑 ${file.filename}`} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads" referrerPolicy="no-referrer" src={launch.shellUrl} onLoad={initFrame}/>}

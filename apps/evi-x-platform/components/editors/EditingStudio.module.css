@@ -82,7 +82,7 @@
 .slideCanvas[data-layout=cover] { padding-top: 15%; }
 .slideCanvas[data-layout=cover] h2 { font-size: clamp(22px,5.5cqw,42px); }
 .slideNumber { position: absolute; bottom: 3%; right: 5%; color: #64748b; font-size: 12px; }
-.boundary { color: var(--wb-muted); font-size: 12px; line-height: 1.7; margin: 10px 4px 0; }
+.backupActions { display: flex; justify-content: flex-end; gap: 8px; }
 .libraryPanel { border: 1px solid var(--wb-line); border-top: 0; background: var(--wb-solid); }
 .libraryPanel[hidden] { display: none; }
 .versionManager { padding: 0 18px 18px; }
@@ -170,3 +170,16 @@
   .presentation > header { font-size: 12px; } .presentation > header button { padding: 6px 8px; }
 }
 .previewScroll:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: -2px; }
+
+/* Selection and receipts stay separate from the mounted writing fields. */
+.itemList,.modeGroup,.viewBar>div { position:relative; }
+.motionMarker { position:absolute; top:0; left:0; width:3px; height:0; background:var(--wb-gold,#b39757); border-radius:2px; pointer-events:none; z-index:2; }
+.modeGroup .motionMarker,.viewBar .motionMarker { width:0; height:2px; }
+.itemList button,.modeGroup button,.viewBar button { transition:background-color 180ms ease,border-color 180ms ease,color 180ms ease; }
+.paper section { transition:background-color 220ms ease,border-color 180ms ease; }
+.saveStatus[data-motion-state]::before { content:''; display:inline-block; width:7px; height:7px; border:1px solid currentColor; border-radius:50%; margin-right:7px; vertical-align:1px; }
+.saveStatus[data-motion-state=saved]::before { background:currentColor; }
+.saveStatus[data-motion-state=saving]::before { border-right-color:transparent; animation:receiptSpin .8s linear infinite; }
+.saveStatus[data-motion-state=warning] { color:var(--wb-amber); }
+@keyframes receiptSpin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .studio *,.studio *::before { animation:none!important; transition:none!important; } }

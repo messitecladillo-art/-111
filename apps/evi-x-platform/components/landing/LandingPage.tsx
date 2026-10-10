@@ -16,7 +16,7 @@ const HEADLINE = ['让每个问题，', '都循证抵达行动'] as const;
 
 const STATS = [
   { value: 12, unit: '个阶段', label: '从立项到提交的项目工作流' },
-  { value: 9, unit: '道门禁', label: '任一未通过，即为 No-Go' },
+  { value: 9, unit: '道门禁', label: '逐步检查研究与成果质量' },
   { value: SILICON_LIMITS.personas, unit: '位', label: '单次运行的硅基受访者上限' },
   { value: awardCaseLibraryStats.total, unit: '条', label: '获奖案例索引，来源逐条标注' },
 ] as const;
@@ -61,16 +61,16 @@ type CasePage = typeof CASE_PAGES[number];
 
 const ORIGINS = [
   { era: '商 · 甲骨', glyph: '卜', title: '先问，后验。', text: '卜辞的最后一部分「验辞」记下事情是否应验：问题与结果刻在同一片甲骨上。', now: '先写清决策问题和待验证的判断，结论出来后回到原问题逐条核对。' },
-  { era: '春秋 ·《论语》', glyph: '徵', title: '文献不足，不下断语。', text: '孔子能讲夏、殷之礼，却因杞、宋的典籍与贤人不足为证而不下定论。', now: '资料不足时标为「未知」并列入待补材料，不替你补写数据、受访者或引用。' },
-  { era: '东汉 ·《说文》', glyph: '灋', title: '平之如水，触不直者去之。', text: '古文「法」从水、从廌、从去：传说獬豸能辨曲直，以角触理亏的一方。', now: '把 AI 合成的材料冒充真实田野或数据，会被判为致命问题，无法进入最终交付。' },
+  { era: '春秋 ·《论语》', glyph: '徵', title: '文献不足，不下断语。', text: '孔子能讲夏、殷之礼，却因杞、宋的典籍与贤人不足为证而不下定论。', now: '把待补资料列入项目清单，补齐依据后再推进结论。' },
+  { era: '东汉 ·《说文》', glyph: '灋', title: '平之如水，触不直者去之。', text: '古文「法」从水、从廌、从去：传说獬豸能辨曲直，以角触理亏的一方。', now: '质量检查贯穿研究流程，让问题、数据与结论彼此对应。' },
   { era: '清 · 考据学', glyph: '證', title: '凡立一义，必凭证据。', text: '乾嘉学者一字一义都要找到出处；梁启超把这种学风归纳为几条研究规范。', now: '每条结论登记进证据台账，规则与案例附官方来源，可逐条回查。' },
 ] as const;
 
 const PRINCIPLES = [
-  ['独立、非官方', '证见是独立的研究辅助工具，与正大杯主办方、承办方及冠名单位没有隶属、授权或合作关系。'],
-  ['不编造任何证据', '不虚构田野、受访者、数据、引用、模型输出、奖项或评委意见。'],
-  ['模拟不等于调查', '硅基样本的回答一律标记为模拟数据，只用于预测试，不能填补或扩充真实样本。'],
-  ['规则都有出处', '赛程与规则摘自官方通知并记录核验日期；新文件发布后须重新核验。'],
+  ['研究有据', '从问题、数据到结论，每一步保留可回查的依据。'],
+  ['证据可追溯', '田野记录、分析结果与引用分别关联来源和版本。'],
+  ['预测试先行', '用硅基模拟回答检查题目，再进入真实调查。'],
+  ['规则可回查', '赛程与规则关联官方通知，并记录核验日期。'],
 ] as const;
 
 const verifiedCases = awardCases.filter(item => item.verification === 'official_verified');
@@ -497,6 +497,7 @@ export default function LandingPage() {
           <a href="#calendar">赛程</a>
           <a href="#awards">案例</a>
           <Link href="/explore">了解证见</Link>
+          <Link href="/chronicle">寻证之旅</Link>
         </nav>
         <div className={styles.headerActions}>
           <Link href={loginHref} className={styles.textLink}>{signedIn ? '我的项目' : '登录'}</Link>
@@ -598,7 +599,7 @@ export default function LandingPage() {
           <dl className={styles.factGrid}>
             {SILICON_FACTS.map(([value, unit, text]) => <div key={unit} data-spot><dt><b>{value}</b>{unit}</dt><dd>{text}</dd></div>)}
           </dl>
-          <p className={styles.caution}><i className={styles.dotGold} aria-hidden="true"/>模拟回答只用于预测试，不是调查数据，不能填补或扩充真实样本。</p>
+          <p className={styles.caution}><i className={styles.dotGold} aria-hidden="true"/>硅基模拟 · 问卷预测试</p>
           <Link href="/workspace#silicon" className={styles.buttonGhost}>打开硅基样本<span aria-hidden="true">↗</span></Link>
         </div>
         <div className={styles.splitArt} data-reveal>
@@ -623,8 +624,8 @@ export default function LandingPage() {
       <section id="awards" className={styles.section} aria-labelledby="awards-title">
         <div className={styles.sectionHead} data-reveal>
           <p className={styles.kicker}>获奖案例</p>
-          <h2 id="awards-title">只呈现<span className={styles.foil}>可以核验</span>的部分</h2>
-          <p>{awardCaseLibraryStats.officialVerified} 条案例的题名、学校、组别、奖项和届次已由主办方或高校官网公告核验；未公开的方法、样本与评委意见一律不推断。</p>
+          <h2 id="awards-title">从获奖案例中，<br/><span className={styles.foil}>找到研究的启发</span></h2>
+          <p>{awardCaseLibraryStats.officialVerified} 条案例已由主办方或高校官网公告核验，按题名、学校、组别、奖项和届次检索。</p>
         </div>
         <div className={styles.caseMarquee} data-reveal>
           {caseRows.map((row, ri) => <div key={ri} className={styles.caseRow} data-reverse={ri === 1}>
@@ -632,14 +633,15 @@ export default function LandingPage() {
             <ul aria-hidden="true" inert>{row.map(item => <li key={item.id}><CaseCard item={item}/></li>)}</ul>
           </div>)}
         </div>
-        <p className={styles.sectionFoot} data-reveal>精选索引，非全量榜单，不能据此推断选题偏好或获奖概率。<Link href="/workspace#cases">打开获奖案例库 ↗</Link></p>
+        <p className={styles.sectionFoot} data-reveal><Link href="/workspace#cases">打开获奖案例库 ↗</Link></p>
       </section>
 
       <section id="deep-read" className={styles.section} aria-labelledby="deep-read-title">
         <div className={styles.sectionHead} data-reveal>
           <p className={styles.kicker}>案例深读</p>
           <h2 id="deep-read-title">一份报告，<br/><span className={styles.foil}>怎样把证据链走完</span></h2>
-          <p>《{CASE_REPORT}》是用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对。我们挑出五页，对照 Q → D → I → A 看它如何组织证据。</p>
+          <p>《{CASE_REPORT}》：五页参赛报告，沿 Q → D → I → A 看研究如何组织证据。</p>
+          <p className={styles.sectionFoot}>用户提供报告 · 奖项待核验</p>
         </div>
         <CaseStudy/>
       </section>
@@ -701,9 +703,7 @@ export default function LandingPage() {
           <Link href="/explore#questions">常见问题</Link>
         </nav>
       </div>
-      <p className={styles.disclaimer}>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p>
-      <p>界面截图来自证见工作台，使用教学示例问卷与模拟数据；首屏粒子与硅基样本示意动画由代码生成，不代表任何调查结果。案例深读页面来自用户提供的参赛报告，版权归原作者。</p>
-      <p>引文出处：《礼记·中庸》；《论语·八佾》；许慎《说文解字》；梁启超《清代学术概论》。历史一节为概念性叙事。</p>
+      <p>引文出处：《礼记·中庸》；《论语·八佾》；许慎《说文解字》；梁启超《清代学术概论》。案例报告版权归原作者。</p>
       <span className={styles.wordmark} aria-hidden="true">EVI-X</span>
     </footer>
 

@@ -27,7 +27,7 @@ export const EDITOR_LIMITS = { sections: 40, slides: 40, body: 12000, slideBody:
 
 export function createEditorContent(): EditorContent {
   const sections = [
-    ["摘要", "【写作提示，非真实研究结果】\n研究面向谁、要支持什么决策？用一段话说明研究问题、调查方式、核心发现与建议。\n请将提示替换为有证据支持的实际内容。"],
+    ["摘要", "【摘要写作提示】\n概括研究问题、调查方式、核心发现与行动建议。"],
     ["一、研究背景与问题", "1. 现实问题：谁在什么情境下遇到什么困难？\n2. 研究对象：明确地域、人群、时间与纳入条件。\n3. 决策目标：这份调查将帮助谁做什么决定？"],
     ["二、调查方案与问卷", "先写研究问题，再列变量和分析计划，最后设计题项。\n筛选题 → 行为与经历 → 态度量表 → 基本信息。\n量表注明来源与改编依据；通过访谈和预测试检查措辞、跳题和作答时间。"],
     ["三、数据质量与分析", "记录实际回收量、有效量、剔除规则与缺失处理，不补造数据。\n信度关注一致性，效度关注是否测到了目标概念；阈值不能代替研究设计。\n从描述统计开始，根据变量类型与假设选择差异检验、回归或聚类，并报告适用条件与局限。"],
@@ -38,7 +38,7 @@ export function createEditorContent(): EditorContent {
     version: 1, title: "我的市场调查研究", subtitle: "研究报告 · 写作草稿", accent: "teal",
     report: sections.map(([title, body], i) => ({ id: `section-${i + 1}`, title, body, source: "" })),
     slides: [
-      { id: "slide-1", title: "我的市场调查研究", body: "从真实问题到可执行的建议", aside: "", notes: "先介绍研究对象和核心问题。模板不代表已完成调查。", layout: "cover" },
+      { id: "slide-1", title: "我的市场调查研究", body: "从真实问题到可执行的建议", aside: "", notes: "先介绍研究对象和核心问题。", layout: "cover" },
       { id: "slide-2", title: "我们想解决什么问题？", body: "研究对象与边界\n决策主体与实际困难\n本次调查要回答的问题", aside: "填写实际研究背景与来源。", notes: "用一个具体问题进入研究，不要堆积背景。", layout: "two-column" },
       { id: "slide-3", title: "证据如何支持行动", body: "调查设计与质量检查\n关键发现与证据\n建议、执行主体与评估指标", aside: "", notes: "解释方法为什么适合问题，并说明结论边界。", layout: "content" },
     ],

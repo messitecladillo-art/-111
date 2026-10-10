@@ -160,7 +160,7 @@ export default function QuestionnaireLibrary({design,repairOrigin,editRevision,b
           void operation(async valid=>{const origin=await prepareQuestionnaireRepair(preview.version,record,finding);if(!valid()||!isCurrent(preview.editRevision)||getIdentity()!==preview.identity)return;setRepairTarget({finding:{...finding},origin});setApproval(false);});
         }}/>
         {repairTarget&&<p className={styles.notice} role="status">待定位：{repairTarget.finding.questionId?`第 ${repairTarget.finding.questionNumber} 题 ${repairTarget.finding.variable}`:'研究简介 / 题目结构'} · {repairTarget.finding.message}。原检查 {repairTarget.origin.reviewId} 已核对；当前内容尚未改变，请重新勾选并确认载入。</p>}
-        <p>载入会替换当前已应用设计，可一次撤销；不会覆盖任何已存版本。保存、哈希一致或结构检查不代表问卷已验证、预试已实施或 Gate 通过。</p>
+        <p>载入会替换当前已应用设计，可一次撤销；不会覆盖任何已存版本。</p>
         {stalePreview&&<p className={styles.warning}>预览后当前设计已变化。请取消并重新预览；恢复原文字或撤销也不会使旧预览重新有效。</p>}
         <label className={styles.check}><input type="checkbox" checked={approval} disabled={stalePreview||busy||frozen} onChange={e=>setApproval(e.target.checked)}/><span>已核对本版内容，同意替换当前设计；重要内容已下载备份。</span></label>
         {pending&&<p className={styles.warning}>请先核对上次保存结果，再载入另一版本。</p>}

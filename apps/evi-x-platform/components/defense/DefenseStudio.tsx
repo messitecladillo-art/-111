@@ -7,6 +7,7 @@ import {MAX_DEFENSE_IMPORT_BYTES,mergeDefenseImport,parseDefenseImport} from '@/
 import styles from './DefenseStudio.module.css';
 import PitchRehearsal from './PitchRehearsal';
 import ActionEvidence from './ActionEvidence';
+import {useContentReveal,useKeyedListMotion} from '../motion/useWorkspaceMotion';
 
 export default function DefenseStudio(){
   const [category,setCategory]=useState('全部主题');
@@ -70,6 +71,11 @@ export default function DefenseStudio(){
       setFeedback('已发起下载，请确认练习包已保存后再刷新。依据状态由你声明，仍需人工核验。');
     }catch{setFeedback('导出失败，当前页面内容仍在，请稍后重试。');}
   };
+  const bankMotion=useKeyedListMotion<HTMLDivElement>({ids:cards.map(c=>c.id),activeId:card.id});
+  const questionReveal=useContentReveal<HTMLDivElement>({token:card.id});
+  const scaffoldReveal=useContentReveal<HTMLDivElement>({token:draft.evidenceState});
+  const importReveal=useContentReveal<HTMLUListElement>({token:pending?`${pending.name}:${pending.revision}`:null});
+  const reviewReveal=useContentReveal<HTMLDivElement>({token:JSON.stringify([check.status,check.missing,check.warnings])});
   return <section className={styles.studio} id="defense" aria-labelledby="defense-title">
     <header className={styles.heading}>
       <div><span className={styles.eyebrow}>演练 · 定位 · 修订</span><h2 id="defense-title">路演与答辩</h2><p>选择问题，记录回答与证据，再分段彩排。</p></div>
@@ -83,32 +89,31 @@ export default function DefenseStudio(){
       <div className={styles.previewHeading}><div><span className={styles.eyebrow}>本地恢复 · 确认后生效</span><h3 id="defense-import-title">检查这次导入</h3></div><span className={styles.badge}>证据未核验</span></div>
       <p className={styles.filename}>{pending.name}</p>
       <p>导入 {pending.data.cardIds.length} 题：新增 {pending.data.cardIds.length-replaced.length} 题，替换 {replaced.length} 题。未列出的现有笔记保留；替换会覆盖该题的全部回答字段，建议先导出备份。</p>
-      <ul className={styles.importList}>{pending.data.cardIds.map(id=><li key={id}><span>{corpus.cards.find(c=>c.id===id)!.title}</span><strong>{replaced.includes(id)?'替换现有笔记':'新增笔记'}</strong></li>)}</ul>
+      <ul ref={importReveal} className={styles.importList}>{pending.data.cardIds.map(id=><li key={id}><span>{corpus.cards.find(c=>c.id===id)!.title}</span><strong>{replaced.includes(id)?'替换现有笔记':'新增笔记'}</strong></li>)}</ul>
       <label className={styles.checkbox}><input type="checkbox" checked={includeTiming} onChange={e=>setIncludeTiming(e.target.checked)}/><span>同时恢复文件的时间编排：总时长 {formatDuration(pending.data.total)}，预留 {formatDuration(pending.data.reserve)}（当前总时长 {planError?'设置待修正':formatDuration(Number(total))}）</span></label>
       {pending.data.corpusMismatch&&<div className={styles.versionWarning}><p>文件题库版本 {pending.data.corpusVersion} 与当前版本 {corpus.version} 不同。问题编号可识别，但请按当前题意重新检查回答。</p><label className={styles.checkbox}><input type="checkbox" checked={versionAcknowledged} onChange={e=>setVersionAcknowledged(e.target.checked)}/><span>我会复核版本差异，按当前题库继续练习</span></label></div>}
-      <p className={styles.importBoundary}>导入不代表证据已核验。文件内的检查结论不沿用，系统仅重新检查回答结构；练习时间不是官方规则。</p>
       <div className={styles.importActions}><button type="button" className={styles.secondary} onClick={cancelImport}>取消，保留当前内容</button><button type="button" onClick={confirmImport} disabled={pending.data.corpusMismatch&&!versionAcknowledged}>{replaced.length?`确认导入并替换 ${replaced.length} 题`:`确认导入 ${pending.data.cardIds.length} 题`}</button></div>
     </section>}
     <p className={styles.feedback} role="status">{feedback}</p>
     <div className={styles.workspace}>
       <aside className={styles.bank} aria-label="答辩练习题库">
         <div className={styles.bankHeader}><strong>选择一个薄弱环节</strong><label>主题筛选<select value={category} onChange={e=>{setCategory(e.target.value);setFeedback('');}}>{['全部主题',...new Set(corpus.cards.map(c=>c.category))].map(value=><option key={value}>{value}</option>)}</select></label></div>
-        <div className={styles.cards}>{cards.map((item,index)=><button key={item.id} type="button" aria-pressed={card.id===item.id} onClick={()=>{setSelected(item.id);setFeedback('');}}><span>{String(index+1).padStart(2,'0')} · {item.category}</span><strong>{item.title}</strong><small>{hasDefenseDraftChanges(drafts[item.id])?'已记笔记 · 未核验':'待练习'}</small></button>)}</div>
+        <div ref={bankMotion} className={styles.cards}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{cards.map((item,index)=><button key={item.id} data-motion-id={item.id} type="button" aria-pressed={card.id===item.id} onClick={()=>{setSelected(item.id);setFeedback('');}}><span>{String(index+1).padStart(2,'0')} · {item.category}</span><strong>{item.title}</strong><small>{hasDefenseDraftChanges(drafts[item.id])?'已记笔记 · 未核验':'待练习'}</small></button>)}</div>
       </aside>
       <article className={styles.practice} aria-label="当前问题与回答">
-        <div className={styles.question}><span>{card.category}</span><h3>{card.question}</h3><p>{card.followUp}</p></div>
+        <div ref={questionReveal} className={styles.question}><span>{card.category}</span><h3>{card.question}</h3><p>{card.followUp}</p></div>
         <div className={styles.evidenceChecklist}><h4>回答前，先找这三类证据</h4><ul>{card.evidencePrompts.map(prompt=><li key={prompt}>{prompt}</li>)}</ul></div>
         <div className={styles.pitfall}><strong>不要这样回答</strong><p>{card.pitfall}</p></div>
         <div className={styles.form}>
           <label>当前依据状态<select value={draft.evidenceState} onChange={e=>patch({evidenceState:e.target.value as EvidenceState})}><option value="missing">缺少证据，暂不能确认</option><option value="documented">有记录可定位，尚待人工核验</option><option value="proposed">仅为计划，尚未执行</option></select></label>
-          <div className={styles.scaffold} aria-label="按依据状态组织回答">
+          <div ref={scaffoldReveal} className={styles.scaffold} aria-label="按依据状态组织回答">
             <strong>{scaffold.title}</strong><ol>{scaffold.steps.map(step=><li key={step}>{step}</li>)}</ol>
             <p>切换状态只调整提示，笔记保留；证据需人工核验。</p>
           </div>
           {DEFENSE_FIELDS.map((field,index)=><label key={field.id}><span><i>{index+1}</i>{field.label}</span>{field.id==='owner'?<input maxLength={120} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>:<textarea rows={field.id==='answer'?4:2} maxLength={1800} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>}</label>)}
         </div>
-        <div className={styles.review} aria-label="回答结构检查"><strong>{check.status==='incomplete'?'还有信息需要补齐':'结构已填写，证据仍待人工复核'}</strong><p>{check.missing.length?`待补：${check.missing.join('、')}。`:'这不是正确性评分，也不代表已通过赛事或项目质量门禁。'}</p>{check.warnings.length>0&&<ul>{check.warnings.map(w=><li key={w}>{w}</li>)}</ul>}</div>
-        <details className={styles.sources}><summary>方法来源与使用边界</summary><p>独立改写的练习题，不是历史现场提问原文。来源页码按 PDF 物理页计。</p>{card.sourceRefs.map(ref=>{const source=corpus.sources.find(s=>s.id===ref.id)!;return <p key={ref.id}>{source.label} · 第 {ref.pages.join('、')} 页<br/><small>{source.scope}</small></p>;})}<p>{corpus.notice}</p></details>
+        <div ref={reviewReveal} className={styles.review} aria-label="回答结构检查"><strong>{check.status==='incomplete'?'还有信息需要补齐':'结构已填写，证据待复核'}</strong>{check.missing.length>0&&<p>待补：{check.missing.join('、')}。</p>}{check.warnings.length>0&&<ul>{check.warnings.map(w=><li key={w}>{w}</li>)}</ul>}</div>
+        <details className={styles.sources}><summary>参考资料</summary>{card.sourceRefs.map(ref=>{const source=corpus.sources.find(s=>s.id===ref.id)!;return <p key={ref.id}>{source.label} · 第 {ref.pages.join('、')} 页</p>;})}</details>
       </article>
     </div>
     <ActionEvidence/>
@@ -120,7 +125,5 @@ export default function DefenseStudio(){
       {!planError&&<p className={styles.timeTotal}>讲述 {formatDuration(Number(total)-Number(reserve))} + 预留 {formatDuration(Number(reserve))} = 总时长 {formatDuration(Number(total))}</p>}
     </section>
     <PitchRehearsal total={total.trim()?Number(total):NaN} reserve={reserve.trim()?Number(reserve):NaN} weights={weights.map(w=>w.trim()?Number(w):NaN)} corpusVersion={corpus.version} planError={planError}/>
-    <details className={styles.learned}><summary>本次吸收了什么，哪些没有照搬？</summary><p>3 份资料共 126 页，已保留出处和指纹。只抽象训练机制，不公开原件、完整讲稿、案例数字或联系方式。</p><div className={styles.rejections}>{corpus.rejectedShortcuts.map(item=><article key={item.id}><h4>{item.reason}</h4><p>{item.replacement}</p></article>)}</div><p>“国一”等描述来自资料自述，未据此新增已核验获奖案例。历史经验不能替代当前届次、组别、赛区、赛道和阶段的正式通知。</p><div className={styles.references}>{corpus.verificationReferences.map(ref=><a key={ref.id} href={ref.url} target="_blank" rel="noreferrer">{ref.label}</a>)}</div></details>
-    <details className={styles.sources}><summary>资料自身有哪些限制？</summary><ul>{corpus.sourceLimitations.map(item=><li key={item}>{item}</li>)}</ul></details>
   </section>;
 }

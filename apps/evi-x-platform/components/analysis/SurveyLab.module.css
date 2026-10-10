@@ -51,7 +51,10 @@
 .metrics article:last-child { border-right: 0; }
 .metrics span,.metrics small { display: block; font-size: 13px; color: var(--wb-muted); }
 .metrics strong { display: block; font-size: 27px; line-height: 1.5; font-variant-numeric: tabular-nums; font-weight: 650; color: var(--wb-text); }
-.tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tabs { position: relative; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.selectionMarker { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; background: var(--wb-gold-text); border-radius: 2px; }
+.tabs > .selectionMarker { margin-top: -2px; }
+.tabs > button,.steps > button { transition: background-color 180ms ease, color 180ms ease; }
 .tabs > button { white-space: nowrap; }
 .tabs > button[aria-pressed=true] { color: var(--wb-accent); border-color: var(--wb-accent); background: var(--wb-accent-soft); }
 .exports { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -83,7 +86,7 @@
 .barRow > span { overflow-wrap: anywhere; }
 .barRow strong { font-size: 13px; font-weight: 550; }
 .barTrack { grid-column: 1/-1; background: var(--wb-well); border-radius: 2px; height: 7px; overflow: hidden; }
-.barTrack i { display: block; height: 100%; background: var(--wb-accent); }
+.barTrack i { display: block; height: 100%; background: var(--wb-accent); transition: width 220ms cubic-bezier(.2,.7,.2,1); }
 .bounds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
 .itemList { max-height: 360px; overflow: auto; margin: 18px 0; border-block: 1px solid var(--wb-line); }
 .itemRow { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--wb-line); }
@@ -104,17 +107,22 @@
 .methodNotes a { color: var(--wb-accent); font-size: 14px; font-weight: 600; text-underline-offset: 4px; }
 .methodNotes article p { margin-top: 6px; font-size: 14px; }
 
-.steps { display: flex; gap: 6px; border-bottom: 1px solid var(--wb-line); margin: 0 0 12px; }
+.steps { position: relative; display: flex; gap: 6px; border-bottom: 1px solid var(--wb-line); margin: 0 0 12px; }
 .lab .steps button { display: flex; align-items: center; gap: 9px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 10px 18px; min-height: 44px; font-weight: 600; }
 .steps button span { color: var(--wb-muted); font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 500; }
-.lab .steps button[aria-pressed=true] { color: var(--wb-accent); border-bottom-color: var(--wb-accent); }
+.lab .steps button[aria-pressed=true] { color: var(--wb-accent); }
 .steps i { width: 6px; height: 6px; border-radius: 50%; background: var(--wb-accent); }
 .datasetIdentity { flex: 1; overflow-wrap: anywhere; }
 .datasetMenu { position: relative; }
 .datasetMenu > summary { cursor: pointer; padding: 8px 0 8px 12px; font-size: 13px; color: var(--wb-accent); }
 .datasetMenu > div { display: grid; gap: 8px; position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 290px; max-width: 75vw; padding: 16px; border: 1px solid var(--wb-line); border-radius: 9px; background: var(--wb-solid); box-shadow: 0 12px 36px #00000012; }
 .datasetMenu p { font-size: 12px; overflow-wrap: anywhere; }
-.reading { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 14px; color: var(--wb-accent); }
+.reading { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--wb-line); border-radius: 7px; background: var(--wb-well); font-size: 14px; color: var(--wb-accent); }
+.reading > div { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.reading strong { display: block; font-size: 13px; font-weight: 600; }
+.reading small { display: block; margin-top: 3px; color: var(--wb-muted); font-size: 12px; overflow-wrap: anywhere; }
+.activityDot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; animation: activity 900ms ease-in-out infinite alternate; }
+@keyframes activity { from { opacity: .4; } to { opacity: 1; } }
 .stageActions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 20px 0 0; }
 .stageActions p { flex: 1; font-size: 13px; min-width: 200px; }
 .resultsToolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -164,4 +172,10 @@
   .stageActions button { flex: 1; }
   .error button,.warning button { margin: 10px 0 0; }
   .evidenceDrawer > summary span { display: block; margin: 7px 0 0; }
+  .reading { flex-wrap: wrap; }
+  .reading > div { flex: 1 1 180px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .tabs > button,.steps > button,.barTrack i { transition: none; }
+  .activityDot { animation: none; }
 }

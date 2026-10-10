@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "证见 EVI-X｜正大杯冠军 Agent",
-    description: "独立、非官方的正大杯全流程循证竞赛智能体。",
+    description: "市场调查与分析的循证研究工作台。",
     images: ["/og.png"],
   },
 };

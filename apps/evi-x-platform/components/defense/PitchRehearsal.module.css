@@ -41,3 +41,12 @@
 @media(max-width:1100px) {.blocks {grid-template-columns:repeat(2,minmax(0,1fr));}.blocks li:last-child {grid-column:1/-1;}}
 @media(max-width:760px) {.panel {padding:18px;}.clockArea {padding:16px;}.controls {width:100%;}.controls button {flex:1 1 150px;}.setup button {width:100%;}}
 @media(max-width:380px) {.blocks {grid-template-columns:1fr;}.footer button {width:100%;}}
+
+.blocks { position:relative; }
+.blocks li { transition:background-color 180ms ease,border-color 180ms ease; }
+.blocks li.motionMarker { position:absolute; top:0; left:0; width:0; height:2px; padding:0; border:0; display:block; background:var(--wb-gold,#b39757); pointer-events:none; border-radius:2px; }
+.clockArea[data-running=true] { border-color:color-mix(in srgb,var(--wb-accent) 55%,var(--wb-line)); }
+.planProgress { height:3px; border-radius:2px; background:var(--wb-line); overflow:hidden; }
+.planProgress>span { display:block; height:100%; background:var(--wb-accent); transition:width 200ms linear; }
+.planProgress[data-over-plan=true]>span { background:var(--wb-amber); }
+@media(prefers-reduced-motion:reduce) { .panel *,.panel *::before { animation:none!important; transition:none!important; } }

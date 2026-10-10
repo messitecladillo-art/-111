@@ -4,6 +4,7 @@ import {useEffect, useRef, useState} from 'react';
 import {PITCH_BLOCKS} from '@/lib/defense-training';
 import {exportPitchSessions, pitchElapsed, pitchPlanMatches, startPitchSession, summarizePitch, transitionPitchSession, type PitchSession} from '@/lib/pitch-rehearsal';
 import styles from './PitchRehearsal.module.css';
+import {useContentReveal,useKeyedListMotion} from '../motion/useWorkspaceMotion';
 
 type Props = {total:number; reserve:number; weights:number[]; corpusVersion:string; planError:string};
 const MAX_ROUNDS = 20;
@@ -84,7 +85,7 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
       }
       const next = transitionPitchSession(previous, action, at);
       publish([...records.current.slice(0, -1), next]); setNow(at); setError('');
-      setNotice(next.status === 'completed' ? '五段计时已记录。完成计时不代表内容正确，请结合缺口与证据复盘。'
+      setNotice(next.status === 'completed' ? '五段计时已记录，可以查看用时并复盘。'
         : next.status === 'stopped' ? '已保留本轮未完成记录，不会补齐未讲段落。'
         : action === 'pause' ? '已暂停；暂停时间不计入讲述时间，中断次数会保留。'
         : action === 'resume' ? '继续当前段。带暂停的练习不能当作连续实战用时。'
@@ -104,9 +105,9 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
     try {
       const content = exportPitchSessions(records.current);
       const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], {type:'application/json;charset=utf-8'}));
-      const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'EVI-X-彩排记录-非官方.json'; anchor.click();
+      const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'EVI-X-彩排记录.json'; anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice('已发起下载，请确认文件已保存。彩排 JSON 仅供复盘，无法通过“导入练习笔记”恢复，不能用作赛事计时证明。'); setError('');
+      setNotice('已发起下载，请确认彩排记录已保存。'); setError('');
     } catch {setError('导出失败，页面内的记录仍保留，请重试。');}
   };
   const clear = () => {
@@ -115,25 +116,30 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
     publish([]); setNow(0); setError(''); setNotice('已清空本页彩排记录。已下载的文件及答辩笔记未受影响。');
   };
 
+  const blockMotion=useKeyedListMotion<HTMLOListElement>({ids:current?.plan.map(entry=>entry.id)??[],activeId:current?.plan[current.currentIndex]?.id??null,markerAxis:'horizontal'});
+  const summaryReveal=useContentReveal<HTMLDivElement>({token:current&&!active?`${current.id}:${current.status}`:null});
+  const planProgress=block&&active?Math.min(1,elapsed.currentMs/(block.seconds*1000)):null;
+
   return <section ref={panel} className={styles.panel} aria-labelledby="rehearsal-title">
-    <header className={styles.heading}><div><span className={styles.kicker}>把计划练一遍</span><h3 id="rehearsal-title">分段实测彩排</h3><p>逐段记录用时，对照计划复盘。</p></div><span className={styles.tag}>仅本地 · 非官方计时</span></header>
-    <p className={styles.boundary}>记录仅存于当前页面；刷新或关闭会丢失。切换模块或进入后台会自动暂停，返回后手动继续。彩排与答辩笔记需分别导出；彩排 JSON 暂不支持导入恢复。计时仅供练习，不采集音视频，不核验报告。</p>
+    <header className={styles.heading}><div><span className={styles.kicker}>把计划练一遍</span><h3 id="rehearsal-title">分段实测彩排</h3><p>逐段记录用时，对照计划复盘。</p></div><span className={styles.tag}>练习计时</span></header>
+    <p className={styles.boundary}>切换模块或进入后台时自动暂停，返回后点击继续。离开前分别导出彩排记录与答辩笔记。</p>
     <div className={styles.setup}><label>本轮报告 / 讲稿版本<input maxLength={120} value={reportVersion} onChange={e => setReportVersion(e.target.value)} disabled={active} placeholder="例如：讲稿 v3 · 10 月 2 日修订（自行填写）"/></label><button type="button" onClick={start} disabled={active || !!planError || !reportVersion.trim() || sessions.length >= MAX_ROUNDS}>{sessions.length ? '按当前计划再练一轮' : '开始本轮计时'}</button></div>
     {!!planError && <p className={styles.warning}>先修正上方时间设置，才能开始新一轮；已有记录不受影响。</p>}
     {sessions.length >= MAX_ROUNDS && <p className={styles.warning}>本页已记录 20 轮，不会自动删除旧记录。请先导出并确认保存，再清空以继续。</p>}
     {current && <>
       <div className={styles.sessionHead}><strong>第 {sessions.length} 轮 · {current.reportVersion}</strong><span>{current.status === 'running' ? '正在讲述' : current.status === 'paused' ? '已暂停' : current.status === 'completed' ? '五段已记录' : '提前结束 · 未完成'} · 中断 {current.pauseCount} 次</span></div>
       {drift && <p className={styles.warning}>上方计划已变化。本轮仍按开始时的快照比较，不会重写已记录时间；下一轮才采用新计划。</p>}
-      <div className={styles.clockArea}>
+      <div className={styles.clockArea} data-running={running}>
         <div><span>{active ? `当前段 · ${block?.label}` : '本轮讲述用时'}</span><strong role="timer" aria-label={active ? '当前段讲述时间' : '本轮讲述时间'}>{duration(active ? elapsed.currentMs : elapsed.totalMs)}</strong><small>累计 {duration(elapsed.totalMs)} / 本轮计划 {duration((current.total-current.reserve)*1000)} · 总练习额度 {duration(current.total*1000)}</small></div>
         {active && <div className={styles.controls}><button type="button" onClick={() => act(running ? 'pause' : 'resume')}>{running ? '暂停计时' : '继续当前段'}</button><button type="button" className={styles.primary} onClick={() => act('complete-block')} disabled={!running || !!clockError || elapsed.currentMs < 1000}>{current.currentIndex === PITCH_BLOCKS.length-1 ? '完成最后一段' : '完成本段，进入下一段'}</button><button type="button" className={styles.stop} onClick={() => act('stop')}>结束本轮（保留未完成）</button></div>}
       </div>
-      <ol className={styles.blocks}>{current.plan.map((entry, index) => {
+      {planProgress!==null&&<div className={styles.planProgress} aria-hidden="true" data-over-plan={elapsed.currentMs>(block?.seconds??0)*1000}><span style={{width:`${planProgress*100}%`}}/></div>}
+      <ol ref={blockMotion} className={styles.blocks}><li role="presentation" className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{current.plan.map((entry, index) => {
         const recorded = current.segments[index];
         const actual = recorded?.elapsedMs ?? (active && index === current.currentIndex ? elapsed.currentMs : null);
-        return <li key={entry.id} className={active && index === current.currentIndex ? styles.current : undefined}><span>0{index+1} · {entry.label}</span><strong>{actual === null ? '尚未讲述' : duration(actual)}</strong><small>计划 {duration(entry.seconds*1000)}{actual !== null && <> · 差值 {difference(actual-entry.seconds*1000)}</>}</small><em>{recorded ? (recorded.completed ? '已确认本段结束' : '结束时尚未讲完') : active && index === current.currentIndex ? '当前段' : '未记录'}</em></li>;
+        return <li key={entry.id} data-motion-id={entry.id} className={active && index === current.currentIndex ? styles.current : undefined}><span>0{index+1} · {entry.label}</span><strong>{actual === null ? '尚未讲述' : duration(actual)}</strong><small>计划 {duration(entry.seconds*1000)}{actual !== null && <> · 差值 {difference(actual-entry.seconds*1000)}</>}</small><em>{recorded ? (recorded.completed ? '已确认本段结束' : '结束时尚未讲完') : active && index === current.currentIndex ? '当前段' : '未记录'}</em></li>;
       })}</ol>
-      {!active && summary && <div className={styles.review}><strong>{summary.complete ? '本轮复盘' : '未完成，只比较已经记录的讲述'}</strong><p>{summary.complete ? `比讲述计划${summary.overPlanMs > 0 ? '多用' : '节余'} ${duration(Math.abs(summary.overPlanMs))}；使用预留 ${duration(summary.reserveUsedMs)}；超出总练习额度 ${duration(summary.overTotalMs)}。` : '未讲完的段落没有补零，也不据此宣称节省时间或达到要求。'}</p><ul><li>先检查重复背景、模型名和逐图复述；不要为了缩时删掉样本口径、关键证据与限制。</li><li>将卡顿处对应到报告页码或表号，在上方答辩笔记里写清补证、改稿和负责角色。</li><li>{current.pauseCount ? '本轮有中断，不能直接等同于连续实战；完成修订后再练一次不中断的版本。' : '本轮未记录暂停，但系统不核验是否真正完成口头讲述。'}</li></ul></div>}
+      {!active && summary && <div ref={summaryReveal} className={styles.review}><strong>{summary.complete ? '本轮复盘' : '未完成，只比较已经记录的讲述'}</strong><p>{summary.complete ? `比讲述计划${summary.overPlanMs > 0 ? '多用' : '节余'} ${duration(Math.abs(summary.overPlanMs))}；使用预留 ${duration(summary.reserveUsedMs)}；超出总练习额度 ${duration(summary.overTotalMs)}。` : '未讲完的段落没有补零，也不据此宣称节省时间或达到要求。'}</p><ul><li>先检查重复背景、模型名和逐图复述；不要为了缩时删掉样本口径、关键证据与限制。</li><li>将卡顿处对应到报告页码或表号，在上方答辩笔记里写清补证、改稿和负责角色。</li><li>{current.pauseCount ? '本轮有中断，不能直接等同于连续实战；完成修订后再练一次不中断的版本。' : '本轮未记录暂停，但系统不核验是否真正完成口头讲述。'}</li></ul></div>}
     </>}
     {(error || clockError) && <p className={styles.error} role="alert">{error || clockError}</p>}
     <p className={styles.notice} role="status">{notice}</p>

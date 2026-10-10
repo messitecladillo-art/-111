@@ -112,5 +112,5 @@ test('CSV and reliability calculator keep raw data local; explicit aggregate per
   assert.match(source,/schema: "survey-analysis\/v2"/); assert.match(source,/reliability: currentResult \?/);
   assert.match(source,/scope:'raw_file_cell_check'/); assert.match(source,/numericColumnRecords/);
   assert.doesNotMatch(source,/rows: dataset\.table\.rows|rows: table\.rows/);
-  assert.match(source,/模拟数据 · 非真实调研/);
+  assert.match(source,/教学模拟数据/);
 });

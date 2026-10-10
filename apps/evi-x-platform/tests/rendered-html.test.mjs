@@ -168,7 +168,7 @@ test("server-renders the finished EVI-X product shell", async () => {
   assert.match(html, /五维赛事规则解析器/);
   assert.match(html, /控制执行保持关闭/);
   assert.doesNotMatch(html, /保存阶段|更新控制阶段|修改 Gate|签发交接/);
-  assert.match(html, /独立研究辅助工具/);
+  assert.match(html, /证见 EVI-X/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
@@ -561,7 +561,7 @@ test("keeps migration, local-read boundary, and visual assets auditable", async 
   assert.match(platformSource, /caseGroupLabel\(item\.group\)/);
   assert.match(platformSource, /caseGroupLabel\(selected\.group\)/);
   assert.match(platformSource, /用户陈述奖项｜未独立核验/);
-  assert.match(platformSource, /材料分析：可迁移结构（非获奖因果）/);
+  assert.match(platformSource, /研究设计启发/);
   assert.match(platformSource, /证据来源与核验字段/);
   assert.match(platformSource, /params\.set\("edition", edition\)/);
   assert.match(platformSource, /createPortal\(/);

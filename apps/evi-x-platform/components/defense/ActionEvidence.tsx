@@ -8,6 +8,7 @@ import {
   type ActionEvidenceCard, type ActionField, type ActionStage,
 } from '@/lib/action-evidence';
 import styles from './ActionEvidence.module.css';
+import {useContentReveal,useKeyedListMotion} from '../motion/useWorkspaceMotion';
 
 const groups: {title:string; hint:string; fields:ActionField[]}[] = [
   {title:'从哪条发现出发', hint:'把研究依据、对象和责任人放在同一张卡里。', fields:['title','finding','audience','owner','artifactVersion']},
@@ -102,6 +103,8 @@ export default function ActionEvidence() {
     } catch(reason) {setError(reason instanceof Error?reason.message:'导出失败，当前页面内容仍在。');}
   };
 
+  const cardMotion=useKeyedListMotion<HTMLElement>({ids:cards.map(item=>item.id),activeId:card?.id??null});
+  const stageReveal=useContentReveal<HTMLDivElement>({token:card?`${card.id}:${card.stage}`:null});
   return <section className={styles.panel} aria-labelledby="action-evidence-title">
     <header className={styles.heading}>
       <div><span className={styles.kicker}>从建议到记录</span><h3 id="action-evidence-title">建议落地证据卡</h3><p>每张卡记录一项行动的进展与依据。</p></div>
@@ -129,20 +132,19 @@ export default function ActionEvidence() {
     {error&&<p role="alert" className={styles.error}>{error} 当前卡片未被导入覆盖。</p>}
     <p className={styles.notice} role="status">{notice}</p>
     {!card?<div className={styles.empty}><strong>选择一条准备在答辩中展示的建议</strong><p>新增成果卡，填写支撑这条建议的发现。</p></div>:<div className={styles.workspace}>
-      <aside className={styles.cards} aria-label="成果卡列表">{cards.map((item,index)=><button type="button" key={item.id} aria-pressed={card.id===item.id} onClick={()=>{setSelected(item.id);setRemoveId('');}}><span>行动 {String(index+1).padStart(2,'0')}</span><strong>{item.title||'未命名成果卡'}</strong><small>{ACTION_STAGES.find(s=>s.id===item.stage)?.label} · 未核验</small></button>)}</aside>
+      <aside ref={cardMotion} className={styles.cards} aria-label="成果卡列表"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{cards.map((item,index)=><button type="button" key={item.id} data-motion-id={item.id} aria-pressed={card.id===item.id} onClick={()=>{setSelected(item.id);setRemoveId('');}}><span>行动 {String(index+1).padStart(2,'0')}</span><strong>{item.title||'未命名成果卡'}</strong><small>{ACTION_STAGES.find(s=>s.id===item.stage)?.label} · 未核验</small></button>)}</aside>
       <article className={styles.editor} aria-label="成果卡编辑区">
         <fieldset className={styles.stages}><legend>选择声明类别 · 自报</legend><div>{ACTION_STAGES.map(item=><label key={item.id} data-selected={card.stage===item.id}><input type="radio" name={`action-stage-${card.id}`} value={item.id} checked={card.stage===item.id} onChange={()=>patch({stage:item.id as ActionStage})}/><span>{item.label}</span></label>)}</div></fieldset>
-        <div className={styles.stageNote}><strong>{stage?.prompt}</strong><p>{stage?.boundary}</p></div>
+        <div ref={stageReveal} className={styles.stageNote}><strong>{stage?.prompt}</strong><p>{stage?.boundary}</p></div>
         {groups.map(group=><section key={group.title} className={styles.group}><h4>{group.title}</h4><p>{group.hint}</p><div className={styles.fields}>{group.fields.map(id=>{
           const field=ACTION_FIELDS.find(item=>item.id===id)!;
           const short=['title','owner','artifactVersion','audience'].includes(id);
           return <label key={id} className={short?styles.short:styles.wide}><span>{field.label}</span>{short?<input ref={id==='title'?titleInput:undefined} maxLength={field.maxLength} value={card[id]} placeholder={field.placeholder} onChange={event=>patch({[id]:event.target.value})}/>:<textarea maxLength={field.maxLength} rows={id==='evidence'?3:2} value={card[id]} placeholder={field.placeholder} onChange={event=>patch({[id]:event.target.value})}/>}</label>;
         })}</div></section>)}
-        <div className={styles.review} aria-label="成果卡结构提醒"><strong>{check?.status==='incomplete'?'还有信息待补充':'结构已填写，证据仍待人工核验'}</strong>{!!check?.missing.length&&<p>待补：{check.missing.join('、')}。</p>}<ul>{check?.warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul><p>文字完整不代表内容属实。请另一位成员打开原始记录核对；材料变化后，应重新核对这张卡。</p></div>
-        <div className={styles.cardFooter}><span>不改写报告、PPT、问卷或项目 Gate。</span><button type="button" onClick={()=>setRemoveId(card.id)}>移除当前成果卡</button></div>
+        <div className={styles.review} aria-label="成果卡结构提醒"><strong>{check?.status==='incomplete'?'还有信息待补充':'结构已填写，证据待复核'}</strong>{!!check?.missing.length&&<p>待补：{check.missing.join('、')}。</p>}<ul>{check?.warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>
+        <div className={styles.cardFooter}><button type="button" onClick={()=>setRemoveId(card.id)}>移除当前成果卡</button></div>
         {removeId===card.id&&<div className={styles.removeBox}><p>确认移除“{card.title||'未命名成果卡'}”？此操作只删除页面内存中的这一张卡。未导出的内容无法恢复。</p><div className={styles.toolbar}><button type="button" onClick={()=>setRemoveId('')}>保留此卡</button><button type="button" onClick={remove}>确认移除此卡</button></div></div>}
       </article>
     </div>}
-    <details className={styles.sources}><summary>这个练习借鉴了什么？</summary><p>指南物理第 3、7、12 页关于成果与采纳依据的追问、回答模板第 1 页关于建议可行性的组织方式、路演拆解第 13、28、37 页的成果呈现，促成了此卡的设计。</p><p>卡片、字段和声明分类是 EVI-X 的产品推导，不是材料中的统一流程，也不是赛事官方标准。我们保留“发现对应行动”，不采纳“受到重视或舞台演示就等于落地”的推断。不复制原件、讲稿、案例数值或图片。</p></details>
   </section>;
 }

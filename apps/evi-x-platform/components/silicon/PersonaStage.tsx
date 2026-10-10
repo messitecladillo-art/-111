@@ -32,7 +32,7 @@ const ACCESSORIES: Exclude<AccessoryKind, 'none'>[] = ['glasses', 'scarf', 'back
 
 type FigureState = {
   id: string; from: THREE.Vector2; to: THREE.Vector2; pos: THREE.Vector2; start: number; spawn: number;
-  yaw: number; phase: number; pop: number; activity: FigureActivity; figure: StageFigure;
+  yaw: number; phase: number; pop: number; emphasis: number; activity: FigureActivity; figure: StageFigure;
 };
 
 /* ───────────── geometry, built once per stage ───────────── */
@@ -127,7 +127,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
   const hostRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
-  const apiRef = useRef<{ label: (text: string) => void; stacked: (on: boolean) => void; sync: (figures: StageFigure[], groups: ReadonlyArray<{ key: string; label: string }>) => void; select: (id: string | null) => void; motion: (reduced: boolean) => void; zoom: (factor: number) => void; reset: () => void; spin: (on: boolean) => void } | null>(null);
+  const apiRef = useRef<{ label: (text: string) => void; stacked: (on: boolean) => void; sync: (figures: StageFigure[], groups: ReadonlyArray<{ key: string; label: string }>) => void; select: (id: string | null) => void; motion: (reduced: boolean) => void; zoom: (factor: number) => void; focus: () => void; reset: () => void; spin: (on: boolean) => void } | null>(null);
   const callbacks = useRef({ onSelect, describe, onFallback });
   const [hover, setHover] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
@@ -271,7 +271,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
         let s = states.get(f.id);
         const slot = layout?.slots[i] ?? (s ? { x: s.to.x, z: s.to.y } : { x: 0, z: 0 });
         if (!s) {
-          s = { id: f.id, from: new THREE.Vector2(slot.x, slot.z), to: new THREE.Vector2(slot.x, slot.z), pos: new THREE.Vector2(slot.x, slot.z), start: now, spawn: now + Math.min(900, i * 9), yaw: 0, phase: Math.random() * Math.PI * 2, pop: 0, activity: f.activity, figure: f };
+          s = { id: f.id, from: new THREE.Vector2(slot.x, slot.z), to: new THREE.Vector2(slot.x, slot.z), pos: new THREE.Vector2(slot.x, slot.z), start: now, spawn: now + Math.min(900, i * 9), yaw: 0, phase: Math.random() * Math.PI * 2, pop: 0, emphasis: 1, activity: f.activity, figure: f };
           states.set(f.id, s);
         } else if (Math.abs(s.to.x - slot.x) > 1e-3 || Math.abs(s.to.y - slot.z) > 1e-3) {
           s.from.copy(s.pos); s.to.set(slot.x, slot.z); s.start = now + Math.min(520, i * 6);
@@ -281,7 +281,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
         return s;
       });
       for (const id of [...states.keys()]) if (!seen.has(id)) states.delete(id);
-      order.forEach((s, i) => colorFigure(i, s.figure, s.id === hovered ? 0.22 : 0));
+      order.forEach((s, i) => colorFigure(i, s.figure, s.id === hovered ? 0.22 : s.id === selected ? 0.14 : 0));
       order.forEach((s, i) => {
         parts.halo.setColorAt(i, tmpColor.set(s.figure.halo ?? '#2a6f7a').multiplyScalar(s.figure.halo ? 1 : 0.32));
         parts.eyes.setColorAt(i, s.figure.activity === 'thinking' ? glow : ink);
@@ -312,7 +312,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
     };
 
     const pointer = new THREE.Vector2(), raycaster = new THREE.Raycaster();
-    let pointerInside = false, pointerDirty = false, drag: { x: number; y: number; az: number; el: number; moved: boolean } | null = null;
+    let pointerInside = false, pointerDirty = false, drag: { pointerId: number; x: number; y: number; az: number; el: number; moved: boolean } | null = null;
     const pick = (): string | null => {
       parts.body.computeBoundingSphere(); parts.head.computeBoundingSphere();
       raycaster.setFromCamera(pointer, camera);
@@ -320,9 +320,10 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       return hit && hit.instanceId !== undefined ? order[hit.instanceId]?.id ?? null : null;
     };
     const setHovered = (id: string | null) => {
+      if (disposed) { hovered = null; return; }
       if (id === hovered) return;
       const prev = order.findIndex(s => s.id === hovered);
-      if (prev >= 0) colorFigure(prev, order[prev].figure, 0);
+      if (prev >= 0) colorFigure(prev, order[prev].figure, order[prev].id === selected ? 0.14 : 0);
       hovered = id;
       const next = order.findIndex(s => s.id === id);
       if (next >= 0) colorFigure(next, order[next].figure, 0.22);
@@ -335,14 +336,14 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       pointer.set(((event.clientX - r.left) / r.width) * 2 - 1, -((event.clientY - r.top) / r.height) * 2 + 1);
     };
     const onDown = (event: PointerEvent) => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 || drag) return;
       toPointer(event);
-      drag = { x: event.clientX, y: event.clientY, az: view.targetAz, el: view.targetEl, moved: false };
+      drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, az: view.targetAz, el: view.targetEl, moved: false };
       renderer.domElement.setPointerCapture(event.pointerId);
     };
     const onMove = (event: PointerEvent) => {
       toPointer(event); pointerInside = true; pointerDirty = true;
-      if (!drag) return;
+      if (!drag || drag.pointerId !== event.pointerId) return;
       const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
       if (!drag.moved && Math.hypot(dx, dy) > 5) { drag.moved = true; spin = false; setSpinning(false); }
       if (drag.moved) {
@@ -352,12 +353,19 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       }
     };
     const onUp = (event: PointerEvent) => {
-      if (!drag) return;
+      if (!drag || drag.pointerId !== event.pointerId) return;
       const clicked = !drag.moved;
       drag = null;
       if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
       if (clicked) { toPointer(event); callbacks.current.onSelect(pick()); }
       renderer.domElement.style.cursor = hovered ? 'pointer' : 'grab';
+    };
+    const cancelDrag = () => {
+      const captured = drag?.pointerId;
+      drag = null; pointerInside = false; pointerDirty = false;
+      if (captured !== undefined && renderer.domElement.hasPointerCapture(captured)) renderer.domElement.releasePointerCapture(captured);
+      setHovered(null);
+      renderer.domElement.style.cursor = 'grab';
     };
     const onLeave = () => { pointerInside = false; if (!drag) setHovered(null); };
     const onKey = (event: KeyboardEvent) => {
@@ -366,6 +374,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       else if (k === 'ArrowUp' || k === 'ArrowDown') { view.targetEl = Math.max(0.16, Math.min(1.05, view.targetEl + (k === 'ArrowUp' ? 0.08 : -0.08))); event.preventDefault(); }
       else if (k === '+' || k === '=') view.targetZoom = Math.max(0.45, view.targetZoom * 0.85);
       else if (k === '-' || k === '_') view.targetZoom = Math.min(1.6, view.targetZoom / 0.85);
+      else if (k === 'Home' && selected) { apiRef.current?.focus(); event.preventDefault(); }
       else if (k === 'Escape') callbacks.current.onSelect(null);
     };
     const canvas = renderer.domElement;
@@ -373,7 +382,8 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
-    canvas.addEventListener('pointercancel', onUp);
+    canvas.addEventListener('pointercancel', cancelDrag);
+    canvas.addEventListener('lostpointercapture', cancelDrag);
     canvas.addEventListener('pointerleave', onLeave);
     canvas.addEventListener('keydown', onKey);
 
@@ -387,16 +397,16 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       if (nextPortrait !== portrait) { portrait = nextPortrait; if (lastInput) relayout(lastInput.figs, lastInput.groupOrder, performance.now()); }
     };
     const ro = new ResizeObserver(resize); ro.observe(host); resize();
-    let visible = true;
-    const io = new IntersectionObserver(entries => { visible = entries.some(e => e.isIntersecting); }, { threshold: 0.01 });
+    let visible = true, suspended = document.hidden || !!host.closest('[hidden]'), disposed = false;
+    const io = new IntersectionObserver(entries => { visible = entries.some(e => e.isIntersecting); resume(); }, { threshold: 0.01 });
     io.observe(host);
 
     const look = new THREE.Vector3(), m4 = new THREE.Matrix4(), spinM = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), sc = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     const project = (x: number, y: number, z: number) => { v.set(x, y, z).project(camera); return { x: (v.x + 1) / 2 * width, y: (1 - v.y) / 2 * height, behind: v.z > 1 }; };
     let raf = 0, last = performance.now();
     const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
-      if (!visible || document.hidden) { last = now; return; }
+      raf = 0;
+      if (disposed || !visible || suspended) { last = now; return; }
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       const t = now / 1000;
       if (spin && motion) view.targetAz = Math.sin(t * 0.18) * 0.9;
@@ -405,7 +415,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       view.elevation += (view.targetEl - view.elevation) * k;
       view.zoom += (view.targetZoom - view.zoom) * k;
       const sel = selected ? states.get(selected) : undefined;
-      view.focus.lerp(v.set(sel ? sel.pos.x * 0.4 : 0, TARGET_Y, sel ? sel.pos.y * 0.4 : 0), k * 0.6);
+      view.focus.lerp(v.set(sel ? sel.pos.x * 0.58 : 0, TARGET_Y, sel ? sel.pos.y * 0.58 : 0), motion ? k * 0.7 : 1);
       // Frame the cluster's bounding box: width against the horizontal FOV (nearest row is closest to the
       // camera), depth against the vertical FOV, leaving the top band for the title overlay.
       const tanV = Math.tan(THREE.MathUtils.degToRad(FOV / 2)), tanH = tanV * camera.aspect;
@@ -437,8 +447,9 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
         const thinking = s.figure.activity === 'thinking';
         const breathe = motion ? Math.sin(t * 2.1 + s.phase) * 0.014 : 0;
         const hop = moving ? Math.sin(Math.PI * p) * 0.26 : thinking && motion ? Math.abs(Math.sin(t * 6 + s.phase)) * 0.05 : 0;
-        const hoverLift = s.id === hovered ? 1.08 : 1;
-        const scale = s.figure.appearance.height * (spawnP > 0 ? backOut(spawnP) : 0) * hoverLift * (1 + popP * 0.14);
+        const emphasis = s.id === selected ? 1.12 : s.id === hovered ? 1.06 : 1;
+        s.emphasis += (emphasis - s.emphasis) * k;
+        const scale = s.figure.appearance.height * (spawnP > 0 ? backOut(spawnP) : 0) * s.emphasis * (1 + popP * 0.14);
         q.setFromAxisAngle(up, s.yaw + (thinking && motion ? Math.sin(t * 5 + s.phase) * 0.12 : 0));
         m4.compose(v.set(s.pos.x, hop, s.pos.y), q, sc.set(scale, scale * (1 + breathe), scale));
         parts.body.setMatrixAt(i, m4); parts.arms.setMatrixAt(i, m4); parts.head.setMatrixAt(i, m4); parts.eyes.setMatrixAt(i, m4); parts.hair.setMatrixAt(i, m4);
@@ -489,27 +500,52 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
         tip.style.transform = `translate(${pt.x.toFixed(1)}px, ${pt.y.toFixed(1)}px) translate(${flip ? 'calc(-100% - 14px)' : '14px'}, -50%)`;
       }
       renderer.render(scene, camera);
+      raf = requestAnimationFrame(frame);
     };
+    const settle = () => {
+      const now = performance.now();
+      for (const state of order) { state.pos.copy(state.to); state.from.copy(state.to); state.start = now - MOVE_MS; state.spawn = now - 520; state.pop = 0; }
+      view.azimuth = view.targetAz; view.elevation = view.targetEl; view.zoom = view.targetZoom;
+    };
+    // Suspend this stage's renderer and pointer gesture when its workspace panel or document is hidden.
+    const resume = () => {
+      if (disposed) return;
+      suspended = document.hidden || !!host.closest('[hidden]');
+      if (!visible || suspended) { cancelAnimationFrame(raf); raf = 0; settle(); cancelDrag(); return; }
+      if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    };
+    const visibilityObserver = new MutationObserver(resume);
+    for (let node: HTMLElement | null = host; node; node = node.parentElement) visibilityObserver.observe(node, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    document.addEventListener('visibilitychange', resume);
 
     apiRef.current = {
       label: text => canvas.setAttribute('aria-label', text),
       stacked: on => { centred = on; },
       sync: (figs, groupOrder) => relayout(figs, groupOrder, performance.now()),
-      select: id => { selected = id; },
-      motion: reduced => { motion = !reduced; if (reduced) { spin = false; setSpinning(false); } },
+      select: id => {
+        const changed = selected !== id;
+        selected = id;
+        if (changed) {
+          spin = false; setSpinning(false);
+          view.targetZoom = id ? Math.min(view.targetZoom, 0.82) : 1;
+          order.forEach((s, i) => colorFigure(i, s.figure, s.id === hovered ? 0.22 : s.id === selected ? 0.14 : 0)); markColors();
+        }
+      },
+      motion: reduced => { motion = !reduced; if (reduced) { spin = false; setSpinning(false); settle(); } },
       zoom: factor => { view.targetZoom = Math.max(0.45, Math.min(1.6, view.targetZoom * factor)); },
+      focus: () => { if (!selected || !states.has(selected)) return; spin = false; setSpinning(false); view.targetZoom = 0.6; view.targetAz = 0; view.targetEl = 0.5; },
       reset: () => { view.targetAz = 0; view.targetEl = 0.5; view.targetZoom = 1; callbacks.current.onSelect(null); },
       spin: on => { spin = on && motion; },
     };
-    raf = requestAnimationFrame(frame);
+    resume();
 
     const onLost = (event: Event) => { event.preventDefault(); cancelAnimationFrame(raf); callbacks.current.onFallback(); };
     canvas.addEventListener('webglcontextlost', onLost);
 
     return () => {
-      cancelAnimationFrame(raf); ro.disconnect(); io.disconnect();
+      disposed = true; cancelAnimationFrame(raf); cancelDrag(); ro.disconnect(); io.disconnect(); visibilityObserver.disconnect(); document.removeEventListener('visibilitychange', resume);
       canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerup', onUp);
-      canvas.removeEventListener('pointercancel', onUp); canvas.removeEventListener('pointerleave', onLeave); canvas.removeEventListener('keydown', onKey);
+      canvas.removeEventListener('pointercancel', cancelDrag); canvas.removeEventListener('lostpointercapture', cancelDrag); canvas.removeEventListener('pointerleave', onLeave); canvas.removeEventListener('keydown', onKey);
       canvas.removeEventListener('webglcontextlost', onLost);
       for (const line of groupLines) line.geometry.dispose();
       for (const mesh of [...Object.values(parts), ...Object.values(hatMeshes), ...Object.values(accMeshes)]) mesh.dispose();
@@ -536,10 +572,12 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
       {tip && <><strong>{tip.title}</strong><small>{tip.meta}</small><ul>{tip.lines.map(line => <li key={line}>{line}</li>)}</ul>{tip.flag && <em>{tip.flag}</em>}</>}
     </div>
     <div className={styles.stageControls}>
+      <button type="button" className={styles.focusControl} disabled={!selectedId} onClick={() => apiRef.current?.focus()} aria-label="聚焦选中画像" title="聚焦选中画像（Home）">聚焦</button>
       <button type="button" onClick={() => apiRef.current?.zoom(0.82)} aria-label="拉近视角" title="拉近">＋</button>
       <button type="button" onClick={() => apiRef.current?.zoom(1 / 0.82)} aria-label="拉远视角" title="拉远">－</button>
       <button type="button" onClick={() => apiRef.current?.reset()} aria-label="复位视角" title="复位">⟲</button>
       {!reducedMotion && <button type="button" aria-pressed={spinning} onClick={() => { const next = !spinning; setSpinning(next); apiRef.current?.spin(next); }} aria-label="自动环视" title="自动环视">◎</button>}
     </div>
+    <span className={styles.stageHelp}>方向键旋转 · +/− 缩放 · Home 聚焦 · Esc 清除选中</span>
   </div>;
 }

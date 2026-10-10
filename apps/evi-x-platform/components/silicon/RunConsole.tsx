@@ -5,6 +5,7 @@ import type { Questionnaire } from '@/lib/questionnaire';
 import { SILICON_LIMITS } from '@/lib/silicon/persona';
 import { estimateCalls, type RunProgress, type RunSettings } from '@/lib/silicon/run';
 import styles from './SiliconLab.module.css';
+import { useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 
 export type ModelOption = { id: string; label: string; detail: string };
 type Props = {
@@ -21,19 +22,20 @@ export default function RunConsole({ config, update, design, personas, settings,
   const overLimit = config.engine === 'model' && maxCalls !== undefined && calls > maxCalls;
   const modelReady = config.engine === 'demo' || (!!models && config.models.length > 0 && consent && !overLimit);
   const toggleModel = (id: string) => update({ models: config.models.includes(id) ? config.models.filter(m => m !== id) : [...config.models, id].slice(0, SILICON_LIMITS.models) });
+  const engineRef = useKeyedListMotion<HTMLDivElement>({ ids: ['demo', 'model'], activeId: config.engine, markerAxis: 'horizontal' });
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-engine">
       <div className={styles.blockHead}><h3 id="sx-engine">选择作答引擎</h3><p>两种引擎均生成模拟回答，导出时保留来源标记。</p></div>
-      <div className={styles.sourceRow} role="radiogroup" aria-label="作答引擎">
-        <button type="button" role="radio" aria-checked={config.engine === 'demo'} className={styles.sourceCard} disabled={running} onClick={() => update({ engine: 'demo' })}>
+      <div ref={engineRef} className={styles.sourceRow} role="radiogroup" aria-label="作答引擎"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
+        <button type="button" data-motion-id="demo" role="radio" aria-checked={config.engine === 'demo'} className={styles.sourceCard} disabled={running} onClick={() => update({ engine: 'demo' })}>
           <span className={styles.sourceKicker}>离线演示引擎 · 无需密钥</span>
           <strong>走查流程与界面</strong>
-          <small>在浏览器生成可复现的随机答案，检查跳转、答案传递与分析流程；不能作为预测试结论。</small>
+          <small>生成可复现的随机答案，检查跳转、答案传递与分析流程。</small>
         </button>
-        <button type="button" role="radio" aria-checked={config.engine === 'model'} className={styles.sourceCard} disabled={running || !models} onClick={() => update({ engine: 'model' })}>
+        <button type="button" data-motion-id="model" role="radio" aria-checked={config.engine === 'model'} className={styles.sourceCard} disabled={running || !models} onClick={() => update({ engine: 'model' })}>
           <span className={styles.sourceKicker}>语言模型 · 使用你的 API 额度</span>
           <strong>模型预测试</strong>
-          <small>{models ? '由你在「我的模型服务」中配置的模型扮演每位受访者，最多同时比较 3 个模型。' : '请在「我的项目」中打开项目使用；运行由服务端转发，密钥不发送至本页。'}</small>
+          <small>{models ? '由已配置的模型扮演受访者，最多同时比较 3 个模型。' : '在「我的项目」中打开项目，选择已配置的模型。'}</small>
         </button>
       </div>
       {config.engine === 'model' && models && <div className={styles.modelPick}>

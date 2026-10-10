@@ -47,14 +47,13 @@
 .review { border:1px solid var(--wb-line); border-radius:8px; padding:16px; background:var(--wb-well); }
 .review p { margin-top:6px; font-size:.875rem; }
 .sources { padding-top:20px; font-size:.875rem; }
-.sources summary,.learned summary { cursor:pointer; font-weight:650; line-height:1.7; }
+.sources summary { cursor:pointer; font-weight:650; line-height:1.7; }
 .sources p { margin-top:12px; }
-.sources small { font-size:.8125rem; }
 .timing { border:1px solid var(--wb-line); border-radius:12px; padding:24px; margin-top:26px; background:var(--wb-solid); }
 .timingHeading { display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:center; }
 .timing h3 { margin:6px 0; font-size:1.3rem; }
 .timing p { font-size:.9375rem; }
-.timing a,.references a { color:var(--wb-accent); font-size:.875rem; text-decoration:underline; text-underline-offset:3px; }
+.timing a { color:var(--wb-accent); font-size:.875rem; text-decoration:underline; text-underline-offset:3px; }
 .timeInputs { display:flex; flex-wrap:wrap; align-items:end; gap:18px; margin:22px 0; }
 .timeInputs label { width:175px; }
 .timeInputs p { flex:1; min-width:200px; }
@@ -68,13 +67,6 @@
 .timeline small { font-size:.8125rem; color:var(--wb-muted); }
 .timeTotal { text-align:right; margin-top:16px!important; font-variant-numeric:tabular-nums; }
 .error { color:var(--wb-risk)!important; margin:14px 0!important; }
-.learned { margin-top:24px; padding:20px 24px; border:1px solid var(--wb-line); border-radius:10px; background:var(--wb-solid); }
-.learned>p { margin-top:14px; font-size:.875rem; }
-.rejections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:20px; }
-.rejections article { padding:16px; border:1px solid var(--wb-line); border-radius:8px; }
-.rejections h4 { font-size:.9375rem; line-height:1.6; margin-bottom:6px; }
-.rejections p { font-size:.875rem; }
-.references { display:flex; flex-wrap:wrap; gap:20px; margin-top:18px; }
 .feedback { font-size:.875rem; }
 .feedback:not(:empty) { margin-bottom:18px!important; }
 .fileInput { display:none; }
@@ -92,11 +84,18 @@
 .checkbox input { width:18px; height:18px; min-height:18px; flex:0 0 18px; margin:3px 0 0; accent-color:var(--wb-accent); }
 .versionWarning { margin-top:16px; padding:14px; background:var(--wb-well); border-left:3px solid var(--wb-amber); }
 .versionWarning p { overflow-wrap:anywhere; margin-bottom:10px!important; }
-.importBoundary { margin-top:16px!important; }
 .importActions,.reading { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:18px 0 0; }
 .reading { margin-bottom:18px; }
 .importActions button,.reading button { padding:10px 14px; border:1px solid var(--wb-accent); border-radius:7px; background:var(--wb-accent); color:var(--wb-accent-text); }
 .studio button.secondary { background:var(--wb-solid); color:var(--wb-text); border:1px solid var(--wb-line); }
 @media(max-width:1100px){.timeline{grid-template-columns:repeat(2,minmax(0,1fr));}.timeline>div{border-bottom:1px solid var(--wb-line);}.timeline>div:nth-child(even){border-right:0;}.timeline>div:last-child{grid-column:1/-1;border-bottom:0;}}
-@media(max-width:760px){.workspace{grid-template-columns:1fr;gap:16px;}.cards{max-height:280px;overflow:auto;}.practice,.timing,.learned{padding:18px;}.rejections{grid-template-columns:1fr;}.heading{align-items:start;}.timeInputs label{flex:1;min-width:120px;}}
+@media(max-width:760px){.workspace{grid-template-columns:1fr;gap:16px;}.cards{max-height:280px;overflow:auto;}.practice,.timing{padding:18px;}.heading{align-items:start;}.timeInputs label{flex:1;min-width:120px;}}
 @media(max-width:380px){.timeline{grid-template-columns:1fr;}.timeline>div{border-right:0;}.export{width:100%;}.export button{width:100%;}}
+
+.cards { position:relative; }
+.motionMarker { position:absolute; top:0; left:0; width:3px; height:0; border-radius:2px; background:var(--wb-gold,#b39757); pointer-events:none; z-index:2; }
+.cards button[aria-pressed=true] { border-left-color:transparent; }
+.cards button { transition:background-color 180ms ease,color 180ms ease; }
+.reading::before { content:''; width:8px; height:8px; display:inline-block; border:1px solid var(--wb-accent); border-right-color:transparent; border-radius:50%; animation:defenseRead .8s linear infinite; }
+@keyframes defenseRead { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .studio *,.studio *::before { animation:none!important; transition:none!important; } }
