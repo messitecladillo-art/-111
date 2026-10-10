@@ -405,14 +405,14 @@
 }
 
 /* ——— Editors (report/PPT, questionnaire, analysis, project): a compact header gives the canvas room ——— */
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar { min-height: 76px; padding: 12px 22px; align-items: center; background: var(--wb-solid); }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar::after { left: 0; right: 0; }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .wb-page-heading { display: flex; flex-direction: column; gap: 2px; }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .wb-page-title { font-size: 21px; margin: 0; }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .wb-breadcrumb { font-size: 11px; }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .wb-page-description { display: none; }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .workbench-content { padding: 16px 20px; }
-.workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .wb-footer { display: none; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar { min-height: 76px; padding: 12px 22px; align-items: center; background: var(--wb-solid); }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar::after { left: 0; right: 0; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .wb-page-heading { display: flex; flex-direction: column; gap: 2px; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .wb-page-title { font-size: 21px; margin: 0; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .wb-breadcrumb { font-size: 11px; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .wb-page-description { display: none; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .workbench-content { padding: 16px 20px; }
+.workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .wb-footer { display: none; }
 
 /* ——— Command palette ——— */
 .wb-command-dialog { width: min(640px, calc(100vw - 32px)); max-height: min(680px, calc(100dvh - 48px)); margin: min(12vh, 100px) auto auto; padding: 0; border: 1px solid var(--wb-gold-line); border-radius: 14px; color: var(--wb-text); background: var(--wb-solid); box-shadow: 0 40px 120px -20px rgba(6, 18, 31, 0.55); }
@@ -438,10 +438,10 @@
 .wb-command-list small { margin-top: 3px; color: var(--wb-muted); font-size: 13px; line-height: 1.6; }
 .wb-command-empty { padding: 24px; color: var(--wb-muted); text-align: center; font-size: 14px; }
 .wb-command-footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; border-top: 1px solid var(--wb-line); padding: 12px 18px; color: var(--wb-muted); font-size: 12px; }
-@media (max-width: 899px) { .workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar { min-height: 64px; } }
+@media (max-width: 899px) { .workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar { min-height: 64px; } }
 @media (max-width: 600px) {
-  .workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar { flex-wrap: nowrap; padding-inline: 14px; gap: 8px; }
-  .workbench:is([data-section="editor"], [data-section="design"], [data-section="analysis"], [data-density="compact"]) .workbench-content { padding: 10px; }
+  .workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .workbench-topbar { flex-wrap: nowrap; padding-inline: 14px; gap: 8px; }
+  .workbench:is([data-section="editor"], [data-section="design"], [data-section="silicon"], [data-section="analysis"], [data-density="compact"]) .workbench-content { padding: 10px; }
   .wb-command-dialog { margin-top: 16px; }
   .wb-command-list small { display: none; }
 }

@@ -31,11 +31,13 @@ const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio')
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
 const DefenseStudio = dynamic(() => import('@/components/defense/DefenseStudio'));
+const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
 import HostedServices from '@/components/hosted/HostedServices';
 import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
 import DiagnosisActions from "@/components/DiagnosisActions";
 import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-actions';
 import type { DesignSnapshot, DesignTransfer } from '@/lib/questionnaire-mapping';
+import type { DatasetHandoff } from '@/components/silicon/ResultsBoard';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -1358,6 +1360,7 @@ function ProjectWorkbench() {
 export default function EviXPlatform() {
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
+  const [datasetTransfer,setDatasetTransfer]=useState<DatasetHandoff|null>(null);
   const [briefSource,setBriefSource]=useState<DiagnosisBriefSource|null>(null);
   const [agentProposal,setAgentProposal]=useState<AgentQuestionnaireProposal|null>(null);
   return (
@@ -1395,7 +1398,8 @@ export default function EviXPlatform() {
       cases: <CaseLibrary />,
       editor: <EditingStudio localOnly />,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab designSnapshot={designSnapshot} designTransfer={designTransfer}/>,
+      analysis: <SurveyLab designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer}/>,
+      silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={setBriefSource} />,
       workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>使用我的项目创建团队研究，生成、编辑并保存问卷版本。原有生命周期控制程序和证据文件继续保留。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
