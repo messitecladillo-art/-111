@@ -125,7 +125,7 @@ p.hosted-empty[role=status]{overflow:hidden}
 .hosted-app .hosted-tabs button{border:0;border-radius:0;background:transparent;min-height:44px;padding:10px 16px;color:var(--wb-muted);box-shadow:inset 0 -2px 0 transparent;transition:color var(--wb-fast),box-shadow var(--wb-med) var(--wb-ease)}
 .hosted-app .hosted-tabs button:hover:not(:disabled){color:var(--wb-text)}
 .hosted-app .hosted-tabs button[aria-pressed=true]{color:var(--wb-text);box-shadow:inset 0 -2px 0 var(--evx-gold)}
-.hosted-project-tools{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:start}
+.hosted-project-tools{display:grid;align-items:start}
 .hosted-project-tools a{font-size:12px}
 .hosted-consent{display:flex!important;align-items:start!important;font-size:12px!important;line-height:1.8;font-weight:400!important}
 .hosted-consent input{margin-top:3px}
@@ -150,6 +150,23 @@ p.hosted-empty[role=status]{overflow:hidden}
 .hosted-table-wrap th{background:var(--wb-well);color:var(--wb-muted);font-weight:600;letter-spacing:.06em}
 .hosted-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-@media(max-width:900px){.hosted-create,.hosted-service-layout,.hosted-project-tools{grid-template-columns:1fr;gap:14px}.hosted-login-card>div{padding:32px}.hosted-project-heading{align-items:start;flex-direction:column}}
+/* Project tools stay secondary to the questionnaire editor. */
+.hosted-project-tools{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.hosted-project-tools .hosted-project-tool{min-width:0;margin:0;padding:0 14px;border:1px solid var(--wb-line);border-radius:var(--wb-radius);background:var(--wb-surface);overflow-wrap:anywhere;transition:border-color var(--wb-fast),box-shadow var(--wb-med)}
+.hosted-project-tools .hosted-project-tool:hover{border-color:var(--wb-gold-line)}
+.hosted-project-tools .hosted-project-tool>summary{display:flex;align-items:center;gap:8px;min-height:48px;list-style:none;font-size:13px;font-weight:600;color:var(--wb-text);cursor:pointer}
+.hosted-project-tools .hosted-project-tool>summary::-webkit-details-marker{display:none}
+.hosted-project-tools .hosted-project-tool>summary::before{content:'›';font-size:19px;line-height:1;color:var(--wb-gold-text);transition:transform var(--wb-med) var(--wb-ease)}
+.hosted-project-tools .hosted-project-tool>summary small{margin-left:auto;font-size:11px;font-weight:400;color:var(--wb-muted);overflow-wrap:anywhere}
+.hosted-project-tools .hosted-project-tool[open]{grid-column:1/-1;box-shadow:var(--wb-shadow)}
+.hosted-project-tools .hosted-project-tool[open]>summary{border-bottom:1px solid var(--wb-line)}
+.hosted-project-tools .hosted-project-tool[open]>summary::before{transform:rotate(90deg)}
+.hosted-project-tools .hosted-project-tool-body{padding:18px 2px 20px;animation:wb-rise .45s var(--wb-ease) both}
+.hosted-project-tools .hosted-project-tool-body>.hosted-section-title{margin:0 0 12px}
+.hosted-project-tools .hosted-project-tool-body h3{font-size:15px;margin:0}
+.hosted-project-tools .hosted-project-tool-body p{font-size:13px;line-height:1.8}
+.hosted-project-tools .hosted-project-tool-body>label{max-width:800px}
+@media(max-width:900px){.hosted-project-tools{grid-template-columns:1fr;gap:6px}.hosted-project-tools .hosted-project-tool{padding:0 12px}.hosted-project-tools .hosted-project-tool>summary{min-height:44px}}
+@media(max-width:900px){.hosted-create,.hosted-service-layout{grid-template-columns:1fr;gap:14px}.hosted-login-card>div{padding:32px}.hosted-project-heading{align-items:start;flex-direction:column}}
 @media(max-width:640px){.hosted-login-card{grid-template-columns:1fr}.hosted-login-intro{padding:28px!important}.hosted-login-intro h2{margin:18px 0 12px}.hosted-steps{grid-auto-flow:column;gap:12px;margin-top:20px;padding-top:18px;font-size:11.5px}.hosted-field-grid{grid-template-columns:1fr;gap:0}.hosted-card{padding:20px}.hosted-check-group{grid-template-columns:1fr}.hosted-history>div{align-items:start}.hosted-inline-form label{min-width:100%}.hosted-auth-bar .wb-brand small,.hosted-ghost-link{display:none}.hosted-empty,.hosted-loading{padding:26px}}
 @media(prefers-reduced-motion:reduce){.hosted-app *,.hosted-app *::before,.hosted-app *::after{animation:none!important;transition:none!important}.hosted-project-card:hover{transform:none}}

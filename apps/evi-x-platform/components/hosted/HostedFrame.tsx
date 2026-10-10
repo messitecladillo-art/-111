@@ -15,7 +15,7 @@ export function AccountStatus() {
   </div>;
 }
 export function EnvironmentNotice() { const { session } = useHostedSession(); return session?.mode === 'local_test' ? <p className="hosted-test-banner" role="status">本地合成验收环境 · 邮件和模型由测试适配器提供，请勿输入真实密钥或调查资料。</p> : null; }
-export default function HostedFrame({ title, subtitle, children, variant = 'app' }: { title: string; subtitle: string; children: ReactNode; variant?: 'app' | 'auth' }) {
+export default function HostedFrame({ title, subtitle, children, variant = 'app', density }: { title: string; subtitle: string; children: ReactNode; variant?: 'app' | 'auth'; density?: 'compact' }) {
   const pathname = usePathname(), theme = useThemePreference(), [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLButtonElement>(null);
   if (variant === 'auth') return <ThemeProvider value={theme}><div className="workbench hosted-app hosted-auth" data-theme={theme}>
@@ -25,7 +25,7 @@ export default function HostedFrame({ title, subtitle, children, variant = 'app'
     <footer className="wb-footer"><span>证见 EVI-X 为独立研究辅助工具，非赛事官方产品</span><span>不承诺奖项结果</span></footer>
   </div></ThemeProvider>;
   const active: Section = pathname.startsWith('/services') ? 'services' : 'workspace';
-  return <ThemeProvider value={theme}><div className="workbench hosted-app" data-theme={theme} data-section={active}>
+  return <ThemeProvider value={theme}><div className="workbench hosted-app" data-theme={theme} data-section={active} data-density={density}>
     <a className="hosted-skip" href="#hosted-content">跳到主要内容</a>
     <WorkbenchSidebar active={active} inWorkspace={false} open={open} setOpen={setOpen} menuRef={menuRef}/>
     <div className="workbench-main">

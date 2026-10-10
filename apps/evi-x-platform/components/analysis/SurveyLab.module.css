@@ -1,5 +1,7 @@
 .lab { color: var(--wb-text); font-size: 16px; min-width: 0; }
 .lab * { min-width: 0; }
+.lab [hidden] { display: none !important; }
+.lab :is(button,input,select,textarea,summary,a):focus-visible { outline: 3px solid var(--wb-accent); outline-offset: 3px; }
 .lab button,.lab input,.lab select,.lab textarea { font: inherit; font-size: 14px; }
 .lab button { padding: 9px 14px; min-height: 40px; border-radius: 7px; border: 1px solid var(--wb-line); color: var(--wb-text); background: var(--wb-solid); cursor: pointer; }
 .lab button:disabled { cursor: not-allowed; opacity: .5; }
@@ -12,11 +14,13 @@
 .lab h2,.lab h3,.lab p { margin: 0; }
 .lab p { line-height: 1.75; color: var(--wb-muted); }
 .lab h3 { font-size: 18px; line-height: 1.5; font-weight: 700; color: var(--wb-text); overflow-wrap: anywhere; }
-.intro { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 4px 0 22px; }
-.intro h2 { font-size: clamp(24px,2.2vw,32px); line-height: 1.4; margin: 7px 0; font-weight: 750; letter-spacing: -.035em; }
+.intro { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 0 0 24px; }
+.intro[data-loaded=true] { margin-bottom: 12px; }
+.intro[data-loaded=true] h2 { font-size: 22px; margin: 0; }
+.intro h2 { font-size: clamp(24px,2.1vw,30px); line-height: 1.4; margin: 5px 0 6px; font-weight: 750; letter-spacing: -.035em; }
 .eyebrow { color: var(--wb-accent); font-size: 12px; font-weight: 700; letter-spacing: .15em; }
-.privacy { padding: 8px 12px; background: var(--wb-accent-soft); border: 1px solid var(--wb-line); color: var(--wb-accent); border-radius: 20px; font-size: 13px; }
-.importPanel { padding: 22px; border: 1px solid var(--wb-line); background: var(--wb-solid); border-radius: 12px; }
+.privacy { color: var(--wb-muted); font-size: 12px; white-space: nowrap; }
+.importPanel { padding: 22px; margin: 0 0 18px; border: 1px solid var(--wb-line); background: var(--wb-solid); border-radius: 12px; }
 .importPanel > summary { font-size:14px; cursor:pointer; font-weight:650; }
 .importPanel[open] > summary { margin-bottom:18px; }
 .importHeading { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
@@ -32,21 +36,22 @@
 .lab .error { color: var(--wb-risk); background: var(--wb-solid); border-left: 4px solid var(--wb-risk); }
 .lab .warning { color: var(--wb-text); background: var(--wb-well); border-left: 3px solid var(--wb-amber); font-size: 14px; }
 .lab .notice { color: var(--wb-accent); background: var(--wb-accent-soft); }
-.datasetBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 28px 0 16px; }
+.datasetBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 0 0 8px; padding: 8px 0; border-block: 1px solid var(--wb-line); }
 .datasetBar > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .datasetBar strong { overflow-wrap: anywhere; }
-.datasetBar small { font-size: 12px; color: var(--wb-muted); flex-basis: 100%; }
+.datasetBar small { font-size: 12px; color: var(--wb-muted); }
 .badge { display: inline-flex; border: 1px solid var(--wb-line); padding: 3px 8px; border-radius: 4px; font-size: 12px; color: var(--wb-muted); background: var(--wb-solid); }
 .badge[data-demo=true] { border-color: var(--wb-amber); color: var(--wb-amber); }
 .card .resultSource { margin: 0 0 14px; }
 .missingSetting { display: grid; grid-template-columns: minmax(220px,1fr) 2fr; align-items: end; gap: 20px; margin: 16px 0 20px; }
 .missingSetting p { font-size: 14px; }
 .metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--wb-line); border-radius: 10px; background: var(--wb-solid); margin: 20px 0; overflow: hidden; }
-.metrics article { padding: 19px 20px; border-right: 1px solid var(--wb-line); }
+.metrics article { padding: 16px 18px; border-right: 1px solid var(--wb-line); }
 .metrics article:last-child { border-right: 0; }
 .metrics span,.metrics small { display: block; font-size: 13px; color: var(--wb-muted); }
-.metrics strong { display: block; font-size: 30px; line-height: 1.5; font-variant-numeric: tabular-nums; font-weight: 650; color: var(--wb-text); }
-.tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 0 0 12px; border-bottom: 1px solid var(--wb-line); margin-bottom: 20px; }
+.metrics strong { display: block; font-size: 27px; line-height: 1.5; font-variant-numeric: tabular-nums; font-weight: 650; color: var(--wb-text); }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tabs > button { white-space: nowrap; }
 .tabs > button[aria-pressed=true] { color: var(--wb-accent); border-color: var(--wb-accent); background: var(--wb-accent-soft); }
 .exports { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
 .lab .exportNote { margin: -4px 0 16px; font-size: 12px; }
@@ -92,11 +97,33 @@
 .alphaHeading small { display: block; font-size: 12px; line-height: 1.6; color: var(--wb-muted); margin-top: 5px; }
 .cautions { padding: 12px 12px 12px 28px; background: var(--wb-well); border-radius: 6px; font-size: 14px; line-height: 1.7; margin: 18px 0 0; }
 .cautions li + li { margin-top: 8px; }
-.methodNotes { margin: 24px 0; padding: 20px; border: 1px solid var(--wb-line); border-radius: 10px; }
+.methodNotes { margin: 24px 0 0; padding: 16px 0; border-top: 1px solid var(--wb-line); }
 .methodNotes > p { margin-top: 14px; font-size: 14px; }
 .methodNotes > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; margin-top: 20px; }
 .methodNotes a { color: var(--wb-accent); font-size: 14px; font-weight: 600; text-underline-offset: 4px; }
 .methodNotes article p { margin-top: 6px; font-size: 14px; }
+
+.steps { display: flex; gap: 6px; border-bottom: 1px solid var(--wb-line); margin: 0 0 12px; }
+.lab .steps button { display: flex; align-items: center; gap: 9px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 10px 18px; min-height: 44px; font-weight: 600; }
+.steps button span { color: var(--wb-muted); font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 500; }
+.lab .steps button[aria-pressed=true] { color: var(--wb-accent); border-bottom-color: var(--wb-accent); }
+.steps i { width: 6px; height: 6px; border-radius: 50%; background: var(--wb-accent); }
+.datasetIdentity { flex: 1; overflow-wrap: anywhere; }
+.datasetMenu { position: relative; }
+.datasetMenu > summary { cursor: pointer; padding: 8px 0 8px 12px; font-size: 13px; color: var(--wb-accent); }
+.datasetMenu > div { display: grid; gap: 8px; position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 290px; max-width: 75vw; padding: 16px; border: 1px solid var(--wb-line); border-radius: 9px; background: var(--wb-solid); box-shadow: 0 12px 36px #00000012; }
+.datasetMenu p { font-size: 12px; overflow-wrap: anywhere; }
+.reading { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 14px; color: var(--wb-accent); }
+.stageActions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 20px 0 0; }
+.stageActions p { flex: 1; font-size: 13px; min-width: 200px; }
+.resultsToolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.resultsToolbar .tabs { flex-shrink: 0; }
+.resultsToolbar > span { font-size: 12px; color: var(--wb-muted); }
+.evidenceDrawer { border-top: 1px solid var(--wb-line); margin-top: 24px; padding-top: 18px; }
+.evidenceDrawer > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.evidenceDrawer > summary span { color: var(--wb-muted); font-size: 12px; font-weight: 400; margin-left: 10px; }
+.error button,.warning button { margin-left: 12px; }
+
 @media (max-width:1100px) { .overviewGrid,.scaleGrid { grid-template-columns: minmax(0,1fr); } .exports { width: 100%; margin-left: 0; } }
 @media (max-width:650px) {
   .lab { font-size: 16px; }
@@ -119,4 +146,21 @@
   .tableScroll table { min-width: 340px; }
   .alphaHeading strong { font-size: 40px; }
   .methodNotes > div { grid-template-columns: minmax(0,1fr); }
+}
+
+@media (max-width:650px) {
+  .intro { gap: 8px; margin-bottom: 18px; }
+  .privacy { width: 100%; }
+  .steps { gap: 0; margin-bottom: 18px; }
+  .lab .steps button { flex: 1; justify-content: center; padding: 11px 4px; gap: 5px; font-size: 13px; }
+  .steps button span { font-size: 10px; }
+  .datasetBar { align-items: flex-start; gap: 8px; }
+  .datasetIdentity { flex-basis: 100%; }
+  .datasetMenu { width: 100%; }
+  .datasetMenu > summary { padding-left: 0; }
+  .datasetMenu > div { position: static; width: 100%; max-width: none; margin-top: 8px; box-shadow: none; }
+  .stageActions p { flex-basis: 100%; }
+  .stageActions button { flex: 1; }
+  .error button,.warning button { margin: 10px 0 0; }
+  .evidenceDrawer > summary span { display: block; margin: 7px 0 0; }
 }

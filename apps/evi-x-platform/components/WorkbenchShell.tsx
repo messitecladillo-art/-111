@@ -103,7 +103,7 @@ export default function WorkbenchShell({ panels }: { panels: Record<Panel, React
           <button type="button" className="wb-search-toggle" onClick={showCommands} aria-label="打开快速导航" title="快速导航（Ctrl / ⌘ K）"><NavIcon kind="search"/><span>快速导航</span><kbd>⌘ K</kbd></button>
           <AccountStatus/>
           <ThemeToggle theme={theme}/>
-          {section !== "editor" && <a className="wb-top-cta" href="#diagnose"><NavIcon kind="plus"/>开始诊断</a>}
+          {!["editor", "design", "analysis"].includes(section) && <a className="wb-top-cta" href="#diagnose"><NavIcon kind="plus"/>开始诊断</a>}
         </>}/>
         <div className="workbench-content"><EnvironmentNotice/><main id="top">
           {(Object.keys(panels) as Panel[]).filter(panel => visited.includes(panel) || activePanel === panel).map(panel => <div key={panel} className="wb-panel" data-workbench-panel={panel} hidden={activePanel !== panel}>{panels[panel]}</div>)}
