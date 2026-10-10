@@ -1,8 +1,8 @@
-.panel { margin:22px 0; border:1px solid var(--wb-line); border-radius:16px; background:var(--wb-solid); overflow:hidden; color:var(--wb-text); font-size:15px; line-height:1.6; }
+.panel { margin:0 0 20px; border:1px solid var(--wb-line); border-radius:10px; background:var(--wb-solid); overflow:hidden; color:var(--wb-text); font-size:15px; line-height:1.6; }
 .panel * { min-width:0; }
-.header { padding:24px; display:flex; justify-content:space-between; align-items:flex-start; gap:20px; background:var(--wb-accent-soft); }
+.header { padding:20px 24px; display:flex; justify-content:space-between; align-items:flex-start; gap:20px; background:var(--wb-solid); border-bottom:1px solid var(--wb-line); }
 .eyebrow { color:var(--wb-accent); font-size:12px; letter-spacing:.1em; font-weight:700; }
-.panel .header h3 { color:var(--wb-text); font-size:23px; line-height:1.35; margin:6px 0; }
+.panel .header h3 { color:var(--wb-text); font-size:20px; line-height:1.35; margin:6px 0; }
 .header p { margin:5px 0 0; }
 .state { border:1px solid var(--wb-line); background:var(--wb-solid); color:var(--wb-muted); border-radius:20px; padding:5px 12px; font-size:14px; white-space:nowrap; }
 .state[data-ready=true] { color:var(--wb-accent); border-color:var(--wb-accent); }
@@ -52,7 +52,7 @@
 @media(max-width:750px) {
   .header,.summary,.incoming,.confirm { flex-direction:column; gap:12px; align-items:stretch; }
   .header,.summary,.tools,.mappingTools,.incoming,.confirm,.scales { padding:18px; }
-  .panel .header h3 { font-size:21px; }
+  .panel .header h3 { font-size:20px; }
   .state { align-self:flex-start; }
   .rows { padding:0 18px; max-height:none; }
   .row { grid-template-columns:1fr; gap:14px; }

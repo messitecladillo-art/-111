@@ -25,3 +25,23 @@
 @media(max-width:900px){.hosted-topbar{gap:18px}.hosted-topbar nav{order:3;flex-basis:100%}.hosted-topbar .hosted-account{margin-left:auto}.hosted-create,.hosted-service-layout,.hosted-project-tools{grid-template-columns:1fr;gap:14px}.hosted-main{padding:20px 20px 48px}.hosted-login-card>div{padding:30px}.hosted-project-heading{align-items:start;flex-direction:column}.hosted-heading h1{font-size:28px}}
 @media(max-width:600px){.hosted-login-card{grid-template-columns:1fr}.hosted-login-intro{padding:26px!important}.hosted-login-intro h2{font-size:25px;margin:18px 0}.hosted-steps{flex-direction:row;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:20px}.hosted-field-grid{grid-template-columns:1fr;gap:0}.hosted-topbar{padding:18px 20px}.hosted-topbar .brand{min-width:0}.hosted-topbar nav{justify-content:space-between;gap:10px}.hosted-topbar nav a{font-size:12px}.hosted-account{font-size:11px;justify-content:flex-start}.hosted-card{padding:20px}.hosted-main{padding:12px 14px 40px}.hosted-heading{margin:20px 4px}.hosted-check-group{grid-template-columns:1fr}.hosted-history>div{align-items:start}.hosted-inline-form label{min-width:100%}}
 @media(prefers-reduced-motion:reduce){.hosted-project-card{transition:none}.hosted-project-card:hover{transform:none}}
+
+/* Project tools stay secondary to the questionnaire editor. */
+.hosted-main:has(.hosted-project-heading)>.hosted-heading{margin:4px 0 14px}
+.hosted-main:has(.hosted-project-heading)>.hosted-heading>span,.hosted-main:has(.hosted-project-heading)>.hosted-heading>p{display:none}
+.hosted-main:has(.hosted-project-heading)>.hosted-heading h1{font-size:20px;line-height:1.4;letter-spacing:0;margin:0}
+.hosted-project-tools{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.hosted-project-tools .hosted-project-tool{min-width:0;margin:0;padding:0 14px;border:1px solid #dbe5e9;border-radius:8px;background:#fff;overflow-wrap:anywhere}
+.hosted-project-tools .hosted-project-tool>summary{display:flex;align-items:center;gap:8px;min-height:48px;list-style:none;font-size:13px;font-weight:600;color:#234453;cursor:pointer}
+.hosted-project-tools .hosted-project-tool>summary::-webkit-details-marker{display:none}
+.hosted-project-tools .hosted-project-tool>summary::before{content:'›';font-size:19px;line-height:1;color:#627582}
+.hosted-project-tools .hosted-project-tool>summary small{margin-left:auto;font-size:11px;font-weight:400;color:#627582;overflow-wrap:anywhere}
+.hosted-project-tools .hosted-project-tool[open]{grid-column:1/-1}
+.hosted-project-tools .hosted-project-tool[open]>summary{border-bottom:1px solid #e3ecef}
+.hosted-project-tools .hosted-project-tool[open]>summary::before{transform:rotate(90deg)}
+.hosted-project-tools .hosted-project-tool-body{padding:18px 2px 20px}
+.hosted-project-tools .hosted-project-tool-body>.hosted-section-title{margin:0 0 12px}
+.hosted-project-tools .hosted-project-tool-body h3{font-size:15px;margin:0}
+.hosted-project-tools .hosted-project-tool-body p{font-size:13px;line-height:1.8}
+.hosted-project-tools .hosted-project-tool-body>label{max-width:800px}
+@media(max-width:900px){.hosted-project-tools{grid-template-columns:1fr;gap:6px}.hosted-project-tools .hosted-project-tool{padding:0 12px}.hosted-project-tools .hosted-project-tool>summary{min-height:44px}}
