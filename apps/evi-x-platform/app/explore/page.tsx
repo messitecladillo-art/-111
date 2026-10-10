@@ -23,6 +23,6 @@ export default function ExplorePage() {
       ].map(([q,a]) => <details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</section>
       <div className={styles.tools}><p>已有研究，继续向前。</p><Link href="/workspace">打开研究工具 ↗</Link></div>
     </main>
-    <footer className={styles.footer}><p>证见 EVI-X 为独立研究辅助工具，与赛事主办、承办及冠名单位无隶属、授权或合作关系。</p><p>首页「循证三千年」为概念性叙事，引文出处列于首页页脚；本页使用合成示例。</p></footer>
+    <footer className={styles.footer}><p>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p><p>本页使用合成示例。</p></footer>
   </div>;
 }
