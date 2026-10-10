@@ -36,6 +36,9 @@ const vertexShader = /* glsl */ `
   uniform vec4 uLayout;
   uniform vec2 uView;
   uniform float uSpin;
+  uniform vec2 uPointer;
+  uniform float uPointerForce;
+  uniform vec3 uRipple;
   varying vec3 vColor;
   varying float vAlpha;
   const float PI = 3.14159265;
@@ -66,6 +69,18 @@ const vertexShader = /* glsl */ `
       f.xy = vec2(cs * f.x - sn * f.y, sn * f.x + cs * f.y);
       world = vec3(f.xy * uLayout.z + uLayout.xy, f.z * uLayout.z * 0.4);
     }
+    // The cursor parts the dust like a lamp passed over gold leaf; a click sends out one ring.
+    vec2 toPointer = world.xy - uPointer;
+    float pointerDistance = length(toPointer);
+    vec2 away = pointerDistance > 0.0001 ? toPointer / pointerDistance : vec2(0.0);
+    float near = uPointerForce * (1.0 - smoothstep(0.0, 0.72, pointerDistance));
+    near *= near;
+    world.xy += (away * 0.26 + vec2(-away.y, away.x) * 0.1 * (aSeed.z - 0.5)) * near;
+    world.z += near * 0.5 * aSeed.w;
+    vec2 toRipple = world.xy - uRipple.xy;
+    float rippleDistance = length(toRipple);
+    float wave = step(0.0, uRipple.z) * exp(-pow((rippleDistance - uRipple.z * 2.8) * 4.0, 2.0)) * exp(-uRipple.z * 1.5);
+    world.xy += (rippleDistance > 0.0001 ? toRipple / rippleDistance : vec2(0.0)) * wave * 0.3;
     vec4 view = modelViewMatrix * vec4(world, 1.0);
     gl_Position = projectionMatrix * view;
     float dust = step(0.5, aKind);
@@ -79,7 +94,9 @@ const vertexShader = /* glsl */ `
     vec3 colour = aSeed.z < 0.1 ? teal : (aSeed.z < 0.3 ? pale : gold);
     vColor = mix(colour, mix(pale, teal, step(0.62, aSeed.z)) * 0.8, dust);
     float twinkle = mix(1.0, 0.7 + 0.3 * sin(uTime * (0.7 + aSeed.w * 1.7) + phase * 3.0), uMotion);
-    vAlpha = mix(0.82 * uLayout.w, 0.34, dust) * twinkle;
+    float lit = clamp(near * 1.8 + wave * 1.6, 0.0, 2.0);
+    vColor = mix(vColor, pale, clamp(lit, 0.0, 1.0) * 0.6);
+    vAlpha = mix(0.82 * uLayout.w, 0.34, dust) * twinkle * (1.0 + lit);
   }
 `;
 
@@ -146,6 +163,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
     let disposed = false, lost = false, ready = false;
     let width = 0, height = 0, raf = 0, pendingFrames = 0, lastTime = 0, activeTime = 0;
     let pointerX = 0, pointerY = 0, smoothX = 0, smoothY = 0, frameCount = 0;
+    let pointerInside = false, pointerForce = 0, rippleX = 0, rippleY = 0, rippleStart = -1;
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     const layout = new Float32Array(4);
     const scene = new THREE.Scene();
@@ -178,6 +196,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
         transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
         uniforms: {
           uProgress: { value: 0 }, uTime: { value: 0 }, uMotion: { value: 1 }, uPointSize: { value: small ? 2.5 : 2.35 }, uSpin: { value: 0 },
+          uPointer: { value: new THREE.Vector2(99, 99) }, uPointerForce: { value: 0 }, uRipple: { value: new THREE.Vector3(0, 0, -1) },
           uPixelRatio: { value: 1 }, uLayout: { value: new THREE.Vector4(0, 0, 1, 1) }, uView: { value: new THREE.Vector2(1, 1) },
         },
       });
@@ -222,6 +241,12 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
         smoothX += (pointerX - smoothX) * 0.04;
         smoothY += (pointerY - smoothY) * 0.04;
       }
+      pointerForce += ((animating && pointerInside ? 1 : 0) - pointerForce) * (animating ? 0.08 : 1);
+      u.uPointerForce.value = pointerForce;
+      (u.uPointer.value as THREE.Vector2).set(pointerX * visibleW / 2, pointerY * visibleH / 2);
+      const rippleAge = rippleStart < 0 ? -1 : (now - rippleStart) / 1000;
+      if (rippleAge > 2.6) rippleStart = -1;
+      (u.uRipple.value as THREE.Vector3).set(rippleX * visibleW / 2, rippleY * visibleH / 2, animating ? rippleAge : -1);
       const sway = animating ? Math.sin(activeTime * 0.13) * 0.06 : 0;
       group.rotation.set(settings.reducedMotion ? 0 : -smoothY * 0.05, settings.reducedMotion ? 0 : sway + smoothX * 0.09, 0);
       try {
@@ -234,7 +259,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
         }
       } catch { fail(); return; }
       pendingFrames = Math.max(0, pendingFrames - 1);
-      if (animating || pendingFrames > 0) queue();
+      if (animating || pendingFrames > 0 || pointerForce > 0.01) queue();
       else lastTime = 0;
     }
 
@@ -255,8 +280,17 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
       if (!finePointer.matches || settings.paused || settings.reducedMotion || event.pointerType === 'touch' || !width || !height) return;
       pointerX = event.clientX / width * 2 - 1;
       pointerY = -(event.clientY / height * 2 - 1);
+      pointerInside = true;
     };
-    const resetPointer = () => { pointerX = 0; pointerY = 0; };
+    const ripple = (event: PointerEvent) => {
+      const settings = settingsRef.current;
+      if (!finePointer.matches || settings.paused || settings.reducedMotion || event.pointerType === 'touch' || event.button !== 0 || !width || !height) return;
+      rippleX = event.clientX / width * 2 - 1;
+      rippleY = -(event.clientY / height * 2 - 1);
+      rippleStart = performance.now();
+      invalidate();
+    };
+    const resetPointer = () => { pointerX = 0; pointerY = 0; pointerInside = false; };
     const visibility = () => { if (document.hidden) stop(); else invalidate(); };
     const contextLost = (event: Event) => { event.preventDefault(); fail(); };
     const contextRestored = () => {
@@ -268,6 +302,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     window.addEventListener('pointermove', pointer, { passive: true });
+    window.addEventListener('pointerdown', ripple, { passive: true });
     document.documentElement.addEventListener('pointerleave', resetPointer);
     window.addEventListener('scroll', invalidate, { passive: true });
     document.addEventListener('visibilitychange', visibility);
@@ -282,6 +317,7 @@ export default function ChronicleScene({ progressRef, paused, reducedMotion, onR
       invalidateRef.current = null;
       observer.disconnect();
       window.removeEventListener('pointermove', pointer);
+      window.removeEventListener('pointerdown', ripple);
       document.documentElement.removeEventListener('pointerleave', resetPointer);
       window.removeEventListener('scroll', invalidate);
       document.removeEventListener('visibilitychange', visibility);

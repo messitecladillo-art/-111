@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   blendStageLayout, buildChronicleField, chainFormation, chronicleProgress, chronicleStage, maskFormation, oracleFormation,
-  resolveChronicleProgress, ringFormation, seededRandom, stageLayout, CHRONICLE_DUST_RATIO, CHRONICLE_GLYPHS,
+  resolveChronicleProgress, ringFormation, seededRandom, stageLayout, CHRONICLE_DUST_RATIO, CHRONICLE_GLYPHS, CHRONICLE_STAGE_PLACEMENT,
   CHRONICLE_LAST_STAGE, CHRONICLE_MIN_PARTICLES, CHRONICLE_MOBILE_PARTICLE_COUNT, CHRONICLE_PARTICLE_COUNT, CHRONICLE_STAGE_COUNT,
 } from '../lib/landing-chronicle.ts';
 
@@ -122,6 +122,12 @@ test('layouts centre the ring, place chapters beside the copy and stay continuou
   assert.equal(hero[0], 0);
   assert.deepEqual(hero, finale);
   assert.ok(chapter[0] > w * 0.2 && chapter[0] + chapter[2] < w / 2);
+  // Compositions alternate: oracle art on the left, documents behind centred copy, 灋 on the right.
+  assert.equal(CHRONICLE_STAGE_PLACEMENT.length, CHRONICLE_STAGE_COUNT);
+  const left = stageLayout(1, w, h), backdrop = stageLayout(2, w, h);
+  assert.ok(left[0] < -w * 0.2 && left[0] - left[2] > -w / 2);
+  assert.equal(backdrop[0], 0);
+  assert.ok(backdrop[3] < chapter[3], 'backdrop formations are dimmer than side formations');
   const portrait = stageLayout(3, 2.2, 4.68);
   assert.equal(portrait[0], 0);
   assert.ok(portrait[2] <= 2.2 * 0.42 + 1e-6);

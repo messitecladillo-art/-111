@@ -311,13 +311,18 @@ export function resolveChronicleProgress(progress: number, reducedMotion: boolea
   return reducedMotion ? chronicleStage(value, last) : value;
 }
 
+/** Horizontal placement of each stage in landscape layouts: art beside, behind or opposite the copy. */
+export const CHRONICLE_STAGE_PLACEMENT = ['center', 'left', 'backdrop', 'right', 'backdrop', 'right', 'center'] as const;
+export type StagePlacement = (typeof CHRONICLE_STAGE_PLACEMENT)[number];
+
 /** Where a stage sits in world units for a visible plane of `viewW × viewH`: [x, y, scale, brightness]. */
 export function stageLayout(stage: number, viewW: number, viewH: number, out: Float32Array = new Float32Array(4)): Float32Array {
   const w = Number.isFinite(viewW) && viewW > 0 ? viewW : 1;
   const h = Number.isFinite(viewH) && viewH > 0 ? viewH : 1;
   const portrait = w / h < 0.9;
-  const ring = stage <= 0 || stage >= CHRONICLE_LAST_STAGE;
-  if (ring) {
+  const index = Number.isFinite(stage) ? Math.max(0, Math.min(CHRONICLE_LAST_STAGE, Math.round(stage))) : 0;
+  const placement = CHRONICLE_STAGE_PLACEMENT[index];
+  if (placement === 'center') {
     out[0] = 0;
     out[1] = portrait ? h * 0.03 : 0;
     out[2] = portrait ? Math.min(w * 0.66, h * 0.4) : Math.min(h * 0.56, w * 0.42);
@@ -326,9 +331,15 @@ export function stageLayout(stage: number, viewW: number, viewH: number, out: Fl
     out[0] = 0;
     out[1] = h * 0.2;
     out[2] = Math.min(w * 0.42, h * 0.22);
-    out[3] = 0.5;
+    out[3] = placement === 'backdrop' ? 0.4 : 0.5;
+  } else if (placement === 'backdrop') {
+    // Behind centred copy: larger, dimmer, lifted slightly so headings stay legible.
+    out[0] = 0;
+    out[1] = h * 0.04;
+    out[2] = Math.min(h * 0.47, w * 0.3);
+    out[3] = 0.42;
   } else {
-    out[0] = w * 0.245;
+    out[0] = (placement === 'left' ? -1 : 1) * w * 0.245;
     out[1] = -h * 0.02;
     out[2] = Math.min(h * 0.36, w * 0.2);
     out[3] = 1;
