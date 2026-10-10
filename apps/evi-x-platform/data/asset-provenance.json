@@ -41,6 +41,408 @@
         "officialMarkSafety": "pass",
         "humanReview": "required_before_any_competition_submission_reuse"
       }
+    },
+    {
+      "path": "public/landing/app-analysis-1600.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#analysis after loading the built-in 12-row simulated dataset",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "2aac88e5babddf250ba67be1add6bf3c513a249a8a01b3d03d7fdfcaa3e3ef1c",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-analysis-960.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#analysis after loading the built-in 12-row simulated dataset",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "53b32596d2609ffef1fd4219b0b171fe12de409c96862eaa779904ef4f9a61aa",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-defense-1600.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#defense default view",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "4e03d2e19ba210012f3a4849b7cf9e1c034d8cc5c5046e867ed1138ca3f26073",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-defense-960.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#defense default view",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "e3201cadeb5aced595e3711929d4a3835ff0d612073ae6474a9a9153924bd11c",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-design-1600.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#design with the built-in teaching questionnaire 校园服务体验 loaded",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "1b9cdbb68ee5162e10f96db0c2587cfb7a92f938ec9f060669abae1b6a0fa880",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-design-960.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#design with the built-in teaching questionnaire 校园服务体验 loaded",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "889498dddfa9a634bd75941a5397ba9ba266c7a6ce3df594217f086d046d83c8",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-editor-1600.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#editor with the default report template",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "893b342747e52cb24c28f22363aaaa49b7c577b710f8f6a9a59eca87b48b83a6",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-editor-960.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#editor with the default report template",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "f6912770e25b878decc462bdf476c4d207455abd5037564268547e7dcf147c16",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-silicon-1600.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#silicon after an offline demo-engine run (24 fictional personas × 2 scenarios), grouped by answers to WAIT",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "04d177f9298182784ef5c27d04e559d408c116f28d73d0c4d6871df183a88d24",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-silicon-960.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#silicon after an offline demo-engine run (24 fictional personas × 2 scenarios), grouped by answers to WAIT",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "81f21192096a78d6f9727a8264a35a323257bf263b881c357e6c97279d6b20a0",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-analysis.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#analysis after loading the built-in 12-row simulated dataset",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "2e04549a5e0ce319bf65c64793cab728eadc3aa0efa497374f01e80c3ddaf8c6",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-cases.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#cases default view",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "e7f65f1b37b4e23ec8ea5012e9b42cdc6e84a1a606fa7c3cb6d4a28e04f24cb0",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-defense.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#defense default view",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "7aa4f8042cf773c159264143ad76f80a57a5fbd53158f506dc6b1e18d0648b14",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-design.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#design with the built-in teaching questionnaire 校园服务体验 loaded",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "88205763e9c1f9b29b0d307b226221f5ffea3cd38ff01af18e0164282167ce23",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-editor.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#editor with the default report template",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "14fb76ae46b935013dcabdfc5873387c37f433d220e185df4254b67f6a025f54",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-fidelity.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#silicon results, fidelity tab",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "e39f9d5071358d8982f95f9c27461e27d49ee8dfe9646fe6bf19a0028fe711c8",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-rules.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#rules after resolving the default selection",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "66485b7c922bfb12bbefec0769eebccc606828ce469251c6b0c099bd07e9e5e4",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/crop-stage.webp",
+      "role": "landing_feature_crop",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#silicon after an offline demo-engine run, stage area",
+      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "0079e55a18b5b85e22ee16c834f9a8ed2156c7cb63217a7a2fe438809611af28",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/case-abstract-1240.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 2 = report page 1",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "42b5c83c0eeeaf0f1a2a1322218d08310e740efe877117b2fd376c105b1a634f",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-abstract-560.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 2 = report page 1",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "951fca89676f62e3bc476a54026a7c609f79562973667e5478a0714a79681468",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-chain-1240.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 17 = report page 16",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "968f9c637d1d5d6337ae322eff66abcac444003b75c41ad7cf83931b84ab5d6b",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-chain-560.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 17 = report page 16",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "2848af3f65ff4f446006c33a40229b1a0b0bb07566c296bd8df8f604ce3f4bb2",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-paths-1240.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 63 = report page 62",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "c2b1e03532e78c001e61f3966280c44e4d338986b10901ff91939c4a719dd929",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-paths-560.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 63 = report page 62",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "1430c306625afd40f4bc29e3d7180c591f12b7f23dc8b04f9147cb1fa4eed05b",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-personas-1240.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 42 = report page 41",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "cd1f6558158ee29c5b482e3982b9c056fc3aa5e9b7addde9692e0b93871afebc",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-personas-560.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 42 = report page 41",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "0866f53c364afd0fb8b80ab66a18a54a084d8f8ccba3e254760cbeee27c0823e",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-sampling-1240.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 23 = report page 22",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "64505cb1d37c170822af8d12f2c223beb7802b03f62d6d80f3cb8ce88a36ed46",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/case-sampling-560.webp",
+      "role": "landing_case_page",
+      "visualMode": "public_promo",
+      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 23 = report page 22",
+      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
+      "sha256": "b5d7aaa3d241a31d2a06194d6806e7842c01e7053015c31d8bb7e8f3a18292e7",
+      "review": {
+        "awardStatus": "user_attested",
+        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
+        "personalData": "none on selected pages",
+        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
+        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
     }
   ]
 }
