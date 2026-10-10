@@ -50,3 +50,13 @@
 - 新模块使用 `--wb-*` 令牌，不写死浅色色值；报告预览纸面这类本应固定为白纸的区域除外。
 - 不要把品牌标志、獬见或金色纹样带入导出的报告、PPT 与提交文件。
 - 托管页的通用按钮样式不作用于嵌入的问卷编辑器（`.hosted-editor-fieldset`），编辑器保留自身模块样式。
+
+## 硅基样本、概览与质量基线（2026-10-10）
+
+- **硅基样本实验室**（`#silicon`，项目页「硅基样本」标签）：深色“剧场”始终保持墨色背景，3D 人物的光环颜色与图表共用一套经 dataviz 校验器验证的色板（8 色分类 + 5 级顺序色阶，明暗各一套），见 `lib/silicon/palette.ts` 与 `components/silicon/SiliconLab.module.css` 顶部变量。详细说明见 `apps/evi-x-platform/docs/silicon-samples.md`。
+- **自带设计的模块**在容器上加 `data-self-styled`，`hosted.css` 的通用表单与按钮规则会用 `:where()` 跳过它们，不改变其他规则的优先级。
+- **概览页**新增第十七届赛程（`data/edition17-calendar.ts`，逐条标注总通知页码，11 月 17 日实践赛文件发布后须重新核验）与研究流水线。“今天”标记只在浏览器端渲染，服务端 HTML 不猜测日期。
+- **质量基线**（每次大改后复跑）：
+  - axe-core（WCAG 2.1 A/AA + best practice）：14 个路由 × 明暗主题，加上实验室的全部状态，严重 / 关键问题为 0；
+  - 14 个路由 × 明暗 × 390 / 768 / 1366 宽度：无横向溢出、无控制台错误；
+  - CI（`.github/workflows/ci.yml`）：前端单元测试、类型检查、lint、生产构建；API 在 PostgreSQL 16 上用非特权角色跑 pytest。
