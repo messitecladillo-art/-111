@@ -670,7 +670,7 @@ function CaseLibrary() {
           <span className="eyebrow">获奖案例证据库</span>
           <h2 id="cases-title">只呈现证据，不补写故事</h2>
         </div>
-        <p>检索已收录项目，区分公告元数据与材料深读；每张详情卡说明核验字段、来源层级和复用边界。</p>
+        <p>检索已收录案例，查看公告信息、材料分析与核验范围。</p>
       </div>
 
       {libraryMeta && libraryNotice && (
@@ -744,7 +744,7 @@ function CaseLibrary() {
         <div className="empty-state" role="status">
           <span className="empty-mark">0</span>
           <h3>没有匹配案例</h3>
-          <p>换一个关键词或放宽筛选条件。未核验案例不会被自动补造成结果。</p>
+          <p>换一个关键词或放宽筛选条件。</p>
           <button className="text-button" type="button" onClick={clearCaseFilters}>清除全部筛选</button>
         </div>
       ) : (
@@ -850,7 +850,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
     <section className="section section-diagnose" id="diagnose" aria-labelledby="diagnose-title">
       <div className="section-heading inverted">
         <div><span className="eyebrow">Agent 诊断</span><h2 id="diagnose-title">先暴露证据缺口，再安排最短修复路径</h2></div>
-        <p>输入当前真实状态。缺失就写未知，诊断不会用复杂术语掩盖资料不足。</p>
+        <p>填写当前项目状态，缺失信息可标为未知。</p>
       </div>
       <div className="diagnose-grid">
         <form className="diagnose-form" onSubmit={submit} aria-busy={submitting}>
@@ -873,7 +873,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
             <label><span>真实决策问题</span><textarea required rows={4} value={form.problem} onChange={(event) => update("problem", event.target.value)} placeholder="谁要在什么期限内，依据哪些证据，在什么选项间作何取舍？" /></label>
             <button className="primary-button gold-button" type="submit">{submitting ? "正在检查…" : "检查缺口与下一步"}</button>
           </fieldset>
-          <p className="form-note">仅按自报信息进行启发式检查，未读取报告或核验田野证据；不是质量评分或获奖概率。不写入 Gate、不推进项目状态。请勿提交受访者个人信息或未授权企业机密。</p>
+          <p className="form-note">依据自报信息检查准备度，不核验报告或田野证据，不更新项目状态或 Gate。结果不代表研究质量或获奖概率。请勿提交个人信息或未授权商业资料。</p>
         </form>
         <div className="diagnosis-result" aria-live="polite" aria-busy={submitting}>
           {submitting && <div className="result-placeholder" role="status"><span className="evidence-orbit" aria-hidden="true">…</span><h3>正在检查自报信息</h3><p>按固定规则提示缺口，不代表证据审查。</p></div>}
@@ -946,12 +946,12 @@ function RuleWorkbench() {
     <section className="section rules-section" id="rules" aria-labelledby="rules-title">
       <div className="section-heading">
         <div><span className="eyebrow">五维赛事规则解析器</span><h2 id="rules-title">五个维度同时匹配，规则才可进入项目</h2></div>
-        <p>按届次、组别、赛区、赛道与阶段核对本地哈希锁定的来源快照。没有匹配就返回未知并阻断，不会拿旧规则补位。</p>
+        <p>按届次、组别、赛区、赛道与阶段匹配来源快照；五维不匹配时标为未知，停止套用。</p>
       </div>
 
       <aside className="rule-scope-banner" aria-label="规则快照使用边界">
         <div><strong>当前证据快照</strong><span>{RULE_CORPUS_META.snapshot.edition} · {RULE_CORPUS_META.snapshot.group} · 核验于 {RULE_CORPUS_META.snapshot.verified_at}</span></div>
-        <p>这是独立工具保存的历史核验快照，不代表赛事官方实时通知。正式提交前必须重新核对适用于当前项目的原始通知及补充文件。</p>
+        <p>历史核验快照。正式提交前，请重新核对当前项目适用的官方通知及补充文件。</p>
       </aside>
 
       <aside className="rule-scope-banner" aria-label="新届次官方通知核验">
@@ -969,7 +969,7 @@ function RuleWorkbench() {
             <label><span>阶段</span><input required value={form.stage} onChange={(event) => update("stage", event.target.value)} /></label>
           </div>
           <button className="primary-button" type="submit" disabled={loading}>{loading ? "正在核对五维范围…" : "解析适用规则"}</button>
-          <p>可修改任一维度验证边界；不匹配结果不会回退到相近届次或组别。</p>
+          <p>仅采用五维精确匹配的规则。</p>
         </form>
 
         <div className="rule-result" aria-live="polite" aria-busy={loading}>
@@ -1025,7 +1025,7 @@ export default function EviXPlatform() {
         <div className="hero-grid" aria-hidden="true" />
         <div className="hero-content">
           <div className="hero-copy">
-            <span className="hero-kicker"><i /> 正大杯全流程循证竞赛智能体</span>
+            <span className="hero-kicker"><i /> 市场调查与分析研究工作台</span>
             <h1 id="hero-title">让每个问题，<br /><em>都循证抵达行动。</em></h1>
             <p>从规则锁定、获奖案例证据、研究设计到报告答辩，证见把问题、数据、洞察和行动收进一条可复核的证据链。</p>
             <div className="hero-actions"><Link className="primary-button gold-button" href="/projects">进入我的项目</Link><a className="ghost-button" href="#cases">查看获奖案例 <span aria-hidden="true">↗</span></a></div>
@@ -1039,18 +1039,18 @@ export default function EviXPlatform() {
           </div>
           <EvidenceFlight />
         </div>
-        <div className="independent-notice"><span>独立 · 非官方</span><p>证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。</p></div>
+        <div className="independent-notice"><span>独立 · 非官方</span><p>证见 EVI-X 为独立研究辅助工具，与赛事主办、承办及冠名单位无隶属、授权或合作关系。</p></div>
       </section>
 
       <CompetitionCalendar />
       <ResearchPipeline />
 
       <section className="section qdia-section" aria-labelledby="qdia-title">
-        <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">不是写作捷径，是证据生产系统</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关 Gate 必须在受信任控制面中重新评估。</p></div>
+        <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">让问题、数据、洞察与行动对应</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关 Gate 必须在受信任控制面中重新评估。</p></div>
         <div className="qdia-cards">{QDIA.map((item, index) => <article key={item.code}><span className="step-number">0{index + 1}</span><div className="step-code">{item.code}</div><h3>{item.name} <small>{item.english}</small></h3><p>{item.detail}</p><span className="step-check">{["决策主体 · 目标人群 · 证据缺口", "来源 · 样本 · 清洗 · 台账", "方法适配 · 结果 · 限制", "负责人 · 优先级 · KPI"][index]}</span></article>)}</div>
       </section>
 
-      <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>先诊断，再进入工作台。未知不会被包装成完成，风险不会被一句“基本没问题”带过。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>
+      <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>梳理当前证据缺口，生成下一步行动清单。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>
 
       </>,
       cases: <CaseLibrary />,
@@ -1060,7 +1060,7 @@ export default function EviXPlatform() {
       silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={setBriefSource} />,
-      workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>使用我的项目创建团队研究，生成、编辑并保存问卷版本。原有生命周期控制程序和证据文件继续保留。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
+      workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>创建团队项目，生成、编辑并保存问卷版本。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
     }} />

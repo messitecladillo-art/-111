@@ -77,7 +77,7 @@ export default function QuestionnaireLibrary({design,repairOrigin,editRevision,b
     if(!/^[a-f0-9]{64}$/.test(result.scope))throw new LibraryError('问卷库身份无效，未连接。');
     scopeRef.current=result.scope;setScope(result.scope);setProjects(result.projects);
     if(selected){const history=await api<{versions:QuestionnaireVersionSummary[]}>(`/api/drafts/questionnaires/${selected}/versions`,result.scope);if(valid())setVersions(history.versions);}
-    setNotice('已读取问卷目录，当前设计没有上传或替换。');
+    setNotice('已读取问卷目录；当前设计保留，本次未上传。');
   });}
   function selectProject(id:string){if(lock.current||frozenRef.current)return;setSelected(id);setPreview(null);setVersions([]);if(!id)return;void operation(async valid=>{
     const result=await api<{versions:QuestionnaireVersionSummary[]}>(`/api/drafts/questionnaires/${id}/versions`,scopeRef.current);
@@ -132,7 +132,7 @@ export default function QuestionnaireLibrary({design,repairOrigin,editRevision,b
   return <details className={styles.library}>
     <summary><span>问卷项目与版本</span><small>{frozen?'身份已冻结':binding?(savedCurrent?`已保存 · v${binding.revision}`:'有未保存更改'):scope?'已连接 · 本页尚未绑定':'按需连接 · 本页设计暂存内存'}</small></summary>
     <div className={styles.body}>
-      <header className={styles.head}><div><span className={styles.eyebrow}>DESIGN HISTORY</span><h3>每次保存，留下可找回的一版</h3><p>保存到当前系统的问卷库，不是赛事控制项目或 Gate。只有明确勾选并保存，才会上传问卷文字。</p></div><button type="button" disabled={busy||frozen} onClick={connect}>{scope?'刷新问卷目录':'连接问卷库'}</button></header>
+      <header className={styles.head}><div><span className={styles.eyebrow}>DESIGN HISTORY</span><h3>保存问卷与历史版本</h3><p>勾选并保存后，问卷文字才会上传到当前系统。问卷库独立于赛事控制项目与 Gate。</p></div><button type="button" disabled={busy||frozen} onClick={connect}>{scope?'刷新问卷目录':'连接问卷库'}</button></header>
       <p className={styles.privacy}>保存范围：简介、题干、选项、变量、显示条件、来源与预试备注；不含答卷、演练答案、未应用的数值或拼装输入。请删除个人信息、未授权材料和机密。已存版本不自动删除，请同时保留本地备份。</p>
       {error&&<p className={styles.error} role="alert">{error}</p>}{notice&&<p className={styles.notice} role="status">{notice}</p>}
       {blocked&&<p className={styles.warning}>请先完成数值输入、文件读取或当前确认；问卷库暂不保存和载入。</p>}
@@ -143,7 +143,7 @@ export default function QuestionnaireLibrary({design,repairOrigin,editRevision,b
           <label>本次版本说明<input value={label} maxLength={80} placeholder="例如：认知访谈后修订筛选题" disabled={busy||frozen||!!pending} onChange={e=>setLabel(e.target.value)}/></label>
           <label className={styles.check}><input type="checkbox" checked={consent} disabled={!scope||busy||frozen||blocked||!!pending} onChange={e=>setConsent(e.target.checked)}/><span>已检查当前问卷的隐私与权利，同意将本版完整设计保存到当前系统。</span></label>
           <div className={styles.actions}>{binding&&<button type="button" className={styles.primary} disabled={!scope||!consent||!label.trim()||busy||frozen||blocked||!!pending} onClick={()=>save(false)}>保存为下一版本</button>}<button type="button" className={!binding?styles.primary:undefined} disabled={!scope||!consent||!label.trim()||busy||frozen||blocked||!!pending} onClick={()=>save(true)}>{binding?'另存为新问卷项目':'创建问卷项目并保存'}</button></div>
-          <small>每个身份最多 40 个问卷项目，每项目 40 个不可变版本。不自动覆盖其他页面保存的版本。</small>
+          <small>每个身份最多 40 个问卷项目，每项目最多 40 个版本；已存版本不可覆盖。</small>
           {pending&&!busy&&<div className={styles.warning}><strong>上次保存结果尚未确认</strong><p>版本说明：{pending.label}。重试只发送原快照和当时的修订来源，不包含后续新编辑，也不会重复创建。{pending.repairOrigin?`原检查：${pending.repairOrigin.reviewId}。`:'本次保存不含修订来源。'}</p><button type="button" disabled={frozen} onClick={()=>void operation(valid=>saveAttempt(pending,valid))}>核对并重试上次保存</button></div>}
         </section>
         <section className={styles.history} aria-label="已保存的问卷项目"><h4>已保存的问卷 <small>{projects.length} / 40</small></h4>

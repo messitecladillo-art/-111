@@ -265,8 +265,8 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
     </header>
 
     <ul className={styles.tiers} aria-label="硅基样本的适用边界">
-      <li data-tier="ok"><span>推荐 · 最稳健</span><strong>预测试</strong><small>发放前找出表述不清、选项缺失与跳转错误，估计作答时长，演练分析流程。</small></li>
-      <li data-tier="caution"><span>谨慎 · 只作参考</span><strong>模拟难触达人群</strong><small>不得用模拟回答填补、扩充或替代真实样本；与真实数据混用会误导结论。</small></li>
+      <li data-tier="ok"><span>推荐用途</span><strong>预测试</strong><small>检查表述、选项与跳转，估计作答时长，演练分析流程。</small></li>
+      <li data-tier="caution"><span>仅供参考</span><strong>模拟难触达人群</strong><small>模拟回答须与真实数据分开，不得填补、扩充或替代真实样本。</small></li>
       <li data-tier="limit"><span>须单独论证</span><strong>机制建模</strong><small>贝叶斯先验、ABM 初始化、压力测试等用途需另行说明假设与局限。</small></li>
     </ul>
 
@@ -349,7 +349,7 @@ function PersonaInspector({ persona, attributes, run, runDesign, response, share
           if (!a || !a.shown) return null;
           return <li key={q.id}><p>{text}</p><strong>{a.refused ? '（跳过）' : answerLabel(q, a.value)}</strong>{a.unclear && <em>{a.unclear}</em>}</li>;
         })}</ol>}
-      <p className={styles.small}>{run.engine === 'demo' ? '离线演示引擎的随机答案，不代表任何人的观点。' : '语言模型扮演的模拟回答，不是任何真实受访者的观点——这位受访者并不存在。'}</p>
+      <p className={styles.small}>{run.engine === 'demo' ? '离线演示引擎的随机答案，不代表任何人的观点。' : '语言模型生成的虚构受访者回答，不代表真实观点。'}</p>
     </div>}
   </aside>;
 }

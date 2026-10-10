@@ -127,7 +127,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
   const hostRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
-  const apiRef = useRef<{ stacked: (on: boolean) => void; sync: (figures: StageFigure[], groups: ReadonlyArray<{ key: string; label: string }>) => void; select: (id: string | null) => void; motion: (reduced: boolean) => void; zoom: (factor: number) => void; reset: () => void; spin: (on: boolean) => void } | null>(null);
+  const apiRef = useRef<{ label: (text: string) => void; stacked: (on: boolean) => void; sync: (figures: StageFigure[], groups: ReadonlyArray<{ key: string; label: string }>) => void; select: (id: string | null) => void; motion: (reduced: boolean) => void; zoom: (factor: number) => void; reset: () => void; spin: (on: boolean) => void } | null>(null);
   const callbacks = useRef({ onSelect, describe, onFallback });
   const [hover, setHover] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
@@ -492,6 +492,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
     };
 
     apiRef.current = {
+      label: text => canvas.setAttribute('aria-label', text),
       stacked: on => { centred = on; },
       sync: (figs, groupOrder) => relayout(figs, groupOrder, performance.now()),
       select: id => { selected = id; },
@@ -522,6 +523,7 @@ export default function PersonaStage({ figures, groups, selectedId, onSelect, de
   }, []);
 
   // Declared after the scene effect, so on mount they run once the scene exists.
+  useEffect(() => { apiRef.current?.label(label); }, [label]);
   useEffect(() => { apiRef.current?.sync(figures, groups); }, [figures, groups]);
   useEffect(() => { apiRef.current?.select(selectedId); }, [selectedId]);
   useEffect(() => { apiRef.current?.motion(reducedMotion); }, [reducedMotion]);

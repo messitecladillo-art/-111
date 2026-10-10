@@ -6,7 +6,7 @@ import './hosted.css';
 
 export const metadata: Metadata = {
   title: "证见 EVI-X｜正大杯冠军 Agent",
-  description: "面向正大杯项目的全流程循证智能体：真实案例、项目诊断、规则锁定、九道质量门禁与项目控制门户。证见 EVI-X 为独立研究辅助工具，非赛事官方产品。",
+  description: "面向市场调查与分析团队的独立研究工作台：案例检索、问卷设计、硅基样本预测试、数据分析与报告答辩。",
   applicationName: "证见 EVI-X",
   keywords: ["正大杯", "市场调查", "证见 EVI-X", "竞赛 Agent", "循证研究"],
   openGraph: {

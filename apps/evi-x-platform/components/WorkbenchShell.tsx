@@ -121,7 +121,7 @@ export default function WorkbenchShell({ panels }: { panels: Record<Panel, React
           {commandItems.map(item => <button type="button" id={`wb-command-${item.id}`} key={item.id} role="option" aria-selected={activeCommand?.id === item.id} tabIndex={-1} onMouseDown={event => event.preventDefault()} onClick={() => chooseCommand(item.id)}><span className="wb-command-icon"><NavIcon kind={item.icon}/></span><span><strong>{item.title}</strong><small>{item.description}</small></span><NavIcon kind="arrow"/></button>)}
           {!commandItems.length && <p className="wb-command-empty" role="status">没有找到对应功能，试试“案例”“报告”或“规则”。</p>}
         </div>
-        <div className="wb-command-footer"><span>只搜索工作区功能，不检索研究内容。</span><span><kbd>↑↓</kbd> 选择 <kbd>Enter</kbd> 打开 <kbd>Esc</kbd> 关闭</span></div>
+        <div className="wb-command-footer"><span>搜索范围：工作区功能</span><span><kbd>↑↓</kbd> 选择 <kbd>Enter</kbd> 打开 <kbd>Esc</kbd> 关闭</span></div>
       </dialog>
     </div>
   </ThemeProvider>;
