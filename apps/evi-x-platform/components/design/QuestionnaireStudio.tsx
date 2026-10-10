@@ -26,9 +26,10 @@ type SessionDesignDraft={history:History;numericDrafts:NumericDrafts;activeId:st
 export type HostedDesignBridge = { initialDesign: Questionnaire; cacheKey?:string; load?: { id: string; design: Questionnaire }; savedFingerprint?: string; onLoaded?: () => void; onDetachProposal?: () => void };
 export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,onBriefHandled,agentProposal,onAgentHandled,onAgentApplied,localOnly=false,hosted}:{onSnapshot?:(value:DesignSnapshot)=>void;onAnalyze?:(value:DesignSnapshot)=>void;briefSource?:DiagnosisBriefSource|null;onBriefHandled?:()=>void;agentProposal?:AgentQuestionnaireProposal|null;onAgentHandled?:()=>void;onAgentApplied?:(value:AgentQuestionnaireProposal)=>void;localOnly?:boolean;hosted?:HostedDesignBridge}={}) {
   const session=useHostedSession();
-  const cached=useRef((hosted?.cacheKey?session.getDraft(hosted.cacheKey):undefined) as SessionDesignDraft|undefined);
-  const [history, setHistory] = useState<History>(()=>cached.current?.history||(hosted?initialRevisionHistory(hosted.initialDesign):initial()));
-  const [activeId, setActiveId] = useState(()=>cached.current?.activeId||hosted?.initialDesign.questions[0]?.id || "initial-question");
+  // Read once at mount; state rather than a ref so the initializers below may use it during render.
+  const [cached]=useState(()=>(hosted?.cacheKey?session.getDraft(hosted.cacheKey):undefined) as SessionDesignDraft|undefined);
+  const [history, setHistory] = useState<History>(()=>cached?.history||(hosted?initialRevisionHistory(hosted.initialDesign):initial()));
+  const [activeId, setActiveId] = useState(()=>cached?.activeId||hosted?.initialDesign.questions[0]?.id || "initial-question");
   const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -49,7 +50,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const [libraryResetKey,setLibraryResetKey]=useState(0);
   const libraryIdentity=useRef(0);
   function detachLibrary(){libraryIdentity.current++;setLibraryResetKey(libraryIdentity.current);}
-  const [numericDrafts, setNumericDrafts] = useState<NumericDrafts>(()=>cached.current?.numericDrafts||{});
+  const [numericDrafts, setNumericDrafts] = useState<NumericDrafts>(()=>cached?.numericDrafts||{});
   const editRevision = useRef(0), readEpoch = useRef(0);
   const agentProposalRef=useRef(agentProposal);
   useLayoutEffect(()=>{agentProposalRef.current=agentProposal;},[agentProposal]);
@@ -74,7 +75,10 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     const safe=parseQuestionnaire(JSON.stringify(hosted.load.design));loadedIntent.current=hosted.load.id;
     setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');hosted.onLoaded?.();
   },[hosted?.load,hosted?.onLoaded]);
-  useEffect(()=>{if(hosted?.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers)setDirty(false);},[hosted?.savedFingerprint,design,hasPendingNumbers]);
+  // When the design comes back to the saved version, it is clean again (adjusted during render, not in an effect).
+  const savedMatch=useMemo(()=>!!hosted&&hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers,[hosted,design,hasPendingNumbers]);
+  const [lastSavedMatch,setLastSavedMatch]=useState(savedMatch);
+  if(savedMatch!==lastSavedMatch){setLastSavedMatch(savedMatch);if(savedMatch)setDirty(false);}
   const activeIssueId = active ? `design-${active.id}-issues` : undefined;
   const hasIssue = (...codes: string[]) => issues.some(i=>i.questionId===active?.id && codes.includes(i.code));
   const mapped = design.questions.filter(questionIsMapped).length;

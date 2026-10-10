@@ -48,7 +48,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
   const [sectionId, setSectionId] = useState("section-1");
   const [slideId, setSlideId] = useState("slide-1");
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
-  const [phase, setPhase] = useState<Phase>("loading");
+  const [phase, setPhase] = useState<Phase>(localOnly ? "ready" : "loading");
   const [message, setMessage] = useState("");
   const [exporting, setExporting] = useState(false);
   const [past, setPast] = useState<EditorContent[]>([]);
@@ -133,7 +133,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
   useEffect(() => {
     let cancelled = false;
     alive.current = true;
-    if(localOnly){setPhase('ready');return()=>{alive.current=false;};}
+    if(localOnly)return()=>{alive.current=false;};
     // Session establishment is external I/O; state updates follow its completion.
     ensureEditorSession().then(() => {
       if (!cancelled) void connect(true);
