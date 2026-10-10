@@ -183,110 +183,12 @@
       }
     },
     {
-      "path": "public/landing/crop-analysis.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#analysis after loading the built-in 12-row simulated dataset",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "2e04549a5e0ce319bf65c64793cab728eadc3aa0efa497374f01e80c3ddaf8c6",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
-      "path": "public/landing/crop-cases.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#cases default view",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "e7f65f1b37b4e23ec8ea5012e9b42cdc6e84a1a606fa7c3cb6d4a28e04f24cb0",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
-      "path": "public/landing/crop-defense.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#defense default view",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "7aa4f8042cf773c159264143ad76f80a57a5fbd53158f506dc6b1e18d0648b14",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
-      "path": "public/landing/crop-design.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#design with the built-in teaching questionnaire 校园服务体验 loaded",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "88205763e9c1f9b29b0d307b226221f5ffea3cd38ff01af18e0164282167ce23",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
-      "path": "public/landing/crop-editor.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#editor with the default report template",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "14fb76ae46b935013dcabdfc5873387c37f433d220e185df4254b67f6a025f54",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
       "path": "public/landing/crop-fidelity.webp",
       "role": "landing_feature_crop",
       "visualMode": "public_promo",
       "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#silicon results, fidelity tab",
       "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
       "sha256": "e39f9d5071358d8982f95f9c27461e27d49ee8dfe9646fe6bf19a0028fe711c8",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
-      "path": "public/landing/crop-rules.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#rules after resolving the default selection",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "66485b7c922bfb12bbefec0769eebccc606828ce469251c6b0c099bd07e9e5e4",
-      "review": {
-        "content": "teaching_example_or_simulated_data_only",
-        "realRespondentData": "none",
-        "officialMarkSafety": "pass",
-        "labelOnPage": "真实界面 · 示例数据"
-      }
-    },
-    {
-      "path": "public/landing/crop-stage.webp",
-      "role": "landing_feature_crop",
-      "visualMode": "public_promo",
-      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#silicon after an offline demo-engine run, stage area",
-      "derivation": "Pillow crop of the main content area, LANCZOS resize to 1200 px wide, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
-      "sha256": "0079e55a18b5b85e22ee16c834f9a8ed2156c7cb63217a7a2fe438809611af28",
       "review": {
         "content": "teaching_example_or_simulated_data_only",
         "realRespondentData": "none",
@@ -442,6 +344,34 @@
         "personalData": "none on selected pages",
         "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
         "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
+      }
+    },
+    {
+      "path": "public/landing/app-cases-960.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#cases default view",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "80d0771de1d79be8f8ca8ea08e1654b82553d90b85aa948ced7d37287fd9ec07",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/app-cases-1600.webp",
+      "role": "landing_product_screenshot",
+      "visualMode": "public_promo",
+      "origin": "Playwright capture of the local workbench (dark theme, 1440×900 @2x): /workspace#cases default view",
+      "derivation": "Pillow LANCZOS resize, WebP quality 80; dev indicator and local-test banner hidden during capture; no repainting",
+      "sha256": "01876b0f30d87dd508d1b472fc30bfc90d75890c089ded05b54428639c974f04",
+      "review": {
+        "content": "teaching_example_or_simulated_data_only",
+        "realRespondentData": "none",
+        "officialMarkSafety": "pass",
+        "labelOnPage": "真实界面 · 示例数据"
       }
     }
   ]
