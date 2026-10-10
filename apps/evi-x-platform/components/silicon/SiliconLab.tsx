@@ -234,7 +234,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const engineLabel = run ? (run.engine === 'demo' ? '离线演示引擎' : `${run.settings.models.length} 个模型`) : config.engine === 'demo' ? '离线演示引擎' : '语言模型';
   const showFlat = flat || !webgl;
 
-  return <section className={styles.lab} aria-labelledby="sx-title">
+  return <section className={styles.lab} aria-labelledby="sx-title" data-self-styled>
     <header className={styles.theatre} data-layout={showFlat || narrow ? 'stacked' : 'overlay'} data-flat={showFlat}>
       <div className={styles.stage}>
         {showFlat ? <FlatStage figures={figures} groups={groups} personas={personas} selectedId={selectedId} onSelect={setSelectedId}/> :

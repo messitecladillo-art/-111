@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     mail_from: str = ""
     cookie_name: str = "evix_session"
     proposal_stale_seconds: int = 120
+    # 硅基样本 runs spend the user's own API quota, so every bound is explicit.
+    silicon_max_calls: int = 240
+    silicon_concurrency: int = 3
+    silicon_hourly_runs: int = 6
+    silicon_call_seconds: int = 45
+    silicon_stale_seconds: int = 600
 
     @model_validator(mode="after")
     def valid(self):
@@ -68,6 +74,9 @@ class Settings(BaseSettings):
             raise ValueError("Production requires a __Host- cookie")
         if not 60 <= self.proposal_stale_seconds <= 3600:
             raise ValueError("Invalid stale call boundary")
+        if not (1 <= self.silicon_max_calls <= 1000 and 1 <= self.silicon_concurrency <= 8 and 1 <= self.silicon_hourly_runs <= 60
+                and 5 <= self.silicon_call_seconds <= 120 and 120 <= self.silicon_stale_seconds <= 7200):
+            raise ValueError("Invalid silicon run bounds")
         for base in self.compatible_bases:
             validate_base("compatible", base, {"compatible": tuple(self.compatible_bases)})
         return self

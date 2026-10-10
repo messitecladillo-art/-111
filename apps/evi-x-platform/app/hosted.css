@@ -22,20 +22,21 @@
 .hosted-kicker{display:inline-flex;align-items:center;gap:9px;font-size:11.5px;font-weight:600;letter-spacing:.2em;color:var(--wb-gold-text)}
 .hosted-kicker::before{content:"";width:5px;height:5px;flex:none;transform:rotate(45deg);background:var(--evx-gold)}
 .hosted-small{font-size:12px;line-height:1.8;color:var(--wb-muted)}
-.hosted-app label{display:grid;gap:8px;font-size:13px;font-weight:600;margin:14px 0;color:var(--wb-text)}
-.hosted-app input:not([type=checkbox]),.hosted-app select,.hosted-app textarea{border:1px solid var(--wb-line-strong);background:var(--wb-solid);border-radius:var(--wb-radius);padding:11px 13px;min-width:0;width:100%;color:var(--wb-text);box-sizing:border-box;font-size:14px;transition:border-color var(--wb-fast),box-shadow var(--wb-med)}
+/* Modules with their own design system (data-self-styled) opt out of the generic control rules below. */
+.hosted-app label:where(:not([data-self-styled] *)){display:grid;gap:8px;font-size:13px;font-weight:600;margin:14px 0;color:var(--wb-text)}
+.hosted-app input:not([type=checkbox]):where(:not([data-self-styled] *)),.hosted-app select:where(:not([data-self-styled] *)),.hosted-app textarea:where(:not([data-self-styled] *)){border:1px solid var(--wb-line-strong);background:var(--wb-solid);border-radius:var(--wb-radius);padding:11px 13px;min-width:0;width:100%;color:var(--wb-text);box-sizing:border-box;font-size:14px;transition:border-color var(--wb-fast),box-shadow var(--wb-med)}
 .hosted-app textarea{resize:vertical;line-height:1.7}
-.hosted-app input:focus,.hosted-app select:focus,.hosted-app textarea:focus{outline:none;border-color:var(--wb-accent);box-shadow:0 0 0 4px var(--wb-accent-soft)}
+.hosted-app input:focus:where(:not([data-self-styled] *)),.hosted-app select:focus:where(:not([data-self-styled] *)),.hosted-app textarea:focus:where(:not([data-self-styled] *)){outline:none;border-color:var(--wb-accent);box-shadow:0 0 0 4px var(--wb-accent-soft)}
 .hosted-app input::placeholder,.hosted-app textarea::placeholder{color:var(--wb-muted);opacity:.85}
-.hosted-app :is(.hosted-main,.hosted-auth-main) button:not(.hosted-editor-fieldset *),.hosted-primary,.hosted-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:9px 16px;border:1px solid var(--wb-line-strong);border-radius:var(--wb-radius);background:var(--wb-surface);color:var(--wb-text);font-size:13px;font-weight:600;text-decoration:none;line-height:1.4;cursor:pointer;transition:border-color var(--wb-fast),color var(--wb-fast),background var(--wb-fast),box-shadow var(--wb-med),transform var(--wb-fast)}
-.hosted-app :is(.hosted-main,.hosted-auth-main) button:not(.hosted-editor-fieldset *):hover:not(:disabled){border-color:var(--wb-accent);color:var(--wb-accent)}
-.hosted-app :is(.hosted-main,.hosted-auth-main) button:not(.hosted-editor-fieldset *):active:not(:disabled){transform:translateY(1px)}
+.hosted-app :is(.hosted-main,.hosted-auth-main) button:not(.hosted-editor-fieldset *):where(:not([data-self-styled] *)),.hosted-primary,.hosted-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:9px 16px;border:1px solid var(--wb-line-strong);border-radius:var(--wb-radius);background:var(--wb-surface);color:var(--wb-text);font-size:13px;font-weight:600;text-decoration:none;line-height:1.4;cursor:pointer;transition:border-color var(--wb-fast),color var(--wb-fast),background var(--wb-fast),box-shadow var(--wb-med),transform var(--wb-fast)}
+.hosted-app :is(.hosted-main,.hosted-auth-main) button:not(.hosted-editor-fieldset *):where(:not([data-self-styled] *)):hover:not(:disabled){border-color:var(--wb-accent);color:var(--wb-accent)}
+.hosted-app :is(.hosted-main,.hosted-auth-main) button:not(.hosted-editor-fieldset *):where(:not([data-self-styled] *)):active:not(:disabled){transform:translateY(1px)}
 .hosted-app .hosted-primary{background:var(--wb-accent);color:var(--wb-accent-text);border-color:var(--wb-accent);box-shadow:0 10px 24px -16px var(--wb-accent)}
 .hosted-app .hosted-primary:hover:not(:disabled){background:var(--wb-accent);color:var(--wb-accent-text)!important;filter:brightness(1.08);box-shadow:0 14px 30px -16px var(--wb-accent)}
 .hosted-app button:disabled{cursor:not-allowed;opacity:.48}
 .hosted-app .hosted-danger{color:var(--wb-risk)}
 .hosted-app fieldset{border:0;margin:0;padding:0;min-width:0}
-.hosted-app input[type=checkbox]{accent-color:var(--wb-accent);width:17px;height:17px;flex-shrink:0}
+.hosted-app input[type=checkbox]:where(:not([data-self-styled] *)){accent-color:var(--wb-accent);width:17px;height:17px;flex-shrink:0}
 .hosted-main a{color:var(--wb-accent)}
 .hosted-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
 

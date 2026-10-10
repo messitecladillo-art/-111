@@ -254,3 +254,12 @@ test('stage halo colours follow the validated ramps and never generate a ninth h
   assert.equal(stageCategoryColor(false, 8, 9), NEUTRAL_HALO);
   assert.equal(stageCategoryColor(true, 6, 7), CATEGORICAL_DARK[6]);
 });
+
+test('answer normalisation agrees with the server twin on the shared parity fixture', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const fixture = JSON.parse(await readFile(new URL('../../evi-x-api/tests/fixtures/silicon-parity.json', import.meta.url), 'utf8'));
+  for (const c of fixture.cases) {
+    const q = { ...newQuestion(c.question.id, c.question.variable), ...c.question };
+    assert.deepEqual(normalizeModelAnswer(q, c.raw), { value: c.value, valid: c.valid }, JSON.stringify(c.raw));
+  }
+});

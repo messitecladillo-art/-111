@@ -71,14 +71,20 @@ def parse_proposal(raw):
 
 class LiveProvider:
     async def __call__(self, config, key, brief):
-        message = prompt(brief)
+        return await self.complete(config, key, prompt(brief), 32768)
+
+    async def answer(self, config, key, message, spec):
+        """One simulated-respondent turn for a 硅基样本 run; `spec` is for fixtures only."""
+        return await self.complete(config, key, message, 65536)
+
+    async def complete(self, config, key, message, limit):
         parameter = "max_completion_tokens" if config["provider"] in ("openai", "qwen") else "max_tokens"
         payload = {"model": config["model"], "messages": [{"role": "user", "content": message}], "stream": False,
                    parameter: config["maxOutputTokens"]}
         if config["provider"] == "openai":
             payload["store"] = False
         encoded = json.dumps(payload, ensure_ascii=False).encode()
-        if len(encoded) > 32768:
+        if len(encoded) > limit:
             raise ProviderFailure("input_too_large")
         try:
             async with asyncio.timeout(30):
@@ -129,3 +135,18 @@ class FixtureProvider:
         return json.dumps({"title": "合成测试问卷 · 待实施", "objective": "合成需求用于测试保存与版本链。", "population": "合成对象，不是实际受访者。",
                            "items": [{"text": f"合成测试题项 {n}：您如何评价拟议服务？", "type": "single", "choices": ["选项甲", "选项乙"],
                                       "researchQuestion": "拟议服务体验如何？", "decisionUse": "拟支持预测试规划。"} for n in range(1, 4)]}, ensure_ascii=False)
+
+    async def answer(self, config, key, message, spec):
+        self.calls += 1
+        # Conspicuously synthetic answers: first option, lowest point, a labelled placeholder text.
+        def pick(item):
+            if item["type"] == "single":
+                return item["codes"][0] if item["codes"] else None
+            if item["type"] == "multi":
+                return item["codes"][:1] or None
+            if item["type"] in ("likert", "number"):
+                return item["min"] if item["min"] is not None else 0
+            return "合成测试回答，不代表任何人的观点。"
+        if spec["mode"] == "single":
+            return json.dumps({"value": pick(spec["questions"][0]), "unclear": ""}, ensure_ascii=False)
+        return json.dumps({"answers": [{"variable": item["variable"], "value": pick(item), "unclear": ""} for item in spec["questions"]]}, ensure_ascii=False)

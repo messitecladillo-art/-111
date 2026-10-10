@@ -22,5 +22,5 @@ environment = dict(os.environ, EVIX_MIGRATION_DATABASE_URL=owner.replace('postgr
 subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], cwd=root / 'apps/evi-x-api', env=environment, check=True)
 with psycopg.connect('postgresql://evix_app:local-p0-app-only@127.0.0.1:55432/' + name) as connection:
     row = connection.execute("SELECT current_user, (SELECT version_num FROM alembic_version), (SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user)").fetchone()
-    assert row == ('evix_app', '0001_p0', False), row
-print(f'{name}: migration 0001_p0 verified with unprivileged evix_app')
+    assert row == ('evix_app', '0002_silicon_runs', False), row
+print(f'{name}: migrations through 0002_silicon_runs verified with unprivileged evix_app')

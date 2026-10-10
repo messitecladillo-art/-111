@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { newQuestionnaire, parseCollection, parseHeadResponse, parseProjectResponse, parseProposal, parseProposalSummary, summarizeProposal, parseVersionPage, parseQuestionnaireHead, parseQuestionnaireVersion, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersion, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
 import type { DesignSnapshot, DesignTransfer } from '@/lib/questionnaire-mapping';
 import { parseQuestionnaireLibraryContent } from '@/lib/questionnaire-library';
@@ -9,8 +9,11 @@ import { HostedApiError, downloadQuestionnaire, errorMessage, hostedRequest } fr
 import { LoginRequired } from './HostedFrame';
 import { useHostedSession } from './HostedSession';
 import HostedMembers from './HostedMembers';
+import { createSiliconRunner } from './silicon-runner';
+import type { DatasetTransfer } from '@/components/analysis/SurveyLab';
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'), { loading: () => <p role="status">正在打开问卷编辑器…</p> });
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'), { loading: () => <p role="status">正在打开本地分析工具…</p> });
+const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'), { loading: () => <p role="status">正在搭建硅基样本舞台…</p> });
 type SaveRequest = { design: Questionnaire; expectedRevision: number; idempotencyKey: string; sourceProposalId?: string };
 type GenerationRequest = { serviceId: string; serviceRevision: number; brief: string; expectedQuestionnaireRevision: number; idempotencyKey: string; consent: true };
 type CachedProject={head:QuestionnaireHead|null;initial:Questionnaire;snapshot:DesignSnapshot|null;sourceProposal?:string;proposal:Proposal|null;brief:string;pendingSave:SaveRequest|null;pendingGeneration:GenerationRequest|null;saveUncertain:boolean;generationUncertain:boolean;conflict:boolean};
@@ -36,11 +39,14 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [readonlyDesign,setReadonlyDesign]=useState<Questionnaire|null>(null);
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [generating, setGenerating] = useState(false), [reading, setReading] = useState(false);
   const [saveUncertain, setSaveUncertain] = useState(cached.current?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached.current?.generationUncertain||false), [conflict, setConflict] = useState(cached.current?.conflict||false);
-  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'analysis' | 'members'>('design');
+  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'silicon' | 'analysis' | 'members'>('design');
   const [transfer, setTransfer] = useState<DesignTransfer | null>(null), [analysisOpened, setAnalysisOpened] = useState(false);
+  const [siliconOpened, setSiliconOpened] = useState(false), [datasetTransfer, setDatasetTransfer] = useState<DatasetTransfer | null>(null);
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached.current?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached.current?.head||null);
   const pendingSave = useRef<SaveRequest | null>(cached.current?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached.current?.pendingGeneration||null), operation = useRef(false);
   const writable = role === 'owner' || role === 'editor';
+  // Model-backed runs are a write action on the project; viewers can still rehearse with the offline engine.
+  const siliconRunner = useMemo(() => writable ? createSiliconRunner({ projectId, services, localTest: auth.session?.mode === 'local_test', mutate: auth.mutate }) : null, [writable, projectId, services, auth.session?.mode, auth.mutate]);
   const savedFingerprint = head ? fingerprint(head.design) : initial ? fingerprint(initial) : '';
   const dirty = !!snapshot && (snapshot.pending || fingerprint(snapshot.design) !== savedFingerprint);
   const revision = head?.revision || 0;
@@ -173,7 +179,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
   return <>
     <div className="hosted-project-heading"><div><Link href="/projects">← 我的项目</Link><h2>{project.title}</h2><span className="hosted-small">{ROLE_LABELS[role]} · 问卷 {revision ? `v${revision}` : '尚未保存'}</span></div><div className="hosted-actions"><button onClick={() => snapshot && downloadQuestionnaire(snapshot.design)} disabled={!snapshot}>下载当前设计</button><button className="hosted-primary" onClick={() => void save()} disabled={!writable || !snapshot || snapshot.pending || saving || reading || conflict || saveUncertain || !dirty}>{saving ? '正在保存…' : '保存新版本'}</button></div></div>
-    <div className="hosted-tabs" role="group" aria-label="项目工作区"><button aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>本地分析</button><button aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
+    <div className="hosted-tabs" role="group" aria-label="项目工作区"><button aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>本地分析</button><button aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
     {error && <p className="hosted-alert" role="alert">{error}</p>}{notice && <p className="hosted-notice" role="status">{notice}</p>}
     {(proposal || generationUncertain) && tab !== 'design' && <p className="hosted-notice"><span>{generationUncertain?'模型调用待核对，原请求已保留。':'模型提案已保留，可返回问卷设计查看。'}</span><button onClick={()=>setTab('design')}>查看生成结果与状态</button></p>}
     {saveUncertain && <div className="hosted-notice"><p>上次保存尚待核对。重试会使用原内容和原请求标识；本页新编辑仍保留。</p><button disabled={saving} onClick={() => void save()}>核对并重试原保存</button></div>}
@@ -186,7 +192,8 @@ function ProjectEditor({ projectId }: { projectId: string }) {
       <p className="hosted-edit-status" role="status">{dirty ? '有未保存的修改' : revision ? `已与云端 v${revision} 对齐` : '从空白设计开始'}{snapshot?.pending && ' · 请修正暂存数值后保存'}</p>
       {writable?<fieldset className="hosted-editor-fieldset" disabled={reading}><legend className="hosted-sr-only">项目问卷编辑器</legend><QuestionnaireStudio localOnly onSnapshot={onSnapshot} onAnalyze={value => { setTransfer({ id: crypto.randomUUID(), snapshot: value }); setAnalysisOpened(true); setTab('analysis'); }} hosted={{ initialDesign: initial,cacheKey:`questionnaire:${projectId}`, load, savedFingerprint, onLoaded: acknowledgeLoad, onDetachProposal: detach }}/></fieldset>:<ReadonlyQuestionnaire design={readonlyDesign||head?.design||initial}/>}
     </div>
-    {analysisOpened && <div hidden={tab !== 'analysis'}><p className="hosted-notice">本地分析沿用现有统计工具，数据在浏览器处理；本期尚未写入项目云端分析记录。</p><SurveyLab designSnapshot={snapshot} designTransfer={transfer}/></div>}
+    {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { setDatasetTransfer(handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><p className="hosted-notice">本地分析沿用现有统计工具，数据在浏览器处理；本期尚未写入项目云端分析记录。</p><SurveyLab designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
   </>;
 }
