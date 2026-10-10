@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   blendStageLayout, buildChronicleField, chainFormation, chronicleChapterFrame, chronicleParticlePosition, chronicleProgress, chronicleStage, chronicleVisualState, maskFormation, matchChronicleFormation, oracleFormation,
   resolveChronicleProgress, ringFormation, seededRandom, stageLayout, CHRONICLE_DUST_RATIO, CHRONICLE_GLYPHS, CHRONICLE_STAGE_PLACEMENT,
@@ -7,6 +8,19 @@ import {
 } from '../lib/landing-chronicle.ts';
 
 const finite = array => array.every(Number.isFinite);
+
+test('cinematic home links to the retained chronicle route and its dedicated wrapper', () => {
+  const home = readFileSync(new URL('../components/landing/LandingPage.tsx', import.meta.url), 'utf8');
+  const route = readFileSync(new URL('../app/chronicle/page.tsx', import.meta.url), 'utf8');
+  const wrapper = readFileSync(new URL('../components/landing/ChroniclePage.tsx', import.meta.url), 'utf8');
+  assert.match(home, /href="\/chronicle"/);
+  assert.match(route, /import ChroniclePage from '@\/components\/landing\/ChroniclePage'/);
+  assert.match(route, /return <ChroniclePage\s*\/>/);
+  assert.match(wrapper, /import styles from '\.\/ChroniclePage\.module\.css'/);
+  assert.match(wrapper, /export default function ChroniclePage\(/);
+  assert.match(wrapper, /data-landing="evidence-journey"/);
+  assert.match(wrapper, /import\('\.\/ChronicleScene'\)/);
+});
 function squareMask(size, from, to) {
   const alpha = new Uint8Array(size * size);
   for (let y = from; y < to; y++) for (let x = from; x < to; x++) alpha[y * size + x] = 255;
