@@ -17,9 +17,13 @@ export default function NodeLibrary({ onAdd, onTemplate, onClose }: { onAdd: (ki
   const results = useMemo(() => searchCatalog(query), [query]);
   return <aside className={styles.library} aria-label="节点库" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
     <header className={styles.panelHead}>
-      <div className={styles.segmented} role="tablist" aria-label="节点库内容">
-        <button type="button" role="tab" aria-selected={tab === 'nodes'} onClick={() => setTab('nodes')}>节点</button>
-        <button type="button" role="tab" aria-selected={tab === 'flows'} onClick={() => setTab('flows')}>参考流程</button>
+      <div className={styles.segmented} role="tablist" aria-label="节点库内容" onKeyDown={e => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+        e.preventDefault(); const next = e.key === 'Home' ? 'nodes' : e.key === 'End' ? 'flows' : tab === 'nodes' ? 'flows' : 'nodes';
+        setTab(next); e.currentTarget.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)?.focus();
+      }}>
+        <button type="button" role="tab" data-tab="nodes" tabIndex={tab === 'nodes' ? 0 : -1} aria-selected={tab === 'nodes'} onClick={() => setTab('nodes')}>节点</button>
+        <button type="button" role="tab" data-tab="flows" tabIndex={tab === 'flows' ? 0 : -1} aria-selected={tab === 'flows'} onClick={() => setTab('flows')}>参考流程</button>
       </div>
       <button type="button" className={styles.iconButton} onClick={onClose} aria-label="关闭节点库">×</button>
     </header>

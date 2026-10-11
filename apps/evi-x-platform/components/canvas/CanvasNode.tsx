@@ -1,7 +1,7 @@
 'use client';
 
-import { memo } from 'react';
-import { Handle, Position, useStore, type NodeProps, type ReactFlowState } from '@xyflow/react';
+import { memo, useEffect, useRef } from 'react';
+import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps, type ReactFlowState } from '@xyflow/react';
 import { nodeDef, type CategoryId } from '@/lib/canvas/catalog';
 import { REL_IN, REL_OUT } from '@/lib/canvas/graph';
 import type { NodeStatus } from '@/lib/canvas/execute';
@@ -23,12 +23,21 @@ export const ResearchNode = memo(function ResearchNode({ id, data, selected, dra
   const ctx = useCanvasContext();
   const lod = useStore(lodOf);
   const def = nodeDef(data.node.kind), status = data.state?.status ?? 'idle';
+  const updateInternals = useUpdateNodeInternals();
+  const portSignature = `${id}:${def.inputs.map(p => p.id).join('|')}/${def.outputs.map(p => p.id).join('|')}`;
+  const lastPorts = useRef(portSignature);
+  useEffect(() => {
+    // Imported IDs can retain their dimensions but acquire different handles. RF's type remains
+    // "research", so its observer cannot detect this custom port change. Initial mount is measured by RF.
+    if (lastPorts.current === portSignature) return;
+    lastPorts.current = portSignature; updateInternals(id);
+  }, [id, portSignature, updateInternals]);
   const lines = nodeSummary(data.node, data.state, ctx).filter(Boolean);
   const issue = data.issues.find(i => i.level === 'error') ?? data.issues[0];
   const message = status === 'failed' || status === 'blocked' || status === 'waiting' ? data.state?.message : issue?.message;
   return <div className={styles.node} data-category={def.category} data-status={status} data-selected={selected || undefined} data-dragging={dragging || undefined} data-lod={lod} data-enter={data.entering ?? undefined} data-issue={issue?.level}>
-    {def.inputs.map((p, i) => <Handle key={p.id} type="target" position={Position.Left} id={p.id} className={styles.port} style={{ top: portTop(i, def.inputs.length) }} title={`输入：${p.label}`}><span className={styles.portLabel} data-side="in">{p.label}</span></Handle>)}
-    {def.outputs.map((p, i) => <Handle key={p.id} type="source" position={Position.Right} id={p.id} className={styles.port} style={{ top: portTop(i, def.outputs.length) }} title={`输出：${p.label}`}><span className={styles.portLabel} data-side="out">{p.label}</span></Handle>)}
+    {def.inputs.map((p, i) => <Handle key={p.id} type="target" position={Position.Left} id={p.id} className={styles.port} style={{ top: portTop(i, def.inputs.length) }} title={`输入：${p.label} · ${p.accepts.join(' / ')}`} aria-label={`${data.node.title}输入：${p.label}`}><span className={styles.portLabel} data-side="in">{p.label}</span></Handle>)}
+    {def.outputs.map((p, i) => <Handle key={p.id} type="source" position={Position.Right} id={p.id} className={styles.port} style={{ top: portTop(i, def.outputs.length) }} title={`输出：${p.label} · ${p.type}`} aria-label={`${data.node.title}输出：${p.label}`}><span className={styles.portLabel} data-side="out">{p.label}</span></Handle>)}
     <Handle type="target" position={Position.Top} id={REL_IN} className={styles.relPort} title="说明连线（接入）" />
     <Handle type="source" position={Position.Bottom} id={REL_OUT} className={styles.relPort} title="说明连线（引出）" />
     <div className={styles.nodeShell}>

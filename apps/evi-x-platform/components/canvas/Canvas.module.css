@@ -53,6 +53,8 @@
   --cv-lift: 0;
 }
 .canvas[data-motion="off"] *, .canvas[data-motion="off"] *::before, .canvas[data-motion="off"] *::after { animation: none !important; transition: none !important; }
+.canvas[data-motion="off"] .ghostNode, .canvas[data-motion="off"] .ghostEdges, .canvas[data-motion="off"] .edgeDraw, .canvas[data-motion="off"] .edgePulse { display: none; }
+.canvas[data-inactive] *, .canvas[data-inactive] *::before, .canvas[data-inactive] *::after { animation-play-state: paused !important; }
 .canvas :focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 2px; box-shadow: none; }
 .canvas button { font: inherit; color: inherit; }
 .canvas button:disabled { cursor: not-allowed; }
@@ -142,7 +144,7 @@
 @keyframes cv-sweep { from { background-position: -50% 0; } to { background-position: 150% 0; } }
 
 .node[data-enter="add"] .nodeShell, .node[data-enter="copy"] .nodeShell { animation: cv-node-in var(--t-reveal) var(--cv-ease-out) both; }
-.node[data-enter="restore"] .nodeShell { animation: cv-node-restore calc(var(--t-reveal) + 120ms) var(--cv-ease-out) both; }
+.node[data-enter="restore"] .nodeShell { animation: cv-node-restore var(--t-reveal) var(--cv-ease-out) both; }
 .canvas[data-motion="reduced"] .node[data-enter] .nodeShell { animation-name: cv-fade-in; }
 @keyframes cv-node-in { from { opacity: 0; transform: translateY(6px) scale(.97); } }
 @keyframes cv-node-restore { 0% { opacity: 0; transform: scale(.97); box-shadow: 0 0 0 0 var(--wb-accent); } 60% { opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--wb-accent) 35%, transparent); } }
@@ -222,7 +224,7 @@
 .dataEdge[data-selected] { stroke: var(--wb-accent) !important; stroke-width: 2.4 !important; }
 .relationEdge { stroke: var(--wb-muted) !important; stroke-width: 1.4 !important; stroke-dasharray: 1.5 5; stroke-linecap: round; opacity: .8; }
 .relationEdge[data-selected] { stroke: var(--wb-accent) !important; opacity: 1; }
-.edgeDraw { fill: none; stroke: var(--wb-accent); stroke-width: 2.2; stroke-dasharray: 1 1; stroke-dashoffset: 1; pointer-events: none; animation: cv-draw var(--t-draw) var(--cv-ease-out) forwards, cv-fade-out 200ms ease var(--t-draw) forwards; }
+.edgeDraw { fill: none; stroke: var(--wb-accent); stroke-width: 2.2; stroke-dasharray: 1 1; stroke-dashoffset: 1; pointer-events: none; animation: cv-draw var(--t-draw) var(--cv-ease-out) forwards, cv-fade-out 60ms ease var(--t-draw) forwards; }
 .edgeDrawRelation { stroke: var(--wb-muted); stroke-width: 1.6; }
 .canvas[data-motion="reduced"] .edgeDraw { stroke-dashoffset: 0; animation: cv-fade-out var(--t-draw) ease forwards; }
 .edgePulse { fill: none; stroke: var(--cv-run); stroke-width: 3; stroke-linecap: round; stroke-dasharray: .14 1.2; stroke-dashoffset: .14; pointer-events: none; animation: cv-pulse var(--t-pulse) var(--cv-ease-in) forwards; }
@@ -251,6 +253,14 @@
 .topLeft { top: 14px; left: 16px; max-width: calc(100% - 420px); }
 .topRight { top: 14px; right: 16px; }
 .zoomBar { bottom: 14px; left: 16px; gap: 2px; }
+.selectionBar { bottom: 58px; left: 16px; gap: 3px; animation: cv-fade-in var(--t-select) ease both; }
+.selectionCount { padding: 0 7px; font-size: 12px; color: var(--wb-muted); white-space: nowrap; }
+.moveButtons { display: inline-flex; gap: 1px; border-inline: 1px solid var(--wb-line); padding: 0 3px; }
+.moveButtons .barButton { min-width: 28px; padding: 0 4px; }
+.connectionEditor { position: absolute; z-index: 40; bottom: calc(100% + 8px); left: 0; display: grid; gap: 10px; width: 320px; max-height: min(420px, calc(100dvh - 220px)); overflow: auto; padding: 14px; border: 1px solid var(--cv-chrome-line); border-radius: 12px; background: var(--wb-solid); box-shadow: var(--cv-shadow-lift); animation: cv-fade-in var(--t-reveal) ease both; }
+.connectionEditor header { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.connectionEditor header strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connectionEditor .primary { justify-self: start; }
 .docTitle { width: clamp(120px, 18vw, 240px); min-width: 0; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--wb-text); font: 650 14px/1.4 var(--wb-sans); text-overflow: ellipsis; transition: border-color var(--t-hover) ease, background-color var(--t-hover) ease; }
 .docTitle:hover { border-color: var(--wb-line); }
 .docTitle:focus { border-color: var(--wb-accent); background: var(--wb-solid); outline: none; }

@@ -4,15 +4,16 @@ import '@xyflow/react/dist/base.css';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent as ReactDragEvent } from 'react';
 import {
   Background, BackgroundVariant, MiniMap, ReactFlow, ReactFlowProvider, ViewportPortal, getBezierPath, useConnection, useReactFlow,
-  Position, type Connection, type EdgeChange, type NodeChange, type Viewport, type XYPosition,
+  Position, type Connection, type ConnectionState, type EdgeChange, type NodeChange, type Viewport, type XYPosition,
 } from '@xyflow/react';
-import { nodeDef, type EditorSection, type NodeKind } from '@/lib/canvas/catalog';
+import { isKind, nodeDef, type EditorSection, type NodeKind } from '@/lib/canvas/catalog';
 import {
-  CANVAS_SCHEMA, NODE_SIZE, REL_IN, REL_OUT, connectionProblem, defaultConfig, emptyDoc, newId, parseDoc, partitionScope, preflight, runScope, serializeDoc,
+  CANVAS_LIMITS, CANVAS_SCHEMA, NODE_SIZE, REL_IN, REL_OUT, connectionProblem, defaultConfig, emptyDoc, newId, parseDoc, partitionScope, preflight, runScope, serializeDoc,
   type CanvasDoc, type CanvasEdge, type CanvasNode, type Issue,
 } from '@/lib/canvas/graph';
 import { reviewKey, runCanvas, type Cache, type DatasetValue, type NodeState, type NodeStatus, type RunEvent } from '@/lib/canvas/execute';
 import { emptyHistory, record, redo, snapshotOf, undo, type History, type Snapshot } from '@/lib/canvas/history';
+import { applyPositions, cloneSelection, deleteSelection, pasteSelection, positionsChanged, type CanvasClipboard } from '@/lib/canvas/operations';
 import { autoLayout } from '@/lib/canvas/layout';
 import { buildTemplate } from '@/lib/canvas/templates';
 import type { Delimiter } from '@/lib/survey-analysis';
@@ -28,10 +29,18 @@ import NodeLibrary, { DRAG_MIME } from './NodeLibrary';
 import ConfigPanel from './ConfigPanel';
 import RunDrawer, { type DrawerTab } from './RunDrawer';
 import { EMPTY_ISSUES, absolutePosition, snapToNeighbours, toFlowEdge, toFlowNode } from './flowModel';
+import CanvasPerformanceProbe from './CanvasPerformanceProbe';
 import styles from './Canvas.module.css';
 
 const STORAGE = 'evix.canvas.v1', VIEWPORT = 'evix.canvas.viewport.v1';
 const NODE_TYPES = { research: ResearchNode, cvgroup: GroupNode };
+const FIT_VIEW_OPTIONS = { padding: 0.2, maxZoom: 1 };
+const MULTI_SELECTION_KEYS = ['Meta', 'Control'];
+/** RF allocates renderer-space `to` on every store update. Chrome only needs primitive semantics. */
+const selectConnectionUi = (c: ConnectionState) => ({
+  inProgress: c.inProgress, fromId: c.fromNode?.id ?? '', fromPort: c.fromHandle?.id ?? '', fromType: c.fromHandle?.type ?? null,
+  toId: c.toHandle?.nodeId ?? '', toPort: c.toHandle?.id ?? '', isValid: c.isValid,
+});
 const ARIA = {
   'node.a11yDescription.default': '按 Enter 或空格选择节点，按 Delete 删除，方向键移动。',
   'node.a11yDescription.keyboardDisabled': '按 Enter 或空格选择节点。',
@@ -57,6 +66,8 @@ function loadViewport(): Viewport | undefined {
 }
 const subscribeReduced = (cb: () => void) => { const m = window.matchMedia('(prefers-reduced-motion: reduce)'); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb); };
 const systemReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const subscribeVisibility = (cb: () => void) => { document.addEventListener('visibilitychange', cb); return () => document.removeEventListener('visibilitychange', cb); };
+const pageVisible = () => !document.hidden;
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
 
 export default function ResearchCanvas(props: ResearchCanvasProps) {
@@ -73,6 +84,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   const [history, setHistory] = useState<History>(emptyHistory);
   const [selected, setSelected] = useState<string[]>([]);
   const [selectedEdges, setSelectedEdges] = useState<string[]>([]);
+  const [draggingNodes, setDraggingNodes] = useState<Set<string>>(() => new Set());
   const [states, setStates] = useState<Map<string, NodeState>>(() => new Map());
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [issues, setIssues] = useState<Issue[] | null>(null);
@@ -95,44 +107,74 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   const [minimap, setMinimap] = useState(false);
   const [dropPreview, setDropPreview] = useState<XYPosition | null>(null);
   const [runChoice, setRunChoice] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const reduced = useSyncExternalStore(subscribeReduced, systemReduced, () => false);
+  const visible = useSyncExternalStore(subscribeVisibility, pageVisible, () => true);
   // The system preference wins: "standard" becomes "reduced"; "off" stays off.
   const motion: MotionLevel = reduced && motionPref === 'standard' ? 'reduced' : motionPref;
 
   const docRef = useRef(doc), historyRef = useRef(history);
-  useLayoutEffect(() => { docRef.current = doc; historyRef.current = history; });
-  const wrapper = useRef<HTMLDivElement>(null), moreButton = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => { docRef.current = doc; });
+  const wrapper = useRef<HTMLDivElement>(null), moreButton = useRef<HTMLButtonElement>(null), addButton = useRef<HTMLButtonElement>(null), connectButton = useRef<HTMLButtonElement>(null);
   const cache = useRef<Cache>(new Map()), controller = useRef<AbortController | null>(null);
-  const clipboard = useRef<{ nodes: CanvasNode[]; edges: CanvasEdge[]; pastes: number } | null>(null);
-  const dragBefore = useRef<Snapshot | null>(null), layoutFrame = useRef(0), typing = useRef<{ key: string; at: number } | null>(null);
+  const clipboard = useRef<(CanvasClipboard & { pastes: number }) | null>(null);
+  const dragBefore = useRef<Snapshot | null>(null), dragCancelled = useRef(false), keyMoveBefore = useRef<Snapshot | null>(null), layoutFrame = useRef(0), typing = useRef<{ key: string; at: number } | null>(null);
   const altDown = useRef(false), toastTimer = useRef(0), undoRef = useRef<() => void>(() => undefined);
+  const visualTimers = useRef<Set<number>>(new Set()), flashToken = useRef(0), flashes = useRef<Map<string, number>>(new Map());
+  const later = useCallback((run: () => void, delay: number) => {
+    const timer = window.setTimeout(() => { visualTimers.current.delete(timer); run(); }, delay);
+    visualTimers.current.add(timer); return timer;
+  }, []);
+  const stopLayout = useCallback(() => { cancelAnimationFrame(layoutFrame.current); layoutFrame.current = 0; }, []);
   const ms = useCallback((v: number) => motion === 'standard' ? v : motion === 'reduced' ? Math.min(v, 120) : 0, [motion]);
+  const recordBefore = useCallback((label: string, before: Snapshot) => {
+    const next = record(historyRef.current, label, before);
+    historyRef.current = next; setHistory(next);
+  }, []);
+  const finishKeyMove = useCallback(() => {
+    const before = keyMoveBefore.current; keyMoveBefore.current = null;
+    if (before && positionsChanged(before, docRef.current)) recordBefore('移动节点', before);
+  }, [recordBefore]);
+  const cancelDrag = useCallback(() => {
+    const before = dragBefore.current;
+    if (!before) return false;
+    dragBefore.current = null; dragCancelled.current = true;
+    const next = applyPositions(docRef.current, new Map(before.nodes.map(n => [n.id, n.position])));
+    docRef.current = next; setDoc(next); setGuides({ x: null, y: null }); setDraggingNodes(new Set());
+    return true;
+  }, []);
 
   /* ───────── history-aware updates ───────── */
   const commit = useCallback((next: CanvasDoc, label: string, coalesceKey?: string) => {
+    stopLayout(); finishKeyMove();
+    if (next === docRef.current) return;
     const now = Date.now();
     // Continuous typing in one field is one undo step.
     const merge = coalesceKey && typing.current?.key === coalesceKey && now - typing.current.at < 1200;
     typing.current = coalesceKey ? { key: coalesceKey, at: now } : null;
     // Capture "before" now: the updater runs later, when docRef already points at the new state.
-    if (!merge) { const before = snapshotOf(docRef.current); setHistory(h => record(h, label, before)); }
+    if (!merge) recordBefore(label, snapshotOf(docRef.current));
     docRef.current = next;
     setDoc(next);
-  }, []);
+  }, [finishKeyMove, recordBefore, stopLayout]);
   const notify = useCallback((text: string, opts: Omit<Toast, 'id' | 'text'> = {}) => {
     window.clearTimeout(toastTimer.current);
     setToast({ id: Date.now(), text, ...opts });
     toastTimer.current = window.setTimeout(() => setToast(null), opts.action ? 6000 : 3800);
   }, []);
   const flash = useCallback((ids: string[], kind: 'add' | 'copy' | 'restore', edgeIds: string[] = []) => {
-    if (!ids.length && !edgeIds.length) return;
+    if (motion === 'off' || (!ids.length && !edgeIds.length)) return;
+    const token = ++flashToken.current;
+    for (const id of [...ids, ...edgeIds]) flashes.current.set(id, token);
     setEntering(m => { const n = new Map(m); ids.forEach(id => n.set(id, kind)); return n; });
     if (edgeIds.length) setEnteringEdges(s => new Set([...s, ...edgeIds]));
-    window.setTimeout(() => {
-      setEntering(m => { const n = new Map(m); ids.forEach(id => n.delete(id)); return n; });
-      if (edgeIds.length) setEnteringEdges(s => { const n = new Set(s); edgeIds.forEach(id => n.delete(id)); return n; });
-    }, Math.max(MOTION.reveal, MOTION.draw) + 80);
-  }, []);
+    later(() => {
+      const current = (id: string) => flashes.current.get(id) === token;
+      setEntering(m => { const n = new Map(m); ids.filter(current).forEach(id => n.delete(id)); return n; });
+      if (edgeIds.length) setEnteringEdges(s => { const n = new Set(s); edgeIds.filter(current).forEach(id => n.delete(id)); return n; });
+      [...ids, ...edgeIds].filter(current).forEach(id => flashes.current.delete(id));
+    }, ms(Math.max(MOTION.reveal, MOTION.draw)) + 30);
+  }, [later, motion, ms]);
 
   /* ───────── persistence (this browser only) ───────── */
   useEffect(() => {
@@ -155,9 +197,10 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     return doc.nodes.map(n => {
       const kids = children.get(n.id) ?? [], childStatus: Partial<Record<NodeStatus, number>> = {};
       for (const k of kids) { const s = states.get(k.id)?.status ?? 'idle'; childStatus[s] = (childStatus[s] ?? 0) + 1; }
-      return toFlowNode(n, { state: states.get(n.id), issues: issuesBy.get(n.id) ?? EMPTY_ISSUES, entering: entering.get(n.id) ?? null, selected: selectedSet.has(n.id), hidden: !!n.parent && !!byId.get(n.parent)?.config.collapsed, childCount: kids.length, childKey: JSON.stringify(childStatus) }, childStatus);
+      const flow = toFlowNode(n, { state: states.get(n.id), issues: issuesBy.get(n.id) ?? EMPTY_ISSUES, entering: entering.get(n.id) ?? null, selected: selectedSet.has(n.id), hidden: !!n.parent && !!byId.get(n.parent)?.config.collapsed, childCount: kids.length, childKey: JSON.stringify(childStatus) }, childStatus);
+      return draggingNodes.has(n.id) ? { ...flow, dragging: true } : flow;
     });
-  }, [doc.nodes, states, issuesBy, entering, selectedSet]);
+  }, [doc.nodes, states, issuesBy, entering, selectedSet, draggingNodes]);
   const flowEdges = useMemo(() => {
     const hidden = new Set(doc.nodes.filter(n => n.parent && doc.nodes.find(p => p.id === n.parent)?.config.collapsed).map(n => n.id));
     const edgeSel = new Set(selectedEdges);
@@ -184,13 +227,14 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     return { x: p.x + 40, y: p.y + 40 };
   }, []);
   const addNode = useCallback((kind: NodeKind, at?: XYPosition) => {
+    if (docRef.current.nodes.length >= CANVAS_LIMITS.nodes) { notify(`单张画布最多 ${CANVAS_LIMITS.nodes} 个节点。`, { tone: 'error' }); return; }
     const def = nodeDef(kind), id = newId('n');
     const node: CanvasNode = { id, kind, title: def.title, position: freeSpot(at ?? viewportCentre()), parent: null, config: defaultConfig(kind) };
     commit({ ...docRef.current, nodes: [...docRef.current.nodes, node] }, `添加「${def.title}」`);
     flash([id], 'add');
     setSelected([id]); setSelectedEdges([]); setConfigClosed(null);
     return id;
-  }, [commit, flash, freeSpot, viewportCentre]);
+  }, [commit, flash, freeSpot, viewportCentre, notify]);
   /** Place a block of new nodes at the view centre, or just below the existing drawing if that spot is taken. */
   const clearOrigin = useCallback((width: number, height: number): XYPosition => {
     const c = viewportCentre(), at = { x: c.x + NODE_SIZE.width / 2 - width / 2, y: c.y + NODE_SIZE.height / 2 - height / 2 };
@@ -202,15 +246,16 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   }, [viewportCentre]);
   const insertTemplate = useCallback((templateId: string) => {
     const probe = buildTemplate(templateId, newId, { x: 0, y: 0 });
+    if (docRef.current.nodes.length + probe.nodes.length > CANVAS_LIMITS.nodes || docRef.current.edges.length + probe.edges.length > CANVAS_LIMITS.edges) { notify('参考流程会超过画布容量，请先移除部分节点或连线。', { tone: 'error' }); return; }
     const width = Math.max(...probe.nodes.map(n => n.position.x)) + NODE_SIZE.width, height = Math.max(...probe.nodes.map(n => n.position.y)) + NODE_SIZE.height;
     const built = buildTemplate(templateId, newId, clearOrigin(width, height));
     commit({ ...docRef.current, nodes: [...docRef.current.nodes, ...built.nodes], edges: [...docRef.current.edges, ...built.edges] }, '插入参考流程');
     // Batch insertions stagger only the first eight cards.
     flash(built.nodes.slice(0, 8).map(n => n.id), 'add', built.edges.map(e => e.id));
     setSelected([]); setSelectedEdges([]); setLibraryOpen(false);
-    window.setTimeout(() => void rf.fitView({ nodes: built.nodes.map(n => ({ id: n.id })), duration: ms(MOTION.focus), padding: 0.2, maxZoom: 1 }), 30);
+    later(() => void rf.fitView({ nodes: built.nodes.map(n => ({ id: n.id })), duration: ms(MOTION.focus), padding: 0.2, maxZoom: 1 }), 30);
     notify(`已插入 ${built.nodes.length} 个节点；每个节点都可修改或删除。`);
-  }, [commit, flash, clearOrigin, rf, ms, notify]);
+  }, [commit, flash, clearOrigin, rf, ms, notify, later]);
 
   const ghostFor = useCallback((ids: string[], edgeIds: string[]) => {
     const g: Ghost[] = [], stamp = Date.now();
@@ -233,8 +278,8 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     }
     if (!g.length || motion === 'off') return;
     setGhosts(prev => [...prev, ...g]);
-    window.setTimeout(() => setGhosts(prev => prev.filter(x => !g.includes(x))), ms(MOTION.exit) + 60);
-  }, [rf, motion, ms]);
+    later(() => setGhosts(prev => prev.filter(x => !g.includes(x))), ms(MOTION.exit) + 30);
+  }, [rf, motion, ms, later]);
 
   const removeElements = useCallback((nodeIds: string[], edgeIds: string[]) => {
     const d = docRef.current, groups = nodeIds.filter(id => d.nodes.find(n => n.id === id)?.kind === 'group');
@@ -243,8 +288,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     if (!removeNodes.size && !removeEdges.size && !groups.length) return;
     ghostFor([...removeNodes], [...removeEdges]);
     // Deleting a group frame keeps its members; their absolute positions are restored.
-    const nodes = d.nodes.filter(n => !removeNodes.has(n.id) && !groups.includes(n.id)).map(n => n.parent && groups.includes(n.parent) ? { ...n, parent: null, position: absolutePosition(d, n) } : n);
-    commit({ ...d, nodes, edges: d.edges.filter(e => !removeEdges.has(e.id)) }, removeNodes.size ? `删除 ${removeNodes.size} 个节点` : groups.length ? '解散编组' : '断开连线');
+    commit(deleteSelection(d, nodeIds, edgeIds), removeNodes.size ? `删除 ${removeNodes.size} 个节点` : groups.length ? '解散编组' : '断开连线');
     setSelected([]); setSelectedEdges([]);
     setStates(s => { const n = new Map(s); removeNodes.forEach(id => n.delete(id)); return n; });
     if (removeNodes.size) notify(`已删除 ${removeNodes.size} 个节点；原成果文件不受影响。`, { action: { label: '撤销', run: () => undoRef.current() } });
@@ -259,48 +303,52 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     docRef.current = next; setDoc(next);
     flash(restored, 'restore', restoredEdges);
     setSelected(s => s.filter(id => next.nodes.some(n => n.id === id)));
+    setSelectedEdges(s => s.filter(id => next.edges.some(e => e.id === id)));
     notify(`${verb}：${label}`);
   }, [flash, notify]);
   const doUndo = useCallback(() => {
+    stopLayout(); finishKeyMove();
+    if (cancelDrag()) return;
     const u = undo(historyRef.current, snapshotOf(docRef.current));
     if (!u) return;
     setHistory(u.history); historyRef.current = u.history; typing.current = null;
     applySnapshot(u.snap, u.label, '已撤销');
-  }, [applySnapshot]);
+  }, [applySnapshot, cancelDrag, finishKeyMove, stopLayout]);
   useLayoutEffect(() => { undoRef.current = doUndo; }, [doUndo]);
   const doRedo = useCallback(() => {
+    stopLayout(); finishKeyMove(); cancelDrag();
     const r = redo(historyRef.current, snapshotOf(docRef.current));
     if (!r) return;
     setHistory(r.history); historyRef.current = r.history; typing.current = null;
     applySnapshot(r.snap, r.label, '已恢复');
-  }, [applySnapshot]);
+  }, [applySnapshot, cancelDrag, finishKeyMove, stopLayout]);
 
   const copySelection = useCallback(() => {
-    const d = docRef.current, ids = new Set(selected);
-    for (const n of d.nodes) if (n.parent && ids.has(n.parent)) ids.add(n.id);
-    const nodes = d.nodes.filter(n => ids.has(n.id));
-    if (!nodes.length) return false;
-    clipboard.current = { nodes: structuredClone(nodes), edges: structuredClone(d.edges.filter(e => ids.has(e.source) && ids.has(e.target))), pastes: 0 };
+    const clip = cloneSelection(docRef.current, selected);
+    if (!clip.nodes.length) return false;
+    clipboard.current = { ...clip, pastes: 0 };
     return true;
   }, [selected]);
   const paste = useCallback(() => {
     const clip = clipboard.current;
     if (!clip) return;
+    const offset = 40 * (clip.pastes + 1);
+    let result: ReturnType<typeof pasteSelection>;
+    try { result = pasteSelection(docRef.current, clip, { x: offset, y: offset }); }
+    catch (error) { notify(error instanceof Error ? error.message : '无法复制节点。', { tone: 'error' }); return; }
     clip.pastes++;
-    const map = new Map(clip.nodes.map(n => [n.id, newId(n.kind === 'group' ? 'g' : 'n')]));
-    const offset = 40 * clip.pastes;
-    // Copies get fresh ids and independent configuration objects; review approvals do not carry over.
-    const nodes = clip.nodes.map(n => ({ ...structuredClone(n), id: map.get(n.id)!, parent: n.parent && map.has(n.parent) ? map.get(n.parent)! : null, position: n.parent && map.has(n.parent) ? n.position : { x: n.position.x + offset, y: n.position.y + offset }, config: n.kind === 'review' ? { ...n.config, approvedHash: '', approvedAt: '' } : structuredClone(n.config) }));
-    const edges = clip.edges.map(e => ({ ...e, id: newId('e'), source: map.get(e.source)!, target: map.get(e.target)! }));
-    commit({ ...docRef.current, nodes: [...docRef.current.nodes, ...nodes], edges: [...docRef.current.edges, ...edges] }, `粘贴 ${nodes.length} 个节点`);
-    flash(nodes.slice(0, 8).map(n => n.id), 'copy', edges.map(e => e.id));
-    setSelected(nodes.filter(n => !n.parent).map(n => n.id)); setSelectedEdges([]);
-  }, [commit, flash]);
+    const { doc: next, ids } = result;
+    const addedEdges = next.edges.slice(docRef.current.edges.length).map(e => e.id);
+    commit(next, `粘贴 ${ids.length} 个节点`);
+    flash(ids.slice(0, 8), 'copy', addedEdges);
+    setSelected(next.nodes.filter(n => ids.includes(n.id) && !n.parent).map(n => n.id)); setSelectedEdges([]);
+  }, [commit, flash, notify]);
 
   const groupSelection = useCallback(() => {
     const d = docRef.current;
     const members = d.nodes.filter(n => selected.includes(n.id) && !n.parent && n.kind !== 'group');
     if (members.length < 2) { notify('选择至少两个未编组的节点后再编组。'); return; }
+    if (d.nodes.length >= CANVAS_LIMITS.nodes) { notify(`编组需要一个空余节点位置；画布上限为 ${CANVAS_LIMITS.nodes} 个节点。`, { tone: 'error' }); return; }
     const xs = members.map(n => n.position.x), ys = members.map(n => n.position.y);
     const minX = Math.min(...xs) - 28, minY = Math.min(...ys) - 56, maxX = Math.max(...xs) + NODE_SIZE.width + 28, maxY = Math.max(...ys) + NODE_SIZE.height + 28;
     const gid = newId('g');
@@ -319,7 +367,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     const d = docRef.current, target = autoLayout(d);
     if (!target.size) return;
     const before = snapshotOf(d), from = new Map(d.nodes.map(n => [n.id, n.position]));
-    setHistory(h => record(h, '自动排布', before));
+    finishKeyMove(); recordBefore('自动排布', before);
     const duration = ms(MOTION.layout), start = performance.now();
     cancelAnimationFrame(layoutFrame.current);
     const ease = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -331,7 +379,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     };
     layoutFrame.current = requestAnimationFrame(step);
     notify('已自动排布；连线随节点一起移动。', { action: { label: '撤销', run: () => doUndo() } });
-  }, [ms, notify, doUndo]);
+  }, [ms, notify, doUndo, finishKeyMove, recordBefore]);
 
   /* ───────── React Flow change handlers ───────── */
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -339,16 +387,21 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     const sel: { id: string; selected: boolean }[] = [];
     let dragging = false;
     for (const ch of changes) {
-      if (ch.type === 'position' && ch.position) { (moved ??= new Map()).set(ch.id, ch.position); dragging ||= !!ch.dragging; }
+      if (ch.type === 'position' && ch.position && !dragCancelled.current) { (moved ??= new Map()).set(ch.id, ch.position); dragging ||= !!ch.dragging; }
       if (ch.type === 'select') sel.push(ch);
     }
+    const dragChanges = changes.filter((ch): ch is Extract<NodeChange, { type: 'position' }> => ch.type === 'position' && ch.dragging !== undefined);
+    if (dragChanges.length && !dragCancelled.current) setDraggingNodes(prev => {
+      const next = new Set(prev); for (const ch of dragChanges) { if (ch.dragging) next.add(ch.id); else next.delete(ch.id); }
+      return next.size === prev.size && [...next].every(id => prev.has(id)) ? prev : next;
+    });
     if (moved) {
       if (moved.size === 1 && dragging && !altDown.current) {
         const [id, pos] = [...moved][0];
         const snapped = snapToNeighbours(docRef.current, id, pos, rf.getZoom());
         moved.set(id, snapped.pos); setGuides(snapped.guides);
       } else setGuides({ x: null, y: null });
-      const next = { ...docRef.current, nodes: docRef.current.nodes.map(n => moved!.has(n.id) ? { ...n, position: moved!.get(n.id)! } : n) };
+      const next = applyPositions(docRef.current, moved);
       docRef.current = next; setDoc(next);
     }
     if (sel.length) { setSelected(prev => { const s = new Set(prev); for (const c of sel) { if (c.selected) s.add(c.id); else s.delete(c.id); } return [...s]; }); setConfigClosed(null); }
@@ -357,19 +410,23 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     const sel = changes.filter((c): c is Extract<EdgeChange, { type: 'select' }> => c.type === 'select');
     if (sel.length) setSelectedEdges(prev => { const s = new Set(prev); for (const c of sel) { if (c.selected) s.add(c.id); else s.delete(c.id); } return [...s]; });
   }, []);
+  const onMoveEnd = useCallback((_: unknown, viewport: Viewport) => {
+    try { localStorage.setItem(VIEWPORT, JSON.stringify(viewport)); } catch { /* viewport preference only */ }
+  }, []);
   const onDragStart = useCallback(() => {
     // A drag takes over from any running auto layout immediately, from the current frame.
-    cancelAnimationFrame(layoutFrame.current);
+    stopLayout(); finishKeyMove(); dragCancelled.current = false;
     dragBefore.current = snapshotOf(docRef.current);
-  }, []);
+  }, [finishKeyMove, stopLayout]);
   const onDragStop = useCallback(() => {
-    const before = dragBefore.current; dragBefore.current = null;
-    setGuides({ x: null, y: null });
-    if (before && JSON.stringify(before.nodes.map(n => n.position)) !== JSON.stringify(docRef.current.nodes.map(n => n.position))) setHistory(h => record(h, '移动节点', before));
-  }, []);
+    const before = dragBefore.current; dragBefore.current = null; dragCancelled.current = false;
+    setGuides({ x: null, y: null }); setDraggingNodes(new Set());
+    if (before && positionsChanged(before, docRef.current)) recordBefore('移动节点', before);
+  }, [recordBefore]);
   const toConn = (c: Connection | { source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null }) => ({ source: c.source, target: c.target, sourcePort: c.sourceHandle ?? '', targetPort: c.targetHandle ?? '' });
   const isValidConnection = useCallback((c: Connection | { source: string; target: string; sourceHandle?: string | null; targetHandle?: string | null }) => connectionProblem(docRef.current, toConn(c)) === null, []);
   const onConnect = useCallback((c: Connection) => {
+    if (docRef.current.edges.length >= CANVAS_LIMITS.edges) { notify(`单张画布最多 ${CANVAS_LIMITS.edges} 条连线。`, { tone: 'error' }); return; }
     const conn = toConn(c), problem = connectionProblem(docRef.current, conn);
     if (problem) { notify(problem, { tone: 'error' }); return; }
     const relation = conn.sourcePort === REL_OUT;
@@ -412,14 +469,14 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
           if (e.type === 'handoff' && e.edgeId && motion !== 'off') {
             const edgeId = e.edgeId, key = e.seq + Date.now();
             setPulses(p => new Map(p).set(edgeId, key));
-            window.setTimeout(() => setPulses(p => { if (p.get(edgeId) !== key) return p; const n = new Map(p); n.delete(edgeId); return n; }), MOTION.pulse + 120);
+            later(() => setPulses(p => { if (p.get(edgeId) !== key) return p; const n = new Map(p); n.delete(edgeId); return n; }), MOTION.pulse + 30);
           }
         },
       });
     } finally {
       controller.current = null; setRunning(null);
     }
-  }, [check, notify, workspaceDataset, files, motion]);
+  }, [check, notify, workspaceDataset, files, motion, later]);
   const cancelRun = useCallback(() => controller.current?.abort(), []);
 
   const approve = useCallback((nodeId: string, hash: string | null) => {
@@ -450,6 +507,28 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   useEffect(() => { if (active) wrapper.current?.focus({ preventScroll: true }); }, [active]);
 
   /* ───────── keyboard ───────── */
+  const selectedPositions = useCallback((dx: number, dy: number) => {
+    const ids = new Set(selected), d = docRef.current;
+    return new Map(d.nodes.filter(n => ids.has(n.id) && (!n.parent || !ids.has(n.parent))).map(n => [n.id, { x: n.position.x + dx, y: n.position.y + dy }]));
+  }, [selected]);
+  const moveSelection = useCallback((dx: number, dy: number) => {
+    commit(applyPositions(docRef.current, selectedPositions(dx, dy)), '移动节点');
+  }, [commit, selectedPositions]);
+  const onCanvasKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // The newly selected node may open a panel that consumes Esc. Cancel the gesture first.
+    if (active && !e.nativeEvent.isComposing && e.key === 'Escape' && cancelDrag()) {
+      e.preventDefault(); e.stopPropagation(); notify('已取消移动。'); return;
+    }
+    if (!active || e.nativeEvent.isComposing || editable(e.target) || e.ctrlKey || e.metaKey || e.altKey || !selected.length || menuOpen || libraryOpen || connectOpen) return;
+    const direction = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, number[]>)[e.key];
+    if (!direction || !(e.target instanceof HTMLElement) || (!e.target.closest('.react-flow__node') && e.target !== wrapper.current)) return;
+    // Capture before React Flow's own arrow handler: one held key is one undo transaction.
+    e.preventDefault(); e.stopPropagation(); stopLayout();
+    keyMoveBefore.current ??= snapshotOf(docRef.current);
+    const step = e.shiftKey ? 40 : 10;
+    const next = applyPositions(docRef.current, selectedPositions(direction[0] * step, direction[1] * step));
+    docRef.current = next; setDoc(next);
+  };
   useEffect(() => {
     if (!active) return;
     const down = (e: KeyboardEvent) => {
@@ -461,17 +540,36 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
       if (mod && key === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
       else if (mod && (key === 'y' || (key === 'z' && e.shiftKey))) { e.preventDefault(); doRedo(); }
       else if (mod && key === 'c') { if (copySelection()) notify('已复制到画布剪贴板。'); }
-      else if (mod && key === 'v') { e.preventDefault(); paste(); }
-      else if (mod && key === 'd') { e.preventDefault(); if (copySelection()) paste(); }
+      else if (mod && key === 'v') { e.preventDefault(); cancelDrag(); paste(); }
+      else if (mod && key === 'd') { e.preventDefault(); cancelDrag(); if (copySelection()) paste(); }
       else if (mod && key === 'g') { e.preventDefault(); if (e.shiftKey) { const g = selected.find(id => docRef.current.nodes.find(n => n.id === id)?.kind === 'group'); if (g) removeElements([g], []); } else groupSelection(); }
       else if (mod && key === 'a') { e.preventDefault(); setSelected(docRef.current.nodes.map(n => n.id)); }
-      else if (key === 'delete' || key === 'backspace') { if (selected.length || selectedEdges.length) { e.preventDefault(); removeElements(selected, selectedEdges); } }
-      else if (key === 'escape') { if (menuOpen) setMenuOpen(false); else if (libraryOpen) setLibraryOpen(false); else { setSelected([]); setSelectedEdges([]); } }
+      else if (key === 'delete' || key === 'backspace') { if (selected.length || selectedEdges.length) { e.preventDefault(); cancelDrag(); removeElements(selected, selectedEdges); } }
+      else if (key === 'escape') {
+        if (cancelDrag()) { e.preventDefault(); notify('已取消移动。'); }
+        else if (menuOpen) { setMenuOpen(false); moreButton.current?.focus(); }
+        else if (libraryOpen) { setLibraryOpen(false); addButton.current?.focus(); }
+        else if (connectOpen) { setConnectOpen(false); connectButton.current?.focus(); }
+        else { setSelected([]); setSelectedEdges([]); }
+      }
     };
-    const up = (e: KeyboardEvent) => { altDown.current = e.altKey; };
+    const up = (e: KeyboardEvent) => { altDown.current = e.altKey; if (e.key.startsWith('Arrow')) finishKeyMove(); };
+    const interrupted = () => { altDown.current = false; cancelDrag(); stopLayout(); finishKeyMove(); setDropPreview(null); };
+    const visibility = () => { if (document.hidden) interrupted(); };
+    const dragEnd = () => setDropPreview(null);
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [active, selected, selectedEdges, menuOpen, libraryOpen, doUndo, doRedo, copySelection, paste, groupSelection, removeElements, notify]);
+    window.addEventListener('blur', interrupted); document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('dragend', dragEnd);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); window.removeEventListener('blur', interrupted); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('dragend', dragEnd); };
+  }, [active, selected, selectedEdges, menuOpen, libraryOpen, connectOpen, doUndo, doRedo, copySelection, paste, groupSelection, removeElements, notify, cancelDrag, finishKeyMove, stopLayout]);
+  useEffect(() => {
+    if (!active) return;
+    return () => { cancelDrag(); stopLayout(); finishKeyMove(); setDropPreview(null); };
+  }, [active, cancelDrag, finishKeyMove, stopLayout]);
+  useEffect(() => {
+    const timers = visualTimers.current, tokens = flashes.current;
+    return () => { controller.current?.abort(); cancelAnimationFrame(layoutFrame.current); window.clearTimeout(toastTimer.current); for (const t of timers) window.clearTimeout(t); timers.clear(); tokens.clear(); };
+  }, []);
 
   /* ───────── drag from library ───────── */
   const onDragOver = (e: ReactDragEvent) => {
@@ -481,9 +579,9 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     setDropPreview({ x: p.x - NODE_SIZE.width / 2, y: p.y - NODE_SIZE.height / 2 });
   };
   const onDrop = (e: ReactDragEvent) => {
-    const kind = e.dataTransfer.getData(DRAG_MIME) as NodeKind;
+    const kind = e.dataTransfer.getData(DRAG_MIME);
     setDropPreview(null);
-    if (!kind) return;
+    if (!isKind(kind) || kind === 'group') return;
     e.preventDefault();
     const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     addNode(kind, { x: p.x - NODE_SIZE.width / 2, y: p.y - NODE_SIZE.height / 2 });
@@ -528,12 +626,12 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   const context = useMemo<CanvasContextValue>(() => ({ workspaceDataset, design, files, motion, open, toggleGroup, select: locate }), [workspaceDataset, design, files, motion, open, toggleGroup, locate]);
   const scopeForSelection = selected.filter(id => doc.nodes.find(n => n.id === id && n.kind !== 'group'));
   const selectionScope = scopeForSelection.length ? runScope(doc, scopeForSelection) : [];
-  const connection = useConnection();
-  const connecting = connection.inProgress ? (connection.fromHandle?.id === REL_OUT || connection.fromHandle?.id === REL_IN ? 'relation' : 'data') : undefined;
-  const hint = connection.inProgress && connection.toHandle && connection.isValid === false
-    ? connectionProblem(doc, connection.fromHandle?.type === 'source'
-      ? { source: connection.fromNode.id, sourcePort: connection.fromHandle.id ?? '', target: connection.toHandle.nodeId, targetPort: connection.toHandle.id ?? '' }
-      : { source: connection.toHandle.nodeId, sourcePort: connection.toHandle.id ?? '', target: connection.fromNode.id, targetPort: connection.fromHandle?.id ?? '' })
+  const connection = useConnection(selectConnectionUi);
+  const connecting = connection.inProgress ? (connection.fromPort === REL_OUT || connection.fromPort === REL_IN ? 'relation' : 'data') : undefined;
+  const hint = connection.inProgress && connection.toId && connection.isValid === false
+    ? connectionProblem(doc, connection.fromType === 'source'
+      ? { source: connection.fromId, sourcePort: connection.fromPort, target: connection.toId, targetPort: connection.toPort }
+      : { source: connection.toId, sourcePort: connection.toPort, target: connection.fromId, targetPort: connection.fromPort })
     : null;
   const saveText = save.state === 'saving' ? '保存中…' : save.state === 'error' ? '保存失败：本机存储不可用' : save.state === 'saved' ? `已保存到本机 ${new Date(save.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '自动保存到本机';
 
@@ -546,19 +644,23 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     setMenuOpen(false);
   };
   const importDoc = async (file: File) => {
+    const target = docRef.current;
     try {
       const next = parseDoc(JSON.parse(await file.text()));
+      if (docRef.current !== target) { notify('读取期间画布已更改，请重新导入。', { tone: 'error' }); return; }
       commit(next, '导入画布'); setStates(new Map()); setIssues(null);
+      setSelected([]); setSelectedEdges([]); setConfigClosed(null); setConnectOpen(false); setGhosts([]);
       flash(next.nodes.slice(0, 8).map(n => n.id), 'add');
-      window.setTimeout(() => void rf.fitView({ duration: ms(MOTION.focus), padding: 0.2, maxZoom: 1 }), 30);
+      later(() => void rf.fitView({ duration: ms(MOTION.focus), padding: 0.2, maxZoom: 1 }), 30);
       notify(`已导入 ${next.nodes.length} 个节点；可撤销。`);
     } catch (e) { notify(e instanceof Error ? e.message : '导入失败。', { tone: 'error' }); }
     setMenuOpen(false);
   };
 
   return <CanvasContext.Provider value={context}>
-    <div ref={wrapper} className={`${styles.canvas} wb-canvas`} data-motion={motion} data-library={libraryOpen || undefined} data-config={configNode ? true : undefined} data-connecting={connecting} tabIndex={-1} style={{ '--cv-glass': glass } as React.CSSProperties}
-      onDragOver={onDragOver} onDragLeave={e => { if (e.currentTarget === e.target) setDropPreview(null); }} onDrop={onDrop} aria-label="研究画布">
+    <div ref={wrapper} className={`${styles.canvas} wb-canvas`} data-motion={motion} data-inactive={!active || !visible || undefined} data-library={libraryOpen || undefined} data-config={configNode ? true : undefined} data-connecting={connecting} tabIndex={-1} style={{ '--cv-glass': glass } as React.CSSProperties}
+      onPointerCancelCapture={() => cancelDrag()} onKeyDownCapture={onCanvasKeyDown} onDragOver={onDragOver} onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropPreview(null); }} onDrop={onDrop} aria-label="研究画布">
+      {process.env.NEXT_PUBLIC_EVIX_CANVAS_DIAGNOSTICS === 'true' && <CanvasPerformanceProbe hostRef={wrapper} nodes={doc.nodes.length} edges={doc.edges.length} />}
       <ReactFlow
         nodes={flowNodes} edges={flowEdges} nodeTypes={NODE_TYPES} edgeTypes={EDGE_TYPES}
         onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} isValidConnection={isValidConnection}
@@ -569,10 +671,10 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
           if (selected.length > 1) { setSelected([n.id]); setSelectedEdges([]); }
           setConfigClosed(null);
         }}
-        onPaneClick={() => { setSelected([]); setSelectedEdges([]); setMenuOpen(false); setRunChoice(false); }}
-        onMoveEnd={(_, v) => { try { localStorage.setItem(VIEWPORT, JSON.stringify(v)); } catch { /* viewport preference only */ } }}
-        defaultViewport={initialViewport} fitView={!initialViewport && doc.nodes.length > 0} fitViewOptions={{ padding: 0.2, maxZoom: 1 }} minZoom={0.15} maxZoom={2}
-        deleteKeyCode={null} selectionKeyCode="Shift" multiSelectionKeyCode={['Meta', 'Control']} panOnScroll={false} zoomOnDoubleClick={false}
+        onPaneClick={() => { setSelected([]); setSelectedEdges([]); setMenuOpen(false); setRunChoice(false); setConnectOpen(false); }}
+        onMoveEnd={onMoveEnd}
+        defaultViewport={initialViewport} fitView={!initialViewport && doc.nodes.length > 0} fitViewOptions={FIT_VIEW_OPTIONS} minZoom={0.15} maxZoom={2}
+        deleteKeyCode={null} selectionKeyCode="Shift" multiSelectionKeyCode={MULTI_SELECTION_KEYS} panOnScroll={false} zoomOnDoubleClick={false}
         connectionRadius={28} elevateNodesOnSelect={false} colorMode={theme} ariaLabelConfig={ARIA} attributionPosition="bottom-center"
         className={styles.flow}
       >
@@ -608,13 +710,26 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
           <button ref={moreButton} type="button" className={styles.barButton} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(v => !v)} aria-label="更多">⋯</button>
           {menuOpen && <MoreMenu doc={doc} motion={motionPref} glass={glass} onMotion={setMotionPref} onGlass={setGlass} onPalette={p => commit({ ...docRef.current, palette: p }, '修改项目配色')}
             onExport={exportDoc} onImport={f => void importDoc(f)} onLayout={() => { setMenuOpen(false); runLayout(); }}
-            onClear={() => { setMenuOpen(false); if (docRef.current.nodes.length) { removeElements(docRef.current.nodes.filter(n => !n.parent).map(n => n.id), docRef.current.edges.map(e => e.id)); } }}
+            onClear={() => { setMenuOpen(false); if (docRef.current.nodes.length) { removeElements(docRef.current.nodes.map(n => n.id), docRef.current.edges.map(e => e.id)); } }}
             history={history} onUndo={doUndo} onRedo={doRedo} onClose={() => { setMenuOpen(false); moreButton.current?.focus(); }} />}
         </div>
       </div>
 
-      <button type="button" className={styles.addButton} data-open={libraryOpen || undefined} aria-expanded={libraryOpen} aria-label={libraryOpen ? '关闭节点库' : '打开节点库'} onClick={() => setLibraryOpen(v => !v)}><span aria-hidden="true">+</span></button>
-      {libraryOpen && <NodeLibrary onAdd={k => addNode(k)} onTemplate={insertTemplate} onClose={() => setLibraryOpen(false)} />}
+      <button ref={addButton} type="button" className={styles.addButton} data-open={libraryOpen || undefined} aria-expanded={libraryOpen} aria-label={libraryOpen ? '关闭节点库' : '打开节点库'} onClick={() => setLibraryOpen(v => !v)}><span aria-hidden="true">+</span></button>
+      {libraryOpen && <NodeLibrary onAdd={k => addNode(k)} onTemplate={insertTemplate} onClose={() => { setLibraryOpen(false); addButton.current?.focus(); }} />}
+
+      {(selected.length > 0 || selectedEdges.length > 0) && <div className={`${styles.floatBar} ${styles.selectionBar}`} role="group" aria-label="所选对象操作">
+        <span className={styles.selectionCount}>{selected.length ? `${selected.length} 个节点` : `${selectedEdges.length} 条连线`}</span>
+        {selected.length > 0 && <>
+          <button type="button" className={styles.barButton} onClick={() => { if (copySelection()) paste(); }} aria-label="复制选中节点" title="复制（Ctrl / ⌘ D）">复制</button>
+          <span className={styles.moveButtons} role="group" aria-label="移动选中节点">
+            {([[-20, 0, '向左移动', '←'], [0, -20, '向上移动', '↑'], [0, 20, '向下移动', '↓'], [20, 0, '向右移动', '→']] as const).map(([x, y, label, glyph]) => <button key={label} type="button" className={styles.barButton} aria-label={label} title={`${label} 20 单位`} onClick={() => moveSelection(x, y)}>{glyph}</button>)}
+          </span>
+        </>}
+        {single && single.kind !== 'group' && <button ref={connectButton} type="button" className={styles.barButton} aria-expanded={connectOpen} onClick={() => setConnectOpen(v => !v)}>连接…</button>}
+        <button type="button" className={`${styles.barButton} ${styles.dangerItem}`} aria-label="删除选中对象" onClick={() => removeElements(selected, selectedEdges)}>删除</button>
+        {connectOpen && single && single.kind !== 'group' && <ConnectionEditor key={single.id} doc={doc} source={single} onConnect={onConnect} onClose={() => { setConnectOpen(false); connectButton.current?.focus(); }} />}
+      </div>}
 
       <div className={`${styles.floatBar} ${styles.zoomBar}`} role="group" aria-label="画布视图">
         <button type="button" className={styles.barButton} onClick={() => void rf.zoomOut({ duration: ms(160) })} aria-label="缩小" title="缩小"><Icon d="M5 12h14" /></button>
@@ -653,6 +768,38 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
 
 function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+}
+
+/** The same typed-port validation as drag-connect, usable with a click or keyboard. */
+function ConnectionEditor({ doc, source, onConnect, onClose }: { doc: CanvasDoc; source: CanvasNode; onConnect: (c: Connection) => void; onClose: () => void }) {
+  const output = nodeDef(source.kind).outputs;
+  const targets = doc.nodes.filter(n => n.id !== source.id && n.kind !== 'group');
+  const [sourcePort, setSourcePort] = useState(output[0]?.id ?? REL_OUT);
+  const [targetId, setTargetId] = useState(targets[0]?.id ?? '');
+  const [inputPort, setInputPort] = useState(targets[0] ? nodeDef(targets[0].kind).inputs[0]?.id ?? '' : '');
+  const first = useRef<HTMLSelectElement>(null);
+  useEffect(() => { first.current?.focus(); }, []);
+  const target = doc.nodes.find(n => n.id === targetId), inputs = target ? nodeDef(target.kind).inputs : [];
+  const targetPort = sourcePort === REL_OUT ? REL_IN : inputPort;
+  const connection = { source: source.id, sourcePort, target: targetId, targetPort };
+  const problem = connectionProblem(doc, connection);
+  return <form className={styles.connectionEditor} role="dialog" aria-label="连接节点" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }} onSubmit={e => {
+    e.preventDefault(); if (problem) return;
+    onConnect({ source: source.id, sourceHandle: sourcePort, target: targetId, targetHandle: targetPort }); onClose();
+  }}>
+    <header><strong>从「{source.title}」连接</strong><button type="button" className={styles.iconButton} aria-label="关闭连接设置" onClick={onClose}>×</button></header>
+    <label className={styles.field}>输出端口<select ref={first} value={sourcePort} onChange={e => setSourcePort(e.target.value)}>
+      {output.map(p => <option key={p.id} value={p.id}>{p.label} · {p.type}</option>)}<option value={REL_OUT}>研究说明（点线）</option>
+    </select></label>
+    <label className={styles.field}>目标节点<select value={targetId} onChange={e => { setTargetId(e.target.value); const n = doc.nodes.find(n => n.id === e.target.value); setInputPort(n ? nodeDef(n.kind).inputs[0]?.id ?? '' : ''); }}>
+      {!targets.length && <option value="">先添加另一个节点</option>}{targets.map(n => <option key={n.id} value={n.id}>{n.title} · {nodeDef(n.kind).title}</option>)}
+    </select></label>
+    {sourcePort !== REL_OUT && <label className={styles.field}>输入端口<select value={inputPort} onChange={e => setInputPort(e.target.value)}>
+      {!inputs.length && <option value="">该节点没有数据输入</option>}{inputs.map(p => <option key={p.id} value={p.id}>{p.label} · {p.accepts.join(' / ')}</option>)}
+    </select></label>}
+    {problem && <p className={styles.errorText} role="status">{problem}</p>}
+    <button type="submit" className={styles.primary} disabled={!!problem}>建立连接</button>
+  </form>;
 }
 
 function MoreMenu({ doc, motion, glass, onMotion, onGlass, onPalette, onExport, onImport, onLayout, onClear, history, onUndo, onRedo, onClose }: {

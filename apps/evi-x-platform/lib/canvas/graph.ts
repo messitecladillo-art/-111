@@ -211,7 +211,18 @@ export function parseDoc(value: unknown): CanvasDoc {
   });
   const ids = new Set(nodes.map(n => n.id));
   if (ids.size !== nodes.length) throw Error('节点 ID 重复。');
-  for (const n of nodes) if (n.parent !== null && (!ids.has(n.parent) || nodes.find(x => x.id === n.parent)!.kind !== 'group')) throw Error('节点的编组不存在。');
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  for (const n of nodes) if (n.parent !== null) {
+    if (n.parent === n.id) throw Error('节点不能放入自身编组。');
+    if (n.kind === 'group') throw Error('编组不支持嵌套。');
+    if (!ids.has(n.parent) || byId.get(n.parent)!.kind !== 'group') throw Error('节点的编组不存在。');
+  }
+  // React Flow requires a parent before its children. Imports keep every id and relative position.
+  const orderedNodes: CanvasNode[] = [], inserted = new Set<string>();
+  for (const n of nodes) {
+    if (n.parent !== null && !inserted.has(n.parent)) { orderedNodes.push(byId.get(n.parent)!); inserted.add(n.parent); }
+    if (!inserted.has(n.id)) { orderedNodes.push(n); inserted.add(n.id); }
+  }
   const edges: CanvasEdge[] = v.edges.map((raw: unknown) => {
     const e = raw as Record<string, unknown>;
     if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !ID.test(e.id) || (e.kind !== 'data' && e.kind !== 'relation')) throw Error('连线格式不正确。');
@@ -220,7 +231,7 @@ export function parseDoc(value: unknown): CanvasDoc {
     return edge;
   });
   if (new Set(edges.map(e => e.id)).size !== edges.length) throw Error('连线 ID 重复。');
-  return { schema: CANVAS_SCHEMA, title: str(v.title ?? '研究画布', CANVAS_LIMITS.title, '画布名称'), palette: str(v.palette ?? 'blue', 40, '配色'), nodes, edges };
+  return { schema: CANVAS_SCHEMA, title: str(v.title ?? '研究画布', CANVAS_LIMITS.title, '画布名称'), palette: str(v.palette ?? 'blue', 40, '配色'), nodes: orderedNodes, edges };
 }
 
 export function serializeDoc(doc: CanvasDoc): string {
