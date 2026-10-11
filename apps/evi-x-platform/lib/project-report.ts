@@ -5,6 +5,19 @@ export type ProjectReport = { id: string; projectId: string; revision: number; t
 export type ProjectReportSummary = Omit<ProjectReport, 'content'>;
 export type ReportProposal = { id: string; section: ReportSection };
 export type SaveReportRequest = { content: EditorContent; expectedRevision: number; idempotencyKey: string };
+/** Compare schema values rather than insertion order, while retaining invalid in-progress edits as dirty. */
+export function reportContentsEqual(left: EditorContent, right: EditorContent): boolean {
+  function ordered(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(ordered);
+    if (value !== null && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      return Object.fromEntries(Object.keys(record).sort().map(key => [key, ordered(record[key])]));
+    }
+    return value;
+  }
+  try { return JSON.stringify(ordered(parseEditorContent(left))) === JSON.stringify(ordered(parseEditorContent(right))); }
+  catch { return false; }
+}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export function parseProjectReport(value: unknown, projectId: string, full: false): ProjectReportSummary;
 export function parseProjectReport(value: unknown, projectId: string, full?: true): ProjectReport;

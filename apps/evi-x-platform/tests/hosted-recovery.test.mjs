@@ -10,6 +10,7 @@ import * as editor from '../lib/editor-model.ts';
 import * as reports from '../lib/project-report.ts';
 import * as collection from '../lib/survey-collection.ts';
 import * as research from '../lib/research-flow.ts';
+import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
 const projectId = 'a51fd4b9-7672-491b-9251-dea7809cfc8a';
@@ -108,6 +109,34 @@ test('report pending retry resolves a newer head and preserves edits made before
   nodes(screen.tree).find(n => n.props?.projectBinding).props.projectBinding.onSnapshot({ ...submitted, subtitle: '保存中新增段落' });
   resolveSave(latest); await screen.settle();
   assert.equal(cache.content.subtitle, '保存中新增段落'); assert.equal(cache.head.revision, 2); assert.equal(cache.pending, null); assert.equal(cache.conflict, false);
+  screen.unmount();
+});
+
+test('report format save receipt clears dirty status but later edits remain unsaved',async()=>{
+  const initial=editor.createEditorContent();
+  let head={id:projectId,projectId,revision:1,title:initial.title,updatedAt:timestamp,content:initial};
+  let finishSave,request,cache,unsaved;
+  const auth={session:{user:{id:projectId}},getDraft:()=>undefined,cacheDraft:(_key,value)=>{cache=value;},setUnsaved:(_key,value)=>{unsaved=value;},mutate:(_path,body)=>{request=body;return new Promise(resolve=>{finishSave=()=>{const saved=editor.parseEditorContent(body.content);if(saved.reportFormat)saved.reportFormat.options=Object.fromEntries(Object.entries(saved.reportFormat.options).reverse());head={...head,revision:head.revision+1,content:saved};resolve(head);};});}};
+  const screen=mount('../components/hosted/HostedReport.tsx',{
+    '../editors/EditingStudio':{default:'EditingStudio'},'@/lib/editor-model':editor,'@/lib/project-report':reports,
+    './api-client':{hostedRequest:async url=>url.endsWith('/versions')?{versions:[],nextBeforeRevision:null}:{report:head},errorMessage:e=>e.message,HostedApiError},'./HostedSession':{useHostedSession:()=>auth},
+  },{projectId,title:initial.title,writable:true,proposal:null,onProposalConsumed(){}});
+  const binding=()=>nodes(screen.tree).find(n=>n.props?.projectBinding).props.projectBinding;
+  await screen.settle();
+  const formatted={...initial,reportFormat:structuredClone(DEFAULT_REPORT_SETTINGS)};
+  formatted.reportFormat.options.firstLineChars=0;
+  binding().onSnapshot(formatted);await screen.settle();
+  button(screen,'保存报告与 PPT').props.onClick();await tick();finishSave();await screen.settle();
+  assert.equal(request.content.reportFormat.options.firstLineChars,0);
+  assert.equal(binding().status,'云端 v2');assert.equal(unsaved,false);
+  assert.equal(button(screen,'保存报告与 PPT').props.disabled,true);
+  assert.equal(cache.content,formatted,'receipt must keep the original editor object');
+  const next={...formatted,subtitle:'第二次保存'};
+  binding().onSnapshot(next);await screen.settle();button(screen,'保存报告与 PPT').props.onClick();await tick();
+  const late={...next,title:'等待回执时继续编辑'};
+  binding().onSnapshot(late);finishSave();await screen.settle();
+  assert.equal(binding().status,'有未保存修改');assert.equal(unsaved,true);assert.equal(cache.content.title,late.title);
+  binding().onSnapshot({...late,title:''});await screen.settle();assert.equal(binding().status,'有未保存修改');
   screen.unmount();
 });
 

@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     silicon_hourly_runs: int = 6
     silicon_call_seconds: int = 45
     silicon_stale_seconds: int = 600
+    # Explicit operator-installed compiler only; no discovery or package installation.
+    latex_compiler: str = ""
+    latex_timeout_seconds: int = 45
+    latex_concurrency: int = 2
+    latex_hourly_compiles: int = 30
 
     @model_validator(mode="after")
     def valid(self):
@@ -77,6 +82,10 @@ class Settings(BaseSettings):
         if not (1 <= self.silicon_max_calls <= 1000 and 1 <= self.silicon_concurrency <= 8 and 1 <= self.silicon_hourly_runs <= 60
                 and 5 <= self.silicon_call_seconds <= 120 and 120 <= self.silicon_stale_seconds <= 7200):
             raise ValueError("Invalid silicon run bounds")
+        if self.latex_compiler and (not Path(self.latex_compiler).is_absolute() or Path(self.latex_compiler).name.lower() not in ("xelatex", "xelatex.exe")):
+            raise ValueError("LaTeX requires an absolute xelatex executable path")
+        if not (1 <= self.latex_timeout_seconds <= 45 and 1 <= self.latex_concurrency <= 2 and 1 <= self.latex_hourly_compiles <= 60):
+            raise ValueError("Invalid LaTeX compile bounds")
         for base in self.compatible_bases:
             validate_base("compatible", base, {"compatible": tuple(self.compatible_bases)})
         return self

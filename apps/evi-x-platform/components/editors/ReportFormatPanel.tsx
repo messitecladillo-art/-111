@@ -24,8 +24,8 @@ export default function ReportFormatPanel({ value, onChange, sections }: Props) 
   const notices = reportFormatNotices(sections);
   const update = (patch: Partial<ReportFormatSettings>) => onChange({ ...value, ...patch });
   const scopeSelect = (key: 'group' | 'track' | 'stage', title: string, choices: string[]) => (
-    <label>{title}
-      <select value={value[key]} onChange={event => update({ [key]: event.target.value })}>
+    <label htmlFor={id + '-' + key}>{title}
+      <select id={id + '-' + key} value={value[key]} onChange={event => update({ [key]: event.target.value })}>
         <option value="">请选择</option>
         {value[key] && !choices.includes(value[key]) && <option value={value[key]}>{value[key]}</option>}
         {choices.map(choice => <option key={choice} value={choice}>{choice}</option>)}
@@ -41,16 +41,16 @@ export default function ReportFormatPanel({ value, onChange, sections }: Props) 
     </summary>
     <div className={styles.content}>
       <div className={styles.scope}>
-        <label>届次<select value={value.edition} onChange={event => update({ edition: event.target.value })}>
+        <label htmlFor={id + '-edition'}>届次<select id={id + '-edition'} value={value.edition} onChange={event => update({ edition: event.target.value })}>
           <option>第十七届</option><option>第十六届</option>
         </select></label>
         {scopeSelect('group', '组别', GROUPS)}
-        <label>赛区<input value={value.region} maxLength={80} placeholder="如：湖北" onChange={event => update({ region: event.target.value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/gu, '') })} /></label>
+        <label htmlFor={id + '-region'}>赛区<input id={id + '-region'} value={value.region} maxLength={80} placeholder="如：湖北" onChange={event => update({ region: event.target.value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/gu, '') })} /></label>
         {scopeSelect('track', '赛道', TRACKS)}
         {scopeSelect('stage', '阶段', STAGES)}
       </div>
       <div className={styles.profileRow}>
-        <label>排版方案<select value={value.profileId} onChange={event => update({ profileId: event.target.value })}>
+        <label htmlFor={id + '-profile'}>排版方案<select id={id + '-profile'} value={value.profileId} onChange={event => update({ profileId: event.target.value })}>
           {REPORT_FORMAT_PROFILES.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
         </select></label>
         <p className={styles.scopeStatus} role="status" data-state={evaluation.status}>{evaluation.detail}</p>
@@ -62,20 +62,20 @@ export default function ReportFormatPanel({ value, onChange, sections }: Props) 
         <div><dt>图表题</dt><dd>宋体 12 pt · 图下表上 · 居中</dd></div>
       </dl>
       <div className={styles.options}>
-        <label>导出部分<select value={value.options.part} onChange={event => {
+        <label htmlFor={id + '-part'}>导出部分<select id={id + '-part'} value={value.options.part} onChange={event => {
           const part = event.target.value as 'main' | 'appendix';
-          update({ options: { ...value.options, part, ...(part === 'main' ? { includeCover: true, includeToc: true } : {}) } });
+          update({ options: { ...value.options, part } });
         }}><option value="main">报告正文</option><option value="appendix">附录</option></select></label>
-        <label>首行缩进<select value={value.options.firstLineChars} onChange={event => update({ options: { ...value.options, firstLineChars: Number(event.target.value) as 0 | 2 } })}>
+        <label htmlFor={id + '-indent'}>首行缩进<select id={id + '-indent'} value={value.options.firstLineChars} onChange={event => update({ options: { ...value.options, firstLineChars: Number(event.target.value) as 0 | 2 } })}>
           <option value={2}>2 字符</option><option value={0}>不缩进</option>
         </select></label>
         <div className={styles.checks}>
-          <label className={styles.check}><input type="checkbox" checked={value.options.includeCover} disabled={value.options.part === 'main'} onChange={event => update({ options: { ...value.options, includeCover: event.target.checked } })} />标题页</label>
-          <label className={styles.check}><input type="checkbox" checked={value.options.includeToc} disabled={value.options.part === 'main'} onChange={event => update({ options: { ...value.options, includeToc: event.target.checked } })} />目录</label>
-          <label className={styles.check}><input type="checkbox" checked={value.options.numberPages} onChange={event => update({ options: { ...value.options, numberPages: event.target.checked } })} />页码</label>
+          <label className={styles.check} htmlFor={id + '-cover'}><input id={id + '-cover'} type="checkbox" checked={value.options.includeCover} onChange={event => update({ options: { ...value.options, includeCover: event.target.checked } })} />标题页</label>
+          <label className={styles.check} htmlFor={id + '-toc'}><input id={id + '-toc'} type="checkbox" checked={value.options.includeToc} onChange={event => update({ options: { ...value.options, includeToc: event.target.checked } })} />目录</label>
+          <label className={styles.check} htmlFor={id + '-pages'}><input id={id + '-pages'} type="checkbox" checked={value.options.numberPages} onChange={event => update({ options: { ...value.options, numberPages: event.target.checked } })} />页码</label>
         </div>
       </div>
-      {notices.length > 0 && <ul className={styles.notices} aria-label="章节检查">{notices.map(notice => <li key={notice}>{notice}</li>)}</ul>}
+      {notices.length > 0 && <ul className={styles.notices} aria-label="章节建议">{notices.map(notice => <li key={notice}>{notice}</li>)}</ul>}
       <details className={styles.source}>
         <summary>来源与适用范围</summary>
         <dl aria-labelledby={`${id}-source`}>

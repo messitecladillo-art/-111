@@ -47,19 +47,22 @@ def report_settings(value):
         raise ApiError()
     if type(o["firstLineChars"]) is not int or o["firstLineChars"] not in (0, 2):
         raise ApiError()
-    if o["part"] == "main" and (not o["includeCover"] or not o["includeToc"]):
-        raise ApiError()
     return x
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat",))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex"))
     if type(x["version"]) is not int or x["version"] != 1 or x["accent"] not in ("teal", "blue", "burgundy"):
         raise ApiError()
     nonblank(x["title"], 120)
     text(x["subtitle"], 240)
     if "reportFormat" in x:
         report_settings(x["reportFormat"])
+    if "latex" in x:
+        latex = object_fields(x["latex"], ("version", "body", "reportHash"))
+        if type(latex["version"]) is not int or latex["version"] != 1 or not isinstance(latex["reportHash"], str) or not re.fullmatch(r"[a-f0-9]{64}", latex["reportHash"]):
+            raise ApiError()
+        text(latex["body"], 120000)
     for key in ("report", "slides"):
         if not isinstance(x[key], list) or not 1 <= len(x[key]) <= 40:
             raise ApiError()

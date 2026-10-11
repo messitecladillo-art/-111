@@ -9,12 +9,16 @@ export async function hostedRequest(path: string, options: { method?: string; bo
   if (!path.startsWith('/api/') || path.includes('://')) throw Error('不支持的接口。');
   const maxBytes = options.maxBytes ?? 1_000_000;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 16 * 1024 * 1024) throw Error('接口读取上限无效。');
+  const timeoutMs = options.timeoutMs ?? 45_000;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) throw Error('接口等待上限无效。');
+  const deadline = AbortSignal.timeout(timeoutMs);
+  const signal = options.signal ? AbortSignal.any([options.signal, deadline]) : deadline;
   const headers = new Headers({ accept: 'application/json' });
   if (options.body !== undefined) headers.set('content-type', 'application/json');
   if (options.csrfToken) headers.set('X-CSRF-Token', options.csrfToken);
   let response: Response;
   try {
-    response = await fetch(path, { method: options.method || 'GET', credentials: 'same-origin', cache: 'no-store', headers, ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }), signal: options.signal || AbortSignal.timeout(options.timeoutMs ?? 45_000) });
+    response = await fetch(path, { method: options.method || 'GET', credentials: 'same-origin', cache: 'no-store', headers, ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }), signal });
   } catch { throw new HostedApiError(0, 'network_outcome_unknown', '连接未完成，操作结果尚不明确。当前内容已保留，请核对后再操作。'); }
   if (response.status === 204) return undefined;
   let value: unknown;

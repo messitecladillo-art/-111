@@ -18,6 +18,7 @@ from .security import keyed, random_token, code_verifier, config_view, encrypt, 
 from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_proposal
 from . import silicon, surveys
 from .reports import register_reports
+from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
 
 
@@ -787,4 +788,5 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
 
     surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
+    register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)
     return app
