@@ -464,3 +464,16 @@
   .wb-nav-link[aria-current="page"] { border: 1px solid Highlight; color: Highlight; }
   .workbench :focus-visible { outline-color: Highlight; box-shadow: none; }
 }
+
+/* Agent 诊断: readiness check and the literature-based topic lab share one section. */
+.workbench .diagnose-modes { display: inline-grid; grid-auto-flow: column; gap: 6px; margin: 0 0 18px; padding: 5px; border: 1px solid var(--wb-line); border-radius: 14px; background: var(--wb-well); }
+.workbench .diagnose-modes button { display: grid; gap: 1px; min-width: 190px; padding: 8px 16px; border: 0; border-radius: 10px; background: transparent; color: var(--wb-muted); text-align: left; cursor: pointer; transition: background var(--wb-fast) var(--wb-ease), color var(--wb-fast); }
+.workbench .diagnose-modes strong { font-size: 15px; color: inherit; }
+.workbench .diagnose-modes small { font-size: 12px; }
+.workbench .diagnose-modes button[aria-selected="true"] { background: var(--wb-surface); color: var(--wb-text); box-shadow: 0 1px 0 rgba(10, 31, 51, .05), 0 8px 20px -14px rgba(10, 31, 51, .5), inset 0 -2px 0 var(--wb-gold-text); }
+.workbench .section-diagnose [role="tabpanel"][hidden] { display: none; }
+.workbench .topic-lab-loading { padding: 40px; color: var(--wb-muted); text-align: center; }
+@media (max-width: 640px) {
+  .workbench .diagnose-modes { display: grid; grid-auto-flow: row; grid-template-columns: 1fr 1fr; width: 100%; }
+  .workbench .diagnose-modes button { min-width: 0; padding: 8px 10px; }
+}

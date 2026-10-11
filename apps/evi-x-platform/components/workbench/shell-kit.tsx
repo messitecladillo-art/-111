@@ -12,7 +12,7 @@ export type Theme = "light" | "dark";
 export const NAV_ITEMS: Array<{ id: Section; title: string; description: string; icon: string; group: string }> = [
   { id: "overview", title: "概览", description: "从真实问题出发，把研究一步步做扎实。", icon: "grid", group: "我的工作台" },
   { id: "cases", title: "获奖案例库", description: "检索真实案例，分清公告核验与材料分析。", icon: "book", group: "研究与证据" },
-  { id: "diagnose", title: "Agent 诊断", description: "梳理准备度，找到当前最值得补齐的证据。", icon: "spark", group: "研究与证据" },
+  { id: "diagnose", title: "Agent 诊断", description: "梳理准备度，用文献词云与证据画像筛选选题。", icon: "spark", group: "研究与证据" },
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },
   { id: "silicon", title: "硅基样本", description: "让 AI 扮演设定人群预答问卷，在真人作答前发现问题。", icon: "persona", group: "研究与证据" },
   { id: "analysis", title: "数据分析", description: "检查数据质量、变量分布与量表内部一致性。", icon: "grid", group: "研究与证据" },

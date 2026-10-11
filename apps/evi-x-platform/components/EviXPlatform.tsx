@@ -27,6 +27,7 @@ const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
 const DefenseStudio = dynamic(() => import('@/components/defense/DefenseStudio'));
 const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
+const TopicLab = dynamic(() => import('@/components/topic-lab/TopicLab'), { ssr: false, loading: () => <p className="topic-lab-loading" role="status">正在载入词云与选题…</p> });
 import HostedServices from '@/components/hosted/HostedServices';
 import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
 import DiagnosisActions from "@/components/DiagnosisActions";
@@ -799,6 +800,8 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
   const [error, setError] = useState("");
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [resultSource,setResultSource]=useState<DiagnosisBriefSource|null>(null);
+  const [mode,setMode]=useState<"readiness"|"topics">("readiness");
+  const [topicsOpened,setTopicsOpened]=useState(false);
   const requestEpoch=useRef(0);
   const [form, setForm] = useState({
     title: "",
@@ -815,6 +818,13 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
     setForm((current) => ({ ...current, [field]: value }));
   };
   useEffect(()=>()=>{requestEpoch.current++;},[]);
+  const openMode=(next:"readiness"|"topics")=>{setMode(next);if(next==="topics")setTopicsOpened(true);};
+  const applyTopic=(topic:{title:string;decisionOwner:string})=>{
+    requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setError('');onBriefSource?.(null);
+    setForm(current=>({...current,title:topic.title,decisionOwner:topic.decisionOwner||current.decisionOwner}));
+    setMode("readiness");
+    requestAnimationFrame(()=>document.getElementById("diagnose")?.scrollIntoView({behavior:"smooth",block:"start"}));
+  };
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -842,9 +852,14 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
   return (
     <section className="section section-diagnose" id="diagnose" aria-labelledby="diagnose-title">
       <div className="section-heading inverted">
-        <div><span className="eyebrow">Agent 诊断</span><h2 id="diagnose-title">先暴露证据缺口，再安排最短修复路径</h2></div>
-        <p>填写当前项目状态，缺失信息可标为未知。</p>
+        <div><span className="eyebrow">Agent 诊断</span><h2 id="diagnose-title">{mode==="topics"?"从文献里找方向，用证据筛选题目":"先暴露证据缺口，再安排最短修复路径"}</h2></div>
+        <p>{mode==="topics"?"导入文献，看清领域结构、前沿与空白，再为候选题目生成逐项可追溯的证据画像。":"填写当前项目状态，缺失信息可标为未知。"}</p>
       </div>
+      <div className="diagnose-modes" role="tablist" aria-label="诊断类型">
+        {([["readiness","准备度诊断","检查证据缺口与下一步"],["topics","词云与选题","文献图谱 · 研究空白 · 证据画像"]] as const).map(([id,label,hint])=><button key={id} type="button" role="tab" id={`dg-tab-${id}`} aria-selected={mode===id} aria-controls={`dg-panel-${id}`} tabIndex={mode===id?0:-1} onClick={()=>openMode(id)} onKeyDown={event=>{if(event.key!=="ArrowRight"&&event.key!=="ArrowLeft")return;event.preventDefault();const next=id==="readiness"?"topics":"readiness";openMode(next);document.getElementById(`dg-tab-${next}`)?.focus();}}><strong>{label}</strong><small>{hint}</small></button>)}
+      </div>
+      <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic}/>}</div>
+      <div role="tabpanel" id="dg-panel-readiness" aria-labelledby="dg-tab-readiness" hidden={mode!=="readiness"}>
       <div className="diagnose-grid">
         <form className="diagnose-form" onSubmit={submit} aria-busy={submitting}>
           <fieldset disabled={submitting}>
@@ -894,6 +909,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
             {resultSource&&<DiagnosisActions codes={result.actionCodes} source={resultSource} onPrepare={source=>{onBriefSource?.(source);window.location.hash='design';}}/>}
           </>}
         </div>
+      </div>
       </div>
     </section>
   );

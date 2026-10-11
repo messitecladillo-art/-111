@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>证见 EVI-X · 宣传片</title>
+<!--
+  Deterministic film: window.renderFrame(t) draws the frame at time t (seconds) with no reliance on
+  wall-clock time, so frames can be captured in any order and in parallel. Timing lives in cues.json.
+  Mode: public_promo. Screenshots are real workbench captures on teaching / simulated data;
+  particles, rings, orbits and seals are conceptual visuals.
+-->
+<style>
+  html,body{margin:0;background:#000;overflow:hidden}
+  #frame{position:relative;width:1920px;height:1080px;overflow:hidden;background:#02050a;color:#f7f4ed;font-family:"Noto Sans CJK SC","Noto Sans SC",sans-serif;-webkit-font-smoothing:antialiased}
+  #cam{position:absolute;inset:0;transform-origin:50% 50%}
+  canvas{position:absolute;left:0;top:0}
+  #stage{position:absolute;inset:0}
+  .layer{position:absolute;inset:0;display:none}
+  .serif{font-family:"Noto Serif CJK SC","Noto Serif SC",serif}
+  .ch{display:inline-block;white-space:pre}
+  .center{position:absolute;left:0;right:0;text-align:center}
+  .gold{color:#f4b942}
+  .foil{background:linear-gradient(100deg,#c8902f 0%,#f4b942 22%,#fff1c9 40%,#f4b942 55%,#4fd1c1 85%,#7fb6ff 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+  .foil .ch{background:inherit;background-size:inherit;-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* history */
+  .histLine{top:800px;font-size:54px;font-weight:700;letter-spacing:.14em;text-shadow:0 0 30px rgba(244,185,66,.35)}
+  .histEra{top:876px;font-size:22px;letter-spacing:.32em;color:#e9c77a;opacity:.9}
+  .bigYear{position:absolute;right:150px;top:150px;font:700 190px/1 "Noto Sans CJK SC",sans-serif;color:transparent;-webkit-text-stroke:1.5px rgba(244,185,66,.28);letter-spacing:-.02em}
+  #opening{top:640px;font-size:46px;font-weight:700;letter-spacing:.4em}
+  #titleSource{top:812px;font-size:30px;letter-spacing:.2em;color:#e9c77a}
+
+  /* today */
+  .todayLine{top:812px;font-size:48px;font-weight:700;letter-spacing:.1em;text-shadow:0 2px 30px rgba(0,0,0,.9)}
+  #answer{top:812px;font-size:60px;font-weight:700;letter-spacing:.3em}
+
+  /* logo */
+  #logoMark{position:absolute;left:885px;top:308px;width:150px;height:150px;border-radius:30px;box-shadow:0 0 80px rgba(244,185,66,.55)}
+  #logoWord{top:470px;font-size:176px;font-weight:700;line-height:1;letter-spacing:.12em;padding-left:.12em}
+  #logoLatin{top:672px;font-size:34px;letter-spacing:1.1em;padding-left:1.1em;color:#ffe3a6;font-weight:400}
+  #tagline{top:900px;font-size:46px;font-weight:700;letter-spacing:.24em;padding-left:.24em}
+
+  /* chain */
+  #chainTitle{top:232px;font-size:44px;font-weight:700;letter-spacing:.16em}
+  .chainLabel{position:absolute;top:600px;width:240px;margin-left:-120px;text-align:center}
+  .chainLabel b{display:block;font:700 46px/1 "Noto Sans Mono CJK SC",monospace;color:#f4b942}
+  .chainLabel span{display:block;margin-top:14px;font-size:34px;font-weight:700;letter-spacing:.3em;padding-left:.3em}
+  .chainLabel small{display:block;margin-top:10px;font-size:20px;color:#9fb0be;letter-spacing:.08em}
+
+  /* windows */
+  .persp{position:absolute;inset:0;perspective:2200px;perspective-origin:50% 45%}
+  .win{position:absolute;width:1160px;border-radius:18px;padding:1.5px;background:linear-gradient(160deg,rgba(255,227,166,.85),rgba(79,209,193,.35) 30%,rgba(247,244,237,.1) 60%,rgba(127,182,255,.45));box-shadow:0 80px 160px -40px rgba(0,0,0,.95),0 0 120px -30px rgba(244,185,66,.45);transform-style:preserve-3d;overflow:hidden}
+  .win .bar{display:flex;align-items:center;gap:9px;height:40px;padding:0 16px;border-radius:16px 16px 0 0;background:#0a1522;border-bottom:1px solid rgba(247,244,237,.08)}
+  .win .bar i{width:11px;height:11px;border-radius:50%;background:#2a3644}
+  .win .bar i:nth-child(1){background:#e46f5c}.win .bar i:nth-child(2){background:#e7b54a}.win .bar i:nth-child(3){background:#3fbf7f}
+  .win .bar span{margin:0 auto;padding:4px 18px;border-radius:8px;background:rgba(247,244,237,.06);font-size:15px;color:#8d9ba7;transform:translateX(-30px)}
+  .win img{display:block;width:100%;height:auto;border-radius:0 0 16px 16px}
+  .win .sweep{position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,244,214,.22) 48%,rgba(255,255,255,.05) 52%,transparent 60%);background-size:300% 100%;mix-blend-mode:screen;pointer-events:none}
+  .shotCopy{position:absolute;left:150px;top:300px;width:620px}
+  .shotKicker{font:700 26px/1 "Noto Sans Mono CJK SC",monospace;letter-spacing:.2em;color:#4fd1c1}
+  .shotTitle{margin-top:26px;font-size:72px;font-weight:700;line-height:1.22}
+  .tag{display:inline-block;margin-top:34px;padding:8px 20px;border:1.5px solid rgba(79,209,193,.6);border-radius:999px;font-size:22px;color:#7fe3d6;letter-spacing:.08em}
+  .chip{display:inline-block;margin-top:18px;padding:8px 20px;border:1.5px solid rgba(244,185,66,.7);border-radius:999px;font-size:24px;color:#ffe3a6;letter-spacing:.08em;background:rgba(244,185,66,.08)}
+
+  /* cuts */
+  .cutLabel{position:absolute;left:120px;bottom:120px}
+  .cutLabel b{display:block;font-size:84px;font-weight:700;letter-spacing:.06em;text-shadow:0 6px 40px rgba(0,0,0,.95)}
+  .cutLabel span{display:block;margin-top:10px;font-size:34px;color:#ffe3a6;letter-spacing:.12em;text-shadow:0 4px 30px rgba(0,0,0,.95)}
+
+  /* gates */
+  #gatesKicker{top:200px;font-size:44px;font-weight:700;letter-spacing:.18em}
+  .seal{position:absolute;top:400px;width:150px;height:150px;margin-left:-75px;border:3px double rgba(244,185,66,.9);border-radius:16px;background:radial-gradient(circle at 50% 40%,rgba(244,185,66,.22),rgba(10,20,34,.92) 70%);box-shadow:0 0 60px -6px rgba(244,185,66,.65),inset 0 0 30px rgba(244,185,66,.2);display:grid;place-items:center;font:700 96px/1 "Noto Serif CJK SC",serif;color:#ffd987;text-shadow:0 0 24px rgba(244,185,66,.8)}
+  .sealName{position:absolute;top:578px;width:150px;margin-left:-75px;text-align:center;font-size:26px;font-weight:700;letter-spacing:.3em;padding-left:.3em;color:#c9d3dc}
+  #gatesCaption{top:760px;font-size:54px;font-weight:700;letter-spacing:.12em}
+
+  /* integrity */
+  .vow{position:absolute;left:250px;font-size:104px;font-weight:700;letter-spacing:.06em}
+  .vow i{position:absolute;left:0;bottom:-14px;height:6px;border-radius:3px;background:linear-gradient(90deg,#f4b942,#4fd1c1);box-shadow:0 0 20px rgba(244,185,66,.8)}
+
+  /* dawn + end */
+  #mascot{position:absolute;left:820px;top:200px;width:1050px;-webkit-mask:radial-gradient(66% 70% at 50% 48%,#000 58%,transparent 96%);mask:radial-gradient(66% 70% at 50% 48%,#000 58%,transparent 96%)}
+  .dawnLine{position:absolute;left:170px;color:#0a1f33}
+  #dawn1{top:400px;font-size:104px;font-weight:700;letter-spacing:.08em}
+  #dawn2{top:580px;font-size:46px;font-weight:700;color:#3b4d5e;letter-spacing:.08em}
+  #endMark{position:absolute;left:885px;top:210px;width:150px;height:150px;border-radius:30px;box-shadow:0 30px 60px -20px rgba(10,31,51,.45)}
+  #endWord{top:400px;font-size:120px;font-weight:700;color:#0a1f33;letter-spacing:.1em;padding-left:.1em;line-height:1}
+  #endLatin{top:548px;font-size:30px;letter-spacing:1em;padding-left:1em;color:#85590a}
+  #endTag{top:630px;font-size:48px;font-weight:700;letter-spacing:.2em;padding-left:.2em;color:#0a1f33}
+  #endMotto{top:712px;font-size:30px;letter-spacing:.5em;padding-left:.5em;color:#85590a}
+  #endDisclaimer{top:878px;font-size:24px;color:#3b4d5e;letter-spacing:.04em}
+  #endNotes{top:928px;font-size:19px;color:#536677;letter-spacing:.03em}
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="cam">
+    <canvas id="bg" width="1920" height="1080"></canvas>
+    <div id="stage"></div>
+  </div>
+  <canvas id="post" width="1920" height="1080"></canvas>
+</div>
+<script>
+'use strict';
+const W = 1920, H = 1080, CX = 960, CY = 500;
+const ASSET = '../../apps/evi-x-platform/public/landing/';
+const BRAND = '../../skill/zhengda-cup-champion/assets/brand/';
+
+/* ——— math ——— */
+const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOutCubic = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeOutExpo = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+const easeInCubic = t => t * t * t;
+const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const smooth = (a, b, t) => { const x = clamp((t - a) / (b - a)); return x * x * (3 - 2 * x); };
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+/** Envelope that is 1 inside [a, b] with linear ramps of length fin / fout. */
+const env = (t, a, b, fin = .6, fout = .5) => (t < a || t > b) ? 0 : Math.min(1, (t - a) / fin, (b - t) / fout);
+
+/* ——— DOM helpers ——— */
+const stage = document.getElementById('stage');
+function el(tag, cls, parent = stage, html = '') { const n = document.createElement(tag); if (cls) n.className = cls; n.innerHTML = html; parent.appendChild(n); return n; }
+function split(node, text) { node.textContent = ''; node._chars = [...text].map(c => { const s = document.createElement('span'); s.className = 'ch'; s.textContent = c; node.appendChild(s); return s; }); return node; }
+function show(node, on) { if (node.classList.contains('layer')) node.style.display = on ? 'block' : 'none'; else node.style.visibility = on ? 'visible' : 'hidden'; }
+/** Character-staggered entrance and exit. */
+function lineFx(node, t, tin, tout, o = {}) {
+  const st = o.stagger ?? .045, du = o.dur ?? .75, dy = o.dy ?? 34, bl = o.blur ?? 14, od = o.outDur ?? .45;
+  if (t < tin || t > tout + od) { show(node, false); return; }
+  show(node, true);
+  const q = clamp((t - tout) / od);
+  node._chars.forEach((c, k) => {
+    const p = clamp((t - tin - k * st) / du), e = easeOutCubic(p);
+    c.style.opacity = (e * (1 - q)).toFixed(3);
+    c.style.transform = `translateY(${((1 - e) * dy - q * 12).toFixed(1)}px) scale(${(1 + (1 - e) * .12).toFixed(3)})`;
+    const b = (1 - p) * bl + q * 8;
+    c.style.filter = b > .05 ? `blur(${b.toFixed(1)}px)` : 'none';
+  });
+}
+function fadeFx(node, t, tin, tout, o = {}) {
+  const fin = o.fin ?? .6, fout = o.fout ?? .5, dy = o.dy ?? 20, bl = o.blur ?? 10;
+  const v = env(t, tin, tout, fin, fout);
+  if (v <= 0) { show(node, false); return 0; }
+  show(node, true);
+  const e = easeOutCubic(v);
+  node.style.opacity = e.toFixed(3);
+  node.style.transform = `translateY(${((1 - e) * dy).toFixed(1)}px)` + (o.extra ? ' ' + o.extra : '');
+  node.style.filter = (1 - e) * bl > .05 ? `blur(${((1 - e) * bl).toFixed(1)}px)` : 'none';
+  return e;
+}
+
+/* ——— assets ——— */
+let C; // cues
+const IMG = {};
+function loadImg(key, src) { return new Promise(res => { const i = new Image(); i.onload = () => i.decode().then(() => res(i), () => res(i)); i.onerror = () => res(null); i.src = src; IMG[key] = i; }); }
+
+/* ——— particles ——— */
+const N = 7200;
+const rng = mulberry32(20261011);
+const R1 = new Float32Array(N), R2 = new Float32Array(N), R3 = new Float32Array(N), R4 = new Float32Array(N), R5 = new Float32Array(N), SIZE = new Float32Array(N), KIND = new Uint8Array(N);
+for (let i = 0; i < N; i++) { R1[i] = rng(); R2[i] = rng(); R3[i] = rng(); R4[i] = rng(); R5[i] = rng(); SIZE[i] = 5 + Math.pow(rng(), 2.6) * 16; const k = rng(); KIND[i] = k < .7 ? 0 : k < .9 ? 1 : 2; }
+const SHAPES = {};
+
+function sampleCanvas(draw, n, seed, jitter = 1.2) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#fff'; draw(g);
+  const d = g.getImageData(0, 0, W, H).data, pts = [];
+  for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (d[(y * W + x) * 4 + 3] > 140) pts.push(x, y);
+  const r = mulberry32(seed), out = new Float32Array(n * 2), m = pts.length / 2;
+  for (let i = 0; i < n; i++) { const k = Math.floor(r() * m); out[i * 2] = pts[k * 2] + (r() - .5) * 2 * jitter; out[i * 2 + 1] = pts[k * 2 + 1] + (r() - .5) * 2 * jitter; }
+  return out;
+}
+function glyphShape(ch, seed) {
+  return sampleCanvas(g => { g.font = '700 640px "Noto Serif CJK SC"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, CX, CY - 10); }, N, seed);
+}
+function buildShapes() {
+  const spark = new Float32Array(N * 2);
+  for (let i = 0; i < N; i++) { const a = R1[i] * Math.PI * 2, r = Math.pow(R2[i], 2) * 10; spark[i * 2] = CX + Math.cos(a) * r; spark[i * 2 + 1] = CY + Math.sin(a) * r; }
+  SHAPES.spark = spark;
+  C.history.forEach((h, k) => { SHAPES['g' + k] = glyphShape(h.glyph, 11 + k); });
+  SHAPES.title = sampleCanvas(g => { g.font = '700 300px "Noto Serif CJK SC"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(C.title.text, CX, CY); }, N, 31);
+  const chaos = new Float32Array(N * 2), r = mulberry32(41);
+  for (let i = 0; i < N; i++) { chaos[i * 2] = 60 + r() * (W - 120); chaos[i * 2 + 1] = 150 + r() * (H - 300); }
+  SHAPES.chaos = chaos;
+  SHAPES.question = sampleCanvas(g => {
+    const marks = [[300, 360, 300, -.2], [720, 300, 200, .15], [1080, 420, 420, -.05], [1500, 330, 260, .2], [1700, 640, 180, -.1], [480, 690, 230, .1], [860, 720, 150, -.25], [1300, 700, 220, .05], [180, 560, 140, .3], [1840, 300, 120, -.3]];
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const [x, y, s, rot] of marks) { g.save(); g.translate(x, y); g.rotate(rot); g.font = `700 ${s}px "Noto Sans CJK SC"`; g.fillText('？', 0, 0); g.restore(); }
+  }, N, 51, 1.5);
+  // A receding plane: structure out of noise.
+  const floor = new Float32Array(N * 2), cols = 120, rows = Math.ceil(N / cols);
+  for (let i = 0; i < N; i++) { const u = i % cols, v = Math.floor(i / cols); const X = (u / (cols - 1) - .5) * 4200, Z = 260 + v * 34, f = 640; floor[i * 2] = CX + X * f / Z; floor[i * 2 + 1] = 380 + 520 * f / Z; }
+  SHAPES.floor = floor;
+  // Evidence network: nodes and the edges between them.
+  const nr = mulberry32(61), nodes = [];
+  for (let k = 0; k < 15; k++) nodes.push([260 + nr() * 1400, 210 + nr() * 560]);
+  const edges = [];
+  nodes.forEach((a, i) => { const d = nodes.map((b, j) => [Math.hypot(a[0] - b[0], a[1] - b[1]), j]).sort((p, q) => p[0] - q[0]); edges.push([i, d[1][1]], [i, d[2][1]]); });
+  const net = new Float32Array(N * 2);
+  for (let i = 0; i < N; i++) {
+    if (R5[i] < .55) { const nd = nodes[Math.floor(R1[i] * nodes.length)], a = R2[i] * Math.PI * 2, rr = Math.pow(R3[i], .7) * 46; net[i * 2] = nd[0] + Math.cos(a) * rr; net[i * 2 + 1] = nd[1] + Math.sin(a) * rr; }
+    else { const e = edges[Math.floor(R1[i] * edges.length)], a = nodes[e[0]], b = nodes[e[1]], s = R2[i]; net[i * 2] = lerp(a[0], b[0], s) + (R3[i] - .5) * 4; net[i * 2 + 1] = lerp(a[1], b[1], s) + (R4[i] - .5) * 4; }
+  }
+  SHAPES.net = net; SHAPES.nodes = nodes;
+}
+let KF;
+function particlePos(i, t, out) {
+  if (t < 25) {
+    let k = 0; while (k + 1 < KF.length && KF[k + 1].t <= t) k++;
+    if (k === 0) { // spark breathing before the first burst
+      const a = R1[i] * Math.PI * 2 + t * .4, r = Math.pow(R2[i], 2) * (6 + 4 * Math.sin(t * 2.4));
+      out[0] = CX + Math.cos(a) * r; out[1] = CY + Math.sin(a) * r; return;
+    }
+    const A = KF[k - 1].s, B = KF[k].s, f = KF[k];
+    const delay = R1[i] * (f.spread ?? .45), p = clamp((t - f.t - delay) / f.d), e = (f.ease || easeInOutCubic)(p);
+    const ax = A[i * 2], ay = A[i * 2 + 1], bx = B[i * 2], by = B[i * 2 + 1];
+    let x = lerp(ax, bx, e), y = lerp(ay, by, e);
+    const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) + 1e-3, amp = (R2[i] - .5) * len * (f.swirl ?? .4) * Math.sin(Math.PI * e);
+    x += -dy / len * amp; y += dx / len * amp;
+    x += Math.sin(t * 1.3 + R3[i] * 6.283) * 1.4; y += Math.cos(t * 1.1 + R4[i] * 6.283) * 1.4;
+    out[0] = x; out[1] = y; return;
+  }
+  if (t < 30) { // vortex into a single point
+    const p = clamp((t - 25) / 4.35), e = Math.pow(p, 2.1), ang = e * (7 + 7 * R1[i]), sc = 1 - easeInCubic(p) * .997;
+    const rx = SHAPES.net[i * 2] - CX, ry = SHAPES.net[i * 2 + 1] - CY;
+    out[0] = CX + (rx * Math.cos(ang) - ry * Math.sin(ang)) * sc; out[1] = CY + (rx * Math.sin(ang) + ry * Math.cos(ang)) * sc; return;
+  }
+  const burst = (tt, o) => {
+    const tau = tt - 30, a = R1[i] * Math.PI * 2;
+    if (R5[i] < .74) { const ang = a + tau * .07, R = 360 * easeOutExpo(Math.min(1, tau / .8)) + Math.sin(ang * 7 + tau * 1.5) * 7 + (R2[i] - .5) * 30; o[0] = CX + Math.cos(ang) * R; o[1] = CY + Math.sin(ang) * R; }
+    else { const dist = (220 + 1500 * R2[i]) * easeOutCubic(Math.min(1, tau / 2.4)); o[0] = CX + Math.cos(a) * dist; o[1] = CY + Math.sin(a) * dist; }
+  };
+  const ambient = (tt, o) => {
+    const x = (R3[i] * (W + 80) + tt * (R1[i] - .5) * 18) % (W + 80), y = (R4[i] * (H + 80) - tt * (8 + R2[i] * 22)) % (H + 80);
+    o[0] = (x < 0 ? x + W + 80 : x) - 40; o[1] = (y < 0 ? y + H + 80 : y) - 40;
+  };
+  if (t < 34.5) { burst(t, out); return; }
+  if (t < 36.5) { const a = [0, 0], b = [0, 0]; burst(t, a); ambient(t, b); const e = easeInOutCubic((t - 34.5) / 2); out[0] = lerp(a[0], b[0], e); out[1] = lerp(a[1], b[1], e); return; }
+  ambient(t, out);
+}
+
+/* ——— canvases ——— */
+const bg = document.getElementById('bg'), g = bg.getContext('2d');
+const post = document.getElementById('post'), pg = post.getContext('2d');
+const small = document.createElement('canvas'); small.width = 480; small.height = 270; const sg = small.getContext('2d');
+const cam = document.getElementById('cam');
+function sprite(rgb) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(.2, `rgba(${rgb},.65)`); gr.addColorStop(.5, `rgba(${rgb},.16)`); gr.addColorStop(1, `rgba(${rgb},0)`); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return c; }
+const SPRITES = [sprite('255,206,120'), sprite('110,228,212'), sprite('255,248,232')];
+const STROKES = ['rgba(255,206,120,', 'rgba(110,228,212,', 'rgba(255,248,232,'];
+const GRAIN = [0, 1, 2, 3].map(k => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), d = x.createImageData(256, 256), r = mulberry32(900 + k); for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } x.putImageData(d, 0, 0); return c; });
+
+/* ——— scene DOM ——— */
+const D = {};
+function buildDom() {
+  const L = name => el('div', 'layer', stage), cue = C;
+  D.hist = L();
+  D.opening = split(el('div', 'center serif', D.hist), cue.opening.line); D.opening.id = 'opening';
+  D.histLines = cue.history.map(h => split(el('div', 'center serif histLine', D.hist), h.line));
+  D.histEras = cue.history.map(h => split(el('div', 'center histEra', D.hist), h.era));
+  D.years = ['−1300', '−500', '100', '1750'].map(y => el('div', 'bigYear', D.hist, y));
+  D.titleSource = split(el('div', 'center serif', D.hist), cue.title.source); D.titleSource.id = 'titleSource';
+  D.today = L();
+  D.todayLines = cue.today.slice(0, 4).map(h => split(el('div', 'center todayLine', D.today), h.line));
+  D.answer = split(el('div', 'center serif foil', D.today), cue.today[4].line); D.answer.id = 'answer';
+  D.logo = L();
+  D.logoMark = el('img', '', D.logo); D.logoMark.id = 'logoMark'; D.logoMark.src = BRAND + 'logo/mark.svg';
+  D.logoWord = split(el('div', 'center serif foil', D.logo), '证见'); D.logoWord.id = 'logoWord';
+  D.logoLatin = split(el('div', 'center', D.logo), 'EVI-X'); D.logoLatin.id = 'logoLatin';
+  D.tagline = split(el('div', 'center', D.logo), '让每个问题，都循证抵达行动'); D.tagline.id = 'tagline';
+  D.chain = L();
+  D.chainTitle = split(el('div', 'center', D.chain), '一条证据链，从问题走到行动'); D.chainTitle.id = 'chainTitle';
+  D.chainLabels = [['Q', '问题', '先锁定规则与研究问题'], ['D', '数据', '每份数据有来源'], ['I', '洞察', '区分相关与因果'], ['A', '行动', '建议有依据、有主人']].map(([k, n, s], i) => { const d = el('div', 'chainLabel', D.chain, `<b>${k}</b><span>${n}</span><small>${s}</small>`); d.style.left = CHAIN_X[i] + 'px'; return d; });
+  D.shots = cue.shots.map(s => {
+    const layer = L(), per = el('div', 'persp', layer), win = el('div', 'win', per, `<div class="bar"><i></i><i></i><i></i><span>证见工作台 · ${s.label}</span></div><img src="${ASSET}app-${s.id}-1600.webp"><div class="sweep"></div>`);
+    const copy = el('div', 'shotCopy', layer, `<div class="shotKicker">${s.no} · ${s.label}</div><div class="shotTitle"></div><div class="tag">真实界面 · ${s.caption}</div>${s.id === 'silicon' ? '<br><div class="chip">模拟 ≠ 调查 · 只用于预测试</div>' : ''}`);
+    const title = copy.querySelector('.shotTitle'); title.innerHTML = s.title.map(l => `<div>${l}</div>`).join('');
+    return { layer, win, copy, sweep: win.querySelector('.sweep'), lines: [...title.children].map(n => split(n, n.textContent)), cue: s };
+  });
+  if (D.shots[1]) { D.shots[1].copy.style.left = '120px'; D.shots[1].copy.style.top = '150px'; }
+  D.cuts = cue.cuts.map(c => {
+    const layer = L(), per = el('div', 'persp', layer), win = el('div', 'win', per, `<div class="bar"><i></i><i></i><i></i><span>证见工作台 · ${c.label}</span></div><img src="${ASSET}app-${c.id}-1600.webp">`);
+    win.style.width = '1500px'; win.style.left = '210px'; win.style.top = '80px';
+    const label = el('div', 'cutLabel', layer, `<b>${c.label}</b><span>${c.line}</span>`);
+    return { layer, win, label, cue: c };
+  });
+  D.cutTag = el('div', 'tag', stage, '真实界面 · 示例数据'); D.cutTag.style.cssText += ';position:absolute;right:120px;bottom:126px;margin:0;visibility:hidden;background:rgba(4,9,15,.7)';
+  D.gates = L();
+  D.gatesKicker = split(el('div', 'center', D.gates), '每一份交付，都要过九道门禁'); D.gatesKicker.id = 'gatesKicker';
+  D.seals = cue.gates.map((gt, i) => { const s = el('div', 'seal', D.gates, gt.seal); s.style.left = GATE_X(i) + 'px'; return s; });
+  D.sealNames = cue.gates.map((gt, i) => { const s = el('div', 'sealName', D.gates, gt.name); s.style.left = GATE_X(i) + 'px'; return s; });
+  D.gatesCaption = split(el('div', 'center', D.gates), '任何一道未通过，都不会给出「Go」。'); D.gatesCaption.id = 'gatesCaption';
+  D.vows = L();
+  D.vowLines = cue.integrity.map((v, i) => { const n = el('div', 'vow' + (i === 2 ? ' foil' : ''), D.vows); n.style.top = (300 + i * 170) + 'px'; split(n, v.line); n._bar = el('i', '', n); return n; });
+  D.dawn = L();
+  D.mascot = el('img', '', D.dawn); D.mascot.id = 'mascot'; D.mascot.src = BRAND + 'raster/evi-x-character-anchor-v2.png';
+  D.dawn1 = split(el('div', 'dawnLine serif', D.dawn), cue.finale[0].line); D.dawn1.id = 'dawn1';
+  D.dawn2 = split(el('div', 'dawnLine', D.dawn), cue.finale[1].line); D.dawn2.id = 'dawn2';
+  D.end = L();
+  D.endMark = el('img', '', D.end); D.endMark.id = 'endMark'; D.endMark.src = BRAND + 'logo/mark.svg';
+  D.endWord = el('div', 'center serif', D.end, '证见'); D.endWord.id = 'endWord';
+  D.endLatin = el('div', 'center', D.end, 'EVI-X'); D.endLatin.id = 'endLatin';
+  D.endTag = el('div', 'center', D.end, '让每个问题，都循证抵达行动'); D.endTag.id = 'endTag';
+  D.endMotto = el('div', 'center serif', D.end, '问有据 · 见有策'); D.endMotto.id = 'endMotto';
+  D.endDisclaimer = el('div', 'center', D.end, '证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。'); D.endDisclaimer.id = 'endDisclaimer';
+  D.endNotes = el('div', 'center', D.end, '片中界面为证见工作台真实截图，使用教学示例与模拟数据；粒子、光环、轨道与印章为概念性视觉；獬见为 AI 辅助生成、经人工验收的原创概念角色；配乐由代码合成。'); D.endNotes.id = 'endNotes';
+}
+const CHAIN_X = [420, 780, 1140, 1500];
+const GATE_X = i => 165 + 75 + i * 180;
+
+/* ——— background ——— */
+function nebula(x, y, r, rgb, a) { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+function drawBackground(t) {
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  g.fillStyle = '#02050a'; g.fillRect(0, 0, W, H);
+  const warm = env(t, 0, 15.2, 2.5, 1.5), cool = env(t, 14.5, 30, 1.5, 1.2), navy = env(t, 30, 65.4, .2, 1);
+  if (warm > 0) { nebula(CX + Math.sin(t * .2) * 120, CY + 40, 900, '120,70,20', .28 * warm); nebula(300 + t * 8, 200, 700, '160,110,40', .1 * warm); }
+  if (cool > 0) { nebula(500 + Math.sin(t * .3) * 100, 300, 900, '20,80,120', .28 * cool); nebula(1500 - t * 4, 760, 800, '10,60,90', .22 * cool); }
+  if (navy > 0) {
+    g.globalAlpha = navy; g.fillStyle = '#050c16'; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+    nebula(380 + Math.sin(t * .17) * 160, 260, 1000, '160,110,30', .2 * navy);
+    nebula(1600 + Math.cos(t * .13) * 140, 820, 1000, '20,120,130', .24 * navy);
+    // faint research grid
+    g.globalAlpha = .06 * navy; g.strokeStyle = '#f7f4ed'; g.lineWidth = 1; g.beginPath();
+    for (let x = ((t * 6) % 80) - 80; x < W; x += 80) { g.moveTo(x, 0); g.lineTo(x, H); }
+    for (let y = 0; y < H; y += 80) { g.moveTo(0, y); g.lineTo(W, y); }
+    g.stroke(); g.globalAlpha = 1;
+  }
+  // Dawn: dark breaks into gold light, then ivory paper.
+  if (t >= 64.6) {
+    const d = easeInOutCubic(clamp((t - 64.8) / 2.6));
+    const gl = Math.sin(Math.PI * clamp((t - 64.6) / 3.2));
+    if (gl > 0) { const gr = g.createRadialGradient(CX, H + 260 - d * 420, 0, CX, H + 260 - d * 420, 1500); gr.addColorStop(0, `rgba(255,214,140,${.95 * gl})`); gr.addColorStop(.35, `rgba(244,185,66,${.55 * gl})`); gr.addColorStop(1, 'rgba(244,185,66,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
+    g.globalAlpha = d; g.fillStyle = '#faf2e9'; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+    if (d > 0) { // morning rays and a faint paper grid
+      g.save(); g.globalAlpha = .18 * d; g.translate(1700, -200);
+      for (let k = 0; k < 9; k++) { const a = 1.9 + k * .09 + Math.sin(t * .3 + k) * .015; const gr = g.createLinearGradient(0, 0, Math.cos(a) * 1800, Math.sin(a) * 1800); gr.addColorStop(0, 'rgba(244,185,66,.55)'); gr.addColorStop(1, 'rgba(244,185,66,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - .025) * 2000, Math.sin(a - .025) * 2000); g.lineTo(Math.cos(a + .025) * 2000, Math.sin(a + .025) * 2000); g.closePath(); g.fill(); }
+      g.restore();
+      g.globalAlpha = .05 * d; g.strokeStyle = '#0a1f33'; g.beginPath();
+      for (let x = 0; x < W; x += 64) { g.moveTo(x, 0); g.lineTo(x, H); } for (let y = 0; y < H; y += 64) { g.moveTo(0, y); g.lineTo(W, y); }
+      g.stroke(); g.globalAlpha = 1;
+    }
+  }
+}
+
+/* ——— particles drawing ——— */
+const P = [0, 0], Q = [0, 0];
+function particleAlpha(t) {
+  return clamp(t / .5) * (t < 34 ? 1 : t < 36.5 ? lerp(1, .32, (t - 34) / 2.5) : t < 50 ? .32 : t < 60 ? .26 : t < 65 ? .2 : .35) * (1 - smooth(77.5, 79.5, t));
+}
+function drawParticles(t) {
+  const A = particleAlpha(t);
+  if (A <= 0) return;
+  const light = t > 65.5;
+  g.globalCompositeOperation = light ? 'source-over' : 'lighter';
+  const sizeMul = t < 30 ? 1 : t < 36.5 ? lerp(1.15, .55, clamp((t - 31) / 5)) : .5;
+  const paths = [new Path2D(), new Path2D(), new Path2D()], dt = 1 / 40;
+  let collapse = 0;
+  if (t >= 28.6 && t < 30.05) collapse = smooth(28.6, 29.4, t);
+  for (let i = 0; i < N; i++) {
+    particlePos(i, t, P);
+    if (P[0] < -60 || P[0] > W + 60 || P[1] < -60 || P[1] > H + 60) continue;
+    let a = A * (.55 + .45 * Math.sin(t * 2 + R3[i] * 20));
+    if (t >= 30 && t < 36.5 && R5[i] >= .74) a *= 1 - clamp((t - 30) / 3);
+    if (light) { a *= .45; }
+    particlePos(i, t - dt, Q);
+    const vx = P[0] - Q[0], vy = P[1] - Q[1], sp = Math.hypot(vx, vy);
+    const s = SIZE[i] * sizeMul * (1 - collapse * .6);
+    if (sp > 4 && !light) { const p = paths[KIND[i]]; p.moveTo(Q[0], Q[1]); p.lineTo(P[0], P[1]); }
+    g.globalAlpha = clamp(a);
+    g.drawImage(SPRITES[light ? 0 : KIND[i]], P[0] - s / 2, P[1] - s / 2, s, s);
+  }
+  if (!light) { g.lineCap = 'round'; for (let k = 0; k < 3; k++) { g.globalAlpha = .32 * A; g.strokeStyle = STROKES[k] + '.9)'; g.lineWidth = 1.2; g.stroke(paths[k]); } }
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  // The vortex core before the hit.
+  if (t >= 26 && t < 30.2) {
+    const c = smooth(26, 29.5, t) * (t > 30 ? 1 - (t - 30) / .2 : 1), r = 20 + 160 * c;
+    g.globalCompositeOperation = 'lighter';
+    const gr = g.createRadialGradient(CX, CY, 0, CX, CY, r); gr.addColorStop(0, `rgba(255,250,235,${.9 * c})`); gr.addColorStop(.3, `rgba(255,206,120,${.5 * c})`); gr.addColorStop(1, 'rgba(255,206,120,0)');
+    g.fillStyle = gr; g.fillRect(CX - r, CY - r, r * 2, r * 2);
+    const sl = 60 + 520 * c;
+    for (const [dx, dy, w] of [[1, 0, 3], [0, 1, 2], [.7, .7, 1], [.7, -.7, 1]]) { const lg = g.createLinearGradient(CX - dx * sl, CY - dy * sl, CX + dx * sl, CY + dy * sl); lg.addColorStop(0, 'rgba(255,236,190,0)'); lg.addColorStop(.5, `rgba(255,250,240,${.95 * c})`); lg.addColorStop(1, 'rgba(255,236,190,0)'); g.strokeStyle = lg; g.lineWidth = w; g.beginPath(); g.moveTo(CX - dx * sl, CY - dy * sl); g.lineTo(CX + dx * sl, CY + dy * sl); g.stroke(); }
+    g.globalCompositeOperation = 'source-over';
+  }
+}
+
+/* ——— logo eclipse ——— */
+function drawEclipse(t) {
+  const v = env(t, 30, 35.4, .05, .9);
+  if (v <= 0) return;
+  const tau = t - 30, R = 360;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  // god rays
+  g.translate(CX, CY);
+  for (let k = 0; k < 28; k++) {
+    const a = k / 28 * Math.PI * 2 + tau * .05 + Math.sin(k * 3.1) * .1, len = 900 + 500 * Math.sin(k * 1.7 + tau), w = .03 + .025 * Math.sin(k * 5.3);
+    const gr = g.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+    gr.addColorStop(0, 'rgba(255,214,140,0)'); gr.addColorStop(.32, `rgba(255,214,140,${.16 * v})`); gr.addColorStop(1, 'rgba(255,214,140,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - w) * len, Math.sin(a - w) * len); g.lineTo(Math.cos(a + w) * len, Math.sin(a + w) * len); g.closePath(); g.fill();
+  }
+  // corona
+  const cg = g.createRadialGradient(0, 0, R * .8, 0, 0, R * 1.9); cg.addColorStop(0, 'rgba(255,214,140,0)'); cg.addColorStop(.18, `rgba(255,214,140,${.55 * v})`); cg.addColorStop(.4, `rgba(79,209,193,${.18 * v})`); cg.addColorStop(1, 'rgba(79,209,193,0)');
+  g.fillStyle = cg; g.beginPath(); g.arc(0, 0, R * 1.9, 0, Math.PI * 2); g.fill();
+  g.restore();
+  // dark disc and rim
+  g.save(); g.translate(CX, CY);
+  g.globalAlpha = v; g.fillStyle = '#02050a'; g.beginPath(); g.arc(0, 0, R - 2, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'lighter';
+  g.shadowColor = 'rgba(255,214,140,.95)'; g.shadowBlur = 40; g.strokeStyle = `rgba(255,236,190,${.95 * v})`; g.lineWidth = 3.5; g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.stroke();
+  g.shadowBlur = 0;
+  // travelling highlight along the rim
+  const ha = -Math.PI / 2 + tau * 1.2;
+  for (let k = 0; k < 30; k++) { g.globalAlpha = v * (1 - k / 30) * .9; g.strokeStyle = k < 4 ? '#ffffff' : '#ffd27a'; g.lineWidth = 6 - k * .15; g.beginPath(); g.arc(0, 0, R, ha - k * .025, ha - k * .025 + .03); g.stroke(); }
+  g.restore();
+  // shockwave
+  if (tau < 1.6) { const p = tau / 1.6, rr = R + easeOutExpo(p) * 1400; g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = (1 - p) * .8; g.strokeStyle = '#ffe3a6'; g.lineWidth = 3 + 30 * (1 - p); g.shadowColor = '#f4b942'; g.shadowBlur = 50; g.beginPath(); g.arc(CX, CY, rr, 0, Math.PI * 2); g.stroke(); g.restore(); }
+}
+
+/* ——— Q → D → I → A ——— */
+function drawChain(t) {
+  const v = env(t, 34.6, 38.1, .5, .6);
+  if (v <= 0) return;
+  const times = C.chain, y = 470;
+  g.save(); g.globalAlpha = v; g.lineCap = 'round';
+  // connecting line, drawn progressively
+  const p = clamp((t - times[0]) / (times[3] - times[0] + .3));
+  const x0 = CHAIN_X[0], x1 = CHAIN_X[3], xe = lerp(x0, x1, easeInOutCubic(p));
+  const lg = g.createLinearGradient(x0, 0, x1, 0); lg.addColorStop(0, '#f4b942'); lg.addColorStop(.5, '#4fd1c1'); lg.addColorStop(1, '#f4b942');
+  g.strokeStyle = 'rgba(247,244,237,.12)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+  g.shadowColor = '#f4b942'; g.shadowBlur = 24; g.strokeStyle = lg; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(xe, y); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(xe, y, 6, 0, Math.PI * 2); g.fill();
+  CHAIN_X.forEach((x, k) => {
+    const tau = t - times[k], lit = clamp(tau / .25), col = k % 2 ? '#4fd1c1' : '#f4b942';
+    g.shadowBlur = 0;
+    g.fillStyle = '#081320'; g.strokeStyle = lit > 0 ? col : 'rgba(247,244,237,.2)'; g.lineWidth = 2.5;
+    g.beginPath(); g.roundRect(x - 70, y - 70, 140, 140, 30); g.fill(); g.stroke();
+    if (lit <= 0) return;
+    g.shadowColor = col; g.shadowBlur = 40 * lit; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 6; g.globalAlpha = v * lit;
+    if (k === 0) { g.beginPath(); g.arc(x, y, 38, -Math.PI * .35, Math.PI * 1.45); g.stroke(); g.font = '700 46px "Noto Sans CJK SC"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', x + 1, y + 2); }
+    if (k === 1) { [[0, 0], [-26, -16], [26, -16], [-26, 16], [26, 16], [0, -32], [0, 32]].forEach(([dx, dy]) => { g.beginPath(); g.arc(x + dx, y + dy, 8, 0, Math.PI * 2); g.fill(); }); }
+    if (k === 2) {
+      g.beginPath(); g.moveTo(x, y - 40); g.lineTo(x + 38, y + 30); g.lineTo(x - 38, y + 30); g.closePath(); g.stroke();
+      g.lineWidth = 3; g.strokeStyle = '#fff'; g.beginPath(); g.moveTo(x - 66, y + 4); g.lineTo(x - 10, y); g.stroke();
+      ['#f4b942', '#4fd1c1', '#7fb6ff'].forEach((c, j) => { g.strokeStyle = c; g.beginPath(); g.moveTo(x + 12, y); g.lineTo(x + 66, y - 16 + j * 16); g.stroke(); });
+    }
+    if (k === 3) { g.lineWidth = 9; g.beginPath(); g.moveTo(x - 42, y); g.lineTo(x + 30, y); g.stroke(); g.beginPath(); g.moveTo(x + 44, y); g.lineTo(x + 12, y - 28); g.lineTo(x + 12, y + 28); g.closePath(); g.fill(); }
+    if (tau < .9) { g.globalAlpha = v * (1 - tau / .9); g.lineWidth = 3; g.shadowBlur = 30; g.beginPath(); g.arc(x, y, 70 + easeOutExpo(tau / .9) * 160, 0, Math.PI * 2); g.stroke(); }
+    g.globalAlpha = v;
+  });
+  g.restore();
+}
+
+/* ——— silicon orbit ——— */
+const HUES = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+function persona(x, y, s, hue, a) {
+  g.globalAlpha = a;
+  g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(x, y, 10 * s, 3 * s, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = hue; g.beginPath(); g.moveTo(x - 9 * s, y); g.bezierCurveTo(x - 9 * s, y - 14 * s, x - 6 * s, y - 22 * s, x, y - 22 * s); g.bezierCurveTo(x + 6 * s, y - 22 * s, x + 9 * s, y - 14 * s, x + 9 * s, y); g.closePath(); g.fill();
+  g.fillStyle = '#e8eef3'; g.beginPath(); g.arc(x, y - 30 * s, 8 * s, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#2b2f3a'; g.beginPath(); g.arc(x, y - 32 * s, 8 * s, Math.PI * 1.05, Math.PI * 1.95); g.fill();
+  g.fillStyle = '#0d1c2c'; g.beginPath(); g.arc(x - 2.8 * s, y - 29 * s, 1.2 * s, 0, Math.PI * 2); g.arc(x + 2.8 * s, y - 29 * s, 1.2 * s, 0, Math.PI * 2); g.fill();
+}
+function drawOrbit(t) {
+  const sh = C.shots[1], v = env(t, sh.t + .2, sh.end + .1, .8, .5);
+  if (v <= 0) return;
+  const cx = 470, cy = 720, rings = [[360, 100, 9, .16], [250, 70, 7, -.22], [150, 42, 5, .3]];
+  g.save();
+  // floor glow
+  const fg = g.createRadialGradient(cx, cy, 0, cx, cy, 420); fg.addColorStop(0, `rgba(79,209,193,${.22 * v})`); fg.addColorStop(1, 'rgba(79,209,193,0)'); g.fillStyle = fg; g.fillRect(cx - 420, cy - 300, 840, 600);
+  // beam on the core
+  g.globalCompositeOperation = 'lighter'; const bm = g.createLinearGradient(0, cy - 420, 0, cy); bm.addColorStop(0, 'rgba(255,226,160,0)'); bm.addColorStop(1, `rgba(255,226,160,${.22 * v})`); g.fillStyle = bm; g.beginPath(); g.moveTo(cx - 20, cy - 420); g.lineTo(cx + 20, cy - 420); g.lineTo(cx + 110, cy); g.lineTo(cx - 110, cy); g.closePath(); g.fill();
+  g.globalCompositeOperation = 'source-over';
+  const items = [];
+  rings.forEach(([rx, ry, n, sp], ri) => {
+    g.globalAlpha = v; g.strokeStyle = ['rgba(127,182,255,.45)', 'rgba(244,185,66,.5)', 'rgba(79,209,193,.55)'][ri]; g.lineWidth = 2; g.setLineDash(ri === 0 ? [8, 10] : []);
+    g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+    for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + t * sp + ri; items.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry, z: Math.sin(a), hue: HUES[(k + ri * 3) % HUES.length] }); }
+    const sa = t * sp * 1.6 + ri * 2; g.globalCompositeOperation = 'lighter'; g.drawImage(SPRITES[2], cx + Math.cos(sa) * rx - 18, cy + Math.sin(sa) * ry - 18, 36, 36); g.globalCompositeOperation = 'source-over';
+  });
+  items.sort((a, b) => a.z - b.z);
+  const core = () => { g.globalAlpha = v; g.shadowColor = '#f4b942'; g.shadowBlur = 50; g.fillStyle = 'rgba(30,26,14,.95)'; g.strokeStyle = '#ffe3a6'; g.lineWidth = 2; g.beginPath(); g.roundRect(cx - 50, cy - 130, 100, 122, 14); g.fill(); g.stroke(); g.shadowBlur = 0; g.fillStyle = '#ffe3a6'; g.font = '700 30px "Noto Serif CJK SC"'; g.textAlign = 'center'; g.fillText('问卷', cx, cy - 46); g.fillStyle = 'rgba(255,227,166,.5)'; for (let l = 0; l < 4; l++) g.fillRect(cx - 30, cy - 112 + l * 9, 60, 2); };
+  let drawn = false;
+  for (const it of items) { if (!drawn && it.z > 0) { core(); drawn = true; } persona(it.x, it.y, 1.35 + it.z * .25, it.hue, v * (.75 + .25 * (it.z + 1) / 2)); }
+  if (!drawn) core();
+  g.restore();
+}
+
+/* ——— gate bursts ——— */
+function drawGateFx(t) {
+  C.gates.forEach((gt, i) => {
+    const tau = t - gt.t - .2; if (tau < 0 || tau > 1.4) return;
+    const x = GATE_X(i), y = 475;
+    g.save(); g.globalCompositeOperation = 'lighter';
+    const p = tau / 1.1; if (p < 1) { g.globalAlpha = (1 - p) * .9; g.strokeStyle = '#ffe3a6'; g.shadowColor = '#f4b942'; g.shadowBlur = 40; g.lineWidth = 2 + 16 * (1 - p); g.beginPath(); g.arc(x, y, 80 + easeOutExpo(p) * 520, 0, Math.PI * 2); g.stroke(); }
+    g.shadowBlur = 0;
+    const r = mulberry32(700 + i);
+    for (let k = 0; k < 90; k++) { const a = r() * Math.PI * 2, sp = 260 + r() * 900, life = .5 + r() * .8; if (tau > life) continue; const d = sp * tau * (1 - tau / (2 * life)), s = 4 + r() * 10; g.globalAlpha = 1 - tau / life; g.drawImage(SPRITES[r() < .8 ? 0 : 2], x + Math.cos(a) * d - s / 2, y + Math.sin(a) * d * .8 - s / 2 + tau * tau * 120, s, s); }
+    g.restore();
+  });
+}
+
+/* ——— bloom ——— */
+function bloom(t) {
+  if (t > 66) return;
+  sg.globalCompositeOperation = 'source-over'; sg.filter = 'blur(5px)'; sg.clearRect(0, 0, 480, 270); sg.drawImage(bg, 0, 0, 480, 270); sg.filter = 'none';
+  g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = t < 30 ? .85 : .6; g.drawImage(small, 0, 0, W, H); g.restore();
+}
+
+/* ——— DOM per frame ——— */
+function updateDom(t) {
+  const cue = C;
+  // history
+  const histOn = t < 15.2; show(D.hist, histOn);
+  if (histOn) {
+    lineFx(D.opening, t, cue.opening.t, 2.1, { stagger: .12, dur: .9 });
+    cue.history.forEach((h, k) => {
+      const next = k < 3 ? cue.history[k + 1].t : cue.title.t;
+      lineFx(D.histLines[k], t, h.t + .55, next - .45, { stagger: .06 });
+      lineFx(D.histEras[k], t, h.t + .9, next - .4, { stagger: .02, dy: 12, blur: 8 });
+      const yv = env(t, h.t + .3, next - .1, .8, .4); D.years[k].style.visibility = yv > 0 ? 'visible' : 'hidden'; D.years[k].style.opacity = (yv * .9).toFixed(3); D.years[k].style.transform = `translateX(${(-(t - h.t) * 18).toFixed(1)}px)`;
+    });
+    lineFx(D.titleSource, t, cue.title.t + .9, 14.7, { stagger: .03, dy: 14, blur: 8 });
+  }
+  // today
+  const todayOn = t > 15 && t < 29; show(D.today, todayOn);
+  if (todayOn) {
+    cue.today.slice(0, 4).forEach((h, k) => lineFx(D.todayLines[k], t, h.t + .35, h.t + 2.15, { stagger: .04 }));
+    lineFx(D.answer, t, cue.today[4].t + .4, 28.1, { stagger: .14, dur: 1.1, blur: 18 });
+  }
+  // logo
+  const logoOn = t >= 30 && t < 35.6; show(D.logo, logoOn);
+  if (logoOn) {
+    const m = fadeFx(D.logoMark, t, 30.15, 35.1, { fin: .7, dy: 0, blur: 16, extra: `scale(${(1.25 - .25 * easeOutExpo(clamp((t - 30.15) / 1.2))).toFixed(3)})` });
+    lineFx(D.logoWord, t, 30.05, 35.1, { stagger: .12, dur: 1, dy: 60, blur: 24 });
+    D.logoWord.style.backgroundPosition = `${((t - 30) * 18) % 200}% 0`;
+    lineFx(D.logoLatin, t, 30.6, 35.1, { stagger: .07, dy: 10 });
+    lineFx(D.tagline, t, cue.tagline, 35.1, { stagger: .05 });
+    void m;
+  }
+  // chain
+  const chainOn = t > 34.6 && t < 38.2; show(D.chain, chainOn);
+  if (chainOn) { lineFx(D.chainTitle, t, 34.8, 37.6, { stagger: .03 }); D.chainLabels.forEach((n, k) => fadeFx(n, t, cue.chain[k] + .05, 37.6, { fin: .4, fout: .4, dy: 16 })); }
+  // product shots
+  D.shots.forEach((s, k) => {
+    const a = s.cue.t, b = s.cue.end, on = t > a - .1 && t < b + .3; show(s.layer, on);
+    if (!on) return;
+    const pin = easeOutExpo(clamp((t - a) / 1.5)), pout = easeInCubic(clamp((t - (b - .35)) / .6)), drift = (t - a) / (b - a);
+    const side = k === 0 ? 1 : 1;
+    const x = 650 + (1 - pin) * 700 * side - pout * 900, z = -1900 * (1 - pin) - pout * 1200, ry = -40 * (1 - pin) - 10 + drift * 5 - pout * 30, rx = 8 * (1 - pin) + 4;
+    s.win.style.left = '0px'; s.win.style.top = k === 0 ? '170px' : '190px';
+    s.win.style.transform = `translate3d(${x.toFixed(1)}px,0,${z.toFixed(1)}px) rotateY(${ry.toFixed(2)}deg) rotateX(${rx.toFixed(2)}deg) scale(${(1 + drift * .03).toFixed(4)})`;
+    s.win.style.opacity = (clamp((t - a) / .4) * (1 - pout)).toFixed(3);
+    s.sweep.style.backgroundPosition = `${(120 - ((t - a) * 55) % 260).toFixed(1)}% 0`;
+    show(s.copy, true);
+    const kick = s.copy.firstElementChild, tag = s.copy.querySelectorAll('.tag,.chip');
+    fadeFx(kick, t, a + .25, b - .25, { fin: .5, fout: .35 });
+    s.lines.forEach((ln, j) => lineFx(ln, t, a + .45 + j * .35, b - .3, { stagger: .04 }));
+    tag.forEach((n, j) => fadeFx(n, t, a + 1.3 + j * .3, b - .3, { fin: .5, fout: .35, dy: 10 }));
+  });
+  // cuts
+  let cutOn = false;
+  D.cuts.forEach((c, k) => {
+    const a = c.cue.t, b = k < D.cuts.length - 1 ? D.cuts[k + 1].cue.t : 50.05, on = t >= a && t < b; show(c.layer, on);
+    if (!on) return; cutOn = true;
+    const p = (t - a) / (b - a), s = 1.12 - .12 * easeOutCubic(p);
+    c.win.style.transform = `scale(${s.toFixed(4)}) rotate(${((k % 2 ? 1 : -1) * (1 - easeOutCubic(p)) * 1.5).toFixed(2)}deg)`;
+    c.label.style.transform = `translateX(${((1 - easeOutCubic(clamp(p * 2))) * -60).toFixed(1)}px)`;
+    c.label.style.opacity = easeOutCubic(clamp(p * 3)).toFixed(3);
+  });
+  show(D.cutTag, cutOn);
+  // gates
+  const gatesOn = t > 49.9 && t < 60.3; show(D.gates, gatesOn);
+  if (gatesOn) {
+    lineFx(D.gatesKicker, t, 50.0, 59.8, { stagger: .04 });
+    cue.gates.forEach((gt, i) => {
+      const tau = t - gt.t, s = D.seals[i], nm = D.sealNames[i];
+      if (tau < 0 || t > 60.2) { show(s, false); show(nm, false); return; }
+      show(s, true); show(nm, true);
+      const p = clamp(tau / .2), land = easeInCubic(p), bounce = tau > .2 ? Math.exp(-(tau - .2) * 10) * Math.sin((tau - .2) * 38) * .06 : 0;
+      const sc = (2.8 - 1.8 * land) * (1 + bounce), rot = -16 * (1 - land) - 3 + (i % 2 ? 2 : -1) * land;
+      s.style.transform = `scale(${sc.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
+      s.style.opacity = Math.min(1, p * 3).toFixed(3);
+      s.style.filter = p < 1 ? `blur(${((1 - p) * 10).toFixed(1)}px)` : 'none';
+      const out = clamp((t - 59.7) / .5); s.style.opacity = (Math.min(1, p * 3) * (1 - out)).toFixed(3);
+      nm.style.opacity = (clamp((tau - .25) / .4) * (1 - out)).toFixed(3);
+    });
+    lineFx(D.gatesCaption, t, cue.gatesCaption + .1, 59.75, { stagger: .04 });
+  }
+  // integrity
+  const vowOn = t > 59.9 && t < 65.2; show(D.vows, vowOn);
+  if (vowOn) D.vowLines.forEach((n, i) => {
+    const a = cue.integrity[i].t; lineFx(n, t, a, 64.6, { stagger: .05, dur: .5, dy: 0, blur: 20 });
+    n._bar.style.width = (easeOutCubic(clamp((t - a - .3) / .7)) * n.offsetWidth * .98).toFixed(1) + 'px';
+    n._bar.style.opacity = (1 - clamp((t - 64.6) / .45)).toFixed(3);
+  });
+  // dawn
+  const dawnOn = t > 65.4 && t < 73.2; show(D.dawn, dawnOn);
+  if (dawnOn) {
+    const mv = env(t, 66.9, 72.8, 1.6, .6), e = easeOutCubic(mv);
+    D.mascot.style.opacity = e.toFixed(3);
+    D.mascot.style.transform = `translateY(${((1 - e) * 60 + Math.sin(t * .9) * 8).toFixed(1)}px) scale(${(.94 + .06 * e + (t - 66.9) * .004).toFixed(4)})`;
+    lineFx(D.dawn1, t, cue.finale[0].t, 72.6, { stagger: .1, dur: .9 });
+    lineFx(D.dawn2, t, cue.finale[1].t, 72.6, { stagger: .05 });
+  }
+  // end card
+  const endOn = t > cue.endCard; show(D.end, endOn);
+  if (endOn) {
+    const a = cue.endCard;
+    fadeFx(D.endMark, t, a + .2, 99, { fin: .8, dy: 20 });
+    fadeFx(D.endWord, t, a + .45, 99, { fin: .9, dy: 30, blur: 14 });
+    fadeFx(D.endLatin, t, a + .75, 99, { fin: .8, dy: 10 });
+    fadeFx(D.endTag, t, a + 1.1, 99, { fin: .9, dy: 16 });
+    fadeFx(D.endMotto, t, a + 1.5, 99, { fin: .9, dy: 10 });
+    fadeFx(D.endDisclaimer, t, a + 1.9, 99, { fin: .8, dy: 0, blur: 4 });
+    fadeFx(D.endNotes, t, a + 2.2, 99, { fin: .8, dy: 0, blur: 4 });
+  }
+}
+
+/* ——— camera ——— */
+function shake(t) {
+  const hits = [[C.logo, 26, 3.2]]; C.history.forEach(h => hits.push([h.t, 4, 6])); hits.push([C.title.t, 9, 5]);
+  C.gates.forEach((gt, i) => hits.push([gt.t + .2, i < 4 ? 15 : 10, 7])); C.integrity.forEach(v => hits.push([v.t, 7, 7])); C.cuts.forEach(c => hits.push([c.t, 5, 9]));
+  let x = 0, y = 0, r = 0;
+  for (const [h, A, k] of hits) { const tau = t - h; if (tau < 0 || tau > 1.6) continue; const d = A * Math.exp(-tau * k); x += d * Math.sin(tau * 63 + h); y += d * Math.cos(tau * 57 + h * 2); r += d * .02 * Math.sin(tau * 41); }
+  let s = 1;
+  if (t < 15) s = 1 + (t % 2.5) * .006; else if (t < 30) s = 1 + (t - 15) * .003; else if (t >= 65) s = 1 + (t - 65) * .002;
+  return `translate(${x.toFixed(2)}px,${y.toFixed(2)}px) rotate(${r.toFixed(3)}deg) scale(${s.toFixed(4)})`;
+}
+
+/* ——— post: flash, flare, letterbox, vignette, grain, fades ——— */
+function drawPost(t, frameIndex) {
+  pg.clearRect(0, 0, W, H);
+  // flashes
+  const flashes = [[C.logo, .95, .22], [C.title.t, .14, .35]]; C.history.forEach(h => flashes.push([h.t, .07, .3])); C.gates.forEach(gt => flashes.push([gt.t + .2, .16, .18])); C.integrity.forEach(v => flashes.push([v.t, .1, .2])); C.cuts.forEach(c => flashes.push([c.t, .14, .12])); C.chain.forEach(c => flashes.push([c, .05, .15]));
+  let f = 0; for (const [h, A, d] of flashes) { const tau = t - h; if (tau >= 0 && tau < d * 4) f += A * Math.exp(-tau / d); }
+  if (f > 0) { pg.fillStyle = `rgba(255,246,226,${clamp(f).toFixed(3)})`; pg.fillRect(0, 0, W, H); }
+  // anamorphic flare at the logo
+  const fl = t >= 29.9 ? (t < 30.4 ? 1 : env(t, 30, 35.2, .01, .8) * .32 * (1 + .15 * Math.sin(t * 9))) : 0;
+  if (fl > 0) {
+    pg.save(); pg.globalCompositeOperation = 'lighter';
+    const lg = pg.createLinearGradient(0, 0, W, 0); lg.addColorStop(0, 'rgba(79,209,193,0)'); lg.addColorStop(.3, `rgba(79,209,193,${.35 * fl})`); lg.addColorStop(.5, `rgba(255,248,232,${.95 * fl})`); lg.addColorStop(.7, `rgba(79,209,193,${.35 * fl})`); lg.addColorStop(1, 'rgba(79,209,193,0)');
+    pg.fillStyle = lg; pg.fillRect(0, CY - 2, W, 4); pg.globalAlpha = .35; pg.fillRect(0, CY - 16, W, 32); pg.globalAlpha = .12; pg.fillRect(0, CY - 60, W, 120);
+    pg.restore();
+  }
+  // letterbox opens on the logo hit
+  const lb = t < 30 ? 138 : 138 * (1 - easeOutExpo(clamp((t - 30) / .9)));
+  if (lb > .5) { pg.fillStyle = '#000'; pg.fillRect(0, 0, W, lb); pg.fillRect(0, H - lb, W, lb); }
+  // vignette
+  const light = smooth(65.5, 67, t) * (1 - smooth(77.5, 78, t));
+  const vg = pg.createRadialGradient(CX, H / 2, H * .35, CX, H / 2, H * 1.05); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${(.62 - .5 * light).toFixed(3)})`); pg.fillStyle = vg; pg.fillRect(0, 0, W, H);
+  // grain
+  pg.save(); pg.globalAlpha = .045 - .02 * light; const tile = GRAIN[frameIndex % 4], ox = (frameIndex * 37) % 256, oy = (frameIndex * 91) % 256; for (let x = -ox; x < W; x += 256) for (let y = -oy; y < H; y += 256) pg.drawImage(tile, x, y); pg.restore();
+  // fade in / out
+  const black = Math.max(1 - clamp(t / .8), smooth(C.fadeOut, C.duration - .2, t));
+  if (black > 0) { pg.fillStyle = `rgba(0,0,0,${black.toFixed(3)})`; pg.fillRect(0, 0, W, H); }
+}
+
+/* ——— entry points ——— */
+window.renderFrame = function (t) {
+  const frameIndex = Math.round(t * C.fps);
+  drawBackground(t);
+  drawParticles(t);
+  drawEclipse(t);
+  drawChain(t);
+  drawOrbit(t);
+  drawGateFx(t);
+  bloom(t);
+  cam.style.transform = shake(t);
+  updateDom(t);
+  drawPost(t, frameIndex);
+};
+window.ready = (async () => {
+  C = await (await fetch('cues.json')).json();
+  await Promise.all([document.fonts.load('700 100px "Noto Serif CJK SC"', '卜徵灋證无征不信问卷证见'), document.fonts.load('700 100px "Noto Sans CJK SC"', '？问题'), document.fonts.load('400 100px "Noto Sans CJK SC"', 'EVI-X')]);
+  KF = [
+    { t: 0, s: null },
+    { t: C.history[0].t, d: 1.5, ease: easeOutExpo, swirl: .7, spread: .25 },
+    { t: C.history[1].t, d: 1.35 }, { t: C.history[2].t, d: 1.35 }, { t: C.history[3].t, d: 1.35 },
+    { t: C.title.t, d: 1.4, swirl: .3 },
+    { t: C.today[0].t, d: 1.2, swirl: .5, spread: .4 },
+    { t: C.today[1].t, d: 1.0, spread: .3 },
+    { t: C.today[2].t, d: 1.0, swirl: .2, spread: .3 },
+    { t: C.today[3].t, d: 1.0, spread: .3 },
+  ];
+  buildShapes();
+  const order = ['spark', 'g0', 'g1', 'g2', 'g3', 'title', 'chaos', 'question', 'floor', 'net'];
+  KF.forEach((k, i) => { k.s = SHAPES[order[i]]; });
+  buildDom();
+  await Promise.all([...C.shots, ...C.cuts].map(s => loadImg(s.id, ASSET + `app-${s.id}-1600.webp`)));
+  await Promise.all([...document.images].map(i => i.complete ? i.decode().catch(() => {}) : new Promise(r => { i.onload = () => i.decode().then(r, r); i.onerror = r; })));
+  window.renderFrame(0);
+  return true;
+})();
+</script>
+</body>
+</html>
