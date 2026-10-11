@@ -9,7 +9,7 @@ export type Memory = 'carry' | 'independent';
 export type RunSettings = { engine: Engine; memory: Memory; shuffleOptions: boolean; scenarios: Scenario[]; models: string[] };
 export type AnswerValue = string | string[] | number | null;
 export type SiliconAnswer = { questionId: string; value: AnswerValue; shown: boolean; refused: boolean; unclear: string };
-export type SiliconResponse = { personaId: string; scenarioId: string; model: string; status: 'ok' | 'failed'; answers: SiliconAnswer[]; error?: string };
+export type SiliconResponse = { personaId: string; scenarioId: string; model: string; status: 'ok' | 'failed' | 'outcome_unknown'; answers: SiliconAnswer[]; error?: string };
 export type SiliconRun = {
   schema: 'silicon-run/v1'; classification: 'simulated'; id: string; createdAt: string; engine: Engine;
   questionnaire: { title: string; fingerprint: string; questions: number };

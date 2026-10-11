@@ -43,7 +43,9 @@
     "test:unit": "node scripts/run-unit-tests.mjs"
   },
   "dependencies": {
+    "@dagrejs/dagre": "3.1.1",
     "@evix/shared": "*",
+    "@xyflow/react": "12.12.0",
     "docx": "^9.7.2",
     "drizzle-orm": "0.45.2",
     "echarts": "6.1.0",

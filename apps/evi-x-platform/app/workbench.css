@@ -83,7 +83,7 @@
 }
 .workbench *, .workbench *::before, .workbench *::after { box-sizing: border-box; }
 .workbench .wb-panel[hidden] { display: none !important; }
-.workbench :focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 3px; box-shadow: 0 0 0 5px var(--wb-accent-soft); }
+.workbench :focus-visible:not(.wb-canvas *) { outline: 2px solid var(--wb-accent); outline-offset: 3px; box-shadow: 0 0 0 5px var(--wb-accent-soft); }
 .workbench ::selection { background: var(--evx-gold); color: var(--evx-ink); }
 .workbench :is(.wb-page-title, main, .hosted-main):focus { outline: none; box-shadow: none; }
 
@@ -175,6 +175,22 @@
 .wb-footer > span:first-child::before { content: ""; display: inline-block; width: 5px; height: 5px; margin: 0 10px 2px 0; transform: rotate(45deg); background: var(--evx-gold); }
 .wb-footer p { margin: 0; }
 .wb-footer a { color: var(--wb-accent); text-decoration: underline; text-underline-offset: 3px; }
+/* ——— Research canvas: the panel fills the viewport beside the sidebar. Generic form, focus and
+   press rules above skip `.wb-canvas`, which carries its own motion levels. ——— */
+.workbench[data-view="canvas"] { height: 100vh; height: 100dvh; overflow: hidden; }
+.workbench[data-view="canvas"] .workbench-main { display: flex; flex-direction: column; min-height: 0; background-image: none; }
+.workbench[data-view="canvas"] .workbench-content { display: flex; flex: 1; min-height: 0; padding: 0; }
+.workbench[data-view="canvas"] .workbench-content > main { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.workbench[data-view="canvas"] .wb-panel:not([hidden]) { flex: 1; min-width: 0; min-height: 0; animation-name: wb-canvas-in; animation-duration: 0.32s; }
+.wb-canvas-loading { display: grid; place-items: center; height: 100%; margin: 0; color: var(--wb-muted); font-size: 14px; }
+.wb-canvas-return { position: fixed; z-index: 60; right: 26px; bottom: 22px; display: flex; align-items: center; gap: 2px; padding: 4px; border: 1px solid var(--wb-line-strong); border-radius: 999px; background: var(--wb-solid); box-shadow: var(--wb-shadow-lift); animation: wb-pop 0.32s var(--wb-ease) both; }
+.wb-canvas-return button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--wb-text); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background-color var(--wb-fast); }
+.wb-canvas-return button:hover { background: var(--wb-accent-soft); }
+.wb-canvas-return button svg { width: 17px; height: 17px; color: var(--wb-accent); }
+.wb-canvas-return small { max-width: 180px; overflow: hidden; color: var(--wb-muted); font-size: 12.5px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.wb-canvas-return .wb-canvas-return-close { width: 36px; padding: 0; justify-content: center; }
+.wb-canvas-return .wb-canvas-return-close svg { color: var(--wb-muted); width: 15px; height: 15px; }
+@keyframes wb-canvas-in { from { opacity: 0; transform: scale(0.992); } to { opacity: 1; transform: none; } }
 @keyframes wb-panel-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes wb-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes wb-pop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
@@ -246,9 +262,9 @@
 
 /* Form fields deliberately exclude native choice inputs and keep their module styling. */
 .workbench fieldset { --choice-text: var(--wb-text); --choice-muted: var(--wb-muted); --choice-border: var(--wb-line); --choice-surface: var(--wb-solid); --choice-selected: var(--wb-accent-soft); --choice-accent: var(--wb-accent); color-scheme: inherit; }
-.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea) { min-width: 0; border-color: var(--wb-line); color: var(--wb-text); background: var(--wb-solid); }
+.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):not(.wb-canvas *) { min-width: 0; border-color: var(--wb-line); color: var(--wb-text); background: var(--wb-solid); }
 .workbench :is(input, textarea)::placeholder { color: var(--wb-muted); opacity: 1; }
-.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):focus-visible { border-color: var(--wb-accent); outline: 2px solid var(--wb-accent); outline-offset: 2px; box-shadow: none; }
+.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):focus-visible:not(.wb-canvas *) { border-color: var(--wb-accent); outline: 2px solid var(--wb-accent); outline-offset: 2px; box-shadow: none; }
 .workbench select option { color: var(--wb-text); background: var(--wb-solid); }
 .workbench :is(.diagnose-form, .diagnosis-result, .rule-form, .rule-result) { min-height: 0; padding: 24px; border: 1px solid var(--wb-line); border-radius: var(--wb-radius-lg); color: var(--wb-text); background: var(--wb-surface); box-shadow: var(--wb-shadow); }
 .workbench .diagnose-grid { gap: 18px; align-items: stretch; }
@@ -317,9 +333,9 @@
 .workbench .step-code { border-radius: 50%; border-color: var(--wb-gold-line); color: var(--wb-gold-text); background: var(--wb-gold-soft); font-family: var(--wb-serif); }
 .workbench .qdia-cards article, .workbench .case-card, .wb-lift { transition: transform var(--wb-med) var(--wb-ease), box-shadow var(--wb-med) var(--wb-ease), border-color var(--wb-med); }
 .workbench :is(.primary-button, .gold-button, .ghost-button, .secondary-button) { transition: transform var(--wb-fast) ease, box-shadow var(--wb-med), filter var(--wb-fast), background var(--wb-fast); }
-.workbench :is(.primary-button, .gold-button):active, .wb-top-cta:active, .workbench button:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
-.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea) { border-radius: var(--wb-radius); transition: border-color var(--wb-fast), box-shadow var(--wb-med); }
-.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):focus-visible { outline: none; border-color: var(--wb-accent); box-shadow: 0 0 0 4px var(--wb-accent-soft); }
+.workbench :is(.primary-button, .gold-button):active, .wb-top-cta:active, .workbench button:active:not(:disabled):not(.wb-canvas *) { transform: translateY(1px) scale(0.99); }
+.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):not(.wb-canvas *) { border-radius: var(--wb-radius); transition: border-color var(--wb-fast), box-shadow var(--wb-med); }
+.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):focus-visible:not(.wb-canvas *) { outline: none; border-color: var(--wb-accent); box-shadow: 0 0 0 4px var(--wb-accent-soft); }
 .workbench :is(.section, .closing-cta, .diagnose-form, .diagnosis-result, .rule-form, .rule-result, .case-scope-note, .rule-scope-banner, .workspace-shell, .hero) { border-color: var(--wb-line); }
 .workbench table { font-variant-numeric: tabular-nums; }
 
@@ -354,6 +370,7 @@
 }
 @media (max-width: 899px) {
   .workbench { grid-template-columns: minmax(0, 1fr); }
+  .workbench[data-view="canvas"] { grid-template-rows: auto minmax(0, 1fr); }
   .workbench-sidebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; height: auto; padding: 12px 20px; border-right: 0; border-bottom: 1px solid rgba(244, 185, 66, 0.2); }
   .workbench-sidebar::before { display: none; }
   .wb-brand { padding: 0; border: 0; }

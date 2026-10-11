@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { DatasetValue } from "@/lib/canvas/execute";
 import { analyzeReliability, categoryCounts, DEMO_SURVEY_CSV, finiteNumber, parseMissingCodes, parseSurveyCsv, profileSurvey, SURVEY_LIMITS, type Delimiter, type ReliabilityResult, type SurveyTable } from "@/lib/survey-analysis";
 import styles from "./SurveyLab.module.css";
 import AnalysisRecipeBoard from "./AnalysisRecipeBoard";
@@ -35,7 +36,7 @@ function saveText(content: string, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null}={}) {
+export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetChange}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetChange?:(value:DatasetValue|null)=>void}={}) {
   const [mapping,setMapping]=useState<Mapping|null>(null);
   const [linkState,setLinkState]=useState<{signature:string;link:ResearchLink|null}>({signature:'',link:null});
   const [datasetSession,setDatasetSession] = useState(0);
@@ -70,6 +71,9 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const readEpoch = useRef(0);
   const missing = useMemo(() => { try { return { codes: parseMissingCodes(missingText), error: "" }; } catch (e) { return { codes: [], error: (e as Error).message }; } }, [missingText]);
   const profile = useMemo(() => dataset && !missing.error ? profileSurvey(dataset.table, missing.codes) : null, [dataset, missing]);
+  // The research canvas reads the same in-memory table; it never stores the rows.
+  const shared = useMemo<DatasetValue|null>(() => dataset ? { name: dataset.name, sourceHash: dataset.hash, kind: dataset.kind, table: dataset.table, missingCodes: missing.error ? [] : missing.codes, lineage: missing.error ? ['「数据分析」中的缺失代码设置有误，画布未继承'] : [] } : null, [dataset, missing]);
+  useLayoutEffect(() => { onDatasetChange?.(shared); }, [shared, onDatasetChange]);
   const mappingStale=!!mapping?.sourceSignature&&(!designSnapshot||mapping.sourceSignature!==snapshotSignature(designSnapshot));
   const mappingKey=canonical({dataset:dataset?.identity||null,mapping:mapping&&dataset?mappingSignature(mapping,dataset.identity):mapping,confirmed:!!mapping&&!!dataset&&mappingCurrent(mapping,dataset.identity,mappingStale),stale:mappingStale});
   const approvalKey=canonical({mappingKey,missingText,policy:routingPolicy});

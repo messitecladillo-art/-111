@@ -130,7 +130,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       if (!run) return 'idle';
       const mine = run.responses.filter(r => r.personaId === p.id);
       if (!mine.length) return 'idle';
-      if (mine.some(r => r.status === 'failed')) return 'failed';
+      if (mine.some(r => r.status !== 'ok')) return 'failed';
       return mine.some(r => r.answers.some(a => a.unclear.trim())) ? 'flagged' : 'done';
     };
     const activity = (p: Persona): FigureActivity => {
@@ -143,11 +143,12 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       const cats = q.type === 'likert' ? Array.from({ length: Math.max(0, (q.max ?? 5) - (q.min ?? 1) + 1) }, (_, i) => String((q.min ?? 1) + i)) : q.choices.map(c => c.code);
       const label = (code: string) => q.type === 'likert' ? `${code} 分` : answerLabel(q, code);
       const color = new Map(cats.map((c, i) => [c, stageCategoryColor(q.type === 'likert', i, cats.length)]));
-      const special = { hidden: '未显示此题', refused: '跳过 / 拒答', failed: '调用失败', absent: '未参加本轮' };
+      const special = { hidden: '未显示此题', refused: '跳过 / 拒答', failed: '调用失败', unknown: '调用结果未知', absent: '未参加本轮' };
       const keyOf = (p: Persona): string => {
         const resp = responseOf(p.id);
         if (!resp) return 'absent';
         if (resp.status === 'failed') return 'failed';
+        if (resp.status === 'outcome_unknown') return 'unknown';
         const a = resp.answers.find(x => x.questionId === q.id);
         if (!a || !a.shown) return 'hidden';
         if (a.refused || a.value === null) return 'refused';
@@ -343,7 +344,7 @@ function PersonaInspector({ persona, attributes, run, runDesign, response, share
       <button type="button" className={styles.linkButton} onClick={onReset}>恢复默认外观与背景</button>
     </div>
     {run && runDesign && <div ref={answerRef} className={styles.inspectorBody} hidden={tab !== 'answers'} tabIndex={0} role="region" aria-label={`${persona.code} 的作答记录`}>
-      {!response ? <p className={styles.hint}>这位受访者没有参加当前情境 / 模型的运行。</p> : response.status === 'failed' ? <p className={styles.errorNote}>本次调用失败：{response.error || '未返回原因'}</p> :
+      {!response ? <p className={styles.hint}>这位受访者没有参加当前情境 / 模型的运行。</p> : response.status === 'failed' ? <p className={styles.errorNote}>本次调用失败：{response.error || '未返回原因'}</p> : response.status === 'outcome_unknown' ? <p className={styles.errorNote}>调用结果未知（{response.error || '未返回原因'}）：供应商可能已处理并计费，未自动重发。</p> :
         <ol className={styles.transcript}>{runDesign.questions.map(q => {
           const a = response.answers.find(x => x.questionId === q.id);
           const text = renderQuestionText(runDesign, q, scenario, answers);
