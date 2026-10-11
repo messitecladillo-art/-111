@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
 import BrandMark from "@/components/brand/BrandMark";
 
 /** Shared chrome for every signed-in surface: one theme store, one navigation model, one sidebar. */
-export type Section = "overview" | "cases" | "diagnose" | "workspace" | "lifecycle" | "rules" | "editor" | "analysis" | "design" | "silicon" | "defense" | "services";
+export type Section = "overview" | "cases" | "diagnose" | "workspace" | "lifecycle" | "rules" | "editor" | "analysis" | "design" | "silicon" | "defense" | "canvas" | "services";
 export type Theme = "light" | "dark";
 
 export const NAV_ITEMS: Array<{ id: Section; title: string; description: string; icon: string; group: string }> = [
@@ -16,6 +16,7 @@ export const NAV_ITEMS: Array<{ id: Section; title: string; description: string;
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },
   { id: "silicon", title: "硅基样本", description: "让 AI 扮演设定人群预答问卷，在真人作答前发现问题。", icon: "persona", group: "研究与证据" },
   { id: "analysis", title: "数据分析", description: "检查数据质量、变量分布与量表内部一致性。", icon: "grid", group: "研究与证据" },
+  { id: "canvas", title: "研究画布", description: "把问卷、数据、统计与图表连成一条可运行、可复核的研究流程。", icon: "nodes", group: "研究与证据" },
   { id: "editor", title: "报告与 PPT", description: "在正大杯工作台中写报告、编排幻灯片，边编辑边预览。", icon: "book", group: "写作与答辩" },
   { id: "defense", title: "路演与答辩", description: "按主题演练追问，定位证据，自由编排讲述时间。", icon: "route", group: "写作与答辩" },
   { id: "workspace", title: "项目控制门户", description: "保存协作登记；真实进度以本地证据控制面为准。", icon: "folder", group: "项目管理" },
@@ -79,6 +80,7 @@ export function NavIcon({ kind }: { kind: string }) {
       kind === "sun" ? <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></> :
       kind === "plus" ? <path d="M12 5v14M5 12h14"/> :
       kind === "arrow" ? <path d="M5 12h14m-5-5 5 5-5 5"/> :
+      kind === "nodes" ? <><rect x="2.5" y="4" width="7" height="5" rx="1.5"/><rect x="14.5" y="4" width="7" height="5" rx="1.5"/><rect x="8.5" y="15" width="7" height="5" rx="1.5"/><path d="M9.5 6.5h5M6 9v4a2 2 0 0 0 2 2h.5M18 9v4a2 2 0 0 1-2 2h-.5"/></> :
       kind === "persona" ? <><circle cx="9" cy="7" r="3"/><path d="M3.5 20c.4-4 2.6-6.5 5.5-6.5s5.1 2.5 5.5 6.5Z"/><path d="m18 3 .9 2.1L21 6l-2.1.9L18 9l-.9-2.1L15 6l2.1-.9Z"/><path d="M16.5 13.5c2.3.4 3.7 2.7 4 6.5"/></> :
       <><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6L12 3Z"/></>}
   </svg>;
