@@ -641,7 +641,9 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                     answers[question["id"]] = silicon.make_answer(question, shown, value, unclear)
                 response["answers"] = [answers[q["id"]] for q in design["questions"]]
         except ProviderFailure as error:
-            response.update(status="failed", answers=[], error=error.code)
+            # A timeout or 5xx may still have been processed (and billed) by the supplier: keep that
+            # uncertainty instead of reporting a plain failure.
+            response.update(status="outcome_unknown" if error.unknown else "failed", answers=[], error=error.code)
         except ApiError:
             response.update(status="failed", answers=[], error="invalid_response")
         except Exception:
@@ -679,8 +681,13 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                     row = session.execute(select(SiliconRun).where(SiliconRun.id == run_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
                     if row is not None and row.status == "running":
                         failed = sum(r["status"] == "failed" for r in row.responses)
-                        row.status = "failed" if row.responses and failed == len(row.responses) else "ready"
-                        row.error_code = next((r["error"] for r in row.responses if r["status"] == "failed"), None) if failed else None
+                        unknown = sum(r["status"] == "outcome_unknown" for r in row.responses)
+                        # A run with unreconciled calls never reads as a success, even when other units answered.
+                        if row.responses and failed == len(row.responses):
+                            row.status = "failed"
+                        else:
+                            row.status = "outcome_unknown" if unknown else "ready"
+                        row.error_code = "unreconciled_calls" if unknown else next((r["error"] for r in row.responses if r["status"] == "failed"), None) if failed else None
                         row.done, row.finished_at, row.updated_at = row.total, now(), now()
                         session.commit()
             await asyncio.to_thread(finish)
