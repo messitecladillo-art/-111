@@ -643,11 +643,11 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                     answers[question["id"]] = silicon.make_answer(question, shown, value, unclear)
                 response["answers"] = [answers[q["id"]] for q in design["questions"]]
         except ProviderFailure as error:
-            response.update(status="failed", answers=[], error=error.code)
+            response.update(status="outcome_unknown" if error.unknown else "failed", answers=[], error=error.code)
         except ApiError:
             response.update(status="failed", answers=[], error="invalid_response")
         except Exception:
-            response.update(status="failed", answers=[], error="provider_failure")
+            response.update(status="outcome_unknown", answers=[], error="provider_failure")
         return response, calls
 
     async def silicon_worker(run_id, user_id, plan, services):
@@ -681,8 +681,9 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                     row = session.execute(select(SiliconRun).where(SiliconRun.id == run_id).with_for_update().execution_options(populate_existing=True)).scalar_one_or_none()
                     if row is not None and row.status == "running":
                         failed = sum(r["status"] == "failed" for r in row.responses)
-                        row.status = "failed" if row.responses and failed == len(row.responses) else "ready"
-                        row.error_code = next((r["error"] for r in row.responses if r["status"] == "failed"), None) if failed else None
+                        unknown = sum(r["status"] == "outcome_unknown" for r in row.responses)
+                        row.status = "outcome_unknown" if unknown else "failed" if row.responses and failed == len(row.responses) else "ready"
+                        row.error_code = next((r["error"] for r in row.responses if r["status"] in ("failed", "outcome_unknown")), None) if failed or unknown else None
                         row.done, row.finished_at, row.updated_at = row.total, now(), now()
                         session.commit()
             await asyncio.to_thread(finish)

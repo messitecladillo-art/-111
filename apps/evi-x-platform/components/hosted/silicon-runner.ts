@@ -1,7 +1,7 @@
 import type { Service } from '@evix/shared';
-import { designFingerprint, estimateCalls, NO_SCENARIO, type AnswerValue, type SiliconAnswer, type SiliconResponse, type SiliconRunRequest } from '@/lib/silicon/run';
+import { designFingerprint, estimateCalls, NO_SCENARIO, type AnswerValue, type SiliconAnswer, type SiliconResponse, type SiliconRunRequest } from '../../lib/silicon/run.ts';
 import type { SiliconRunner } from '@/components/silicon/SiliconLab';
-import { hostedRequest, HostedApiError } from './api-client';
+import { hostedRequest, HostedApiError } from './api-client.ts';
 
 type Status = 'running' | 'ready' | 'failed' | 'cancelled' | 'outcome_unknown';
 type RunView = { id: string; status: Status; done: number; total: number; services: Array<{ serviceId: string; name: string }>; responses?: SiliconResponse[]; errorCode?: string; createdAt: string };
@@ -24,9 +24,11 @@ export function parseRunView(v: unknown): RunView {
     if (!Number.isInteger(v.done) || !Number.isInteger(v.total) || !Array.isArray(v.services) || !isText(v.createdAt, 40)) throw Error();
     const services = v.services.map(s => { if (!record(s) || !isText(s.serviceId, 36) || !isText(s.name, 240)) throw Error(); return { serviceId: s.serviceId, name: s.name }; });
     const responses = v.responses === undefined ? undefined : (Array.isArray(v.responses) ? v.responses : (() => { throw Error(); })()).map((r): SiliconResponse => {
-      if (!record(r) || !isText(r.personaId, 80) || !isText(r.scenarioId, 40) || !isText(r.model, 240) || (r.status !== 'ok' && r.status !== 'failed') || !Array.isArray(r.answers)) throw Error();
-      return { personaId: r.personaId, scenarioId: r.scenarioId, model: r.model, status: r.status, answers: r.answers.map(answer), ...(isText(r.error, 64) ? { error: r.error } : {}) };
+      if (!record(r) || !isText(r.personaId, 80) || !isText(r.scenarioId, 40) || !isText(r.model, 240) || !['ok', 'failed', 'outcome_unknown'].includes(r.status as string) || !Array.isArray(r.answers)) throw Error();
+      if (r.status !== 'ok' && r.answers.length) throw Error();
+      return { personaId: r.personaId, scenarioId: r.scenarioId, model: r.model, status: r.status as SiliconResponse['status'], answers: r.answers.map(answer), ...(isText(r.error, 64) ? { error: r.error } : {}) };
     });
+    if (v.status === 'ready' && responses?.some(r => r.status === 'outcome_unknown')) throw Error();
     return { id: v.id, status: v.status as Status, done: v.done as number, total: v.total as number, services, responses, createdAt: v.createdAt, ...(isText(v.errorCode, 64) ? { errorCode: v.errorCode } : {}) };
   } catch {
     throw new HostedApiError(200, 'invalid_server_receipt', '运行回执待核对，已发出的调用可能已计费。请稍后查询。');
@@ -36,6 +38,9 @@ export function parseRunView(v: unknown): RunView {
 const ERRORS: Record<string, string> = {
   authentication_failed: '模型服务拒绝了密钥，请在「我的模型服务」中检查配置。',
   rate_limited: '模型服务限流，部分画像未能作答。',
+  provider_timeout: '模型调用结果待对账，已发送的调用不会自动重发。',
+  provider_failure: '模型调用结果待对账，请查询本次运行记录。',
+  provider_unavailable: '模型调用结果待对账，请查询本次运行记录。',
   interrupted_run: '运行在服务重启时中断，结果状态未知；已作答的部分保留在运行记录中。',
   cancelled_by_user: '已停止：尚未发出的调用不会再发出。',
 };
@@ -79,7 +84,7 @@ export function createSiliconRunner({ projectId, services, localTest, mutate, ma
       if (!ok.length) throw Error(ERRORS[view.errorCode ?? ''] || `运行没有得到可用的模拟回答（${view.errorCode || view.status}）。`);
       const names = view.services.map(s => s.name);
       return {
-        schema: 'silicon-run/v1', classification: 'simulated', id: view.id, createdAt: view.createdAt, engine: 'model',
+        schema: 'silicon-run/v1', classification: 'simulated', id: view.id, createdAt: view.createdAt, engine: 'model', status: view.status === 'running' ? 'outcome_unknown' : view.status,
         questionnaire: { title: request.design.title, fingerprint: designFingerprint(request.design), questions: request.design.questions.length },
         attributes: request.attributes, personas: request.personas, settings: { ...request.settings, scenarios: request.settings.scenarios.length ? request.settings.scenarios : [NO_SCENARIO], models: names }, responses: view.responses ?? [],
         notes: [
