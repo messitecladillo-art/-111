@@ -80,7 +80,11 @@ if (!existsSync(wav) || statSync(wav).mtimeMs < statSync(join(HERE, 'score.py'))
 const probe = spawnSync('ffmpeg', ['-hide_banner', '-i', wav, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'], { encoding: 'utf8' });
 const m = JSON.parse(probe.stderr.slice(probe.stderr.lastIndexOf('{'), probe.stderr.lastIndexOf('}') + 1));
 const ln = `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true`;
-const final = join(OUT, args.name ?? 'evi-x-promo-1080p.mp4');
+const final = join(OUT, 'evi-x-promo-1080p-master.mp4');
 const startSec = FROM / FPS, durSec = total / FPS;
 await ffmpeg(['-y', '-loglevel', 'error', '-i', video, '-ss', String(startSec), '-t', String(durSec), '-i', wav, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-af', ln + ',aresample=48000', '-c:a', 'aac', '-b:a', '256k', '-movflags', '+faststart', '-shortest', final]).done;
-console.log(`wrote ${final} in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+// The master keeps every grain at CRF 14 (~90 Mbps). The share copy lightly denoises the per-frame grain
+// and encodes at CRF 22 (~8 Mbps), which keeps interface text and particle edges visually intact.
+const share = join(OUT, args.name ?? 'evi-x-promo-1080p.mp4');
+await ffmpeg(['-y', '-loglevel', 'error', '-i', video, '-i', final, '-map', '0:v', '-map', '1:a', '-vf', 'hqdn3d=2:1.5:6:4,format=yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-crf', '22', '-tune', 'film', '-profile:v', 'high', '-level', '4.1', '-c:a', 'copy', '-movflags', '+faststart', share]).done;
+console.log(`wrote ${final} and ${share} in ${((Date.now() - t0) / 1000).toFixed(0)}s`);

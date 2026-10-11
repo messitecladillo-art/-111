@@ -14,11 +14,13 @@
 ```bash
 # 需要：Playwright（全局安装时设 PW_ROOT 为包含 node_modules/playwright 的目录）、ffmpeg、python3 + numpy
 node media/promo-film/render.mjs --workers 4
-# 输出：media/promo-film/out/evi-x-promo-1080p.mp4（out/ 不入库）
+# 输出（out/ 不入库）：
+#   evi-x-promo-1080p.mp4         分享版，约 80 MB / 8 Mbps，轻度去除逐帧颗粒后 CRF 22
+#   evi-x-promo-1080p-master.mp4  母版，约 0.9 GB，保留全部颗粒，CRF 14，用于再剪辑
 # 只渲染一段：--from 29 --to 32
 ```
 
-浏览器使用软件渲染（`--disable-gpu`），在 4 核机器上全片约数分钟。
+浏览器使用软件渲染（`--disable-gpu`），比 SwiftShader GPU 模式快约 6 倍；在 4 核机器上全片约 15 分钟（含编码）。成片：1920×1080、30 fps、2400 帧、80 秒；音频 AAC 256 kbps，综合响度 -13.9 LUFS，峰值 -1.2 dBFS。
 
 ## 分镜
 
