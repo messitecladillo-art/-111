@@ -31,6 +31,8 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
     useEffect(fn, deps) { const at = index++; if (!cells[at] || !sameDeps(cells[at].deps, deps)) { const before = cells[at]; cells[at] = { deps }; effects.push(() => { before?.cleanup?.(); cells[at].cleanup = fn(); }); } },
   };
   hooks.useLayoutEffect = hooks.useEffect;
+  hooks.useSyncExternalStore = (_subscribe, _read, serverRead) => serverRead();
+  hooks.useImperativeHandle = (ref, create) => { if (ref) ref.current = create(); };
   const jsx = (type, props, key) => ({ type, props, key });
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, ...mocks };
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
@@ -60,6 +62,7 @@ function questionnaireScreen({ invalidCurrent = false, denied = false } = {}) {
   const screen = mount('../components/hosted/HostedProject.tsx', {
     'next/link': { default: 'a' }, 'next/dynamic': { default: () => 'DynamicComponent' }, '@evix/shared': shared, '@/lib/questionnaire-library': library,
     './api-client': api, './HostedFrame': { LoginRequired: 'LoginRequired' }, './HostedSession': { useHostedSession: () => auth }, './HostedMembers': { default: 'HostedMembers' },
+    '../research-view/ResearchViewHost': { default: 'ResearchViewHost' },
     './silicon-runner': { serviceNames: () => new Map(), createSiliconRunner: () => null }, '@/components/motion/useWorkspaceMotion': { useContentReveal: () => null, useKeyedListMotion: () => null },
   }, { projectId }, 'ProjectEditor');
   return { screen, pending, latest, local, get cache() { return cache; }, get calls() { return calls; }, get reads() { return reads; }, resolve: () => resolveSave() };
@@ -207,5 +210,58 @@ test('hosted collection evidence uses the same provenance and numbers in preview
   assert.equal(button(screen, '预览并加入项目报告').props.disabled, false); button(screen, '预览并加入项目报告').props.onClick();
   assert.equal(downloaded.proposal.body, displayedBody); assert.equal(proposal.body, displayedBody); assert.equal(downloaded.proposal.source, displayedSource); assert.equal(proposal.source, displayedSource);
   assert.deepEqual(downloaded.input, input); assert.match(proposal.id, /^evidence-/);
+  screen.unmount();
+});
+
+
+test('viewer report propagates read-only binding and refuses server save', async () => {
+  const initial = editor.createEditorContent(); let writes = 0;
+  const auth = {session:{user:{id:projectId}},getDraft:()=>undefined,cacheDraft(){},setUnsaved(){},mutate:()=>{writes++;throw Error('unexpected write');}};
+  const screen = mount('../components/hosted/HostedReport.tsx', {
+    '../editors/EditingStudio':{default:'EditingStudio'},'@/lib/editor-model':editor,'@/lib/project-report':reports,
+    './api-client':{hostedRequest:async url=>url.endsWith('/versions')?{versions:[],nextBeforeRevision:null}:{report:null},errorMessage:e=>e.message,HostedApiError},'./HostedSession':{useHostedSession:()=>auth},
+  },{projectId,title:initial.title,writable:false,proposal:null,onProposalConsumed(){}});
+  await screen.settle();
+  const binding=nodes(screen.tree).find(n=>n.props?.projectBinding).props.projectBinding;
+  assert.equal(binding.readOnly,true);
+  binding.onSave(); await tick(); assert.equal(writes,0);
+  assert.equal(button(screen,'保存报告与 PPT').props.disabled,true);
+  screen.unmount();
+});
+
+test('editor downgrade blocks local edits, undo, format, proposals and hidden shortcuts', async () => {
+  const content=editor.createEditorContent(), handle={current:null}, listeners=new Map(); let latest, saves=0;
+  const props={localOnly:true,controllerRef:handle,projectBinding:{initialContent:content,status:'云端 v1',projectId,readOnly:false,onSnapshot:value=>{latest=value;},onSave:()=>{saves++;}}};
+  const screen=mount('../components/editors/EditingStudio.tsx',{
+    '@/lib/editor-model':editor,'../motion/useWorkspaceMotion':{useContentReveal:()=>null,useKeyedListMotion:()=>null},
+    './ReportStoryboard':{default:'ReportStoryboard',ReportLinkNotice:'ReportLinkNotice'},'@/lib/report-storyboard':{LINK_LABELS:{},reportExportWarnings:()=>[]},
+    './EditingStudio.module.css':{default:{}},'./OfficeFileLibrary':{default:'OfficeFileLibrary'},'./EditorRecovery':{default:'EditorRecovery'},
+    '@/lib/editor-recovery':{EDITOR_RECOVERY_CHANNEL:'test-recovery',EDITOR_RECOVERY_EVENT:'test-recovery'},'../hosted/HostedSession':{useHostedSession:()=>({setUnsaved(){}})},
+    '@/lib/report-format':{DEFAULT_REPORT_SETTINGS,reportFormatNotices:()=>[],reportPart:()=>null,reportExportOptions:()=>({})},
+    './ReportFormatPanel':{default:'ReportFormatPanel'},'./LatexWorkbench':{default:'LatexWorkbench'},'@/lib/project-report':reports,
+  },props,undefined,{window:{addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name,fn)=>{if(listeners.get(name)===fn)listeners.delete(name);},confirm:()=>true},TextEncoder,document:{querySelector:()=>null},HTMLElement:class{}});
+  await screen.settle();
+  const title=()=>nodes(screen.tree).find(n=>n.props?.['aria-label']==='作品名称');
+  title().props.onChange({target:{value:'负责人未保存草稿'}}); await screen.settle(); assert.equal(latest.title,'负责人未保存草稿');
+  const staleTitleChange=title().props.onChange; let resolveBackup;
+  const file={size:500,text:()=>new Promise(resolve=>{resolveBackup=resolve;})};
+  nodes(screen.tree).find(n=>n.type==='input'&&n.props.type==='file').props.onChange({target:{files:[file],value:'backup.json'}}); await tick();
+  props.projectBinding={...props.projectBinding,readOnly:true}; await screen.settle();
+  props.projectBinding={...props.projectBinding,readOnly:false}; await screen.settle();
+  resolveBackup(JSON.stringify({...content,title:'旧权限下读取的备份'})); await tick(); await screen.settle(); assert.equal(latest.title,'负责人未保存草稿','a revoked then restored permission cannot revive an old import');
+  props.projectBinding={...props.projectBinding,readOnly:true}; await screen.settle(); const frozen=latest;
+  staleTitleChange({target:{value:'旧回调修改'}});
+  title().props.onChange({target:{value:'只读修改'}});
+  button(screen,'↶ 撤销').props.onClick(); button(screen,'↷ 重做').props.onClick();
+  nodes(screen.tree).find(n=>n.type==='ReportFormatPanel').props.onChange(DEFAULT_REPORT_SETTINGS);
+  assert.equal(handle.current.appendSection({id:crypto.randomUUID(),title:'新章节',body:'正文',source:''}),false);
+  await screen.settle(); assert.equal(latest,frozen); assert.equal(title().props.readOnly,true);
+  assert.equal(button(screen,'↶ 撤销').props.disabled,true);
+  assert.equal(nodes(screen.tree).find(n=>n.type==='fieldset'&&n.props['aria-label']==='报告格式设置').props.disabled,true);
+  assert.equal(button(screen,'导出 Word 报告正文').props.disabled,false,'viewers retain export');
+  const studio=nodes(screen.tree).find(n=>n.props?.id==='editor'); studio.props.ref.current={getClientRects:()=>[]};
+  const event={key:'s',ctrlKey:true,target:null,preventDefault(){throw Error('hidden shortcut intercepted');}};
+  listeners.get('keydown')(event); await tick(); assert.equal(saves,0);
+  studio.props.ref.current={getClientRects:()=>[{}]}; listeners.get('keydown')({...event,preventDefault(){}}); await tick(); assert.equal(saves,0,'visible viewer cannot save either');
   screen.unmount();
 });

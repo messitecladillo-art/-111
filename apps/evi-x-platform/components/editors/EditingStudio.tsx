@@ -15,7 +15,7 @@ import ReportFormatPanel from './ReportFormatPanel';
 import LatexWorkbench from './LatexWorkbench';
 import { appendEvidenceSection } from '@/lib/project-report';
 
-export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
+export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; readOnly?: boolean; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean };
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
@@ -44,6 +44,9 @@ const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
 export default function EditingStudio({localOnly=false,projectBinding,controllerRef}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
+  const readOnly = projectBinding?.readOnly === true;
+  const permission = useRef({ readOnly, epoch: 0 });
+  useLayoutEffect(() => { if (permission.current.readOnly !== readOnly) { permission.current = { readOnly, epoch: permission.current.epoch + 1 }; } }, [readOnly]);
   const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
   const reportSettings = content.reportFormat ?? DEFAULT_REPORT_SETTINGS;
   const reportFormat = reportSettings.options;
@@ -110,7 +113,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const acknowledgeSaved = useCallback((snapshot: string) => { saved.current = snapshot; setSavedSnapshot(snapshot); }, []);
 
   const adopt = useCallback((draft: Draft) => {
-    if (!alive.current || identityTransition.current) return;
+    if (!alive.current || identityTransition.current || permission.current.readOnly) return;
     setStoryboardOpen(false);
     setStoryboardGeneration(value=>value+1);
     resetVersions();
@@ -181,6 +184,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }, [projectBound]);
 
   const save = useCallback(async (copy = false, forVersion = false): Promise<Draft | null> => {
+    if(permission.current.readOnly)return null;
     if(localOnly){if(projectBinding){projectBinding.onSave();return null;}setMessage('当前为本地编辑。请下载 JSON 备份保存进度；可继续导出 Word 和 PPTX。');return null;}
     if (identityTransition.current || busy.current || (versionOperation.current && !forVersion)) return null;
     busy.current = true; setPhase("saving"); setMessage("");
@@ -227,7 +231,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }, [content, dirty, phase, connected, save, versionBusy]);
 
   function edit(next: EditorContent) {
-    if (versionOperation.current) return false;
+    if (permission.current.readOnly || versionOperation.current) return false;
     const recoverable = next.title.trim() ? next : { ...next, title: "未命名研究" };
     if (new TextEncoder().encode(JSON.stringify(recoverable)).length > EDITOR_LIMITS.bytes) {
       setMessage("此作品已接近 500 KB 上限，本次输入未加入。请先导出备份，并将内容拆分为另一作品。"); return false;
@@ -243,18 +247,21 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     catch(error){setMessage(error instanceof Error?error.message:'未添加提案。');return false;}
   }}));
   function undo() {
+    if (permission.current.readOnly) return;
     const previous = past[past.length - 1]; if (!previous) return;
     setPast(past.slice(0, -1)); setFuture([current.current, ...future]); current.current = previous; setContent(previous);
   }
   function redo() {
+    if (permission.current.readOnly) return;
     if (!future[0]) return;
     setPast([...past, current.current]); current.current = future[0]; setContent(future[0]); setFuture(future.slice(1));
   }
-  function canReplace() { return !identityTransition.current && !busy.current && !versionOperation.current && (!dirty || window.confirm("当前有尚未保存的修改。确定放弃这些修改并切换？建议先保存或导出备份。")); }
+  function canReplace() { return !permission.current.readOnly && !identityTransition.current && !busy.current && !versionOperation.current && (!dirty || window.confirm("当前有尚未保存的修改。确定放弃这些修改并切换？建议先保存或导出备份。")); }
   async function openDraft(id: string) {
     if (!id || !canReplace()) return;
+    const permissionEpoch = permission.current.epoch;
     busy.current = true; setPhase("loading");
-    try { const result = await request<{ draft: Draft }>(`/api/drafts/${id}`, { headers: { "x-editor-scope": scope.current } }); adopt(result.draft); }
+    try { const result = await request<{ draft: Draft }>(`/api/drafts/${id}`, { headers: { "x-editor-scope": scope.current } }); if (permission.current.epoch === permissionEpoch && !permission.current.readOnly) adopt(result.draft); }
     catch (e) { if (!alive.current || identityTransition.current) return; setPhase("error"); blocked.current = true; setMessage(e instanceof Error ? e.message : "读取失败。"); }
     finally { busy.current = false; }
   }
@@ -326,11 +333,12 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }
   async function importBackup(file: File | undefined) {
     if (!file || !canReplace()) return;
+    const permissionEpoch = permission.current.epoch;
     busy.current = true; setPhase("loading");
     try {
       if (file.size > EDITOR_LIMITS.bytes) throw new Error("备份超过 500 KB。");
       const raw: unknown = JSON.parse(await file.text());
-      if (!alive.current || identityTransition.current) return;
+      if (!alive.current || identityTransition.current || permission.current.readOnly || permission.current.epoch !== permissionEpoch) return;
       if (raw && typeof raw === "object" && "title" in raw && typeof raw.title === "string" && !raw.title.trim()) raw.title = "未命名研究";
       const next = parseEditorContent(raw);
       setStoryboardOpen(false);
@@ -388,10 +396,12 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }
   async function restoreVersion(version: DraftVersionSummary) {
     if (!canReplace()) return;
+    const permissionEpoch = permission.current.epoch;
     busy.current = true; setPhase("loading");
     try {
       const result = await request<{ version: DraftVersion }>(`/api/drafts/${version.draftId}/versions/${version.id}`, { headers: { "x-editor-scope": scope.current } });
       if (!alive.current || identityTransition.current) return;
+      if (permission.current.readOnly || permission.current.epoch !== permissionEpoch) return;
       const next = parseEditorContent(result.version.content);
       resetVersions(); setRecord(null); pendingId.current = null; acknowledgeSaved(""); blocked.current = false;
       setStoryboardOpen(false);setStoryboardGeneration(value=>value+1);
@@ -438,7 +448,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const selectedId = mode === "report" ? section.id : slide.id;
   const selectedIndex = items.findIndex(s => s.id === selectedId);
   const statusText = versionBusy ? "正在保存命名版本…" : phase === "loading" ? "正在读取草稿…" : phase === "saving" ? "正在保存…" : phase === "conflict" ? "版本冲突 · 已暂停保存" : phase === "error" ? "未保存 · 请重试" : dirty ? "有修改 · 即将保存" : activeDraftId ? `已保存 ${saveTime}` : "模板 · 编辑后自动保存";
-  const locked = identityFrozen || phase === "loading" || phase === "saving" || versionBusy;
+  const locked = readOnly || identityFrozen || phase === "loading" || phase === "saving" || versionBusy;
   const visibleItems = items.map((item, index) => ({ item, index })).filter(({ item }) => item.title.toLocaleLowerCase().includes(outlineQuery.trim().toLocaleLowerCase()));
   const presentationSlide = content.slides[presentIndex] || content.slides[0];
 
@@ -453,14 +463,14 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         <button type="button" aria-pressed={!fileLibraryOpen} onClick={() => setFileLibraryOpen(false)}>文本草稿</button>
         {!localOnly&&<button type="button" aria-pressed={fileLibraryOpen} onClick={() => setFileLibraryOpen(true)}>Office 原文件</button>}
       </div>
-      {localOnly&&<div className={styles.backupActions}><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
+      {localOnly&&<div className={styles.backupActions}><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" disabled={readOnly} onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
     </div>
     {!localOnly&&<EditorRecovery onBeforeRestore={beforeRestore}/>}
     {identityFrozen && <div className={styles.notice} role="alert"><span>身份切换保护已开启：当前页不再读写服务器作品。请先导出未保存内容，再手动刷新；页面不会自动丢弃正文。</span><button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载当前正文备份</button></div>}
     {!localOnly&&fileLibraryOpen&&<div><OfficeFileLibrary/></div>}
     <div hidden={fileLibraryOpen}>
     <div className={styles.documentBar}>
-      <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
+      <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} readOnly={readOnly} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
       <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
     </div>
     <div className={styles.libraryPanel} id="editor-library" hidden={localOnly||!libraryOpen}>
@@ -482,11 +492,11 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     {message && <div className={styles.notice} role={phase === "error" || phase === "conflict" ? "alert" : "status"}><span>{message}</span>{phase === "conflict" && <button type="button" disabled={locked} onClick={() => void save(true)}>保留当前内容为副本</button>}<button type="button" aria-label="关闭提示" onClick={() => setMessage("")}>×</button></div>}
     <div className={styles.toolbar}>
       <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX 工作台</button></div>
-      <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
+      <div className={styles.history}><button type="button" onClick={undo} disabled={readOnly || !past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={readOnly || !future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
     </div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
-    {mode!=='slides'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
+    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding?.onSave} disabled={locked}/></div>
     <div hidden={mode==='latex'}>
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
@@ -505,9 +515,9 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / 40</span></div>
         <input className={styles.outlineSearch} aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={e => setOutlineQuery(e.target.value)}/>
         <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => mode === "report" ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span><span>{item.title || "未命名"}</span></span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>)}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
-        <button type="button" className={styles.addItem} disabled={items.length >= 40 || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
+        <button type="button" className={styles.addItem} disabled={readOnly || items.length >= 40 || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
       </aside>
-      <fieldset className={styles.fields} disabled={phase === "loading" || versionBusy}>
+      <fieldset className={styles.fields} disabled={readOnly || phase === "loading" || versionBusy}>
         <legend>{mode === "report" ? "章节编辑" : "页面编辑"}</legend>
         <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label="向上移动">↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label="向下移动">↓</button><button type="button" disabled={items.length >= 40} onClick={duplicateItem}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem}>移除</button></div>
         {mode === "report" ? <>
