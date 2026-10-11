@@ -8,7 +8,7 @@ export function downloadBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 export function fileName(title: string) { return title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 80) || "未命名研究"; }
-export async function buildDocx(content: EditorContent, inputOptions: ReportFormatOptions = DEFAULT_REPORT_OPTIONS): Promise<Blob> {
+export async function buildDocx(content: EditorContent, inputOptions: ReportFormatOptions = content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS): Promise<Blob> {
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
   // Stable grouping changes only the exported layout; the saved editor order remains intact.
@@ -30,7 +30,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     {id:'ReportSpecialHeading',name:'摘要与参考文献名称',basedOn:'Normal',next:'Normal',run:{...bodyRun,font:font('黑体'),size:28,sizeComplexScript:28},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},indent:{firstLine:0,firstLineChars:0},keepNext:true}},
     {id:'ReportReference',name:'参考文献正文',basedOn:'Normal',run:bodyRun,paragraph:{...bodyParagraph,indent:{firstLine:0,firstLineChars:0}}},
     {id:'ReportCaption',name:'图表题',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},indent:{firstLine:0,firstLineChars:0},keepNext:true}},
-    {id:'ReportTableText',name:'表内文字',basedOn:'Normal',run:bodyRun,paragraph:{spacing:{line:240,before:0,after:0},indent:{firstLine:0,firstLineChars:0}}},
+    {id:'ReportTableText',name:'表内文字',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:240,before:0,after:0},indent:{firstLine:0,firstLineChars:0}}},
     ...[1,2,3].map(level=>({id:`TOC${level}`,name:`toc ${level}`,basedOn:'Normal',run:bodyRun,paragraph:{spacing:{line:300,before:0,after:0},indent:{left:(level-1)*240,firstLine:0,firstLineChars:0}}})),
   ];
   const page={size:{width:11906,height:16838},margin:{top:1440,bottom:1440,left:1803,right:1803,header:720,footer:720,gutter:0}};

@@ -5,10 +5,10 @@ import {assignmentProblems,canonical,mappingBackup,mappingCurrent,mappingSignatu
 import styles from './QuestionnaireMapping.module.css';
 
 type Scale=ReturnType<typeof scaleSuggestions>[number];
-export default function QuestionnaireMapping({mapping,dataset,stale,transfer,onChange,onScale}:{mapping:Mapping|null;dataset:DatasetIdentity|null;stale:boolean;transfer:DesignTransfer|null;onChange:(value:Mapping|null)=>void;onScale:(value:Scale)=>void}){
+export default function QuestionnaireMapping({mapping,dataset,stale,transfer,onChange,onScale,frozenRevision}:{mapping:Mapping|null;dataset:DatasetIdentity|null;stale:boolean;transfer:DesignTransfer|null;onChange:(value:Mapping|null)=>void;onScale:(value:Scale)=>void;frozenRevision?:number}){
   const [query,setQuery]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[reading,setReading]=useState(false);
   const fileInput=useRef<HTMLInputElement>(null),mode=useRef<'design'|'mapping'>('design'),epoch=useRef(0);
-  const context=canonical({mapping,dataset,transfer,stale}),latest=useRef(context),mounted=useRef(true);
+  const context=canonical({mapping,dataset,transfer,stale,frozenRevision:frozenRevision??null}),latest=useRef(context),mounted=useRef(true);
   // Commit-only synchronization: abandoned renders cannot alter the read guard.
   // Epoch also rejects A → B → A while a file is being decoded.
   useLayoutEffect(()=>{latest.current=context;epoch.current++;},[context]);
@@ -18,7 +18,7 @@ export default function QuestionnaireMapping({mapping,dataset,stale,transfer,onC
   const issues=mapping?questionnaireIssues(mapping.design):[];
   const visible=mapping?.design.questions.filter(q=>[q.text,q.variable,q.construct].join(' ').toLowerCase().includes(query.trim().toLowerCase()))||[];
   function change(next:Mapping|null){epoch.current++;setError('');setNotice('');onChange(next);}
-  function replace(next:Mapping){if(mapping&&!window.confirm('替换当前问卷对应快照？现有计算将失效。请先下载需要保留的对应备份。'))return;change(next);setQuery('');}
+  function replace(next:Mapping){if(frozenRevision&&mapping&&canonical(next.design)!==canonical(mapping.design)){setError('回收答卷固定对应发布版本，请使用这一版问卷的对应备份。');return;}if(mapping&&!window.confirm('替换当前问卷对应快照？现有计算将失效。请先下载需要保留的对应备份。'))return;change(frozenRevision&&mapping?{...next,sourceSignature:mapping.sourceSignature}:next);setQuery('');}
   async function read(file:File){
     const token=++epoch.current,captured=context,kind=mode.current;setReading(true);setError('');
     try{
@@ -38,11 +38,11 @@ export default function QuestionnaireMapping({mapping,dataset,stale,transfer,onC
   }catch(e){setError((e as Error).message);}}
   return <section className={styles.panel} aria-label="问卷与数据对应">
     <header className={styles.header}><div><span className={styles.eyebrow}>QUESTION → VARIABLE → EVIDENCE</span><h3>核对问卷与数据列</h3><p>先核对题目与数据列，再组合分析。相同列名只作为建议，不自动认定。</p></div><span className={styles.state} data-ready={confirmed}>{!mapping?'尚未关联问卷':stale?'源问卷已变化':confirmed?'本版对应已确认':'对应待确认'}</span></header>
-    <div className={styles.tools}><a href="#design">前往问卷设计 ↗</a><button type="button" disabled={reading} onClick={()=>{mode.current='design';fileInput.current?.click();}}>导入问卷设计备份</button><button type="button" disabled={reading||!dataset} onClick={()=>{mode.current='mapping';fileInput.current?.click();}}>恢复对应备份</button>{mapping&&dataset&&<button type="button" onClick={save}>下载对应备份</button>}{mapping&&<button type="button" onClick={()=>{if(window.confirm('解除问卷关联？将使当前结果失效，并返回不核验题目语义的手动分析模式。'))change(null);}}>解除关联</button>}<input hidden ref={fileInput} type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void read(file);}}/></div>
+    <div className={styles.tools}>{frozenRevision?<span>发布问卷 v{frozenRevision}</span>:<><a href="#design">前往问卷设计 ↗</a><button type="button" disabled={reading} onClick={()=>{mode.current='design';fileInput.current?.click();}}>导入问卷设计备份</button></>}<button type="button" disabled={reading||!dataset} onClick={()=>{mode.current='mapping';fileInput.current?.click();}}>恢复对应备份</button>{mapping&&dataset&&<button type="button" onClick={save}>下载对应备份</button>}{mapping&&!frozenRevision&&<button type="button" onClick={()=>{if(window.confirm('解除问卷关联？将使当前结果失效，并返回不核验题目语义的手动分析模式。'))change(null);}}>解除关联</button>}<input hidden ref={fileInput} type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void read(file);}}/></div>
     {transfer&&snapshotSignature(transfer.snapshot)!==mapping?.sourceSignature&&<div className={styles.incoming}><div><strong>收到设计页快照：{transfer.snapshot.design.title}</strong><span>{transfer.snapshot.design.questions.length} 道题 · 待实施草稿，不证明实际施测版本</span></div><button type="button" disabled={reading||transfer.snapshot.pending} onClick={()=>replace({design:transfer.snapshot.design,assignments:[],confirmed:null,sourceSignature:snapshotSignature(transfer.snapshot)})}>使用收到的问卷</button></div>}
     {error&&<p className={styles.error} role="alert">{error}</p>}{notice&&<p className={styles.notice} role="status">{notice}</p>}
     {!mapping?<div className={styles.empty}><b>01 带入问卷</b><span>→</span><b>02 核对数据列</b><span>→</span><b>03 确认后分析</b><p>也可暂不关联，按原始列手动分析；数字格式不作为题型依据。答卷与问卷仅保留在本页，刷新前请下载备份。</p></div>:<>
-      <div className={styles.summary}><div><strong>{mapping.design.title}</strong><p>{mapping.assignments.length} / {mapping.design.questions.length} 题已选择数据列 · {issues.filter(i=>i.level==='blocker').length} 项设计结构提示</p><small>{mapping.sourceSignature?'来自本页设计快照；设计修改会使关联失效。':'来自导入备份；系统无法感知外部文件的后续修改。'}</small></div>{dataset&&<code title={dataset.interpretationHash}>解析身份 {dataset.interpretationHash.slice(0,12)}…</code>}</div>
+      <div className={styles.summary}><div><strong>{mapping.design.title}</strong><p>{mapping.assignments.length} / {mapping.design.questions.length} 题已选择数据列 · {issues.filter(i=>i.level==='blocker').length} 项设计结构提示</p><small>{frozenRevision?`固定使用发布 v${frozenRevision} 的题目和分支规则。`:mapping.sourceSignature?'来自本页设计快照；设计修改会使关联失效。':'来自导入备份；系统无法感知外部文件的后续修改。'}</small></div>{dataset&&<code title={dataset.interpretationHash}>解析身份 {dataset.interpretationHash.slice(0,12)}…</code>}</div>
       {stale&&<p className={styles.error} role="alert">源问卷已有变化或未应用数值输入。当前快照保留供核对，但旧结果不再用于报告。请回设计页重新发送快照。</p>}
       {!dataset?<p className={styles.notice}>问卷已就位。请先在“数据检查”读取 CSV，再逐题核对对应。</p>:<>
         <div className={styles.mappingTools}><label>查找题目<input type="search" value={query} maxLength={160} placeholder="题干、变量或构念" onChange={e=>setQuery(e.target.value)}/></label><button type="button" onClick={()=>{if(mapping.assignments.length&&!window.confirm('用同名列建议替换当前选择？确认状态和计算结果将失效。'))return;change({...mapping,assignments:suggestAssignments(mapping.design,dataset),confirmed:null});setNotice('已填入同名列建议，请核对取值是编码还是选项文字，再确认对应。');}}>填入同名列建议</button><span>显示 {visible.length} 题</span></div>

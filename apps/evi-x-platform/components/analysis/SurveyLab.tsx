@@ -7,8 +7,9 @@ import AnalysisRecipeBoard from "./AnalysisRecipeBoard";
 import ResearchFlow from './ResearchFlow';
 import {linkEvidence,reliabilityEvidence,type EvidenceCandidate} from '@/lib/research-flow';
 import QuestionnaireMapping from './QuestionnaireMapping';
-import {prepareLinkedAnalysis,canonical,datasetIdentity,mappingCurrent,mappingSignature,researchLink,snapshotSignature,type DatasetIdentity,type DesignSnapshot,type DesignTransfer,type Mapping} from '@/lib/questionnaire-mapping';
+import {prepareLinkedAnalysis,canonical,datasetIdentity,mappingCurrent,mappingSignature,researchLink,snapshotSignature,suggestAssignments,type DatasetIdentity,type DesignSnapshot,type DesignTransfer,type Mapping} from '@/lib/questionnaire-mapping';
 import type {ResearchLink} from '@/lib/research-link';
+import type {ReportSection} from '@/lib/editor-model';
 import RoutingAudit from './RoutingAudit';
 import {routingSummary,type RoutingPolicy,type RoutingEvidence} from '@/lib/routing-evidence';
 import {numericColumnRecords,profileColumn} from '@/lib/analysis-summary';
@@ -17,10 +18,10 @@ import {useContentReveal,useKeyedListMotion} from '@/components/motion/useWorksp
 import AnalysisJourney from './AnalysisJourney';
 import { currentJourneyModules, journeyScope, moduleJourneyStatus, type JourneySnapshot, type JourneyModule } from '@/lib/analysis-journey';
 
-/** A CSV handed over from the 硅基样本 lab; it is always read as simulated data. */
-export type DatasetTransfer = { id: string; name: string; csv: string };
+import {collectionEvidenceSection,transferClassification,type CollectionOrigin,type DatasetTransfer} from '@/lib/survey-collection';
+export type {DatasetTransfer} from '@/lib/survey-collection';
 
-type Dataset = { table: SurveyTable; name: string; hash: string; kind: "simulated" | "user_provided"; silicon?: boolean; encoding: string; identity:DatasetIdentity };
+type Dataset = { table: SurveyTable; name: string; hash: string; kind: "simulated" | "user_provided"; silicon?: boolean; collection?:CollectionOrigin; encoding: string; identity:DatasetIdentity };
 const format = (n: number | null | undefined, digits = 3) => n === null || n === undefined ? "—" : n.toLocaleString("zh-CN", { maximumFractionDigits: digits });
 const pct = (n: number, denominator: number) => denominator ? `${(n / denominator * 100).toFixed(1)}%` : "—";
 const SOURCES = [
@@ -35,7 +36,7 @@ function saveText(content: string, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null}={}) {
+export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null,onEvidenceProposal}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onEvidenceProposal?:(section:ReportSection)=>void}={}) {
   const [mapping,setMapping]=useState<Mapping|null>(null);
   const [linkState,setLinkState]=useState<{signature:string;link:ResearchLink|null}>({signature:'',link:null});
   const [datasetSession,setDatasetSession] = useState(0);
@@ -70,7 +71,9 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const readEpoch = useRef(0);
   const missing = useMemo(() => { try { return { codes: parseMissingCodes(missingText), error: "" }; } catch (e) { return { codes: [], error: (e as Error).message }; } }, [missingText]);
   const profile = useMemo(() => dataset && !missing.error ? profileSurvey(dataset.table, missing.codes) : null, [dataset, missing]);
-  const mappingStale=!!mapping?.sourceSignature&&(!designSnapshot||mapping.sourceSignature!==snapshotSignature(designSnapshot));
+  const sourceSnapshot=dataset?.collection?{design:dataset.collection.design,pending:false}:designSnapshot;
+  const sourceTransfer=dataset?.collection?null:designTransfer;
+  const mappingStale=!!mapping?.sourceSignature&&(!sourceSnapshot||mapping.sourceSignature!==snapshotSignature(sourceSnapshot));
   const mappingKey=canonical({dataset:dataset?.identity||null,mapping:mapping&&dataset?mappingSignature(mapping,dataset.identity):mapping,confirmed:!!mapping&&!!dataset&&mappingCurrent(mapping,dataset.identity,mappingStale),stale:mappingStale});
   const approvalKey=canonical({mappingKey,missingText,policy:routingPolicy});
   const routing={policy:routingPolicy,confirmed:routingApproval===approvalKey&&!missing.error};
@@ -130,7 +133,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     setDatasetSession(n=>n+1); setDataset(next); setMissingText(""); setSelected([]); setReverse([]); setResult(null); setDetail(null); setConstruct(""); setMinText("1"); setMaxText("5"); setSection("data"); setPaste(""); setNotice(""); setError(""); setCalculationError(null);
   }
   async function readData(file?: File, sample = false, handoff?: DatasetTransfer) {
-    if (reading) return;
+    if (reading && !handoff) return;
     if (dataset && !window.confirm("替换当前分析数据？原始文件不会改动。请先下载需要保留的分析记录。")) return;
     const epoch = ++readEpoch.current;
     setReading(true); setReadPhase(file ? 'reading' : 'checking'); setReadName(handoff ? handoff.name : sample ? '12 行教学模拟数据' : file?.name || '粘贴的 CSV 文本'); setError(""); setNotice("");
@@ -156,8 +159,11 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       const identity=await datasetIdentity(hash,usedEncoding,table);
       if (epoch !== readEpoch.current) return;
       // The silicon origin column marks the whole table as simulated, whatever else it contains.
-      const silicon = !!handoff || isSiliconTable(table.headers);
-      adopt({ table, name: handoff ? handoff.name : sample ? "12 行教学模拟数据" : file?.name || "粘贴的 CSV 文本", hash, kind: sample || silicon ? "simulated" : "user_provided", silicon, encoding: usedEncoding,identity });
+      const origin=handoff?transferClassification(handoff):null;
+      const silicon = !!origin?.silicon || isSiliconTable(table.headers);
+      const collection=handoff?.origin?.kind==='collection'?handoff.origin:undefined;
+      adopt({ table, name: handoff ? handoff.name : sample ? "12 行教学模拟数据" : file?.name || "粘贴的 CSV 文本", hash, kind: sample || silicon || origin?.simulated ? "simulated" : "user_provided", silicon, ...(collection?{collection}:{}), encoding: usedEncoding,identity });
+      if(collection){setMapping({design:collection.design,assignments:suggestAssignments(collection.design,identity),confirmed:null,sourceSignature:snapshotSignature({design:collection.design,pending:false})});setSection('mapping');setNotice(`已读取 ${table.rows.length} 份${collection.classification==='synthetic'?'合成验收':'回收'}答卷，问卷固定为发布 v${collection.questionnaireRevision}。请核对本版变量对应。`);}
       if (silicon) setNotice(`已按模拟数据载入：表中含 ${SILICON_ORIGIN_COLUMN} 标记列，来自硅基样本。可用于演练分析流程。`);
     } catch (e) { if (epoch === readEpoch.current) setError(e instanceof Error ? e.message : "无法读取数据；原有分析未被替换。"); }
     finally { if (epoch === readEpoch.current) setReading(false); }
@@ -193,7 +199,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     if (!dataset || !profile) return;
     const exportProfile={...profile,scope:'raw_file_cell_check',columns:profile.columns.map(c=>({...c,stats:null}))};
     const numericSummaries=numericColumnRecords(dataset.table,missing.codes,mapping,dataset.identity,mappingStale,routing);
-    const record = { schema: "survey-analysis/v2", createdAt: new Date().toISOString(), source: { name: dataset.name, sha256: dataset.hash, classification: dataset.kind, ...(dataset.silicon ? { origin: "silicon_simulated" } : {}), encoding: dataset.encoding, delimiter: dataset.table.delimiter, skippedBlankLines: dataset.table.skippedBlankLines }, processing: { missingCodes: missing.codes, blankIsMissing: true, trimming: "cell edges for analysis only; raw data unchanged", duplicateTreatment: "exact parsed rows detected; never automatically removed", variance: "sample n-1", quantiles: "R type 7", weighting: "none", populationInference: "not performed" }, profile:exportProfile, numericSummaries, reliability: currentResult ? { eligibility:currentEligibility, construct: construct.trim(), options: { columns: selected, reverse, min: Number(minText), max: Number(maxText), missingCodes: missing.codes }, completeCaseRule: "all selected values numeric, present, and within declared bounds", result: currentResult } : null, limits: ["User-provided provenance is not independently verified.", "No validity, causal or population representativeness claim.", "No raw response rows or category labels included in this export."], methods: SOURCES };
+    const record = { schema: "survey-analysis/v2", createdAt: new Date().toISOString(), source: { name: dataset.name, sha256: dataset.hash, classification: dataset.kind, ...(dataset.silicon ? { origin: "silicon_simulated" } : {}), ...(dataset.collection ? { collection: { projectId: dataset.collection.projectId, releaseId: dataset.collection.releaseId, versionId: dataset.collection.versionId, questionnaireRevision: dataset.collection.questionnaireRevision, classification: dataset.collection.classification, snapshotHash: dataset.collection.snapshotHash, generatedAt: dataset.collection.generatedAt } } : {}), encoding: dataset.encoding, delimiter: dataset.table.delimiter, skippedBlankLines: dataset.table.skippedBlankLines }, processing: { missingCodes: missing.codes, blankIsMissing: true, trimming: "cell edges for analysis only; raw data unchanged", duplicateTreatment: "exact parsed rows detected; never automatically removed", variance: "sample n-1", quantiles: "R type 7", weighting: "none", populationInference: "not performed" }, profile:exportProfile, numericSummaries, reliability: currentResult ? { eligibility:currentEligibility, construct: construct.trim(), options: { columns: selected, reverse, min: Number(minText), max: Number(maxText), missingCodes: missing.codes }, completeCaseRule: "all selected values numeric, present, and within declared bounds", result: currentResult } : null, limits: ["User-provided provenance is not independently verified.", "No validity, causal or population representativeness claim.", "No raw response rows or category labels included in this export."], methods: SOURCES };
     if (asText) {
       const lines = [dataset.silicon ? "【硅基样本模拟数据：由 AI 扮演虚构受访者生成，不可作为调研结果，不得填补或扩充真实样本】" : dataset.kind === "simulated" ? "【教学模拟数据：不可作为实际调研结果】" : "【用户导入数据的计算摘要：来源与抽样设计仍需人工核验】", `来源：${dataset.name}`, `SHA-256：${dataset.hash}`, `原文件共读取 ${profile.rows} 条记录、${profile.columns.length} 列；空白/缺失代码 ${profile.missingCells}/${profile.totalCells} 个单元格（包含正常跳题，不是漏答率）。`, `缺失口径：空白${missing.codes.length ? `及 ${missing.codes.join("、")}` : "；未指定其他代码"}；未插补，未自动删除重复记录。`, `完全相同记录的额外出现次数为 ${profile.duplicateRows}，仅为检查线索。`, "", "数值列摘要（关联模式只导出通过题目语义检查的数值题；未关联时仅作原始编码检查）：", ...numericSummaries.filter(item=>item.column?.stats).flatMap(item=>{const c=item.column!;return [...(item.eligibility?[routingSummary(item.eligibility)]:[]),`${c.name}：${mapping?"题项应答范围":"原编码检查"}共 ${item.total} 行，数值 n=${c.numeric}，范围内缺失=${c.missing}，非数值=${c.nonNumeric}，均值=${format(c.stats?.mean)}，样本标准差=${format(c.stats?.sd)}，中位数=${format(c.stats?.median)}。`];}),...numericSummaries.filter(item=>item.status==='blocked').map(item=>`${item.name}：未导出数值统计。${item.problems.join(" ")}`), "", ...(currentResult ? [...(currentEligibility?[routingSummary(currentEligibility)]:[]),`构念：${construct.trim()}；题项数 k=${currentResult.k}；完整案例 n=${currentResult.n}/${currentResult.total}。`, `原始 Cronbach α=${format(currentResult.alpha)}；反向计分 x'=${minText}+${maxText}−x。`, `题项：${selected.map(c => dataset.table.headers[c]).join("、")}；反向题：${reverse.map(c => dataset.table.headers[c]).join("、") || "无"}。`, `本次未纳入计算 ${currentResult.excluded} 行，未改动原文件；α 不代表效度或单维性。`, ...currentResult.warnings] : ["量表一致性：未运行或设置已改变，未导出旧结果。"]), "", "边界：以上为未加权的当前样本描述，不推断总体，不提供便利样本的简单随机抽样误差。", "请补充调查对象、招募渠道、时间、筛选与剔除依据后再写入正式报告。", "", ...SOURCES.map(s => `${s.title}：${s.url}`)];
       lines.push('',mapping?`问卷关联：${mapping.design.title}；${mappingCurrent(mapping,dataset.identity,mappingStale)?'本版对应已确认':'对应待确认或源问卷已变化'}。设计快照不证明实际施测版本。`:'未关联问卷：手动分析，未核验题目语义。',`数据解析身份 SHA-256：${dataset.identity.interpretationHash}`);
@@ -202,13 +208,13 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     setNotice("已生成本地下载。统计汇总不等于匿名：列名、文件名、极值与小样本仍可能识别个人。分享前请检查敏感列和小样本。");
   }
 
-  if (designTransfer && designTransfer.id !== seenTransfer) {
-    setSeenTransfer(designTransfer.id);
+  if (sourceTransfer && sourceTransfer.id !== seenTransfer) {
+    setSeenTransfer(sourceTransfer.id);
     setSection("mapping");
   }
 
   const inResults = section === "recipes" || section === "reliability";
-  const incomingDesign = !!designTransfer && snapshotSignature(designTransfer.snapshot) !== mapping?.sourceSignature;
+  const incomingDesign = !!sourceTransfer && snapshotSignature(sourceTransfer.snapshot) !== mapping?.sourceSignature;
   const setupIssue = missing.error ? '缺失代码设置需调整' : mappingStale ? '源问卷已变化' : mapping && !activeLink ? '题目对应尚未确认' : '';
   const journeyModules: JourneyModule[] = currentJourneyModules(journeySnapshot, journeyScope(contextKey, missing.codes)).map(module => setupIssue && module.status === 'ready' ? { ...module, status: 'stale', n: null } : module);
   if (selected.length || result || calculationError?.signature === signature) journeyModules.push({
@@ -220,10 +226,10 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   return <section className={styles.lab} id="analysis" aria-label="问卷数据分析工作台">
     <header className={styles.intro} data-loaded={!!dataset}>
       <div>{!dataset && <span className={styles.eyebrow}>DATA → INSIGHT</span>}<h2>数据分析</h2>{!dataset && <p>从研究路线开始，或自由组合分析模块。</p>}</div>
-      <span className={styles.privacy}>本页计算 · 答卷不上传</span>
+      <span className={styles.privacy}>{dataset?.collection ? `回收 v${dataset.collection.questionnaireRevision} · 本页计算` : "本页计算 · 答卷不上传"}</span>
     </header>
     {dataset && <div className={styles.datasetBar}>
-      <div className={styles.datasetIdentity}><strong>{dataset.name}</strong><span className={styles.badge} data-demo={dataset.kind === "simulated"}>{dataset.silicon ? "硅基样本 · 模拟数据" : dataset.kind === "simulated" ? "教学模拟数据" : "用户导入"}</span><small>{dataset.table.rows.length.toLocaleString("zh-CN")} 行 · {dataset.table.headers.length} 列 · {dataset.encoding}</small></div>
+      <div className={styles.datasetIdentity}><strong>{dataset.name}</strong><span className={styles.badge} data-demo={dataset.kind === "simulated"}>{dataset.silicon ? "硅基样本 · 模拟数据" : dataset.collection ? dataset.collection.classification === "synthetic" ? "回收流程 · 合成验收" : "问卷回收" : dataset.kind === "simulated" ? "教学模拟数据" : "用户导入"}</span><small>{dataset.table.rows.length.toLocaleString("zh-CN")} 行 · {dataset.table.headers.length} 列 · {dataset.encoding}</small></div>
       <details className={styles.datasetMenu}><summary>文件与导出</summary><div>
         <p title={dataset.hash}>SHA-256 {dataset.hash.slice(0, 12)}…<br/>跳过 {dataset.table.skippedBlankLines} 个空白行</p>
         <button type="button" disabled={!profile} onClick={() => exportSummary(false)}>下载分析记录</button>
@@ -267,7 +273,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       </>}
     </div>
     <div id="analysis-mapping" hidden={section !== "mapping"}>
-    <QuestionnaireMapping mapping={mapping} dataset={dataset?.identity||null} stale={mappingStale} transfer={designTransfer} onChange={value=>{setMapping(value);setRoutingApproval(null);setRecipeCandidates([]);}} onScale={scale=>{setResult(null);setCalculationError(null);setSelected(scale.columns);setReverse(scale.reverse);setMinText(String(scale.min));setMaxText(String(scale.max));setConstruct(scale.construct);setSection('reliability');setNotice('已填入问卷定义的题项与反向设置，尚未计算。请核对后点击计算内部一致性。');}}/>
+    <QuestionnaireMapping frozenRevision={dataset?.collection?.questionnaireRevision} mapping={mapping} dataset={dataset?.identity||null} stale={mappingStale} transfer={sourceTransfer} onChange={value=>{if(dataset?.collection&&(!value||canonical(value.design)!==canonical(dataset.collection.design))){setError("回收数据固定使用发布问卷；请在本版问卷内核对数据列。");return;}setMapping(value);setRoutingApproval(null);setRecipeCandidates([]);}} onScale={scale=>{setResult(null);setCalculationError(null);setSelected(scale.columns);setReverse(scale.reverse);setMinText(String(scale.min));setMaxText(String(scale.max));setConstruct(scale.construct);setSection('reliability');setNotice('已填入问卷定义的题项与反向设置，尚未计算。请核对后点击计算内部一致性。');}}/>
       {dataset && <>
       {mapping&&<RoutingAudit mapping={mapping} table={dataset.table} missingCodes={missing.codes} current={mappingCurrent(mapping,dataset.identity,mappingStale)} invalidMissing={!!missing.error} policy={routingPolicy} confirmed={routing.confirmed} onPolicy={policy=>{setRoutingPolicy(policy);setRoutingApproval(null);}} onConfirm={()=>setRoutingApproval(approvalKey)}/>}
         <div className={styles.stageActions}><p>{mapping ? "确认对应与跳题口径后，进入分析。" : "也可以暂不关联，按原始列进行手动分析。"}</p><button type="button" className={styles.primary} onClick={() => setSection("recipes")}>进入分析 →</button></div>
@@ -275,7 +281,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     </div>
     <div id="analysis-results" hidden={!inResults}>
       {dataset && <>
-        <div className={styles.resultsToolbar}><div ref={tabsRef} className={styles.tabs} role="group" aria-label="结果类型"><span className={styles.selectionMarker} data-motion-marker aria-hidden="true"/><button type="button" data-motion-id="recipes" aria-pressed={section === "recipes"} onClick={() => setSection("recipes")}>分析方案</button><button type="button" data-motion-id="reliability" aria-pressed={section === "reliability"} onClick={() => setSection("reliability")}>量表一致性</button></div><span>{dataset.silicon ? "硅基样本 · 模拟数据" : dataset.kind === "simulated" ? "教学模拟数据" : "当前样本 · 未加权分析"}</span></div>
+        <div className={styles.resultsToolbar}><div ref={tabsRef} className={styles.tabs} role="group" aria-label="结果类型"><span className={styles.selectionMarker} data-motion-marker aria-hidden="true"/><button type="button" data-motion-id="recipes" aria-pressed={section === "recipes"} onClick={() => setSection("recipes")}>分析方案</button><button type="button" data-motion-id="reliability" aria-pressed={section === "reliability"} onClick={() => setSection("reliability")}>量表一致性</button></div><span>{dataset.silicon ? "硅基样本 · 模拟数据" : dataset.collection?.classification === "synthetic" ? "回收流程 · 合成验收" : dataset.kind === "simulated" ? "教学模拟数据" : "当前样本 · 未加权分析"}</span></div>
         {profile && section === "reliability" && <div className={styles.scaleGrid}><div className={styles.card}>
         <h3>先定义同一个构念</h3><label>构念名称<input value={construct} onChange={e => setConstruct(e.target.value)} maxLength={80} placeholder="例如：服务体验（需有量表或理论依据）"/></label>
         <div className={styles.bounds}><label>计分下限<input inputMode="decimal" value={minText} onChange={e => setMinText(e.target.value)} maxLength={20}/></label><label>计分上限<input inputMode="decimal" value={maxText} onChange={e => setMaxText(e.target.value)} maxLength={20}/></label></div>
@@ -290,7 +296,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       </div></div>}
       <div hidden={section !== "recipes"}><AnalysisRecipeBoard key={datasetSession} table={dataset.table} profile={profile || profileSurvey(dataset.table,[])} invalidMissing={!!missing.error} missingCodes={missing.codes} hash={dataset.hash} simulated={dataset.kind === "simulated"} onReliability={()=>setSection("reliability")} onCandidates={setRecipeCandidates} onProgress={setJourneySnapshot} mapping={mapping} identity={dataset.identity} mappingStale={mappingStale} activeLink={activeLink} contextKey={contextKey} routing={routing}/></div>
       </>}
-      <details className={styles.evidenceDrawer}><summary>整理为报告段落 <span>{evidenceCandidates.length ? `${evidenceCandidates.length} 项当前有效结果` : "计算后可用"}</span></summary><ResearchFlow candidates={evidenceCandidates} localOnly/></details>
+      <details className={styles.evidenceDrawer}><summary>整理为报告段落 <span>{evidenceCandidates.length ? `${evidenceCandidates.length} 项当前有效结果` : "计算后可用"}</span></summary><ResearchFlow candidates={evidenceCandidates} localOnly onEvidenceProposal={onEvidenceProposal} transformSection={dataset?.collection?section=>collectionEvidenceSection(section,dataset.collection!):undefined}/></details>
     </div>
     <details className={styles.methodNotes}><summary>方法、来源与适用范围</summary><p>支持未加权描述、分组汇总、交叉关联强度、Pearson / Spearman 相关与内部一致性计算。原始 α = k/(k−1) × [1−各题方差之和/总分方差]，所有题项使用同一完整案例集合。</p><div>{SOURCES.map(s => <article key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title} ↗</a><p>{s.note}</p></article>)}</div><p className={styles.note}>来源核查：2026-09-26。</p></details>
   </section>;

@@ -134,7 +134,7 @@ def questionnaire(value):
             raise ApiError()
         for key in ("min", "max"):
             v = q[key]
-            if v is not None and (type(v) not in (int, float) or not math.isfinite(v) or abs(v) > 1e9):
+            if v is not None and (type(v) not in (int, float) or abs(v) > 1e9 or not math.isfinite(v)):
                 raise ApiError()
         if not isinstance(q["choices"], list) or len(q["choices"]) > 30:
             raise ApiError()

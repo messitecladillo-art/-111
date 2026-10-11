@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import { ACCENTS, createEditorContent, EDITOR_LIMITS, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { useContentReveal, useKeyedListMotion } from '../motion/useWorkspaceMotion';
 import ReportStoryboard, { ReportLinkNotice } from './ReportStoryboard';
@@ -10,7 +10,12 @@ import OfficeFileLibrary from "./OfficeFileLibrary";
 import EditorRecovery from "./EditorRecovery";
 import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-recovery";
 import { useHostedSession } from '../hosted/HostedSession';
-import { DEFAULT_REPORT_OPTIONS, REPORT_FORMAT, reportFormatNotices, reportPart, type ReportFormatOptions } from '@/lib/report-format';
+import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportPart, reportExportOptions } from '@/lib/report-format';
+import ReportFormatPanel from './ReportFormatPanel';
+import { appendEvidenceSection } from '@/lib/project-report';
+
+export type ProjectEditorBinding = { initialContent: EditorContent; status: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
+export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean };
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -35,10 +40,14 @@ function subscribeNarrowScreen(listener: () => void) {
 }
 const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
 
-export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>}={}) {
   const hostedSession = useHostedSession();
-  const [reportFormat,setReportFormat]=useState<ReportFormatOptions>({...DEFAULT_REPORT_OPTIONS});
-  const [content, setContent] = useState<EditorContent>(createEditorContent);
+  const projectBound = !!projectBinding;
+  const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
+  const reportSettings = content.reportFormat ?? DEFAULT_REPORT_SETTINGS;
+  const reportFormat = reportSettings.options;
+  const onSnapshot = projectBinding?.onSnapshot;
+  useLayoutEffect(()=>{onSnapshot?.(content);},[content,onSnapshot]);
   const [mode, setMode] = useState<"report" | "slides">("report");
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
@@ -91,7 +100,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
   const slide = content.slides.find(s => s.id === slideId) || content.slides[0];
   const dirty = JSON.stringify(content) !== savedSnapshot;
   const { setUnsaved } = hostedSession;
-  useEffect(() => { if(localOnly) setUnsaved('local-report',dirty); return () => setUnsaved('local-report',false); },[localOnly,dirty,setUnsaved]);
+  useEffect(() => { if(localOnly&&!projectBinding) setUnsaved('local-report',dirty); return () => {if(!projectBinding)setUnsaved('local-report',false);}; },[localOnly,dirty,setUnsaved,projectBinding]);
 
   const resetVersions = useCallback(() => { versionEpoch.current += 1; setVersions([]); setVersionLoading(false); pendingVersion.current = null; }, []);
   // Refs coordinate async operations; state is the sole source for rendered status.
@@ -164,12 +173,13 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
     recoveryChannel.current?.postMessage({ type: "identity-transition" });
   }, []);
   useEffect(() => {
+    if(projectBound)return;
     const warn = (event: BeforeUnloadEvent) => { if (JSON.stringify(current.current) !== saved.current || busy.current || versionOperation.current) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn);
-  }, []);
+  }, [projectBound]);
 
   const save = useCallback(async (copy = false, forVersion = false): Promise<Draft | null> => {
-    if(localOnly){setMessage('当前为本地编辑。请下载 JSON 备份保存进度；可继续导出 Word 和 PPTX。');return null;}
+    if(localOnly){if(projectBinding){projectBinding.onSave();return null;}setMessage('当前为本地编辑。请下载 JSON 备份保存进度；可继续导出 Word 和 PPTX。');return null;}
     if (identityTransition.current || busy.current || (versionOperation.current && !forVersion)) return null;
     busy.current = true; setPhase("saving"); setMessage("");
     const snapshot = JSON.stringify(current.current);
@@ -206,7 +216,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       setMessage(e instanceof Error ? e.message : "保存失败，内容仍在当前页面。请重试或导出备份。");
       return null;
     } finally { busy.current = false; }
-  }, [connected, resetVersions, setRecord, acknowledgeSaved,localOnly]);
+  }, [connected, resetVersions, setRecord, acknowledgeSaved,localOnly,projectBinding]);
 
   useEffect(() => {
     if (!dirty || blocked.current || busy.current || versionOperation.current || phase === "loading" || !connected) return;
@@ -226,6 +236,10 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
     if (!blocked.current && !busy.current) setPhase("ready");
     return true;
   }
+  useImperativeHandle(controllerRef,()=>({appendSection(proposal:ReportSection){
+    try { const next=appendEvidenceSection(current.current,proposal); if(!edit(next))return false; setSectionId(proposal.id);setMode('report');setMessage('已添加统计章节，可撤销。保存后生成云端新版本。');return true; }
+    catch(error){setMessage(error instanceof Error?error.message:'未添加提案。');return false;}
+  }}));
   function undo() {
     const previous = past[past.length - 1]; if (!previous) return;
     setPast(past.slice(0, -1)); setFuture([current.current, ...future]); current.current = previous; setContent(previous);
@@ -295,9 +309,9 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
           setMessage("已取消导出，未修改作品。请核对提示页的报告依据与页面内容。");return;
         }
       }
-      const blob = kind === "docx" || kind === "appendix" ? await buildDocx(data,{...reportFormat,part:kind==='appendix'?'appendix':'main'}) : kind === "pptx" ? await buildPptx(data) : new Blob([JSON.stringify(data)], { type: "application/json" });
+      const blob = kind === "docx" || kind === "appendix" ? await buildDocx(data,reportExportOptions(reportFormat,kind==='appendix'?'appendix':'main')) : kind === "pptx" ? await buildPptx(data) : new Blob([JSON.stringify(data)], { type: "application/json" });
       downloadBlob(blob, `${fileName(data.title)}${kind==='docx'?'-报告正文':kind==='appendix'?'-附录':''}.${kind==='appendix'?'docx':kind}`);
-      setMessage(kind==='docx'||kind==='appendix'?`已按公开格式范本生成${kind==='appendix'?'独立附录':'报告正文'}。请在 Word/WPS 更新目录并核对实际分页、匿名和引用。${reportFormatNotices(data.report).join('')}`:"已生成下载文件。");
+      setMessage(kind==='docx'||kind==='appendix'?`已生成${kind==='appendix'?'独立附录':'报告正文'}。在 Word/WPS 更新目录后可查看实际分页。${reportFormatNotices(data.report).join('')}`:"已生成下载文件。");
     } catch (e) { setMessage(e instanceof Error ? e.message : "导出失败，请重试。"); }
     finally { setExporting(false); }
   }
@@ -438,7 +452,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
     <div hidden={fileLibraryOpen}>
     <div className={styles.documentBar}>
       <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
-      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
+      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
     </div>
     <div className={styles.libraryPanel} id="editor-library" hidden={localOnly||!libraryOpen}>
     <div className={styles.libraryBar}>
@@ -462,7 +476,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       <div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>
     </div>
-    {mode==='report'&&<details className={styles.reportFormat}><summary>报告排版范本与导出设置 · {REPORT_FORMAT.label}</summary><p><a href={REPORT_FORMAT.sourceUrl} target="_blank" rel="noopener noreferrer">{REPORT_FORMAT.sourceTitle}</a> · 核验日期 {REPORT_FORMAT.verifiedAt}</p><p>{REPORT_FORMAT.sourceScope}</p><ul>{Object.values(REPORT_FORMAT.verified).map(value=><li key={value}>{value}</li>)}</ul><p>正文导出依次排列标题页、已有摘要、自动目录、普通正文、参考文献，各类章节保持原有顺序；明确命名为“附录”的章节单独导出。正文中“一、”“（一）”“1.”等编号开头的短行映射为对应层级标题。旧“参考文献与附录”章节会完整保留，请先拆分。</p><label>首行缩进（原附件未规定，可调整）<select value={reportFormat.firstLineChars} onChange={e=>setReportFormat(f=>({...f,firstLineChars:Number(e.target.value) as 0|2}))}><option value={2}>2 字符</option><option value={0}>不缩进</option></select></label><label><input type="checkbox" checked={reportFormat.numberPages} onChange={e=>setReportFormat(f=>({...f,numberPages:e.target.checked}))}/>加入页码（版式选项）：标题页不编号；摘要与目录用罗马数字；正文从 1 起，参考文献续编；独立附录从 1 起。</label><p>导出后在 Word/WPS 中更新目录，检查分页、图表、引用和匿名信息。</p>{reportFormatNotices(content.report).map(message=><p key={message}>{message}</p>)}</details>}
+    {mode==='report'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
       if(identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {

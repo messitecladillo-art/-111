@@ -16,11 +16,12 @@ from .contracts import ApiError, body, uuid_string, text, integer, fingerprint, 
 from .models import User, Challenge, RateEvent, Session, Team, Member, Project, Service, Operation, Version, Proposal, SiliconRun, now, new_id
 from .security import keyed, random_token, code_verifier, config_view, encrypt, decrypt
 from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_proposal
-from . import silicon
+from . import silicon, surveys
+from .reports import register_reports
 from .mail import FixtureMail, ResendMail, MailFailure
 
 
-SCHEMA_REVISION = "0002_silicon_runs"
+SCHEMA_REVISION = "0004_project_reports"
 
 
 def iso(value):
@@ -784,4 +785,6 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
         session.commit()
         return silicon_view(row, full=True)
 
+    surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
+    register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     return app

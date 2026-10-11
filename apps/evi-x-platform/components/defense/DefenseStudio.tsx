@@ -82,7 +82,7 @@ export default function DefenseStudio(){
       <div className={styles.export}><span>{filled} / {corpus.cards.length} 题已记笔记</span><button ref={importButton} className={styles.secondary} type="button" onClick={()=>fileInput.current?.click()} disabled={reading}>导入练习笔记</button><button type="button" onClick={exportNotes} disabled={!filled||!!planError}>导出练习笔记</button></div>
     </header>
     <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择答辩练习 JSON 文件" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readImport(file);}}/>
-    <p className={styles.localNotice}>内容仅保留在当前页面内存，不上传、不自动保存。刷新或关闭页面会丢失未导出的笔记，请先导出并确认文件已保存，下次可导入继续练习；不要填写受访者身份或敏感资料。</p>
+    <p className={styles.localNotice}>练习笔记在本页编辑；离开前下载保存，下次导入继续。</p>
     {reading&&<div className={styles.reading}><p role="status">正在本地检查文件，尚未更改任何笔记…</p><button type="button" onClick={cancelImport}>取消读取</button></div>}
     {importError&&<p className={styles.error} role="alert">{importError} 当前笔记与时间设置未变。</p>}
     {pending&&<section ref={preview} tabIndex={-1} className={styles.importPreview} aria-labelledby="defense-import-title">

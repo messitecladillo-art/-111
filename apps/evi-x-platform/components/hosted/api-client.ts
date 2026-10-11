@@ -5,8 +5,10 @@ export class HostedApiError extends Error {
   readonly code: string;
   constructor(status: number, code: string, message: string) { super(message); this.name = 'HostedApiError'; this.status = status; this.code = code; }
 }
-export async function hostedRequest(path: string, options: { method?: string; body?: unknown; csrfToken?: string; signal?: AbortSignal; timeoutMs?: number } = {}): Promise<unknown> {
+export async function hostedRequest(path: string, options: { method?: string; body?: unknown; csrfToken?: string; signal?: AbortSignal; timeoutMs?: number; maxBytes?: number } = {}): Promise<unknown> {
   if (!path.startsWith('/api/') || path.includes('://')) throw Error('不支持的接口。');
+  const maxBytes = options.maxBytes ?? 1_000_000;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 16 * 1024 * 1024) throw Error('接口读取上限无效。');
   const headers = new Headers({ accept: 'application/json' });
   if (options.body !== undefined) headers.set('content-type', 'application/json');
   if (options.csrfToken) headers.set('X-CSRF-Token', options.csrfToken);
@@ -19,7 +21,7 @@ export async function hostedRequest(path: string, options: { method?: string; bo
   try {
     const reader = response.body?.getReader(), chunks: Uint8Array[] = []; let length = 0;
     if (reader) {
-      try { while (true) { const item = await reader.read(); if (item.done) break; length += item.value.byteLength; if (length > 1_000_000) { void reader.cancel().catch(() => {}); throw Error(); } chunks.push(item.value); } }
+      try { while (true) { const item = await reader.read(); if (item.done) break; length += item.value.byteLength; if (length > maxBytes) { void reader.cancel().catch(() => {}); throw Error(); } chunks.push(item.value); } }
       finally { reader.releaseLock(); }
     }
     const bytes = new Uint8Array(length); let position = 0;
