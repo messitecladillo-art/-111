@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ANALYSIS_PLANS, DESIGN_LIMITS, QUESTION_TYPES, designDictionary, exampleQuestionnaire, newQuestion, newQuestionnaire, nextVariable, parseBoundDraft, parseQuestionnaire, questionDirectory, questionIsMapped, questionnaireIssues, questionnaireText, routeDependencies, visibleQuestionIds, type DesignQuestion, type Questionnaire, type QuestionType, type QuestionFilter } from "@/lib/questionnaire";
 import styles from "./QuestionnaireStudio.module.css";
 import QuestionBlocks from "./QuestionBlocks";
+import QuestionnairePlatformExport from "./QuestionnairePlatformExport";
 import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
 import { appendMaterialQuestionGroup } from "@/lib/research-materials";
 import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
@@ -299,6 +300,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
           <button type="button" disabled={reading} onClick={()=>input.current?.click()}>{reading?"正在读取…":"恢复备份"}</button>
           <hr/><button type="button" onClick={()=>exportFile('text')}>导出问卷草稿</button><button type="button" onClick={()=>exportFile('dictionary')}>导出变量字典</button>
         </div></details>
+        <QuestionnairePlatformExport design={design} revision={previewRevision} blocked={reading||hasPendingNumbers||!!confirmation}/>
         <button type="button" className={styles.primary} onClick={()=>exportFile('backup')}>下载备份</button>
         {onAnalyze&&<button type="button" className={styles.analysisLink} disabled={reading||hasPendingNumbers} onClick={sendToAnalysis}>送到数据分析 →</button>}
       </div>
