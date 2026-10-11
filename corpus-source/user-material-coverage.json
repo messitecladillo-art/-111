@@ -1,0 +1,44 @@
+{
+  "schema": "local-corpus-coverage/v1",
+  "classification": "user-provided-local-sources",
+  "indexed_top_level_files": 283,
+  "unique_sha256": 264,
+  "exact_duplicates": 19,
+  "unique_statuses": {
+    "extracted": 254,
+    "timeout": 5,
+    "inventory_only": 2,
+    "blocked": 2,
+    "no_text": 1
+  },
+  "modern_machine_text_unique": 107,
+  "legacy_machine_text_unique": 147,
+  "machine_text_records_unique": 177171,
+  "archive_members_statuses": {
+    "blocked": 10,
+    "extracted": 2
+  },
+  "source_hashes_unchanged": true,
+  "curated_locators": {
+    "cards": 87,
+    "sources": 47,
+    "locators": 886,
+    "errors": [],
+    "passed": true,
+    "data_sha256": "4bdfc77c602ae426cf8290f3c6c309976be86cd3e003c41d604227d9d058fa89",
+    "manifest_sha256": "3e573ff52b400940efe32a20c41fd64dd086fde1d9b3439993e4892ea0a07c17"
+  },
+  "read_claim": "Machine text extraction only; no claim of full visual reading, historical rule applicability, fieldwork or award verification.",
+  "unread_media": [
+    "Images and embedded objects",
+    "PPTX videos and image-only diagrams",
+    "DOC/DOCX embedded objects and layout semantics",
+    "402-page scanned PDF without OCR",
+    "10 SPSS SAV archive members; safe reader unavailable"
+  ],
+  "tool_hashes": {
+    "tools/ingest-research-materials.py": "34a482ccf11259b93b7dece5f88eb13a3b1904bbb197740f03cd9a85efcadf25",
+    "tools/ingest-legacy-materials.ps1": "0c291d315093a74a7104dd298581dd7167018025db6fe8f52c6f1dff5d7159e1"
+  },
+  "observed_at": "2026-10-11T14:23:19.756557+00:00"
+}

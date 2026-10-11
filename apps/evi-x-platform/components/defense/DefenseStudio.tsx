@@ -6,6 +6,7 @@ import {allocatePitch,defenseExport,DEFENSE_FIELDS,DEFENSE_SCAFFOLDS,EMPTY_DEFEN
 import {MAX_DEFENSE_IMPORT_BYTES,mergeDefenseImport,parseDefenseImport} from '@/lib/defense-import';
 import styles from './DefenseStudio.module.css';
 import PitchRehearsal from './PitchRehearsal';
+import ResearchMaterialLibrary from '../research/ResearchMaterialLibrary';
 import ActionEvidence from './ActionEvidence';
 import {useContentReveal,useKeyedListMotion} from '../motion/useWorkspaceMotion';
 
@@ -81,6 +82,7 @@ export default function DefenseStudio(){
       <div><span className={styles.eyebrow}>演练 · 定位 · 修订</span><h2 id="defense-title">路演与答辩</h2><p>选择问题，记录回答与证据，再分段彩排。</p></div>
       <div className={styles.export}><span>{filled} / {corpus.cards.length} 题已记笔记</span><button ref={importButton} className={styles.secondary} type="button" onClick={()=>fileInput.current?.click()} disabled={reading}>导入练习笔记</button><button type="button" onClick={exportNotes} disabled={!filled||!!planError}>导出练习笔记</button></div>
     </header>
+    <ResearchMaterialLibrary context="defense"/>
     <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择答辩练习 JSON 文件" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readImport(file);}}/>
     <p className={styles.localNotice}>内容仅保留在当前页面内存，不上传、不自动保存。刷新或关闭页面会丢失未导出的笔记，请先导出并确认文件已保存，下次可导入继续练习；不要填写受访者身份或敏感资料。</p>
     {reading&&<div className={styles.reading}><p role="status">正在本地检查文件，尚未更改任何笔记…</p><button type="button" onClick={cancelImport}>取消读取</button></div>}

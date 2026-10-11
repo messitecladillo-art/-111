@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { RESEARCH_GUIDE_SOURCES, RESEARCH_METHOD_CARDS } from '@/lib/research-method-guide';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 import styles from './ResearchMethodGuide.module.css';
+import ResearchMaterialLibrary from '../research/ResearchMaterialLibrary';
 
 export default function ResearchMethodGuide() {
   const [activeId, setActiveId] = useState(RESEARCH_METHOD_CARDS[0].id);
@@ -12,7 +13,7 @@ export default function ResearchMethodGuide() {
   const reveal = useContentReveal<HTMLElement>({ token: card.id });
   const sources = RESEARCH_GUIDE_SOURCES.filter(source => card.sourceRefs.includes(source.id));
 
-  return <details className={styles.guide}>
+  return <><ResearchMaterialLibrary context="analysis"/><details className={styles.guide}>
     <summary><span>研究方法指南</span><small>从问题选方法，再核对条件与诊断</small></summary>
     <div className={styles.workspace}>
       <nav ref={directory} className={styles.directory} aria-label="研究方法指南目录">
@@ -34,5 +35,5 @@ export default function ResearchMethodGuide() {
         <details className={styles.sources}><summary>方法依据</summary><ul>{sources.map(source => <li key={source.id}>{source.url.startsWith('https://') ? <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a> : <strong>{source.title}</strong>}<span>{source.coverage}</span></li>)}</ul></details>
       </article>
     </div>
-  </details>;
+  </details></>;
 }

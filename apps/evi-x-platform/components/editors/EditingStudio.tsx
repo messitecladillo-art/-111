@@ -7,6 +7,7 @@ import ReportStoryboard, { ReportLinkNotice } from './ReportStoryboard';
 import { LINK_LABELS, reportExportWarnings } from '@/lib/report-storyboard';
 import styles from "./EditingStudio.module.css";
 import OfficeFileLibrary from "./OfficeFileLibrary";
+import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
 import EditorRecovery from "./EditorRecovery";
 import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-recovery";
 import { useHostedSession } from '../hosted/HostedSession';
@@ -462,6 +463,7 @@ export default function EditingStudio({localOnly=false}:{localOnly?:boolean}={})
       <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       <div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>
     </div>
+    <ResearchMaterialLibrary context="report"/>
     {mode==='report'&&<details className={styles.reportFormat}><summary>报告排版范本与导出设置 · {REPORT_FORMAT.label}</summary><p><a href={REPORT_FORMAT.sourceUrl} target="_blank" rel="noopener noreferrer">{REPORT_FORMAT.sourceTitle}</a> · 核验日期 {REPORT_FORMAT.verifiedAt}</p><p>{REPORT_FORMAT.sourceScope}</p><ul>{Object.values(REPORT_FORMAT.verified).map(value=><li key={value}>{value}</li>)}</ul><p>正文导出依次排列标题页、已有摘要、自动目录、普通正文、参考文献，各类章节保持原有顺序；明确命名为“附录”的章节单独导出。正文中“一、”“（一）”“1.”等编号开头的短行映射为对应层级标题。旧“参考文献与附录”章节会完整保留，请先拆分。</p><label>首行缩进（原附件未规定，可调整）<select value={reportFormat.firstLineChars} onChange={e=>setReportFormat(f=>({...f,firstLineChars:Number(e.target.value) as 0|2}))}><option value={2}>2 字符</option><option value={0}>不缩进</option></select></label><label><input type="checkbox" checked={reportFormat.numberPages} onChange={e=>setReportFormat(f=>({...f,numberPages:e.target.checked}))}/>加入页码（版式选项）：标题页不编号；摘要与目录用罗马数字；正文从 1 起，参考文献续编；独立附录从 1 起。</label><p>导出后在 Word/WPS 中更新目录，检查分页、图表、引用和匿名信息。</p>{reportFormatNotices(content.report).map(message=><p key={message}>{message}</p>)}</details>}
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
       if(identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
