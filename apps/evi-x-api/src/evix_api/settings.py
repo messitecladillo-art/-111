@@ -38,6 +38,14 @@ class Settings(BaseSettings):
     silicon_call_seconds: int = 45
     silicon_stale_seconds: int = 600
 
+    # SAV stays private and disposable; limits apply before native decoding.
+    sav_temp_dir: Path = Path(".local/sav-imports")
+    sav_upload_seconds: int = 20
+    sav_parse_seconds: int = 15
+    sav_cleanup_seconds: int = 60
+    sav_hourly_imports: int = 12
+    sav_global_hourly_imports: int = 120
+
     @model_validator(mode="after")
     def valid(self):
         if not self.database_url.startswith("postgresql+psycopg://"):
@@ -77,6 +85,12 @@ class Settings(BaseSettings):
         if not (1 <= self.silicon_max_calls <= 1000 and 1 <= self.silicon_concurrency <= 8 and 1 <= self.silicon_hourly_runs <= 60
                 and 5 <= self.silicon_call_seconds <= 120 and 120 <= self.silicon_stale_seconds <= 7200):
             raise ValueError("Invalid silicon run bounds")
+        if (not self.sav_temp_dir.parts or ".." in self.sav_temp_dir.parts
+                or not (1 <= self.sav_upload_seconds <= 60 and 1 <= self.sav_parse_seconds <= 60
+                        and 30 <= self.sav_cleanup_seconds <= 3600
+                        and 1 <= self.sav_hourly_imports <= 60
+                        and self.sav_hourly_imports <= self.sav_global_hourly_imports <= 1000)):
+            raise ValueError("Invalid private SAV conversion bounds")
         for base in self.compatible_bases:
             validate_base("compatible", base, {"compatible": tuple(self.compatible_bases)})
         return self
