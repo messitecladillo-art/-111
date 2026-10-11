@@ -4,22 +4,26 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {COMPETITION_UPDATE} from '../data/competition-update.ts';
 const root=new URL('../../../',import.meta.url);
-const recordPath=COMPETITION_UPDATE.lastAttempt.evidencePath;
 const read=path=>JSON.parse(readFileSync(new URL(path,root),'utf8'));
-test('bounded source attempt stays separate from canonical rule verification and edition scope',()=>{
- const record=read(recordPath),prior=read(COMPETITION_UPDATE.evidencePath);
- assert.equal(record.record_kind,'source-attempt-not-a-rule-snapshot');
- assert.equal(record.attempted_at,COMPETITION_UPDATE.lastAttempt.date);assert.equal(record.edition,COMPETITION_UPDATE.edition);
- assert.equal(COMPETITION_UPDATE.verifiedAt,prior.verified_at);assert.equal(record.preserved_verified_at,prior.verified_at);
+
+test('current official-source review preserves edition17 and unresolved exact scope',()=>{
+ const record=read(COMPETITION_UPDATE.lastAttempt.evidencePath);
+ assert.equal(record.record_kind,'source-review-not-rule-snapshot');
+ assert.equal(record.verified_at,COMPETITION_UPDATE.verifiedAt);
+ assert.equal(record.verified_at,COMPETITION_UPDATE.lastAttempt.date);
+ assert.equal(record.confirmed_scope.edition,COMPETITION_UPDATE.edition);
+ for(const field of ['group','region','track','stage'])assert.equal(record.confirmed_scope[field],null);
  assert.equal(COMPETITION_UPDATE.status,'general_notice_only');assert.equal(COMPETITION_UPDATE.fullRuleSnapshotAvailable,false);
- assert.equal(record.organizer.latest_notice_completeness,'unknown');assert.equal(record.republication.pdf,COMPETITION_UPDATE.source);
+ assert.equal(record.notice_index.format_notice_in_retrieved_index,false);
+ assert.match(record.notice_index.completeness,/只核验/);
 });
-test('attempt record references unchanged local bounded evidence, not a fabricated full crawl',()=>{
- const record=read(recordPath),evidence=record.evidence;
- assert.match(evidence.path,/^corpus-source\/official-rules\/[a-z0-9-]+\.json$/);
- const bytes=readFileSync(new URL(evidence.path,root));assert.equal(createHash('sha256').update(bytes).digest('hex'),evidence.sha256);
- const parsed=JSON.parse(bytes);assert.equal(parsed.kind,'bounded-official-source-extraction');
- assert(parsed.attempts.some(a=>a.url.includes('china-cssc.org')&&a.outcome==='inaccessible'));
- assert(parsed.attempts.some(a=>a.url===COMPETITION_UPDATE.source&&a.outcome==='pdf_body_read'));
- // This checks internal evidence linkage only, not current network or official authenticity.
+
+test('notice provenance binds archived bytes without promoting school format to national rule',()=>{
+ const record=read(COMPETITION_UPDATE.lastAttempt.evidencePath);
+ const bytes=readFileSync(new URL(record.general_notice.existing_local_pdf,root));
+ assert.equal(createHash('sha256').update(bytes).digest('hex'),record.general_notice.sha256);
+ assert.equal(record.local_reference.id,'btbu-17-report-layout-v1');
+ assert.match(record.local_reference.use,/参考/);
+ assert.match(record.general_notice.facts[0].text,/2026年11月17日/);
+ // Hash linkage checks stored evidence. It does not perform a new web verification.
 });

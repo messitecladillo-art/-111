@@ -11,10 +11,15 @@ import { useHostedSession } from './HostedSession';
 import HostedMembers from './HostedMembers';
 import { createSiliconRunner, parseSiliconLimits, serviceNames } from './silicon-runner';
 import type { DatasetTransfer } from '@/components/analysis/SurveyLab';
+import type { ReportSection } from '@/lib/editor-model';
+import type { ReportProposal } from '@/lib/project-report';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'), { loading: () => <p role="status">正在打开问卷编辑器…</p> });
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'), { loading: () => <p role="status">正在打开本地分析工具…</p> });
 const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'), { loading: () => <p role="status">正在搭建硅基样本舞台…</p> });
+const HostedDefense = dynamic(() => import('@/components/hosted/HostedDefense'), { loading: () => <p role="status">正在打开答辩工作区…</p> });
+const HostedReport = dynamic(() => import('@/components/hosted/HostedReport'), { loading: () => <p role="status">正在打开报告与 PPT…</p> });
+const SurveyCollection = dynamic(() => import('@/components/survey/SurveyCollection'), { loading: () => <p role="status">正在读取发布与回收…</p> });
 type SaveRequest = { design: Questionnaire; expectedRevision: number; idempotencyKey: string; sourceProposalId?: string };
 type GenerationRequest = { serviceId: string; serviceRevision: number; brief: string; expectedQuestionnaireRevision: number; idempotencyKey: string; consent: true };
 type CachedProject={head:QuestionnaireHead|null;initial:Questionnaire;snapshot:DesignSnapshot|null;sourceProposal?:string;proposal:Proposal|null;brief:string;pendingSave:SaveRequest|null;pendingGeneration:GenerationRequest|null;saveUncertain:boolean;generationUncertain:boolean;conflict:boolean};
@@ -41,8 +46,13 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [loadingHistory,setLoadingHistory] = useState(false);
   const [readonlyDesign,setReadonlyDesign]=useState<Questionnaire|null>(null);
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [generating, setGenerating] = useState(false), [reading, setReading] = useState(false);
-  const [saveUncertain, setSaveUncertain] = useState(cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
-  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'silicon' | 'analysis' | 'members'>('design');
+  const [saveUncertain, setSaveUncertain] = useState(!!cached?.pendingSave||cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
+  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<'design' | 'silicon' | 'collection' | 'analysis' | 'report' | 'defense' | 'members'>('design');
+  const [defenseOpened, setDefenseOpened] = useState(false);
+  const [collectionOpened, setCollectionOpened] = useState(false);
+  const [reportOpened, setReportOpened] = useState(false), [reportProposal, setReportProposal] = useState<ReportProposal|null>(null);
+  const proposeEvidence = useCallback((section:ReportSection) => { setReportProposal({id:crypto.randomUUID(),section}); setReportOpened(true); setTab('report'); }, []);
+  const consumeReportProposal = useCallback(() => setReportProposal(null), []);
   const [transfer, setTransfer] = useState<DesignTransfer | null>(null), [analysisOpened, setAnalysisOpened] = useState(false);
   const [siliconOpened, setSiliconOpened] = useState(false), [datasetTransfer, setDatasetTransfer] = useState<DatasetTransfer | null>(null), [siliconMaxCalls, setSiliconMaxCalls] = useState<number | undefined>();
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
@@ -61,7 +71,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const savedFingerprint = head ? fingerprint(head.design) : initial ? fingerprint(initial) : '';
   const dirty = !!snapshot && (snapshot.pending || fingerprint(snapshot.design) !== savedFingerprint);
   const revision = head?.revision || 0;
-  const tabMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['design', 'silicon', 'analysis', 'members'], activeId: tab, markerAxis: 'horizontal' });
+  const tabMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['design', 'silicon', 'collection', 'analysis', 'report', 'defense', 'members'], activeId: tab, markerAxis: 'horizontal' });
   const proposalMotion = useContentReveal<HTMLOListElement>({ token: proposal?.design ? `${proposal.id}:${proposal.status}` : null });
   const saveState = saving ? 'saving' : saveUncertain ? 'uncertain' : conflict ? 'conflict' : dirty ? 'dirty' : revision ? 'saved' : 'empty';
   const { cacheDraft, setUnsaved } = auth, userId = auth.session?.user?.id;
@@ -110,9 +120,9 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     setSourceProposal(origin); setLoad({ id: crypto.randomUUID(), design }); setTab('design'); setNotice(message); setError('');
   }
   async function save() {
-    if (operation.current || !writable || !latest.current || latest.current.pending || conflict) return;
+    if (operation.current || !writable || (!pendingSave.current && (!latest.current || latest.current.pending || conflict))) return;
     operation.current = true; setSaving(true); setError('');
-    pendingSave.current ??= { design: structuredClone(latest.current.design), expectedRevision: headRef.current?.revision || 0, idempotencyKey: crypto.randomUUID(), ...(sourceProposal ? { sourceProposalId: sourceProposal } : {}) };
+    pendingSave.current ??= { design: structuredClone(latest.current!.design), expectedRevision: headRef.current?.revision || 0, idempotencyKey: crypto.randomUUID(), ...(sourceProposal ? { sourceProposalId: sourceProposal } : {}) };
     try {
       const receipt = parseQuestionnaireHead(await auth.mutate(`/api/projects/${projectId}/questionnaire/versions`, pendingSave.current));
       if (!alive.current) return;
@@ -122,7 +132,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
       if (!current || current.revision < receipt.revision) throw Error('保存回执与当前版本尚未完成核对，请重试原保存。');
       pendingSave.current = null; setSaveUncertain(false); setSourceProposal(undefined);
       if (current.revision > receipt.revision) { setConflict(true); setNotice(`本次已保存为 v${receipt.revision}；云端已有 v${current.revision}。当前编辑已保留，请核对最新版本。`); }
-      else { rememberHead(current); setNotice(`已保存 v${receipt.revision}。${latest.current && fingerprint(latest.current.design) !== fingerprint(receipt.design) ? '保存期间的新编辑仍在本页，需再次保存。' : '刷新或重新登录后可恢复。'}`); }
+      else { rememberHead(current); setConflict(false); setNotice(`已保存 v${receipt.revision}。${latest.current && fingerprint(latest.current.design) !== fingerprint(receipt.design) ? '保存期间的新编辑仍在本页，需再次保存。' : '刷新或重新登录后可恢复。'}`); }
       await reloadVersions().catch(() => { if(alive.current)setNotice(`已保存 v${receipt.revision}，历史列表暂未刷新。`); });
     } catch (e) {
       if (!alive.current) return;
@@ -133,7 +143,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     } finally { operation.current = false; if (alive.current) setSaving(false); }
   }
   async function refreshHead(keepLocal: boolean) {
-    if (operation.current || saving) return;
+    if (operation.current || saving || saveUncertain || pendingSave.current) return;
     operation.current = true; setReading(true); setError(''); const before = draftRevision.current;
     try {
       const current = parseHeadResponse(await hostedRequest(`/api/projects/${projectId}/questionnaire`));
@@ -194,11 +204,11 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
   return <>
     <div className="hosted-project-heading"><div><Link href="/projects">← 我的项目</Link><h2>{project.title}</h2><span className="hosted-small">{ROLE_LABELS[role]} · 问卷 {revision ? `v${revision}` : '尚未保存'}</span></div><div className="hosted-actions"><button onClick={() => snapshot && downloadQuestionnaire(snapshot.design)} disabled={!snapshot}>下载当前设计</button><button className="hosted-primary" onClick={() => void save()} disabled={!writable || !snapshot || snapshot.pending || saving || reading || conflict || saveUncertain || !dirty}>{saving ? '正在保存…' : '保存新版本'}</button></div></div>
-    <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>本地分析</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
+    <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="collection" aria-pressed={tab === 'collection'} onClick={() => { setCollectionOpened(true); setTab('collection'); }}>发布与回收</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>数据分析</button><button data-motion-id="report" aria-pressed={tab === 'report'} onClick={() => { setReportOpened(true); setTab('report'); }}>报告与 PPT</button><button data-motion-id="defense" aria-pressed={tab === 'defense'} onClick={() => { setDefenseOpened(true); setTab('defense'); }}>路演与答辩</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
     {error && <p className="hosted-alert" role="alert">{error}</p>}{notice && <p className="hosted-notice" role="status">{notice}</p>}
     {(proposal || generationUncertain) && tab !== 'design' && <p className="hosted-notice"><span>{generationUncertain?'模型调用待核对，原请求已保留。':'模型提案已保留，可返回问卷设计查看。'}</span><button onClick={()=>setTab('design')}>查看生成结果与状态</button></p>}
     {saveUncertain && <div className="hosted-notice"><p>上次保存尚待核对。重试会使用原内容和原请求标识；本页新编辑仍保留。</p><button disabled={saving} onClick={() => void save()}>核对并重试原保存</button></div>}
-    {conflict && <div className="hosted-conflict" role="alert"><strong>云端版本已更新，当前草稿已保留。</strong><p>可以先下载本页设计，再载入云端版本。也可以确认以最新版本为基础保留手工草稿。</p><div className="hosted-actions"><button disabled={reading} onClick={() => void refreshHead(false)}>载入最新云端版本</button><button disabled={reading} onClick={() => void refreshHead(true)}>保留当前草稿并核对版本</button></div></div>}
+    {conflict && <div className="hosted-conflict" role="alert"><strong>云端版本已更新，当前草稿已保留。</strong><p>可以先下载本页设计，再载入云端版本。也可以确认以最新版本为基础保留手工草稿。</p><div className="hosted-actions"><button disabled={reading || saving || saveUncertain} onClick={() => void refreshHead(false)}>载入最新云端版本</button><button disabled={reading || saving || saveUncertain} onClick={() => void refreshHead(true)}>保留当前草稿并核对版本</button></div></div>}
     <div hidden={tab !== 'design'}>
       <div className="hosted-project-tools"><details className="hosted-project-tool" open={!head || generationUncertain}><summary><span>生成问卷建议</span><small>{generationUncertain?'请求待核对':generating?'正在生成…':'按需使用模型'}</small></summary><div className="hosted-project-tool-body"><span className="hosted-kicker">提出需求 → 预览建议 → 确认应用</span>{writable ? <><label>模型服务<select value={serviceId} disabled={generating || generationUncertain} onChange={e => { setServiceId(e.target.value); setConsent(false); }}>{!questionnaireServices.length && <option value="">请先配置个人模型服务</option>}{questionnaireServices.map(s => <option key={s.id} value={s.id}>{questionnaireNames.get(s.id)} · v{s.revision}</option>)}</select></label><Link href="/services">管理我的模型服务 →</Link><label>研究需求<textarea rows={4} maxLength={6000} disabled={generating || generationUncertain} value={brief} placeholder="说明研究目标、目标群体，以及希望支持的决策。" onChange={e => { setBrief(e.target.value); setConsent(false); }}/></label><label className="hosted-consent"><input type="checkbox" checked={consent} disabled={generating || generationUncertain} onChange={e => setConsent(e.target.checked)}/><span>{auth.session?.mode === 'local_test' ? '确认使用合成模型验收本次需求，不产生真实模型费用。' : `同意将上方研究需求发送到 ${services.find(s => s.id === serviceId)?.provider || '所选供应商'}，用于生成问卷建议，并使用我的 API 额度。`}</span></label><button className="hosted-primary" disabled={generating || generationUncertain || !serviceId || !consent || !brief.trim() || saving || saveUncertain || conflict} onClick={() => void generate()}>{generating ? '正在等待回执…' : '生成问卷建议'}</button>{generationUncertain && <div className="hosted-notice"><p>请求回执未到，原请求已保留。</p><button disabled={generating} onClick={() => void generate()}>核对原生成请求</button></div>}</> : <p>当前角色可查看问卷和历史版本。生成与编辑由负责人或编辑成员进行。</p>}</div></details>
         <details className="hosted-project-tool"><summary><span>版本历史</span><small>{historyError?'读取未完成':revision?`当前 v${revision}`:'尚未保存'}</small></summary><div className="hosted-project-tool-body"><div className="hosted-section-title"><h3>已保存版本</h3><button disabled={loadingHistory || reading || saving || saveUncertain} onClick={() => void reloadVersions().catch(e => setError(errorMessage(e)))}>刷新</button></div><p className="hosted-small">历史载入只影响本页；保存后新增版本。每次读取 100 条。</p>{historyError&&<p role="alert">{historyError}</p>}<div className="hosted-history">{versions.length ? versions.map(v => <div key={v.id}><span><strong>v{v.revision} · {v.title || '未命名问卷'}</strong><small>{new Date(v.createdAt).toLocaleString('zh-CN')}</small></span><button disabled={reading || saving || saveUncertain} onClick={() => void history(v)}>载入编辑器</button></div>) : <p>第一次保存后，版本会出现在这里。</p>}</div>{nextBeforeRevision!==null&&<button disabled={loadingHistory || reading || saving} onClick={()=>void reloadVersions(nextBeforeRevision)}>加载更早版本</button>}<button disabled={reading || saving || saveUncertain} onClick={() => void refreshHead(false)}>核对并载入最新版本</button></div></details>
@@ -208,7 +218,10 @@ function ProjectEditor({ projectId }: { projectId: string }) {
       {writable?<fieldset className="hosted-editor-fieldset" disabled={reading}><legend className="hosted-sr-only">项目问卷编辑器</legend><QuestionnaireStudio localOnly onSnapshot={onSnapshot} onAnalyze={value => { setTransfer({ id: crypto.randomUUID(), snapshot: value }); setAnalysisOpened(true); setTab('analysis'); }} hosted={{ initialDesign: initial,cacheKey:`questionnaire:${projectId}`, load, savedFingerprint: head ? savedFingerprint : undefined, onLoaded: acknowledgeLoad, onDetachProposal: detach }}/></fieldset>:<ReadonlyQuestionnaire design={readonlyDesign||head?.design||initial}/>}
     </div>
     {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { setDatasetTransfer(handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
-    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer}/></div>}
+    {collectionOpened && <div hidden={tab !== 'collection'}><SurveyCollection projectId={projectId} savedRevision={revision} canPublish={!dirty && !saving && !saveUncertain && !conflict} writable={writable} onAnalyze={value => { setDatasetTransfer(value); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
+    {reportOpened && <div hidden={tab !== 'report'}><HostedReport projectId={projectId} title={project.title} writable={writable} proposal={reportProposal} onProposalConsumed={consumeReportProposal}/></div>}
+    {defenseOpened && <div hidden={tab !== 'defense'}><HostedDefense projectId={projectId} onOpenReport={() => { setReportOpened(true); setTab('report'); }}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
   </>;
 }

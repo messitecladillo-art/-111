@@ -26,10 +26,106 @@ export const REPORT_FORMAT = {
 export type ReportFormatOptions = { part:'main'|'appendix'; includeCover: boolean; includeToc: boolean; firstLineChars: 0 | 2; numberPages: boolean };
 /** Explicit product choices where the cited attachment does not prescribe a value. */
 export const DEFAULT_REPORT_OPTIONS: ReportFormatOptions = { part:'main',includeCover: true, includeToc: true, firstLineChars: 2, numberPages: true };
-export function parseReportFormatOptions(value: ReportFormatOptions): ReportFormatOptions {
-  if (!value || typeof value !== 'object' || Object.keys(value).some(key => !['part','includeCover','includeToc','firstLineChars','numberPages'].includes(key)) || !['main','appendix'].includes(value.part) || ['includeCover','includeToc','numberPages'].some(key=>typeof value[key as keyof ReportFormatOptions]!=='boolean') || ![0,2].includes(value.firstLineChars)) throw Error('报告排版选项无效。');
-  if(value.part==='main'&&(!value.includeCover||!value.includeToc))throw Error('本范本的报告正文需包含标题页和目录页。');
-  return { ...value };
+export function parseReportFormatOptions(value: unknown): ReportFormatOptions {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('报告排版选项无效。');
+  const options = value as Record<string, unknown>;
+  if (Object.keys(options).length !== 5 || Object.keys(options).some(key => !['part','includeCover','includeToc','firstLineChars','numberPages'].includes(key)) || !['main','appendix'].includes(options.part as string) || ['includeCover','includeToc','numberPages'].some(key=>typeof options[key]!=='boolean') || ![0,2].includes(options.firstLineChars as number)) throw Error('报告排版选项无效。');
+  const parsed = options as ReportFormatOptions;
+  if(parsed.part==='main'&&(!parsed.includeCover||!parsed.includeToc))throw Error('报告正文需包含标题页和目录页。');
+  return { ...parsed };
+}
+
+export type ReportFormatSettings = {
+  edition: string;
+  group: string;
+  region: string;
+  track: string;
+  stage: string;
+  profileId: string;
+  options: ReportFormatOptions;
+};
+
+/** Export buttons choose the part explicitly; remembered appendix settings never remove required main pages. */
+export function reportExportOptions(value: ReportFormatOptions, part: 'main'|'appendix'): ReportFormatOptions {
+  const options = parseReportFormatOptions(value);
+  return parseReportFormatOptions({...options,part,...(part==='main'?{includeCover:true,includeToc:true}:{})});
+}
+
+export const REPORT_FORMAT_PROFILES = [
+  {
+    id: 'research-default', label: '研究文档标准排版', edition: null,
+    sourceTitle: '证见研究文档排版设置', sourceUrl: null, sourceSha256: null,
+    scope: '研究文档', verifiedAt: null,
+  },
+  {
+    id: REPORT_FORMAT.id, label: '第十六届公开排版范本', edition: '第十六届',
+    sourceTitle: REPORT_FORMAT.sourceTitle, sourceUrl: REPORT_FORMAT.sourceUrl,
+    sourceSha256: REPORT_FORMAT.sourceSha256, scope: '安徽工程大学第十六届实践赛与省赛选拔附件',
+    verifiedAt: REPORT_FORMAT.verifiedAt,
+  },
+  {
+    id: 'btbu-17-report-layout-v1', label: '第十七届校赛排版参考 · 北工商', edition: '第十七届',
+    sourceTitle: '北京工商大学第十六届立丰杯校赛《报告格式和封面参考》',
+    sourceUrl: 'https://stxy.btbu.edu.cn/tzgg/40e1699e94774c69b98ea3a94f2112a2.htm',
+    sourceSha256: '1c5dc579bd453bb50fa8362581001f37883cc487129bd3efa3f85f80925352d4',
+    scope: '北京工商大学校级选拔；衔接全国第十七届', verifiedAt: '2026-10-11',
+  },
+] as const;
+
+export type ReportFormatProfile = (typeof REPORT_FORMAT_PROFILES)[number];
+export const DEFAULT_REPORT_FORMAT_SETTINGS: ReportFormatSettings = {
+  edition: '第十七届', group: '', region: '', track: '', stage: '',
+  profileId: 'research-default', options: { ...DEFAULT_REPORT_OPTIONS },
+};
+export const DEFAULT_REPORT_SETTINGS = DEFAULT_REPORT_FORMAT_SETTINGS;
+
+const SCOPE_FIELDS = ['edition', 'group', 'region', 'track', 'stage'] as const;
+const SETTING_FIELDS = [...SCOPE_FIELDS, 'profileId', 'options'] as const;
+// Length matches the persisted contract's UTF-16 units, including astral characters.
+const CONTROL_OR_LINE_BREAK = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
+
+export function parseReportFormatSettings(value: unknown): ReportFormatSettings {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('报告格式设置无效。');
+  const record = value as Record<string, unknown>;
+  if (Object.keys(record).length !== SETTING_FIELDS.length || Object.keys(record).some(key => !SETTING_FIELDS.includes(key as (typeof SETTING_FIELDS)[number]))) throw Error('报告格式设置字段无效。');
+  for (const field of SCOPE_FIELDS) {
+    const input = record[field];
+    if (typeof input !== 'string' || input.length > (field === 'edition' ? 20 : 80) || CONTROL_OR_LINE_BREAK.test(input)) throw Error('赛事范围格式无效。');
+  }
+  if (!['第十六届', '第十七届'].includes(record.edition as string)) throw Error('赛事届次无效。');
+  if (!REPORT_FORMAT_PROFILES.some(profile => profile.id === record.profileId)) throw Error('报告排版范本无效。');
+  return {
+    edition: record.edition as string, group: record.group as string, region: record.region as string,
+    track: record.track as string, stage: record.stage as string, profileId: record.profileId as string,
+    options: parseReportFormatOptions(record.options),
+  };
+}
+
+export type ReportFormatEvaluation = {
+  status: 'unknown' | 'not_applicable' | 'reference_only';
+  label: string;
+  detail: string;
+  missingScope: (typeof SCOPE_FIELDS)[number][];
+  profile: ReportFormatProfile;
+  /** No loaded profile establishes a hard limit for the selected project scope. */
+  pageLimit: null;
+};
+
+export function evaluateReportFormat(value: ReportFormatSettings): ReportFormatEvaluation {
+  const settings = parseReportFormatSettings(value);
+  const profile = REPORT_FORMAT_PROFILES.find(item => item.id === settings.profileId)!;
+  const missingScope = SCOPE_FIELDS.filter(field => !settings[field].trim());
+  const base = { profile, missingScope, pageLimit: null };
+  if (profile.edition && profile.edition !== settings.edition) return {
+    ...base, status: 'not_applicable', label: '范本届次不匹配', detail: `当前选择${settings.edition}，该范本属于${profile.edition}。`,
+  };
+  if (missingScope.length) return {
+    ...base, status: 'unknown', label: '赛事范围待完善', detail: '补充组别、赛区、赛道与阶段。',
+  };
+  return {
+    ...base, status: 'reference_only', label: profile.id === 'research-default' ? '研究排版' : '排版参考',
+    detail: settings.edition === '第十七届' ? '第十七届实践赛格式细则待绑定。' : '选择对应学校、赛区与阶段的正式提交要求。',
+  };
 }
 export type ReportPart = 'abstract'|'references'|'appendix'|'body';
 export function reportPart(title: string): ReportPart {

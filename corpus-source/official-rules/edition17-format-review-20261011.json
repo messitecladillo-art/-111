@@ -1,0 +1,83 @@
+{
+  "id": "edition17-format-review-20261011",
+  "record_kind": "source-review-not-rule-snapshot",
+  "verified_at": "2026-10-11",
+  "confirmed_scope": {
+    "edition": "第十七届",
+    "group": null,
+    "region": null,
+    "track": null,
+    "stage": null
+  },
+  "general_notice": {
+    "title": "关于第十七届全国大学生市场调查与分析大赛的通知",
+    "authority": "中国商业统计学会全国大学生市场调查与分析大赛组委会",
+    "document_number": "中商统〔2026〕33号",
+    "signed_date": "2026-09-20",
+    "published_date": "2026-09-21",
+    "original_url": "http://www.china-cssc.org/show-304-2179-1.html",
+    "https_pdf": "https://stxy.btbu.edu.cn/docs/2026-10/1fcc2b9eccae40efad4f6e4903db2e3e.pdf",
+    "existing_local_pdf": "corpus-source/official-rules/edition17-main-notice-20260921.pdf",
+    "sha256": "e334bed6a76a7a75131eed7d3d2b996b2ab63d4d9e2ce2821b1ebaae5b499b65",
+    "verification": "本次实时下载的官网HTTP原件及浙江工商大学、北京工商大学两份HTTPS附件字节完全一致。",
+    "facts": [
+      {
+        "page": 3,
+        "text": "实践赛文件与企业命题安排于2026年11月17日发布。"
+      },
+      {
+        "page": 3,
+        "scope": "在华留学生组",
+        "text": "报告和PPT展示使用中文，答辩可用中文或中英双语，展示答辩需有留学生参加。"
+      },
+      {
+        "page": 5,
+        "scope": "全国赛",
+        "text": "初赛评审报告与PPT，决赛采用现场答辩。"
+      }
+    ]
+  },
+  "notice_index": {
+    "url": "http://www.china-cssc.org/list-304-1.html",
+    "latest_observed_date": "2026-10-09",
+    "latest_observed_title": "关于公布第十七届市调大赛各组别赛区设置的通知",
+    "latest_url": "http://www.china-cssc.org/show-304-2190-1.html",
+    "format_notice_in_retrieved_index": false,
+    "completeness": "只核验该列表及总通知，不代表穷尽所有渠道。"
+  },
+  "local_reference": {
+    "id": "btbu-17-report-layout-v1",
+    "title": "北京工商大学第十六届立丰杯校赛附件3：报告格式和封面参考",
+    "relationship": "该校赛衔接全国第十七届；两项赛事届次不同。",
+    "authority": "北京工商大学数学与统计学院",
+    "published_date": "2026-10-08",
+    "page_url": "https://stxy.btbu.edu.cn/tzgg/40e1699e94774c69b98ea3a94f2112a2.htm",
+    "attachment_url": "https://stxy.btbu.edu.cn/docs/2026-10/192853f81570400ab71938667499349a.doc",
+    "attachment_sha256": "1c5dc579bd453bb50fa8362581001f37883cc487129bd3efa3f85f80925352d4",
+    "content_kind": "从只读Word提取中整理的排版事实，不是原附件副本。",
+    "facts": {
+      "paper": "A4",
+      "margins_mm": [
+        25.4,
+        25.4,
+        31.8,
+        31.8
+      ],
+      "body": "宋体12pt，1.25倍行距，段前0.5行",
+      "title": "宋体16pt加粗",
+      "headings": "一级黑体15pt，二级黑体14pt",
+      "caption": "宋体12pt，图题在下、表题在上、居中；序题空两格"
+    },
+    "use": "可选校级排版参考；不启用全国第十七届页数或匿名处罚校验。"
+  },
+  "unknowns": [
+    "第十七届所选范围的全国实践赛报告字体和页数要求",
+    "PPT尺寸、字号、页数要求",
+    "用户的组别、赛区、赛道、阶段",
+    "本届具体匿名后果及AI使用细则"
+  ],
+  "product_choices": [
+    "三线表1.5/0.75/1.5pt与各列居中来自用户要求。",
+    "通用排版默认值独立于赛事规则状态。"
+  ]
+}
