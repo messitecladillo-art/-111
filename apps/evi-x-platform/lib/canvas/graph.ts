@@ -26,7 +26,7 @@ export function defaultConfig(kind: NodeKind): Record<string, unknown> {
     case 'filter': return { column: '', values: [] };
     case 'missing': return { codes: '', complete: [] };
     case 'alpha': return { columns: [], reverse: [], min: 1, max: 5, construct: '', question: '' };
-    case 'chart': return { kind: 'auto', palette: '', title: '', decimals: 2, showLabels: false };
+    case 'chart': return { kind: 'auto', palette: '', title: '', decimals: 2, showLabels: false, tableRules: 'three_line' };
     case 'review': return { approvedHash: '', approvedAt: '', note: '' };
     case 'report': return { heading: '' };
     case 'group': return { collapsed: false, width: 600, height: 360 };
@@ -152,6 +152,18 @@ export function preflight(doc: CanvasDoc, scope: string[]): Issue[] {
     if (n.kind === 'review' && !text(c.approvedHash)) issues.push({ nodeId: n.id, level: 'warning', message: '运行到这里会暂停，等待人工确认。' });
   }
   return issues;
+}
+
+/**
+ * Split a run scope by its check results: nodes with an error are skipped (and reported), their
+ * downstream is blocked, and every independent branch still runs. Warnings never skip a node.
+ */
+export function partitionScope(doc: CanvasDoc, scope: string[], issues: Issue[]): { run: string[]; skipped: Map<string, string>; blocked: Map<string, string> } {
+  const inScope = new Set(scope), skipped = new Map<string, string>();
+  for (const i of issues) if (i.level === 'error' && inScope.has(i.nodeId) && !skipped.has(i.nodeId)) skipped.set(i.nodeId, i.message);
+  const blocked = new Map<string, string>();
+  for (const id of downstreamOf(doc, skipped.keys())) if (inScope.has(id) && !skipped.has(id)) blocked.set(id, '上游节点未通过检查，本节点没有运行。');
+  return { run: scope.filter(id => !skipped.has(id) && !blocked.has(id)), skipped, blocked };
 }
 
 /* ───────── strict parsing for storage and import ───────── */

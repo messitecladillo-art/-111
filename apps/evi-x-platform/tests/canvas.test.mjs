@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { NODE_DEFS, nodeDef, searchCatalog, isStat } from '../lib/canvas/catalog.ts';
-import { connectionProblem, defaultConfig, emptyDoc, parseDoc, preflight, runScope, serializeDoc, topoOrder, upstreamOf, REL_IN, REL_OUT } from '../lib/canvas/graph.ts';
+import { connectionProblem, defaultConfig, emptyDoc, parseDoc, partitionScope, preflight, runScope, serializeDoc, topoOrder, upstreamOf, REL_IN, REL_OUT } from '../lib/canvas/graph.ts';
 import { runCanvas, reviewKey, hash53 } from '../lib/canvas/execute.ts';
 import { emptyHistory, record, undo, redo, snapshotOf } from '../lib/canvas/history.ts';
 import { autoLayout } from '../lib/canvas/layout.ts';
@@ -130,6 +130,22 @@ test('a failing branch blocks only its dependents; independent branches still fi
   const handoffs = events.filter(e => e.type === 'handoff');
   assert.deepEqual(handoffs.map(e => e.edgeId).sort(), [d.edges[0].id, d.edges[2].id].sort());
   assert.deepEqual(events.map(e => e.seq), events.map((_, i) => i + 1));
+});
+
+test('a node that fails the check is skipped with its downstream; other branches still run', async () => {
+  const data = node('dataset'), ok = node('frequency', { x: '渠道' }), bad = node('numeric'), chart = node('chart'), loose = node('crosstab', { x: '渠道', y: '推荐意愿' });
+  const d = doc([data, ok, bad, chart, loose], [edge(data, ok), edge(data, bad), edge(bad, chart)]);
+  const scope = runScope(d, null), issues = preflight(d, scope);
+  const { run: runnable, skipped, blocked } = partitionScope(d, scope, issues);
+  assert.deepEqual([...skipped.keys()].sort(), [bad.id, loose.id].sort());
+  assert.deepEqual([...blocked.keys()], [chart.id]);
+  assert.deepEqual(runnable, [data.id, ok.id]);
+  const states = await runCanvas(d, runnable, run);
+  assert.equal(states.get(ok.id).status, 'done');
+  // Warnings (an unapproved review) never skip a node.
+  const review = node('review');
+  const d2 = doc([data, ok, review], [edge(data, ok), edge(ok, review)]);
+  assert.equal(partitionScope(d2, runScope(d2, null), preflight(d2, runScope(d2, null))).skipped.size, 0);
 });
 
 test('missing workspace data fails with a clear reason instead of a placeholder result', async () => {
