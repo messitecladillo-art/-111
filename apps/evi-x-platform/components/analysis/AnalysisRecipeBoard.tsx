@@ -26,7 +26,9 @@ const ALPHA_BLOCK = { id: 'alpha', title: '信度与题项诊断', tag: '测量�
 const blocks = [...ANALYSIS_BLOCKS, ALPHA_BLOCK];
 const fmt = (n: number | null) => n === null ? '—' : n.toLocaleString('zh-CN', { maximumFractionDigits: 4 });
 const nodeOnly = (c: Card): PlanNode => ({ id: c.id, method: c.method, x: c.x, y: c.y, question: c.question, branch: c.branch, filter: c.filter, scale: c.scale });
-const resultSignature = (c: Card, contextKey: string, missingCodes: string[]) => JSON.stringify({ calculation: planNodeSignature(c, contextKey, missingCodes), question: c.question, boundsDraft: c.boundsDraft });
+// Valid bound edits are already normalized into scale.min/max. Transient input text
+// must not change portable result bindings; inputProblems still fences invalid drafts.
+const resultSignature = (c: Card, contextKey: string, missingCodes: string[]) => JSON.stringify({ calculation: planNodeSignature(c, contextKey, missingCodes), question: c.question });
 function inputProblems(card: Card): string[] {
   const problems: string[] = [];
   if (!card.question.trim()) problems.push('填写研究问题');
