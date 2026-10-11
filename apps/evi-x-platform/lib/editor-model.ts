@@ -3,6 +3,7 @@ import { parseReportFormatSettings, type ReportFormatSettings } from './report-f
 export type ReportSection = { id: string; title: string; body: string; source: string };
 export type SlideLayout = "cover" | "content" | "two-column";
 export type Slide = { id: string; title: string; body: string; aside: string; notes: string; layout: SlideLayout; reportLink?: ReportSlideLink };
+export type LatexReport = { version: 1; body: string; reportHash: string };
 export type EditorContent = {
   version: 1;
   title: string;
@@ -11,6 +12,7 @@ export type EditorContent = {
   slides: Slide[];
   accent: "teal" | "blue" | "burgundy";
   reportFormat?: ReportFormatSettings;
+  latex?: LatexReport;
 };
 export type DraftSummary = { id: string; title: string; revision: number; updatedAt: string };
 export type Draft = DraftSummary & { content: EditorContent };
@@ -25,7 +27,7 @@ export function parseVersionLabel(value: unknown): string {
   return value.trim();
 }
 export const ACCENTS = { teal: "0F766E", blue: "234E80", burgundy: "8A3449" } as const;
-export const EDITOR_LIMITS = { sections: 40, slides: 40, body: 12000, slideBody: 1800, bytes: 500000 } as const;
+export const EDITOR_LIMITS = { sections: 40, slides: 40, body: 12000, slideBody: 1800, latexBody: 120000, bytes: 500000 } as const;
 
 export function createEditorContent(): EditorContent {
   const sections = [
@@ -63,11 +65,18 @@ export function parseEditorContent(value: unknown): EditorContent {
     if (new Set(result.map(x => x.id)).size !== result.length) throw new Error("内容标识重复。");
     return result;
   }
-  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat"]);
+  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex"]);
   if (x.version !== 1 || !["teal", "blue", "burgundy"].includes(x.accent as string)) throw new Error("草稿版本或主题不受支持。");
+  let latex: LatexReport | undefined;
+  if (Object.hasOwn(x, 'latex')) {
+    const draft = object(x.latex, ['version', 'body', 'reportHash']);
+    if (draft.version !== 1 || typeof draft.reportHash !== 'string' || !/^[a-f0-9]{64}$/.test(draft.reportHash)) throw Error('LaTeX 草稿版本或报告指纹无效。');
+    latex = { version: 1, body: str(draft.body, EDITOR_LIMITS.latexBody), reportHash: draft.reportHash };
+  }
   const parsed: EditorContent = {
     version: 1, title: str(x.title, 120, 1), subtitle: str(x.subtitle, 240), accent: x.accent as EditorContent["accent"],
     ...(Object.hasOwn(x, 'reportFormat') ? { reportFormat: parseReportFormatSettings(x.reportFormat) } : {}),
+    ...(latex ? { latex } : {}),
     report: entries(x.report, EDITOR_LIMITS.sections, v => {
       const s = object(v, ["id", "title", "body", "source"]);
       return { id: str(s.id, 80, 1), title: str(s.title, 150), body: str(s.body, EDITOR_LIMITS.body), source: str(s.source, 1500) };

@@ -24,15 +24,13 @@ export const REPORT_FORMAT = {
 } as const;
 
 export type ReportFormatOptions = { part:'main'|'appendix'; includeCover: boolean; includeToc: boolean; firstLineChars: 0 | 2; numberPages: boolean };
-/** Explicit product choices where the cited attachment does not prescribe a value. */
+/** Recommended starting choices; the author owns the final document structure. */
 export const DEFAULT_REPORT_OPTIONS: ReportFormatOptions = { part:'main',includeCover: true, includeToc: true, firstLineChars: 2, numberPages: true };
 export function parseReportFormatOptions(value: unknown): ReportFormatOptions {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('报告排版选项无效。');
   const options = value as Record<string, unknown>;
   if (Object.keys(options).length !== 5 || Object.keys(options).some(key => !['part','includeCover','includeToc','firstLineChars','numberPages'].includes(key)) || !['main','appendix'].includes(options.part as string) || ['includeCover','includeToc','numberPages'].some(key=>typeof options[key]!=='boolean') || ![0,2].includes(options.firstLineChars as number)) throw Error('报告排版选项无效。');
-  const parsed = options as ReportFormatOptions;
-  if(parsed.part==='main'&&(!parsed.includeCover||!parsed.includeToc))throw Error('报告正文需包含标题页和目录页。');
-  return { ...parsed };
+  return { ...options as ReportFormatOptions };
 }
 
 export type ReportFormatSettings = {
@@ -45,10 +43,10 @@ export type ReportFormatSettings = {
   options: ReportFormatOptions;
 };
 
-/** Export buttons choose the part explicitly; remembered appendix settings never remove required main pages. */
+/** Export buttons select a part without replacing the author's layout choices. */
 export function reportExportOptions(value: ReportFormatOptions, part: 'main'|'appendix'): ReportFormatOptions {
   const options = parseReportFormatOptions(value);
-  return parseReportFormatOptions({...options,part,...(part==='main'?{includeCover:true,includeToc:true}:{})});
+  return parseReportFormatOptions({...options,part});
 }
 
 export const REPORT_FORMAT_PROFILES = [
@@ -145,8 +143,8 @@ export function reportHeadingLevel(text: string): 1|2|3|4|5|null {
 }
 export function reportFormatNotices(sections:readonly {title:string}[]):string[]{
   const notices:string[]=[];
-  if(sections.some(s=>/参考文献.*附录|附录.*参考文献/.test(s.title)))notices.push('将“参考文献与附录”拆成两个章节，才能分别分页；当前仍完整保留该章节。');
-  if(!sections.some(s=>reportPart(s.title)==='abstract'))notices.push('尚无独立“摘要”章节；导出不会代写摘要。');
-  if(!sections.some(s=>reportPart(s.title)==='references'))notices.push('尚无独立“参考文献”章节；请录入实际引用的文献。');
+  if(sections.some(s=>/参考文献.*附录|附录.*参考文献/.test(s.title)))notices.push('需要单独导出附录时，可将“参考文献与附录”拆成两个章节。');
+  if(!sections.some(s=>reportPart(s.title)==='abstract'))notices.push('可添加摘要，概括研究问题、方法与主要发现。');
+  if(!sections.some(s=>reportPart(s.title)==='references'))notices.push('可添加参考文献，集中列出引用来源。');
   return notices;
 }

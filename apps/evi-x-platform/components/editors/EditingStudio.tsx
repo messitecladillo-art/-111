@@ -13,9 +13,10 @@ import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-rec
 import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
+import LatexWorkbench from './LatexWorkbench';
 import { appendEvidenceSection } from '@/lib/project-report';
 
-export type ProjectEditorBinding = { initialContent: EditorContent; status: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
+export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean };
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
@@ -49,9 +50,10 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const reportFormat = reportSettings.options;
   const onSnapshot = projectBinding?.onSnapshot;
   useLayoutEffect(()=>{onSnapshot?.(content);},[content,onSnapshot]);
-  const [mode, setMode] = useState<"report" | "slides">("report");
+  const [mode, setMode] = useState<"report" | "slides" | "latex">("report");
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
+  const [blankReportConfirm, setBlankReportConfirm] = useState(false);
   const [storyboardGeneration, setStoryboardGeneration] = useState(0);
   const [identityFrozen, setIdentityFrozen] = useState(false);
   const identityTransition = useRef(false);
@@ -268,6 +270,13 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     current.current = next; setContent(next); setPast([]); setFuture([]); setPhase("ready"); setMessage(""); setSaveTime("");
   }
   function patchSection(patch: Partial<ReportSection>) { edit({ ...content, report: content.report.map(s => s.id === section.id ? { ...s, ...patch } : s) }); }
+  function startBlankReport() {
+    const nextSection: ReportSection = { id: crypto.randomUUID(), title: '正文', body: '', source: '' };
+    if (!edit({ ...content, report: [nextSection] })) return;
+    setSectionId(nextSection.id); setOutlineQuery(''); setBlankReportConfirm(false);
+    setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);
+    previewRef.current?.scrollTo({ top: 0 });
+  }
   function patchSlide(patch: Partial<Slide>) { edit({ ...content, slides: content.slides.map(s => s.id === slide.id ? { ...s, ...patch } : s) }); }
   function addItem() {
     if (mode === "report") {
@@ -435,7 +444,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const presentationSlide = content.slides[presentIndex] || content.slides[0];
 
   const outlineMotion = useKeyedListMotion<HTMLDivElement>({ ids: visibleItems.map(({item}) => `${mode}:${item.id}`), activeId: `${mode}:${selectedId}` });
-  const modeMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['report','slides'], activeId: mode, markerAxis: 'horizontal' });
+  const modeMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['report','slides','latex'], activeId: mode, markerAxis: 'horizontal' });
   const viewMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['write','split','preview'], activeId: view, markerAxis: 'horizontal' });
   const versionMotion = useKeyedListMotion<HTMLDivElement>({ ids: versions.map(v=>v.id), enabled: !localOnly && libraryOpen });
 
@@ -473,12 +482,15 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     </div></div>
     {message && <div className={styles.notice} role={phase === "error" || phase === "conflict" ? "alert" : "status"}><span>{message}</span>{phase === "conflict" && <button type="button" disabled={locked} onClick={() => void save(true)}>保留当前内容为副本</button>}<button type="button" aria-label="关闭提示" onClick={() => setMessage("")}>×</button></div>}
     <div className={styles.toolbar}>
-      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button></div>
+      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX 工作台</button></div>
       <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
-      <div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>
+      {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
     </div>
     <ResearchMaterialLibrary context="report"/>
-    {mode==='report'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
+    {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
+    {mode!=='slides'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
+    <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding?.onSave} disabled={locked}/></div>
+    <div hidden={mode==='latex'}>
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
       if(identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
@@ -532,6 +544,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }
       if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); setPresentIndex(i => Math.max(0,i-1)); }
     }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面"/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
+    </div>
     </div>
   </section>;
 }

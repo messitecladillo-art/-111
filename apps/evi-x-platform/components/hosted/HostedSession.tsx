@@ -4,7 +4,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { parseSession, type Session } from '@evix/shared';
 import { errorMessage, hostedRequest } from './api-client';
 
-type HostedContext = { session: Session | null; loading: boolean; error: string; identityEpoch: number; refresh: () => Promise<Session>; accept: (session: Session) => void; announce: () => void; logout: () => Promise<void>; setUnsaved: (key: string, dirty: boolean) => void; getDraft:(key:string)=>unknown; cacheDraft:(key:string,value:unknown,changed:boolean,ownerId:string)=>void; navigate: (path: string) => boolean; mutate: (path: string, body?: unknown, method?: string) => Promise<unknown> };
+type MutationReadOptions = { maxBytes?: number; timeoutMs?: number; signal?: AbortSignal };
+type HostedContext = { session: Session | null; loading: boolean; error: string; identityEpoch: number; refresh: () => Promise<Session>; accept: (session: Session) => void; announce: () => void; logout: () => Promise<void>; setUnsaved: (key: string, dirty: boolean) => void; getDraft:(key:string)=>unknown; cacheDraft:(key:string,value:unknown,changed:boolean,ownerId:string)=>void; navigate: (path: string) => boolean; mutate: (path: string, body?: unknown, method?: string, options?: MutationReadOptions) => Promise<unknown> };
 const Context = createContext<HostedContext | null>(null);
 export function useHostedSession(): HostedContext { const value = useContext(Context); if (!value) throw Error('缺少账号上下文。'); return value; }
 export function HostedSessionProvider({ children }: { children: ReactNode }) {
@@ -59,10 +60,10 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
   const getDraft=useCallback((key:string)=>draftCache.current.get(key)?.value,[]);
   const cacheDraft=useCallback((key:string,value:unknown,changed:boolean,ownerId:string)=>{if(sessionRef.current?.user?.id===ownerId)draftCache.current.set(key,{value,changed});},[]);
   const navigate = useCallback((path: string) => { if (dirty.current.size && !window.confirm('有未保存的修改，是否离开？本标签页会保留草稿，再次进入项目可恢复。')) return false; router.push(path); return true; }, [router]);
-  const mutate = useCallback(async (path: string, body?: unknown, method = 'POST') => {
+  const mutate = useCallback(async (path: string, body?: unknown, method = 'POST', options: MutationReadOptions = {}) => {
     const current = sessionRef.current;
     if (!current?.authenticated || !current.csrfToken) throw Error('请先完成邮箱登录。');
-    const value = await hostedRequest(path, { body, method, csrfToken: current.csrfToken });
+    const value = await hostedRequest(path, { ...options, body, method, csrfToken: current.csrfToken });
     if (sessionRef.current?.user?.id !== current.user?.id || sessionRef.current?.csrfToken !== current.csrfToken) throw Error('账号状态已经变化，这次回执未应用。请刷新核对。');
     return value;
   }, []);

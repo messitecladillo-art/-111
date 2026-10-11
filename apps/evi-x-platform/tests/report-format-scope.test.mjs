@@ -71,13 +71,14 @@ test('scope bounds count UTF-16 units and reject control/line characters', () =>
   assert.ok(evaluateReportFormat({ ...scoped(), region: '   ' }).missingScope.includes('region'));
 });
 
-test('existing options contract is exact and keeps main cover/TOC invariants', () => {
+test('existing options contract keeps strict field types and accepts independent cover/TOC choices', () => {
   assert.deepEqual(parseReportFormatOptions(DEFAULT_REPORT_OPTIONS), DEFAULT_REPORT_OPTIONS);
   const missingPages = {...DEFAULT_REPORT_OPTIONS}; delete missingPages.numberPages;
   for (const value of [null, [], missingPages, { ...DEFAULT_REPORT_OPTIONS, extra: true },
-    { ...DEFAULT_REPORT_OPTIONS, includeCover: false }, { ...DEFAULT_REPORT_OPTIONS, includeToc: false },
+    { ...DEFAULT_REPORT_OPTIONS, includeCover: 'false' }, { ...DEFAULT_REPORT_OPTIONS, includeToc: 0 },
     { ...DEFAULT_REPORT_OPTIONS, firstLineChars: '2' }, { ...DEFAULT_REPORT_OPTIONS, firstLineChars: 1 },
     { ...DEFAULT_REPORT_OPTIONS, numberPages: 1 }]) assert.throws(() => parseReportFormatOptions(value), Error);
   const appendix = { part: 'appendix', includeCover: false, includeToc: false, firstLineChars: 0, numberPages: false };
   assert.deepEqual(parseReportFormatOptions(appendix), appendix);
+  assert.deepEqual(parseReportFormatOptions({...appendix,part:'main'}), {...appendix,part:'main'});
 });

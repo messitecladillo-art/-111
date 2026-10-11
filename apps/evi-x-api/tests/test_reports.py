@@ -100,3 +100,34 @@ def test_report_concurrent_cas_and_original_receipt(harness):
     with ThreadPoolExecutor(max_workers=2) as pool:
         replies = list(pool.map(submit, [left, right]))
     assert sorted(status for status, _ in replies) == [201, 409]
+
+
+@pytest.mark.postgres
+def test_report_custom_chapter_order_and_independent_cover_toc_roundtrip(harness):
+    _, login, _, _ = harness
+    owner, _ = login()
+    p, _ = project(owner)
+    base = f'/api/projects/{p["id"]}/report'
+    versions = []
+    for part in ("main", "appendix"):
+        for cover, toc in ((False, False), (False, True), (True, False), (True, True)):
+            value = content()
+            # Deliberately different from a conventional abstract-first template.
+            value["report"] = [
+                {"id": "findings", "title": "先看发现", "body": "合成发现", "source": ""},
+                {"id": "custom-method", "title": "自定义方法", "body": "合成方法", "source": ""},
+                {"id": "abstract", "title": "最后的摘要", "body": "合成摘要", "source": ""},
+            ]
+            value["reportFormat"]["options"].update(part=part, includeCover=cover, includeToc=toc)
+            request = {"content": value, "expectedRevision": len(versions), "idempotencyKey": str(uuid4())}
+            response = owner.post(base + '/versions', json=request)
+            assert response.status_code == 201, response.text
+            saved = response.json()
+            assert saved["content"] == value and saved["revision"] == len(versions) + 1
+            assert owner.get(base).json()["report"] == saved
+            assert owner.post(base + '/versions', json=request).json() == saved
+            versions.append(saved)
+    for saved in versions:
+        historical = owner.get(base + '/versions/' + saved["id"])
+        assert historical.status_code == 200 and historical.json() == saved
+        assert [section["id"] for section in historical.json()["content"]["report"]] == ["findings", "custom-method", "abstract"]
