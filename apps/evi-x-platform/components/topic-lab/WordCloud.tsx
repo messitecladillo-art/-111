@@ -22,13 +22,16 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
     document.fonts?.ready.then(() => { if (alive) { clearMeasureCache(); setFontsReady(n => n + 1); } });
     return () => { alive = false; };
   }, []);
-  const height = Math.round(Math.min(560, Math.max(320, width * .56)));
+  // A small vocabulary gets a shorter frame instead of floating in empty space.
+  const height = Math.round(Math.min(560, Math.max(300, width * .56 * Math.min(1, Math.sqrt(map.nodes.length / 90)))));
   const { placed, dropped } = useMemo(() => {
     if (!width) return { placed: [], dropped: [] };
     void fontsReady;
     const items = map.nodes.map(n => ({ key: n.key, label: n.label, weight: n.df }));
     const maxFont = Math.max(30, Math.min(64, width / 13));
-    return layoutCloud(items, { width, height, minFont: width < 520 ? 11 : 12, maxFont, padding: 3, measure: (t, s) => ({ w: textWidth(t, s), h: s * 1.08 }) });
+    // Small vocabularies get a larger floor so the cloud fills its frame; the √ scaling is unchanged.
+    const minFont = (width < 520 ? 11 : 12) + (items.length <= 60 ? 4 : 0);
+    return layoutCloud(items, { width, height, minFont, maxFont, padding: 3, measure: (t, s) => ({ w: textWidth(t, s), h: s * 1.08 }) });
   }, [map, width, height, fontsReady]);
   const bins = useMemo(() => yearBins(theme, map.nodes.map(n => n.meanYear)), [theme, map]);
   const byKey = useMemo(() => new Map(map.nodes.map(n => [n.key, n])), [map]);

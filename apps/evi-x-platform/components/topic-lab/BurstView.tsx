@@ -78,7 +78,7 @@ export default function BurstView({ dataNote, theme, index, records, cy, basket,
             return <tr key={r.key} data-live={isLive || undefined}>
               <th scope="row" title={r.label}>{kind === 'keywords' ? r.label : refShortLabel(r.label)}{isLive && <span className={styles.liveTag}>至今</span>}</th>
               <td>{r.first}</td><td>{r.burst.strength.toFixed(2)}</td><td>{r.burst.begin}</td><td>{r.burst.end}</td>
-              <td><span className={styles.burstStrip} aria-label={`${r.burst.begin} 至 ${r.burst.end} 年突现，共出现 ${fmtInt(r.total)} 次`}>{data.years.map(y => <i key={y} data-state={y >= r.burst.begin && y <= r.burst.end ? 'burst' : y >= r.first ? 'on' : 'off'} />)}</span></td>
+              <td><span className={styles.burstStrip} role="img" aria-label={`${r.burst.begin} 至 ${r.burst.end} 年突现，共出现 ${fmtInt(r.total)} 次`}>{data.years.map(y => <i key={y} data-state={y >= r.burst.begin && y <= r.burst.end ? 'burst' : y >= r.first ? 'on' : 'off'} />)}</span></td>
               {kind === 'keywords' && <td><button type="button" className={styles.linkButton} aria-pressed={inBasket} onClick={() => onToggle(r.key)}>{inBasket ? '移出' : '加入选题篮'}<span className={styles.srOnly}>：{r.label}</span></button></td>}
             </tr>;
           })}</tbody>

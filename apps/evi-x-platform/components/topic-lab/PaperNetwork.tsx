@@ -35,8 +35,10 @@ function CouplingMap({ dataNote, records, index, theme, basket, basketLabels }: 
   const { k, x: tx, y: ty } = zv;
   const nodes = graph.nodes;
   const maxC = Math.max(1, ...nodes.map(n => n.citations ?? 0));
+  const hasCitations = nodes.some(n => n.citations !== null), maxDeg = Math.max(1, ...nodes.map(n => n.degree));
   const pos = useMemo(() => nodes.map(n => ({ x: padX(width) + n.x * (width - padX(width) * 2), y: PAD + n.y * (height - PAD * 2) })), [nodes, width, height]);
-  const r = (c: number | null) => (3 + 10 * Math.sqrt(Math.log1p(c ?? 0) / Math.log1p(maxC))) * sizeScale(width) / Math.sqrt(k);
+  // Size encodes log citations; without citation counts it encodes the number of relations instead.
+  const r = (i: number) => (3 + 10 * Math.sqrt(hasCitations ? Math.log1p(nodes[i].citations ?? 0) / Math.log1p(maxC) : nodes[i].degree / maxDeg)) * sizeScale(width) / Math.sqrt(k);
   const bins = useMemo(() => yearBins(theme, nodes.map(n => n.year)), [theme, nodes]);
   const fill = (i: number) => bins ? bins.color(nodes[i].year) : 'var(--wb-muted)';
   const active = selected ?? hover?.i ?? null;
@@ -67,7 +69,7 @@ function CouplingMap({ dataNote, records, index, theme, basket, basketLabels }: 
     exportSvgElement(svgRef.current, `文献${graph.mode === 'coupling' ? '耦合' : '相似'}网络-${stamp()}.svg`, {
       title: graph.mode === 'coupling' ? '施引文献书目耦合网络' : '施引文献关键词相似网络',
       legend: bins ? bins.labels.map((l, i) => ({ color: bins.colors[i], label: `发表年份 ${l}` })) : [],
-      notes: [`${nodes.length} 篇文献（${focus.length ? '含选题篮词的文献中按命中词数与被引次数选取' : '按被引次数选取'}），${graph.links.length} 条关系；${graph.mode === 'coupling' ? '连线 = 共同引用的参考文献（余弦归一化）' : '导出文件参考文献不足，连线 = 关键词 Jaccard 相似度，不表示引用关系'}；圆面积随 log(被引 + 1) 增大，被引为导出时累计值。`, dataNote],
+      notes: [`${nodes.length} 篇文献（${focus.length ? '含选题篮词的文献中按命中词数' : '按'}${hasCitations ? '被引次数' : '关键词数'}选取），${graph.links.length} 条关系；${graph.mode === 'coupling' ? '连线 = 共同引用的参考文献（余弦归一化）' : '导出文件参考文献不足，连线 = 关键词 Jaccard 相似度，不表示引用关系'}；${hasCitations ? '圆面积随 log(被引 + 1) 增大，被引为导出时累计值' : '导出文件未含被引次数，圆面积随关系数增大'}。`, dataNote],
     });
   };
   if (records.length < 5) return <div className={styles.emptyView}><strong>记录太少</strong><p>至少需要 5 条记录才能绘制文献关系图。</p></div>;
@@ -79,13 +81,13 @@ function CouplingMap({ dataNote, records, index, theme, basket, basketLabels }: 
         {graph.mode === 'coupling'
           ? <>连线 = <strong>书目耦合</strong>：两篇文献引用了相同的参考文献，共同引用越多线越粗（余弦归一化）。{fmtInt(graph.withRefs)} / {fmtInt(records.length)} 篇记录带有参考文献。</>
           : <>导出文件中参考文献不足（{fmtInt(graph.withRefs)} / {fmtInt(records.length)} 篇带参考文献），连线改用<strong>关键词相似度</strong>（Jaccard），只表示用词相近，不表示引用关系。</>}
-        {' '}圆越大被引越多，颜色{recentHint(theme)}。
+        {' '}{hasCitations ? '圆越大被引越多' : '导出文件未含被引次数，圆越大关系越多'}，颜色{recentHint(theme)}。
       </p>
       <div className={styles.toolCluster}><ExportButton onExport={exportCoupling} />
       {basket.length > 0 && <label className={styles.checkLine}><input type="checkbox" checked={useBasket} onChange={e => { setUseBasket(e.target.checked); setSelected(null); }} />只看与选题篮（{basketLabels.join('、')}）相关的文献</label>}
       </div>
     </div>
-    <p className={styles.viewMeta}>{focus.length ? `含选题篮词的文献中，按命中词数与被引次数取前 ${nodes.length} 篇` : `按被引次数取前 ${nodes.length} 篇`}（共 {fmtInt(records.length)} 篇）· {graph.links.length} 条关系，每篇最多保留 6 条最强关系</p>
+    <p className={styles.viewMeta}>{focus.length ? `含选题篮词的文献中，按命中词数${hasCitations ? '与被引次数' : '与关键词数'}取前 ${nodes.length} 篇` : `按${hasCitations ? '被引次数' : '关键词数'}取前 ${nodes.length} 篇`}（共 {fmtInt(records.length)} 篇）· {graph.links.length} 条关系，每篇最多保留 6 条最强关系</p>
     <div className={styles.mapLayout}>
       <div className={styles.mapFrame} ref={frameRef} style={{ height, touchAction: k > 1 ? 'none' : 'pan-y' }} {...handlers} onPointerLeave={() => setHover(null)} onClick={() => { if (!wasDrag()) setSelected(null); }}>
         {width > 0 && nodes.length > 0 && <svg ref={svgRef} width={width} height={height} role="img" aria-label={`文献关系图：${nodes.length} 篇文献，${graph.links.length} 条${graph.mode === 'coupling' ? '书目耦合' : '关键词相似'}关系`}>
@@ -94,11 +96,11 @@ function CouplingMap({ dataNote, records, index, theme, basket, basketLabels }: 
               const on = active !== null && (l.a === active || l.b === active);
               return <line key={idx} x1={pos[l.a].x} y1={pos[l.a].y} x2={pos[l.b].x} y2={pos[l.b].y} vectorEffect="non-scaling-stroke" strokeWidth={.6 + 3 * l.weight / maxW} style={{ opacity: active === null ? .14 + .4 * l.weight / maxW : on ? .9 : .04, stroke: on ? 'var(--wb-accent)' : undefined }} />;
             })}</g>
-            <g>{nodes.map((n, i) => <circle key={n.id} cx={pos[i].x} cy={pos[i].y} r={r(n.citations)} className={styles.paperNode} data-active={i === active || undefined}
+            <g>{nodes.map((n, i) => <circle key={n.id} cx={pos[i].x} cy={pos[i].y} r={r(i)} className={styles.paperNode} data-active={i === active || undefined}
               style={{ fill: fill(i), opacity: active !== null && i !== active && !near.has(i) ? .2 : 1 }} vectorEffect="non-scaling-stroke"
               onPointerMove={e => setHover({ i, ...svgPoint(e) })}
               onClick={e => { e.stopPropagation(); if (!wasDrag()) setSelected(s => s === i ? null : i); }} />)}</g>
-            <g className={styles.mapLabels}>{labels.map(i => <text key={nodes[i].id} x={pos[i].x} y={pos[i].y + (r(nodes[i].citations) + 9 / k)} fontSize={11 / k} fontFamily={SANS} fontWeight={i === active ? 800 : 600} textAnchor="middle" style={{ strokeWidth: 3 / k, opacity: active !== null && i !== active && !near.has(i) ? .25 : 1 }}>{paperLabel(records[nodes[i].index])}</text>)}</g>
+            <g className={styles.mapLabels}>{labels.map(i => <text key={nodes[i].id} x={pos[i].x} y={pos[i].y + (r(i) + 9 / k)} fontSize={11 / k} fontFamily={SANS} fontWeight={i === active ? 800 : 600} textAnchor="middle" style={{ strokeWidth: 3 / k, opacity: active !== null && i !== active && !near.has(i) ? .25 : 1 }}>{paperLabel(records[nodes[i].index])}</text>)}</g>
           </g>
         </svg>}
         {nodes.length === 0 && <div className={styles.emptyView}><strong>没有匹配的文献</strong><p>选题篮中的词没有出现在任何记录里。</p></div>}
@@ -128,7 +130,7 @@ function CouplingMap({ dataNote, records, index, theme, basket, basketLabels }: 
         </>}
       </aside>
     </div>
-    {bins && <div className={styles.legendRow}><Legend title={`颜色 = 发表年份（${recentHint(theme)}）`} items={bins.labels.map((l, i) => ({ color: bins.colors[i], label: l }))} /><span className={styles.legendNote}>圆面积随 log(被引 + 1) 增大</span></div>}
+    {bins && <div className={styles.legendRow}><Legend title={`颜色 = 发表年份（${recentHint(theme)}）`} items={bins.labels.map((l, i) => ({ color: bins.colors[i], label: l }))} /><span className={styles.legendNote}>{hasCitations ? '圆面积随 log(被引 + 1) 增大' : '圆面积随关系数增大'}</span></div>}
   </div>;
 }
 

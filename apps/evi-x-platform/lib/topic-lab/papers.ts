@@ -15,12 +15,16 @@ export type PaperGraph = { mode: PaperMode; nodes: PaperNode[]; links: PaperLink
 
 export function refCoverage(records: LitRecord[]): number { return records.filter(r => r.refs.length > 0).length; }
 
-/** Pick papers: those matching the focus terms first, then by times cited. */
+/**
+ * Pick papers: those matching the focus terms first, then by times cited. Without citation counts
+ * (CNKI exports) the tie-break is the number of indexed terms, so keyword-rich records come first
+ * rather than whatever happens to open the file.
+ */
 function selectPapers(records: LitRecord[], docs: string[][], focus: string[], max: number): number[] {
   const f = new Set(focus);
-  return records.map((r, i) => ({ i, hit: focus.length ? docs[i].filter(k => f.has(k)).length : 0, c: r.citations ?? 0 }))
+  return records.map((r, i) => ({ i, hit: focus.length ? docs[i].filter(k => f.has(k)).length : 0, c: r.citations ?? 0, t: docs[i].length }))
     .filter(p => !focus.length || p.hit > 0)
-    .sort((a, b) => b.hit - a.hit || b.c - a.c || a.i - b.i)
+    .sort((a, b) => b.hit - a.hit || b.c - a.c || b.t - a.t || a.i - b.i)
     .slice(0, max).map(p => p.i);
 }
 
