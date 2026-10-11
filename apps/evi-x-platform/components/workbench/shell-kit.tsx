@@ -6,11 +6,12 @@ import { flushSync } from "react-dom";
 import BrandMark from "@/components/brand/BrandMark";
 
 /** Shared chrome for every signed-in surface: one theme store, one navigation model, one sidebar. */
-export type Section = "overview" | "cases" | "diagnose" | "workspace" | "lifecycle" | "rules" | "editor" | "analysis" | "design" | "silicon" | "defense" | "canvas" | "services";
+export type Section = "overview" | "cases" | "diagnose" | "workspace" | "lifecycle" | "rules" | "editor" | "analysis" | "design" | "silicon" | "defense" | "canvas" | "services" | "exam";
 export type Theme = "light" | "dark";
 
 export const NAV_ITEMS: Array<{ id: Section; title: string; description: string; icon: string; group: string }> = [
   { id: "overview", title: "概览", description: "从真实问题出发，把研究一步步做扎实。", icon: "grid", group: "我的工作台" },
+  { id: "exam", title: "网赛刷题", description: "按章节练习，重做错题，用模拟自测掌握调查方法。", icon: "book", group: "网赛备考" },
   { id: "cases", title: "获奖案例库", description: "检索真实案例，分清公告核验与材料分析。", icon: "book", group: "研究与证据" },
   { id: "diagnose", title: "Agent 诊断", description: "梳理准备度，用文献词云与证据画像筛选选题。", icon: "spark", group: "研究与证据" },
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },

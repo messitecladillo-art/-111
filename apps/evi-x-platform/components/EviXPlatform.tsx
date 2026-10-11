@@ -25,6 +25,7 @@ import Link from 'next/link';
 const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio'));
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
+const NetExamStudio = dynamic(() => import('@/components/exam/NetExamStudio'), { ssr: false, loading: () => <p role="status">正在载入网赛题库…</p> });
 const DefenseStudio = dynamic(() => import('@/components/defense/DefenseStudio'));
 const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
 // React Flow and the canvas engine load only when the canvas is first opened.
@@ -1069,6 +1070,7 @@ export default function EviXPlatform() {
       <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>梳理当前证据缺口，生成下一步行动清单。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>
 
       </>,
+      exam: <NetExamStudio />,
       cases: <CaseLibrary />,
       editor: <EditingStudio localOnly />,
       defense: <DefenseStudio />,
