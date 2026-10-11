@@ -4,10 +4,12 @@
  * Everything is deterministic for the same input so a map can be reproduced and cited.
  */
 import type { TermIndex } from './terms.ts';
+import { betweenness, modularity, pathfinder, silhouette } from './metrics.ts';
 
-export type MapNode = { key: string; label: string; df: number; meanYear: number | null; meanCitations: number | null; cluster: number; strength: number; x: number; y: number };
+export type MapNode = { key: string; label: string; df: number; meanYear: number | null; firstYear: number | null; meanCitations: number | null; cluster: number; strength: number; centrality: number; silhouette: number; x: number; y: number };
 export type MapLink = { a: number; b: number; count: number; strength: number };
-export type TermMap = { nodes: MapNode[]; links: MapLink[]; clusters: number; totalDocs: number; minDf: number };
+export type ClusterInfo = { id: number; label: string; size: number; silhouette: number; meanYear: number | null };
+export type TermMap = { nodes: MapNode[]; links: MapLink[]; backbone: MapLink[]; clusters: number; clusterInfo: ClusterInfo[]; modularity: number; silhouette: number; totalLinks: number; totalDocs: number; minDf: number };
 
 export function mulberry32(seed: number) { let a = seed | 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -130,7 +132,20 @@ export function buildTermMap(index: TermIndex, opts: MapOptions = {}): TermMap {
   const finalCluster = cluster.map(c => c < 0 ? -1 : dense.get(c)!);
   const pos = forceLayout(n, edges, finalCluster.map(c => c < 0 ? used.length : c), opts.seed ?? 7);
   const strength = new Array(n).fill(0); for (const l of links) { strength[l.a] += l.count; strength[l.b] += l.count; }
-  const nodes = ranked.map((t, i) => ({ key: t.key, label: t.label, df: t.df, meanYear: t.meanYear, meanCitations: t.meanCitations, cluster: finalCluster[i], strength: strength[i], x: pos[i].x, y: pos[i].y }));
+  // CiteSpace-style structure measures. Betweenness on the full-counting network is near zero for
+  // every term (almost everything co-occurs), so it is computed on the Pathfinder backbone instead.
+  const backbone = pathfinder(n, edges).map(i => links[i]);
+  const central = betweenness(n, backbone.map(l => [l.a, l.b, l.count] as [number, number, number]));
+  const sil = silhouette(n, edges, finalCluster, ranked.map(t => t.df));
+  const q = modularity(edges, finalCluster);
+  const nodes = ranked.map((t, i) => ({ key: t.key, label: t.label, df: t.df, meanYear: t.meanYear, firstYear: t.byYear.size ? Math.min(...t.byYear.keys()) : null, meanCitations: t.meanCitations, cluster: finalCluster[i], strength: strength[i], centrality: central[i], silhouette: sil.node[i], x: pos[i].x, y: pos[i].y }));
+  const clusterInfo = used.map((_, c) => {
+    const members = nodes.filter(nd => nd.cluster === c).sort((a, b) => b.df - a.df || a.key.localeCompare(b.key));
+    const dated = members.filter(m => m.meanYear !== null);
+    const w = dated.reduce((sum, m) => sum + m.df, 0);
+    return { id: c, label: members[0]?.label ?? '', size: members.length, silhouette: sil.byCluster.get(c) ?? 0, meanYear: w ? dated.reduce((sum, m) => sum + m.meanYear! * m.df, 0) / w : null };
+  });
+  const totalLinks = links.length;
   const shown = links.sort((x, y) => y.count - x.count || y.strength - x.strength).slice(0, maxLinks);
-  return { nodes, links: shown, clusters: used.length, totalDocs: index.docs.length, minDf };
+  return { nodes, links: shown, backbone, clusters: used.length, clusterInfo, modularity: q, silhouette: sil.mean, totalLinks, totalDocs: index.docs.length, minDf };
 }

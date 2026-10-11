@@ -338,3 +338,76 @@ test('award-title reference is descriptive, sourced, and counts only official ve
   assert.ok(recs.every(r => r.format === 'library' && r.citations === null && r.refs.length === 0));
   assert.ok(!recs.some(r => r.keywords.some(k => /题名/.test(k))));
 });
+
+import { kleinberg, strongestBursts } from '../lib/topic-lab/burst.ts';
+import { betweenness, modularity, silhouette } from '../lib/topic-lab/metrics.ts';
+import { cocitationGraph, refShortLabel, refYear, referenceYearSeries } from '../lib/topic-lab/papers.ts';
+
+test('Kleinberg bursts find a planted spike and ignore a flat series', () => {
+  const years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022];
+  const d = years.map(() => 100);
+  assert.deepEqual(kleinberg([5, 5, 5, 5, 5, 5, 5, 5], d, years), []);
+  const b = kleinberg([2, 2, 2, 20, 22, 2, 2, 2], d, years);
+  assert.equal(b.length, 1);
+  assert.equal(b[0].begin, 2018);
+  assert.equal(b[0].end, 2019);
+  assert.ok(b[0].strength > 0);
+  // A higher entry cost (γ) can only suppress or shorten bursts.
+  assert.ok(kleinberg([2, 2, 2, 6, 2, 2, 2, 2], d, years, { gamma: 4 }).length <= kleinberg([2, 2, 2, 6, 2, 2, 2, 2], d, years, { gamma: .5 }).length);
+  const idx = buildTermIndex(synthCorpus(), { source: 'keywords' });
+  const totals = new Map(); for (const r of idx.records) totals.set(r.year, (totals.get(r.year) ?? 0) + 1);
+  const { rows, years: span } = strongestBursts([...idx.terms.values()], totals);
+  assert.equal(span[0], 2014); assert.equal(span[span.length - 1], 2023);
+  assert.equal(rows[0].key, 'digital twin');
+  assert.equal(rows[0].burst.end, 2023);
+});
+
+test('betweenness, modularity and silhouette match textbook cases', () => {
+  // Path 0-1-2: the middle node lies on the only path between the ends.
+  assert.deepEqual(betweenness(3, [[0, 1, 1], [1, 2, 1]]), [0, 1, 0]);
+  // Star with centre 0.
+  const star = betweenness(5, [[0, 1, 1], [0, 2, 1], [0, 3, 1], [0, 4, 1]]);
+  assert.equal(star[0], 1); assert.equal(star[1], 0);
+  // Two disjoint triangles split perfectly: Q = 2 · (3/6 − (6/12)²) = 0.5.
+  const tri = [[0, 1, 1], [1, 2, 1], [0, 2, 1], [3, 4, 1], [4, 5, 1], [3, 5, 1]];
+  assert.ok(Math.abs(modularity(tri, [0, 0, 0, 1, 1, 1]) - .5) < 1e-12);
+  assert.ok(Math.abs(modularity(tri, [0, 0, 0, 0, 0, 0])) < 1e-12);
+  const s = silhouette(6, tri, [0, 0, 0, 1, 1, 1], [1, 1, 1, 1, 1, 1]);
+  assert.ok(s.mean > .9);
+  assert.ok(silhouette(6, tri, [0, 1, 0, 1, 0, 1], [1, 1, 1, 1, 1, 1]).mean < 0);
+  const map = buildTermMap(buildTermIndex(synthCorpus(), { source: 'keywords' }), { minDf: 2 });
+  // "policy" is planted in both topics, so it is the bridge with the highest betweenness.
+  const top = [...map.nodes].sort((a, b) => b.centrality - a.centrality)[0];
+  assert.equal(top.key, 'policy');
+  assert.ok(map.modularity > .2 && map.modularity < .5);
+  assert.ok(map.clusterInfo.every(c => c.size > 0 && c.label));
+  for (const n of map.nodes) assert.ok(n.centrality >= 0 && n.centrality <= 1);
+});
+
+test('co-citation links references cited together and keeps labels readable', () => {
+  assert.equal(refShortLabel('COLLINS AM, 2007, J VERB LEARN, V8, P240'), 'Collins 2007');
+  assert.equal(refYear('Collins AM, 2007, J VERB LEARN, V8, P240'), 2007);
+  const recs = synthCorpus();
+  const g = cocitationGraph(recs, { top: 20 });
+  const i1 = g.nodes.findIndex(n => n.key === 'R1'), i2 = g.nodes.findIndex(n => n.key === 'R2'), i7 = g.nodes.findIndex(n => n.key === 'R7');
+  const link = (a, b) => g.links.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+  assert.equal(link(i1, i2).shared, 40);
+  assert.ok(Math.abs(link(i1, i2).weight - 40 / Math.sqrt(70 * 40)) < 1e-9);
+  assert.equal(link(i1, i7), undefined);
+  assert.equal(g.nodes[i1].cluster, g.nodes[i2].cluster);
+  assert.notEqual(g.nodes[i1].cluster, g.nodes[i7].cluster);
+  const { series, totals } = referenceYearSeries(recs, [{ key: 'R1', label: 'R1' }]);
+  assert.equal([...series[0].byYear.values()].reduce((a, b) => a + b, 0), 70);
+  assert.equal([...totals.values()].reduce((a, b) => a + b, 0), 110);
+});
+
+import { pathfinder } from '../lib/topic-lab/metrics.ts';
+test('Pathfinder keeps the union of maximum spanning trees', () => {
+  // Triangle with one weak side: the weak link is redundant (a stronger path exists).
+  assert.deepEqual(pathfinder(3, [[0, 1, 5], [1, 2, 4], [0, 2, 1]]), [0, 1]);
+  // Equal weights: every link lies on some spanning tree, so all survive.
+  assert.deepEqual(pathfinder(3, [[0, 1, 2], [1, 2, 2], [0, 2, 2]]), [0, 1, 2]);
+  const map = buildTermMap(buildTermIndex(synthCorpus(), { source: 'keywords' }), { minDf: 2 });
+  assert.ok(map.backbone.length >= map.nodes.filter(n => n.cluster >= 0).length - 1);
+  assert.ok(map.backbone.length <= map.totalLinks);
+});

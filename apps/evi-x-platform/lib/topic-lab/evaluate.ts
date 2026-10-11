@@ -9,46 +9,9 @@ import type { LitRecord } from './parse.ts';
 import { cooccurrence } from './network.ts';
 import { termKey, type TermIndex } from './terms.ts';
 import { termTrend, type CorpusYears, type TermTrend } from './trend.ts';
+import { benjaminiHochberg, hypergeomLowerTail } from './stats.ts';
 
-/* ───────── statistics ───────── */
-
-const LANCZOS = [676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
-export function logGamma(x: number): number {
-  if (x < .5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
-  x -= 1;
-  let a = 0.99999999999980993;
-  const t = x + 7.5;
-  LANCZOS.forEach((c, i) => { a += c / (x + i + 1); });
-  return .5 * Math.log(2 * Math.PI) + (x + .5) * Math.log(t) - t + Math.log(a);
-}
-const logChoose = (n: number, k: number) => logGamma(n + 1) - logGamma(k + 1) - logGamma(n - k + 1);
-function logSumExp(xs: number[]): number { const m = Math.max(...xs); return m === -Infinity ? m : m + Math.log(xs.reduce((s, x) => s + Math.exp(x - m), 0)); }
-
-/**
- * One-sided Fisher exact test. With N records, K containing term A and n containing term B, returns
- * P(X ≤ observed) for the number X containing both, under independence (hypergeometric).
- */
-export function hypergeomLowerTail(observed: number, N: number, K: number, n: number): number {
-  const kMin = Math.max(0, n + K - N), kMax = Math.min(n, K);
-  if (observed < kMin) return 0;
-  if (observed >= kMax) return 1;
-  const logs: number[] = [];
-  let lp = logChoose(K, kMin) + logChoose(N - K, n - kMin) - logChoose(N, n);
-  for (let k = kMin; k <= observed; k++) {
-    logs.push(lp);
-    lp += Math.log((K - k) * (n - k)) - Math.log((k + 1) * (N - K - n + k + 1));
-  }
-  return Math.min(1, Math.exp(logSumExp(logs)));
-}
-
-/** Benjamini–Hochberg adjusted p-values (q-values), returned in the input order. */
-export function benjaminiHochberg(p: number[]): number[] {
-  const m = p.length, order = p.map((v, i) => [v, i] as const).sort((a, b) => a[0] - b[0]);
-  const q = new Array<number>(m);
-  let min = 1;
-  for (let r = m - 1; r >= 0; r--) { const [v, i] = order[r]; min = Math.min(min, v * m / (r + 1)); q[i] = min; }
-  return q;
-}
+export { benjaminiHochberg, hypergeomLowerTail, logGamma } from './stats.ts';
 
 /* ───────── research-gap candidates ───────── */
 
@@ -201,15 +164,26 @@ export type TopicEvaluation = {
   title: string;
   corpusSize: number;
   terms: TermEvidence[];
-  base: { status: Status; weak: string[] };
+  base: { status: Status; weak: string[]; pivots: Array<{ label: string; centrality: number }> };
   novelty: { status: Status; kind: 'none' | 'sparse' | 'crowded' | 'unknown'; joint: number; expected: number | null; crowdedAt: number; pairs: PairEvidence[]; papers: number[] };
-  trend: { status: Status; rising: string[]; falling: string[]; usable: boolean };
+  trend: { status: Status; rising: string[]; falling: string[]; usable: boolean; bursts: Array<{ label: string; begin: number; end: number; live: boolean }> };
   award: { status: Status; similar: SimilarCase[]; nearDuplicate: SimilarCase | null };
   structure: { status: Status; features: Array<FeatureBase & { match: string | null }>; length: number; lengths: { median: number; q1: number; q3: number; total: number } };
   feasibility: { status: Status; issues: string[] };
 };
 
-export function evaluateTopic(input: { title: string; terms: string[]; feasibility?: Feasibility }, ctx: { index: TermIndex | null; cy: CorpusYears | null; cases: AwardCase[] }): TopicEvaluation {
+export type EvaluationContext = {
+  index: TermIndex | null;
+  cy: CorpusYears | null;
+  cases: AwardCase[];
+  /** Strongest keyword burst per term (CiteSpace-style), when computed. */
+  bursts?: Map<string, { begin: number; end: number }>;
+  /** Betweenness centrality on the keyword backbone, for terms in the map. */
+  centrality?: Map<string, number>;
+  lastYear?: number | null;
+};
+
+export function evaluateTopic(input: { title: string; terms: string[]; feasibility?: Feasibility }, ctx: EvaluationContext): TopicEvaluation {
   const { index, cy, cases } = ctx, title = input.title.trim();
   const N = index?.docs.length ?? 0;
   const keys = [...new Set(input.terms.map(termKey).filter(Boolean))];
@@ -217,7 +191,8 @@ export function evaluateTopic(input: { title: string; terms: string[]; feasibili
 
   // Literature base: every core term should be present in at least three imported records.
   const weak = terms.filter(t => t.df < 3).map(t => t.label);
-  const base = { status: (!index || !terms.length ? 'unknown' : weak.length ? 'attention' : 'ok') as Status, weak };
+  const pivots = terms.map(t => ({ label: t.label, centrality: ctx.centrality?.get(t.key) ?? 0 })).filter(p => p.centrality >= .1);
+  const base = { status: (!index || !terms.length ? 'unknown' : weak.length ? 'attention' : 'ok') as Status, weak, pivots };
 
   // Novelty: how many records already combine all core terms, against what independence predicts.
   const present = terms.filter(t => t.df > 0);
@@ -241,7 +216,9 @@ export function evaluateTopic(input: { title: string; terms: string[]; feasibili
 
   const usable = !!cy?.usable;
   const rising = terms.filter(t => t.trend?.signal === 'rising').map(t => t.label), falling = terms.filter(t => t.trend?.signal === 'falling').map(t => t.label);
-  const trend = { status: (!index || !usable || !present.length ? 'unknown' : rising.length ? 'ok' : falling.length ? 'attention' : 'neutral') as Status, rising, falling, usable };
+  const bursts = terms.flatMap(t => { const b = ctx.bursts?.get(t.key); return b ? [{ label: t.label, begin: b.begin, end: b.end, live: ctx.lastYear != null && b.end >= ctx.lastYear }] : []; });
+  const live = bursts.some(b => b.live);
+  const trend = { status: (!index || !present.length || (!usable && !bursts.length) ? 'unknown' : rising.length || live ? 'ok' : falling.length ? 'attention' : 'neutral') as Status, rising, falling, usable, bursts };
 
   const similar = similarAwardCases(title, cases);
   const nearDuplicate = similar.find(c => c.titleJaccard >= .35) ?? null;
