@@ -32,11 +32,12 @@ export default function NetExamStudio(){
 function ExamBankLoader({accountId,active}:{accountId:string;active:boolean}){
  const [state,setState]=useState<BankState>({status:'loading'}),[attempt,setAttempt]=useState(0);
  useEffect(()=>{
-  const controller=new AbortController();
-  hostedRequest('/api/net-exam/bank',{signal:controller.signal,maxBytes:BANK_MAX_BYTES})
-   .then(value=>{if(!controller.signal.aborted)setState({status:'ready',bank:parseExamBank(value)});})
-   .catch(error=>{if(controller.signal.aborted)return;setState(error instanceof HostedApiError&&error.code==='net_exam_bank_unavailable'?{status:'unavailable'}:{status:'failed',message:errorMessage(error)});});
-  return()=>controller.abort();
+  // No caller signal: hostedRequest keeps its own timeout, so a stalled response reaches the retry state.
+  let current=true;
+  hostedRequest('/api/net-exam/bank',{maxBytes:BANK_MAX_BYTES,timeoutMs:60_000})
+   .then(value=>{if(current)setState({status:'ready',bank:parseExamBank(value)});})
+   .catch(error=>{if(current)setState(error instanceof HostedApiError&&error.code==='net_exam_bank_unavailable'?{status:'unavailable'}:{status:'failed',message:errorMessage(error)});});
+  return()=>{current=false;};
  },[attempt]);
  if(state.status==='loading')return <div className={styles.loading}>正在读取题库…</div>;
  if(state.status==='unavailable')return <div className={styles.loading}><p>此服务器尚未配置网赛题库。</p><p>历史题库的公开传播授权尚未确认，不随公开源码分发；管理员按「网赛刷题」说明在服务器上放置本地生成的题库后即可使用。</p></div>;

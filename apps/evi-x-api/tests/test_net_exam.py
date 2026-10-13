@@ -72,7 +72,9 @@ def test_invalid_or_oversized_file_is_reported_not_served(tmp_path):
     broken.write_text("{not json", encoding="utf-8")
     oversized = tmp_path / "large.json"
     oversized.write_bytes(b" " * (MAX_BANK_BYTES + 1))
-    for path in (broken, oversized, write(tmp_path / "shape.json", {"version": "x"})):
+    directory = tmp_path / "directory.json"
+    directory.mkdir()
+    for path in (broken, oversized, directory, write(tmp_path / "shape.json", {"version": "x"})):
         with pytest.raises(ApiError) as error:
             NetExamBank(path).body()
         assert (error.value.status, error.value.code) == (503, "net_exam_bank_invalid")
