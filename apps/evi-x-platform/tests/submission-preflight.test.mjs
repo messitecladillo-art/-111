@@ -149,6 +149,36 @@ test("actual inflate bomb, size/CRC mismatch, truncated and trailing deflate are
   const huge = Buffer.alloc(1024 * 1024, 65); await incomplete(rawZip(parts("docx", [{ name: "word/x.bin", body: huge, size: 1 }])), "zip_expansion_limit");
   for (const patch of [{ size: 4 }, { crc: 0 }, { packed: deflateRawSync(Buffer.from('abc')).subarray(0, 2) }, { packed: Buffer.concat([deflateRawSync(Buffer.from('abc')), Buffer.from('junk')]) }, { packed: Buffer.concat([deflateRawSync(Buffer.from('abc')), deflateRawSync(Buffer.from('extra'))]) }]) await incomplete(rawZip(parts("docx", [{ name: "word/x.bin", body: "abc", ...patch }])), "zip_integrity");
 });
+test("strict raw inflate requires first EOF and all packed bytes, across chunk boundaries", async () => {
+  const input = Buffer.alloc(16 * 1024 - 5, 65), packed = deflateRawSync(input, { level: 0 }); assert.equal(packed.length, 16 * 1024);
+  const entry = { name: "word/boundary.bin", body: input, packed };
+  assert.equal((await inspect(rawZip(parts("docx", [entry])))).status, "no_issues_in_checked_scope");
+  for (const tail of [Buffer.from([0]), Buffer.from("junk"), deflateRawSync(Buffer.from("second stream")), Buffer.alloc(16 * 1024)]) await incomplete(rawZip(parts("docx", [{ ...entry, packed: Buffer.concat([packed, tail]) }])), "zip_integrity");
+  // Truncate only the final block byte; producing all expected text is not EOF.
+  const finalBlock = Buffer.from([0x00, 0x03, 0x00, 0xfc, 0xff, 0x61, 0x62, 0x63]);
+  await incomplete(rawZip(parts("docx", [{ name: "word/missing-final.bin", body: "abc", packed: finalBlock }])), "zip_integrity");
+});
+test("strict inflater supports multi-chunk STORE/fixed/dynamic DEFLATE and empty entries", async () => {
+  const input = Buffer.alloc(200_000); let state = 0x6acb1825;
+  for (let i = 0; i < input.length; i++) { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; input[i] = state & 255; }
+  for (const options of [{ level: 0 }, { level: 9 }, { level: 6, strategy: 4 }]) {
+    const packed = deflateRawSync(input, options); assert(packed.length > 16 * 1024);
+    assert.equal((await inspect(rawZip(parts("docx", [{ name: "word/multi.bin", body: input, packed }, { name: "word/empty.bin", body: "" }])))).status, "no_issues_in_checked_scope");
+    await incomplete(rawZip(parts("docx", [{ name: "word/multi.bin", body: input, packed: packed.subarray(0, -1) }])), "zip_integrity");
+  }
+});
+test("16MiB and64MiB underdeclared output abort at bounded output callback", async () => {
+  for (const size of [16, 64]) {
+    const inflated = Buffer.alloc(size * 1024 * 1024, 65), packed = deflateRawSync(inflated);
+    await incomplete(rawZip(parts("docx", [{ name: `word/bomb${size}.bin`, body: Buffer.from("A"), packed, size: 1 }])), "zip_expansion_limit");
+  }
+});
+test("Office inspection is independent of native DecompressionStream behavior", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "DecompressionStream");
+  Object.defineProperty(globalThis, "DecompressionStream", { configurable: true, value: class { constructor() { throw new Error("native decompressor must not be used"); } } });
+  try { assert.equal((await inspect(await zip())).status, "no_issues_in_checked_scope"); }
+  finally { if (descriptor) Object.defineProperty(globalThis, "DecompressionStream", descriptor); else delete globalThis.DecompressionStream; }
+});
 test("relationship missing/dangling/duplicate and traversal targets are incomplete", async () => {
   for (const records of [
     `<Relationship Id="r2" Type="urn:test" Target="missing.xml"/>`,

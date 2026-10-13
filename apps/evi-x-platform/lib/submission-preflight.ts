@@ -1,4 +1,5 @@
 import sax, { type QualifiedAttribute, type QualifiedTag } from "sax";
+import { Inflate } from "pako";
 
 export const PREFLIGHT_LIMITS = Object.freeze({ input: 20 * 1024 * 1024, entries: 2000, total: 64 * 1024 * 1024, entry: 8 * 1024 * 1024, findings: 500, xmlNodes: 300_000, xmlDepth: 128, terms: 128 });
 export type PreflightFinding = { level: "error" | "warning"; code: string; message: string; location: string; field?: string };
@@ -100,19 +101,30 @@ function inspectZip(bytes: Uint8Array): { entries: Entry[]; comment: string } {
 async function inflate(bytes: Uint8Array, entry: Entry): Promise<Uint8Array> {
   const packed = bytes.subarray(entry.start, entry.start + entry.packed);
   if (entry.method === 0) { if (crc32(packed) !== entry.crc) fail("zip_integrity", "包内条目 CRC 校验失败。", entry.name); return packed; }
-  let stream: ReadableStream<Uint8Array>;
-  try { stream = new Blob([new Uint8Array(packed)]).stream().pipeThrough(new DecompressionStream("deflate-raw")); }
-  catch { return fail("decompression_unavailable", "当前浏览器不支持有界 Office 解压，请更新桌面浏览器。", entry.name); }
-  const reader = stream.getReader(), chunks: Uint8Array[] = []; let total = 0;
+  // ZIP requires exactly one raw DEFLATE stream. Native DecompressionStream can
+  // ignore trailing input (notably Node 22); CRC/size alone cannot detect that.
+  // Pako's public onStart exposes consumption counters; its raw mode stops at the
+  // first final block. Keep both input slices and output allocations bounded.
+  const sliceBytes = 16 * 1024, chunks: Uint8Array[] = [];
+  const stream: { state?: Parameters<Inflate["onStart"]>[0] } = {};
+  const decoder = new Inflate({ raw: true, chunkSize: Math.max(1, Math.min(sliceBytes, entry.size + 1)) });
+  let total = 0;
+  decoder.onStart = state => { stream.state = state; };
+  decoder.onData = chunk => {
+    total += chunk.length;
+    if (total > entry.size || total > PREFLIGHT_LIMITS.entry) fail("zip_expansion_limit", "实际解压长度超过目录声明或 8 MiB 上限。", entry.name);
+    chunks.push(chunk);
+  };
+  decoder.onEnd = () => { /* Output is retained only by the bounded callback above. */ };
   try {
-    while (true) {
-      const result = await reader.read(); if (result.done) break;
-      total += result.value.length;
-      if (total > entry.size || total > PREFLIGHT_LIMITS.entry) { await reader.cancel(); fail("zip_expansion_limit", "实际解压长度超过目录声明或 8 MiB 上限。", entry.name); }
-      chunks.push(result.value);
+    for (let start = 0; start < packed.length; start += sliceBytes) {
+      const end = Math.min(start + sliceBytes, packed.length), last = end === packed.length;
+      if (decoder.ended || !decoder.push(packed.subarray(start, end), last) || decoder.err) fail("zip_integrity", "压缩内容损坏、截断或带有额外数据。", entry.name);
+      const state = stream.state;
+      if (!state || state.avail_in !== 0 || state.next_in !== end - start || state.total_in !== end || (decoder.ended && !last)) fail("zip_integrity", "压缩数据在首个流结束后仍有未消费字节。", entry.name);
     }
+    if (!decoder.ended || decoder.err || stream.state?.total_in !== packed.length) fail("zip_integrity", "压缩流缺少完整结束标记或未精确消费全部输入。", entry.name);
   } catch (error) { if (error instanceof InspectionError) throw error; return fail("zip_integrity", "压缩内容损坏、截断或带有额外数据。", entry.name); }
-  finally { reader.releaseLock(); }
   if (total !== entry.size) fail("zip_integrity", "条目实际解压长度与目录不一致。", entry.name);
   const output = new Uint8Array(total); let offset = 0; for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.length; }
   if (crc32(output) !== entry.crc) fail("zip_integrity", "条目 CRC 校验失败。", entry.name);
