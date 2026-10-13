@@ -81,3 +81,15 @@ test('frequency and numeric tables append interval columns without disturbing ex
   const [lower, upper] = numeric.rows.slice(7).map(r => r[1]);
   assert.ok(lower < 14 / 6 && 14 / 6 < upper);
 });
+
+test('exported summary metadata and method guide describe the inference that is now performed', async () => {
+  const board = readFileSync(new URL('../components/analysis/AnalysisRecipeBoard.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(board, /inference: 'not performed'|No p-values, confidence intervals/);
+  assert.match(board, /assume random sampling or random assignment/);
+  const { RESEARCH_METHOD_CARDS: METHOD_CARDS } = await import('../lib/research-method-guide.ts');
+  for (const id of ['descriptive-profile', 'categorical-association', 'paired-association']) {
+    const card = METHOD_CARDS.find(c => c.id === id), text = JSON.stringify(card);
+    assert.doesNotMatch(text, /不输出 p 值|当前没有显著性结论|不执行 t 检验/, id);
+    assert.match(text, /随机抽样/, id);
+  }
+});
