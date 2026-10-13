@@ -19,7 +19,7 @@
 .routeFlow { fill: none; stroke: var(--journey-teal); stroke-width: 2; stroke-dasharray: 3 23; opacity: .28; }
 .journey[data-reading=true] .routeFlow { opacity: .8; animation: travel 2.2s linear infinite; }
 .stations { position: relative; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; height: 100%; }
-.journey .station { align-self: start; display: flex; align-items: center; flex-direction: column; gap: 5px; position: relative; margin-top: 19px; padding: 12px 5px 10px; border: 1px solid transparent; background: transparent; color: var(--journey-muted); transition: background-color 220ms ease,border-color 220ms ease; box-shadow: none; }
+.journey .station { align-self: start; display: flex; align-items: center; flex-direction: column; gap: 5px; position: relative; margin-top: 19px; padding: 12px 5px 10px; border: 1px solid transparent; background: transparent; color: var(--journey-muted); transition: background-color var(--motion-base) var(--ease-arrive),border-color var(--motion-base) var(--ease-arrive); box-shadow: none; }
 .journey .station:nth-child(even) { margin-top: 55px; }
 .journey .station[data-active=true] { background: #8be3d00b; border-color: #73cebf40; border-radius: 9px; color: var(--journey-ink); }
 .journey .station:hover { background: #ffffff0b; color: var(--journey-ink); border-color: #8bdac044; }

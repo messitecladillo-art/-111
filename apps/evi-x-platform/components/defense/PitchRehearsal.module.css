@@ -43,7 +43,7 @@
 @media(max-width:380px) {.blocks {grid-template-columns:1fr;}.footer button {width:100%;}}
 
 .blocks { position:relative; }
-.blocks li { transition:background-color 180ms ease,border-color 180ms ease; }
+.blocks li { transition:background-color var(--motion-fast) var(--ease-arrive),border-color var(--motion-fast) var(--ease-arrive); }
 .blocks li.motionMarker { position:absolute; top:0; left:0; width:0; height:2px; padding:0; border:0; display:block; background:var(--wb-gold,#b39757); pointer-events:none; border-radius:2px; }
 .clockArea[data-running=true] { border-color:color-mix(in srgb,var(--wb-accent) 55%,var(--wb-line)); }
 .planProgress { height:3px; border-radius:2px; background:var(--wb-line); overflow:hidden; }

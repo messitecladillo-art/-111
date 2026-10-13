@@ -22,7 +22,7 @@ async function loadStaticPreview() {
   const source = await readFile(new URL('../components/analysis/ChartPreview.tsx', import.meta.url), 'utf8');
   let compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   for (const name of ['react/jsx-runtime', 'react']) compiled = compiled.replaceAll(`"${name}"`, JSON.stringify(import.meta.resolve(name))).replaceAll(`'${name}'`, JSON.stringify(import.meta.resolve(name)));
-  for (const name of ['chart-options', 'chart-theme', 'chart-engine']) compiled = compiled.replaceAll(`'@/lib/${name}'`, JSON.stringify(new URL(`../lib/${name}.ts`, import.meta.url).href)).replaceAll(`"@/lib/${name}"`, JSON.stringify(new URL(`../lib/${name}.ts`, import.meta.url).href));
+  for (const name of ['chart-options', 'chart-theme', 'chart-engine', 'workspace-motion']) compiled = compiled.replaceAll(`'@/lib/${name}'`, JSON.stringify(new URL(`../lib/${name}.ts`, import.meta.url).href)).replaceAll(`"@/lib/${name}"`, JSON.stringify(new URL(`../lib/${name}.ts`, import.meta.url).href));
   const classes = { tablePaper: 'tablePaper', tableScroll: 'tableScroll', caption: 'caption', paper: 'paper', host: 'host', status: 'status' };
   const cssModule = 'data:text/javascript;base64,' + Buffer.from(`export default ${JSON.stringify(classes)};`).toString('base64');
   compiled = compiled.replaceAll("'./ChartPreview.module.css'", JSON.stringify(cssModule)).replaceAll('"./ChartPreview.module.css"', JSON.stringify(cssModule));

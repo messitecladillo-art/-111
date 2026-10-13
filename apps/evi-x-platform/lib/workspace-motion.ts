@@ -1,5 +1,5 @@
 /** Presentation-only motion; callers own all edits, versions and calculations. */
-export const WORKSPACE_MOTION = { selection: 180, reorder: 240, reveal: 220, easing: 'cubic-bezier(.16,.8,.12,1)' } as const;
+export const WORKSPACE_MOTION = { selection: 180, liquid: 260, reorder: 240, reveal: 220, draw: 560, easing: 'cubic-bezier(.16,1,.3,1)' } as const;
 export type MotionPoint = { x: number; y: number; width: number; height: number };
 export type MarkerAxis = 'vertical' | 'horizontal';
 type OwnedMove = { animation: Animation; x: number; y: number };
@@ -11,6 +11,40 @@ export function markerBounds(item: MotionPoint, axis: MarkerAxis): MotionPoint {
   return axis === 'horizontal'
     ? { x: item.x, y: item.y + item.height - 2, width: item.width, height: 2 }
     : { x: item.x, y: item.y, width: 3, height: item.height };
+}
+const lead = (t: number) => 1 - (1 - t) ** 3;
+const trail = (t: number) => 1 - (1 - t) ** 1.6;
+const round = (n: number) => Math.round(n * 100) / 100;
+/**
+ * Liquid selection: the edge facing the destination arrives first and the far edge
+ * follows, so the marker stretches across the gap and settles without overshoot.
+ */
+export function liquidMarkerAt(from: MotionPoint, to: MotionPoint, axis: MarkerAxis, t: number): MotionPoint {
+  const [pos, size, crossPos, crossSize] = axis === 'horizontal' ? ['x', 'width', 'y', 'height'] as const : ['y', 'height', 'x', 'width'] as const;
+  const s0 = from[pos], e0 = from[pos] + from[size], s1 = to[pos], e1 = to[pos] + to[size];
+  const forward = s1 > s0, backward = s1 < s0;
+  const start = s0 + (s1 - s0) * (forward ? trail(t) : lead(t));
+  const end = Math.max(start + 1, e0 + (e1 - e0) * (backward ? trail(t) : lead(t)));
+  const out = { x: 0, y: 0, width: 0, height: 0 };
+  out[pos] = round(start); out[size] = round(end - start);
+  out[crossPos] = round(from[crossPos] + (to[crossPos] - from[crossPos]) * lead(t));
+  out[crossSize] = round(from[crossSize] + (to[crossSize] - from[crossSize]) * lead(t));
+  return out;
+}
+export function liquidMarkerFrames(from: MotionPoint, to: MotionPoint, axis: MarkerAxis, steps = 12): MotionPoint[] {
+  return Array.from({ length: steps + 1 }, (_, i) => i === steps ? { ...to } : i === 0 ? { ...from } : liquidMarkerAt(from, to, axis, i / steps));
+}
+/** How a freshly computed chart draws in: from its value axis, around its centre, or as a whole. */
+export function chartDrawFrames(kind: string): Keyframe[] {
+  if (kind === 'pie' || kind === 'donut') return [{ clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(75% at 50% 50%)' }];
+  if (['bar', 'grouped_bar', 'stacked_bar', 'percent_stacked', 'histogram', 'lollipop', 'group_mean', 'mean_sd', 'item_mean', 'alpha_deleted'].includes(kind)) return [{ clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0 0 0 0)' }];
+  if (['treemap', 'waffle', 'heatmap', 'mosaic'].includes(kind)) return [{ opacity: .4, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0px)' }];
+  return [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }];
+}
+export function drawChartIn(element: HTMLElement, kind: string): Animation | null {
+  const view = element.ownerDocument.defaultView;
+  if (typeof element.animate !== 'function' || element.ownerDocument.hidden || view?.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  return element.animate(chartDrawFrames(kind), { duration: WORKSPACE_MOTION.draw, easing: WORKSPACE_MOTION.easing });
 }
 export function motionProgress(animation: Animation): number {
   const progress = animation.effect?.getComputedTiming().progress;
@@ -55,7 +89,7 @@ export function createKeyedListMotion(root: HTMLElement) {
   const knownIds = new Set<string>(), moves = new Map<HTMLElement, OwnedMove>();
   const sizes = new Map<Element, { width: number; height: number }>();
   let marker: HTMLElement | null = null, markerPoint: MotionPoint | null = null;
-  let markerMove: { animation: Animation; from: MotionPoint; to: MotionPoint } | null = null;
+  let markerMove: { animation: Animation; from: MotionPoint; to: MotionPoint; axis: MarkerAxis } | null = null;
   let observed = '';
   const elements = () => new Map(Array.from(root.querySelectorAll<HTMLElement>('[data-motion-id]')).map(node => [node.dataset.motionId!, node]));
   const cancelMoves = () => { for (const { animation } of moves.values()) animation.cancel(); moves.clear(); };
@@ -69,21 +103,18 @@ export function createKeyedListMotion(root: HTMLElement) {
     marker = root.querySelector<HTMLElement>('[data-motion-marker]');
     if (!marker || !next) { if (marker) marker.hidden = true; cancelMarker(); markerPoint = null; return; }
     let from = markerPoint;
-    if (markerMove) {
-      const p = motionProgress(markerMove.animation), { from: start, to } = markerMove;
-      from = { x: start.x + (to.x - start.x) * p, y: start.y + (to.y - start.y) * p, width: start.width + (to.width - start.width) * p, height: start.height + (to.height - start.height) * p };
-    }
+    // An interrupted move restarts from the visible stretched shape, not from either rest state.
+    if (markerMove) from = liquidMarkerAt(markerMove.from, markerMove.to, markerMove.axis, motionProgress(markerMove.animation));
     cancelMarker();
     marker.hidden = false;
     marker.style.transform = `translate(${next.x}px,${next.y}px)`;
     marker.style.width = `${next.width}px`; marker.style.height = `${next.height}px`;
     markerPoint = next;
     if (animate && from && typeof marker.animate === 'function') {
-      const animation = marker.animate([
-        { transform: `translate(${from.x}px,${from.y}px)`, width: `${from.width}px`, height: `${from.height}px` },
-        { transform: `translate(${next.x}px,${next.y}px)`, width: `${next.width}px`, height: `${next.height}px` },
-      ], { duration: WORKSPACE_MOTION.selection, easing: WORKSPACE_MOTION.easing });
-      markerMove = { animation, from, to: next };
+      const frames = liquidMarkerFrames(from, next, axis).map(p => ({ transform: `translate(${p.x}px,${p.y}px)`, width: `${p.width}px`, height: `${p.height}px` }));
+      // Frames already carry the easing of each edge, so the effect itself runs linearly.
+      const animation = marker.animate(frames, { duration: WORKSPACE_MOTION.liquid, easing: 'linear' });
+      markerMove = { animation, from, to: next, axis };
       animation.onfinish = () => { if (markerMove?.animation === animation) markerMove = null; };
     }
   };
@@ -158,7 +189,8 @@ export function createContentReveal(root: HTMLElement) {
       const shouldReveal = next !== null && next !== token && nextEnabled && scope.allowed();
       token = next; enabled = nextEnabled; initialized = true;
       if (shouldReveal && typeof root.animate === 'function') {
-        animation = root.animate([{ opacity: .55 }, { opacity: 1 }], { duration: WORKSPACE_MOTION.reveal, easing: WORKSPACE_MOTION.easing });
+        // A short focus pull reads as new content arriving; no transform, so text stays crisp.
+        animation = root.animate([{ opacity: .55, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0px)' }], { duration: WORKSPACE_MOTION.reveal, easing: WORKSPACE_MOTION.easing });
       }
     },
     dispose() { cancel(); scope.dispose(); },

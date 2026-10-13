@@ -13,7 +13,7 @@
 .count { color: var(--wb-muted); font-size: 11px; align-self: center; white-space: nowrap; margin-top: 16px; }
 .workspace { display: grid; grid-template-columns: 230px minmax(0,1fr); min-height: 390px; }
 .directory { position: relative; padding: 10px 0; max-height: 560px; overflow-y: auto; border-right: 1px solid var(--wb-line); }
-.library .directory > button { display: grid; gap: 5px; width: 100%; padding: 12px 18px; background: transparent; border: 0; border-radius: 0; color: var(--wb-muted); text-align: left; cursor: pointer; transition: background-color 180ms,color 180ms; }
+.library .directory > button { display: grid; gap: 5px; width: 100%; padding: 12px 18px; background: transparent; border: 0; border-radius: 0; color: var(--wb-muted); text-align: left; cursor: pointer; transition: background-color var(--motion-fast) var(--ease-arrive),color var(--motion-fast) var(--ease-arrive); }
 .library .directory > button strong { font-size: 12px; font-weight: 550; line-height: 1.5; }
 .library .directory > button span { width: fit-content; font-size: 10px; padding: 2px 5px; border: 1px solid var(--wb-line); border-radius: 4px; }
 .library .directory > button:hover,.library .directory > button[aria-pressed=true] { background: var(--wb-gold-soft); color: var(--wb-text); }
@@ -22,7 +22,7 @@
 .content { padding: 24px 28px; min-width: 0; }
 .content header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .content header > span { color: var(--wb-gold-text); font-size: 11px; }
-.library .content button { cursor: pointer; font: inherit; font-size: 11px; padding: 7px 11px; border: 1px solid var(--wb-line); color: var(--wb-text); background: var(--wb-solid); border-radius: 6px; transition: background-color 160ms,border-color 160ms; }
+.library .content button { cursor: pointer; font: inherit; font-size: 11px; padding: 7px 11px; border: 1px solid var(--wb-line); color: var(--wb-text); background: var(--wb-solid); border-radius: 6px; transition: background-color var(--motion-fast) var(--ease-arrive),border-color var(--motion-fast) var(--ease-arrive); }
 .library .content button:hover { border-color: var(--wb-gold-text); background: var(--wb-gold-soft); }
 .library .content button:disabled { opacity: .45; cursor: default; }
 .content h3 { font-size: 22px; line-height: 1.45; margin: 16px 0 10px; }

@@ -54,7 +54,7 @@
 .tabs { position: relative; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .selectionMarker { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; background: var(--wb-gold-text); border-radius: 2px; }
 .tabs > .selectionMarker { margin-top: -2px; }
-.tabs > button,.steps > button { transition: background-color 180ms ease, color 180ms ease; }
+.tabs > button,.steps > button { transition: background-color var(--motion-fast) var(--ease-arrive), color var(--motion-fast) var(--ease-arrive); }
 .tabs > button { white-space: nowrap; }
 .tabs > button[aria-pressed=true] { color: var(--wb-accent); border-color: var(--wb-accent); background: var(--wb-accent-soft); }
 .exports { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -86,7 +86,7 @@
 .barRow > span { overflow-wrap: anywhere; }
 .barRow strong { font-size: 13px; font-weight: 550; }
 .barTrack { grid-column: 1/-1; background: var(--wb-well); border-radius: 2px; height: 7px; overflow: hidden; }
-.barTrack i { display: block; height: 100%; background: var(--wb-accent); transition: width 220ms cubic-bezier(.2,.7,.2,1); }
+.barTrack i { display: block; height: 100%; background: var(--wb-accent); transition: width var(--motion-base) var(--ease-arrive); }
 .bounds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
 .itemList { max-height: 360px; overflow: auto; margin: 18px 0; border-block: 1px solid var(--wb-line); }
 .itemRow { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--wb-line); }
