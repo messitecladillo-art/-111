@@ -73,13 +73,14 @@ test('each SVG header and data cell is independently centered in its own column'
   parser.write(svg).close();
   const cells = texts.filter(text => text.anchor === 'middle');
   const expected = [snapshot.table.headers, ...snapshot.table.rows];
-  assert.equal(cells.length, expected.length * snapshot.table.headers.length);
-  cells.forEach((cell, index) => {
-    const column = index % snapshot.table.headers.length, row = Math.floor(index / snapshot.table.headers.length);
-    assert.ok(Math.abs(cell.x - (28 + (column + .5) * (style.width - 56) / snapshot.table.headers.length)) < 1e-10);
-    const value = expected[row][column];
-    assert.equal(cell.content, typeof value === 'string' ? value : formatChartNumber(value, style.decimals));
+  // Long cells wrap onto several centred lines; each line stays centred in its own column.
+  const columns = snapshot.table.headers.length, columnWidth = (style.width - 56) / columns, byColumn = Array.from({ length: columns }, () => '');
+  cells.forEach(cell => {
+    const column = Math.round((cell.x - 28) / columnWidth - .5);
+    assert.ok(column >= 0 && column < columns && Math.abs(cell.x - (28 + (column + .5) * columnWidth)) < 1e-10);
+    byColumn[column] += cell.content;
   });
+  byColumn.forEach((content, column) => assert.equal(content, expected.map(row => typeof row[column] === 'string' ? row[column] : formatChartNumber(row[column], style.decimals)).join('')));
   assert.ok(texts.filter(text => text.anchor !== 'middle').every(text => text.anchor === 'start'));
   assert.ok(texts.some(text => text.content === style.title && text.anchor === 'start'));
   assert.ok(texts.some(text => text.content === 'n = 3' && text.anchor === 'start'));
