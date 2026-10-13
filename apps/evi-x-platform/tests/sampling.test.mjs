@@ -82,3 +82,35 @@ test('methods paragraph states precision only for probability designs', () => {
   const quota = methodsStatement({ kind: 'quota', population: '', frame: '', plan, result });
   assert.match(quota, /不计算抽样误差/); assert.doesNotMatch(quota, /抽样误差不超过/); assert.match(quota, /请填写目标总体/);
 });
+
+test('a minimum larger than a stratum takes that stratum whole and never breaks the total', () => {
+  const r = allocate([{ id: 'a', name: '小层', size: 5, sd: 1 }, { id: 'b', name: '大层', size: 100, sd: 1 }], 20, 'proportional', 10);
+  assert.deepEqual(r.rows.map(x => x.allocation), [5, 15]);
+  assert.equal(r.total, 20);
+  assert.ok(r.warnings.some(w => w.includes('全部纳入')));
+  assert.throws(() => allocate([{ id: 'a', name: '甲', size: 50, sd: 1 }, { id: 'b', name: '乙', size: 50, sd: 1 }], 30, 'proportional', 20), /最少样本之和/);
+});
+
+test('random allocations always respect caps, floors and the exact total', () => {
+  let seed = 7; const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  for (let trial = 0; trial < 300; trial++) {
+    const k = 2 + Math.floor(rand() * 6), strata = Array.from({ length: k }, (_, i) => ({ id: String(i), name: `层${i}`, size: 1 + Math.floor(rand() * 200), sd: 0.5 + rand() * 20 }));
+    const capacity = strata.reduce((s, x) => s + x.size, 0), minimum = Math.floor(rand() * 15);
+    const floors = strata.reduce((s, x) => s + Math.min(minimum, x.size), 0);
+    const total = Math.max(k, floors) + Math.floor(rand() * Math.max(0, capacity - Math.max(k, floors)));
+    for (const method of ['proportional', 'neyman', 'equal']) {
+      const r = allocate(strata, total, method, minimum);
+      assert.equal(r.total, total, `${method} total`);
+      r.rows.forEach((row, i) => { assert.ok(row.allocation <= strata[i].size, `${method} cap`); assert.ok(row.allocation >= Math.min(minimum, strata[i].size), `${method} floor`); });
+    }
+  }
+});
+
+test('mean plans report mean precision and mean wording', () => {
+  const plan = { ...base, target: 'mean', sd: 12, margin: 2 };
+  const e = achievedMargin({ n: 139, confidence: '0.95', sd: 12, population: null, designEffect: 1 });
+  close(e, 1.959963984540054 * 12 / Math.sqrt(139));
+  assert.ok(e < 2);
+  const text = methodsStatement({ kind: 'srs', population: '某市居民', frame: '户籍名册', plan, result: sampleSize(plan) });
+  assert.match(text, /均值估计的抽样误差/); assert.doesNotMatch(text, /比例估计/);
+});
