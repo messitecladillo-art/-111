@@ -61,13 +61,13 @@ export const RESEARCH_METHOD_CARDS: readonly ResearchMethodCard[] = [
   },
   {
     id: 'descriptive-profile', title: '描述分布与人群比较', availability: 'implemented',
-    implementationScope: '频数、有效比例、均值、样本标准差、中位数、Type 7 四分位数与分组描述。',
+    implementationScope: '频数与 Wilson 95% 区间、均值与 t 区间、样本标准差、中位数、Type 7 四分位数；分组比较附 Welch t / Welch 方差分析、秩检验对照、效应量与 Holm 两两比较。',
     researchQuestion: '当前样本的结构、水平和差异集中在哪里？',
     preconditions: ['分类、顺序和数值变量含义明确，单位一致。', '多选题按选项处理；标识列完成审查。'],
     steps: ['先看样本结构与缺失，再选择频数或数值分布。', '偏态分布同时查看中位数与四分位数。', '按研究依据分组，对照 n、水平和离散程度。', '把异常值核查结果与业务解释一起记录。'],
     diagnostics: ['数字类别码是否被当作连续值？', '少数极端值是否支配均值？', '组规模和招募渠道是否足以解释表面差异？'],
     outputs: ['样本分布表', '分组数值摘要与口径说明'],
-    limits: ['当前分组描述不执行 t 检验或 ANOVA。', '小组结果可能不稳定，也需考虑重识别风险。', '描述记录中的差异不能单独解释其原因。'],
+    limits: ['检验与区间以随机抽样为前提；便利或配额样本的 p 值只作参考。', '小组结果可能不稳定，也需考虑重识别风险。', '描述记录中的差异不能单独解释其原因。'],
     sourceRefs: ['evix-analysis', 'evix-router', 'business-playbook', 'python-index'],
   },
   {

@@ -33,10 +33,10 @@ const resultOut: OutputPort = { id: 'result', label: '结果', type: 'result' };
 const statBoundary: Record<StatMethod, string> = {
   frequency: '比例分母为该列非缺失样本，不推断总体。',
   numeric: '标准差用 n−1，四分位数为 Type 7。',
-  groups: '只做分组描述，不做 t 检验或方差分析，不给出显著性。',
-  crosstab: 'χ² 未作连续性校正，只报告统计量与 Cramér V，不提供 p 值。',
-  pearson: '无 p 值与置信区间，不作显著性或因果判断。',
-  spearman: '有序编码须保持真实顺序，不证明因果。',
+  groups: '两组用 Welch t 检验、多组用 Welch 方差分析，附秩检验对照与效应量；检验以随机抽样为前提，不证明因果。',
+  crosstab: 'χ² 不作连续性校正，报告 p 值与 Cramér V；2×2 稀疏表以 Fisher 精确检验为准。',
+  pearson: '报告双侧 p 与 Fisher z 95% 区间；相关不证明因果。',
+  spearman: 'p 值为 t 近似；有序编码须保持真实顺序，不证明因果。',
   alpha: '原始 Cronbach α 只描述内部一致性，不证明单维性或效度。',
 };
 const stat = (kind: StatMethod, title: string, summary: string, roles: number, keywords = ''): NodeDef => ({
@@ -55,9 +55,9 @@ export const NODE_DEFS: readonly NodeDef[] = [
   { kind: 'missing', title: '缺失处理', category: 'data', capability: 'run', summary: '声明缺失代码，并可只保留指定变量都有效的完整案例。', inputs: [datasetIn], outputs: [{ id: 'data', label: '处理后', type: 'dataset' }], boundary: '只删除不插补；删除行数会写入结果说明。', keywords: '缺失 完整案例 清洗' },
   stat('frequency', '频数与比例', '单个分类变量的类别频数与有效占比。', 1, '频数 比例 分类'),
   stat('numeric', '数值描述', '均值、标准差、中位数与四分位数。', 1, '描述 均值 标准差'),
-  stat('groups', '分组描述', '按分组变量并排描述一个数值变量。', 2, '分组 比较 组间'),
-  stat('crosstab', '交叉表', '两个分类变量的交叉频数、行内比例、χ² 与 Cramér V。', 2, '交叉 卡方 关联'),
-  stat('pearson', 'Pearson 相关', '两个数值变量的线性相关。', 2, '相关 线性'),
+  stat('groups', '分组比较', '按分组变量比较一个数值变量，附差异检验与效应量。', 2, '分组 比较 组间 t检验 方差分析'),
+  stat('crosstab', '交叉表', '两个分类变量的交叉频数、行内比例、χ² 检验与 Cramér V。', 2, '交叉 卡方 关联 Fisher'),
+  stat('pearson', 'Pearson 相关', '两个数值变量的线性相关、p 值与 95% 区间。', 2, '相关 线性'),
   stat('spearman', 'Spearman 秩相关', '两个有序或数值变量的单调关联。', 2, '秩 相关 有序'),
   stat('alpha', '信度（Cronbach α）', '量表题项的内部一致性、校正题总相关与删除后 α。', 3, '信度 量表 α alpha'),
   { kind: 'chart', title: '图表', category: 'chart', capability: 'run', summary: '把统计结果画成图或三线表，可选图形、配色与格式。', inputs: [{ id: 'result', label: '结果', accepts: ['result'] }], outputs: [{ id: 'chart', label: '图表', type: 'chart' }], section: 'analysis', keywords: '图 可视化 三线表 配色' },

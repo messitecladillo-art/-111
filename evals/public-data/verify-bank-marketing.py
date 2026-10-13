@@ -35,7 +35,21 @@ REPO = HERE.parent.parent
 ENGINE_FILES = (
     'apps/evi-x-platform/lib/survey-analysis.ts',
     'apps/evi-x-platform/lib/analysis-recipes.ts',
+    'apps/evi-x-platform/lib/inference.ts',
 )
+# Inference outputs appended after the descriptive results. Their values are checked
+# independently with SciPy/statsmodels by verify-bank-marketing-inference.py.
+INFERENCE_METRICS = {'p 值（Welch t）', 'p 值（Welch F）', 'Hedges g', 'η²（经典方差分析）', 'p 值（χ² 渐近）',
+                     'p 值（Fisher 精确）', 'p 值（双侧）', '95% CI 下限', '95% CI 上限'}
+INFERENCE_ROWS = {'均值 95% CI 下限', '均值 95% CI 上限', '95% CI 下限（Fisher z）', '95% CI 上限（Fisher z）', 'p 值（双侧）'}
+Z975 = statistics.NormalDist().inv_cdf(0.975)
+
+
+def wilson(count, total):
+    p, z2 = count / total, Z975 * Z975
+    centre = (p + z2 / (2 * total)) / (1 + z2 / total)
+    half = Z975 / (1 + z2 / total) * math.sqrt(p * (1 - p) / total + z2 / (4 * total * total))
+    return max(0.0, centre - half) * 100, min(1.0, centre + half) * 100
 
 
 def require(condition, message):
@@ -91,7 +105,7 @@ def reference(records, method, x, y, missing):
     }
     if method == 'frequency':
         counts = Counter(row[x].strip() for row in valid)
-        output['rows'] = [[label, count, count / len(valid) * 100] for label, count in counts.items()]
+        output['rows'] = [[label, count, count / len(valid) * 100, *wilson(count, len(valid))] for label, count in counts.items()]
         output['metrics'] = [len(counts)]
     elif method == 'numeric':
         values = describe([float(row[x]) for row in valid])
@@ -194,12 +208,18 @@ def verify(csv_path):
         require(result['method'] == case['method'], 'Result method does not match the requested method.')
         for key in ('n', 'total', 'excluded', 'missingRows', 'invalidRows'):
             equal(result[key], expected[key], f'{identifier}/{key}')
-        metrics = [metric['value'] for metric in result['metrics']]
+        descriptive = len(expected['metrics'])
+        extra = [metric['label'] for metric in result['metrics'][descriptive:]]
+        require(set(extra) <= INFERENCE_METRICS, f'{identifier}: unexpected metrics {extra!r}')
+        metrics = [metric['value'] for metric in result['metrics'][:descriptive]]
         equal(len(metrics), len(expected['metrics']), f'{identifier}/metric_count')
         for index, (first, second) in enumerate(zip(metrics, expected['metrics'])):
             equal(first, second, f'{identifier}/metric/{index}')
         sort_key = lambda row: tuple(str(value) for value in row[:2 if case['method'] == 'crosstab' else 1])
-        actual_rows, expected_rows = sorted(result['rows'], key=sort_key), sorted(expected['rows'], key=sort_key)
+        appended = [row for row in result['rows'] if case['method'] in ('numeric', 'pearson', 'spearman') and row[0] in INFERENCE_ROWS]
+        require(len(appended) <= len(INFERENCE_ROWS), f'{identifier}: duplicated inference rows')
+        rows = [row for row in result['rows'] if row not in appended]
+        actual_rows, expected_rows = sorted(rows, key=sort_key), sorted(expected['rows'], key=sort_key)
         equal(len(actual_rows), len(expected_rows), f'{identifier}/row_count')
         for row_index, (row, expected_row) in enumerate(zip(actual_rows, expected_rows)):
             equal(len(row), len(expected_row), f'{identifier}/width/{row_index}')

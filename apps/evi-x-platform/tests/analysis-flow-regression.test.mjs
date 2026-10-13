@@ -25,7 +25,10 @@ test('synthetic UTF8 source retains original rows while every branch excludes un
 
 test('seven methods agree with independently derived sufficient statistics including ties and reverse scoring', () => {
   const frequency = compute('frequency').result;
-  assert.equal(frequency.n, 14); assert.deepEqual(new Map(frequency.rows.map(row => [row[0], row.slice(1)])), new Map([['校园', [7, 50]], ['社区', [7, 50]]]));
+  assert.equal(frequency.n, 14); assert.deepEqual(new Map(frequency.rows.map(row => [row[0], row.slice(1, 3)])), new Map([['校园', [7, 50]], ['社区', [7, 50]]]));
+  // Wilson 95% interval for 7/14, z = 1.959963984540054: centre and half-width derived by hand.
+  const z = 1.959963984540054, centre = (0.5 + z * z / 28) / (1 + z * z / 14), half = z / (1 + z * z / 14) * Math.sqrt(0.25 / 14 + z * z / (4 * 196));
+  frequency.rows.forEach(row => { near(row[3], (centre - half) * 100); near(row[4], (centre + half) * 100); });
   const numeric = compute('numeric').result;
   const values = new Map(numeric.rows); near(values.get('样本标准差'), Math.sqrt(325));
   assert.equal(values.get('Q1'), 23.75); assert.equal(values.get('中位数'), 37.5); assert.equal(values.get('Q3'), 51.25);
