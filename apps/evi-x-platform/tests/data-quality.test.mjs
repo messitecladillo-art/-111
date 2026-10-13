@@ -83,3 +83,12 @@ test('straightlining candidates are rating-like columns, not identifiers or meta
   assert.deepEqual(likertCandidates(table), [4, 5, 6, 7]);
   assert.deepEqual(likertCandidates(parseSurveyCsv('收入,满意\n3500,4\n8200,5\n12000,3\n5100,2\n6100,1\n7300,4\n8800,5\n9100,3\n4300,2\n2200,1\n3300,4\n5500,5')), [1]);
 });
+
+test('answer columns that mention time are not treated as platform duration', () => {
+  const survey = parseSurveyCsv('编号,通勤用时（分钟）,每周运动时间,Duration (in seconds),Q1\n1,30,3,240,4\n2,45,5,35,3');
+  assert.deepEqual(detectQualityColumns(survey), { id: 0, duration: 3, ip: null });
+  assert.equal(detectQualityColumns(parseSurveyCsv('通勤用时,Q1\n30,4')).duration, null);
+  const report = evaluateQuality(parseSurveyCsv('编号,提交答卷时间,每周运动时间,Q1,Q2\n1,10:00,3,4,5\n2,10:05,3,4,5'), { ...base, duplicateAnswers: true });
+  // The answer column 每周运动时间 stays in the comparison; only the platform time column is ignored.
+  assert.equal(report.rules[0].flagged, 1);
+});

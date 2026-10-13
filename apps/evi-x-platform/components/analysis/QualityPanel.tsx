@@ -2,10 +2,10 @@
 import { useMemo, useState } from 'react';
 import { detectQualityColumns, likertCandidates, evaluateQuality, exclusionLedger, keptTable, tableCsv, validateRules, type QualityReport, type QualityRules, type RuleId } from '@/lib/data-quality';
 import type { SurveyTable } from '@/lib/survey-analysis';
-import type { QualityOrigin } from '@/lib/survey-collection';
+import type { CollectionOrigin, QualityOrigin } from '@/lib/survey-collection';
 import styles from './QualityPanel.module.css';
 
-type Props = { table: SurveyTable; sourceName: string; sourceHash: string; simulated: boolean; silicon: boolean; missingCodes: string[]; onApply: (csv: string, name: string, origin: QualityOrigin) => void };
+type Props = { table: SurveyTable; sourceName: string; sourceHash: string; simulated: boolean; silicon: boolean; collection?: CollectionOrigin; missingCodes: string[]; onApply: (csv: string, name: string, origin: QualityOrigin) => void };
 const DEFAULT_EXCLUDE: RuleId[] = ['duration', 'attention', 'duplicateAnswers'];
 function download(text: string, name: string, type: string) {
   const url = URL.createObjectURL(new Blob(['﻿' + text], { type })), a = document.createElement('a');
@@ -15,7 +15,7 @@ async function sha256(text: string) { return [...new Uint8Array(await crypto.sub
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
 
 /** Register rules first, then see which responses they flag; nothing is removed until chosen. */
-export default function QualityPanel({ table, sourceName, sourceHash, simulated, silicon, missingCodes, onApply }: Props) {
+export default function QualityPanel({ table, sourceName, sourceHash, simulated, silicon, collection, missingCodes, onApply }: Props) {
   const detected = useMemo(() => detectQualityColumns(table), [table]);
   const candidates = useMemo(() => likertCandidates(table, missingCodes), [table, missingCodes]);
   const [rules, setRules] = useState<QualityRules>(() => ({
@@ -46,6 +46,8 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
     onApply(tableCsv(kept.table), `${stem(sourceName)} · 质控后（剔除 ${kept.removed} 行）`, {
       kind: 'quality', parentName: sourceName, parentHash: sourceHash, simulated, silicon, removed: kept.removed, ledgerHash: await sha256(ledger),
       rules: report.rules.filter(r => exclude.has(r.id)).map(r => `${r.label}：${r.criterion}`),
+      // Hosted collection data keeps its frozen questionnaire and release identity after QC.
+      ...(collection ? { collection } : {}),
     });
   }
 

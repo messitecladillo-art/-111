@@ -20,10 +20,11 @@ export type FlaggedRow = { row: number; id: string; reasons: RuleId[] };
 export type QualityReport = { total: number; kept: number; flagged: FlaggedRow[]; rules: RuleSummary[]; notes: string[] };
 
 const ID_HEADER = /^(序号|编号|答卷编号|答卷id|response ?id|id|respondent ?id)$/i;
-const DURATION_HEADER = /所用时间|答题时长|作答时长|用时|duration|time ?taken/i;
+// Whole-header matches for platform fields only, so questions such as 通勤用时（分钟） are never mistaken for response time.
+const DURATION_HEADER = /^(所用时间|答题时长|作答时长|填写时长|答题用时|所用时间[（(]秒[)）]|duration|duration \(in seconds\)|time ?taken)$/i;
 const IP_HEADER = /来自ip|ip地址|^ip$|^ip ?address$/i;
 // Platform metadata only, so ordinary questions that mention time stay in the comparison.
-const META_TIME_HEADER = /提交答卷时间|开始时间|结束时间|提交时间|所用时间|答题时长|作答时长|^start ?time$|^end ?time$|^submit(ted)? ?(at|time)?$|duration/i;
+const META_TIME_HEADER = /^(提交答卷时间|开始时间|结束时间|提交时间|开始答题时间|所用时间|答题时长|作答时长|填写时长|答题用时|所用时间[（(]秒[)）]|start ?time|end ?time|submit(ted)? ?(at|time)?|duration|duration \(in seconds\)|time ?taken)$/i;
 /** Guess platform metadata columns from their headers; the user confirms before use. */
 export function detectQualityColumns(table: SurveyTable): { id: number | null; duration: number | null; ip: number | null } {
   const find = (pattern: RegExp) => { const i = table.headers.findIndex(h => pattern.test(h.trim())); return i < 0 ? null : i; };
