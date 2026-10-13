@@ -5,17 +5,19 @@ import type { SurveyTable } from '@/lib/survey-analysis';
 import type { CollectionOrigin, QualityOrigin } from '@/lib/survey-collection';
 import styles from './QualityPanel.module.css';
 
-type Props = { table: SurveyTable; sourceName: string; sourceHash: string; simulated: boolean; silicon: boolean; collection?: CollectionOrigin; missingCodes: string[]; onApply: (csv: string, name: string, origin: QualityOrigin) => void };
+type Props = { table: SurveyTable; sourceName: string; sourceHash: string; simulated: boolean; silicon: boolean; collection?: CollectionOrigin; missingCodes: string[]; continueBlocked?: string; onApply: (csv: string, name: string, origin: QualityOrigin) => void };
 const DEFAULT_EXCLUDE: RuleId[] = ['duration', 'attention', 'duplicateAnswers'];
+// Downloads carry a BOM so spreadsheet software reads UTF-8; the recorded hash covers these exact bytes.
+const withBom = (text: string) => '\uFEFF' + text;
 function download(text: string, name: string, type: string) {
-  const url = URL.createObjectURL(new Blob(['﻿' + text], { type })), a = document.createElement('a');
+  const url = URL.createObjectURL(new Blob([withBom(text)], { type })), a = document.createElement('a');
   a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 async function sha256(text: string) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(b => b.toString(16).padStart(2, '0')).join(''); }
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
 
 /** Register rules first, then see which responses they flag; nothing is removed until chosen. */
-export default function QualityPanel({ table, sourceName, sourceHash, simulated, silicon, collection, missingCodes, onApply }: Props) {
+export default function QualityPanel({ table, sourceName, sourceHash, simulated, silicon, collection, missingCodes, continueBlocked, onApply }: Props) {
   const detected = useMemo(() => detectQualityColumns(table), [table]);
   const candidates = useMemo(() => likertCandidates(table, missingCodes), [table, missingCodes]);
   const [rules, setRules] = useState<QualityRules>(() => ({
@@ -44,7 +46,7 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
     if (!report || !kept || !registered) return;
     const ledger = exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered.at });
     onApply(tableCsv(kept.table), `${stem(sourceName)} · 质控后（剔除 ${kept.removed} 行）`, {
-      kind: 'quality', parentName: sourceName, parentHash: sourceHash, simulated, silicon, removed: kept.removed, ledgerHash: await sha256(ledger),
+      kind: 'quality', parentName: sourceName, parentHash: sourceHash, simulated, silicon, removed: kept.removed, ledgerHash: await sha256(withBom(ledger)),
       rules: report.rules.filter(r => exclude.has(r.id)).map(r => `${r.label}：${r.criterion}`),
       // Hosted collection data keeps its frozen questionnaire and release identity after QC.
       ...(collection ? { collection } : {}),
@@ -103,8 +105,9 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
       <div className={styles.actions}>
         <button type="button" onClick={() => download(exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered!.at }), `${stem(sourceName)}-剔除台账.csv`, 'text/csv;charset=utf-8')}>下载剔除台账</button>
         <button type="button" onClick={() => download(tableCsv(kept.table), `${stem(sourceName)}-质控后.csv`, 'text/csv;charset=utf-8')}>下载质控后数据</button>
-        <button type="button" className={styles.primary} disabled={!kept.removed} onClick={() => void apply()}>以质控后数据继续分析</button>
+        <button type="button" className={styles.primary} disabled={!kept.removed || !!continueBlocked} onClick={() => void apply()}>以质控后数据继续分析</button>
       </div>
+      {continueBlocked && <p className={styles.hint}>{continueBlocked}</p>}
     </div>}
   </section>;
 }
