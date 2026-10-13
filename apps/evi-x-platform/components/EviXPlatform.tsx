@@ -26,6 +26,7 @@ const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio')
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
 const NetExamStudio = dynamic(() => import('@/components/exam/NetExamStudio'), { ssr: false, loading: () => <p role="status">正在载入网赛题库…</p> });
+const SamplingDesigner = dynamic(() => import('@/components/sampling/SamplingDesigner'), { ssr: false, loading: () => <p role="status">正在载入抽样设计…</p> });
 const SubmissionPreflight = dynamic(() => import('@/components/preflight/SubmissionPreflight'), { ssr: false, loading: () => <p role="status">正在载入提交前体检…</p> });
 const DefenseStudio = dynamic(() => import('@/components/defense/DefenseStudio'));
 const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
@@ -1074,6 +1075,7 @@ export default function EviXPlatform() {
       </>,
       exam: <NetExamStudio />,
       preflight: <SubmissionPreflight />,
+      sampling: <SamplingDesigner />,
       cases: <CaseLibrary />,
       editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)}/>,
       defense: <DefenseStudio />,
