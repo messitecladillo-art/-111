@@ -21,6 +21,7 @@ from . import silicon
 from .mail import FixtureMail, ResendMail, MailFailure
 from .survey_import_routes import TemporarySavImports
 from .submission_preflight_routes import TemporarySubmissionPreflights
+from .net_exam import NetExamBank
 
 
 SCHEMA_REVISION = "0002_silicon_runs"
@@ -332,6 +333,12 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     @app.post("/api/submission/preflight")
     async def submission_preflight(request: Request):
         return await preflights.convert(request, preflight_authorize, preflight_reauthorize)
+
+    exam_bank = NetExamBank(settings.net_exam_bank_path)
+
+    @app.get("/api/net-exam/bank")
+    def net_exam_bank(user=Depends(auth)):
+        return Response(exam_bank.body(), media_type="application/json", headers={"Cache-Control": "private, no-store"})
 
     @app.get("/api/health")
     def health(session=Depends(db)):

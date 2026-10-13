@@ -45,6 +45,7 @@ All runtime environment names start `EVIX_`. JSON collections must be valid JSON
 | MAIL_MODE / PROVIDER_MODE | both `fixture` mandatory in local_test; production `resend` / `live` |
 | MAILBOX_DIR | private ignored `.local/mailbox` for local fixture only |
 | MAIL_API_KEY / MAIL_FROM | operator's real mail configuration; never a user's LLM key |
+| NET_EXAM_BANK_PATH | optional private practice bank file outside the source tree; served by `GET /api/net-exam/bank` to signed-in members only |
 
 Local-test mailbox entries are `<challengeId>.json` with `challengeId`, `email`,
 `code`, and `classification:"synthetic_local_test"`. Only example.test invitations

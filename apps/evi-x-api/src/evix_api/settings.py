@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     preflight_hourly_imports: int = 12
     preflight_global_hourly_imports: int = 120
 
+    # Third-party practice bank: kept outside the public source tree and served
+    # only to signed-in invited members when an operator configures a path.
+    net_exam_bank_path: Path | None = None
+
     @model_validator(mode="after")
     def valid(self):
         if not self.database_url.startswith("postgresql+psycopg://"):
@@ -105,6 +109,8 @@ class Settings(BaseSettings):
                         and 1 <= self.preflight_hourly_imports <= 60
                         and self.preflight_hourly_imports <= self.preflight_global_hourly_imports <= 1000)):
             raise ValueError("Invalid private submission preflight bounds")
+        if self.net_exam_bank_path is not None and not self.net_exam_bank_path.parts:
+            raise ValueError("Invalid practice bank path")
         for base in self.compatible_bases:
             validate_base("compatible", base, {"compatible": tuple(self.compatible_bases)})
         return self
