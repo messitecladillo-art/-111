@@ -39,7 +39,7 @@ export default function SamplingDesigner() {
     try { return { value: allocate(state.strata, result?.completes ?? 0, state.method, state.minimum), error: '' }; }
     catch (e) { return { value: null, error: (e as Error).message }; }
   }, [state.strata, state.method, state.minimum, result?.completes]);
-  const margin = achievedMargin({ n: state.achieved, confidence: plan.confidence, proportion: plan.target === 'proportion' ? plan.proportion : 0.5, population: plan.population, designEffect: plan.designEffect });
+  const margin = achievedMargin({ n: state.achieved, confidence: plan.confidence, ...(plan.target === 'proportion' ? { proportion: plan.proportion } : { sd: plan.sd }), population: plan.population, designEffect: plan.designEffect });
   const tabs = useKeyedListMotion<HTMLDivElement>({ ids: TABS.map(t => t.id), activeId: tab, markerAxis: 'horizontal' });
   const resultSurface = useContentReveal<HTMLDivElement>({ token: result ? `${result.completes}:${result.contacts}` : null });
   async function copy() { try { await navigator.clipboard.writeText(statement); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { setCopied(false); } }
@@ -120,12 +120,12 @@ export default function SamplingDesigner() {
     {tab === 'precision' && <div className={styles.split}>
       <form className={styles.form} onSubmit={e => e.preventDefault()}>
         <label>实际有效样本<input inputMode="numeric" defaultValue={state.achieved} onChange={e => set('achieved', num(e.target.value))} /></label>
-        <p className={styles.reuse}>置信水平、预估比例、总体规模和设计效应沿用“样本量”中的设置。</p>
+        <p className={styles.reuse}>置信水平、{plan.target === 'proportion' ? '预估比例' : '标准差'}、总体规模和设计效应沿用“样本量”中的设置。</p>
       </form>
       <div className={styles.result}>
         {!meta.probability ? <div className={styles.nonProb}><strong>当前为{meta.label}</strong><p>非概率样本的入样概率未知，不报告抽样误差或置信区间。请在报告中如实描述招募渠道、样本结构与目标总体的差异，并把结论限定在样本内。</p></div>
           : margin === null ? <p className={styles.error}>请输入不少于 2 的有效样本，且不超过总体规模。</p>
-            : <div className={styles.headline}><div><span>比例估计的抽样误差</span><strong>±{fmt(margin * 100)}<small> 个百分点</small></strong><em>{Number(plan.confidence) * 100}% 置信水平，按 {plan.target === 'proportion' ? `p = ${pct(plan.proportion)}` : 'p = 50%'}{plan.designEffect !== 1 ? `、deff = ${plan.designEffect}` : ''}</em></div></div>}
+            : <div className={styles.headline}><div><span>{plan.target === 'proportion' ? '比例' : '均值'}估计的抽样误差</span><strong>±{plan.target === 'proportion' ? fmt(margin * 100) : fmt(margin, 3)}<small>{plan.target === 'proportion' ? ' 个百分点' : '（与结果同单位）'}</small></strong><em>{Number(plan.confidence) * 100}% 置信水平，按 {plan.target === 'proportion' ? `p = ${pct(plan.proportion)}` : `σ = ${plan.sd}`}{plan.designEffect !== 1 ? `、deff = ${plan.designEffect}` : ''}</em></div></div>}
         {meta.probability && margin !== null && <p className={styles.reuse}>这是抽样误差的上限估计，不包含无应答、覆盖不足和测量误差；回收率低时应在报告中说明无应答偏差的可能方向。</p>}
       </div>
     </div>}

@@ -72,12 +72,16 @@ export function sampleSize(plan: SizePlan): SizeResult {
   return { steps, perGroup, completes, contacts, warnings };
 }
 
-/** Margin of error reached by n completes under the same probability-sampling assumptions. */
-export function achievedMargin({ n, confidence, proportion, population, designEffect }: { n: number; confidence: Confidence; proportion: number; population: number | null; designEffect: number }): number | null {
-  if (!(n >= 2) || !(proportion > 0 && proportion < 1) || !(designEffect >= 1)) return null;
+/**
+ * Margin of error reached by n completes under the same probability-sampling assumptions:
+ * a proportion uses p(1−p), a mean uses the outcome standard deviation.
+ */
+export function achievedMargin({ n, confidence, proportion, sd, population, designEffect }: { n: number; confidence: Confidence; proportion?: number; sd?: number; population: number | null; designEffect: number }): number | null {
+  const variance = sd !== undefined ? (sd > 0 ? sd * sd : NaN) : proportion !== undefined && proportion > 0 && proportion < 1 ? proportion * (1 - proportion) : NaN;
+  if (!(n >= 2) || !Number.isFinite(variance) || !(designEffect >= 1)) return null;
   if (population !== null && !(population > n)) return population === n ? 0 : null;
   const fpc = population === null ? 1 : Math.sqrt((population - n) / (population - 1));
-  return Z_BY_CONFIDENCE[confidence] * Math.sqrt(designEffect * proportion * (1 - proportion) / n) * fpc;
+  return Z_BY_CONFIDENCE[confidence] * Math.sqrt(designEffect * variance / n) * fpc;
 }
 
 export type Stratum = { id: string; name: string; size: number; sd: number | null };
@@ -98,25 +102,36 @@ export function allocate(strata: Stratum[], total: number, method: AllocationMet
   if (strata.some(s => !(Number.isFinite(s.size) && s.size > 0))) throw Error('每层规模须为正数，可来自统计年鉴、普查或学校名册。');
   if (method === 'neyman' && strata.some(s => !(s.sd !== null && s.sd > 0))) throw Error('Neyman 分配需要每层的标准差（比例可用 √(p(1−p))）。');
   if (!(Number.isInteger(total) && total >= strata.length)) throw Error('总样本量须为整数，且不少于层数。');
-  if (!(Number.isInteger(minimum) && minimum >= 0 && minimum * strata.length <= total)) throw Error('每层最少样本须为非负整数，且总和不超过总样本量。');
+  if (!(Number.isInteger(minimum) && minimum >= 0)) throw Error('每层最少样本须为非负整数。');
   const counts = strata.every(s => Number.isInteger(s.size)), caps = strata.map(s => counts ? s.size : Infinity);
   if (counts && total > caps.reduce((s, v) => s + v, 0)) throw Error('总样本量超过各层规模之和。');
   const score = strata.map(s => method === 'proportional' ? s.size : method === 'neyman' ? s.size * s.sd! : 1);
-  // Fix strata that hit the minimum or their own size, then share the rest by score.
+  // A stratum smaller than the minimum is taken whole; the floors must fit in the total.
+  const floors = caps.map(cap => Math.min(minimum, cap));
+  if (floors.reduce((s, v) => s + v, 0) > total) throw Error('各层最少样本之和超过总样本量。');
+  // Cap strata that exceed their size first (this frees budget), then lift strata below the floor.
   const fixed = new Map<number, number>(), warnings: string[] = [];
-  for (let guard = 0; guard <= strata.length; guard++) {
+  for (let guard = 0; guard <= 2 * strata.length + 1; guard++) {
     const free = strata.map((_, i) => i).filter(i => !fixed.has(i)), remaining = total - [...fixed.values()].reduce((s, v) => s + v, 0);
+    if (!free.length) break;
     const weight = free.reduce((s, i) => s + score[i], 0);
     const exact = free.map(i => remaining * score[i] / weight);
-    const low = free.filter((i, k) => exact[k] < minimum), high = free.filter((i, k) => exact[k] > caps[i]);
-    if (!low.length && !high.length) {
-      const rounded = roundToTotal(exact, remaining, free.map(i => caps[i]));
-      free.forEach((i, k) => fixed.set(i, rounded[k]));
-      break;
-    }
-    low.forEach(i => fixed.set(i, minimum));
-    high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`「${strata[i].name}」按公式分配超过该层规模，已全部纳入（普查该层）。`); });
+    const high = free.filter((i, k) => exact[k] > caps[i]);
+    if (high.length) { high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`「${strata[i].name}」按公式分配超过该层规模，已全部纳入（普查该层）。`); }); continue; }
+    const low = free.filter((i, k) => exact[k] < floors[i]);
+    if (low.length) { low.forEach(i => fixed.set(i, floors[i])); continue; }
+    const rounded = roundToTotal(exact, remaining, free.map(i => caps[i]));
+    free.forEach((i, k) => fixed.set(i, rounded[k]));
   }
+  // Every stratum is fixed at a floor, a cap or its rounded share; settle any remainder within bounds.
+  const alloc = strata.map((_, i) => fixed.get(i)!);
+  let diff = total - alloc.reduce((s, v) => s + v, 0);
+  const byScore = strata.map((_, i) => i).sort((a, b) => score[b] - score[a]);
+  for (const i of byScore) { while (diff > 0 && alloc[i] < caps[i]) { alloc[i]++; diff--; } }
+  for (const i of [...byScore].reverse()) { while (diff < 0 && alloc[i] > floors[i]) { alloc[i]--; diff++; } }
+  if (diff !== 0) throw Error('无法在层规模与最少样本的约束下分配该总样本量。');
+  alloc.forEach((v, i) => fixed.set(i, v));
+  if (floors.some((f, i) => f < minimum && alloc[i] === caps[i])) warnings.push('有层的规模小于“每层最少样本”，该层已全部纳入。');
   const population = strata.reduce((s, v) => s + v.size, 0);
   if (minimum > 0 && method !== 'equal') warnings.push(`为保证每层至少 ${minimum} 份，部分层偏离${method === 'neyman' ? 'Neyman' : '比例'}分配，分析时须用设计权数加权。`);
   if (method !== 'proportional') warnings.push('非比例分配下各层抽样比不同，汇总全体时必须使用设计权数，否则结构失衡。');
@@ -144,6 +159,6 @@ export function methodsStatement({ kind, population, frame, plan, result }: { ki
   const adjustments = [plan.population !== null ? `有限总体规模 ${plan.population.toLocaleString('zh-CN')}` : '', plan.designEffect !== 1 ? `设计效应 ${plan.designEffect}` : '', plan.subgroups > 1 ? `${plan.subgroups} 个子群分别达到该精度` : ''].filter(Boolean).join('、');
   const base = `本研究的目标总体为${population || '〔请填写目标总体〕'}，抽样框为${frame || '〔请填写抽样框及其覆盖情况〕'}，采用${meta.label}。按 ${conf} 置信水平、${precision}计算${adjustments ? `，并考虑${adjustments}` : ''}，所需有效样本为 ${result.completes} 份；按预计有效回收率 ${pctText(plan.validRate)}，计划发放 ${result.contacts} 份。`;
   return meta.probability
-    ? `${base}在上述抽样设计得到执行的前提下，比例估计的抽样误差不超过设定的允许误差；实际回收后按实际有效样本量重新计算精度，并报告无应答情况。`
+    ? `${base}在上述抽样设计得到执行的前提下，${plan.target === 'proportion' ? '比例' : '均值'}估计的抽样误差不超过设定的允许误差；实际回收后按实际有效样本量重新计算精度，并报告无应答情况。`
     : `${base}由于${meta.label.replace('（非概率）', '')}不满足随机抽样前提，样本量仅作为规模参照，报告中不计算抽样误差，结论限于样本内的分布与差异；对目标总体的推广需结合配额变量与总体结构的对照论证。`;
 }
