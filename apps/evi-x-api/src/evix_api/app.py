@@ -20,6 +20,7 @@ from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_prop
 from . import silicon
 from .mail import FixtureMail, ResendMail, MailFailure
 from .survey_import_routes import TemporarySavImports
+from .submission_preflight_routes import TemporarySubmissionPreflights
 
 
 SCHEMA_REVISION = "0002_silicon_runs"
@@ -66,10 +67,12 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     if settings.mode == "production" and (mail is not None or provider is not None or engine is not None):
         raise ValueError("Production rejects injected fixtures")
     owns_engine = engine is None
-    engine = engine or create_engine(settings.database_url, pool_pre_ping=True, pool_size=5, max_overflow=5, echo=False)
+    engine = engine or create_engine(settings.database_url, pool_pre_ping=True, pool_size=5, max_overflow=5,
+                                     pool_timeout=3, connect_args={"connect_timeout": 3}, echo=False)
     mailer = mail or (FixtureMail(settings.mailbox_dir) if settings.mail_mode == "fixture" else ResendMail(settings))
     generator = provider or (FixtureProvider() if settings.provider_mode == "fixture" else LiveProvider())
     sav_imports = TemporarySavImports(settings)
+    preflights = TemporarySubmissionPreflights(settings)
 
     @asynccontextmanager
     async def lifespan(application):
@@ -81,13 +84,17 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                 if privileged or owner or revision != SCHEMA_REVISION:
                     raise RuntimeError("API requires current migrations and an unprivileged non-owner database role")
         await sav_imports.sweep()
+        await preflights.sweep()
         maintenance = asyncio.create_task(sav_imports.maintenance())
+        preflight_maintenance = asyncio.create_task(preflights.maintenance())
         try:
             yield
         finally:
             maintenance.cancel()
-            await asyncio.gather(maintenance, return_exceptions=True)
+            preflight_maintenance.cancel()
+            await asyncio.gather(maintenance, preflight_maintenance, return_exceptions=True)
             await sav_imports.close()
+            await preflights.close()
         loop = asyncio.get_running_loop()
         tasks = [task for task in application.state.silicon_tasks if task.get_loop() is loop]
         for task in tasks:
@@ -99,6 +106,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     app.state.settings, app.state.engine, app.state.provider = settings, engine, generator
     app.state.silicon_tasks = set()
     app.state.sav_imports = sav_imports
+    app.state.preflights = preflights
 
     @app.middleware("http")
     async def security_headers(request, call_next):
@@ -279,6 +287,51 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     @app.post("/api/imports/sav")
     async def import_sav(request: Request):
         return await sav_imports.convert(request, sav_authorize, sav_reauthorize)
+
+    @contextmanager
+    def preflight_db_session():
+        deadline = time.monotonic() + 2.5
+        with engine.connect() as connection:
+            def bounded(_connection, cursor, _statement, _parameters, _context, _many):
+                remaining = int((deadline - time.monotonic()) * 1000)
+                if remaining <= 0:
+                    raise ApiError(503, "preflight_auth_timeout", "文件检查授权等待超时，请稍后重试。")
+                cursor.execute(f"SET LOCAL statement_timeout = {remaining}")
+                cursor.execute(f"SET LOCAL lock_timeout = {min(1000, remaining)}")
+            event.listen(connection, "before_cursor_execute", bounded)
+            try:
+                with DBSession(bind=connection, expire_on_commit=False) as session:
+                    yield session
+            finally:
+                event.remove(connection, "before_cursor_execute", bounded)
+
+    def preflight_authorize(request, charge=False):
+        with preflight_db_session() as session:
+            user, _ = session_user(request, session)
+            user_id = user.id
+            if charge:
+                session.execute(sql_text("SELECT pg_advisory_xact_lock(4489371010)"))
+                scope = keyed(settings, "submission-preflight-rate/v1", user_id)
+                cutoff = now() - timedelta(hours=1)
+                personal = session.scalar(select(func.count()).select_from(RateEvent).where(
+                    RateEvent.scope == scope, RateEvent.created_at > cutoff))
+                total = session.scalar(select(func.count()).select_from(RateEvent).where(
+                    RateEvent.scope == "submission-preflight-global", RateEvent.created_at > cutoff))
+                if personal >= settings.preflight_hourly_imports or total >= settings.preflight_global_hourly_imports:
+                    raise ApiError(429, "preflight_rate_limit", "文件检查次数较多，请稍后重试。")
+                session.add_all([RateEvent(scope=scope), RateEvent(scope="submission-preflight-global")])
+                session.commit()
+            return user_id
+
+    def preflight_reauthorize(request, expected_user_id):
+        with preflight_db_session() as session:
+            user, _ = session_user(request, session)
+            if user.id != expected_user_id:
+                raise ApiError(401, "session_required", "请先登录。")
+
+    @app.post("/api/submission/preflight")
+    async def submission_preflight(request: Request):
+        return await preflights.convert(request, preflight_authorize, preflight_reauthorize)
 
     @app.get("/api/health")
     def health(session=Depends(db)):

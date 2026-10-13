@@ -13,6 +13,9 @@ dependencies = [
   "httpx>=0.28,<1",
   "pydantic-settings>=2.7,<3",
   "pyreadstat==1.3.6",
+  "pypdf==6.20.1",
+  "Pillow==12.3.0",
+  "defusedxml==0.7.1",
 ]
 
 [dependency-groups]
@@ -28,6 +31,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/evix_api"]
+
+# Ship the same frozen auditor used by CLI acceptance, not a second ruleset.
+[tool.hatch.build.targets.wheel.force-include]
+"../../skill/zhengda-cup-champion/scripts/audit_submission_files.py" = "evix_api/_submission_auditor.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

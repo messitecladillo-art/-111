@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
 import BrandMark from "@/components/brand/BrandMark";
 
 /** Shared chrome for every signed-in surface: one theme store, one navigation model, one sidebar. */
-export type Section = "overview" | "cases" | "diagnose" | "workspace" | "lifecycle" | "rules" | "editor" | "analysis" | "design" | "silicon" | "defense" | "canvas" | "services" | "exam";
+export type Section = "overview" | "cases" | "diagnose" | "workspace" | "lifecycle" | "rules" | "editor" | "analysis" | "design" | "silicon" | "defense" | "canvas" | "services" | "exam" | "preflight";
 export type Theme = "light" | "dark";
 
 export const NAV_ITEMS: Array<{ id: Section; title: string; description: string; icon: string; group: string }> = [
@@ -23,6 +23,7 @@ export const NAV_ITEMS: Array<{ id: Section; title: string; description: string;
   { id: "workspace", title: "项目控制门户", description: "保存协作登记；真实进度以本地证据控制面为准。", icon: "folder", group: "项目管理" },
   { id: "lifecycle", title: "生命周期作战室", description: "读取本机权威状态，不代替质量门禁判定。", icon: "route", group: "项目管理" },
   { id: "rules", title: "规则与门禁", description: "对齐届次、组别、赛区、赛道与阶段。", icon: "shield", group: "质量保障" },
+  { id: "preflight", title: "提交前体检", description: "检查身份与编辑残留，定位文件部件并下载记录。", icon: "shield", group: "质量保障" },
   { id: "services", title: "我的模型服务", description: "接入自己的 API Key，为研究能力选择服务。", icon: "spark", group: "服务与设置" },
 ];
 export const NAV_GROUPS = [...new Set(NAV_ITEMS.map(item => item.group))];
