@@ -31,7 +31,7 @@ function action(tree,component,name,env){
   return new Function(...Object.keys(env),`${code};return ${name};`)(...Object.values(env));
 }
 function selection(dataset,mapping,designSnapshot,originalDataset=null){
-  const code=compile(['sourceSignature','mappingStale','interpretationPending','rawDataset','platformDesign'].map(name=>statement(lab,'SurveyLab',name)).join('\n'));
+  const code=compile(['sourceSnapshot','sourceSignature','mappingStale','interpretationPending','rawDataset','platformDesign'].map(name=>statement(lab,'SurveyLab',name)).join('\n'));
   return new Function('dataset','mapping','designSnapshot','originalDataset','snapshotSignature','platformAnalysisCurrent',`${code};return {sourceSignature,mappingStale,interpretationPending,rawDataset,platformDesign};`)(dataset,mapping,designSnapshot,originalDataset,snapshotSignature,platformAnalysisCurrent);
 }
 function sharedSource(dataset,interpretationPending){
@@ -230,4 +230,12 @@ test('XLSX coordinates stay hashed and invalid or unknown coordinate metadata is
     const invalid=structuredClone(metadata);Object.assign(invalid.columns[0],patch);
     await assert.rejects(platformDatasetIdentity(table,invalid,sourceHash));
   }
+});
+test('collection data judges staleness against its published design, not the editor draft',async()=>{
+  const f=await fixture(),raw=rawDataset(f),published={design:f.context.design,pending:false};
+  const draft=structuredClone(f.context.design);draft.questions[1].text='发布后继续编辑的草稿';
+  const mapping={design:f.context.design,sourceSignature:snapshotSignature(published)};
+  const collected={...raw,collection:{kind:'collection',design:f.context.design}};
+  assert.equal(selection(collected,mapping,{design:draft,pending:true}).mappingStale,false);
+  assert.equal(selection(raw,mapping,{design:draft,pending:false}).mappingStale,true);
 });
