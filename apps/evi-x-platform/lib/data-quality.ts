@@ -26,8 +26,10 @@ const IP_HEADER = /来自ip|ip地址|^ip$|^ip ?address$/i;
 // Platform metadata only, so ordinary questions that mention time stay in the comparison.
 const META_TIME_HEADER = /^(提交答卷时间|开始时间|结束时间|提交时间|开始答题时间|所用时间|答题时长|作答时长|填写时长|答题用时|所用时间[（(]秒[)）]|start ?time|end ?time|submit(ted)? ?(at|time)?|duration|duration \(in seconds\)|time ?taken)$/i;
 /** Guess platform metadata columns from their headers; the user confirms before use. */
+/** Imported XLSX/SAV tables keep stable IDs as headers and the platform names as labels; check both. */
+const matches = (table: SurveyTable, column: number, pattern: RegExp) => [table.headers[column], table.columnLabels?.[table.headers[column]]].some(name => !!name && pattern.test(name.trim()));
 export function detectQualityColumns(table: SurveyTable): { id: number | null; duration: number | null; ip: number | null } {
-  const find = (pattern: RegExp) => { const i = table.headers.findIndex(h => pattern.test(h.trim())); return i < 0 ? null : i; };
+  const find = (pattern: RegExp) => { const i = table.headers.findIndex((_, c) => matches(table, c, pattern)); return i < 0 ? null : i; };
   return { id: find(ID_HEADER), duration: find(DURATION_HEADER), ip: find(IP_HEADER) };
 }
 
@@ -35,7 +37,7 @@ export function detectQualityColumns(table: SurveyTable): { id: number | null; d
 export function likertCandidates(table: SurveyTable, missingCodes: string[] = []): number[] {
   const skip = new Set(Object.values(detectQualityColumns(table)).filter((v): v is number => v !== null));
   return table.headers.flatMap((h, c) => {
-    if (skip.has(c) || META_TIME_HEADER.test(h.trim())) return [];
+    if (skip.has(c) || matches(table, c, META_TIME_HEADER)) return [];
     const values = table.rows.map(r => r[c]).filter(v => !isMissing(v, missingCodes)).map(v => v.trim());
     if (!values.length) return [];
     const numeric = values.filter(v => /^-?\d+(\.\d+)?$/.test(v));
@@ -109,7 +111,7 @@ export function evaluateQuality(table: SurveyTable, rules: QualityRules, missing
   }
   if (rules.duplicateAnswers) {
     const skip = new Set<number>([rules.idColumn ?? -1, rules.duration?.column ?? -1, rules.duplicateIp?.column ?? -1]);
-    table.headers.forEach((h, i) => { if (META_TIME_HEADER.test(h.trim()) || IP_HEADER.test(h.trim()) || ID_HEADER.test(h.trim())) skip.add(i); });
+    table.headers.forEach((_, i) => { if (matches(table, i, META_TIME_HEADER) || matches(table, i, IP_HEADER) || matches(table, i, ID_HEADER)) skip.add(i); });
     const seen = new Set<string>();
     let flagged = 0;
     table.rows.forEach((r, i) => { const key = JSON.stringify(r.filter((_, c) => !skip.has(c)).map(v => v.trim())); if (seen.has(key)) { reasons[i].add('duplicateAnswers'); flagged++; } else seen.add(key); });

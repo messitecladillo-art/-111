@@ -92,3 +92,10 @@ test('answer columns that mention time are not treated as platform duration', ()
   // The answer column 每周运动时间 stays in the comparison; only the platform time column is ignored.
   assert.equal(report.rules[0].flagged, 1);
 });
+
+test('imported tables are matched by their platform labels as well as stable IDs', () => {
+  const imported = { ...parseSurveyCsv('c1,c2,c3,c4,c5\n1,10:00,1.1.1.1,4,5\n2,10:09,2.2.2.2,4,5'), columnLabels: { c1: '序号', c2: '提交答卷时间', c3: '来自IP', c4: 'Q1', c5: 'Q2' } };
+  assert.deepEqual(detectQualityColumns(imported), { id: 0, duration: null, ip: 2 });
+  const report = evaluateQuality(imported, { ...base, duplicateAnswers: true });
+  assert.equal(report.rules[0].flagged, 1);
+});
