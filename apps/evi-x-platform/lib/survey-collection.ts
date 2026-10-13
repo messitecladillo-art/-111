@@ -11,8 +11,10 @@ export type SurveyDraft = Record<string, string | string[]>;
 export type SurveyAnswers = Record<string, string | number | string[] | null>;
 export type SurveySubmission = { idempotencyKey: string; answers: SurveyAnswers };
 export type CollectionOrigin = { kind: 'collection'; projectId: string; releaseId: string; versionId: string; questionnaireRevision: number; classification: 'actual' | 'synthetic'; snapshotHash: string; generatedAt: string; design: Questionnaire };
+/** Rows kept after registered quality rules; classification is inherited from the parent data. */
+export type QualityOrigin = { kind: 'quality'; parentName: string; parentHash: string; simulated: boolean; silicon: boolean; removed: number; ledgerHash: string; rules: string[] };
 /** Omitted origin is supported only for the existing silicon lab handoff. */
-export type DatasetTransfer = { id: string; name: string; csv: string; origin?: CollectionOrigin | { kind: 'silicon' } };
+export type DatasetTransfer = { id: string; name: string; csv: string; origin?: CollectionOrigin | QualityOrigin | { kind: 'silicon' } };
 const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 function object(value: unknown, keys: string[], optional: string[] = []): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw Error('调查回执格式无效。');
@@ -99,7 +101,7 @@ export function collectionAnalysisCsv(dataset: SurveyDataset): string {
 export function collectionTransfer(dataset: SurveyDataset, id: string): DatasetTransfer {
   return { id, name: `${dataset.release.title} · 回收 v${dataset.release.questionnaireRevision}`, csv: collectionAnalysisCsv(dataset), origin: { kind: 'collection', projectId: dataset.release.projectId, releaseId: dataset.release.id, versionId: dataset.release.versionId, questionnaireRevision: dataset.release.questionnaireRevision, classification: dataset.release.classification, snapshotHash: dataset.sha256, generatedAt: dataset.generatedAt, design: dataset.design } };
 }
-export function transferClassification(transfer: DatasetTransfer): { simulated: boolean; silicon: boolean } { return transfer.origin?.kind === 'collection' ? { simulated: transfer.origin.classification === 'synthetic', silicon: false } : { simulated: true, silicon: true }; }
+export function transferClassification(transfer: DatasetTransfer): { simulated: boolean; silicon: boolean } { return transfer.origin?.kind === 'collection' ? { simulated: transfer.origin.classification === 'synthetic', silicon: false } : transfer.origin?.kind === 'quality' ? { simulated: transfer.origin.simulated, silicon: transfer.origin.silicon } : { simulated: true, silicon: true }; }
 export function collectionEvidenceSource(source: string, origin: CollectionOrigin): string {
   return `${source}\n回收项目：${origin.projectId}\n发布记录：${origin.releaseId}\n问卷版本：v${origin.questionnaireRevision} · ${origin.versionId}\n回收快照 SHA-256：${origin.snapshotHash}\n快照读取时间：${origin.generatedAt}\n来源分类：${origin.classification === 'synthetic' ? '合成验收' : '问卷回收'}`;
 }
