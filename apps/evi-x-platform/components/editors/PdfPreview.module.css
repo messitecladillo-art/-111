@@ -1,0 +1,11 @@
+.preview { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 200px; }
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--wb-line); background: var(--wb-solid); }
+.toolbar button { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+.pageCount { min-width: 94px; text-align: center; font: 12px/1.4 var(--wb-body); color: var(--wb-muted); font-variant-numeric: tabular-nums; }
+.fit { margin-left: auto; }
+.viewport { flex: 1; min-height: 0; overflow: auto; padding: 16px; scrollbar-gutter: stable; background: var(--wb-well); }
+.canvas { display: block; margin: 0 auto; background: white; box-shadow: 0 2px 12px #0002; }
+.canvas[hidden] { display: none; }
+.message { display: flex; min-height: 260px; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--wb-muted); font-size: 13px; text-align: center; }
+.message p { margin: 0; }
+.limit { margin: 0; padding: 8px 12px; color: var(--wb-muted); font-size: 11px; border-bottom: 1px solid var(--wb-line); }

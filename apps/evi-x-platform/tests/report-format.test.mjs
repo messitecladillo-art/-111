@@ -36,7 +36,7 @@ test('source profile binds checked edition and supports explicit unsourced layou
   assert.match(style(styles,'Normal')[0],/w:firstLineChars="0"/);assert.doesNotMatch(xml,/<w:pgNumType[^>]*w:(?:fmt|start)=/);
   for(const [name,entry] of Object.entries(zip.files)){if(/^word\/footer\d+\.xml$/.test(name))assert.doesNotMatch(await entry.async('string'),/\bPAGE\b/);}
 });
-test('export groups late abstracts and references without mutating source or dropping mixed sections',async()=>{
+test('export preserves chosen placement of late abstracts and references without mutating source or dropping mixed sections',async()=>{
   const content=createEditorContent();
   content.report=[
     {id:'ref',title:'参考文献',body:'REFERENCE_CONTENT_MARKER',source:''},
@@ -48,7 +48,7 @@ test('export groups late abstracts and references without mutating source or dro
   const before=structuredClone(content);
   const zip=await JSZip.loadAsync(await (await buildDocx(content)).arrayBuffer());
   const xml=await zip.file('word/document.xml').async('string');
-  const order=['ABSTRACT_CONTENT_MARKER','FIRST_BODY_MARKER','MIXED_BODY_MARKER','LAST_BODY_MARKER','REFERENCE_CONTENT_MARKER'].map(value=>xml.indexOf(value));
+  const order=['REFERENCE_CONTENT_MARKER','FIRST_BODY_MARKER','ABSTRACT_CONTENT_MARKER','MIXED_BODY_MARKER','LAST_BODY_MARKER'].map(value=>xml.indexOf(value));
   assert.ok(order.every((index,i)=>index>=0&&(i===0||index>order[i-1])));
   assert.deepEqual(content,before);
 });
