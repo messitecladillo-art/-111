@@ -114,7 +114,7 @@ def test_bank_requires_signed_in_member_and_is_not_cached(settings, pg_engine, t
         assert response.status_code == 200, response.text
         response = client.get("/api/net-exam/bank")
         assert response.status_code == 200, response.text
-        assert response.headers["cache-control"] == "private, no-store"
+        assert response.headers["cache-control"] == "no-store"
         assert response.json()["version"] == "synthetic-v1"
 
     with TestClient(create_app(settings, mail=mail, provider=FixtureProvider(), engine=pg_engine)) as client:

@@ -36,7 +36,7 @@
 历史题库来自第三方备赛资料，公开传播授权尚未确认，因此题库 JSON 不进入 Git 仓库，`apps/evi-x-platform/data/net-exam-bank.json` 已列入 `.gitignore`。题目原文、答案与来源文件名只保存在运营方服务器的私有路径：
 
 - API 进程设置 `EVIX_NET_EXAM_BANK_PATH` 指向题库文件（建议放在源码目录外，例如 `/srv/evix/private/net-exam-bank.json`；本机开发可用仓库根目录下已忽略的 `.local/net-exam-bank.json`）。
-- `GET /api/net-exam/bank` 只对已登录的受邀成员返回题库，响应 `Cache-Control: private, no-store`；文件按修改时间与大小重新读取，结构不合格时返回 503，不提供旧内容。
+- `GET /api/net-exam/bank` 只对已登录的受邀成员返回题库，响应沿用全局 `Cache-Control: no-store`；文件按修改时间与大小重新读取，结构不合格时返回 503，不提供旧内容。
 - 未配置时接口返回 404 `net_exam_bank_unavailable`，练习页显示“此服务器尚未配置网赛题库”，其他功能不受影响。
 - 前端 `parseExamBank` 与后端 `validate_bank` 使用同一结构契约：版本、来源编号、题型、选项、答案数量、`answerStatus=valid` 与来源定位。
 

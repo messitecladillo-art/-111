@@ -338,7 +338,8 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
 
     @app.get("/api/net-exam/bank")
     def net_exam_bank(user=Depends(auth)):
-        return Response(exam_bank.body(), media_type="application/json", headers={"Cache-Control": "private, no-store"})
+        # The security middleware marks every API response no-store.
+        return Response(exam_bank.body(), media_type="application/json")
 
     @app.get("/api/health")
     def health(session=Depends(db)):
