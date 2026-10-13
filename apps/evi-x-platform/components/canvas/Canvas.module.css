@@ -4,7 +4,7 @@
 .canvas {
   --t-hover: 120ms; --t-press-in: 90ms; --t-press-out: 160ms; --t-select: 180ms; --t-reveal: 220ms; --t-morph: 240ms;
   --t-group: 260ms; --t-layout: 300ms; --t-focus: 260ms; --t-pulse: 300ms; --t-exit: 160ms; --t-settle: 180ms; --t-draw: 180ms;
-  --cv-ease: cubic-bezier(.2, .8, .2, 1);
+  --cv-ease: var(--ease-arrive);
   --cv-ease-out: cubic-bezier(.16, 1, .3, 1);
   --cv-ease-in: cubic-bezier(.4, 0, 1, 1);
   --cv-lift: 1;

@@ -5,7 +5,7 @@
 .studio p { color:var(--wb-muted); font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
 .studio small { color:var(--wb-muted); font-size:12px; font-weight:400; }
 .studio button,.studio input,.studio textarea,.studio select { font:inherit; font-size:14px; }
-.studio button { min-height:40px; padding:8px 12px; border:1px solid var(--wb-line); border-radius:8px; background:var(--wb-solid); color:var(--wb-text); cursor:pointer; transition:background .15s,border-color .15s; }
+.studio button { min-height:40px; padding:8px 12px; border:1px solid var(--wb-line); border-radius:8px; background:var(--wb-solid); color:var(--wb-text); cursor:pointer; transition:background var(--motion-fast) var(--ease-arrive),border-color var(--motion-fast) var(--ease-arrive); }
 .studio button:hover:not(:disabled) { color:var(--wb-accent); border-color:var(--wb-accent); background:var(--wb-accent-soft); }
 .studio button:disabled { opacity:.45; cursor:not-allowed; }
 .studio .primary { background:var(--wb-accent); color:var(--wb-accent-text); border-color:var(--wb-accent); font-weight:650; }

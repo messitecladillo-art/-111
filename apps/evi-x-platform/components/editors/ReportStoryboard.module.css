@@ -33,6 +33,6 @@
 
 .grid nav { position:relative; }
 .motionMarker { position:absolute; top:0; left:0; width:3px; height:0; background:var(--wb-gold,#b39757); border-radius:2px; pointer-events:none; }
-.grid nav button { transition:background-color 180ms ease,border-color 180ms ease; }
+.grid nav button { transition:background-color var(--motion-fast) var(--ease-arrive),border-color var(--motion-fast) var(--ease-arrive); }
 .previews article { box-shadow:0 3px 12px #15212a06; }
 @media(prefers-reduced-motion:reduce) { .board *,.board *::before { animation:none!important; transition:none!important; } }

@@ -35,7 +35,7 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 38px; padding: 0 16px; border-radius: 999px;
   font: 700 13.5px/1 var(--wb-sans); cursor: pointer;
-  transition: background var(--wb-fast) var(--wb-ease), border-color var(--wb-fast) var(--wb-ease), transform var(--wb-fast) var(--wb-ease);
+  transition: background var(--motion-fast) var(--wb-ease), border-color var(--motion-fast) var(--wb-ease), transform var(--motion-fast) var(--wb-ease);
 }
 .primaryButton { border: 1px solid var(--wb-accent); background: var(--wb-accent); color: var(--wb-accent-text); }
 .primaryButton:hover:not(:disabled) { transform: translateY(-1px); }
@@ -70,7 +70,7 @@
 .steps { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 20px 0 0; padding: 0; list-style: none; font-size: 13.5px; font-weight: 700; }
 .steps li { display: inline-flex; align-items: center; gap: 8px; }
 .steps b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--wb-gold-soft); color: var(--wb-gold-text); font-size: 12px; }
-.dropZone { display: grid; justify-items: center; align-content: center; gap: 10px; padding: 28px; border: 1.5px dashed var(--wb-gold-line); border-radius: var(--wb-radius-lg); background: var(--wb-well); text-align: center; transition: background var(--wb-fast), border-color var(--wb-fast); }
+.dropZone { display: grid; justify-items: center; align-content: center; gap: 10px; padding: 28px; border: 1.5px dashed var(--wb-gold-line); border-radius: var(--wb-radius-lg); background: var(--wb-well); text-align: center; transition: background var(--motion-fast) var(--ease-arrive), border-color var(--motion-fast) var(--ease-arrive); }
 .dropZone svg { width: 44px; height: 44px; color: var(--wb-gold-text); }
 .dropZone strong { font-size: 16px; }
 .dropZone > span, .dropZone small { color: var(--wb-muted); font-size: 12.5px; line-height: 1.6; }
@@ -107,7 +107,7 @@
 
 /* ───────── view tabs ───────── */
 .viewTabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; padding: 5px; border: 1px solid var(--wb-line); border-radius: 14px; background: var(--wb-well); }
-.viewTabs button { display: grid; gap: 1px; min-height: 52px; padding: 6px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--wb-muted); text-align: left; cursor: pointer; transition: background var(--wb-fast) var(--wb-ease), color var(--wb-fast); }
+.viewTabs button { display: grid; gap: 1px; min-height: 52px; padding: 6px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--wb-muted); text-align: left; cursor: pointer; transition: background var(--motion-fast) var(--wb-ease), color var(--motion-fast) var(--ease-arrive); }
 .viewTabs button strong { font-size: 14px; color: inherit; }
 .viewTabs button small { font-size: 11.5px; opacity: .85; }
 .viewTabs button[aria-selected="true"] { background: var(--wb-surface); color: var(--wb-text); box-shadow: 0 1px 0 rgba(10, 31, 51, .05), 0 8px 20px -14px rgba(10, 31, 51, .5), inset 0 -2px 0 var(--wb-gold-text); }
@@ -138,14 +138,14 @@
 }
 .cloudFrame svg, .mapFrame svg { display: block; }
 .cloudWord { cursor: pointer; }
-.cloudWord text { transition: opacity var(--wb-fast); }
+.cloudWord text { transition: opacity var(--motion-fast) var(--ease-arrive); }
 .cloudFrame svg:hover .cloudWord text { opacity: .55; }
 .cloudFrame svg:hover .cloudWord[data-active] text { opacity: 1; }
 .cloudPick { fill: var(--wb-gold-soft); stroke: var(--wb-gold-line); stroke-width: 1.2; }
 .mapFrame { cursor: grab; user-select: none; }
 .mapFrame:active { cursor: grabbing; }
-.links line, .links path { stroke: var(--wb-muted); transition: opacity var(--wb-fast); }
-.mapNode, .paperNode { stroke: var(--wb-solid); stroke-width: 1.2; cursor: pointer; transition: opacity var(--wb-fast); }
+.links line, .links path { stroke: var(--wb-muted); transition: opacity var(--motion-fast) var(--ease-arrive); }
+.mapNode, .paperNode { stroke: var(--wb-solid); stroke-width: 1.2; cursor: pointer; transition: opacity var(--motion-fast) var(--ease-arrive); }
 .mapNode[data-basket] { stroke: var(--wb-gold-text); stroke-width: 3; }
 .paperNode[data-active] { stroke: var(--wb-text); stroke-width: 2.2; }
 .pivotRing { fill: none; stroke: var(--tl-pivot); }
