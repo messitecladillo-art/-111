@@ -311,12 +311,15 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }
   function applyBlueprint(includeOptional: boolean) {
     try {
-      const next = parseEditorContent({ ...current.current, report: blueprintSections({ includeOptional }) });
+      const before = current.current;
+      // Slide links keep pointing at the removed sections, so export flags them for re-review rather than hiding their origin.
+      const orphaned = before.slides.filter(s => s.reportLink && before.report.some(r => r.id === s.reportLink!.sectionId)).length;
+      const next = parseEditorContent({ ...before, report: blueprintSections({ includeOptional }) });
       if (!edit(next)) return;
       setMode("report"); setSectionId(next.report[0].id); setOutlineQuery(""); setBlankReportConfirm(false);
       setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);
       previewRef.current?.scrollTo({ top: 0 });
-      setMessage(`已替换为正大杯蓝图骨架，共 ${next.report.length} 节。按各节【写作提示】撰写，完成后删除提示；可撤销。`);
+      setMessage(`已替换为正大杯蓝图骨架，共 ${next.report.length} 节。按各节【写作提示】撰写，完成后删除提示；可撤销。${orphaned ? `${orphaned} 页 PPT 的关联章节已移除，导出前请重新选择依据。` : ""}`);
     } catch (e) { setMessage(e instanceof Error ? e.message : "未能替换。"); }
   }
   function patchSlide(patch: Partial<Slide>) { edit({ ...content, slides: content.slides.map(s => s.id === slide.id ? { ...s, ...patch } : s) }); }

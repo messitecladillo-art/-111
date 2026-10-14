@@ -111,6 +111,11 @@ def test_full_report_capacity_matches_browser_limits():
     value['quality']['results']=[result]+[{**result,'id':f'x{i}'} for i in range(119)]
     assert len(report_content(value)['quality']['results'])==120
     with pytest.raises(ApiError):report_content({**value,'quality':{**value['quality'],'results':value['quality']['results']+[{**result,'id':'x-extra'}]}})
+    # A finding may cite every registered result, as the browser parser allows.
+    ids=[r['id'] for r in value['quality']['results']]
+    finding={**value['quality']['findings'][0],'evidenceIds':ids,'confirmedHashes':{i:'b'*64 for i in ids}}
+    cited={**value,'quality':{**value['quality'],'findings':[finding]}}
+    assert len(report_content(cited)['quality']['findings'][0]['evidenceIds'])==120
     with pytest.raises(ApiError):report_content({**value,'slides':[{**value['slides'][-1],'id':f'p{i}'} for i in range(41)]})
 
 

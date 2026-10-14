@@ -29,6 +29,7 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
   const applicable = result.checks.filter(c => c.status !== 'na');
   const passed = applicable.filter(c => c.status === 'pass').length;
   const skeletonSize = BLUEPRINT.filter(node => includeOptional || !node.optional).length;
+  const linkedSlides = content.slides.filter(slide => slide.reportLink && content.report.some(s => s.id === slide.reportLink!.sectionId)).length;
   const act = (fix: BenchmarkFix) => {
     if (fix.insert) onInsert(fix.insert);
     else if (fix.module) onNavigate?.(fix.module);
@@ -67,7 +68,7 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
         <p className={styles.note}>体检按固定规则检查结构与证据的呈现，不评判研究结论本身是否正确。满分线约为一份评审认可的优秀参赛报告相应统计的六成。</p>
         {confirming
           ? <div className={styles.confirm} role="region" aria-label="重建骨架确认">
-            <span>将当前 {content.report.length} 个章节替换为蓝图骨架（{skeletonSize} 节，每节附写作提示）？PPT、LaTeX 与研究发现保留，替换后可撤销。</span>
+            <span>将当前 {content.report.length} 个章节替换为蓝图骨架（{skeletonSize} 节，每节附写作提示）？PPT、LaTeX 与研究发现保留，替换后可撤销。{linkedSlides > 0 && <strong className={styles.warn}>其中 {linkedSlides} 页 PPT 关联了现有章节，替换后会标记为“关联章节已移除”，导出前需重新选择依据。</strong>}</span>
             <label className={styles.check} htmlFor={id + '-optional'}><input id={id + '-optional'} type="checkbox" checked={includeOptional} onChange={event => setIncludeOptional(event.target.checked)}/>包含可选章节：网络文本、人群画像、方案优先级与可行性</label>
             <div className={styles.confirmActions}>
               <button type="button" onClick={() => setConfirming(false)}>取消</button>

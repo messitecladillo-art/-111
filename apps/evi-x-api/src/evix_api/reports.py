@@ -152,7 +152,7 @@ def quality_content(value):
         quality_text(f["id"], 80, True)
         for key, maximum in (("title", 150), ("question", 1000), ("interpretation", 3000), ("alternatives", 1500), ("scope", 1500), ("action", 1500)):
             quality_text(f[key], maximum)
-        evidence = quality_list(f["evidenceIds"], 40)
+        evidence = quality_list(f["evidenceIds"], MAX_RESULTS)
         for item in evidence:
             quality_text(item, 80, True)
         if len(set(evidence)) != len(evidence) or any(e not in result_ids for e in evidence) or f["status"] not in ("draft", "confirmed"):
