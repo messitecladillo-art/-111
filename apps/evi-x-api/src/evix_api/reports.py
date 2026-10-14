@@ -51,6 +51,9 @@ def report_settings(value):
     return x
 
 
+# Mirrors EDITOR_LIMITS and QUALITY_LIMITS in the browser models: chapters and their sections are separate
+# entries, and a full report backs dozens of figures and tables with registered results.
+MAX_SECTIONS, MAX_SLIDES, MAX_RESULTS, MAX_CONTENT_BYTES = 100, 40, 120, 2_000_000
 QUALITY_LAYOUTS = ("cover", "problem", "chart", "comparison", "segments", "insight", "action", "closing")
 VECTOR_ASSETS = ("mosaic-edge", "focus-loop", "path-ribbon")
 # ECMAScript trim differs from Python strip for BOM and NEL. Preserve ID text
@@ -105,7 +108,7 @@ def quality_content(value):
     x = object_fields(value, ("version", "results", "findings"))
     if type(x["version"]) is not int or x["version"] != 1:
         raise ApiError()
-    results = quality_list(x["results"], 40)
+    results = quality_list(x["results"], MAX_RESULTS)
     for result in results:
         r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"))
         for key, maximum in (("id", 80), ("title", 150), ("sourceName", 240), ("method", 80)):
@@ -212,7 +215,7 @@ def report_content(value):
             raise ApiError()
         text(latex["body"], 120000)
     for key in ("report", "slides"):
-        if not isinstance(x[key], list) or not 1 <= len(x[key]) <= 40:
+        if not isinstance(x[key], list) or not 1 <= len(x[key]) <= (MAX_SECTIONS if key == "report" else MAX_SLIDES):
             raise ApiError()
         ids = set()
         for item in x[key]:
@@ -264,8 +267,8 @@ def report_content(value):
                     if piece["kind"] in ("chart", "table") and piece["evidenceId"] not in result_ids:
                         raise ApiError()
                 unique_quality(pieces)
-    if len(canonical(x).encode("utf-8")) > 500000:
-        raise ApiError(413, "payload_too_large", "草稿超过500KB，请拆分作品。")
+    if len(canonical(x).encode("utf-8")) > MAX_CONTENT_BYTES:
+        raise ApiError(413, "payload_too_large", "草稿超过 2 MB，请拆分作品。")
     return x
 
 
@@ -307,7 +310,7 @@ def register_reports(app, *, auth, db, owned_project, operation):
 
     @app.post("/api/projects/{project_id}/report/versions", status_code=201)
     async def save(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
-        data = await body(request, ("content", "expectedRevision", "idempotencyKey"), limit=600000)
+        data = await body(request, ("content", "expectedRevision", "idempotencyKey"), limit=MAX_CONTENT_BYTES + 100_000)
         project, _ = owned_project(session, user, project_id, edit=True, lock=True)
         op, repeated = operation(session, user, "report:" + project.id, data)
         if repeated:

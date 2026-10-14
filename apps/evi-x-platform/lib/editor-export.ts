@@ -46,7 +46,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     if(!preliminary)toc();
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
     const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
-    section.body.split('\n').forEach(line=>{
+    // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
+    if(section.body)section.body.split('\n').forEach(line=>{
       const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
       children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:[new TextRun({text:line})]}));
     });

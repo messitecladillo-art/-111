@@ -1,5 +1,6 @@
 import { createEditorContent, parseEditorContent, type EditorContent, type ReportSection } from './editor-model.ts';
 import {parseEvidence, type EvidenceInput} from './research-flow.ts';
+import { blueprintSections, insertBeforeBackMatter } from './report-blueprint.ts';
 
 export type ProjectReport = { id: string; projectId: string; revision: number; title: string; updatedAt: string; content: EditorContent };
 export type ProjectReportSummary = Omit<ProjectReport, 'content'>;
@@ -38,18 +39,17 @@ export function parseReportHead(value: unknown, projectId: string): ProjectRepor
   return report === null ? null : parseProjectReport(report, projectId);
 }
 export function appendEvidenceSection(content: EditorContent, section: ReportSection): EditorContent {
-  // Preserve the original proposal bytes and every existing report/slide object.
+  // Preserve the original proposal bytes and every existing report/slide object; place it before the back matter.
   if (content.report.some(item => item.id === section.id)) throw Error('这份提案已加入报告。');
-  return parseEditorContent({ ...content, report: [...content.report, { ...section }] });
+  return parseEditorContent({ ...content, report: insertBeforeBackMatter(content.report, { ...section }) });
 }
+/** New project reports start from the competition blueprint; IDs are fixed so an untouched draft compares equal. */
 export function newProjectReport(title: string): EditorContent {
   const content = createEditorContent();
   let shortened='';
   for(const character of title){if(shortened.length+character.length>120)break;shortened+=character;}
   content.title = shortened || content.title;
-  // Separate new references and appendix, preserving legacy backups unchanged.
-  content.report[content.report.length - 1] = { id: 'section-6', title: '参考文献', body: '列出实际使用的文献，并在正文标注相应序号。', source: '' };
-  content.report.push({ id: 'section-7', title: '附录 1 调查工具与处理记录', body: '整理问卷、访谈提纲、数据处理说明与分析代码。', source: '' });
+  content.report = blueprintSections({ includeOptional: false });
   return content;
 }
 

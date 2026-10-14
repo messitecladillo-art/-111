@@ -28,7 +28,9 @@ export type SlideObject = {
   assetId: string; shape: 'rect' | 'ellipse' | 'line';
 };
 
-const MAX_RESULTS = 40, MAX_FINDINGS = 40;
+/** A full competition report carries dozens of figures and tables, each backed by one registered result. */
+export const QUALITY_LIMITS = { results: 120, findings: 40 } as const;
+const MAX_RESULTS = QUALITY_LIMITS.results, MAX_FINDINGS = QUALITY_LIMITS.findings;
 const fail = () => { throw Error('研究成果结构或引用无效。'); };
 export function qualityRecord(value: unknown, keys: string[]): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value))) return fail();

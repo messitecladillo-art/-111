@@ -1,5 +1,5 @@
 import {parseEditorContent, type EditorContent, type Slide} from './editor-model.ts';
-import { makeSlideObject, type QualityLayout, type ResearchQuality, type SlideObject } from './research-quality.ts';
+import { makeSlideObject, QUALITY_LIMITS, type QualityLayout, type ResearchQuality, type SlideObject } from './research-quality.ts';
 
 export const QUALITY_LAYOUT_LABELS:Record<QualityLayout,string>={cover:'封面',problem:'问题与研究路线',chart:'主图发现',comparison:'并列比较',segments:'人群分层',insight:'综合洞察',action:'行动建议',closing:'结论页'};
 /** Layouts are editable starting positions, never a forced chapter or evidence order. */
@@ -95,6 +95,6 @@ export function withQuality(content:EditorContent):EditorContent {
 export function appendQualityResult(content:EditorContent,result:ResearchQuality['results'][number]):EditorContent {
   const next=withQuality(content),q=next.quality!,existing=q.results.find(r=>r.id===result.id);
   if(existing){if(JSON.stringify(existing)!==JSON.stringify(result))throw Error('结果标识已使用，请登记为新的结果版本。');return content;}
-  if(q.results.length>=40)throw Error('成果最多保留40个结果，请先整理或另存作品。');
+  if(q.results.length>=QUALITY_LIMITS.results)throw Error(`成果最多保留 ${QUALITY_LIMITS.results} 个结果，请先整理或另存作品。`);
   return parseEditorContent({...next,quality:{...q,results:[...q.results,result]}});
 }

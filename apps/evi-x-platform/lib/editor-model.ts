@@ -29,7 +29,9 @@ export function parseVersionLabel(value: unknown): string {
   return value.trim();
 }
 export const ACCENTS = { teal: "0F766E", blue: "234E80", burgundy: "8A3449" } as const;
-export const EDITOR_LIMITS = { sections: 40, slides: 40, body: 12000, slideBody: 1800, latexBody: 120000, bytes: 500000 } as const;
+/** Sections hold chapters and their subsections separately, so a full report needs far more than 40. */
+export const EDITOR_LIMITS = { sections: 100, slides: 40, body: 12000, slideBody: 1800, latexBody: 120000, bytes: 2_000_000 } as const;
+export const EDITOR_SIZE_LABEL = "2 MB";
 
 export function createEditorContent(): EditorContent {
   const sections = [
@@ -105,7 +107,7 @@ export function parseEditorContent(value: unknown): EditorContent {
   for(const section of parsed.report)if(section.findingIds?.some(id=>!findingIds.has(id)))throw Error('章节引用的研究发现不存在。');
   for(const section of parsed.report)for(const block of section.blocks??[])if(['chart','table'].includes(block.kind)&&!resultIds.has(block.evidenceId))throw Error('内容块的分析引用不存在。');
   for(const slide of parsed.slides)for(const obj of slide.objects??[])if(['chart','table'].includes(obj.kind)&&!resultIds.has(obj.evidenceId))throw Error('页面对象的分析引用不存在。');
-  if (new TextEncoder().encode(JSON.stringify(parsed)).length > EDITOR_LIMITS.bytes) throw new Error("草稿超过 500 KB，请拆分作品。");
+  if (new TextEncoder().encode(JSON.stringify(parsed)).length > EDITOR_LIMITS.bytes) throw new Error(`草稿超过 ${EDITOR_SIZE_LABEL}，请拆分作品。`);
   return parsed;
 }
 

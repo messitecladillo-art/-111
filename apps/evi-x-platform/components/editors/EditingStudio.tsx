@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
-import { ACCENTS, createEditorContent, EDITOR_LIMITS, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { ACCENTS, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { blueprintSections, insertBlueprintNode } from "@/lib/report-blueprint";
+import BenchmarkPanel from "./BenchmarkPanel";
 import { useContentReveal, useKeyedListMotion } from '../motion/useWorkspaceMotion';
 import ReportStoryboard, { ReportLinkNotice } from './ReportStoryboard';
 import { LINK_LABELS, reportExportWarnings } from '@/lib/report-storyboard';
@@ -235,7 +237,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if (versionOperation.current) return false;
     const recoverable = next.title.trim() ? next : { ...next, title: "未命名研究" };
     if (new TextEncoder().encode(JSON.stringify(recoverable)).length > EDITOR_LIMITS.bytes) {
-      setMessage("此作品已接近 500 KB 上限，本次输入未加入。请先导出备份，并将内容拆分为另一作品。"); return false;
+      setMessage(`此作品已接近 ${EDITOR_SIZE_LABEL} 上限，本次输入未加入。请先导出备份，并将内容拆分为另一作品。`); return false;
     }
     const previous = current.current;
     setPast(items => [...items.slice(-59), previous]); setFuture([]);
@@ -297,14 +299,36 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);
     previewRef.current?.scrollTo({ top: 0 });
   }
+  function insertFromBlueprint(nodeId: string) {
+    try {
+      const { content: next, inserted, renumbered } = insertBlueprintNode(current.current, nodeId);
+      if (!inserted.length) { setMessage("报告中已有这一节。"); return; }
+      if (!edit(parseEditorContent(next))) return;
+      setMode("report"); setSectionId(inserted[inserted.length - 1]); setOutlineQuery("");
+      const titles = next.report.filter(s => inserted.includes(s.id)).map(s => `「${s.title}」`).join("、");
+      setMessage(`已插入${titles}${renumbered ? `，并重排了 ${renumbered} 个章节序号` : ""}。可撤销。`);
+    } catch (e) { setMessage(e instanceof Error ? e.message : "未能插入。"); }
+  }
+  function applyBlueprint(includeOptional: boolean) {
+    try {
+      const next = parseEditorContent({ ...current.current, report: blueprintSections({ includeOptional }) });
+      if (!edit(next)) return;
+      setMode("report"); setSectionId(next.report[0].id); setOutlineQuery(""); setBlankReportConfirm(false);
+      setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);
+      previewRef.current?.scrollTo({ top: 0 });
+      setMessage(`已替换为正大杯蓝图骨架，共 ${next.report.length} 节。按各节【写作提示】撰写，完成后删除提示；可撤销。`);
+    } catch (e) { setMessage(e instanceof Error ? e.message : "未能替换。"); }
+  }
   function patchSlide(patch: Partial<Slide>) { edit({ ...content, slides: content.slides.map(s => s.id === slide.id ? { ...s, ...patch } : s) }); }
+  /** New and duplicated items land right after the selected one, not after the appendices. */
+  const after = <T extends { id: string }>(items: T[], id: string, item: T) => { const at = items.findIndex(x => x.id === id); return [...items.slice(0, at + 1), item, ...items.slice(at + 1)]; };
   function addItem() {
     if (mode === "report") {
       const item: ReportSection = { id: crypto.randomUUID(), title: "新章节", body: "", source: "" };
-      if (edit({ ...content, report: [...content.report, item] })) setSectionId(item.id);
+      if (edit({ ...content, report: after(content.report, section.id, item) })) setSectionId(item.id);
     } else {
       const item: Slide = { id: crypto.randomUUID(), title: "新的一页", body: "", aside: "", notes: "", layout: "content" };
-      if (edit({ ...content, slides: [...content.slides, item] })) setSlideId(item.id);
+      if (edit({ ...content, slides: after(content.slides, slide.id, item) })) setSlideId(item.id);
     }
   }
   function moveItem(delta: number) {
@@ -319,8 +343,8 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     }
   }
   function duplicateItem() {
-    if (mode === "report") { const item = { ...section, id: crypto.randomUUID(), title: `${section.title.slice(0, 145)} 副本` }; if (edit({ ...content, report: [...content.report, item] })) setSectionId(item.id); }
-    else { const item = { ...slide, id: crypto.randomUUID(), title: `${slide.title.slice(0, 145)} 副本` }; if (edit({ ...content, slides: [...content.slides, item] })) setSlideId(item.id); }
+    if (mode === "report") { const item = { ...section, id: crypto.randomUUID(), title: `${section.title.slice(0, 145)} 副本` }; if (edit({ ...content, report: after(content.report, section.id, item) })) setSectionId(item.id); }
+    else { const item = { ...slide, id: crypto.randomUUID(), title: `${slide.title.slice(0, 145)} 副本` }; if (edit({ ...content, slides: after(content.slides, slide.id, item) })) setSlideId(item.id); }
   }
   function removeItem() {
     if (mode === "report") { if (content.report.length < 2) return; const index = content.report.findIndex(s => s.id === section.id); const remaining = content.report.filter(s => s.id !== section.id); edit({ ...content, report: remaining }); setSectionId(remaining[Math.min(index, remaining.length - 1)].id); }
@@ -349,7 +373,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if (!file || !canReplace()) return;
     busy.current = true; setPhase("loading");
     try {
-      if (file.size > EDITOR_LIMITS.bytes) throw new Error("备份超过 500 KB。");
+      if (file.size > EDITOR_LIMITS.bytes) throw new Error(`备份超过 ${EDITOR_SIZE_LABEL}。`);
       const raw: unknown = JSON.parse(await file.text());
       if (!alive.current || identityTransition.current) return;
       if (raw && typeof raw === "object" && "title" in raw && typeof raw.title === "string" && !raw.title.trim()) raw.title = "未命名研究";
@@ -456,6 +480,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     return () => { window.removeEventListener("hashchange", leave); dialog.close(); if (studio?.getClientRects().length) trigger?.focus({ preventScroll: true }); };
   }, [presenting]);
   const items = mode === "report" ? content.report : content.slides;
+  const itemLimit = mode === "report" ? EDITOR_LIMITS.sections : EDITOR_LIMITS.slides;
   const selectedId = mode === "report" ? section.id : slide.id;
   const selectedIndex = items.findIndex(s => s.id === selectedId);
   const statusText = versionBusy ? "正在保存命名版本…" : phase === "loading" ? "正在读取草稿…" : phase === "saving" ? "正在保存…" : phase === "conflict" ? "版本冲突 · 已暂停保存" : phase === "error" ? "未保存 · 请重试" : dirty ? "有修改 · 即将保存" : activeDraftId ? `已保存 ${saveTime}` : "模板 · 编辑后自动保存";
@@ -511,6 +536,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
     {mode!=='slides'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
+    {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={localOnly&&!projectBinding?module=>{window.location.hash=module;}:undefined} onOpenFindings={()=>setQualityOpen(true)}/>}
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding?.onSave} disabled={locked}/></div>
     <div hidden={mode==='latex'||qualityOpen}>
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
@@ -526,14 +552,14 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <div className={styles.viewBar}><button type="button" aria-pressed={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)}>{outlineOpen ? "收起目录" : "展开目录"}</button><div ref={viewMotion} role="group" aria-label="工作区视图"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="write" type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>专注写作</button><button data-motion-id="split" type="button" aria-pressed={view === "split"} onClick={() => setView("split")}><span className={styles.wideLabel}>编辑与预览</span><span className={styles.compactLabel}>编辑</span></button><button data-motion-id="preview" type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>仅预览</button></div><span>{mode === "report" ? `${content.report.reduce((n,s) => n+s.body.length,0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span></div>
     <div className={styles.editorGrid}>
       <aside className={styles.outline} aria-label={mode === "report" ? "报告目录" : "幻灯片列表"}>
-        <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / 40</span></div>
+        <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / {itemLimit}</span></div>
         <input className={styles.outlineSearch} aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={e => setOutlineQuery(e.target.value)}/>
         <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => mode === "report" ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span><span>{item.title || "未命名"}</span></span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>)}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
-        <button type="button" className={styles.addItem} disabled={items.length >= 40 || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
+        <button type="button" className={styles.addItem} disabled={items.length >= itemLimit || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
       </aside>
       <fieldset className={styles.fields} disabled={phase === "loading" || versionBusy}>
         <legend>{mode === "report" ? "章节编辑" : "页面编辑"}</legend>
-        <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label="向上移动">↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label="向下移动">↓</button><button type="button" disabled={items.length >= 40} onClick={duplicateItem}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem}>移除</button></div>
+        <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label="向上移动">↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label="向下移动">↓</button><button type="button" disabled={items.length >= itemLimit} onClick={duplicateItem}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem}>移除</button></div>
         {mode === "report" ? <>
           <label>章节标题<input maxLength={150} value={section.title} onChange={e => patchSection({ title: e.target.value })}/></label>
           <label>正文<textarea className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder="写下本章内容，每次换行形成一个段落。"/></label>

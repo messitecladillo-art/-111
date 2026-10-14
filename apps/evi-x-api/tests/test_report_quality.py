@@ -93,10 +93,25 @@ def test_quality_no_statistical_verification_claim_or_hash_rewrite():
     assert report_content(value)['quality']['results'][0]['resultHash']=='b'*64
 
 
-def test_quality_v2_500kb_and_utf16_budget():
-    value=v2();value['quality']['results'][0]['rows']=[['中'*2000,i]for i in range(90)]
+def test_quality_v2_2mb_and_utf16_budget():
+    value=v2();value['quality']['results'][0]['rows']=[['中'*2000,i]for i in range(360)]
     with pytest.raises(ApiError) as error:report_content(value)
     assert error.value.status==413
+    value['quality']['results'][0]['rows']=value['quality']['results'][0]['rows'][:300]
+    assert len(report_content(value)['quality']['results'][0]['rows'])==300
+
+
+def test_full_report_capacity_matches_browser_limits():
+    value=v2()
+    section=value['report'][0]
+    value['report']=[section]+[{'id':f's{i}','title':f'（{i}）小节','body':'正文','source':''} for i in range(99)]
+    assert len(report_content(value)['report'])==100
+    with pytest.raises(ApiError):report_content({**value,'report':value['report']+[{'id':'extra','title':'多余','body':'','source':''}]})
+    result=value['quality']['results'][0]
+    value['quality']['results']=[result]+[{**result,'id':f'x{i}'} for i in range(119)]
+    assert len(report_content(value)['quality']['results'])==120
+    with pytest.raises(ApiError):report_content({**value,'quality':{**value['quality'],'results':value['quality']['results']+[{**result,'id':'x-extra'}]}})
+    with pytest.raises(ApiError):report_content({**value,'slides':[{**value['slides'][-1],'id':f'p{i}'} for i in range(41)]})
 
 
 def generated_latex(fixture):

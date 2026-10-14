@@ -28,10 +28,10 @@ test('compact backups round-trip near capacity and 40 chapters never silently tr
 });
 test('UTF-8 capacity and every nested field remain strict and round-trip safely', () => {
   const content=createEditorContent();
-  content.report=Array.from({length:20},(_,i)=>({id:`cn-${i}`,title:'中文章节',body:'汉'.repeat(12000),source:''}));
-  assert.ok(JSON.stringify(content).length<500000,'fixture stays below a character-only limit');
-  assert.ok(Buffer.byteLength(JSON.stringify(content),'utf8')>500000,'fixture exceeds the actual byte limit');
-  assert.throws(()=>parseEditorContent(content),/500 KB/);
+  content.report=Array.from({length:60},(_,i)=>({id:`cn-${i}`,title:'中文章节',body:'汉'.repeat(12000),source:''}));
+  assert.ok(JSON.stringify(content).length<2_000_000,'fixture stays below a character-only limit');
+  assert.ok(Buffer.byteLength(JSON.stringify(content),'utf8')>2_000_000,'fixture exceeds the actual byte limit');
+  assert.throws(()=>parseEditorContent(content),/2 MB/);
   const initial=createEditorContent();
   for(const invalid of [
     {...initial,report:[{...initial.report[0],source:'x'.repeat(1501)}]},
