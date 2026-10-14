@@ -18,8 +18,9 @@ async function fixture(){
 }
 test('Word uses native centered three-line table and authoritative SVG chart',async()=>{
  const zip=await JSZip.loadAsync(await (await word(await fixture())).arrayBuffer()),doc=await zip.file('word/document.xml').async('string');
- assert.match(doc,/<w:tbl>/);assert.match(doc,/w:sz="12"/);assert.match(doc,/w:sz="6"/);assert.match(doc,/w:jc w:val="center"/);assert.match(doc,/3/);assert.match(doc,/0.375/);assert.match(doc,/n=8 \/ 10/);assert.match(doc,/asvg:svgBlip/);
- const files=Object.values(zip.files).filter(f=>f.name.endsWith('.svg'));assert.equal(files.length,1);const svg=await files[0].async('string');assert.match(svg,/<rect/);assert.doesNotMatch(svg,/<image|data:image|href=/);assert.match(svg,/>5</);
+ assert.match(doc,/<w:tbl>/);assert.match(doc,/w:sz="12"/);assert.match(doc,/w:sz="6"/);assert.match(doc,/w:pStyle w:val="ReportTableText"/);assert.match(doc,/3/);assert.match(doc,/0.375/);assert.match(doc,/有效样本 n = 8（共 10）/);assert.match(doc,/asvg:svgBlip/);
+ const styles=await zip.file('word/styles.xml').async('string');assert.match(styles.match(/<w:style\b[^>]*w:styleId="ReportTableText"[\s\S]*?<\/w:style>/)[0],/<w:jc w:val="center"\/>/);
+ const files=Object.values(zip.files).filter(f=>f.name.endsWith('.svg'));assert.equal(files.length,1);const svg=await files[0].async('string');assert.match(svg,/<path/);assert.doesNotMatch(svg,/<image|data:image|href=|<style/);assert.match(svg,/>5</);
 });
 test('PPT has native chart workbook, editable centered table, text and vector shapes',async()=>{
  const zip=await JSZip.loadAsync(await (await buildPptx(await fixture())).arrayBuffer());const slide=await zip.file('ppt/slides/slide1.xml').async('string');
@@ -33,7 +34,7 @@ test('LaTeX exports complete table and numeric PGF plot with scoped packages',as
  const before=latexReportKey(c);c.report[0].blocks[0].text='新表题';assert.notEqual(latexReportKey(c),before);
 });
 test('tampered result hash prevents every async output',async()=>{const c=await fixture();c.quality.results[0].rows[0][1]=300;await assert.rejects(word(c),/指纹/);await assert.rejects(buildPptx(c),/指纹/);await assert.rejects(createLatexReport(c),/指纹/);});
-test('missing references and overflowing objects fail instead of silently dropping content',async()=>{const c=await fixture();c.slides[0].objects[1].evidenceId='missing';await assert.rejects(buildPptx(c),/不存在/);c.slides[0].objects=[makeSlideObject('text',{text:'正文'.repeat(800),width:10,height:5})];await assert.rejects(buildPptx(c),/分拆/);c.report[0].blocks=[{id:'math',kind:'formula',text:'x^2',evidenceId:'',valueColumn:1}];await assert.rejects(word(c),/公式/);assert.match(generateLatexBody(c),/x\^2/);});
+test('missing references and overflowing objects fail instead of silently dropping content',async()=>{const c=await fixture();c.slides[0].objects[1].evidenceId='missing';await assert.rejects(buildPptx(c),/不存在/);c.slides[0].objects=[makeSlideObject('text',{text:'正文'.repeat(800),width:10,height:5})];await assert.rejects(buildPptx(c),/分拆/);c.report[0].blocks=[{id:'math',kind:'formula',text:'x^2',evidenceId:'',valueColumn:1}];const math=await JSZip.loadAsync(await (await word(c)).arrayBuffer());assert.match(await math.file('word/document.xml').async('string'),/<m:oMathPara>[\s\S]*<m:sSup>/);assert.match(generateLatexBody(c),/x\^2/);c.report[0].blocks[0].text='\\frac{x';await assert.rejects(word(c),/公式无法解析/);});
 test('true SVG rejects disguised bitmap, scripts, external resources and unsafe formula commands',async()=>{for(const svg of ['<svg><image href="x"/></svg>','<svg><script/></svg>','<svg><path href="https://bad"/></svg>','<svg><filter/></svg>'])assert.throws(()=>assertTrueVector(svg));const c=await fixture();assert.match(chartSVG(c.quality.results[0],1),/>3</);c.report[0].blocks=[{id:'bad',kind:'formula',text:'\\input{secret}',evidenceId:'',valueColumn:1}];assert.throws(()=>generateLatexBody(c),/非数学/);});
 
 test('unsupported native transforms and overfull LaTeX tables require explicit adjustment',async()=>{const c=await fixture();c.slides[0].objects[1].rotation=25;await assert.rejects(buildPptx(c),/旋转/);c.report[0].blocks=[c.report[0].blocks[0]];c.quality.results[0].rows=Array.from({length:26},(_,i)=>['类别'+i,i,i]);assert.throws(()=>generateLatexBody(c),/分拆/);c.report[0].blocks=[{id:'f',kind:'formula',text:'\\write18{command}',evidenceId:'',valueColumn:1}];assert.throws(()=>generateLatexBody(c),/非数学/);assert.throws(()=>assertTrueVector('<svg onload="alert(1)"><rect/></svg>'));});
@@ -54,7 +55,7 @@ test('valid zero-row table snapshots are rejected consistently before native exp
 });
 test('zero-row charts cannot produce empty SVG, native PPT chart or PGF plot',async()=>{
  const c=await fixture(),r=c.quality.results[0];r.rows=[];r.n=0;r.resultHash=await digestText(JSON.stringify(resultPayload(r)));c.report[0].blocks=[c.report[0].blocks[1]];c.slides[0].objects=[c.slides[0].objects[1]];
- assert.throws(()=>chartSVG(r,1),/1–50 个有效类别/);await assert.rejects(word(c),/1–50 个有效类别/);await assert.rejects(buildPptx(c),/1–50 个有效类别/);await assert.rejects(createLatexReport(c),/1–50 个有效类别/);
+ assert.throws(()=>chartSVG(r,1),/1–50 个有效类别/);await assert.rejects(word(c),/没有数据行.*改用表格/);await assert.rejects(buildPptx(c),/1–50 个有效类别/);await assert.rejects(createLatexReport(c),/1–50 个有效类别/);
 });
 
 test('edited and reconfirmed finding requires renewing the chapter snapshot in every export',async()=>{
@@ -75,7 +76,7 @@ test('native chart labels use explicit placement and avoid optional decimal poin
  const r=c.quality.results[0];r.rows[0][1]=1/3;r.resultHash=await digestText(JSON.stringify(resultPayload(r)));zip=await JSZip.loadAsync(await (await buildPptx(c)).arrayBuffer());xml=await Object.values(zip.files).find(f=>/^ppt\/charts\/chart\d+\.xml$/.test(f.name)).async('string');assert.match(xml,/formatCode="0.000"/);assert.match(xml,/<c:v>0.3333333333333333<\/c:v>/);
 });
 test('Word chart and captions remain a local group without binding the whole report',async()=>{
- const zip=await JSZip.loadAsync(await (await word(await fixture())).arrayBuffer()),xml=await zip.file('word/document.xml').async('string');const paragraphs=[...xml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)].map(m=>m[0]);assert.match(paragraphs.find(p=>p.includes('asvg:svgBlip')),/<w:keepNext\/>/);assert.match(paragraphs.find(p=>p.includes('分类人数')),/<w:keepNext\/>/);assert.doesNotMatch(paragraphs.find(p=>p.includes('保留正文')),/<w:keepNext\/>/);
+ const zip=await JSZip.loadAsync(await (await word(await fixture())).arrayBuffer()),xml=await zip.file('word/document.xml').async('string');const paragraphs=[...xml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)].map(m=>m[0]);assert.match(paragraphs.find(p=>p.includes('asvg:svgBlip')),/<w:keepNext\/>/);assert.match(paragraphs.find(p=>p.includes('ReportFigureCaption')&&p.includes('分类人数')),/<w:keepNext\/>/);assert.doesNotMatch(paragraphs.find(p=>p.includes('保留正文')),/<w:keepNext\/>/);
 });
 
 test('native decorative geometry preserves vector shapes, negative line direction and transforms',async()=>{
@@ -85,5 +86,5 @@ test('native decorative geometry preserves vector shapes, negative line directio
 });
 test('headless Word chart requires a real renderer and supplied preview contains chart pixels',async()=>{
  const c=await fixture();await assert.rejects(buildDocx(c),/兼容预览需要渲染器/);const zip=await JSZip.loadAsync(await (await word(c)).arrayBuffer()),file=Object.values(zip.files).find(f=>/^word\/media\/.*\.png$/.test(f.name));assert.ok(file);
- const png=await file.async('nodebuffer'),metadata=await sharp(png).metadata(),stats=await sharp(png).stats();assert.equal(metadata.width,1000);assert.equal(metadata.height,700);assert.ok(stats.channels.some(channel=>channel.stdev>10));assert.match(await zip.file('word/document.xml').async('string'),/asvg:svgBlip/);
+ const png=await file.async('nodebuffer'),metadata=await sharp(png).metadata(),stats=await sharp(png).stats();assert.equal(metadata.width,960);assert.equal(metadata.height,540);assert.ok(stats.channels.some(channel=>channel.stdev>10));assert.match(await zip.file('word/document.xml').async('string'),/asvg:svgBlip/);
 });

@@ -1,7 +1,11 @@
 import {chartData, resultFor, verifyResearchQuality, findingNeedsReview, findingSignature, type ReportBlock, type ResultSnapshot, type SlideObject} from './research-quality.ts';
 import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
+import {assertTrueVector} from './svg-safety.ts';
+import {numberedCaption, resolveReferences, type BlockLabel} from './report-numbering.ts';
+import {columnWeights, presentResult, sectionNotes, sourceLine} from './report-tables.ts';
 import type PptxGenJS from 'pptxgenjs';
+export {assertTrueVector};
 export const evidenceLabel=(r:ResultSnapshot)=>`来源：${r.sourceName}${r.sourceUrl?' · '+r.sourceUrl:''}；有效样本 n=${r.n} / ${r.total}；${r.classification==='simulated'?'模拟数据':r.classification==='public'?'公开数据':'用户提供数据'}${r.warnings.length?'；'+r.warnings.join('；'):''}`;
 export const valueText=(v:string|number|null)=>v===null?'—':typeof v==='number'?String(Number(v.toFixed(3))):v;
 export const chartNumberFormat=(values:number[])=>values.every(Number.isInteger)?'0':'0.000';
@@ -9,7 +13,6 @@ export function assertTableRows(r:ResultSnapshot){if(!r.rows.length)throw Error(
 export function assertFindingReferences(c:EditorContent){for(const section of c.report)for(const id of section.findingIds??[]){const finding=c.quality?.findings.find(f=>f.id===id);if(!finding)throw Error('章节引用的研究发现不存在：'+id);if(!c.quality||findingNeedsReview(finding,c.quality))throw Error('章节引用的研究发现待复核：'+id);if(section.findingSnapshots?.[id]!==findingSignature(finding))throw Error('发现内容已更新，请核对章节并更新关联。');}}
 export async function validateQuality(c:EditorContent){if(c.quality)await verifyResearchQuality(c.quality);}
 const xml=(v:string)=>v.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'})[c]!);
-export function assertTrueVector(svg:string){if(!/^\s*<svg\b/.test(svg)||/<(?:image|script|foreignObject|filter|feImage)\b|(?:href|xlink:href)\s*=|data:|javascript:|url\s*\(|\bon\w+\s*=|<(?:style|iframe)\b|<!DOCTYPE|<!ENTITY/i.test(svg))throw Error('素材必须是无外部资源、无位图和脚本的真实 SVG。');return svg;}
 const b64=(bytes:Uint8Array)=>btoa(Array.from(bytes,v=>String.fromCharCode(v)).join(''));
 export const svgURI=(svg:string)=>`data:image/svg+xml;base64,${b64(new TextEncoder().encode(assertTrueVector(svg)))}`;
 export function chartSVG(r:ResultSnapshot,column:number,color='#255D87'){
@@ -22,20 +25,96 @@ export function chartSVG(r:ResultSnapshot,column:number,color='#255D87'){
 }
 export type SvgPreviewRenderer=(svg:string)=>Promise<Uint8Array>;
 async function preview(svg:string){
- // SVG remains authoritative; compatibility previews must be genuinely rendered.
+ // SVG remains authoritative; compatibility previews must be genuinely rendered at the figure's own size.
  if(typeof document==='undefined')throw Error('SVG 兼容预览需要渲染器，请在浏览器导出或提供 SVG 渲染器。');
- const image=new Image();image.src=svgURI(svg);await image.decode();const canvas=document.createElement('canvas');canvas.width=1000;canvas.height=700;const ctx=canvas.getContext('2d');if(!ctx)throw Error('兼容预览生成失败。');ctx.drawImage(image,0,0,1000,700);return Uint8Array.from(atob(canvas.toDataURL('image/png').split(',')[1]),c=>c.charCodeAt(0));
+ const size=/<svg\b[^>]*?\bwidth="(\d+(?:\.\d+)?)"[^>]*?\bheight="(\d+(?:\.\d+)?)"/.exec(svg),width=Math.round(Number(size?.[1]??1000)),height=Math.round(Number(size?.[2]??700));
+ const image=new Image();image.src=svgURI(svg);await image.decode();const canvas=document.createElement('canvas');canvas.width=width*2;canvas.height=height*2;const ctx=canvas.getContext('2d');if(!ctx)throw Error('兼容预览生成失败。');ctx.drawImage(image,0,0,width*2,height*2);return Uint8Array.from(atob(canvas.toDataURL('image/png').split(',')[1]),c=>c.charCodeAt(0));
 }
-export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview){
- const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun}=await import('docx');const out:(InstanceType<typeof Paragraph>|InstanceType<typeof Table>)[]=[];
- for(const b of blocks){
-  if(b.kind==='formula')throw Error('Word 暂不导出公式块，请使用 LaTeX 或改为正文公式说明。');
-  if(b.kind!=='chart'&&b.kind!=='table'){out.push(new Paragraph({style:b.kind==='citation'?'ReportReference':'Normal',text:b.text}));continue;}
+
+/** Office Math cannot be built through docx's API; formulas travel as placeholder runs and are swapped in after packing. */
+export type MathSlot={omml:string;display:boolean};
+export const mathPlaceholder=(index:number)=>`§§OMML${index}§§`;
+export type WordContext={labels:Map<string,BlockLabel>;math:MathSlot[];where:string};
+/** A4 text width (210 mm − 2 × 31.8 mm) in twentieths of a point, and in pixels for images. */
+export const TEXT_WIDTH={twips:8300,px:553} as const;
+// `$…$` is inline math when it hugs its content (“$x_i$”, not “$5 和 $6”); `\$` stays a literal dollar sign.
+const INLINE_MATH=/(?<!\\)\$(?=\S)((?:\\\$|[^$\n])+?)(?<=\S)(?<!\\)\$/g;
+export function splitInlineMath(text:string):{text:string;math:boolean}[]{
+ const out:{text:string;math:boolean}[]=[];let last=0;
+ for(const match of text.matchAll(INLINE_MATH)){if(match.index>last)out.push({text:text.slice(last,match.index).replace(/\\\$/g,'$'),math:false});out.push({text:match[1],math:true});last=match.index+match[0].length;}
+ if(last<text.length)out.push({text:text.slice(last).replace(/\\\$/g,'$'),math:false});
+ return out;
+}
+/** Text runs with figure references resolved and `$…$` turned into inline equations. */
+export async function richRuns(text:string,ctx:WordContext,run:Record<string,unknown>={}){
+ const {TextRun}=await import('docx');const {texToOmml}=await import('./omml.ts');
+ return splitInlineMath(resolveReferences(text,ctx.labels,ctx.where)).map(part=>{
+  if(!part.math)return new TextRun({...run,text:part.text});
+  ctx.math.push({omml:texToOmml(part.text,false),display:false});
+  return new TextRun({...run,text:mathPlaceholder(ctx.math.length-1)});
+ });
+}
+/** Swaps every math placeholder run in document.xml for its equation. */
+export function insertMath(documentXml:string,math:readonly MathSlot[]):string{
+ return documentXml.replace(/<w:r>(?:(?!<\/w:r>)[\s\S])*?§§OMML(\d+)§§(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g,(_match,index:string)=>{
+  const slot=math[Number(index)];if(!slot)throw Error('公式占位与公式数量不一致。');
+  return slot.display?`<m:oMathPara><m:oMathParaPr><m:jc m:val="center"/></m:oMathParaPr>${slot.omml}</m:oMathPara>`:slot.omml;
+ });
+}
+const ACCENT_HEX:Record<EditorContent['accent'],string>={teal:'#0F766E',blue:'#234E80',burgundy:'#8A3449'};
+export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview,context?:WordContext){
+ const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun,VerticalAlign}=await import('docx');
+ const {figureSVG,FIGURE_SIZE}=await import('./report-figures.ts');
+ const {texToOmml}=await import('./omml.ts');
+ const ctx:WordContext=context??{labels:(await import('./report-numbering.ts')).reportLabels(c.report),math:[],where:'内容块'};
+ const out:(InstanceType<typeof Paragraph>|InstanceType<typeof Table>)[]=[];
+ const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'},rule=(size:number)=>({style:BorderStyle.SINGLE,size,color:'000000'});
+ const used:ResultSnapshot[]=[];
+ for(const [index,b] of blocks.entries()){
+  if(b.kind==='formula'){
+   // Display equation: a borderless three-cell row keeps Word's display style and puts the number at the right margin.
+   ctx.math.push({omml:texToOmml(b.text,true),display:true});
+   const label=ctx.labels.get(b.id)?.label??'';
+   // Side cells are wide enough for a number such as （12-10） on one line.
+   const side=1400,middle=TEXT_WIDTH.twips-2*side;
+   const cell=(width:number,children:InstanceType<typeof Paragraph>[])=>new TableCell({width:{size:width,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,borders:{top:none,bottom:none,left:none,right:none},children});
+   out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:[side,middle,side],borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none},rows:[new TableRow({cantSplit:true,children:[
+    cell(side,[new Paragraph({style:'ReportEquation'})]),
+    cell(middle,[new Paragraph({style:'ReportEquation',alignment:AlignmentType.CENTER,children:[new TextRun(mathPlaceholder(ctx.math.length-1))]})]),
+    cell(side,[new Paragraph({style:'ReportEquation',alignment:AlignmentType.RIGHT,children:[new TextRun(label)]})]),
+   ]})]}));
+   continue;
+  }
+  if(b.kind!=='chart'&&b.kind!=='table'){out.push(new Paragraph({style:b.kind==='citation'?'ReportReference':'Normal',children:await richRuns(b.text,ctx)}));continue;}
   const r=resultFor(c.quality,b.evidenceId);
-  if(b.kind==='chart'){const svg=chartSVG(r,b.valueColumn,`#${c.accent==='teal'?'0F766E':c.accent==='burgundy'?'8A3449':'234E80'}`);out.push(new Paragraph({alignment:AlignmentType.CENTER,keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:530,height:371},altText:{title:b.text||r.title,description:evidenceLabel(r),name:b.id}})]}),new Paragraph({style:'ReportCaption',keepNext:true,keepLines:true,text:b.text||r.title}));}
-  else{assertTableRows(r);if(r.headers.length>10)throw Error('表格超过 10 列，请分拆后导出 Word。');if(b.text)out.push(new Paragraph({style:'ReportCaption',keepNext:true,keepLines:true,text:b.text}));const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'};const rows=[r.headers,...r.rows].map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map(cell=>new TableCell({borders:{top:i===0?{style:BorderStyle.SINGLE,size:12,color:'000000'}:none,bottom:i===0?{style:BorderStyle.SINGLE,size:6,color:'000000'}:i===r.rows.length?{style:BorderStyle.SINGLE,size:12,color:'000000'}:none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',alignment:AlignmentType.CENTER,keepNext:r.rows.length<=15||i===r.rows.length,keepLines:true,children:[new TextRun({text:valueText(cell),bold:i===0})]})]}))}));out.push(new Table({width:{size:100,type:WidthType.PERCENTAGE},rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));}
-  out.push(new Paragraph({style:'ReportReference',keepLines:evidenceLabel(r).length<500,text:evidenceLabel(r)}));
- }return out;
+  if(!used.includes(r))used.push(r);
+  // A chart and a table of the same result share one source line, placed after the second.
+  const next=blocks[index+1],source=!(next&&(next.kind==='chart'||next.kind==='table')&&next.evidenceId===b.evidenceId);
+  const caption=numberedCaption(ctx.labels.get(b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where));
+  if(b.kind==='chart'){
+   const svg=await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
+   const height=Math.round(TEXT_WIDTH.px*FIGURE_SIZE.height/FIGURE_SIZE.width);
+   out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
+   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:[new TextRun(caption)]}));
+  }else{
+   assertTableRows(r);
+   const table=presentResult(r);
+   if(table.headers.length>10)throw Error('表格超过 10 列，请分拆后导出 Word。');
+   const weights=columnWeights(table),total=weights.reduce((a,v)=>a+v,0);
+   const widths=weights.map(w=>Math.round(TEXT_WIDTH.twips*w/total));
+   out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:[new TextRun(caption)]}));
+   const all=[table.headers,...table.rows];
+   // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
+   const small=all.length<=16,follows=source||!!table.note;
+   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:[new TextRun({text:cell,bold:i===0})]})]}))}));
+   out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
+   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,text:table.note}));
+  }
+  if(source)out.push(new Paragraph({style:'ReportSource',text:sourceLine(r)}));
+ }
+ const notes=sectionNotes(used);
+ if(notes)out.push(new Paragraph({style:'ReportNote',text:notes}));
+ return out;
 }
 function fitText(text:string,w:number,h:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));const lines=text.split(/\r?\n/).reduce((n,l)=>n+Math.max(1,Math.ceil(Array.from(l).reduce((a,c)=>a+(/[\u3000-\uffff]/.test(c)?1:.55),0)/slots)),0);if(lines*fs*1.22>h*72)throw Error('文本超出对象尺寸，请扩大对象或分拆幻灯片。');}
 export function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:SlideObject[],c:EditorContent){

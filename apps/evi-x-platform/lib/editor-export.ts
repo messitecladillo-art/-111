@@ -1,4 +1,5 @@
-import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, type SvgPreviewRenderer } from "./quality-export.ts";
+import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, insertMath, richRuns, type SvgPreviewRenderer, type WordContext } from "./quality-export.ts";
+import { reportLabels } from "./report-numbering.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 
@@ -15,20 +16,32 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
   if(!report.length)throw Error(options.part==='appendix'?'请先添加独立的“附录”章节，再单独导出附录。':'报告正文至少需要一个章节。');
-  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents } = await import("docx");
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel } = await import("docx");
   const {default:JSZip}=await import('jszip');
-  const font=(name:string)=>({ascii:name,hAnsi:name,eastAsia:name,cs:name,hint:'eastAsia'});
+  // Chinese in 宋体 / 黑体; Latin letters and numbers in Times New Roman, as competition templates set them.
+  const font=(eastAsia:string)=>({ascii:'Times New Roman',hAnsi:'Times New Roman',eastAsia,cs:'Times New Roman',hint:'eastAsia'});
   const bodyRun={font:font('宋体'),size:24,sizeComplexScript:24,color:'000000'};
+  const smallRun={...bodyRun,size:18,sizeComplexScript:18};
   const headingRun=(level:number)=>({font:font(level<=2?'黑体':'宋体'),size:level===1?30:level===2?28:24,sizeComplexScript:level===1?30:level===2?28:24,bold:false,color:'000000'});
   const bodyParagraph={spacing:{before:120,after:0,line:300},indent:{firstLineChars:options.firstLineChars*100},widowControl:true};
+  const flush={indent:{firstLine:0,firstLineChars:0}};
   const styles=[
     {id:'Normal',name:'Normal',run:bodyRun,paragraph:bodyParagraph},
-    {id:'Title',name:'Title',basedOn:'Normal',next:'Normal',run:{...bodyRun,size:32,sizeComplexScript:32,bold:true},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:240,beforeAutoSpacing:true,afterAutoSpacing:true},indent:{firstLine:0,firstLineChars:0},keepNext:true}},
-    ...[1,2,3,4,5].map(level=>({id:`Heading${level}`,name:`heading ${level}`,basedOn:'Normal',next:'Normal',quickFormat:true,run:headingRun(level),paragraph:{spacing:{line:300,before:120,after:0},indent:{firstLine:0,firstLineChars:0},keepNext:true,keepLines:true,outlineLevel:level-1}})),
-    {id:'ReportSpecialHeading',name:'摘要与参考文献名称',basedOn:'Normal',next:'Normal',run:{...bodyRun,font:font('黑体'),size:28,sizeComplexScript:28},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},indent:{firstLine:0,firstLineChars:0},keepNext:true}},
-    {id:'ReportReference',name:'参考文献正文',basedOn:'Normal',run:bodyRun,paragraph:{...bodyParagraph,indent:{firstLine:0,firstLineChars:0}}},
-    {id:'ReportCaption',name:'图表题',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},indent:{firstLine:0,firstLineChars:0},keepNext:true}},
-    {id:'ReportTableText',name:'表内文字',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:240,before:0,after:0},indent:{firstLine:0,firstLineChars:0}}},
+    {id:'Title',name:'Title',basedOn:'Normal',next:'Normal',run:{...bodyRun,size:32,sizeComplexScript:32,bold:true},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:240,beforeAutoSpacing:true,afterAutoSpacing:true},...flush,keepNext:true}},
+    ...[1,2,3,4,5].map(level=>({id:`Heading${level}`,name:`heading ${level}`,basedOn:'Normal',next:'Normal',quickFormat:true,run:headingRun(level),paragraph:{spacing:{line:300,before:120,after:0},...flush,keepNext:true,keepLines:true,outlineLevel:level-1}})),
+    {id:'ReportSpecialHeading',name:'摘要与参考文献名称',basedOn:'Normal',next:'Normal',run:{...bodyRun,font:font('黑体'),size:28,sizeComplexScript:28},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},...flush,keepNext:true}},
+    {id:'ReportReference',name:'参考文献正文',basedOn:'Normal',run:bodyRun,paragraph:{...bodyParagraph,...flush}},
+    {id:'ReportCaption',name:'图表题',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},...flush,keepNext:true}},
+    // Figure captions sit below the figure and table captions above the table; the names drive the lists of figures and tables.
+    {id:'ReportFigureCaption',name:'图题',basedOn:'ReportCaption',next:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:60,after:120},...flush}},
+    {id:'ReportTableCaption',name:'表题',basedOn:'ReportCaption',next:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:240,after:60},...flush,keepNext:true}},
+    {id:'ReportFigure',name:'图',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:240,before:240,after:0},...flush,keepNext:true}},
+    {id:'ReportTableText',name:'表内文字',basedOn:'Normal',run:{...bodyRun,size:21,sizeComplexScript:21},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:240,before:30,after:30},...flush}},
+    {id:'ReportSource',name:'资料来源',basedOn:'Normal',run:smallRun,paragraph:{alignment:AlignmentType.LEFT,spacing:{line:240,before:40,after:120},...flush}},
+    {id:'ReportNote',name:'注释',basedOn:'Normal',run:smallRun,paragraph:{alignment:AlignmentType.LEFT,spacing:{line:260,before:120,after:120},...flush}},
+    {id:'ReportEquation',name:'公式',basedOn:'Normal',run:bodyRun,paragraph:{spacing:{line:240,before:60,after:60},...flush}},
+    {id:'ReportCoverTitle',name:'封面标题',basedOn:'Normal',next:'ReportCoverSubtitle',run:{...bodyRun,font:font('黑体'),size:44,sizeComplexScript:44,bold:true},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:400,before:4200,after:360},...flush}},
+    {id:'ReportCoverSubtitle',name:'封面副标题',basedOn:'Normal',run:{...bodyRun,size:28,sizeComplexScript:28},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:360,before:120,after:0},...flush}},
     ...[1,2,3].map(level=>({id:`TOC${level}`,name:`toc ${level}`,basedOn:'Normal',run:bodyRun,paragraph:{spacing:{line:300,before:0,after:0},indent:{left:(level-1)*240,firstLine:0,firstLineChars:0}}})),
   ];
   const page={size:{width:11906,height:16838},margin:{top:1440,bottom:1440,left:1803,right:1803,header:720,footer:720,gutter:0}};
@@ -38,21 +51,32 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
   const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
-  if(options.includeCover)addSection([title(),...(content.subtitle?[new Paragraph({alignment:AlignmentType.CENTER,indent:{firstLine:0,firstLineChars:0},children:[new TextRun({...bodyRun,text:content.subtitle})]})]:[])],'cover');
+  if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:[new TextRun({text:content.title})]}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:[new TextRun({text:content.subtitle})]})]:[])],'cover');
+  // Numbers come from the whole draft, so the main text and a separately exported appendix agree.
+  const ctx:WordContext={labels:reportLabels(content.report),math:[],where:''};
+  const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>ctx.labels.get(b.id)?.kind===kind));
   let bodyStarted=false,tocInserted=false,preliminaryStarted=false;
-  function toc(){if(options.includeToc&&!tocInserted){addSection([new Paragraph({style:'ReportSpecialHeading',text:'目录'}),new TableOfContents('目录',{hyperlink:true,headingStyleRange:'1-3'})],'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;tocInserted=true;}}
+  function toc(){
+    if(!options.includeToc||tocInserted)return;
+    const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[new Paragraph({style:'ReportSpecialHeading',text:'目录'}),new TableOfContents('目录',{hyperlink:true,headingStyleRange:'1-3'})];
+    if(exported('table'))children.push(new Paragraph({style:'ReportSpecialHeading',pageBreakBefore:true,text:'表目录'}),new TableOfContents('表目录',{hyperlink:true,stylesWithLevels:[new StyleLevel('表题',1)]}));
+    // The figure list follows the table list on the same page; both stay within the counted front matter.
+    if(exported('figure'))children.push(new Paragraph({style:'ReportSpecialHeading',pageBreakBefore:!exported('table'),spacing:{before:480},text:'图目录'}),new TableOfContents('图目录',{hyperlink:true,stylesWithLevels:[new StyleLevel('图题',1)]}));
+    addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;tocInserted=true;
+  }
   for(const section of report){
     const part=reportPart(section.title),preliminary=part==='abstract'&&!bodyStarted;
     if(!preliminary)toc();
+    ctx.where=section.title||'未命名章节';
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
     const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
     // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
-    if(section.body)section.body.split('\n').forEach(line=>{
+    if(section.body)for(const line of section.body.split('\n')){
       const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
-      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:[new TextRun({text:line})]}));
-    });
-    if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg));
-    if(section.source)children.push(new Paragraph({style:'ReportReference',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
+      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:await richRuns(line,ctx)}));
+    }
+    if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg,ctx));
+    if(section.source)children.push(new Paragraph({style:'ReportSource',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
     if(preliminary){addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;}
     else if(part==='body'&&bodyStarted){const index=sections.length-1;sections[index]={...sections[index],children:[...sections[index].children,...children]};}
     else {addSection(children,'body',bodyStarted?undefined:1);bodyStarted=true;}
@@ -67,6 +91,12 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     if(!/w:styleId="(?:Normal|ReportReference|ReportSpecialHeading|ReportCaption|Heading[1-5])"/.test(block))return block;
     return block.replace(/<w:spacing\b([^>]*)\/>/,(_match,attrs:string)=>`<w:spacing${attrs.replace(/\s+w:before="[^"]*"/g,'')} w:beforeLines="50"/>`);
   }));
+  if(ctx.math.length){
+    // docx cannot write Office Math, so formulas travel as placeholder runs and are swapped in here.
+    const documentXml=insertMath(await archive.file('word/document.xml')!.async('string'),ctx.math);
+    if(documentXml.includes('§§OMML'))throw Error('公式写入失败，请检查公式后重试。');
+    archive.file('word/document.xml',documentXml);
+  }
   return new Blob([await archive.generateAsync({type:'arraybuffer',compression:'DEFLATE'})],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
 export async function buildPptx(content: EditorContent): Promise<Blob> {
