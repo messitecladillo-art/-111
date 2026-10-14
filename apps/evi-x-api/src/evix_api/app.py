@@ -23,6 +23,7 @@ from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
 from .survey_import_routes import TemporarySavImports
 from .submission_preflight_routes import TemporarySubmissionPreflights
+from .net_exam import NetExamBank
 
 
 SCHEMA_REVISION = "0004_project_reports"
@@ -334,6 +335,13 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     @app.post("/api/submission/preflight")
     async def submission_preflight(request: Request):
         return await preflights.convert(request, preflight_authorize, preflight_reauthorize)
+
+    exam_bank = NetExamBank(settings.net_exam_bank_path)
+
+    @app.get("/api/net-exam/bank")
+    def net_exam_bank(user=Depends(auth)):
+        # The security middleware marks every API response no-store.
+        return Response(exam_bank.body(), media_type="application/json")
 
     @app.get("/api/health")
     def health(session=Depends(db)):

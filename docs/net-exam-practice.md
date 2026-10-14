@@ -31,15 +31,26 @@
 
 第十七届考试题数、时间、评分与合格线未硬编码；模拟数量和时间由用户设置。练习判分不会更新 `.agent/state.json`、赛事阶段或 Gate。
 
+## 题库不随公开源码分发
+
+历史题库来自第三方备赛资料，公开传播授权尚未确认，因此题库 JSON 不进入 Git 仓库，`apps/evi-x-platform/data/net-exam-bank.json` 已列入 `.gitignore`。题目原文、答案与来源文件名只保存在运营方服务器的私有路径：
+
+- API 进程设置 `EVIX_NET_EXAM_BANK_PATH` 指向题库文件（建议放在源码目录外，例如 `/srv/evix/private/net-exam-bank.json`；本机开发可用仓库根目录下已忽略的 `.local/net-exam-bank.json`）。
+- `GET /api/net-exam/bank` 只对已登录的受邀成员返回题库，响应沿用全局 `Cache-Control: no-store`；文件按修改时间与大小重新读取，结构不合格时返回 503，不提供旧内容。
+- 未配置时接口返回 404 `net_exam_bank_unavailable`，练习页显示“此服务器尚未配置网赛题库”，其他功能不受影响。
+- 前端 `parseExamBank` 与后端 `validate_bank` 使用同一结构契约：版本、来源编号、题型、选项、答案数量、`answerStatus=valid` 与来源定位。
+
+若日后取得资料的公开传播授权，可撤销以上限制；在此之前不要把题库文件提交到仓库或公开站点。已推送到 GitHub 的历史 PR 分支仍含旧题库文件，彻底清除需另行处理。
+
 ## 重建与验收
 
 先运行研究资料提取工具生成本地 `manifest.json`、定位文本与 ZIP 成员回执，再运行：
 
 ```text
-python tools/build-net-exam-bank.py --extraction <本地提取目录> --output apps/evi-x-platform/data/net-exam-bank.json --review-output <本地复核清单.json>
+python tools/build-net-exam-bank.py --extraction <本地提取目录> --output .local/net-exam-bank.json --review-output <本地复核清单.json>
 ```
 
-生成器读原件时前后核对 SHA-256，校验提取文本哈希；输出须位于原始资料目录外。Office/PDF 文本提取属于上一批工具，本生成器不启动 Office、不调用模型。
+生成器读原件时前后核对 SHA-256，校验提取文本哈希；输出须位于原始资料目录外。Office/PDF 文本提取属于上一批工具，本生成器不启动 Office、不调用模型。题库内容回归测试读取 `EVIX_NET_EXAM_BANK`（默认 `.local/net-exam-bank.json`），文件不存在时跳过，解析器合成夹具测试照常运行。
 
 在 `apps/evi-x-platform` 执行 `npm run test:unit`、`npm run lint`、`npm run typecheck`、`npm run build`。Windows 可设置 `EVIX_PYTHON` 指向已有 Python；构建前设置 `EVIX_API_ORIGIN` 为本地 FastAPI 地址，Next.js 会在构建时冻结代理目的地址。解析器测试覆盖多套卷题号错配、答案表作用域、真假标签、无后缀 Word 图/公式、冲突去重、缺失公式、ZIP/成员/文本哈希篡改、跨段选项粘连、合法两/三选项与普通“答案”语句；进度测试覆盖重复提交、账户隔离、损坏存储、错题纠正、空白题、过期答题及 1000 题压力样本。
 
