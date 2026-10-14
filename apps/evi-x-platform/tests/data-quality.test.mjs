@@ -132,3 +132,10 @@ test('when every response is excluded the kept table is empty and cannot be relo
   assert.equal(keptTable(table, all, new Set(['attention'])).table.rows.length, 0);
   assert.throws(() => parseSurveyCsv(tableCsv(keptTable(table, all, new Set(['attention'])).table)));
 });
+
+test('findings registered from QC-kept rows keep the exclusion step', async () => {
+  const { readFileSync } = await import('node:fs');
+  const lab = readFileSync(new URL('../components/analysis/SurveyLab.tsx', import.meta.url), 'utf8');
+  const register = lab.slice(lab.indexOf('onRegister='), lab.indexOf('onResultSnapshot(result)'));
+  assert.match(register, /snapshotRecipe\(\{\.\.\.value,warnings:\[[^\]]*\.\.\.\(captured\.quality\?\[qualityLineageStep\(captured\.quality\)\]:\[\]\)\]/);
+});

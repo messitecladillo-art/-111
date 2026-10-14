@@ -93,3 +93,21 @@ test('exported summary metadata and method guide describe the inference that is 
     assert.match(text, /随机抽样/, id);
   }
 });
+
+test('results with inference can still be registered as research findings', async () => {
+  const { snapshotRecipe } = await import('../lib/research-quality.ts');
+  // Six groups give the most pairwise comparisons; categories near the 50-value limit give the widest frequency table.
+  const lines = ['组别,得分,类别,行,列,评分'];
+  for (let i = 0; i < 240; i++) lines.push(`组${i % 6},${(i * 37) % 11},C${i % 48},R${i % 3},K${(i * 7) % 4},${(i * 13) % 5 + 1}`);
+  const table = parseSurveyCsv(lines.join('\n'));
+  const source = { title: '登记', sourceName: '合成.csv', sourceUrl: '', sourceHash: 'a'.repeat(64), classification: 'simulated' };
+  for (const [method, x, y] of [['frequency', 2, null], ['numeric', 1, null], ['groups', 0, 1], ['crosstab', 3, 4], ['pearson', 1, 5], ['spearman', 1, 5]]) {
+    const result = run(table, method, x, y);
+    // Frequency and numeric results carry their intervals as table columns and rows.
+    if (!['frequency', 'numeric'].includes(method)) assert.ok(result.inference, method);
+    // SurveyLab appends the sample scope and missing codes before snapshotting.
+    const snapshot = await snapshotRecipe({ ...result, warnings: [...result.warnings, '原表 240 行', '缺失编码：空白'] }, source);
+    assert.deepEqual(snapshot.headers, result.headers, method);
+    assert.equal(snapshot.rows.length, result.rows.length, method);
+  }
+});
