@@ -47,6 +47,15 @@ test('slides built from report text cite figures by number, never by raw token',
   const [slide] = await buildStoryboard(parseEditorContent(content), [{ id: 'card', sectionId: 'c1', job: 'finding', classification: 'simulated', title: '青年组更活跃', excerpt: '如[[图:fig]]所示，青年组更活跃。', limitation: '仅限模拟样本', implication: '优先面向青年组', locator: '第一章', seconds: 45 }], 'replace');
   assert.match(slide.body, /如图 1-1所示/);
   assert.doesNotMatch(slide.body, /\[\[/);
+  const card = excerpt => ({ id: 'card', sectionId: 'c1', job: 'finding', classification: 'simulated', title: '青年组更活跃', excerpt, limitation: '仅限模拟样本', implication: '优先面向青年组', locator: '第一章', seconds: 45 });
+  const [fromPreview] = await buildStoryboard(parseEditorContent(content), [card('如图 1-1所示，青年组更活跃。')], 'replace');
+  assert.match(fromPreview.body, /如图 1-1所示/, 'text copied from the preview is accepted');
+  const broken = structuredClone(content);
+  broken.report[0].body = '见[[图:gone]]，青年组更活跃。';
+  await assert.rejects(buildStoryboard(parseEditorContent(broken), [card('见[[图:gone]]，青年组更活跃。')], 'replace'), /引用已失效/);
+  const math = structuredClone(content);
+  math.report[0].body = '样本量为 $n_0=385$。';
+  await assert.rejects(buildStoryboard(parseEditorContent(math), [card('样本量为 $n_0=385$。')], 'replace'), /行内公式/);
 });
 
 test('a block ID repeated in two sections keeps both numbers but cannot be referenced ambiguously', () => {

@@ -1,8 +1,21 @@
 import type { EditorContent, ReportSection, Slide } from './editor-model.ts';
 import {findingSignature,verifyResearchQuality} from './research-quality.ts';
-import {referenceSegments,reportLabels} from './report-numbering.ts';
-/** Slides cite figures by their report numbers; a slide never shows a raw [[图:…]] token. */
-const readable=(text:string,content:EditorContent)=>referenceSegments(text,reportLabels(content.report)).map(s=>s.text).join('');
+import {referenceSegments,reportLabels,resolveReferences} from './report-numbering.ts';
+import {splitInlineMath} from './inline-math.ts';
+/**
+ * The slide text for an excerpt of a section. The excerpt may be copied from the editor (with [[图:…]] tokens)
+ * or from the preview (with figure numbers); slides show figure numbers, refuse broken references as the Word
+ * export does, and refuse inline formulas, which slides cannot typeset yet.
+ */
+function slideText(excerpt:string,section:ReportSection,content:EditorContent,outside:string):string{
+  const labels=reportLabels(content.report);
+  const shown=referenceSegments(section.body,labels).map(s=>s.text).join('');
+  if(!section.body.includes(excerpt)&&!shown.includes(excerpt))throw Error(outside);
+  if(!section.body.includes(excerpt)&&excerpt.includes('（引用失效）'))throw Error(`「${section.title||'未命名章节'}」中有图表引用已失效，请先在正文重新插入引用。`);
+  const text=section.body.includes(excerpt)?resolveReferences(excerpt,labels,section.title||'未命名章节'):excerpt;
+  if(splitInlineMath(text).some(part=>part.math))throw Error('节选含行内公式，幻灯片暂不能排版行内公式；请改选不含公式的原文。');
+  return text;
+}
 
 export type ReportSlideLink = { version: 1|2; sectionId: string; sectionHash: string; slideHash: string };
 export const STORY_JOBS = { problem: '界定问题', design: '说明调查', finding: '呈现发现', action: '提出行动', limitation: '说明边界' } as const;
@@ -77,8 +90,8 @@ export async function buildStoryboard(content:EditorContent,cards:StoryCard[],mo
     if(section.body.includes('【教学模拟数据，不能作为实际调查结果】')&&c.classification!=='simulated')throw Error('本章带有系统模拟数据标记，页面必须保留教学模拟类别。');
     if(!Number.isInteger(c.seconds)||c.seconds<10||c.seconds>300)throw Error('单页预计讲述时间为 10 至 300 秒，属于排练计划而非赛事规定。');
     const title=required(c.title,'页面标题',120),excerpt=required(c.excerpt,'报告原文节选',400),limitation=required(c.limitation,'适用边界',220),implication=required(c.implication,'意义或下一步',220),locator=required(c.locator,'版本 / 页表定位',160);
-    if(!section.body.includes(excerpt))throw Error(`第 ${index+1} 页节选不在当前章节原文中，请重新选择原文；解释请写入标题或下一步。`);
-    const body=`【${STORY_CLASSES[c.classification]}】\n${readable(excerpt,content)}\n\n意义 / 下一步：${implication}`;
+    const shown=slideText(excerpt,section,content,`第 ${index+1} 页节选不在当前章节原文中，请重新选择原文；解释请写入标题或下一步。`);
+    const body=`【${STORY_CLASSES[c.classification]}】\n${shown}\n\n意义 / 下一步：${implication}`;
     const aside=`适用边界\n${limitation}\n\n报告定位\n${section.title || '未命名章节'}\n${locator}`;
     const notes=`页面任务：${STORY_JOBS[c.job]}\n预计讲述：${c.seconds} 秒（自行规划）\n关联章节 ID：${section.id}\n来源与说明（完整保留）：\n${section.source || '原章未填写来源，须补证'}\n\n本页由人工选择与改写，不代表证据已核验。报告关联指纹仅用于检测编辑变化。`;
     if(body.length>1800||aside.length>1800||notes.length>6000)throw Error(`第 ${index+1} 页超出编辑器容量，请拆页或精简人工填写部分。来源不会被截断。`);
@@ -111,11 +124,12 @@ export async function buildReportBlockSlide(content:EditorContent,sectionId:stri
   const c=structuredClone(content),section=c.report.find(s=>s.id===sectionId),block=section?.blocks?.find(b=>b.id===blockId);
   if(c.version!==2||!section||!block||!['chart','table'].includes(block.kind))throw Error('请选择报告中的图表或表格。');
   if(c.slides.length>=40)throw Error('已有40页，请先整理页面。');
-  const body=excerpt??section.body;
-  if(!body.trim()||body.length>600||!section.body.includes(body))throw Error('请从本章选择一段要讲述的原文，最多600字。');
+  const chosen=excerpt??section.body,outside='请从本章选择一段要讲述的原文，最多600字。';
+  if(!chosen.trim()||chosen.length>600)throw Error(outside);
+  const body=slideText(chosen,section,c,outside);
   if(c.quality)await verifyResearchQuality(c.quality);
   const {composeQualitySlide}=await import('./quality-layouts.ts');
-  const slide=composeQualitySlide({id:crypto.randomUUID(),title:block.text||section.title,body:readable(body,c),aside:'',notes:section.source,layout:block.kind==='table'?'comparison':'chart'},block.kind==='table'?'comparison':'chart',c.quality!,block.evidenceId);
+  const slide=composeQualitySlide({id:crypto.randomUUID(),title:block.text||section.title,body,aside:'',notes:section.source,layout:block.kind==='table'?'comparison':'chart'},block.kind==='table'?'comparison':'chart',c.quality!,block.evidenceId);
   slide.objects=slide.objects?.map(o=>o.kind===block.kind?{...o,valueColumn:block.valueColumn,sourceBlockId:block.id}:o);
   const bound=await bindReportSlide(c,slide,section.id);
   const {buildPptx}=await import('./editor-export.ts');
