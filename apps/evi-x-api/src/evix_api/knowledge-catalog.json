@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026-10-15.2",
+  "release": "2026-10-15.3",
   "entries": [
     {
       "id": "abduction",
@@ -13,6 +13,16 @@
       }
     },
     {
+      "id": "accessibility",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "adjusted-rand-index",
       "version": 1,
       "review": {
@@ -20,6 +30,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "adverse-selection",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -50,6 +70,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "appeal-to-authority",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "argument-soundness",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "argument-validity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -93,6 +143,56 @@
       }
     },
     {
+      "id": "bounded-rationality",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "brand-equity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "buffer-analysis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "burden-of-proof",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "catchment-area",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "central-limit-theorem",
       "version": 1,
       "review": {
@@ -110,6 +210,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "choice-overload",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "choropleth-map",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "circular-reasoning",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -140,6 +270,26 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "collective-action",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "common-pool-resource",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -203,6 +353,16 @@
       }
     },
     {
+      "id": "consumer-surplus",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "convexity",
       "version": 1,
       "review": {
@@ -220,6 +380,46 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "cost-benefit-analysis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "cost-effectiveness-analysis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "counterexample",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "counterfactual-reasoning",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -263,6 +463,16 @@
       }
     },
     {
+      "id": "cross-price-elasticity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "cross-validation",
       "version": 1,
       "review": {
@@ -280,6 +490,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "customer-journey",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "customer-loyalty",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "customer-satisfaction",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -313,6 +553,16 @@
       }
     },
     {
+      "id": "default-effect",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "derivative",
       "version": 1,
       "review": {
@@ -330,6 +580,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "diminishing-marginal-utility",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -443,6 +703,26 @@
       }
     },
     {
+      "id": "explanatory-mechanism",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "externality",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "falsifiability",
       "version": 1,
       "review": {
@@ -490,6 +770,66 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "framing-effect",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "geocoding",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "geodesic-distance",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "geographic-coordinate-system",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "georeferencing",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "getis-ord-gi-star",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -573,6 +913,16 @@
       }
     },
     {
+      "id": "income-elasticity-demand",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "independence",
       "version": 1,
       "review": {
@@ -593,6 +943,16 @@
       }
     },
     {
+      "id": "information-asymmetry",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "informed-consent",
       "version": 1,
       "review": {
@@ -603,6 +963,16 @@
       }
     },
     {
+      "id": "input-output-outcome",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "international-phonetic",
       "version": 1,
       "review": {
@@ -610,6 +980,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "interpretivism",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -660,6 +1040,26 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "key-performance-indicator",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "kriging",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -743,6 +1143,46 @@
       }
     },
     {
+      "id": "local-morans-i",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "location-allocation",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "logic-model",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "logical-empiricism",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "logistic-regression",
       "version": 1,
       "review": {
@@ -750,6 +1190,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "loss-aversion",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "marginal-cost",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "marginal-utility",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -833,6 +1303,16 @@
       }
     },
     {
+      "id": "methodological-individualism",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "missing-at-random",
       "version": 1,
       "review": {
@@ -893,6 +1373,16 @@
       }
     },
     {
+      "id": "moral-hazard",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "multicollinearity",
       "version": 1,
       "review": {
@@ -910,6 +1400,56 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "nearest-neighbor-index",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "necessary-condition",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "net-promoter-score",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "network-distance",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "network-effects",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -943,6 +1483,16 @@
       }
     },
     {
+      "id": "nudge",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "null-hypothesis",
       "version": 1,
       "review": {
@@ -970,6 +1520,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "ontology",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1073,6 +1633,26 @@
       }
     },
     {
+      "id": "perceived-risk",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "perceived-value",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "permutation-test",
       "version": 1,
       "review": {
@@ -1113,6 +1693,16 @@
       }
     },
     {
+      "id": "positioning",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "positive-semidefinite",
       "version": 1,
       "review": {
@@ -1120,6 +1710,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "pragmatism",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1140,6 +1740,26 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "present-bias",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "price-elasticity-demand",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1170,6 +1790,46 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "projected-coordinate-system",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "projection-distortion",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "proportional-symbol-map",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "public-good",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1213,6 +1873,16 @@
       }
     },
     {
+      "id": "raster-data",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "ratio-scale",
       "version": 1,
       "review": {
@@ -1230,6 +1900,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "reference-dependence",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1343,6 +2023,16 @@
       }
     },
     {
+      "id": "scientific-realism",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "selection-bias",
       "version": 1,
       "review": {
@@ -1350,6 +2040,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "service-quality",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1413,6 +2113,16 @@
       }
     },
     {
+      "id": "social-capital",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "social-desirability-bias",
       "version": 1,
       "review": {
@@ -1420,6 +2130,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "social-norms",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1433,6 +2153,106 @@
       }
     },
     {
+      "id": "spatial-boundary-effect",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-heterogeneity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-interpolation",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-join",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-kernel-density",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-lag",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-mismatch",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-nonstationarity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-resolution",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "spatial-weights",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "spearman-correlation",
       "version": 1,
       "review": {
@@ -1440,6 +2260,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "stakeholder-analysis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1483,6 +2313,16 @@
       }
     },
     {
+      "id": "straw-man",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "structural-equation-model",
       "version": 1,
       "review": {
@@ -1490,6 +2330,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "sufficient-condition",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "sunk-cost",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "switching-cost",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1513,6 +2383,16 @@
       }
     },
     {
+      "id": "target-market",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "thematic-analysis",
       "version": 1,
       "review": {
@@ -1520,6 +2400,46 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "theory-ladenness",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "theory-of-change",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "topology-geographic",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "touchpoint",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1543,6 +2463,16 @@
       }
     },
     {
+      "id": "transaction-cost",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "type-two-error",
       "version": 1,
       "review": {
@@ -1550,6 +2480,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "underdetermination",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     },
     {
@@ -1583,6 +2523,26 @@
       }
     },
     {
+      "id": "value-judgment",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "value-proposition",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
       "id": "variance",
       "version": 1,
       "review": {
@@ -1600,6 +2560,46 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "vector-geodata",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "willingness-to-accept",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "willingness-to-pay",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      }
+    },
+    {
+      "id": "word-of-mouth",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
       }
     }
   ]
