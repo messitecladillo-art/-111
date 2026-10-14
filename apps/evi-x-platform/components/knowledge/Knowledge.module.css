@@ -96,8 +96,17 @@
 .indexDetail .reading h3 { font-size:13px;letter-spacing:.03em; }
 .indexDetail .tabs button { font-size:13px;padding:12px 15px; }
 .indexDetail .entryActions button,.indexDetail .related button,.indexDetail .tools a { font-size:12px; }
-.recognition { border-top:1px solid var(--km-line);padding-top:16px;margin-top:20px;font-size:12px; }
-.recognition summary { cursor:pointer;color:var(--km-accent); }
+.recognition { border-top:1px solid var(--km-line);padding-top:16px;margin-top:20px;font-size:13px;line-height:1.8; }
+.recognition summary { cursor:pointer;color:var(--km-accent);font-weight:600;padding:6px 0; }
+.recognition label { display:block;margin-top:14px;font-size:12px;color:var(--km-muted); }
+.recognition button { font:inherit;border:1px solid var(--km-line);border-radius:6px;background:var(--km-bg);color:var(--km-text);padding:6px 10px;cursor:pointer;transition:background 160ms, border-color 180ms; }
+.recognition button:hover { border-color:var(--km-accent);background:var(--km-selected); }
+.recognition button:disabled { opacity:.5;cursor:default; }
+.recognition input { width:100%;min-width:0;border:1px solid var(--km-line);border-radius:6px;background:var(--km-bg);color:var(--km-text);font:inherit;padding:9px 10px; }
+.recognition input[type=file]::file-selector-button { border:0;border-radius:4px;background:var(--km-selected);color:var(--km-accent);font:inherit;padding:5px 10px;margin-right:10px;cursor:pointer; }
+.recognition [role=alert] { color:var(--km-error,#aa4d37); }
+.recognition .result { display:block;width:100%;text-align:left;margin-top:6px; }
+.recognition .entryActions { flex-wrap:wrap; }
 .recognition textarea { width:100%;min-height:140px;border:1px solid var(--km-line);background:var(--km-bg);color:var(--km-text);font:inherit;padding:10px;border-radius:6px; }
 .fileInput { display:block;margin-top:14px; }
 .fileInput input { display:block;width:100%;margin:8px 0; }

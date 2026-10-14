@@ -12,3 +12,9 @@ apps/evi-x-platform/data/rule-corpus.generated.ts text eol=lf
 
 # Preserve the pinned auditor's exact repository code bytes.
 skill/zhengda-cup-champion/scripts/audit_submission_files.py text eol=lf
+
+# Preserve immutable upstream OCR assets exactly, including license notices.
+apps/evi-x-platform/public/knowledge-assets/** -text
+
+# Knowledge publication hashes use LF source bytes on all platforms.
+apps/evi-x-platform/content/knowledge/*.json text eol=lf
