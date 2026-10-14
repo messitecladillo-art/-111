@@ -44,10 +44,12 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
   const kept = report ? keptTable(table, report, exclude) : null;
   async function apply() {
     if (!report || !kept || !registered) return;
-    const ledger = exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered.at });
+    const ledger = exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered.at, missingCodes });
     onApply(tableCsv(kept.table), `${stem(sourceName)} · 质控后（剔除 ${kept.removed} 行）`, {
       kind: 'quality', parentName: sourceName, parentHash: sourceHash, simulated, silicon, removed: kept.removed, ledgerHash: await sha256(withBom(ledger)),
       rules: report.rules.filter(r => exclude.has(r.id)).map(r => `${r.label}：${r.criterion}`),
+      // The rules were evaluated with these codes as missing; the reloaded data keeps them.
+      missingCodes: [...missingCodes],
       // Hosted collection data keeps its frozen questionnaire and release identity after QC.
       ...(collection ? { collection } : {}),
     });
@@ -103,7 +105,7 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
       {report.notes.length > 0 && <ul className={styles.notes}>{report.notes.map(n => <li key={n}>{n}</li>)}</ul>}
       {report.flagged.length > 0 && <details className={styles.preview}><summary>查看被标记的答卷（前 50 行）</summary><table><thead><tr><th>原表行号</th><th>答卷编号</th><th>触发规则</th></tr></thead><tbody>{report.flagged.slice(0, 50).map(f => <tr key={f.row}><td>{f.row}</td><td>{f.id || '—'}</td><td>{f.reasons.map(id => report.rules.find(r => r.id === id)?.label).join('、')}</td></tr>)}</tbody></table></details>}
       <div className={styles.actions}>
-        <button type="button" onClick={() => download(exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered!.at }), `${stem(sourceName)}-剔除台账.csv`, 'text/csv;charset=utf-8')}>下载剔除台账</button>
+        <button type="button" onClick={() => download(exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered!.at, missingCodes }), `${stem(sourceName)}-剔除台账.csv`, 'text/csv;charset=utf-8')}>下载剔除台账</button>
         <button type="button" onClick={() => download(tableCsv(kept.table), `${stem(sourceName)}-质控后.csv`, 'text/csv;charset=utf-8')}>下载质控后数据</button>
         <button type="button" className={styles.primary} disabled={!kept.removed || !kept.table.rows.length || !!continueBlocked} onClick={() => void apply()}>以质控后数据继续分析</button>
       </div>
