@@ -37,6 +37,31 @@ export function parseExamProgress(raw: string|null, accountId: string, bank: Exa
  }catch{return fallback();}
 }
 export function writeExamProgress(storage: {setItem:(key:string,value:string)=>void}, key: string, progress: ExamProgress): boolean { try { storage.setItem(key,JSON.stringify(progress));return true; } catch { return false; } }
+const text = (v: unknown, limit: number): v is string => typeof v==='string' && v.length>0 && v.length<=limit;
+/** Structural contract for the operator-provided bank; mirrors evix_api.net_exam.validate_bank. */
+export function parseExamBank(value: unknown): ExamBank {
+ const fail=(reason:string)=>{throw Error(`题库格式无效：${reason}`);};
+ if(!dict(value)||!text(value.version,120))fail('缺少版本');
+ const v=value as Record<string,unknown>;
+ if(!Array.isArray(v.sources)||!Array.isArray(v.questions)||!v.questions.length||v.questions.length>20_000)fail('缺少题目或来源');
+ const sourceIds=new Set<string>();
+ for(const s of v.sources as unknown[]){if(!dict(s)||!text(s.id,200)||sourceIds.has(s.id))fail('来源编号无效');sourceIds.add((s as {id:string}).id);}
+ const questionIds=new Set<string>();
+ for(const q of v.questions as unknown[]){
+  if(!dict(q)||!text(q.id,200)||questionIds.has(q.id))fail('题目编号无效');
+  const item=q as Record<string,unknown>;questionIds.add(item.id as string);
+  if(!['single','multiple','boolean'].includes(String(item.type))||!text(item.stem,4000)||!text(item.chapter,200))fail(`题目 ${item.id} 不完整`);
+  const options=item.options,answer=item.answer;
+  if(!Array.isArray(options)||options.length<2||!Array.isArray(answer)||!answer.length)fail(`题目 ${item.id} 缺少选项或答案`);
+  const optionIds=(options as unknown[]).map(o=>dict(o)&&text(o.id,40)&&typeof o.text==='string'?o.id:null);
+  if(optionIds.some(id=>id===null)||new Set(optionIds).size!==optionIds.length)fail(`题目 ${item.id} 选项无效`);
+  if(new Set(answer as unknown[]).size!==(answer as unknown[]).length||(answer as unknown[]).some(a=>!optionIds.includes(a as string)))fail(`题目 ${item.id} 答案无效`);
+  if((item.type==='multiple')!==((answer as unknown[]).length>1))fail(`题目 ${item.id} 答案数量与题型不符`);
+  if(item.answerStatus!=='valid')fail(`题目 ${item.id} 未通过来源核对`);
+  if(!Array.isArray(item.sourceRefs)||(item.sourceRefs as unknown[]).some(r=>!dict(r)||!sourceIds.has(String(r.sourceId))||!Array.isArray(r.locators)))fail(`题目 ${item.id} 来源定位无效`);
+ }
+ return value as ExamBank;
+}
 export function gradeExamAnswer(question: ExamQuestion, selected: readonly string[]): Grade {
  if(!selected.length)return 'unanswered';
  if(new Set(selected).size!==selected.length||selected.some(id=>!question.options.some(o=>o.id===id))||(question.type!=='multiple'&&selected.length!==1))return 'incorrect';

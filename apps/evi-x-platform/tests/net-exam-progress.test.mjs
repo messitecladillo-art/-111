@@ -51,3 +51,13 @@ test('1000-question stress session grades, restores and keeps blanks and IDs con
  assert.deepEqual(parseExamProgress(JSON.stringify(p),'user1',large).progress,p);assert.equal(Object.keys(p.records).length,150);
  assert.equal(examQuestionPool(p,large,'chapter','chapter-1').length,100);
 });
+test('served bank contract accepts complete banks and rejects unusable ones before practice starts',async()=>{
+ const {parseExamBank}=await import('../lib/net-exam-progress.ts');
+ const full={version:'fixtures-v1',sources:[{id:'s1'}],questions:[{...q('s','single',['B']),sourceRefs:[{sourceId:'s1',locators:['p1']}]},q('m','multiple',['A','C']),q('b','boolean',['false'])]};
+ assert.strictEqual(parseExamBank(full),full);
+ const clone=()=>JSON.parse(JSON.stringify(full));
+ const broken=[b=>{delete b.version;},b=>{b.questions=[];},b=>{b.questions[1].id='s';},b=>{b.questions[0].type='essay';},b=>{b.questions[0].answer=['Z'];},
+  b=>{b.questions[0].answer=['A','B'];},b=>{b.questions[1].answer=['A'];},b=>{b.questions[0].options.push({id:'A',text:'dup'});},
+  b=>{b.questions[0].sourceRefs=[{sourceId:'missing',locators:[]}];},b=>{b.questions[0].answerStatus='review';},b=>{b.sources.push({id:'s1'});},null];
+ for(const mutate of broken){const b=mutate?clone():'not a bank';if(mutate)mutate(b);assert.throws(()=>parseExamBank(b),/题库格式无效/);}
+});
