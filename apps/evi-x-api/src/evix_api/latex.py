@@ -2,7 +2,9 @@
 import asyncio
 import base64
 from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP, localcontext
 import hashlib
+import math
 import os
 from pathlib import Path
 import re
@@ -21,7 +23,7 @@ MAX_BODY = 120000
 MAX_PDF = 4 * 1024 * 1024
 MAX_LOG = 1024 * 1024
 MAX_FILES = 12 * 1024 * 1024
-ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular array".split())
+ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular array figure tikzpicture axis".split())
 COMMANDS = frozenset((
     "section subsection subsubsection paragraph subparagraph par newline linebreak textbf textit emph textrm textsf texttt textnormal underline textsuperscript textsubscript "
     "item caption label ref eqref centering toprule midrule bottomrule multicolumn "
@@ -36,7 +38,7 @@ COMMANDS = frozenset((
     "to mapsto rightarrow leftarrow leftrightarrow Rightarrow Leftarrow Leftrightarrow iff implies uparrow downarrow "
     "ldots cdots vdots ddots dots langle rangle lvert rvert lVert rVert vert Vert lceil rceil lfloor rfloor "
     "quad qquad enspace thinspace negthinspace displaystyle textstyle scriptstyle scriptscriptstyle limits nolimits underbrace overbrace underset overset binom dbinom tbinom not hbar ell Re Im angle triangle square degree "
-    "begin end"
+    "begin end addplot definecolor"
 ).split())
 SYMBOLS = frozenset("\\%&#_${},;:!()[] ")
 
@@ -77,6 +79,8 @@ def build_source(title, subtitle, content, settings):
         r"\begin{document}",
         r"\fontsize{12bp}{14.4bp}\selectfont",
     ]
+    if r"\begin{tikzpicture}" in content:
+        lines[3:3] = [r"\usepackage{pgfplots}", r"\pgfplotsset{compat=1.18}"]
     if settings["includeCover"]:
         lines += [r"\begin{titlepage}", r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
     if settings["includeToc"]:
@@ -88,6 +92,20 @@ def build_source(title, subtitle, content, settings):
 class UnsafeBody(Exception):
     def __init__(self, message, line):
         self.message, self.line = message, line
+
+
+def chart_display_number(value):
+    """Match String(Number(binary64.toFixed(3))) within the bounded chart range.
+
+    toFixed rounds the actual binary64 value, with exact half ties away from zero;
+    Python round uses ties-to-even and rounding a decimal input string loses that input.
+    """
+    with localcontext() as context:
+        context.prec = 32
+        rounded = Decimal.from_float(value).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+    if not rounded:
+        return "0"  # JavaScript String(Number("-0.000")) normalizes negative zero.
+    return format(rounded, "f").rstrip("0").rstrip(".")
 
 
 def validate_body(content):
@@ -113,6 +131,65 @@ def validate_body(content):
         if not match:
             fail(message, position)
         return match.group(1), position + match.end()
+    number = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+    def escaped_chart_text(value, position):
+        # Generated labels are plain escaped text, never TeX instructions or PGF keys.
+        remainder = re.sub(r"\\(?:textbackslash|textasciitilde|textasciicircum)\{\}|\\[{}$&#%_]", "", value)
+        if "\\" in remainder or "{" in remainder or "}" in remainder or "%" in remainder:
+            fail("图表标签须使用转义后的文字。", position)
+    def chart_labels(value, position):
+        # Each generated category has its own group; commas inside that group are text.
+        labels, cursor = [], 0
+        while cursor < len(value):
+            if value[cursor] != "{": fail("图表类别标签须分别包裹。", position)
+            start, level = cursor + 1, 1
+            cursor += 1
+            while cursor < len(value) and level:
+                if value[cursor] == "\\": cursor += 2; continue
+                if value[cursor] == "{": level += 1
+                if value[cursor] == "}": level -= 1
+                cursor += 1
+            if level: fail("图表类别标签尚未闭合。", position)
+            escaped_chart_text(value[start:cursor - 1], position)
+            labels.append(value[start:cursor - 1])
+            if cursor < len(value):
+                if value[cursor] != ",": fail("图表类别标签分隔符无效。", position)
+                cursor += 1
+                if cursor == len(value): fail("图表类别标签缺失。", position)
+        return labels
+    def axis_options(position):
+        if position >= len(content) or content[position] != "[":
+            fail("图表坐标轴须使用生成的固定配置。", position)
+        end, braces = position + 1, 0
+        while end < len(content):
+            if content[end] == "\\": end += 2; continue
+            if content[end] == "{": braces += 1
+            if content[end] == "}": braces -= 1
+            if braces < 0: fail("图表配置括号不匹配。", end)
+            if content[end] == "]" and braces == 0: break
+            end += 1
+        if end == len(content): fail("图表配置尚未闭合。", position)
+        value = content[position + 1:end]
+        pattern = r"width=13cm,height=8cm,ybar,bar width=12pt,xtick=\{(?P<ticks>[0-9,]+)\},xticklabels=\{(?P<labels>.*?)\},x tick label style=\{rotate=35,anchor=east\},ylabel=\{(?P<ylabel>.*?)\},enlarge x limits=0\.12,nodes near coords,point meta=explicit symbolic"
+        match = re.fullmatch(pattern, value, re.S)
+        if not match: fail("图表仅支持固定的柱状图坐标轴配置。", position)
+        ticks = match["ticks"].split(",")
+        if not 1 <= len(ticks) <= 16 or ticks != [str(n) for n in range(len(ticks))]:
+            fail("图表类别须为 1 至 16 个连续编号。", position)
+        if len(chart_labels(match["labels"], position)) != len(ticks): fail("图表类别标签与编号不匹配。", position)
+        escaped_chart_text(match["ylabel"], position)
+        return end + 1, len(ticks)
+    def plot_coordinates(position):
+        match = re.match(r"\[fill=ResearchAccent,draw=ResearchAccent\] coordinates \{([^{}]*)\};", content[position:])
+        if not match: fail("图表仅接受有限的内联数值坐标。", position)
+        points = re.findall(r"\((" + number + r"),(" + number + r")\) \[(" + number + r")\]", match[1])
+        remainder = re.sub(r"\((" + number + r"),(" + number + r")\) \[(" + number + r")\]", "", match[1])
+        if remainder.strip() or not 1 <= len(points) <= 16:
+            fail("图表坐标数量或格式无效。", position)
+        for n, point in enumerate(points):
+            if any(not math.isfinite(float(v)) or abs(float(v)) > 1e12 for v in point) or float(point[0]) != n or point[2] != chart_display_number(float(point[1])):
+                fail("图表坐标、标注与类别编号不一致。", position)
+        return position + match.end(), len(points)
     while i < len(content):
         c = content[i]
         if c == "%":
@@ -148,16 +225,40 @@ def validate_body(content):
                     environments += 1
                     if len(stack) >= 32 or environments > 2000: fail("正文环境数量或层级超过上限。", start)
                     entry = {"name": name, "rules": [], "rows": 0}
+                    if name == "figure" and next_token(i) == "[":
+                        if not content.startswith("[htbp]", i): fail("图形仅接受固定浮动位置。", start)
+                        i += len("[htbp]")
+                    if name == "tikzpicture":
+                        if not stack or stack[-1]["name"] != "figure" or not stack[-1].get("color"): fail("图表须在固定配色的图形环境内。", start)
+                        if next_token(i) == "[": fail("图表不接受自定义执行配置。", start)
+                    if name == "axis":
+                        if not stack or stack[-1]["name"] != "tikzpicture": fail("坐标轴须在图表环境内。", start)
+                        i, entry["ticks"] = axis_options(i)
+                        entry["plots"] = 0
                     if name in ("tabular", "array"):
                         _, i = argument(i, r"c{1,12}", "表格须使用 1 至 12 个居中列，例如 {ccc}。")
                     stack.append(entry)
                 else:
                     if not stack or stack[-1]["name"] != name: fail("环境起止不匹配。", start)
                     entry = stack.pop()
+                    if name == "axis" and entry["plots"] != 1: fail("每张图须包含一次内联坐标计算结果。", start)
                     if name == "tabular" and entry["rules"] != ["toprule", "midrule", "bottomrule"]: fail("三线表须依次包含一次 top、mid、bottomrule。", start)
+            elif command == "definecolor":
+                if not stack or stack[-1]["name"] != "figure" or stack[-1].get("color"): fail("图表颜色须在图形环境内定义一次。", start)
+                match = re.match(r"\{ResearchAccent\}\{HTML\}\{(?:0F766E|8A3449|234E80)\}", content[i:])
+                if not match: fail("图表颜色仅支持项目三枚标准色。", start)
+                i += match.end(); stack[-1]["color"] = True
+            elif command == "addplot":
+                if not stack or stack[-1]["name"] != "axis": fail("绘图须在坐标轴环境内。", start)
+                i, count = plot_coordinates(i)
+                stack[-1]["plots"] += 1
+                if count != stack[-1]["ticks"] or stack[-1]["plots"] > 1: fail("图表类别与数值坐标不匹配。", start)
             elif command in ("toprule", "midrule", "bottomrule"):
                 if not stack or stack[-1]["name"] != "tabular": fail("三线表横线须放在 tabular 环境内。", start)
-                if next_token(i) == "[": fail("三线表线宽由模板统一设置。", start)
+                if next_token(i) == "[":
+                    fixed = "[0.75bp]" if command == "midrule" else "[1.5bp]"
+                    if not content.startswith(fixed, i): fail("三线表线宽须为 1.5、0.75、1.5 磅。", start)
+                    i += len(fixed)
                 stack[-1]["rules"].append(command)
             elif command == "multicolumn":
                 _, i = argument(i, r"(?:[1-9]|1[0-2])", "合并列数须为 1 至 12。")

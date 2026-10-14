@@ -30,9 +30,9 @@ function action(tree,component,name,env){
   const code=(tree===panel?panelGlobals:'')+compile(statement(tree,component,name));
   return new Function(...Object.keys(env),`${code};return ${name};`)(...Object.values(env));
 }
-function selection(dataset,mapping,designSnapshot,originalDataset=null){
-  const code=compile(['sourceSignature','mappingStale','interpretationPending','rawDataset','platformDesign'].map(name=>statement(lab,'SurveyLab',name)).join('\n'));
-  return new Function('dataset','mapping','designSnapshot','originalDataset','snapshotSignature','platformAnalysisCurrent',`${code};return {sourceSignature,mappingStale,interpretationPending,rawDataset,platformDesign};`)(dataset,mapping,designSnapshot,originalDataset,snapshotSignature,platformAnalysisCurrent);
+function selection(dataset,mapping,designSnapshot,originalDataset=null,designTransfer=null){
+  const code=compile(['sourceSnapshot','sourceTransfer','sourceSignature','mappingStale','interpretationPending','rawDataset','platformDesign'].map(name=>statement(lab,'SurveyLab',name)).join('\n'));
+  return new Function('dataset','mapping','designSnapshot','originalDataset','designTransfer','snapshotSignature','platformAnalysisCurrent',`${code};return {sourceSnapshot,sourceTransfer,sourceSignature,mappingStale,interpretationPending,rawDataset,platformDesign};`)(dataset,mapping,designSnapshot,originalDataset,designTransfer,snapshotSignature,platformAnalysisCurrent);
 }
 function sharedSource(dataset,interpretationPending){
   const declaration=statements(lab,'SurveyLab').find(n=>ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>ts.isIdentifier(d.name)&&d.name.text==='shared'));
@@ -56,7 +56,7 @@ function rawDataset(f){return {table:f.context.table,identity:{importMetadata:nu
 function applyHarness(raw,designSnapshot,platformDesign,derive=platformAnalysisDataset){
   const state={adopted:[],bridges:[],originals:[]},datasetRef={current:raw},designRef={current:platformDesign},readEpoch={current:0};
   const call=action(lab,'SurveyLab','applyPlatform',{
-    rawDataset:raw,designSnapshot,datasetRef,designRef,readEpoch,platformAnalysisDataset:derive,canonical,snapshotSignature,
+    rawDataset:raw,designSnapshot,sourceSnapshot:selection(raw,null,designSnapshot).sourceSnapshot,datasetRef,designRef,readEpoch,platformAnalysisDataset:derive,canonical,snapshotSignature,
     setOriginalDataset:v=>state.originals.push(v),adopt:(v,keep)=>state.adopted.push({value:v,keep}),setMapping:v=>state.bridges.push(v),setSection:()=>{},setNotice:()=>{}
   });
   return {call,state,datasetRef,designRef,readEpoch};
@@ -230,4 +230,22 @@ test('XLSX coordinates stay hashed and invalid or unknown coordinate metadata is
     const invalid=structuredClone(metadata);Object.assign(invalid.columns[0],patch);
     await assert.rejects(platformDatasetIdentity(table,invalid,sourceHash));
   }
+});
+
+test('collection source stays bound to its frozen published questionnaire despite local edits and transfers',async()=>{
+ const f=await fixture(),raw=rawDataset(f),frozen={design:f.context.design,pending:false};
+ raw.collection={projectId:'project',releaseId:'release',versionId:'version',questionnaireRevision:3,classification:'actual',snapshotHash:sourceHash,generatedAt:'2026-10-14T00:00:00Z',design:f.context.design};
+ const changed=structuredClone(f.context.design);changed.questions[1].text='工作台未保存的后续修改';
+ const local={design:changed,pending:true},transfer={id:'new-questionnaire',snapshot:local};
+ const selected=selection(raw,{design:f.context.design,sourceSignature:snapshotSignature(frozen)},local,null,transfer);
+ assert.equal(selected.sourceSnapshot.design,f.context.design);assert.equal(selected.sourceSnapshot.pending,false);assert.equal(selected.sourceTransfer,null);assert.equal(selected.mappingStale,false);assert.equal(selected.platformDesign,f.context.design);
+ const h=applyHarness(raw,local,selected.platformDesign);assert.equal(await h.call({mapping:f.mapping,preview:f.preview},new AbortController().signal),true);
+ assert.equal(h.state.adopted[0].value.platformSourceSignature,snapshotSignature(frozen));assert.equal(h.state.bridges[0].sourceSignature,snapshotSignature(frozen));assert.equal(h.state.adopted[0].value.collection,raw.collection);assert.equal(h.state.originals[0],raw);
+});
+test('mapping bound to a later local questionnaire cannot override a frozen collection source',async()=>{
+ const f=await fixture(),raw=rawDataset(f);raw.collection={design:f.context.design,questionnaireRevision:3};
+ const changed=structuredClone(f.context.design);changed.questions[1].text='另一个施测版本';
+ const local={design:changed,pending:false},selected=selection(raw,{design:changed,sourceSignature:snapshotSignature(local)},local);
+ assert.equal(selected.sourceSnapshot.design,f.context.design);assert.equal(selected.sourceTransfer,null);assert.equal(selected.mappingStale,true);assert.equal(selected.platformDesign,null);
+ const h=applyHarness(raw,local,selected.platformDesign);assert.equal(await h.call({mapping:f.mapping,preview:f.preview},new AbortController().signal),false);assert.deepEqual(h.state,{adopted:[],bridges:[],originals:[]});
 });

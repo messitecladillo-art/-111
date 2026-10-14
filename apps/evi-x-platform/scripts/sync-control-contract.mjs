@@ -104,7 +104,7 @@ if (mode === "--write") {
     }
   }
   const expectedGenerated = renderGeneratedModule(snapshot);
-  const currentGenerated = await readFile(generatedPath, "utf8");
+  const currentGenerated = repositoryText(await readFile(generatedPath, "utf8"));
   if (currentGenerated !== expectedGenerated) {
     throw new Error(
       "Generated TypeScript contract is stale; run npm run contract:sync.",
@@ -125,10 +125,12 @@ if (mode === "--write") {
 }
 
 async function snapshotFromAuthoritativeSource() {
-  const [workflowRaw, gatesRaw] = await Promise.all([
+  const [workflowCheckout, gatesCheckout] = await Promise.all([
     readFile(workflowPath, "utf8"),
     readFile(gatesPath, "utf8"),
   ]);
+  const workflowRaw = repositoryText(workflowCheckout);
+  const gatesRaw = repositoryText(gatesCheckout);
   const workflow = JSON.parse(workflowRaw);
   const gates = JSON.parse(gatesRaw);
   return {
@@ -307,6 +309,12 @@ function sortRecursively(value) {
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+// Raw contract fingerprints describe the LF bytes stored by Git, not a
+// Windows core.autocrlf checkout. Keep every other byte significant.
+function repositoryText(value) {
+  return value.replace(/\r\n/g, "\n");
 }
 
 function major(version) {

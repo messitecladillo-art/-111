@@ -14,10 +14,13 @@ import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
 import LatexWorkbench from './LatexWorkbench';
+import QualityStudio,{QualitySlidePreview,QualityGraphic} from './QualityStudio';
+import {appendQualityResult} from '@/lib/quality-layouts';
+import {makeSlideObject,type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
 
 export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
-export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean };
+export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean };
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -42,7 +45,7 @@ function subscribeNarrowScreen(listener: () => void) {
 }
 const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
@@ -51,6 +54,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const onSnapshot = projectBinding?.onSnapshot;
   useLayoutEffect(()=>{onSnapshot?.(content);},[content,onSnapshot]);
   const [mode, setMode] = useState<"report" | "slides" | "latex">("report");
+  const [qualityOpen,setQualityOpen]=useState(false);
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [blankReportConfirm, setBlankReportConfirm] = useState(false);
@@ -239,10 +243,26 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if (!blocked.current && !busy.current) setPhase("ready");
     return true;
   }
-  useImperativeHandle(controllerRef,()=>({appendSection(proposal:ReportSection){
+  useImperativeHandle(controllerRef,()=>({appendResult(result:ResultSnapshot){
+    if(identityTransition.current||busy.current||versionOperation.current||phase==='loading')return false;
+    try{const next=appendQualityResult(current.current,result);if(next!==current.current&&!edit(next))return false;setQualityOpen(true);return true;}catch(error){setMessage((error as Error).message);return false;}
+  },appendSection(proposal:ReportSection){
     try { const next=appendEvidenceSection(current.current,proposal); if(!edit(next))return false; setSectionId(proposal.id);setMode('report');setMessage('已添加统计章节，可撤销。保存后生成云端新版本。');return true; }
     catch(error){setMessage(error instanceof Error?error.message:'未添加提案。');return false;}
   }}));
+  useEffect(()=>{
+    if(!resultProposal||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
+    const timer=window.setTimeout(()=>{
+    if(!alive.current||identityTransition.current)return;
+    const currentContent=current.current;
+    if(busy.current||versionOperation.current)return;
+    try{current.current=appendQualityResult(currentContent,resultProposal);}
+    catch(error){setMessage((error as Error).message);onResultHandled?.();return;}
+    if(current.current===currentContent){onResultHandled?.();return;}
+    setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(current.current);if(!blocked.current)setPhase('ready');setQualityOpen(true);onResultHandled?.();
+    },0);
+    return ()=>window.clearTimeout(timer);
+  },[resultProposal,onResultHandled,phase,identityFrozen]);
   function undo() {
     const previous = past[past.length - 1]; if (!previous) return;
     setPast(past.slice(0, -1)); setFuture([current.current, ...future]); current.current = previous; setContent(previous);
@@ -484,13 +504,15 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <div className={styles.toolbar}>
       <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX 工作台</button></div>
       <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
+      <button type="button" aria-pressed={qualityOpen} onClick={()=>setQualityOpen(value=>!value)}>发现与矢量编排</button>
       {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
     </div>
     <ResearchMaterialLibrary context="report"/>
+    <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
     {mode!=='slides'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding?.onSave} disabled={locked}/></div>
-    <div hidden={mode==='latex'}>
+    <div hidden={mode==='latex'||qualityOpen}>
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
       if(identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
@@ -534,7 +556,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       <div className={styles.previewPane}>
         <div className={styles.previewHeading}><strong>实时预览</strong><span>{mode === "report" ? "正文连续预览 · 导出为 A4" : "16:9 · 原生文字可编辑"}</span></div>
         <div className={styles.previewScroll} ref={previewRef} tabIndex={0} role="region" aria-label="实时预览（可滚动）">
-          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => <section key={s.id} data-report-section={s.id} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{s.body.split("\n").map((line, i) => <p key={i}>{line || "\u00A0"}</p>)}{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>)}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览"/>}
+          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => <section key={s.id} data-report-section={s.id} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{s.body.split("\n").map((line, i) => <p key={i}>{line || "\u00A0"}</p>)}{s.blocks?.map(block=><div key={block.id}><p>{block.text}</p>{["chart","table"].includes(block.kind)&&<QualityGraphic surface="report" quality={content.quality} object={makeSlideObject(block.kind as "chart"|"table",{evidenceId:block.evidenceId,valueColumn:block.valueColumn})}/>}</div>)}{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>)}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality}/>}
         </div>
         <div className={styles.previewFoot}><span>{mode === "report" ? `${content.report.reduce((n, s) => n + s.body.length, 0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span><span>预览为版式参考 · 导出后复核分页与字体</span></div>
       </div>
@@ -543,13 +565,14 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }
       if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); setPresentIndex(i => Math.max(0,i-1)); }
-    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面"/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
+    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
     </div>
     </div>
   </section>;
 }
 
-function SlidePreview({ slide, accent, index, label }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string }) {
+function SlidePreview({ slide, accent, index, label,quality }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string;quality?:EditorContent['quality'] }) {
   const reveal = useContentReveal<HTMLDivElement>({ token: slide.id });
+  if(slide.objects)return <QualitySlidePreview slide={slide} quality={quality} label={label}/>;
   return <div ref={reveal} className={styles.slideCanvas} data-layout={slide.layout} style={{ "--slide-accent": `#${ACCENTS[accent]}` } as React.CSSProperties} aria-label={label}><h2>{slide.title}</h2><div className={styles.slideBody}><p>{slide.body}</p>{slide.layout === "two-column" && <aside>{slide.aside}</aside>}</div><span className={styles.slideNumber}>{String(index + 1).padStart(2,"0")}</span></div>;
 }
