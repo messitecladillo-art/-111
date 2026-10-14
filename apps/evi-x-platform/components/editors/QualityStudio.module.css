@@ -5,3 +5,4 @@
 .number{margin-left:6px;padding:0 6px;border-radius:4px;font-size:12px;font-weight:600;color:var(--wb-accent,#0f766e);background:var(--wb-accent-soft,#e6f2f0)}
 .formulaField{flex:1;min-width:0;display:grid;gap:6px}.formulaField textarea{min-height:56px;font-family:var(--wb-mono,Consolas,monospace);font-size:13px}.formulaField figure{margin:0}
 .texError{margin:0;color:#9c3d38;font-size:12.5px}
+.place{display:grid;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed #dbe4e8}.place select{width:100%;font-size:12px}.place>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.place .check{display:flex;align-items:center;gap:4px;font-size:13px}.place .check input{width:auto;margin:0}.place button{margin-left:auto}.notice{color:#1f5e4f;background:#eef7f3;border-left:3px solid #2f8f72;padding:8px 24px;margin:0;font-size:13px}

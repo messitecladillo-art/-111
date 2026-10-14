@@ -59,7 +59,7 @@ export function insertMath(documentXml:string,math:readonly MathSlot[]):string{
 const ACCENT_HEX:Record<EditorContent['accent'],string>={teal:'#0F766E',blue:'#234E80',burgundy:'#8A3449'};
 export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview,context?:WordContext){
  const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun,VerticalAlign}=await import('docx');
- const {figureSVG,FIGURE_SIZE}=await import('./report-figures.ts');
+ const {figureSVG,svgSize}=await import('./report-figures.ts');
  const {texToOmml}=await import('./omml.ts');
  const ctx:WordContext=context??{labels:(await import('./report-numbering.ts')).reportLabels(c.report),math:[],where:'内容块',section:''};
  const sectionId=ctx.section||c.report.find(s=>s.blocks===blocks)?.id||'';
@@ -89,7 +89,8 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
   const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where));
   if(b.kind==='chart'){
    const svg=await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
-   const height=Math.round(TEXT_WIDTH.px*FIGURE_SIZE.height/FIGURE_SIZE.width);
+   // Figures share one width and size their height to the content; Word keeps the same proportions.
+   const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
    out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:[new TextRun(caption)]}));
   }else{

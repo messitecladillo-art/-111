@@ -8,8 +8,8 @@ import { parseSurveyCsv } from '../lib/survey-analysis.ts';
 import { runRecipe } from '../lib/analysis-recipes.ts';
 import { snapshotRecipe } from '../lib/research-quality.ts';
 import { blockLabel, danglingReferences, numberedCaption, referenceSegments, referenceToken, reportLabels, resolveReferences } from '../lib/report-numbering.ts';
-import { columnWeights, formatCell, presentResult, sectionNotes, sourceLine } from '../lib/report-tables.ts';
-import { figureOption, figureSVG } from '../lib/report-figures.ts';
+import { categoryOrder, columnWeights, formatCell, presentResult, scaleScores, sectionNotes, sourceLine } from '../lib/report-tables.ts';
+import { accentScale, FIGURE_WIDTH, figurePlan, figureSVG, onFill, svgSize } from '../lib/report-figures.ts';
 import { splitInlineMath } from '../lib/quality-export.ts';
 import { buildStoryboard } from '../lib/report-storyboard.ts';
 
@@ -96,21 +96,72 @@ test('report tables round by meaning and lay a crosstab out as a matrix', () => 
   assert.equal(sectionNotes([{ ...results.freq, warnings: ['甲。乙；', '乙'] }, { ...results.freq, warnings: ['丙。'] }]), '注：甲；乙；丙。');
 });
 
-test('figures use the chart type that fits the result and render to clean vector graphics', async () => {
-  const cross = figureOption(results.cross, 3, '#0F766E');
-  assert.equal(cross.series.length, 3, 'one series per column category');
-  assert.ok(cross.legend);
-  const freq = figureOption(results.freq, 1, '#0F766E');
-  assert.equal(freq.xAxis.type, 'category', 'few short labels stand upright');
-  const many = figureOption({ ...results.freq, rows: Array.from({ length: 9 }, (_, i) => [`类别${i}`, i + 1, 10]) }, 1, '#0F766E');
-  assert.equal(many.yAxis.type, 'category', 'many labels lie horizontally');
-  const groups = figureOption(results.groups, 2, '#0F766E');
-  assert.equal(groups.series.at(-1).type, 'custom', 'group means carry standard-deviation whiskers');
-  assert.throws(() => figureOption({ ...results.freq, rows: [] }, 1, '#0F766E'), /没有数据行/);
+// Hue in degrees of a #RRGGBB colour; shades and tints of one colour share it.
+const hue = hex => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255), max = Math.max(r, g, b), d = max - Math.min(r, g, b);
+  if (!d) return null;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+};
+const freqRows = labels => ({ ...results.freq, rows: labels.map((l, i) => [l, i + 1, 10, 5, 15]) });
+
+test('figures pick the type that fits the result and size their height to it', async () => {
+  const cross = figurePlan(results.cross, 3, '#0F766E');
+  assert.equal(cross.kind, 'stacked', 'a crosstab shows row shares as 100 % stacked bars');
+  assert.equal(cross.option.series.length, 3, 'one series per column category');
+  assert.ok(cross.option.series.every(s => s.stack === 'share'));
+  assert.equal(cross.option.xAxis.max, 100);
+  assert.ok(cross.option.legend);
+  assert.equal(figurePlan(results.cross, 2, '#0F766E').kind, 'grouped', 'choosing the count column draws grouped bars');
+  const wide = { ...results.cross, rows: ['甲', '乙'].flatMap(a => ['一', '二', '三', '四', '五', '六', '七'].map(b => [a, b, 3, 100 / 7, 3])) };
+  assert.equal(figurePlan(wide, 3, '#0F766E').kind, 'heatmap', 'more than six columns become a heat map');
+  assert.equal(figurePlan(results.freq, 1, '#0F766E').kind, 'ring', 'two to four answers form a ring');
+  assert.equal(figurePlan(freqRows(['甲', '乙', '丙', '丁', '戊']), 1, '#0F766E').kind, 'bars', 'five short labels stand upright');
+  assert.equal(figurePlan(freqRows(Array.from({ length: 9 }, (_, i) => `类别${i}`)), 1, '#0F766E').kind, 'barsHorizontal', 'many labels lie horizontally');
+  const groups = figurePlan(results.groups, 2, '#0F766E');
+  assert.equal(groups.kind, 'means');
+  assert.equal(groups.option.series.at(-1).type, 'custom', 'group means carry standard-deviation whiskers');
+  const numeric = await snapshotRecipe(runRecipe(table, { id: 'num', method: 'numeric', x: 3, y: null, question: 'num' }, []), { ...source, title: 'num', variables: ['满意度'] }, 'num');
+  assert.equal(figurePlan(numeric, 1, '#0F766E').kind, 'box', 'one numeric variable is a five-number box');
+  assert.throws(() => figurePlan({ ...results.freq, method: 'pearson' }, 1, '#0F766E'), /不适合作图/);
+  assert.throws(() => figurePlan({ ...results.freq, rows: [] }, 1, '#0F766E'), /没有数据行/);
+  const heights = new Set(['cross', 'freq', 'groups'].map(id => figurePlan(results[id], id === 'freq' ? 1 : 2, '#0F766E').height));
+  assert.ok(heights.size > 1, 'heights follow the content');
   const svg = await figureSVG(results.cross, 3, '#0F766E');
   assert.match(svg, /^<svg/);
   assert.doesNotMatch(svg, /<style|class=|pointer-events/);
   assert.match(svg, /Times New Roman/);
+  assert.equal(svgSize(svg).width, FIGURE_WIDTH);
+  assert.equal(svgSize(svg).height, cross.height);
+});
+
+test('every figure colour is a shade or tint of the report accent', async () => {
+  for (const accent of ['#0F766E', '#234E80', '#8A3449']) {
+    const scale = accentScale(accent, 6);
+    assert.equal(new Set(scale).size, 6, 'distinct steps');
+    for (const color of scale) assert.ok(Math.abs(hue(color) - hue(accent)) < 4, `${color} keeps the hue of ${accent}`);
+    for (const [id, column] of [['cross', 3], ['freq', 1], ['groups', 2]]) {
+      const svg = await figureSVG(results[id], column, accent);
+      const fills = [...svg.matchAll(/fill="(#[0-9a-fA-F]{6})"/g)].map(m => m[1].toUpperCase()).filter(c => hue(c) !== null);
+      // Text and axes are neutral greys (no hue); every coloured fill belongs to the accent.
+      for (const fill of fills.filter(c => { const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)); return Math.max(r, g, b) - Math.min(r, g, b) > 24; }))
+        assert.ok(Math.abs(hue(fill) - hue(accent)) < 6, `${id}: ${fill} is not a shade of ${accent}`);
+    }
+  }
+  assert.equal(onFill('#0F766E'), '#FFFFFF', 'labels on the deep accent are white');
+  assert.equal(onFill(accentScale('#0F766E', 5).at(-1)), '#1F2329', 'labels on a light tint are ink');
+});
+
+test('categories read in their natural order: rating scales, numbered bands, "其他" last', () => {
+  assert.deepEqual(categoryOrder(['满意', '一般', '非常满意', '不满意', '非常不满意']), { labels: ['非常不满意', '不满意', '一般', '满意', '非常满意'], ordinal: true });
+  assert.deepEqual(categoryOrder(['经常', '从不', '偶尔']).labels, ['从不', '偶尔', '经常']);
+  assert.deepEqual(categoryOrder(['25–34岁', '18–24岁', '50岁及以上', '35–49岁']).labels, ['18–24岁', '25–34岁', '35–49岁', '50岁及以上']);
+  assert.deepEqual(categoryOrder(['其他', '健身路径', '篮球场']), { labels: ['健身路径', '篮球场', '其他'], ordinal: false });
+  assert.equal(scaleScores(['男', '女', '其他']), null);
+  assert.equal(scaleScores(['不满意', '比较不满意', '一般']), null, 'two answers on the same step are not one scale');
+  assert.deepEqual([...scaleScores(['很不满意', '不太满意', '一般', '比较满意', '很满意']).values()], [1, 2, 3, 4, 5]);
+  const scale = presentResult({ ...results.freq, rows: [['满意', 5, 50, 1, 2], ['一般', 3, 30, 1, 2], ['不满意', 2, 20, 1, 2]] });
+  assert.deepEqual(scale.rows.map(r => r[0]), ['不满意', '一般', '满意', '合计'], 'frequency tables follow the scale');
 });
 
 test('inline math splits only on dollar pairs that hug their content', () => {

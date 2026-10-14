@@ -37,19 +37,76 @@ export function naturalOrder(labels: string[]): string[] {
   return [...unnumbered, ...labels.filter(l => lead(l) !== null).sort((a, b) => lead(a)! - lead(b)!)];
 }
 
+// Rating and frequency answers, scored from most negative (1) to most positive (5).
+const SCALE_STEPS: readonly [RegExp, number][] = [
+  [/^(?:从不|从来不|从未|没有过)/u, 1], [/^(?:很少|极少|偶尔|几乎不)/u, 2], [/^(?:有时|时而)/u, 3], [/^(?:经常|常常|频繁)/u, 4], [/^(?:总是|每次|一直|几乎总是)/u, 5],
+  [/^(?:非常|十分|极其|完全|很|特别)(?:不|没)/u, 1], [/^(?:(?:比较|较|有点|有些)(?:不|没)|不太|不大|不怎么|不是很)/u, 2],
+  [/^(?:一般|中立|中等|说不清|不确定|无所谓|还行|普通|中性)$/u, 3],
+  [/^(?:非常|十分|极其|完全|很|特别)/u, 5], [/^(?:比较|较|还算|基本|有点|有些)/u, 4], [/^(?:不|没)/u, 2],
+];
+const MODIFIER = /^(?:非常|十分|极其|完全|很|特别|比较|较|还算|基本|有点|有些|不太|不大|不怎么|不是很|不|没)+/u;
+/**
+ * Scores of rating-scale answers ("非常不满意" … "非常满意", "从不" … "总是") from 1 (most negative or least often)
+ * to 5, with 3 neutral; null when the labels are not one scale.
+ */
+export function scaleScores(labels: readonly string[]): Map<string, number> | null {
+  if (labels.length < 3) return null;
+  const cores = new Set(labels.map(l => l.replace(MODIFIER, '')).filter(Boolean));
+  const scored = labels.map(label => {
+    const step = SCALE_STEPS.find(([pattern]) => pattern.test(label));
+    // A bare word ("满意") is the positive step only when the other answers modify that same word.
+    const bare = !step && cores.has(label) && labels.some(other => other !== label && other.endsWith(label) && MODIFIER.test(other));
+    return [label, step ? step[1] : bare ? 4 : null] as const;
+  });
+  if (scored.some(([, score]) => score === null) || new Set(scored.map(([, score]) => score)).size !== scored.length) return null;
+  return new Map(scored as (readonly [string, number])[]);
+}
+/** Rating-scale answers in scale order, or null when the labels are not one scale. */
+export function scaleOrder(labels: readonly string[]): string[] | null {
+  const scores = scaleScores(labels);
+  return scores && [...labels].sort((a, b) => scores.get(a)! - scores.get(b)!);
+}
+const RESIDUAL = /^(?:其他|其它)|^(?:以上都不是|以上均不是|都不是|不清楚|不知道|说不清|拒绝回答|拒答|未回答|无|没有)$/u;
+/**
+ * The reading order of answer categories: a rating scale or numbered bands in their natural order (ordinal), otherwise
+ * the registered order with catch-all answers such as "其他" moved to the end.
+ */
+export function categoryOrder(labels: string[]): { labels: string[]; ordinal: boolean } {
+  const scale = scaleOrder(labels);
+  if (scale) return { labels: scale, ordinal: true };
+  const natural = naturalOrder(labels);
+  if (natural !== labels) return { labels: natural, ordinal: true };
+  return { labels: [...labels.filter(l => !RESIDUAL.test(l)), ...labels.filter(l => RESIDUAL.test(l))], ordinal: false };
+}
+
 function frequency(r: ResultSnapshot): PresentedTable | null {
   if (r.headers.length < 3 || !r.rows.every(row => numeric(row[1]) !== null)) return null;
   const ci = r.headers.length >= 5;
-  const rows = r.rows.map(row => [String(row[0]), formatCell(row[1], '频数'), formatCell(row[2], '%'),
+  // Categories in reading order (scale order, "其他" last); repeated labels keep the registered order.
+  const at = new Map(r.rows.map(row => [String(row[0]), row]));
+  const ordered = at.size === r.rows.length ? categoryOrder([...at.keys()]).labels.map(label => at.get(label)!) : r.rows;
+  const rows = ordered.map(row => [String(row[0]), formatCell(row[1], '频数'), formatCell(row[2], '%'),
     ...(ci ? [numeric(row[3]) !== null && numeric(row[4]) !== null ? `[${formatCell(row[3], '%')}, ${formatCell(row[4], '%')}]` : '—'] : [])]);
   const total = r.rows.reduce((sum, row) => sum + (numeric(row[1]) ?? 0), 0);
   rows.push(['合计', String(total), formatCell(100, '%'), ...(ci ? [''] : [])]);
   return { headers: ['类别', '频数', '占比（%）', ...(ci ? ['95% 置信区间（%）'] : [])], rows, note: '' };
 }
 
+/**
+ * Row and column order of a crosstab, shared by its table and figure: ordinal categories in scale order; nominal
+ * columns by overall frequency, so the most common answer comes first, with "其他" last.
+ */
+export function crosstabOrder(r: ResultSnapshot): { rows: string[]; cols: string[]; colsOrdinal: boolean } {
+  const rows = categoryOrder(firstSeen(r.rows.map(row => String(row[0])))).labels, cols = categoryOrder(firstSeen(r.rows.map(row => String(row[1]))));
+  if (cols.ordinal) return { rows, cols: cols.labels, colsOrdinal: true };
+  const total = (col: string) => r.rows.reduce((sum, row) => sum + (String(row[1]) === col ? numeric(row[2]) ?? 0 : 0), 0);
+  const residual = (col: string) => RESIDUAL.test(col) ? 1 : 0;
+  return { rows, cols: [...cols.labels].sort((a, b) => residual(a) - residual(b) || total(b) - total(a)), colsOrdinal: false };
+}
+
 function crosstab(r: ResultSnapshot): PresentedTable | null {
   if (r.headers.length < 4 || !r.rows.every(row => numeric(row[2]) !== null)) return null;
-  const rowLabels = naturalOrder(firstSeen(r.rows.map(row => String(row[0])))), colLabels = naturalOrder(firstSeen(r.rows.map(row => String(row[1]))));
+  const { rows: rowLabels, cols: colLabels } = crosstabOrder(r);
   if (rowLabels.length * colLabels.length !== r.rows.length) return null;
   const cell = new Map(r.rows.map(row => [`${row[0]}\u0000${row[1]}`, row]));
   const rows = rowLabels.map(rowLabel => {
@@ -66,12 +123,19 @@ function crosstab(r: ResultSnapshot): PresentedTable | null {
   return { headers: ['', ...colLabels, '合计'], rows, note: '单元格为频数（行内占比）。' };
 }
 
+/** Group rows in reading order: ordered groups (age bands, rating levels) sort naturally; others keep their order, "其他" last. */
+export function groupRows(r: ResultSnapshot): ResultSnapshot['rows'] {
+  const order = categoryOrder(r.rows.map(row => String(row[0])));
+  if (new Set(order.labels).size !== r.rows.length) return r.rows;
+  return order.labels.map(label => r.rows.find(row => String(row[0]) === label)!);
+}
+
 function groups(r: ResultSnapshot): PresentedTable | null {
   if (r.headers.length < 4) return null;
   return {
     headers: ['组别', '样本量', '均值', '标准差', ...(r.headers.length >= 5 ? ['中位数'] : [])],
     // Statistics of one table share two decimals, so 3.00 and 0.61 line up.
-    rows: r.rows.map(row => [String(row[0]), formatCell(row[1], 'n'), fixed(row[2], 2), fixed(row[3], 2), ...(r.headers.length >= 5 ? [fixed(row[4], 2)] : [])]),
+    rows: groupRows(r).map(row => [String(row[0]), formatCell(row[1], 'n'), fixed(row[2], 2), fixed(row[3], 2), ...(r.headers.length >= 5 ? [fixed(row[4], 2)] : [])]),
     note: '',
   };
 }

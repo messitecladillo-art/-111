@@ -58,6 +58,10 @@ def bad_cases():
     add('missing object result',lambda v:v['slides'][0]['objects'][0].update(evidenceId='missing'))
     add('unicode length',lambda v:v['quality']['results'][0].update(title='😀'*76))
     add('delete control',lambda v:v['quality']['results'][0].update(title='x\x7f'))
+    add('too many variables',lambda v:v['quality']['results'][0].update(variables=['a','b','c','d','e']))
+    add('blank variable',lambda v:v['quality']['results'][0].update(variables=[' ']))
+    add('variables not a list',lambda v:v['quality']['results'][0].update(variables='渠道'))
+    add('long variable',lambda v:v['quality']['results'][0].update(variables=['x'*161]))
     return cases
 
 
@@ -76,6 +80,8 @@ def test_quality_fixture_positive_ts_python_preserves_old_versions_and_objects()
     for asset in ('mosaic-edge','focus-loop','path-ribbon'):
         v=v2();v['slides'][0]['objects'][0].update(kind='vector',assetId=asset);fixtures.append(v)
     stale=v2();stale['quality']['findings'][0]['confirmedHashes']['r1']='c'*64;fixtures.append(stale)
+    for variables in (['渠道'],['年龄组','使用频次😀','c','d']):
+        named=v2();named['quality']['results'][0]['variables']=variables;fixtures.append(named)
     for fixture,parsed in zip(fixtures,ts_parse(fixtures),strict=True):
         assert parsed['ok'] and report_content(fixture)==fixture and parsed['content']==fixture
 

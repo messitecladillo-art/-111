@@ -1,5 +1,6 @@
 .block { margin: 14px 0 10px; }
-.figure { display: block; inline-size: 100%; aspect-ratio: 16 / 9; }
+.figure { display: block; inline-size: 100%; }
+.figure[aria-busy=true] { aspect-ratio: 16 / 9; }
 .figure > svg { display: block; inline-size: 100%; block-size: auto; }
 .figure[aria-busy=true] { background: linear-gradient(90deg, #f3f5f7, #fafbfc, #f3f5f7); border-radius: 4px; }
 .caption { margin: 6px 0 4px; text-align: center; text-indent: 0; font-size: 15px; }

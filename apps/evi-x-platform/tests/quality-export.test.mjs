@@ -86,5 +86,5 @@ test('native decorative geometry preserves vector shapes, negative line directio
 });
 test('headless Word chart requires a real renderer and supplied preview contains chart pixels',async()=>{
  const c=await fixture();await assert.rejects(buildDocx(c),/兼容预览需要渲染器/);const zip=await JSZip.loadAsync(await (await word(c)).arrayBuffer()),file=Object.values(zip.files).find(f=>/^word\/media\/.*\.png$/.test(f.name));assert.ok(file);
- const png=await file.async('nodebuffer'),metadata=await sharp(png).metadata(),stats=await sharp(png).stats();assert.equal(metadata.width,960);assert.equal(metadata.height,540);assert.ok(stats.channels.some(channel=>channel.stdev>10));assert.match(await zip.file('word/document.xml').async('string'),/asvg:svgBlip/);
+ const png=await file.async('nodebuffer'),metadata=await sharp(png).metadata(),stats=await sharp(png).stats();const svg=await Object.values(zip.files).find(f=>/^word\/media\/.*\.svg$/.test(f.name)).async('string');assert.equal(metadata.width,960);assert.equal(metadata.height,Number(/<svg[^>]*?\bheight="(\d+)"/.exec(svg)[1]),'the preview keeps the figure’s own height');assert.ok(stats.channels.some(channel=>channel.stdev>10));assert.match(await zip.file('word/document.xml').async('string'),/asvg:svgBlip/);
 });

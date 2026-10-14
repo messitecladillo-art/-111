@@ -5,6 +5,8 @@ export type ResultSnapshot = {
   classification: 'public' | 'user_provided' | 'simulated'; method: string; n: number; total: number;
   headers: string[]; rows: (string | number | null)[][]; metrics: { label: string; value: number | null }[];
   warnings: string[];
+  /** Names of the analysed variables (question labels), when known; captions and reading paragraphs use them. */
+  variables?: string[];
 };
 export type ResearchFinding = {
   id: string; title: string; question: string; evidenceIds: string[]; interpretation: string;
@@ -54,7 +56,7 @@ function unique<T extends { id: string }>(items: T[]): T[] { if (new Set(items.m
 const cell = (value: unknown): string | number | null => value === null ? null : typeof value === 'number' ? finite(value, -1e100, 1e100) : qualityText(value, 2000);
 
 export function parseResultSnapshot(value: unknown): ResultSnapshot {
-  const x = qualityRecord(value, ['id','title','sourceName','sourceUrl','sourceHash','resultHash','classification','method','n','total','headers','rows','metrics','warnings']);
+  const x = qualityRecord(value, ['id','title','sourceName','sourceUrl','sourceHash','resultHash','classification','method','n','total','headers','rows','metrics','warnings','variables']);
   const headers = list(x.headers, 30, v => qualityText(v, 160, true));
   if (!headers.length || !['public','user_provided','simulated'].includes(x.classification as string)) return fail();
   const rows = list(x.rows, 400, v => { const row = list(v, headers.length, cell); if (row.length !== headers.length) return fail(); return row; });
@@ -64,7 +66,9 @@ export function parseResultSnapshot(value: unknown): ResultSnapshot {
   return { id:qualityText(x.id,80,true), title:qualityText(x.title,150,true), sourceName:qualityText(x.sourceName,240,true), sourceUrl,
     sourceHash:hash(x.sourceHash), resultHash:hash(x.resultHash), classification:x.classification as ResultSnapshot['classification'], method:qualityText(x.method,80,true), n,total,headers,rows,
     metrics:list(x.metrics,40,v=>{const m=qualityRecord(v,['label','value']);return {label:qualityText(m.label,160,true),value:m.value===null?null:finite(m.value,-1e100,1e100)};}),
-    warnings:list(x.warnings,30,v=>qualityText(v,1000)) };
+    warnings:list(x.warnings,30,v=>qualityText(v,1000)),
+    // Optional and last, so results registered before variables existed keep their fingerprints.
+    ...(Object.hasOwn(x,'variables')?{variables:list(x.variables,4,v=>qualityText(v,160,true))}:{}) };
 }
 export function parseResearchQuality(value: unknown): ResearchQuality {
   const x=qualityRecord(value,['version','results','findings']); if(x.version!==1)return fail();
@@ -106,8 +110,9 @@ export function resultPayload(result:ResultSnapshot) {
 export async function digestText(value:string):Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-export async function snapshotRecipe(result:Omit<RecipeResult,'method'> & {method:string},source:Pick<ResultSnapshot,'title'|'sourceName'|'sourceUrl'|'sourceHash'|'classification'>,id=crypto.randomUUID()):Promise<ResultSnapshot> {
-  const candidate=parseResultSnapshot({id,...source,resultHash:'0'.repeat(64),method:result.method,n:result.n,total:result.total,headers:result.headers,rows:result.rows,metrics:result.metrics,warnings:result.warnings});
+export async function snapshotRecipe(result:Omit<RecipeResult,'method'> & {method:string},source:Pick<ResultSnapshot,'title'|'sourceName'|'sourceUrl'|'sourceHash'|'classification'>&{variables?:string[]},id=crypto.randomUUID()):Promise<ResultSnapshot> {
+  const {variables,...origin}=source;
+  const candidate=parseResultSnapshot({id,...origin,resultHash:'0'.repeat(64),method:result.method,n:result.n,total:result.total,headers:result.headers,rows:result.rows,metrics:result.metrics,warnings:result.warnings,...(variables?.length?{variables}:{})});
   return {...candidate,resultHash:await digestText(JSON.stringify(resultPayload(candidate)))};
 }
 export async function verifyResearchQuality(quality:ResearchQuality):Promise<void> {

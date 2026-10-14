@@ -110,7 +110,9 @@ def quality_content(value):
         raise ApiError()
     results = quality_list(x["results"], MAX_RESULTS)
     for result in results:
-        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"))
+        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"), ("variables",))
+        for variable in quality_list(r.get("variables", []), 4):
+            quality_text(variable, 160, True)
         for key, maximum in (("id", 80), ("title", 150), ("sourceName", 240), ("method", 80)):
             quality_text(r[key], maximum, True)
         quality_text(r["sourceUrl"], 512)
