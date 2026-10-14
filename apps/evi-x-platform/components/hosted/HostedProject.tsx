@@ -30,6 +30,7 @@ export default function HostedProject({ projectId }: { projectId: string }) {
   return <LoginRequired><ProjectEditor key={`${identityEpoch}:${projectId}`} projectId={projectId}/></LoginRequired>;
 }
 function ProjectEditor({ projectId }: { projectId: string }) {
+  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
   const auth = useHostedSession();
   const cacheKey=`project:${projectId}`;
   // The tab-local draft is read once at mount; state (not a ref) so initializers may use it during render.
@@ -219,8 +220,8 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     </div>
     {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { setDatasetTransfer(handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
     {collectionOpened && <div hidden={tab !== 'collection'}><SurveyCollection projectId={projectId} savedRevision={revision} canPublish={!dirty && !saving && !saveUncertain && !conflict} writable={writable} onAnalyze={value => { setDatasetTransfer(value); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
-    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
-    {reportOpened && <div hidden={tab !== 'report'}><HostedReport projectId={projectId} title={project.title} writable={writable} proposal={reportProposal} onProposalConsumed={consumeReportProposal}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab onResultSnapshot={writable?result=>{setResultProposal(result);setReportOpened(true);setTab("report");}:undefined} designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
+    {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)} projectId={projectId} title={project.title} writable={writable} proposal={reportProposal} onProposalConsumed={consumeReportProposal}/></div>}
     {defenseOpened && <div hidden={tab !== 'defense'}><HostedDefense projectId={projectId} onOpenReport={() => { setReportOpened(true); setTab('report'); }}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
   </>;

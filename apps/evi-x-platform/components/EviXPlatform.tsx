@@ -1031,6 +1031,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
 }
 
 export default function EviXPlatform() {
+  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
   const [workspaceDataset,setWorkspaceDataset]=useState<DatasetValue|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
@@ -1074,9 +1075,9 @@ export default function EviXPlatform() {
       exam: <NetExamStudio />,
       preflight: <SubmissionPreflight />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly />,
+      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)}/>,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
+      analysis: <SurveyLab onResultSnapshot={result=>{setResultProposal(result);window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
       canvas: <CanvasPanel dataset={workspaceDataset} design={designSnapshot} />,
       silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
