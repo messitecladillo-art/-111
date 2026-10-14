@@ -333,3 +333,48 @@ test('multi-stage plans produce the frame table and an honest methods paragraph'
   assert.match(groupStatement(students), /自加权/);
   assert.deepEqual(frameTable(students).rows[0], ['全市本科院校', '某学院', '该学校在校生名册']);
 });
+
+test('selection outlines, merged frame-table cells and the dataset bridge', async () => {
+  const { parseSelectionTree, mergeSpans } = await import('../lib/sampling-selection.ts');
+  const tree = parseSelectionTree('甲区\n  一街道\n  二街道\n乙区\n\t三街道\n某学院｜全市本科院校');
+  assert.deepEqual(tree.map(n => n.name), ['甲区', '乙区', '某学院']);
+  assert.deepEqual(tree[0].children.map(n => n.name), ['一街道', '二街道']);
+  assert.equal(tree[1].children[0].name, '三街道'); assert.equal(tree[2].frame, '全市本科院校');
+  const spans = mergeSpans([['框', '甲', 'x'], ['框', '甲', 'y'], ['框', '乙', 'x']]);
+  assert.deepEqual(spans, [[3, 2, 1], [0, 0, 1], [0, 1, 1]]);
+  const { buildDesignRows, describeColumn, marginsFromShares, MISSING_CATEGORY } = await import('../lib/sampling-dataset.ts');
+  const { parseSurveyCsv } = await import('../lib/survey-analysis.ts');
+  const table = parseSurveyCsv('层,群,权数,满意,性别\nA,1,10,4,男\nA,1,10,99,女\nA,2,12,5,女\nB,3,8,3,男\nB,4,8,,女\nB,4,9,2,男');
+  const built = buildDesignRows(table, { y: 3, category: null, weight: 2, stratum: 0, psu: 1, domain: null }, ['99']);
+  assert.equal(built.rows.length, 6); assert.equal(built.excluded, 2);
+  assert.deepEqual(built.rows.map(r => r.inDomain), [true, false, true, true, false, true]);
+  assert.equal(new Set(built.rows.map(r => r.psu)).size, 4);
+  const est = designEstimate(built.rows, { statistic: 'mean', confidence: 0.95, method: 'linearization' });
+  rel(est.estimate, (10 * 4 + 12 * 5 + 8 * 3 + 9 * 2) / (10 + 12 + 8 + 9), 1e-12, 'weighted mean over answered rows');
+  const female = buildDesignRows(table, { y: 4, category: '女', weight: null, stratum: null, psu: null, domain: null }, []);
+  rel(designEstimate(female.rows, { statistic: 'mean', confidence: 0.95, method: 'linearization' }).estimate, 0.5, 1e-12, 'proportion');
+  assert.deepEqual(describeColumn(table, 4, []).categories.sort(), ['女', '男']);
+  const margins = marginsFromShares(table, [{ column: 4, shares: { 男: 40, 女: 60 } }], [], 6);
+  rel(margins[0].targets['女'], 3.6, 1e-12, 'target total');
+  assert.throws(() => marginsFromShares(table, [{ column: 4, shares: { 男: 100, 女: 0 } }], [], 6), /大于 0/);
+  assert.equal(MISSING_CATEGORY, '（缺失）');
+});
+
+test('the sampling lab shows unbiased designs, honest coverage and the expected efficiency ordering', async () => {
+  const { makePopulation, runLab } = await import('../lib/sampling-lab.ts');
+  const pop = makePopulation();
+  assert.equal(pop.units.length, 6000); assert.equal(pop.clusters, 240);
+  assert.ok(pop.rho > 0.75 && pop.rho < 0.95, `rho ${pop.rho}`); assert.ok(pop.icc > 0.05 && pop.icc < 0.3, `icc ${pop.icc}`);
+  const results = Object.fromEntries(runLab(pop, { n: 200, reps: 1500, seed: 'test' }).map(r => [r.design, r]));
+  for (const d of ['srs', 'proportional', 'neyman', 'ratio', 'cluster', 'systematic']) {
+    const r = results[d];
+    assert.ok(Math.abs(r.bias) < 4 * r.empiricalSe / Math.sqrt(1500) + 2, `${d} bias ${r.bias}`);
+    // A systematic sample with k = 30 has only 30 possible samples; its approximate variance is conservative.
+    assert.ok(r.coverage > 0.92 && (d === 'systematic' || r.coverage < 0.98), `${d} coverage ${r.coverage}`);
+  }
+  assert.ok(results.systematic.efficiency > 2, 'a list sorted by a correlated variable stratifies implicitly');
+  assert.ok(results.proportional.efficiency > results.srs.efficiency * 0.98, 'stratification does not lose');
+  assert.ok(results.ratio.efficiency > 1.5, `ratio efficiency ${results.ratio.efficiency}`);
+  assert.ok(results.cluster.efficiency < 0.6, `cluster efficiency ${results.cluster.efficiency}`);
+  assert.equal(results.cluster.sampleSize, 200);
+});

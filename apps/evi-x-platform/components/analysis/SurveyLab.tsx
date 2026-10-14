@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DatasetValue } from "@/lib/canvas/execute";
+import { Tex } from "@/components/math/Tex";
 import { analyzeReliability, categoryCounts, DEMO_SURVEY_CSV, finiteNumber, parseMissingCodes, parseSurveyCsv, profileSurvey, SURVEY_LIMITS, type Delimiter, type ReliabilityResult, type SurveyTable } from "@/lib/survey-analysis";
 import styles from "./SurveyLab.module.css";
 import {snapshotRecipe,type ResultSnapshot} from "@/lib/research-quality";
@@ -388,7 +389,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       </>}
       <details className={styles.evidenceDrawer}><summary>整理为报告段落 <span>{evidenceCandidates.length ? `${evidenceCandidates.length} 项当前有效结果` : "计算后可用"}</span></summary><ResearchFlow candidates={evidenceCandidates} localOnly onEvidenceProposal={onEvidenceProposal} transformSection={dataset?.collection||dataset?.quality?section=>{let next=section;if(dataset.collection)next=collectionEvidenceSection(next,dataset.collection);if(dataset.quality)next=qualityEvidenceSection(next,dataset.quality);return next;}:undefined}/></details>
     </div>
-    <details className={styles.methodNotes}><summary>方法、来源与适用范围</summary><p>支持未加权描述、分组汇总、交叉关联强度、Pearson / Spearman 相关与内部一致性计算。原始 α = k/(k−1) × [1−各题方差之和/总分方差]，所有题项使用同一完整案例集合。</p><div>{SOURCES.map(s => <article key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title} ↗</a><p>{s.note}</p></article>)}</div><p className={styles.note}>来源核查：2026-09-26。</p></details>
+    <details className={styles.methodNotes}><summary>方法、来源与适用范围</summary><p>支持未加权描述、分组汇总、交叉关联强度、Pearson / Spearman 相关与内部一致性计算。原始 Cronbach <Tex tex="\alpha=\frac{k}{k-1}\Bigl(1-\frac{\sum_{i=1}^{k}s_i^{2}}{s_T^{2}}\Bigr)" />，其中 <Tex tex="k" /> 为题项数，<Tex tex="s_i^{2}" /> 为各题方差，<Tex tex="s_T^{2}" /> 为总分方差；所有题项使用同一完整案例集合。</p><div>{SOURCES.map(s => <article key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.title} ↗</a><p>{s.note}</p></article>)}</div><p className={styles.note}>来源核查：2026-09-26。</p></details>
   </section>;
 }
 function Metric({ label, value, note }: { label: string; value: string; note: string }) { return <article><span>{label}</span><strong>{value}</strong><small>{note}</small></article>; }

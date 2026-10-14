@@ -113,7 +113,7 @@ export function designEstimate(rows: DesignRow[], options: DesignOptions & { met
       replicates++;
     }
     variance = s / replicates;
-    notes.push(`Rao–Wu 自助法 ${replicates} 次重复（随机种子 ${options.seed ?? 'bootstrap'}），每层有放回地重抽 n_h − 1 个初级单元；结果有随机波动，不作有限总体校正。`);
+    notes.push(`Rao–Wu 自助法 ${replicates} 次重复（随机种子 ${options.seed ?? 'bootstrap'}），每层有放回地重抽 $n_h-1$ 个初级单元；结果有随机波动，不作有限总体校正。`);
   } else {
     const all = [...strata.values()].flat(), G = options.groups ?? Math.min(10, all.length);
     if (!(Number.isInteger(G) && G >= 2 && G <= all.length)) throw Error('随机组数须为 2 到初级单元数之间的整数。');

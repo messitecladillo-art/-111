@@ -24,6 +24,7 @@ export type SizePlan = {
   /** Subgroups that each need this precision on their own. */
   subgroups: number;
 };
+/** `formula` is TeX source, typeset with KaTeX. */
 export type SizeStep = { label: string; formula: string; value: number };
 export type SizeResult = { steps: SizeStep[]; perGroup: number; completes: number; contacts: number; warnings: string[] };
 
@@ -41,32 +42,43 @@ export function validateSizePlan(plan: SizePlan): string[] {
 }
 
 const round = (n: number, digits = 2) => Math.round(n * 10 ** digits) / 10 ** digits;
+/** A number written for TeX, thousands grouped as {,}. */
+const tn = (v: number, digits = 2) => { const [i, f] = String(round(v, digits)).split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g, '{,}') + (f ? '.' + f : ''); };
+const tex = String.raw;
+/**
+ * Steps carry TeX so every formula is typeset. The finite population correction differs by target:
+ * n₀/[1 + (n₀ − 1)/N] for a proportion (V(p) = (N − n)/(N − 1)·PQ/n) and n₀/(1 + n₀/N) for a mean
+ * (V(ȳ) = (1 − f)S²/n), as in Cochran (1977) §4.4 and §4.6.
+ */
 export function sampleSize(plan: SizePlan): SizeResult {
   const issues = validateSizePlan(plan);
   if (issues.length) throw Error(issues.join(''));
   const z = Z_BY_CONFIDENCE[plan.confidence], steps: SizeStep[] = [], warnings: string[] = [];
+  const zValue = tn(z, 4);
   const n0 = plan.target === 'proportion'
     ? z * z * plan.proportion * (1 - plan.proportion) / plan.margin ** 2
     : z * z * plan.sd ** 2 / plan.margin ** 2;
   steps.push(plan.target === 'proportion'
-    ? { label: '基础样本量（简单随机抽样）', formula: `n₀ = z²·p(1−p)/e² = ${round(z, 4)}² × ${plan.proportion} × ${round(1 - plan.proportion, 4)} ÷ ${plan.margin}²`, value: n0 }
-    : { label: '基础样本量（简单随机抽样）', formula: `n₀ = z²·σ²/e² = ${round(z, 4)}² × ${plan.sd}² ÷ ${plan.margin}²`, value: n0 });
+    ? { label: '基础样本量（简单随机抽样）', formula: tex`n_0=\frac{z_{\alpha/2}^{2}\,p(1-p)}{e^{2}}=\frac{${zValue}^{2}\times ${tn(plan.proportion, 4)}\times ${tn(1 - plan.proportion, 4)}}{${tn(plan.margin, 4)}^{2}}=${tn(n0)}`, value: n0 }
+    : { label: '基础样本量（简单随机抽样）', formula: tex`n_0=\frac{z_{\alpha/2}^{2}\,\sigma^{2}}{e^{2}}=\frac{${zValue}^{2}\times ${tn(plan.sd, 4)}^{2}}{${tn(plan.margin, 4)}^{2}}=${tn(n0)}`, value: n0 });
   let n = n0;
   const groupPopulation = plan.population === null ? null : plan.population / plan.subgroups;
   if (groupPopulation !== null) {
-    n = n0 / (1 + (n0 - 1) / groupPopulation);
-    steps.push({ label: plan.subgroups > 1 ? '有限总体校正（按子群规模近似相等）' : '有限总体校正', formula: `n₁ = n₀ ÷ [1 + (n₀ − 1)/N] = ${round(n0)} ÷ [1 + ${round(n0 - 1)} / ${round(groupPopulation)}]`, value: n });
+    n = plan.target === 'proportion' ? n0 / (1 + (n0 - 1) / groupPopulation) : n0 / (1 + n0 / groupPopulation);
+    steps.push({ label: plan.subgroups > 1 ? '有限总体校正（按子群规模近似相等）' : '有限总体校正', formula: plan.target === 'proportion'
+      ? tex`n_1=\frac{n_0}{1+\frac{n_0-1}{N}}=\frac{${tn(n0)}}{1+\frac{${tn(n0)}-1}{${tn(groupPopulation)}}}=${tn(n)}`
+      : tex`n_1=\frac{n_0}{1+\frac{n_0}{N}}=\frac{${tn(n0)}}{1+\frac{${tn(n0)}}{${tn(groupPopulation)}}}=${tn(n)}`, value: n });
   }
   if (plan.designEffect !== 1) {
-    steps.push({ label: '乘以设计效应', formula: `n₂ = n₁ × deff = ${round(n)} × ${plan.designEffect}`, value: n * plan.designEffect });
+    steps.push({ label: '乘以设计效应', formula: tex`n_2=n_1\times\mathrm{deff}=${tn(n)}\times ${tn(plan.designEffect, 3)}=${tn(n * plan.designEffect)}`, value: n * plan.designEffect });
     n *= plan.designEffect;
   }
   const perGroup = Math.ceil(n - 1e-9);
   if (groupPopulation !== null && perGroup > groupPopulation) warnings.push('所需样本超过总体规模，应考虑普查或放宽允许误差。');
   const completes = perGroup * plan.subgroups;
-  if (plan.subgroups > 1) steps.push({ label: '各子群分别达到精度', formula: `每组 ${perGroup} × ${plan.subgroups} 组`, value: completes });
+  if (plan.subgroups > 1) steps.push({ label: '各子群分别达到精度', formula: tex`n=${perGroup}\times ${plan.subgroups}=${tn(completes, 0)}`, value: completes });
   const contacts = Math.ceil(completes / plan.validRate - 1e-9);
-  steps.push({ label: '按有效回收率换算发放量', formula: `${completes} ÷ ${round(plan.validRate * 100, 1)}%`, value: contacts });
+  steps.push({ label: '按有效回收率换算发放量', formula: tex`n_{\text{发放}}=\left\lceil\frac{n}{r}\right\rceil=\left\lceil\frac{${tn(completes, 0)}}{${tn(plan.validRate * 100, 1)}\%}\right\rceil=${tn(contacts, 0)}`, value: contacts });
   if (plan.target === 'proportion' && plan.proportion !== 0.5) warnings.push('预估比例不是 50%：若真实比例更接近 50%，实际误差会大于设定值。');
   if (plan.designEffect === 1) warnings.push('设计效应取 1 即假定简单随机抽样；分层可能小于 1 的情形此处不计，整群或多阶段抽样通常大于 1。');
   return { steps, perGroup, completes, contacts, warnings };
@@ -80,7 +92,7 @@ export function achievedMargin({ n, confidence, proportion, sd, population, desi
   const variance = sd !== undefined ? (sd > 0 ? sd * sd : NaN) : proportion !== undefined && proportion > 0 && proportion < 1 ? proportion * (1 - proportion) : NaN;
   if (!(n >= 2) || !Number.isFinite(variance) || !(designEffect >= 1)) return null;
   if (population !== null && !(population > n)) return population === n ? 0 : null;
-  const fpc = population === null ? 1 : Math.sqrt((population - n) / (population - 1));
+  const fpc = population === null ? 1 : sd !== undefined ? Math.sqrt(1 - n / population) : Math.sqrt((population - n) / (population - 1));
   return Z_BY_CONFIDENCE[confidence] * Math.sqrt(designEffect * variance / n) * fpc;
 }
 

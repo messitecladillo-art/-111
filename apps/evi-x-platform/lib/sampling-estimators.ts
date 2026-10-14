@@ -68,7 +68,7 @@ export function srsProportion({ a, n, N, confidence }: { a: number; n: number; N
   ];
   if (total) steps.push({ label: '具有该特征的总体单位数', tex: tex`\hat{A}=Np=${texNum(total.value, 7)},\quad \operatorname{se}(\hat{A})=N\sqrt{v(p)}=${texNum(total.se, 6)}` });
   const warnings: string[] = [];
-  if (n * p < 5 || n * (1 - p) < 5) warnings.push('np 或 n(1−p) 小于 5，正态近似不可靠；样本比例接近 0 或 1 时请改用 Wilson 区间或精确区间。');
+  if (n * p < 5 || n * (1 - p) < 5) warnings.push('$np$ 或 $n(1-p)$ 小于 5，正态近似不可靠；样本比例接近 0 或 1 时请改用 Wilson 区间或精确区间。');
   return { n, a, N, f, p: est, total, steps, warnings };
 }
 
@@ -211,8 +211,8 @@ export function auxiliaryEstimators(pairs: Pair[], { N, Xbar, confidence }: { N:
     ],
   };
   const warnings: string[] = [];
-  if (cvXbar >= 0.1) warnings.push(`x̄ 的变异系数为 ${texNum(cvXbar, 3)}，不小于 0.1，比率估计的偏倚可能不可忽略；可增大样本或改用回归估计。`);
-  if (r <= threshold) warnings.push('样本相关系数未超过 C_x/(2C_y)，比率估计未必优于简单估计。');
+  if (cvXbar >= 0.1) warnings.push(`$\\bar{x}$ 的变异系数为 ${texNum(cvXbar, 3)}，不小于 0.1，比率估计的偏倚可能不可忽略；可增大样本或改用回归估计。`);
+  if (r <= threshold) warnings.push('样本相关系数未超过 $C_x/(2C_y)$，比率估计未必优于简单估计。');
   if (n < 30) warnings.push('比率与回归估计的方差公式是大样本近似，样本较小时区间可能偏窄。');
   return { n, f, xbar, ybar, sx2, sy2, sxy, r, R, b, cvXbar, simple, ratio, regression,
     efficiency: { ratio: simple.variance / ratio.variance, regression: simple.variance / regression.variance },
@@ -317,8 +317,8 @@ export function clusterSample(rows: { cluster: string; y: number }[], { N, Mbar,
   if (total) steps.push({ label: '总体总量（无偏估计）', tex: tex`\hat{Y}=\frac{N}{n}\sum_{i=1}^{n}y_i=${texNum(total.value, 7)},\quad \operatorname{se}(\hat{Y})=${texNum(total.se, 6)}` });
   const warnings: string[] = [];
   if (!equalSize) warnings.push('各群规模不等，均值采用比率估计（大样本近似）；群数较少时偏倚与区间误差都可能较大。');
-  if (n < 10) warnings.push('群数少于 10，自由度只有 n − 1，区间会很宽；整群抽样的精度主要取决于群数而不是总人数。');
-  if (Mbar === null) warnings.push('未填写总体平均群规模，方差公式中的 M̄ 用样本平均群规模代替。');
+  if (n < 10) warnings.push('群数少于 10，自由度只有 $n-1$，区间会很宽；整群抽样的精度主要取决于群数而不是总人数。');
+  if (Mbar === null) warnings.push('未填写总体平均群规模，方差公式中的 $\\bar{M}$ 用样本平均群规模代替。');
   return { clusters: n, elements, mbar, equalSize, mean, total, icc, deff, steps, warnings };
 }
 
@@ -395,7 +395,7 @@ export function horvitzThompson(units: { y: number; pi: number }[], { N, confide
   const z = units.map(u => u.y / u.pi), Y = sum(z);
   const v = n / (n - 1) * sum(z.map(t => (t - Y / n) ** 2));
   const total = estimate(Y, v, confidence, n - 1), mean = N === null ? null : estimate(Y / N, v / (N * N), confidence, n - 1);
-  return { total, mean, warnings: ['方差按“放回抽样”近似，未使用二阶入样概率 π_ij，结果通常略为保守；抽样比较大时高估更明显。'], steps: [
+  return { total, mean, warnings: ['方差按“放回抽样”近似，未使用二阶入样概率 $\\pi_{ij}$，结果通常略为保守；抽样比较大时高估更明显。'], steps: [
     { label: 'Horvitz–Thompson 估计量', tex: tex`\hat{Y}_{HT}=\sum_{i=1}^{n}\frac{y_i}{\pi_i}=${texNum(Y, 7)}` },
     { label: '方差估计（放回近似）', tex: tex`v(\hat{Y}_{HT})\approx\frac{n}{n-1}\sum_{i=1}^{n}\left(\frac{y_i}{\pi_i}-\frac{\hat{Y}_{HT}}{n}\right)^{2}=${texNum(v, 6)}` },
     ciStep(tex`\hat{Y}_{HT}`, total, confidence),
@@ -495,7 +495,7 @@ export function randomizedResponse(design: RrDesign, { n, yes, confidence }: { n
     : design.model === 'unrelated' ? tex`\hat{\pi}_A=\frac{\hat{\lambda}-(1-p)\pi_U}{p}` : tex`\hat{\pi}_A=\frac{\hat{\lambda}-p_{\text{是}}}{p_{\text{如实}}}`;
   const denominator = design.model === 'warner' ? tex`(2p-1)^{2}` : design.model === 'unrelated' ? tex`p^{2}` : tex`p_{\text{如实}}^{2}`;
   const warnings: string[] = [];
-  if (raw < 0 || raw > 1) warnings.push('由抽样波动得到的估计值落在 [0, 1] 之外，已截断；样本量偏小或设计参数不合适。');
+  if (raw < 0 || raw > 1) warnings.push('由抽样波动得到的估计值落在 $[0,1]$ 之外，已截断；样本量偏小或设计参数不合适。');
   return { lambda, pi, raw, jeopardy, warnings, steps: [
     { label: '回答“是”的比例', tex: tex`\hat{\lambda}=\frac{${yes}}{${n}}=${texNum(lambda, 5)}` },
     { label: '敏感特征比例', tex: tex`${formula}=${texNum(raw, 5)}` },

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { achievedMargin, allocate, methodsStatement, sampleSize, SAMPLING_KINDS, validateSizePlan, type AllocationMethod, type Confidence, type SamplingKind, type SizePlan, type Stratum } from '@/lib/sampling';
 import { useContentReveal, useKeyedListMotion } from '../motion/useWorkspaceMotion';
+import { Formula, Tex } from '../math/Tex';
 import styles from './SamplingDesigner.module.css';
 
 type Tab = 'size' | 'allocation' | 'precision';
@@ -25,7 +26,7 @@ const num = (text: string) => { const v = Number(text.trim()); return text.trim(
 const pct = (v: number, digits = 1) => `${(v * 100).toLocaleString('zh-CN', { maximumFractionDigits: digits })}%`;
 const fmt = (v: number, digits = 2) => v.toLocaleString('zh-CN', { maximumFractionDigits: digits });
 
-export default function SamplingDesigner() {
+export default function SamplingDesigner({ embedded = false }: { embedded?: boolean }) {
   // Client-only component (loaded without SSR), so the saved inputs are read before the first render.
   const [state, setState] = useState<Saved>(load), [tab, setTab] = useState<Tab>('size'), [copied, setCopied] = useState(false);
   useEffect(() => { try { window.localStorage.setItem(STORAGE, JSON.stringify(state)); } catch { /* storage is a convenience only */ } }, [state]);
@@ -46,7 +47,7 @@ export default function SamplingDesigner() {
   function updateStratum(index: number, patch: Partial<Stratum>) { set('strata', state.strata.map((s, i) => i === index ? { ...s, ...patch } : s)); }
 
   return <section className={styles.designer} data-self-styled aria-label="抽样设计">
-    <p className={styles.lede}><span className={styles.eyebrow}>SAMPLING DESIGN</span>先说清目标总体和抽样框，再按精度要求算样本量、分配各层样本。抽样误差只在概率抽样下成立。</p>
+    {!embedded && <p className={styles.lede}><span className={styles.eyebrow}>SAMPLING DESIGN</span>先说清目标总体和抽样框，再按精度要求算样本量、分配各层样本。抽样误差只在概率抽样下成立。</p>}
 
     <div className={styles.kinds} role="radiogroup" aria-label="抽样方式">
       {(Object.keys(SAMPLING_KINDS) as SamplingKind[]).map(kind => <button type="button" role="radio" aria-checked={state.kind === kind} key={kind} onClick={() => set('kind', kind)} data-probability={SAMPLING_KINDS[kind].probability}>
@@ -84,7 +85,7 @@ export default function SamplingDesigner() {
             <div><span>有效样本</span><strong>{result.completes.toLocaleString('zh-CN')}<small> 份</small></strong>{plan.subgroups > 1 && <em>每个子群 {result.perGroup} 份</em>}</div>
             <div><span>计划发放</span><strong>{result.contacts.toLocaleString('zh-CN')}<small> 份</small></strong><em>按有效回收率 {pct(plan.validRate)}</em></div>
           </div>
-          <ol className={styles.steps}>{result.steps.map(s => <li key={s.label}><span>{s.label}</span><code>{s.formula}</code><b>{fmt(s.value)}</b></li>)}</ol>
+          <ol className={styles.steps}>{result.steps.map(s => <li key={s.label}><span>{s.label}</span><Formula tex={s.formula} compact /><b>{fmt(s.value)}</b></li>)}</ol>
           {!!result.warnings.length && <ul className={styles.notes}>{result.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
           <div className={styles.statement}><div><span>方法部分草稿</span><button type="button" onClick={() => void copy()}>{copied ? '已复制' : '复制'}</button></div><p>{statement}</p><small>只依据上方输入生成；括号内的空项请补全，实际回收后按真实样本更新。</small></div>
         </>}
@@ -94,17 +95,19 @@ export default function SamplingDesigner() {
     {tab === 'allocation' && <div className={styles.allocation}>
       <div className={styles.allocTools}>
         <fieldset className={styles.segment}><legend>分配方式</legend>
-          {([['proportional', '比例分配', '各层样本与层规模成比例，自加权'], ['neyman', 'Neyman 分配', '变异大的层多抽，需各层标准差'], ['equal', '等额分配', '各层同样多，便于层间比较']] as const).map(([id, label, hint]) => <label key={id} title={hint}><input type="radio" name="method" checked={state.method === id} onChange={() => set('method', id)} />{label}</label>)}
+          {([['proportional', '比例分配', '各层样本与层规模成比例，自加权'], ['neyman', 'Neyman 分配', '变异大的层多抽，需各层标准差'], ['optimal', '费用最优分配', '变异大、调查便宜的层多抽，需各层标准差与单位费用'], ['equal', '等额分配', '各层同样多，便于层间比较']] as const).map(([id, label, hint]) => <label key={id} title={hint}><input type="radio" name="method" checked={state.method === id} onChange={() => set('method', id)} />{label}</label>)}
         </fieldset>
         <label>每层最少样本<input inputMode="numeric" defaultValue={state.minimum} onChange={e => set('minimum', Math.max(0, Math.floor(num(e.target.value) || 0)))} /></label>
         <p className={styles.total}>总样本 <b>{result?.completes ?? '—'}</b> 份 <small>（来自“样本量”）</small></p>
       </div>
+      <Formula compact label="当前分配规则" tex={state.method === 'proportional' ? 'n_h=n\\,\\frac{N_h}{N}' : state.method === 'neyman' ? 'n_h=n\\,\\frac{N_hS_h}{\\sum_{k}N_kS_k}' : state.method === 'optimal' ? 'n_h=n\\,\\frac{N_hS_h/\\sqrt{c_h}}{\\sum_{k}N_kS_k/\\sqrt{c_k}}' : 'n_h=\\frac{n}{L}'} />
       <div className={styles.tableWrap} tabIndex={0} aria-label="分层输入与分配结果"><table>
-        <thead><tr><th>层</th><th>层规模 N<sub>h</sub></th>{state.method === 'neyman' && <th>标准差 S<sub>h</sub></th>}<th>规模占比</th><th>分配 n<sub>h</sub></th><th>抽样比</th><th>设计权数</th><th>相对权数</th><th /></tr></thead>
+        <thead><tr><th>层</th><th>层规模 <Tex tex="N_h" /></th>{(state.method === 'neyman' || state.method === 'optimal') && <th>标准差 <Tex tex="S_h" /></th>}{state.method === 'optimal' && <th>单位费用 <Tex tex="c_h" /></th>}<th>规模占比 <Tex tex="W_h" /></th><th>分配 <Tex tex="n_h" /></th><th>抽样比 <Tex tex="f_h" /></th><th>设计权数 <Tex tex="N_h/n_h" /></th><th>相对权数</th><th /></tr></thead>
         <tbody>{state.strata.map((s, i) => { const row = allocation.value?.rows[i]; return <tr key={s.id}>
           <td><input aria-label={`第 ${i + 1} 层名称`} value={s.name} maxLength={40} onChange={e => updateStratum(i, { name: e.target.value })} /></td>
           <td><input aria-label={`${s.name} 规模`} inputMode="numeric" defaultValue={s.size} onChange={e => updateStratum(i, { size: num(e.target.value) })} /></td>
-          {state.method === 'neyman' && <td><input aria-label={`${s.name} 标准差`} inputMode="decimal" defaultValue={s.sd ?? ''} placeholder="比例用 √p(1−p)" onChange={e => updateStratum(i, { sd: e.target.value.trim() === '' ? null : num(e.target.value) })} /></td>}
+          {(state.method === 'neyman' || state.method === 'optimal') && <td><input aria-label={`${s.name} 标准差`} inputMode="decimal" defaultValue={s.sd ?? ''} placeholder="比例用 √p(1−p)" onChange={e => updateStratum(i, { sd: e.target.value.trim() === '' ? null : num(e.target.value) })} /></td>}
+          {state.method === 'optimal' && <td><input aria-label={`${s.name} 每个样本的费用`} inputMode="decimal" defaultValue={s.cost ?? ''} placeholder="元/份" onChange={e => updateStratum(i, { cost: e.target.value.trim() === '' ? null : num(e.target.value) })} /></td>}
           <td>{row ? pct(row.share) : '—'}</td><td><b>{row?.allocation ?? '—'}</b></td><td>{row ? pct(row.fraction, 2) : '—'}</td><td>{row ? fmt(row.weight) : '—'}</td><td>{row ? fmt(row.relativeWeight, 3) : '—'}</td>
           <td><button type="button" className={styles.remove} aria-label={`删除 ${s.name}`} disabled={state.strata.length <= 2} onClick={() => set('strata', state.strata.filter((_, j) => j !== i))}>删除</button></td>
         </tr>; })}</tbody>

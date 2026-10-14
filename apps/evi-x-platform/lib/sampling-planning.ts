@@ -175,7 +175,7 @@ export function twoStagePlan({ components, M, N, c1, c2, constraint }: TwoStageI
   }
   const Su = S1 - S2 / M, warnings: string[] = [];
   let mExact: number;
-  if (Su <= 0) { mExact = M; warnings.push('初级单元之间几乎没有差异（S_u² ≤ 0），每个单元内应尽量多抽，直至全部调查。'); }
+  if (Su <= 0) { mExact = M; warnings.push('初级单元之间几乎没有差异（$S_u^2\\le 0$），每个单元内应尽量多抽，直至全部调查。'); }
   else mExact = Math.sqrt(c1 * S2 / (c2 * Su));
   const product = (m: number) => (Math.max(Su, 0) + S2 / m) * (c1 + c2 * m);
   const candidates = [Math.floor(mExact), Math.ceil(mExact)].map(m => Math.min(M, Math.max(2, m)));
@@ -194,7 +194,7 @@ export function twoStagePlan({ components, M, N, c1, c2, constraint }: TwoStageI
   const V = (Math.max(Su, 0) + S2 / m) / n - S1 * inv, cost = n * (c1 + c2 * m);
   // Against an SRS of the same n·m elements (finite-population terms left out of both): 1 + (m − 1)ρ.
   const deff = (Math.max(Su, 0) + S2 / m) / n / ((Math.max(Su, 0) + S2) / (n * m));
-  if (m < mExact - 1e-9 && m === M) warnings.push('最优值超过 M，已取 M。');
+  if (m < mExact - 1e-9 && m === M) warnings.push('最优值超过 $M$，已取 $m=M$。');
   return { mExact, m, n, V, margin: z === null ? null : z * Math.sqrt(Math.max(0, V)), cost, deff, warnings, steps: [
     ...(targetStep ? [targetStep] : []),
     { label: '单元间方差的有效部分', tex: tex`S_u^{2}=S_1^{2}-\frac{S_2^{2}}{M}=${texNum(S1, 5)}-\frac{${texNum(S2, 5)}}{${M}}=${texNum(Su, 5)}` },
@@ -239,7 +239,7 @@ export function nonresponsePlan({ S2, S2nr, W2, c0, c1, c2, target, N }: { S2: n
   const W1 = 1 - W2, warnings: string[] = [];
   const inner = c2 * (S2 - W2 * S2nr) / (S2nr * (c0 + c1 * W1));
   let k = inner > 1 ? Math.sqrt(inner) : 1;
-  if (inner <= 1) warnings.push('按公式应追访全部无回答者（k = 1）。');
+  if (inner <= 1) warnings.push('按公式应追访全部无回答者（$k=1$）。');
   k = Math.round(k * 100) / 100;
   const { V, step } = targetVariance(target), inv = N === null ? 0 : 1 / N;
   const n = Math.ceil((S2 + (k - 1) * W2 * S2nr) / (V + S2 * inv) - 1e-9);

@@ -146,33 +146,69 @@ export function equalProbabilityInclusion(group: PlanGroup): number | null {
 }
 const stageNames = ['第一阶段', '第二阶段', '第三阶段', '第四阶段', '第五阶段'];
 const levelNames = ['初级', '二级', '三级', '四级', '五级'];
-function stageSentence(stage: PlanStage, index: number): string {
+/** Small counts in words, as Chinese methods sections write them. */
+export const countWord = (n: number) => ['零', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][n] ?? String(n);
+function stageSentence(stage: PlanStage, index: number, stages: PlanStage[]): string {
   const meta = STAGE_METHODS[stage.method], frame = stage.frame.trim() || `〔第${index + 1}级抽样框〕`, unit = stage.unit.trim() || '单位';
-  const count = stage.take ? `${stage.take} 个${unit}` : unit;
+  const count = stage.take ? ` ${stage.take} 个${unit}` : unit;
+  // Later stages are drawn inside every unit selected at the previous stage.
+  const within = index > 0 ? `在每个入样${stages[index - 1].unit.trim() || '单位'}内，` : '';
   switch (stage.method) {
-    case 'pps': return `${stageNames[index]}以${frame}为抽样框，按${stage.sizeMeasure.trim() || '规模'}采用 PPS 抽样抽取${count}`;
-    case 'stratified': return `${stageNames[index]}以${frame}为抽样框，${stage.strata.trim() ? `按${stage.strata.trim()}分层，` : ''}层内随机抽取${count}`;
-    case 'census': return `${stageNames[index]}对入样单位内的全部${unit}进行调查`;
-    case 'intercept': return `${stageNames[index]}在${frame}中进行拦截式访问`;
-    case 'quota': return `${stageNames[index]}在${frame}中按配额招募${unit}`;
-    case 'convenience': return `${stageNames[index]}通过${frame}招募${unit}`;
-    default: return `${stageNames[index]}以${frame}为抽样框，采用${meta.label}抽取${count}`;
+    case 'pps': return `${stageNames[index]}${within}以${frame}为抽样框，按${stage.sizeMeasure.trim() || '规模'}采用 PPS 抽样抽取${count}`;
+    case 'stratified': return `${stageNames[index]}${within}以${frame}为抽样框，${stage.strata.trim() ? `按${stage.strata.trim()}分层，` : ''}层内随机抽取${count}`;
+    case 'census': return `${stageNames[index]}${within}对全部${unit}进行调查`;
+    case 'intercept': return `${stageNames[index]}${within || `在${frame}中`}对${unit}进行拦截式访问`;
+    case 'quota': return `${stageNames[index]}${within || `在${frame}中`}按配额招募${unit}`;
+    case 'convenience': return `${stageNames[index]}${within}通过${frame}招募${unit}`;
+    default: return `${stageNames[index]}${within}以${frame}为抽样框，采用${meta.label}抽取${count}`;
   }
 }
 /** A methods paragraph for one target group, worded by whether every stage is a probability draw. */
 export function groupStatement(group: PlanGroup): string {
   if (!group.stages.length) return '';
   const probability = groupIsProbability(group), name = group.name.trim() || '该群体';
-  const stages = group.stages.map(stageSentence).join('；');
-  const scheme = group.stages.length === 1 ? '单阶段抽样' : `${['', '', '两', '三', '四', '五'][group.stages.length]}阶段抽样`;
+  const stages = group.stages.map((s, i) => stageSentence(s, i, group.stages)).join('；');
+  const scheme = group.stages.length === 1 ? '单阶段抽样' : `${countWord(group.stages.length)}阶段抽样`;
   const base = `对${name}${group.population.trim() ? `（${group.population.trim()}）` : ''}采用${scheme}：${stages}${group.completes ? `，计划获得有效样本 ${group.completes} 份` : ''}。`;
   if (probability) {
     const p = equalProbabilityInclusion(group);
     return base + (p !== null ? `各阶段均为等概率抽样，每个最终单位的入样概率约为 ${(p * 100).toPrecision(3)}%，样本自加权。` : '各阶段均为概率抽样，分析时按各阶段入样概率之积的倒数加权，并按多阶段设计计算抽样误差。');
   }
   const nonProb = group.stages.filter(s => !STAGE_METHODS[s.method].probability).map(s => STAGE_METHODS[s.method].label.replace('（非概率）', '')).join('、');
-  return base + `由于${nonProb}阶段的入样概率未知，样本整体不是概率样本：前几阶段的随机抽取保证了地域与结构上的覆盖，但不能据此计算严格的抽样误差，报告中按样本量公式给出的精度仅作规模参照，并说明样本结构与总体的差异。`;
+  return base + `由于${nonProb}阶段的入样概率未知，样本整体不是概率样本：前几阶段的随机抽取使样本分布到不同地域与类型的单位，但不能据此计算严格的抽样误差；报告中按样本量公式给出的精度仅作规模参照，并说明样本结构与总体的差异。`;
 }
+/**
+ * Selected units written as an indented outline, one unit per line; two spaces or a tab per level.
+ * “名称｜抽样框” attaches a frame label to a unit (e.g. the stratum it was drawn from).
+ */
+export function parseSelectionTree(text: string): SelectedNode[] {
+  const roots: SelectedNode[] = [], stack: { depth: number; node: SelectedNode }[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    if (!raw.trim()) continue;
+    const indent = raw.match(/^[\t ]*/)![0].replace(/\t/g, '  ').length, depth = Math.floor(indent / 2);
+    const [name, frame] = raw.trim().split(/[|｜]/).map(x => x.trim());
+    const node: SelectedNode = { name, ...(frame ? { frame } : {}), children: [] };
+    while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
+    if (stack.length) stack[stack.length - 1].node.children.push(node); else roots.push(node);
+    stack.push({ depth, node });
+  }
+  return roots;
+}
+/** Row spans for a hierarchical table: a cell merges with the cells below while it and every cell to its left repeat. */
+export function mergeSpans(rows: string[][]): number[][] {
+  const spans = rows.map(r => r.map(() => 1));
+  for (let c = 0; c < (rows[0]?.length ?? 0); c++) {
+    for (let r = 0; r < rows.length;) {
+      let end = r + 1;
+      while (end < rows.length && rows[end].slice(0, c + 1).every((v, k) => v === rows[r][k])) end++;
+      spans[r][c] = end - r;
+      for (let k = r + 1; k < end; k++) spans[k][c] = 0;
+      r = end;
+    }
+  }
+  return spans;
+}
+
 /**
  * The multi-level frame table used in survey reports: frame → selected unit → next frame … → final frame.
  * Later-stage frames are written relative to their parent (“青山区所有街道”, “该街道所有居民”); a node may

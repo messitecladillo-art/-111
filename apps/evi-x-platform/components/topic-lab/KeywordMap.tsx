@@ -195,7 +195,7 @@ export default function KeywordMap({ dataNote, map, index, trends, bursts, lastY
           </dl>
           <button type="button" className={styles.primaryButton} aria-pressed={basket.includes(sel.key)} onClick={() => onToggle(sel.key)}>{basket.includes(sel.key) ? '移出选题篮' : '加入选题篮'}</button>
           <h5>最常一起出现的词</h5>
-          {coTerms.length ? <ol className={styles.coList}>{coTerms.map(t => <li key={t.j}><button type="button" onClick={() => setSelected(t.j)}>{nodes[t.j].label}</button><span>{t.c} 篇</span><small title="关联强度 = 实际共现 ÷ 独立预期（> 1 表示比随机更常同时出现）">强度 {t.s.toFixed(2)}</small></li>)}</ol> : <p className={styles.muted}>没有与其他高频词同时出现。</p>}
+          {coTerms.length ? <ol className={styles.coList}>{coTerms.map(t => <li key={t.j}><button type="button" onClick={() => setSelected(t.j)}>{nodes[t.j].label}</button><span>{t.c} 篇</span><small title="关联强度：实际共现次数与两词独立出现时预期共现次数之比；大于 1 表示比随机更常同时出现">强度 {t.s.toFixed(2)}</small></li>)}</ol> : <p className={styles.muted}>没有与其他高频词同时出现。</p>}
         </> : <>
           <h4>聚类</h4>
           <p className={styles.muted}>Louvain 模块度聚类，按词频之和排序；聚类名取自其中出现最多的词，不是人工命名。</p>

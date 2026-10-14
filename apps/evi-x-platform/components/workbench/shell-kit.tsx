@@ -15,7 +15,7 @@ export const NAV_ITEMS: Array<{ id: Section; title: string; description: string;
   { id: "cases", title: "获奖案例库", description: "检索真实案例，分清公告核验与材料分析。", icon: "book", group: "研究与证据" },
   { id: "diagnose", title: "Agent 诊断", description: "梳理准备度，用文献词云与证据画像筛选选题。", icon: "spark", group: "研究与证据" },
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },
-  { id: "sampling", title: "抽样设计", description: "按精度要求算样本量，分配各层样本，写清推断边界。", icon: "target", group: "研究与证据" },
+  { id: "sampling", title: "抽样设计", description: "多阶段方案、样本量、抽取、估计与加权；方法手册含全部公式与计算器。", icon: "target", group: "研究与证据" },
   { id: "silicon", title: "硅基样本", description: "让 AI 扮演设定人群预答问卷，在真人作答前发现问题。", icon: "persona", group: "研究与证据" },
   { id: "analysis", title: "数据分析", description: "检查数据质量、变量分布与量表内部一致性。", icon: "grid", group: "研究与证据" },
   { id: "canvas", title: "研究画布", description: "把问卷、数据、统计与图表连成一条可运行、可复核的研究流程。", icon: "nodes", group: "研究与证据" },
