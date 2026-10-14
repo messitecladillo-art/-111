@@ -12,7 +12,7 @@ export type SurveyAnswers = Record<string, string | number | string[] | null>;
 export type SurveySubmission = { idempotencyKey: string; answers: SurveyAnswers };
 export type CollectionOrigin = { kind: 'collection'; projectId: string; releaseId: string; versionId: string; questionnaireRevision: number; classification: 'actual' | 'synthetic'; snapshotHash: string; generatedAt: string; design: Questionnaire };
 /** Rows kept after registered quality rules; classification is inherited from the parent data. */
-export type QualityOrigin = { kind: 'quality'; parentName: string; parentHash: string; simulated: boolean; silicon: boolean; removed: number; ledgerHash: string; rules: string[]; collection?: CollectionOrigin };
+export type QualityOrigin = { kind: 'quality'; parentName: string; parentHash: string; simulated: boolean; silicon: boolean; removed: number; ledgerHash: string; rules: string[]; missingCodes: string[]; collection?: CollectionOrigin };
 /** Omitted origin is supported only for the existing silicon lab handoff. */
 export type DatasetTransfer = { id: string; name: string; csv: string; origin?: CollectionOrigin | QualityOrigin | { kind: 'silicon' } };
 const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;

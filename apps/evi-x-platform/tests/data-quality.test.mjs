@@ -56,8 +56,10 @@ test('only the rules chosen for exclusion remove rows; the ledger records every 
   assert.equal(removed, 1);
   assert.deepEqual(kept.rows.map(r => r[0]), ['1', '3', '4', '5', '6']);
   assert.equal(table.rows.length, 6);
-  const ledger = exclusionLedger(report, new Set(['duration']), { sourceName: '合成.csv', sourceHash: 'a'.repeat(64), registeredAt: '2026-10-14T02:00:00Z' });
+  const ledger = exclusionLedger(report, new Set(['duration']), { sourceName: '合成.csv', sourceHash: 'a'.repeat(64), registeredAt: '2026-10-14T02:00:00Z', missingCodes: ['99', 'NA'] });
   assert.match(ledger, /# SHA-256 a{64}/);
+  assert.match(ledger, /# 缺失代码 99;NA/);
+  assert.match(exclusionLedger(report, new Set(), { sourceName: 'x', sourceHash: 'a'.repeat(64), registeredAt: 't', missingCodes: [] }), /# 缺失代码 仅空白/);
   assert.match(ledger, /作答过快：用时少于 60 秒（剔除）/);
   assert.match(ledger, /同一 IP 重复提交.*（仅标记）/);
   assert.match(ledger, /\r\n3,2,作答过快,剔除\r\n/);

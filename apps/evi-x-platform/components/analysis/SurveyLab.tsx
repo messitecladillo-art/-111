@@ -183,6 +183,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       const quality=handoff?.origin?.kind==='quality'?handoff.origin:undefined;
       const collection=handoff?.origin?.kind==='collection'?handoff.origin:quality?.collection;
       adopt({ table, name: handoff ? handoff.name : sample ? "12 行教学模拟数据" : file?.name || "粘贴的 CSV 文本", hash, kind: sample || silicon || origin?.simulated ? "simulated" : "user_provided", silicon, ...(collection?{collection}:{}), ...(quality?{quality}:{}), encoding: usedEncoding,identity });
+      if(quality)setMissingText(quality.missingCodes.join(';'));
       if(collection){setMapping({design:collection.design,assignments:suggestAssignments(collection.design,identity),confirmed:null,sourceSignature:snapshotSignature({design:collection.design,pending:false})});setSection('mapping');setNotice(`已读取 ${table.rows.length} 份${collection.classification==='synthetic'?'合成验收':'回收'}答卷，问卷固定为发布 v${collection.questionnaireRevision}。请核对本版变量对应。`);}
       if (silicon) setNotice(`已按模拟数据载入：表中含 ${SILICON_ORIGIN_COLUMN} 标记列，来自硅基样本。可用于演练分析流程。`);
     } catch (e) { if (epoch === readEpoch.current) setError(e instanceof Error ? e.message : "无法读取数据；原有分析未被替换。"); }

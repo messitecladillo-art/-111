@@ -134,9 +134,9 @@ export function tableCsv(table: SurveyTable): string {
   return [table.headers, ...table.rows].map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
 /** Ledger rows: original row number, response ID, reasons, and whether the row was excluded. */
-export function exclusionLedger(report: QualityReport, excluded: ReadonlySet<RuleId>, meta: { sourceName: string; sourceHash: string; registeredAt: string }): string {
+export function exclusionLedger(report: QualityReport, excluded: ReadonlySet<RuleId>, meta: { sourceName: string; sourceHash: string; registeredAt: string; missingCodes: string[] }): string {
   const label = new Map(report.rules.map(r => [r.id, r.label]));
-  const header = [`# 来源 ${meta.sourceName}`, `# SHA-256 ${meta.sourceHash}`, `# 规则登记 ${meta.registeredAt}`, ...report.rules.map(r => `# ${r.label}：${r.criterion}${excluded.has(r.id) ? '（剔除）' : '（仅标记）'}`)];
+  const header = [`# 来源 ${meta.sourceName}`, `# SHA-256 ${meta.sourceHash}`, `# 规则登记 ${meta.registeredAt}`, `# 缺失代码 ${meta.missingCodes.length ? meta.missingCodes.join(';') : '仅空白'}`, ...report.rules.map(r => `# ${r.label}：${r.criterion}${excluded.has(r.id) ? '（剔除）' : '（仅标记）'}`)];
   const rows = report.flagged.map(f => [String(f.row), f.id, f.reasons.map(r => label.get(r)).join('；'), f.reasons.some(r => excluded.has(r)) ? '剔除' : '保留待复核']);
   return [...header, ['原表行号', '答卷编号', '触发规则', '处理'].join(','), ...rows.map(r => r.map(csvCell).join(','))].join('\r\n') + '\r\n';
 }
