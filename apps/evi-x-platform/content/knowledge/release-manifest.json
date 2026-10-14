@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "release": "2026-10-15.1",
+  "packs": [
+    {
+      "path": "core-60.json",
+      "sha256": "511839b3316f855cdfa6aff4f81988e2f3ff785e0b21fe470834a248117843b8"
+    }
+  ]
+}

@@ -61,7 +61,7 @@ export function validateKnowledgePack(value: unknown): KnowledgePack {
   const ids = new Set<string>();
   const entryFields = new Set(['id', 'version', 'name', 'englishName', 'aliases', 'domain', 'depth', 'definition', 'uses', 'examples', 'formula', 'confusions', 'questions', 'relatedIds', 'methodIds', 'materialIds', 'toolLinks', 'sources', 'review', 'updatedAt']);
   for (const entry of pack.entries) {
-    if (!entry || !isKnowledgeId(entry.id) || ids.has(entry.id) || !Number.isInteger(entry.version) || entry.version < 1 || typeof entry.name !== 'string' || !entry.name.trim() || !Object.hasOwn(KNOWLEDGE_DOMAINS, entry.domain) || !['deep', 'brief'].includes(entry.depth) || typeof entry.definition !== 'string' || !entry.definition.trim()) throw new Error('知识条目身份或定义无效。');
+    if (!entry || !isKnowledgeId(entry.id) || ids.has(entry.id) || !Number.isInteger(entry.version) || entry.version < 1 || entry.version > 2147483647 || typeof entry.name !== 'string' || !entry.name.trim() || !Object.hasOwn(KNOWLEDGE_DOMAINS, entry.domain) || !['deep', 'brief'].includes(entry.depth) || typeof entry.definition !== 'string' || !entry.definition.trim()) throw new Error('知识条目身份或定义无效。');
     ids.add(entry.id);
     if (Object.keys(entry).some(key => !entryFields.has(key)) || (entry.englishName !== undefined && typeof entry.englishName !== 'string')) throw new Error(`知识条目 ${entry.id} 含有未登记字段。`);
     for (const field of ['aliases', 'uses', 'examples', 'relatedIds', 'methodIds', 'materialIds'] as const) {

@@ -18,6 +18,7 @@ from .models import User, Challenge, RateEvent, Session, Team, Member, Project, 
 from .security import keyed, random_token, code_verifier, config_view, encrypt, decrypt
 from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_proposal
 from . import silicon, surveys
+from .knowledge import register_knowledge
 from .reports import register_reports
 from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
@@ -26,7 +27,7 @@ from .submission_preflight_routes import TemporarySubmissionPreflights
 from .net_exam import NetExamBank
 
 
-SCHEMA_REVISION = "0004_project_reports"
+SCHEMA_REVISION = "0005_knowledge"
 
 
 def iso(value):
@@ -65,7 +66,7 @@ def silicon_view(run, full=False):
     return result
 
 
-def create_app(settings: Settings | None = None, mail=None, provider=None, engine=None):
+def create_app(settings: Settings | None = None, mail=None, provider=None, engine=None, knowledge_config=None):
     settings = settings or Settings()
     if settings.mode == "production" and (mail is not None or provider is not None or engine is not None):
         raise ValueError("Production rejects injected fixtures")
@@ -919,6 +920,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
         return silicon_view(row, full=True)
 
     surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
+    register_knowledge(app, settings, db, session_user, owned_project, lock_user, operation, config=knowledge_config)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)
     return app
