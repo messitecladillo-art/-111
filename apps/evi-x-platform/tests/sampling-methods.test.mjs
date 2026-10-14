@@ -380,10 +380,14 @@ test('the sampling lab shows unbiased designs, honest coverage and the expected 
 });
 
 test('review fixes: budgets cannot buy more primary units than exist; weights bind to content; names stay literal', async () => {
-  const capped = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 100000 } });
-  assert.equal(capped.n, 10);
-  assert.ok(capped.warnings.some(w => w.includes('$n=N$')));
-  assert.ok(capped.V > 0 && capped.cost === 10 * (100 + 10 * capped.m));
+  // Enough budget for a census of all N·M elements: take every primary unit and every element.
+  const census = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 100000 } });
+  assert.equal(census.n, 10); assert.equal(census.m, 50); assert.equal(census.V, 0); assert.equal(census.cost, 6000);
+  assert.ok(census.warnings.some(w => w.includes('$m=M$')));
+  // Budget for all primary units but not a census: spare money raises m beyond the cost optimum.
+  const partial = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 3000 } });
+  assert.equal(partial.n, 10); assert.equal(partial.m, 20); assert.ok(partial.cost <= 3000);
+  assert.ok(partial.V > 0 && partial.V < twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: null, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 1900 } }).V);
   const { textHash, literal } = await import('../lib/sampling-core.ts');
   assert.equal(textHash('a,b\n1,2'), textHash('a,b\n1,2'));
   assert.notEqual(textHash('a,b\n1,2'), textHash('a,b\n1,3'));

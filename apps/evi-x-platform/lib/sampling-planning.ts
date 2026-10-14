@@ -179,34 +179,39 @@ export function twoStagePlan({ components, M, N, c1, c2, constraint }: TwoStageI
   else mExact = Math.sqrt(c1 * S2 / (c2 * Su));
   const product = (m: number) => (Math.max(Su, 0) + S2 / m) * (c1 + c2 * m);
   const candidates = [Math.floor(mExact), Math.ceil(mExact)].map(m => Math.min(M, Math.max(2, m)));
-  const m = candidates.reduce((best, x) => product(x) < product(best) ? x : best, candidates[0]);
+  const mOptimal = candidates.reduce((best, x) => product(x) < product(best) ? x : best, candidates[0]);
+  let m = mOptimal;
   const inv = N === null ? 0 : 1 / N;
-  let n: number, z: number | null = null, targetStep: Step | null = null;
+  let n: number, z: number | null = null, targetStep: Step | null = null, capStep: Step | null = null;
   if (constraint.kind === 'budget') {
     if (!(constraint.budget > 0)) throw Error('总预算须大于 0。');
     n = Math.floor(constraint.budget / (c1 + c2 * m));
     if (n < 2) throw Error('预算不足以调查 2 个初级单元。');
     if (N !== null && n > N) {
-      // The budget buys more primary units than exist: take them all; the spare budget could raise m instead.
+      // The budget buys more primary units than exist: take all N, then spend what is left on more
+      // elements per unit; V decreases in m, so take the largest affordable m (up to a census, m = M).
       n = N;
-      warnings.push(`预算足以调查全部 ${N} 个初级单元，已取 $n=N$；剩余预算可用于增加每个单元的样本数。`);
+      m = Math.min(M, Math.max(mOptimal, Math.floor((constraint.budget / N - c1) / c2)));
+      capStep = { label: '预算超过全部初级单元所需：取全部初级单元，余款用于增加单元内样本', tex: tex`n=N=${N},\qquad m=\min\Bigl(M,\ \Bigl\lfloor\frac{C/N-c_1}{c_2}\Bigr\rfloor\Bigr)=${m}` };
+      warnings.push(m === M ? `预算足以普查全部 ${N} 个初级单元中的全部单位（$n=N$，$m=M$），无抽样误差。` : `预算足以调查全部 ${N} 个初级单元，已取 $n=N$，并把余下预算用于把每个单元的样本增加到 $m=${m}$。`);
     }
   } else {
     const t = targetVariance(constraint.target); z = t.z; targetStep = t.step;
     n = Math.ceil((Math.max(Su, 0) + S2 / m) / (t.V + S1 * inv) - 1e-9);
     if (N !== null && n > N) throw Error('所需初级单元数超过总数，请放宽精度要求或增加每个单元的样本。');
   }
-  const V = (Math.max(Su, 0) + S2 / m) / n - S1 * inv, cost = n * (c1 + c2 * m);
+  // Exact two-stage variance (zero for a census of all N·M units), clamped against rounding error.
+  const V = Math.max(0, (Su + S2 / m) / n - S1 * inv), cost = n * (c1 + c2 * m);
   // Against an SRS of the same n·m elements (finite-population terms left out of both): 1 + (m − 1)ρ.
   const deff = (Math.max(Su, 0) + S2 / m) / n / ((Math.max(Su, 0) + S2) / (n * m));
-  if (m < mExact - 1e-9 && m === M) warnings.push('最优值超过 $M$，已取 $m=M$。');
+  if (mOptimal < mExact - 1e-9 && mOptimal === M) warnings.push('最优值超过 $M$，已取 $m=M$。');
   return { mExact, m, n, V, margin: z === null ? null : z * Math.sqrt(Math.max(0, V)), cost, deff, warnings, steps: [
     ...(targetStep ? [targetStep] : []),
     { label: '单元间方差的有效部分', tex: tex`S_u^{2}=S_1^{2}-\frac{S_2^{2}}{M}=${texNum(S1, 5)}-\frac{${texNum(S2, 5)}}{${M}}=${texNum(Su, 5)}` },
-    { label: '每个初级单元的最优样本数', tex: Su > 0 ? tex`m_{opt}=\frac{S_2}{S_u}\sqrt{\frac{c_1}{c_2}}=\sqrt{\frac{${texNum(S2, 5)}}{${texNum(Su, 5)}}\times\frac{${texNum(c1, 5)}}{${texNum(c2, 5)}}}=${texNum(mExact, 4)}\ \Rightarrow\ m=${m}` : tex`S_u^{2}\le 0\ \Rightarrow\ m=M=${M}` },
-    constraint.kind === 'budget'
+    { label: '每个初级单元的最优样本数', tex: Su > 0 ? tex`m_{opt}=\frac{S_2}{S_u}\sqrt{\frac{c_1}{c_2}}=\sqrt{\frac{${texNum(S2, 5)}}{${texNum(Su, 5)}}\times\frac{${texNum(c1, 5)}}{${texNum(c2, 5)}}}=${texNum(mExact, 4)}\ \Rightarrow\ m=${mOptimal}` : tex`S_u^{2}\le 0\ \Rightarrow\ m=M=${M}` },
+    capStep ?? (constraint.kind === 'budget'
       ? { label: '初级单元数（由预算）', tex: tex`n=\left\lfloor\frac{C}{c_1+c_2m}\right\rfloor=\left\lfloor\frac{${texNum(constraint.budget, 7)}}{${texNum(c1, 5)}+${texNum(c2, 5)}\times ${m}}\right\rfloor=${n}` }
-      : { label: '初级单元数（由精度）', tex: tex`n=\frac{S_u^{2}+S_2^{2}/m}{V+S_1^{2}/N}\ \Rightarrow\ n=${n}` },
+      : { label: '初级单元数（由精度）', tex: tex`n=\frac{S_u^{2}+S_2^{2}/m}{V+S_1^{2}/N}\ \Rightarrow\ n=${n}` }),
     { label: '达到的方差', tex: tex`V(\bar{\bar{y}})=\frac{1}{n}\Bigl(S_u^{2}+\frac{S_2^{2}}{m}\Bigr)-\frac{S_1^{2}}{N}=${texNum(V, 5)},\quad \text{费用 }C=n(c_1+c_2m)=${texNum(cost, 7)}` },
   ] };
 }
