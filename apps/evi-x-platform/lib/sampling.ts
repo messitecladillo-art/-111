@@ -84,8 +84,8 @@ export function achievedMargin({ n, confidence, proportion, sd, population, desi
   return Z_BY_CONFIDENCE[confidence] * Math.sqrt(designEffect * variance / n) * fpc;
 }
 
-export type Stratum = { id: string; name: string; size: number; sd: number | null };
-export type AllocationMethod = 'proportional' | 'neyman' | 'equal';
+export type Stratum = { id: string; name: string; size: number; sd: number | null; cost?: number | null };
+export type AllocationMethod = 'proportional' | 'neyman' | 'optimal' | 'equal';
 export type AllocationRow = { id: string; name: string; size: number; share: number; allocation: number; fraction: number; weight: number; relativeWeight: number };
 export type Allocation = { rows: AllocationRow[]; total: number; warnings: string[] };
 
@@ -100,17 +100,18 @@ function roundToTotal(exact: number[], total: number, caps: number[]): number[] 
 export function allocate(strata: Stratum[], total: number, method: AllocationMethod, minimum = 0): Allocation {
   if (strata.length < 2 || strata.length > 30) throw Error('分层数为 2–30。');
   if (strata.some(s => !(Number.isFinite(s.size) && s.size > 0))) throw Error('每层规模须为正数，可来自统计年鉴、普查或学校名册。');
-  if (method === 'neyman' && strata.some(s => !(s.sd !== null && s.sd > 0))) throw Error('Neyman 分配需要每层的标准差（比例可用 √(p(1−p))）。');
+  if ((method === 'neyman' || method === 'optimal') && strata.some(s => !(s.sd !== null && s.sd > 0))) throw Error(`${method === 'neyman' ? 'Neyman' : '费用最优'}分配需要每层的标准差（比例可用 √(p(1−p))）。`);
+  if (method === 'optimal' && strata.some(s => !(s.cost != null && s.cost > 0))) throw Error('费用最优分配需要每层每个样本的调查费用。');
   if (!(Number.isInteger(total) && total >= strata.length)) throw Error('总样本量须为整数，且不少于层数。');
   if (!(Number.isInteger(minimum) && minimum >= 0)) throw Error('每层最少样本须为非负整数。');
   const counts = strata.every(s => Number.isInteger(s.size)), caps = strata.map(s => counts ? s.size : Infinity);
   if (counts && total > caps.reduce((s, v) => s + v, 0)) throw Error('总样本量超过各层规模之和。');
-  const score = strata.map(s => method === 'proportional' ? s.size : method === 'neyman' ? s.size * s.sd! : 1);
+  const score = strata.map(s => method === 'proportional' ? s.size : method === 'neyman' ? s.size * s.sd! : method === 'optimal' ? s.size * s.sd! / Math.sqrt(s.cost!) : 1);
   // A stratum smaller than the minimum is taken whole; the floors must fit in the total.
   const floors = caps.map(cap => Math.min(minimum, cap));
   if (floors.reduce((s, v) => s + v, 0) > total) throw Error('各层最少样本之和超过总样本量。');
   // Cap strata that exceed their size first (this frees budget), then lift strata below the floor.
-  const fixed = new Map<number, number>(), warnings: string[] = [];
+  const fixed = new Map<number, number>(), lifted = new Set<number>(), warnings: string[] = [];
   for (let guard = 0; guard <= 2 * strata.length + 1; guard++) {
     const free = strata.map((_, i) => i).filter(i => !fixed.has(i)), remaining = total - [...fixed.values()].reduce((s, v) => s + v, 0);
     if (!free.length) break;
@@ -119,7 +120,7 @@ export function allocate(strata: Stratum[], total: number, method: AllocationMet
     const high = free.filter((i, k) => exact[k] > caps[i]);
     if (high.length) { high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`「${strata[i].name}」按公式分配超过该层规模，已全部纳入（普查该层）。`); }); continue; }
     const low = free.filter((i, k) => exact[k] < floors[i]);
-    if (low.length) { low.forEach(i => fixed.set(i, floors[i])); continue; }
+    if (low.length) { low.forEach(i => { fixed.set(i, floors[i]); lifted.add(i); }); continue; }
     const rounded = roundToTotal(exact, remaining, free.map(i => caps[i]));
     free.forEach((i, k) => fixed.set(i, rounded[k]));
   }
@@ -133,7 +134,7 @@ export function allocate(strata: Stratum[], total: number, method: AllocationMet
   alloc.forEach((v, i) => fixed.set(i, v));
   if (floors.some((f, i) => f < minimum && alloc[i] === caps[i])) warnings.push('有层的规模小于“每层最少样本”，该层已全部纳入。');
   const population = strata.reduce((s, v) => s + v.size, 0);
-  if (minimum > 0 && method !== 'equal') warnings.push(`为保证每层至少 ${minimum} 份，部分层偏离${method === 'neyman' ? 'Neyman' : '比例'}分配，分析时须用设计权数加权。`);
+  if (method !== 'equal' && lifted.size) warnings.push(`为保证每层至少 ${minimum} 份，部分层偏离${method === 'neyman' ? 'Neyman' : method === 'optimal' ? '费用最优' : '比例'}分配，分析时须用设计权数加权。`);
   if (method !== 'proportional') warnings.push('非比例分配下各层抽样比不同，汇总全体时必须使用设计权数，否则结构失衡。');
   const rows = strata.map((s, i) => {
     const allocation = fixed.get(i)!;
