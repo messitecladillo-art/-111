@@ -1,7 +1,8 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {createEditorContent,type DraftSummary} from '@/lib/editor-model';
+import {createEditorContent,type DraftSummary,type ReportSection} from '@/lib/editor-model';
 import {evidenceSection,type EvidenceCandidate,type ResearchRun} from '@/lib/research-flow';
+import { evidenceSectionId } from '@/lib/project-report';
 import {EDITOR_RECOVERY_CHANNEL,EDITOR_RECOVERY_EVENT} from '@/lib/editor-recovery';
 import styles from './ResearchFlow.module.css';
 
@@ -10,14 +11,18 @@ async function api<T>(path:string,scope:string,body?:unknown):Promise<T>{
   const value=await response.json();if(!response.ok)throw Error((value as {error?:{message?:string}}).error?.message||'服务暂时不可用，请稍后重试。');return value as T;
 }
 const labels={pending:'等待确认',accepted:'已写入报告',cancelled:'已取消'};
-export default function ResearchFlow({candidates,localOnly=false}:{candidates:EvidenceCandidate[];localOnly?:boolean}){
-  return localOnly?<LocalEvidenceSummary candidates={candidates}/>:<LegacyResearchFlow candidates={candidates}/>;
+export default function ResearchFlow({candidates,localOnly=false,onEvidenceProposal,transformSection}:{candidates:EvidenceCandidate[];localOnly?:boolean;onEvidenceProposal?:(section:ReportSection)=>void;transformSection?:(section:ReportSection)=>ReportSection}){
+  return localOnly?<LocalEvidenceSummary candidates={candidates} onEvidenceProposal={onEvidenceProposal} transformSection={transformSection}/>:<LegacyResearchFlow candidates={candidates}/>;
 }
-function LocalEvidenceSummary({candidates}:{candidates:EvidenceCandidate[]}){
+function LocalEvidenceSummary({candidates,onEvidenceProposal,transformSection}:{candidates:EvidenceCandidate[];onEvidenceProposal?:(section:ReportSection)=>void;transformSection?:(section:ReportSection)=>ReportSection}){
   const [selected,setSelected]=useState('');
-  const candidate=candidates.find(c=>c.key===selected), preview=candidate?evidenceSection(candidate.input,'本地汇总'):null;
+  const candidate=candidates.find(c=>c.key===selected), rawPreview=candidate?evidenceSection(candidate.input,'本地汇总'):null;
+  const preview=rawPreview&&transformSection?transformSection(rawPreview):rawPreview;
+  const inputKey=candidate?JSON.stringify(candidate.input):'';
+  const [identity,setIdentity]=useState<{inputKey:string;id:string}>({inputKey:'',id:''});
+  useEffect(()=>{let live=true;if(inputKey)void evidenceSectionId(JSON.parse(inputKey)).then(id=>{if(live)setIdentity({inputKey,id});}).catch(()=>{});return()=>{live=false;};},[inputKey]);
   function download(){if(!preview||!candidate)return;const url=URL.createObjectURL(new Blob([JSON.stringify({schema:'evix-local-evidence/v1',input:candidate.input,proposal:preview},null,2)],{type:'application/json;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='统计证据提案.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  return <section className={styles.flow} aria-label="本地统计证据提案"><header className={styles.head}><div><span className={styles.eyebrow}>计算 → 证据 → 报告</span><h3>把统计结果整理成报告段落</h3><p>根据本页计算生成报告段落，可预览与下载。云端写入将在成果编辑阶段接入。</p></div></header><div className={styles.compose}><div><label>选择当前有效结果<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">{candidates.length?'选择统计结果':'先计算频数卡片或量表 α'}</option>{candidates.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label><button type="button" disabled={!preview} onClick={download}>下载统计证据提案</button></div><div className={styles.preview}>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p><details><summary>依据与计算口径</summary><pre>{preview.source}</pre></details></>:<p>选择已计算的结果，预览报告段落。</p>}</div></div></section>;
+  return <section className={styles.flow} aria-label="本地统计证据提案"><header className={styles.head}><div><span className={styles.eyebrow}>计算 → 证据 → 报告</span><h3>把统计结果整理成报告段落</h3><p>{onEvidenceProposal?'预览统计段落，确认后添加到项目报告。':'根据本页计算生成报告段落，可预览与下载。'}</p></div></header><div className={styles.compose}><div><label>选择当前有效结果<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">{candidates.length?'选择统计结果':'先计算频数卡片或量表 α'}</option>{candidates.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></label><button type="button" disabled={!preview} onClick={download}>下载统计证据提案</button>{onEvidenceProposal&&<button type="button" disabled={!preview||identity.inputKey!==inputKey||!identity.id} onClick={()=>{if(preview&&identity.inputKey===inputKey&&identity.id)onEvidenceProposal({...preview,id:identity.id});}}>预览并加入项目报告</button>}</div><div className={styles.preview}>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p><details><summary>依据与计算口径</summary><pre>{preview.source}</pre></details></>:<p>选择已计算的结果，预览报告段落。</p>}</div></div></section>;
 }
 function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
   const [runs,setRuns]=useState<ResearchRun[]>([]),[drafts,setDrafts]=useState<DraftSummary[]>([]),[scope,setScope]=useState('');

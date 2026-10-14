@@ -1,0 +1,48 @@
+.workbench { color: var(--wb-text); border: 1px solid var(--wb-line); border-radius: 10px; overflow: hidden; background: var(--wb-solid); }
+.toolbar,.paneBar,.statusRow,.sourceFooter,.insertBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toolbar { flex-wrap: wrap; padding: 16px 18px; border-bottom: 1px solid var(--wb-line); }
+.toolbar strong { font-size: 16px; }
+.subtitle { margin-left: 12px; font-size: 12px; color: var(--wb-muted); }
+.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.workbench .primary { color: var(--wb-accent-text); background: var(--wb-accent); border-color: var(--wb-accent); }
+.workbench .primary:hover:not(:disabled) { color: var(--wb-accent-text); }
+.workbench kbd { margin-left: 8px; font-size: 11px; font-weight: 400; opacity: .7; }
+.workbench a { color: var(--wb-accent); text-underline-offset: 3px; }
+.statusRow { min-height: 44px; padding: 8px 18px; font-size: 12px; color: var(--wb-muted); background: var(--wb-surface); }
+.workbench [data-stale=true] { color: var(--wb-amber); }
+.panes { display: grid; grid-template-columns: minmax(340px,1fr) minmax(340px,1.05fr); min-height: 590px; height: max(590px,calc(100dvh - 285px)); border-top: 1px solid var(--wb-line); }
+.sourcePane,.previewPane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.sourcePane { border-right: 1px solid var(--wb-line); }
+.previewPane { background: var(--wb-well); }
+.paneBar { padding: 10px 12px; min-height: 48px; border-bottom: 1px solid var(--wb-line); font-size: 12px; background: var(--wb-solid); flex-wrap: wrap; }
+.paneBar > span { color: var(--wb-muted); }
+.tabs { display: flex; gap: 4px; }
+.tabs button { border: 0; padding: 5px 10px; min-height: 30px; background: transparent; }
+.tabs button[aria-pressed=true] { color: var(--wb-accent); background: var(--wb-accent-soft); }
+.insertBar { padding: 8px 12px; justify-content: flex-start; flex-wrap: wrap; border-bottom: 1px solid var(--wb-line); }
+.insertBar button { min-height: 30px; font-size: 12px; }
+.insertBar span { color: var(--wb-muted); font-size: 11px; margin-left: auto; }
+.workbench .code { display: block; flex: 1; width: 100%; min-height: 200px; border: 0; border-radius: 0; padding: 18px; resize: none; tab-size: 2; font: 13px/24px 'Cascadia Code','Consolas','Microsoft YaHei',monospace; color: var(--wb-text); background: var(--wb-solid); scrollbar-width: thin; }
+.workbench .code[hidden] { display: none; }
+.workbench .code:focus { outline: 2px solid var(--wb-accent); outline-offset: -2px; }
+.sourceFooter { min-height: 32px; padding: 8px 12px; font-size: 11px; color: var(--wb-muted); background: var(--wb-solid); border-top: 1px solid var(--wb-line); }
+.empty,.previewEmpty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px; text-align: center; }
+.empty h3,.previewEmpty h3 { font: 600 20px var(--wb-heading); margin: 18px 0 12px; }
+.empty p,.previewEmpty p { color: var(--wb-muted); font-size: 13px; line-height: 1.8; max-width: 280px; margin: 0 0 24px; }
+.eyebrow { letter-spacing: .2em; color: var(--wb-accent); font: 11px monospace; }
+.paperIcon { width: 94px; height: 124px; padding: 24px 17px; border: 1px solid var(--wb-line); background: var(--wb-solid); box-shadow: 0 7px 22px #00000009; }
+.paperIcon i { display: block; height: 2px; margin-bottom: 13px; background: var(--wb-line); }
+.paperIcon i:first-child { background: var(--wb-accent); width: 65%; margin-bottom: 22px; }
+.paperIcon i:last-child { width: 70%; }
+.confirm { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--wb-line); background: var(--wb-accent-soft); }
+.confirm > div { margin-right: auto; }
+.confirm p { margin: 5px 0 0; color: var(--wb-muted); font-size: 12px; }
+.error,.notice { padding: 10px 18px; margin: 0; font-size: 13px; }
+.error { color: var(--wb-risk); background: var(--wb-well); }
+.notice { color: var(--wb-accent); }
+.diagnostics { border-top: 1px solid var(--wb-line); padding: 14px 18px; font-size: 13px; }
+.diagnostics ul { padding: 0; margin: 8px 0 0; list-style: none; display: grid; gap: 6px; }
+.diagnostics li { display: flex; align-items: center; gap: 12px; line-height: 1.6; }
+.diagnostics li[data-severity=error] { color: var(--wb-risk); }
+.diagnostics button { min-height: 28px; flex-shrink: 0; font-size: 12px; }
+.workbench button:focus-visible,.workbench a:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 3px; }

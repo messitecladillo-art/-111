@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     silicon_hourly_runs: int = 6
     silicon_call_seconds: int = 45
     silicon_stale_seconds: int = 600
+    # Explicit operator-installed compiler only; no discovery or package installation.
+    latex_compiler: str = ""
+    latex_timeout_seconds: int = 45
+    latex_concurrency: int = 2
+    latex_hourly_compiles: int = 30
 
     # SAV stays private and disposable; limits apply before native decoding.
     sav_temp_dir: Path = Path(".local/sav-imports")
@@ -109,6 +114,10 @@ class Settings(BaseSettings):
                         and 1 <= self.preflight_hourly_imports <= 60
                         and self.preflight_hourly_imports <= self.preflight_global_hourly_imports <= 1000)):
             raise ValueError("Invalid private submission preflight bounds")
+        if self.latex_compiler and (not Path(self.latex_compiler).is_absolute() or Path(self.latex_compiler).name.lower() not in ("xelatex", "xelatex.exe")):
+            raise ValueError("LaTeX requires an absolute xelatex executable path")
+        if not (1 <= self.latex_timeout_seconds <= 45 and 1 <= self.latex_concurrency <= 2 and 1 <= self.latex_hourly_compiles <= 60):
+            raise ValueError("Invalid LaTeX compile bounds")
         if self.net_exam_bank_path is not None and not self.net_exam_bank_path.parts:
             raise ValueError("Invalid practice bank path")
         for base in self.compatible_bases:
