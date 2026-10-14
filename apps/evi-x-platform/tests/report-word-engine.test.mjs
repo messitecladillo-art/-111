@@ -53,6 +53,9 @@ test('slides built from report text cite figures by number, never by raw token',
   const broken = structuredClone(content);
   broken.report[0].body = '见[[图:gone]]，青年组更活跃。';
   await assert.rejects(buildStoryboard(parseEditorContent(broken), [card('见[[图:gone]]，青年组更活跃。')], 'replace'), /引用已失效/);
+  await assert.rejects(buildStoryboard(parseEditorContent(broken), [card('引用失效）')], 'replace'), /引用已失效/, 'part of a rendered broken marker is refused too');
+  const [beside] = await buildStoryboard(parseEditorContent(broken), [card('青年组更活跃。')], 'replace');
+  assert.match(beside.body, /青年组更活跃/, 'text next to a broken reference is still usable');
   const math = structuredClone(content);
   math.report[0].body = '样本量为 $n_0=385$。';
   await assert.rejects(buildStoryboard(parseEditorContent(math), [card('样本量为 $n_0=385$。')], 'replace'), /行内公式/);

@@ -8,11 +8,19 @@ import {splitInlineMath} from './inline-math.ts';
  * export does, and refuse inline formulas, which slides cannot typeset yet.
  */
 function slideText(excerpt:string,section:ReportSection,content:EditorContent,outside:string):string{
-  const labels=reportLabels(content.report);
-  const shown=referenceSegments(section.body,labels).map(s=>s.text).join('');
-  if(!section.body.includes(excerpt)&&!shown.includes(excerpt))throw Error(outside);
-  if(!section.body.includes(excerpt)&&excerpt.includes('（引用失效）'))throw Error(`「${section.title||'未命名章节'}」中有图表引用已失效，请先在正文重新插入引用。`);
-  const text=section.body.includes(excerpt)?resolveReferences(excerpt,labels,section.title||'未命名章节'):excerpt;
+  const labels=reportLabels(content.report),where=section.title||'未命名章节';
+  let text:string;
+  if(section.body.includes(excerpt))text=resolveReferences(excerpt,labels,where);
+  else{
+    // Match against the preview text, remembering where broken references were rendered.
+    let shown='';const broken:[number,number][]=[];
+    for(const segment of referenceSegments(section.body,labels)){const start=shown.length;shown+=segment.text;if(segment.missing)broken.push([start,shown.length]);}
+    let at=shown.indexOf(excerpt),clean=false;
+    if(at<0)throw Error(outside);
+    for(;at>=0;at=shown.indexOf(excerpt,at+1))if(!broken.some(([a,b])=>at<b&&at+excerpt.length>a)){clean=true;break;}
+    if(!clean)throw Error(`「${where}」中有图表引用已失效，请先在正文重新插入引用。`);
+    text=excerpt;
+  }
   if(splitInlineMath(text).some(part=>part.math))throw Error('节选含行内公式，幻灯片暂不能排版行内公式；请改选不含公式的原文。');
   return text;
 }
