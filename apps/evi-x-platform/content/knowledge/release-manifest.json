@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026-10-15.3",
+  "release": "2026-10-15.4",
   "packs": [
     {
       "path": "core-60.json",
@@ -13,6 +13,10 @@
     {
       "path": "pack-02-social-spatial.json",
       "sha256": "0120abb51d0bb93b75b346cbde5eea72e885ad58a91382bd20579e42a2edf430"
+    },
+    {
+      "path": "pack-03-computing-data.json",
+      "sha256": "7980e32ece323d5d1dc46d70756eb5454a19892c80d6e7350dcc5aa8bab0496c"
     }
   ]
 }

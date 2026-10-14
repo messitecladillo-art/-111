@@ -18,3 +18,7 @@ apps/evi-x-platform/public/knowledge-assets/** -text
 
 # Knowledge publication hashes use LF source bytes on all platforms.
 apps/evi-x-platform/content/knowledge/*.json text eol=lf
+
+# Generated release projections; source packs and review records stay reviewable.
+apps/evi-x-platform/content/knowledge/published.json linguist-generated=true
+apps/evi-x-api/src/evix_api/knowledge-catalog.json linguist-generated=true

@@ -1,0 +1,394 @@
+{
+  "protocol": "agent-collab/v1",
+  "nonce": "review-pack03-20261015",
+  "sender": "/root/knowledge_api",
+  "receiver": "/root",
+  "baseRevision": "630a919491789852438da6c3fd18967bc4f2f6cf",
+  "classification": "original educational content; public technical sources; no user answers or keys",
+  "producer": "knowledge_content",
+  "reviewer": "knowledge_api",
+  "reviewedAt": "2026-10-14T16:52:12Z",
+  "inputSha256": "a774e53ec58e61153f442017696a7ca57f050b0c2e25800c0b312fd2c25c198e",
+  "outputSha256": "7980e32ece323d5d1dc46d70756eb5454a19892c80d6e7350dcc5aa8bab0496c",
+  "bodySha256": "b7d1236a066c58860bf3e20e581678ca3f66316fca9780a6e289b82b4acc1ee6",
+  "entryCount": 100,
+  "deepCount": 28,
+  "briefCount": 72,
+  "formulaCount": 3,
+  "sourceUrlDeclarations": 76,
+  "livePrimaryPassageChecks": 24,
+  "decision": "approved",
+  "metadataAction": "complete; automatic review accepted supplied independent evidence before the guarded write, receipt abc595 exit 0; content body unchanged",
+  "checkedEntryIds": [
+    "data-type",
+    "integer",
+    "floating-point",
+    "boolean",
+    "string",
+    "categorical-encoding",
+    "one-hot-encoding",
+    "ordinal-encoding",
+    "unicode-normalization",
+    "unicode-codepoint",
+    "byte-order-mark",
+    "delimiter",
+    "decimal-precision",
+    "serialization",
+    "json-schema",
+    "xml",
+    "xlsx",
+    "tsv",
+    "parquet",
+    "arrow",
+    "svg",
+    "pdf",
+    "compression",
+    "gzip",
+    "zip-archive",
+    "file-signature",
+    "content-type",
+    "nullable-type",
+    "data-validation",
+    "schema-evolution",
+    "relational-database",
+    "sql",
+    "primary-key",
+    "foreign-key",
+    "unique-constraint",
+    "check-constraint",
+    "null-sql",
+    "join",
+    "aggregation",
+    "window-function",
+    "database-index",
+    "query-plan",
+    "transaction-isolation",
+    "mvcc",
+    "optimistic-concurrency",
+    "pessimistic-lock",
+    "deadlock",
+    "upsert",
+    "write-ahead-log",
+    "backup-recovery",
+    "event-log",
+    "outbox",
+    "lease",
+    "task-queue",
+    "at-least-once",
+    "exactly-once",
+    "checkpoint",
+    "retry-backoff",
+    "timeout",
+    "cancellation",
+    "http",
+    "status-code",
+    "rest",
+    "pagination",
+    "sse",
+    "websocket",
+    "cors",
+    "tls",
+    "authentication",
+    "authorization",
+    "encryption",
+    "aead",
+    "password-hashing",
+    "secret-management",
+    "least-privilege",
+    "sql-injection",
+    "cross-site-scripting",
+    "csrf",
+    "pseudonymization",
+    "anonymization",
+    "differential-privacy",
+    "algorithm",
+    "time-complexity",
+    "space-complexity",
+    "big-o",
+    "hash-table",
+    "binary-search",
+    "sorting",
+    "graph",
+    "breadth-first-search",
+    "depth-first-search",
+    "topological-sort",
+    "cache",
+    "worker-thread",
+    "streaming",
+    "vectorization",
+    "numerical-stability",
+    "reproducibility",
+    "provenance",
+    "environment-lock"
+  ],
+  "findings": [
+    {
+      "priority": "P2",
+      "entry": "compression",
+      "issue": "压缩率 is a measurement, not synonym of lossless compression",
+      "status": "closed by independent producer correction",
+      "current": "alias removed"
+    },
+    {
+      "priority": "P2",
+      "entry": "encryption",
+      "issue": "encryption does not itself prohibit authorized plaintext recovery or UI display",
+      "status": "closed by independent producer correction",
+      "current": "UI no-echo policy distinguished from authorized decryption"
+    }
+  ],
+  "primarySourceChecks": [
+    {
+      "name": "Kafka design",
+      "url": "https://kafka.apache.org/41/design/design/",
+      "observed": "Exactly-once within Kafka/transaction boundary; other destinations require cooperation.",
+      "entries": [
+        "exactly-once",
+        "event-log"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "AWS outbox",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html",
+      "observed": "Duplicate event delivery remains possible; consumer idempotency needed.",
+      "entries": [
+        "outbox"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "AWS timeouts",
+      "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+      "observed": "Timeout or failure does not prove remote side effects absent.",
+      "entries": [
+        "timeout",
+        "retry-backoff"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "NIST DP",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-226.pdf",
+      "observed": "Sec2.1.1 pure epsilon and Sec2.3 variants; all adjacent pairs and output sets; privacy unit/composition.",
+      "entries": [
+        "differential-privacy"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "NIST de-identification",
+      "url": "https://nvlpubs.nist.gov/nistpubs/ir/2015/NIST.IR.8053.pdf",
+      "observed": "Sec3.2 reversible pseudonyms and Sec3.3 linkage attacks; no China legal claim.",
+      "entries": [
+        "pseudonymization",
+        "anonymization"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "PyCA AEAD",
+      "url": "https://cryptography.io/en/latest/hazmat/primitives/aead/",
+      "observed": "Never reuse nonce with key; AAD authenticated but not encrypted; wrong AAD InvalidTag.",
+      "entries": [
+        "aead",
+        "encryption"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "PostgreSQL isolation",
+      "url": "https://www.postgresql.org/docs/current/transaction-iso.html",
+      "observed": "Repeatable-read can have serialization anomaly; serializable may abort.",
+      "entries": [
+        "transaction-isolation",
+        "mvcc"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "SQLAlchemy versioning",
+      "url": "https://docs.sqlalchemy.org/en/20/orm/versioning.html",
+      "observed": "Expected-version UPDATE with zero matching rows raises StaleDataError.",
+      "entries": [
+        "optimistic-concurrency"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "Unicode UAX15",
+      "url": "https://www.unicode.org/reports/tr15/",
+      "observed": "Normalization forms not closed under concatenation; canonical vs compatibility.",
+      "entries": [
+        "unicode-normalization"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "PostgreSQL constraints",
+      "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+      "observed": "CHECK true or NULL passes; NOT NULL separate; unique/foreign-key bounds.",
+      "entries": [
+        "check-constraint",
+        "unique-constraint",
+        "foreign-key"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "TLS1.3 RFC8446",
+      "url": "https://www.rfc-editor.org/rfc/rfc8446.txt",
+      "observed": "Sec8: no inherent 0-RTT replay protection; application side effects need handling.",
+      "entries": [
+        "tls"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "ACM SIGIR",
+      "url": "https://sigir.org/general-information/acm-sigir-artifact-badging/",
+      "observed": "Results Reproduced v1.1 requires another person/team with author artifacts; replicated separately.",
+      "entries": [
+        "reproducibility"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "SVG2 introduction",
+      "url": "https://www.w3.org/TR/SVG2/intro.html",
+      "observed": "Vector shapes, images, text; scripts and filters allowed.",
+      "entries": [
+        "svg"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "RFC8118 PDF",
+      "url": "https://www.rfc-editor.org/info/rfc8118/",
+      "observed": "Sec7 scripts/embeddings/external objects; Sec8 PDF magic bytes; not all-vector guarantee.",
+      "entries": [
+        "pdf",
+        "file-signature"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "Python built-in types",
+      "url": "https://docs.python.org/3/builtins/stdtypes.html",
+      "observed": "Numeric/string/boolean distinctions and fixed byte conversions.",
+      "entries": [
+        "data-type",
+        "integer",
+        "boolean",
+        "string"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "W3C PROV",
+      "url": "https://www.w3.org/TR/prov-overview/",
+      "observed": "Entity, activity, responsibility and derivation vocabulary; metadata not empirical truth.",
+      "entries": [
+        "provenance"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "Python pickle",
+      "url": "https://docs.python.org/3.14/library/pickle.html",
+      "observed": "Untrusted unpickling can execute code; serialization not safe by itself.",
+      "entries": [
+        "serialization"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "OWASP authorization",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+      "observed": "Validate every request; authentication and authorization distinct.",
+      "entries": [
+        "authorization",
+        "least-privilege"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "AWS SQS visibility",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html",
+      "observed": "Time-limited invisibility and expiration; concept used only as lease example.",
+      "entries": [
+        "lease",
+        "task-queue"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "SVG2 embedded content",
+      "url": "https://www.w3.org/TR/SVG2/embedded.html",
+      "observed": "Image element explicitly supports PNG/JPEG as well as SVG; independent corroboration.",
+      "entries": [
+        "svg"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "WHATWG Fetch",
+      "url": "https://fetch.spec.whatwg.org/",
+      "observed": "CORS governs browser response sharing, not all requests or general authorization.",
+      "entries": [
+        "cors"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "WHATWG workers",
+      "url": "https://html.spec.whatwg.org/multipage/workers.html",
+      "observed": "Dedicated worker lifecycle and terminate algorithm; not cloud persistence.",
+      "entries": [
+        "worker-thread"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "Python float",
+      "url": "https://docs.python.org/3.14/tutorial/floatingpoint.html",
+      "observed": "Binary representation/rounding differs from display; pre-rounding cannot fix all errors.",
+      "entries": [
+        "floating-point",
+        "numerical-stability"
+      ],
+      "access": "live primary passage read"
+    },
+    {
+      "name": "scikit-learn encoding",
+      "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+      "observed": "OrdinalEncoder arbitrary integers can falsely impose ordering; one-hot alternatives.",
+      "entries": [
+        "categorical-encoding",
+        "ordinal-encoding",
+        "one-hot-encoding"
+      ],
+      "access": "live primary passage read"
+    }
+  ],
+  "validation": [
+    {
+      "command": "node --experimental-strip-types --input-type=module -e (production validateKnowledgePack + assert + strict KaTeX independent checks)",
+      "exitCode": 0,
+      "receipt": "8d2190",
+      "result": "100/28/72, 3 formulas, 360 unique IDs, 76 source URL declarations; frozen hash verified"
+    },
+    {
+      "command": "independent eight educational arithmetic/representation checks inside same Node command",
+      "exitCode": 0,
+      "result": "4950 pairs; binary64 inequality/cancellation; NFC; null vs absent; 10^10 matrix elements; absolute error; growth ratio"
+    }
+  ],
+  "scopeLimitations": [
+    "All 100 definitions, aliases, examples, uses, questions and relations read individually; source declarations/locators reviewed for all entries.",
+    "24 live primary passages independently read, including high-risk privacy/security/concurrency boundaries; this is not a claim of rereading all 76 source documents in full.",
+    "No real user data, keys, product security audit, backend execution, OCR or UI acceptance claimed by this content review.",
+    "Source document versions and foreign policy contexts not turned into Chinese legal or competition rules."
+  ],
+  "nextAction": "Root may incorporate the independently reviewed pack; publication and merge remain coordinator actions."
+}
