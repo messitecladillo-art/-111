@@ -106,6 +106,12 @@ export function collectionEvidenceSource(source: string, origin: CollectionOrigi
   return `${source}\n回收项目：${origin.projectId}\n发布记录：${origin.releaseId}\n问卷版本：v${origin.questionnaireRevision} · ${origin.versionId}\n回收快照 SHA-256：${origin.snapshotHash}\n快照读取时间：${origin.generatedAt}\n来源分类：${origin.classification === 'synthetic' ? '合成验收' : '问卷回收'}`;
 }
 
+/** Compact QC step for downstream tools whose scope text is length-limited (the research canvas). */
+export function qualityLineageStep(quality: QualityOrigin): string {
+  const labels = quality.rules.map(rule => rule.split('：')[0]).join('、');
+  return `质控：自「${quality.parentName}」剔除 ${quality.removed} 行（${labels}），剔除台账 SHA-256 ${quality.ledgerHash.slice(0, 16)}…`;
+}
+
 /** Quality-control lineage for any paragraph computed on QC-kept rows, hosted or local. */
 export function qualityEvidenceSection(section: ReportSection, quality: QualityOrigin): ReportSection {
   const lines = section.body.split('\n').filter(line => !line.startsWith('质控来源：'));
