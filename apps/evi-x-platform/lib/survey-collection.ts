@@ -106,6 +106,13 @@ export function collectionEvidenceSource(source: string, origin: CollectionOrigi
   return `${source}\n回收项目：${origin.projectId}\n发布记录：${origin.releaseId}\n问卷版本：v${origin.questionnaireRevision} · ${origin.versionId}\n回收快照 SHA-256：${origin.snapshotHash}\n快照读取时间：${origin.generatedAt}\n来源分类：${origin.classification === 'synthetic' ? '合成验收' : '问卷回收'}`;
 }
 
+/** Quality-control lineage for any paragraph computed on QC-kept rows, hosted or local. */
+export function qualityEvidenceSection(section: ReportSection, quality: QualityOrigin): ReportSection {
+  const lines = section.body.split('\n').filter(line => !line.startsWith('质控来源：'));
+  lines.push(`质控来源：自「${quality.parentName}」剔除 ${quality.removed} 行；规则：${quality.rules.join('；')}；剔除台账 SHA-256 ${quality.ledgerHash}。`);
+  return { ...section, body: lines.join('\n'), source: `${section.source}\n质控前数据 SHA-256：${quality.parentHash}\n剔除台账 SHA-256：${quality.ledgerHash}` };
+}
+
 /** Hosted collection provenance replaces the local-file wording, without changing numerical results. */
 export function collectionEvidenceSection(section: ReportSection, origin: CollectionOrigin): ReportSection {
   const lines = section.body.split('\n').filter(line => !/^(核验边界：|问卷关联：)/.test(line));

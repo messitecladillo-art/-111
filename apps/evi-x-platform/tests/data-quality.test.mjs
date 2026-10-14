@@ -99,3 +99,16 @@ test('imported tables are matched by their platform labels as well as stable IDs
   const report = evaluateQuality(imported, { ...base, duplicateAnswers: true });
   assert.equal(report.rules[0].flagged, 1);
 });
+
+test('report paragraphs computed on QC-kept rows carry the exclusion lineage', async () => {
+  const { qualityEvidenceSection, collectionEvidenceSection } = await import('../lib/survey-collection.ts');
+  const quality = { kind: 'quality', parentName: '回收.csv', parentHash: 'b'.repeat(64), simulated: false, silicon: false, removed: 10, ledgerHash: 'c'.repeat(64), rules: ['作答过快：用时少于 60 秒'] };
+  const section = { id: 's', title: '样本结构', body: '频数…\n核验边界：本地文件', source: '浏览器计算' };
+  const out = qualityEvidenceSection(section, quality);
+  assert.match(out.body, /质控来源：自「回收.csv」剔除 10 行；规则：作答过快：用时少于 60 秒；剔除台账 SHA-256 c{64}。/);
+  assert.match(out.source, /质控前数据 SHA-256：b{64}/);
+  assert.equal(qualityEvidenceSection(out, quality).body.match(/质控来源/g).length, 1);
+  const collection = { kind: 'collection', projectId: 'p', releaseId: 'r', versionId: 'v', questionnaireRevision: 3, classification: 'actual', snapshotHash: 'd'.repeat(64), generatedAt: '2026-10-14T00:00:00Z', design: { title: 't', questions: [] } };
+  const both = qualityEvidenceSection(collectionEvidenceSection(section, collection), quality);
+  assert.match(both.body, /发布 v3/); assert.match(both.body, /质控来源/); assert.match(both.source, /剔除台账 SHA-256/);
+});
