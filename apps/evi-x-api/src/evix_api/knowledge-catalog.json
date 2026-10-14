@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026-10-15.1",
+  "release": "2026-10-15.2",
   "entries": [
     {
       "id": "abduction",
@@ -10,6 +10,26 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "adjusted-rand-index",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "alternative-hypothesis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -33,6 +53,56 @@
       }
     },
     {
+      "id": "bayes-theorem",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "bernoulli-distribution",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "binomial-distribution",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "bootstrap",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "central-limit-theorem",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "chi-square",
       "version": 1,
       "review": {
@@ -40,6 +110,46 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "class-imbalance",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "cluster-sampling",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "cognitive-interview",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "conditional-probability",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -53,6 +163,36 @@
       }
     },
     {
+      "id": "confusion-matrix",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "constrained-optimization",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "construct",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "consumer-behavior",
       "version": 1,
       "review": {
@@ -63,6 +203,16 @@
       }
     },
     {
+      "id": "convexity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "coordinate-reference-system",
       "version": 1,
       "review": {
@@ -70,6 +220,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "covariance",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "coverage-error",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "cramers-v",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -103,6 +283,16 @@
       }
     },
     {
+      "id": "data-dictionary",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "data-leakage",
       "version": 1,
       "review": {
@@ -123,6 +313,16 @@
       }
     },
     {
+      "id": "derivative",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "design-effect",
       "version": 1,
       "review": {
@@ -133,6 +333,16 @@
       }
     },
     {
+      "id": "directed-acyclic-graph",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "distance",
       "version": 1,
       "review": {
@@ -140,6 +350,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "double-barreled-question",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -173,6 +393,26 @@
       }
     },
     {
+      "id": "empirical-distribution",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "entropy",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "epistemology",
       "version": 1,
       "review": {
@@ -180,6 +420,26 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "euclidean-norm",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "expectation",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -203,6 +463,16 @@
       }
     },
     {
+      "id": "feature-selection",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "finite-population-correction",
       "version": 1,
       "review": {
@@ -210,6 +480,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "fisher-exact",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -233,6 +513,36 @@
       }
     },
     {
+      "id": "hessian",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "histogram",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "hypothesis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "idempotency",
       "version": 1,
       "review": {
@@ -253,6 +563,26 @@
       }
     },
     {
+      "id": "inclusion-probability",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "independence",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "induction",
       "version": 1,
       "review": {
@@ -263,6 +593,16 @@
       }
     },
     {
+      "id": "informed-consent",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "international-phonetic",
       "version": 1,
       "review": {
@@ -270,6 +610,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "interquartile-range",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "interval-scale",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "inverse-matrix",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -293,6 +663,36 @@
       }
     },
     {
+      "id": "kurtosis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "law-large-numbers",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "leading-question",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "likert-scale",
       "version": 1,
       "review": {
@@ -300,6 +700,56 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "linear-combination",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "linear-regression",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "listwise-deletion",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "local-global-optimum",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "logistic-regression",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -320,6 +770,96 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "matrix-rank",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "mean",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "mean-imputation",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "measurement-error",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "measurement-level",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "median",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "missing-at-random",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "missing-completely-at-random",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "missing-not-at-random",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -353,6 +893,16 @@
       }
     },
     {
+      "id": "multicollinearity",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "multiple-comparisons",
       "version": 1,
       "review": {
@@ -360,6 +910,66 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "nominal-scale",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "nonresponse-error",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "normal-distribution",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "null-hypothesis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "odds-ratio",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "one-sided-test",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -383,6 +993,26 @@
       }
     },
     {
+      "id": "ordinal-scale",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "outlier",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "overfitting",
       "version": 1,
       "review": {
@@ -403,6 +1033,36 @@
       }
     },
     {
+      "id": "paired-t-test",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "pairwise-deletion",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "partial-derivative",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "pearson-correlation",
       "version": 1,
       "review": {
@@ -410,6 +1070,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "permutation-test",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -423,6 +1093,16 @@
       }
     },
     {
+      "id": "poisson-distribution",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "population",
       "version": 1,
       "review": {
@@ -430,6 +1110,36 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "positive-semidefinite",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "precision-recall",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "preregistration",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -443,6 +1153,136 @@
       }
     },
     {
+      "id": "probability",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "probability-calibration",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "qualitative-coding",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "quantile",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "r-squared",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "random-seed",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "ratio-scale",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "recall-bias",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "regularization",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "relative-risk",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "research-question",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "residual",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "response-rate",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "reverse-item",
       "version": 1,
       "review": {
@@ -450,6 +1290,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "roc-auc",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -463,6 +1313,16 @@
       }
     },
     {
+      "id": "sampling-error",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "sampling-frame",
       "version": 1,
       "review": {
@@ -470,6 +1330,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "sampling-weight",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -503,6 +1373,56 @@
       }
     },
     {
+      "id": "silhouette-score",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "simple-random-sampling",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "singular-value-decomposition",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "skewness",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "social-desirability-bias",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "spatial-autocorrelation",
       "version": 1,
       "review": {
@@ -523,6 +1443,16 @@
       }
     },
     {
+      "id": "standard-deviation",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "standard-error-mean",
       "version": 1,
       "review": {
@@ -530,6 +1460,26 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "statistical-power",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "stratified-sampling",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -543,6 +1493,16 @@
       }
     },
     {
+      "id": "systematic-sampling",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "t-test",
       "version": 1,
       "review": {
@@ -550,6 +1510,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "thematic-analysis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {
@@ -573,6 +1543,26 @@
       }
     },
     {
+      "id": "type-two-error",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
+      "id": "unit-of-analysis",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
+      }
+    },
+    {
       "id": "utf8",
       "version": 1,
       "review": {
@@ -590,6 +1580,16 @@
         "producer": "knowledge_content",
         "reviewer": "knowledge_core",
         "checkedAt": "2026-10-14T15:39:39.310Z"
+      }
+    },
+    {
+      "id": "variance",
+      "version": 1,
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T16:16:48.973Z"
       }
     },
     {

@@ -1,10 +1,14 @@
 {
   "schemaVersion": 1,
-  "release": "2026-10-15.1",
+  "release": "2026-10-15.2",
   "packs": [
     {
       "path": "core-60.json",
       "sha256": "511839b3316f855cdfa6aff4f81988e2f3ff785e0b21fe470834a248117843b8"
+    },
+    {
+      "path": "pack-01-stats-research.json",
+      "sha256": "fcaf9be1b279bfa59a74c7bed2006e0ec1af26ebc5079ce07e8e7bad9ca43ffa"
     }
   ]
 }
