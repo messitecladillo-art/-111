@@ -494,3 +494,8 @@
   .workbench .diagnose-modes { display: grid; grid-auto-flow: row; grid-template-columns: 1fr 1fr; width: 100%; }
   .workbench .diagnose-modes button { min-width: 0; padding: 8px 10px; }
 }
+/* Knowledge dock reserves workspace room; editor instances remain mounted. */
+.workbench[data-page=knowledge] .wb-page-title { font-family: var(--wb-sans); font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+@media (min-width: 1440px) {
+  body[data-knowledge-docked=true] .workbench-main { padding-right: 436px; }
+}
