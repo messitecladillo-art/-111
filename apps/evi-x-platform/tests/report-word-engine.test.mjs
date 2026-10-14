@@ -7,10 +7,11 @@ import { buildDocx } from '../lib/editor-export.ts';
 import { parseSurveyCsv } from '../lib/survey-analysis.ts';
 import { runRecipe } from '../lib/analysis-recipes.ts';
 import { snapshotRecipe } from '../lib/research-quality.ts';
-import { danglingReferences, numberedCaption, referenceSegments, referenceToken, reportLabels, resolveReferences } from '../lib/report-numbering.ts';
+import { blockLabel, danglingReferences, numberedCaption, referenceSegments, referenceToken, reportLabels, resolveReferences } from '../lib/report-numbering.ts';
 import { columnWeights, formatCell, presentResult, sectionNotes, sourceLine } from '../lib/report-tables.ts';
 import { figureOption, figureSVG } from '../lib/report-figures.ts';
 import { splitInlineMath } from '../lib/quality-export.ts';
+import { buildStoryboard } from '../lib/report-storyboard.ts';
 
 const renderSvg = async svg => new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
 const csv = ['编号,年龄组,频次,满意度', ...Array.from({ length: 60 }, (_, i) => `${i + 1},${['青年', '中年', '老年'][i % 3]},${['从不', '偶尔', '经常'][(i * 7) % 3]},${1 + (i * 5) % 5}`)].join('\n');
@@ -38,6 +39,25 @@ test('figures, tables and equations are numbered per chapter; appendices use the
   assert.deepEqual(danglingReferences(content).map(d => d.sectionId), ['x']);
 });
 
+test('slides built from report text cite figures by number, never by raw token', async () => {
+  const content = createEditorContent();
+  content.version = 2;
+  content.quality = { version: 1, results: [results.freq], findings: [] };
+  content.report = [section('c1', '一、结果', '如[[图:fig]]所示，青年组更活跃。', [block('fig', 'chart', '使用频次', 'freq')])];
+  const [slide] = await buildStoryboard(parseEditorContent(content), [{ id: 'card', sectionId: 'c1', job: 'finding', classification: 'simulated', title: '青年组更活跃', excerpt: '如[[图:fig]]所示，青年组更活跃。', limitation: '仅限模拟样本', implication: '优先面向青年组', locator: '第一章', seconds: 45 }], 'replace');
+  assert.match(slide.body, /如图 1-1所示/);
+  assert.doesNotMatch(slide.body, /\[\[/);
+});
+
+test('a block ID repeated in two sections keeps both numbers but cannot be referenced ambiguously', () => {
+  const report = [section('c1', '一、甲', '', [block('dup', 'chart', '甲图', 'freq')]), section('c2', '二、乙', '', [block('dup', 'chart', '乙图', 'freq')])];
+  const labels = reportLabels(report);
+  assert.equal(blockLabel(labels, 'c1', 'dup').label, '图 1-1');
+  assert.equal(blockLabel(labels, 'c2', 'dup').label, '图 2-1');
+  assert.equal(labels.get('dup'), undefined);
+  assert.ok(referenceSegments('见[[图:dup]]', labels)[1].missing);
+});
+
 test('report tables round by meaning and lay a crosstab out as a matrix', () => {
   assert.equal(formatCell(0.375, '比例'), '0.375', 'a bare 比例 is not assumed to be a percentage');
   assert.equal(formatCell(40.465, '占比（%）'), '40.5');
@@ -60,6 +80,7 @@ test('report tables round by meaning and lay a crosstab out as a matrix', () => 
   assert.deepEqual(generic.headers, results.freq.headers, 'unknown layouts keep every column');
   assert.ok(columnWeights(cross).every(w => w >= 6));
   assert.equal(sourceLine(results.freq), '资料来源：教学模拟数据；有效样本 n = 60；模拟数据。');
+  assert.equal(sourceLine({ ...results.freq, classification: 'user_provided', total: 64 }), '资料来源：教学模拟数据；有效样本 n = 60（共 64）；用户提供数据。');
   assert.equal(sectionNotes([{ ...results.freq, warnings: ['甲。乙；', '乙'] }, { ...results.freq, warnings: ['丙。'] }]), '注：甲；乙；丙。');
 });
 

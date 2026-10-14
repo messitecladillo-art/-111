@@ -161,6 +161,13 @@ function convert(n: Node): string {
   }
 }
 
+/** Why a formula would fail to export, or null when KaTeX accepts it. */
+export function texProblem(tex: string): string | null {
+  if (!tex.trim()) return '公式为空。';
+  try { katex.renderToString(tex, { throwOnError: true, strict: 'ignore', trust: false }); return null; }
+  catch (error) { return `公式无法解析：${(error as Error).message.replace(/^KaTeX parse error:\s*/, '')}`; }
+}
+
 /** One TeX formula as an OMML `<m:oMath>` element. Display formulas are wrapped in `<m:oMathPara>` by the caller. */
 export function texToOmml(tex: string, displayMode = true): string {
   if (typeof tex !== 'string' || !tex.trim()) throw Error('公式为空。');

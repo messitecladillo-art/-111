@@ -1,5 +1,5 @@
 import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, insertMath, richRuns, type SvgPreviewRenderer, type WordContext } from "./quality-export.ts";
-import { reportLabels } from "./report-numbering.ts";
+import { blockLabel, reportLabels } from "./report-numbering.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 
@@ -53,8 +53,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
   if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:[new TextRun({text:content.title})]}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:[new TextRun({text:content.subtitle})]})]:[])],'cover');
   // Numbers come from the whole draft, so the main text and a separately exported appendix agree.
-  const ctx:WordContext={labels:reportLabels(content.report),math:[],where:''};
-  const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>ctx.labels.get(b.id)?.kind===kind));
+  const ctx:WordContext={labels:reportLabels(content.report),math:[],where:'',section:''};
+  const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>blockLabel(ctx.labels,s.id,b.id)?.kind===kind));
   let bodyStarted=false,tocInserted=false,preliminaryStarted=false;
   function toc(){
     if(!options.includeToc||tocInserted)return;
@@ -67,7 +67,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   for(const section of report){
     const part=reportPart(section.title),preliminary=part==='abstract'&&!bodyStarted;
     if(!preliminary)toc();
-    ctx.where=section.title||'未命名章节';
+    ctx.where=section.title||'未命名章节';ctx.section=section.id;
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
     const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
     // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.

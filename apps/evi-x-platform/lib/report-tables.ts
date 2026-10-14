@@ -93,7 +93,7 @@ export function columnWeights(table: PresentedTable): number[] {
 
 /** A one-line source note under a figure or table; method caveats are gathered once per section instead. */
 export function sourceLine(r: ResultSnapshot): string {
-  const kind = r.classification === 'simulated' ? '；模拟数据' : r.classification === 'public' ? '；公开数据' : '';
+  const kind = r.classification === 'simulated' ? '；模拟数据' : r.classification === 'public' ? '；公开数据' : '；用户提供数据';
   return `资料来源：${r.sourceName}${r.sourceUrl ? `（${r.sourceUrl}）` : ''}；有效样本 n = ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${kind}。`;
 }
 

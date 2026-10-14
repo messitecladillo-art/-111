@@ -13,9 +13,18 @@ const NAMES: Record<LabelKind, string> = { figure: '图', table: '表', equation
 const KINDS: Record<string, LabelKind> = { 图: 'figure', 表: 'table', 式: 'equation' };
 const kindOf = (blockKind: string): LabelKind | null => blockKind === 'chart' ? 'figure' : blockKind === 'table' ? 'table' : blockKind === 'formula' ? 'equation' : null;
 
-/** Numbers restart in every body chapter (一、二、…); appendices use their own 附图 / 附表 sequence. */
+/** Captions look labels up by section and block, since a block ID is only unique within its section. */
+export const labelKey = (sectionId: string, blockId: string) => `${sectionId}\u0000${blockId}`;
+export const blockLabel = (labels: Map<string, BlockLabel>, sectionId: string, blockId: string) => labels.get(labelKey(sectionId, blockId));
+
+/**
+ * Numbers restart in every body chapter (一、二、…); appendices use their own 附图 / 附表 sequence.
+ * The map holds every block under its section-qualified key, and under its bare ID only when that ID is unique
+ * in the report, so a reference to a repeated ID is reported as broken rather than resolved to the wrong block.
+ */
 export function reportLabels(report: readonly ReportSection[]): Map<string, BlockLabel> {
   const labels = new Map<string, BlockLabel>();
+  const byId = new Map<string, BlockLabel | null>();
   let chapter = 0;
   let body = { figure: 0, table: 0, equation: 0 };
   const appendix = { figure: 0, table: 0, equation: 0 };
@@ -25,19 +34,23 @@ export function reportLabels(report: readonly ReportSection[]): Map<string, Bloc
     for (const block of section.blocks ?? []) {
       const kind = kindOf(block.kind);
       if (!kind) continue;
+      let label: BlockLabel;
       if (part === 'appendix') {
         const n = ++appendix[kind];
-        labels.set(block.id, kind === 'equation'
+        label = kind === 'equation'
           ? { kind, number: `附${n}`, label: `（附${n}）`, reference: `式（附${n}）` }
-          : { kind, number: String(n), label: `附${NAMES[kind]} ${n}`, reference: `附${NAMES[kind]} ${n}` });
+          : { kind, number: String(n), label: `附${NAMES[kind]} ${n}`, reference: `附${NAMES[kind]} ${n}` };
       } else {
         const number = chapter ? `${chapter}-${++body[kind]}` : String(++body[kind]);
-        labels.set(block.id, kind === 'equation'
+        label = kind === 'equation'
           ? { kind, number, label: `（${number}）`, reference: `式（${number}）` }
-          : { kind, number, label: `${NAMES[kind]} ${number}`, reference: `${NAMES[kind]} ${number}` });
+          : { kind, number, label: `${NAMES[kind]} ${number}`, reference: `${NAMES[kind]} ${number}` };
       }
+      labels.set(labelKey(section.id, block.id), label);
+      byId.set(block.id, byId.has(block.id) ? null : label);
     }
   }
+  for (const [id, label] of byId) if (label) labels.set(id, label);
   return labels;
 }
 
@@ -67,7 +80,7 @@ export function referenceSegments(text: string, labels: Map<string, BlockLabel>)
 /** Export-time resolution: a dangling reference stops the export rather than printing a wrong number. */
 export function resolveReferences(text: string, labels: Map<string, BlockLabel>, where: string): string {
   const segments = referenceSegments(text, labels);
-  if (segments.some(s => s.missing)) throw Error(`「${where}」中有图表引用已失效（对应的图、表或公式已删除或类型不符），请重新插入引用后再导出。`);
+  if (segments.some(s => s.missing)) throw Error(`「${where}」中有图表引用已失效（对应的图、表或公式已删除、类型不符或被复制成两处），请重新插入引用后再导出。`);
   return segments.map(s => s.text).join('');
 }
 
