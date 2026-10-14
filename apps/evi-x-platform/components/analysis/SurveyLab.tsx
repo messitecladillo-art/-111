@@ -25,7 +25,7 @@ import {platformAnalysisDataset,platformAnalysisCurrent} from '@/lib/platform-an
 import {importedDatasetIdentity,importColumnLabel,withImportLabels,type ImportMetadata} from '@/lib/survey-import-metadata';
 import { currentJourneyModules, journeyScope, moduleJourneyStatus, type JourneySnapshot, type JourneyModule } from '@/lib/analysis-journey';
 
-import {collectionEvidenceSection,qualityEvidenceSection,transferClassification,type CollectionOrigin,type DatasetTransfer,type QualityOrigin} from '@/lib/survey-collection';
+import {collectionEvidenceSection,qualityEvidenceSection,qualityLineageStep,transferClassification,type CollectionOrigin,type DatasetTransfer,type QualityOrigin} from '@/lib/survey-collection';
 import QualityPanel from './QualityPanel';
 export type {DatasetTransfer} from '@/lib/survey-collection';
 
@@ -91,7 +91,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const missing = useMemo(() => { try { return { codes: parseMissingCodes(missingText), error: "" }; } catch (e) { return { codes: [], error: (e as Error).message }; } }, [missingText]);
   const profile = useMemo(() => dataset && !missing.error ? profileSurvey(dataset.table, missing.codes) : null, [dataset, missing]);
   // The research canvas reads the same in-memory table; it never stores the rows.
-  const shared = useMemo<DatasetValue|null>(() => dataset && !interpretationPending && !dataset.platform ? { name: dataset.name, sourceHash: dataset.hash, kind: dataset.kind, table: dataset.table, missingCodes: missing.error ? [] : missing.codes, lineage: missing.error ? ['「数据分析」中的缺失代码设置有误，画布未继承'] : [] } : null, [dataset, missing,interpretationPending]);
+  const shared = useMemo<DatasetValue|null>(() => dataset && !interpretationPending && !dataset.platform ? { name: dataset.name, sourceHash: dataset.hash, kind: dataset.kind, table: dataset.table, missingCodes: missing.error ? [] : missing.codes, lineage: [...(dataset.quality ? [qualityLineageStep(dataset.quality)] : []), ...(missing.error ? ['「数据分析」中的缺失代码设置有误，画布未继承'] : [])] } : null, [dataset, missing,interpretationPending]);
   useLayoutEffect(() => { onDatasetChange?.(shared); }, [shared, onDatasetChange]);
   const mappingKey=canonical({dataset:dataset?.identity||null,mapping:mapping&&dataset?mappingSignature(mapping,dataset.identity):mapping,confirmed:!!mapping&&!!dataset&&mappingCurrent(mapping,dataset.identity,mappingStale),stale:mappingStale});
   const approvalKey=canonical({mappingKey,missingText,policy:routingPolicy});

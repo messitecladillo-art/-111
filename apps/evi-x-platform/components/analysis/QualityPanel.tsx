@@ -105,9 +105,10 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
       <div className={styles.actions}>
         <button type="button" onClick={() => download(exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered!.at }), `${stem(sourceName)}-剔除台账.csv`, 'text/csv;charset=utf-8')}>下载剔除台账</button>
         <button type="button" onClick={() => download(tableCsv(kept.table), `${stem(sourceName)}-质控后.csv`, 'text/csv;charset=utf-8')}>下载质控后数据</button>
-        <button type="button" className={styles.primary} disabled={!kept.removed || !!continueBlocked} onClick={() => void apply()}>以质控后数据继续分析</button>
+        <button type="button" className={styles.primary} disabled={!kept.removed || !kept.table.rows.length || !!continueBlocked} onClick={() => void apply()}>以质控后数据继续分析</button>
       </div>
       {continueBlocked && <p className={styles.hint}>{continueBlocked}</p>}
+      {!continueBlocked && kept.removed > 0 && !kept.table.rows.length && <p className={styles.hint}>所选剔除规则会移除全部答卷。请把部分规则改为“仅标记”，或回到阈值设置重新登记。</p>}
     </div>}
   </section>;
 }

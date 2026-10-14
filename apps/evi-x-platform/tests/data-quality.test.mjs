@@ -112,3 +112,21 @@ test('report paragraphs computed on QC-kept rows carry the exclusion lineage', a
   const both = qualityEvidenceSection(collectionEvidenceSection(section, collection), quality);
   assert.match(both.body, /发布 v3/); assert.match(both.body, /质控来源/); assert.match(both.source, /剔除台账 SHA-256/);
 });
+
+test('the canvas receives a compact QC step that survives its 300-character scope', async () => {
+  const { qualityLineageStep } = await import('../lib/survey-collection.ts');
+  const quality = { kind: 'quality', parentName: '回收.csv', parentHash: 'b'.repeat(64), simulated: false, silicon: false, removed: 10, ledgerHash: 'c'.repeat(64), rules: ['作答过快：用时少于中位数（252.5 秒）的 33%，即 83.3 秒', '注意力题未通过：「注意力题请选4」不等于「4」（未作答也计为未通过）'] };
+  const step = qualityLineageStep(quality);
+  assert.equal(step, `质控：自「回收.csv」剔除 10 行（作答过快、注意力题未通过），剔除台账 SHA-256 ${'c'.repeat(16)}…`);
+  assert.ok(step.length < 120);
+});
+
+test('when every response is excluded the kept table is empty and cannot be reloaded', () => {
+  const report = evaluateQuality(table, { ...base, duration: { column: 2, mode: 'seconds', value: 100000 } });
+  const { table: kept, removed } = keptTable(table, report, new Set(['duration']));
+  // Row 6 has an unreadable duration and is never flagged, so one row remains here.
+  assert.equal(removed, 5); assert.equal(kept.rows.length, 1);
+  const all = evaluateQuality(table, { ...base, attention: { column: 7, expected: '不存在的答案' } });
+  assert.equal(keptTable(table, all, new Set(['attention'])).table.rows.length, 0);
+  assert.throws(() => parseSurveyCsv(tableCsv(keptTable(table, all, new Set(['attention'])).table)));
+});
