@@ -187,13 +187,15 @@ export function twoStagePlan({ components, M, N, c1, c2, constraint }: TwoStageI
     if (!(constraint.budget > 0)) throw Error('总预算须大于 0。');
     n = Math.floor(constraint.budget / (c1 + c2 * m));
     if (n < 2) throw Error('预算不足以调查 2 个初级单元。');
-    if (N !== null && n > N) {
-      // The budget buys more primary units than exist: take all N, then spend what is left on more
-      // elements per unit; V decreases in m, so take the largest affordable m (up to a census, m = M).
+    if (N !== null && n >= N) {
+      // The budget reaches every primary unit: take all N, then spend what is left on more elements per
+      // unit; V decreases in m, so take the largest affordable m (up to a census, m = M).
       n = N;
       m = Math.min(M, Math.max(mOptimal, Math.floor((constraint.budget / N - c1) / c2)));
-      capStep = { label: '预算超过全部初级单元所需：取全部初级单元，余款用于增加单元内样本', tex: tex`n=N=${N},\qquad m=\min\Bigl(M,\ \Bigl\lfloor\frac{C/N-c_1}{c_2}\Bigr\rfloor\Bigr)=${m}` };
-      warnings.push(m === M ? `预算足以普查全部 ${N} 个初级单元中的全部单位（$n=N$，$m=M$），无抽样误差。` : `预算足以调查全部 ${N} 个初级单元，已取 $n=N$，并把余下预算用于把每个单元的样本增加到 $m=${m}$。`);
+      capStep = { label: '预算可覆盖全部初级单元：取全部初级单元，余款用于增加单元内样本', tex: tex`n=N=${N},\qquad m=\min\Bigl(M,\ \Bigl\lfloor\frac{C/N-c_1}{c_2}\Bigr\rfloor\Bigr)=${m}` };
+      warnings.push(m === M ? `预算足以普查全部 ${N} 个初级单元中的全部单位（$n=N$，$m=M$），无抽样误差。`
+        : m > mOptimal ? `预算足以调查全部 ${N} 个初级单元，已取 $n=N$，并把余下预算用于把每个单元的样本增加到 $m=${m}$。`
+          : `预算恰好可调查全部 ${N} 个初级单元（$n=N$）。`);
     }
   } else {
     const t = targetVariance(constraint.target); z = t.z; targetStep = t.step;

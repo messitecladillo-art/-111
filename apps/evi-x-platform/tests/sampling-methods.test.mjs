@@ -387,6 +387,11 @@ test('review fixes: budgets cannot buy more primary units than exist; weights bi
   // Budget for all primary units but not a census: spare money raises m beyond the cost optimum.
   const partial = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 3000 } });
   assert.equal(partial.n, 10); assert.equal(partial.m, 20); assert.ok(partial.cost <= 3000);
+  // A budget that buys exactly N units at the optimum still spends its remainder on m.
+  const exact = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 2000 } });
+  assert.equal(exact.n, 10); assert.equal(exact.m, 10); assert.equal(exact.cost, 2000);
+  const tight = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 1900 } });
+  assert.equal(tight.m, 9); assert.ok(tight.warnings.some(w => w.includes('恰好')));
   assert.ok(partial.V > 0 && partial.V < twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: null, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 1900 } }).V);
   const { textHash, literal } = await import('../lib/sampling-core.ts');
   assert.equal(textHash('a,b\n1,2'), textHash('a,b\n1,2'));
