@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useHostedSession } from '@/components/hosted/HostedSession';
@@ -13,6 +13,7 @@ import KnowledgeEntryView from './KnowledgeEntryView';
 import KnowledgeGuideView from './KnowledgeGuideView';
 import { KNOWLEDGE_ENTRIES, DOMAINS } from './catalog';
 import styles from './Knowledge.module.css';
+const KnowledgeRecognition = lazy(() => import('./KnowledgeRecognition'));
 
 type FocusSnapshot = { element: HTMLElement | null; start?: number | null; end?: number | null; direction?: 'forward' | 'backward' | 'none' | null; range?: Range };
 function captureFocus(): FocusSnapshot {
@@ -59,6 +60,7 @@ export default function KnowledgeProvider({ children }: { children: ReactNode })
   const mounted = useSyncExternalStore(subscribeHydration, () => true, () => false);
   const [shown, setShown] = useState(false), [mode, setMode] = useState<'float' | 'pinned' | 'reading'>('float');
   const [ready, setReady] = useState(false);
+  const [recognitionOpen,setRecognitionOpen] = useState(false);
   const [query, setQuery] = useState(''), [hits, setHits] = useState<KnowledgeSearchHit[]>([]), [selectedId, setSelectedId] = useState('');
   const [guide,setGuide]=useState<{kind:'method'|'material';id:string}|null>(null);
   const [favorites, setFavorites] = useState<string[]>([]), [notice, setNotice] = useState(''), [searching, setSearching] = useState(false);
@@ -74,6 +76,7 @@ export default function KnowledgeProvider({ children }: { children: ReactNode })
 
   useEffect(() => { if (!visible) return; let current=true; const client = createKnowledgeSearchClient(KNOWLEDGE_ENTRIES); searchClient.current = client; void client.ready.then(()=>{if(current)setReady(true);}); return () => { current=false; client.dispose(); searchClient.current = null; }; }, [visible]);
   const search = useCallback((text: string) => searchClient.current ? searchClient.current.search(text, { limit: 12, context }) : Promise.resolve([]), [context]);
+  const recognize = useCallback((text: string) => searchClient.current ? searchClient.current.recognize(text, { limit: 12, context }) : Promise.resolve([]), [context]);
   useEffect(() => {
     const sequence = ++searchSequence.current;
     if (!shown || commandOpen || !query.trim()) return;
@@ -174,6 +177,7 @@ export default function KnowledgeProvider({ children }: { children: ReactNode })
           {query.trim() && <>{searching && <p role="status">正在检索…</p>}{!searching && hits.length === 0 && <p className={styles.empty}>暂未找到这个概念，试试完整名称或常见别名。</p>}{hits.map(hit => <button key={hit.entry.id} className={styles.result} onClick={() => choose(hit.entry.id)}><span className={styles.eyebrow}>{DOMAINS[hit.entry.domain]}{hit.ambiguous && ' · 同名概念'}</span><strong>{hit.entry.name}</strong><small>{hit.entry.englishName}</small><p>{hit.entry.definition}</p></button>)}</>}
           {notice && <p className={styles.notice} role="status">{notice}</p>}
         </>}
+        <details className={styles.recognition} onToggle={event=>setRecognitionOpen(event.currentTarget.open)}><summary>识别 PDF 或图片中的概念</summary>{recognitionOpen&&shown&&!obscured&&<Suspense fallback={<p role="status">正在打开识别工具…</p>}><KnowledgeRecognition embedded recognize={recognize} onChoose={choose}/></Suspense>}</details>
       </div><footer className={styles.mirrorFooter}><a href="/knowledge">浏览知识索引 ↗</a><span>{KNOWLEDGE_ENTRIES.length} 个概念</span></footer>
     </aside>}
     <dialog ref={dialog} className={styles.command} data-knowledge-dialog aria-label="全局搜索" onCancel={() => setCommandOpen(false)}>

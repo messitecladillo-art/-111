@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/knowledge-assets/**", // Pinned upstream OCR/WASM files; verified by asset hashes.
   ]),
 ]);
 
