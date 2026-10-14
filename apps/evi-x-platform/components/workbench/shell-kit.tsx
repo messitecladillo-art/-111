@@ -114,7 +114,7 @@ export function ThemeToggle({ theme }: { theme: Theme }) {
 }
 
 type SidebarProps = {
-  active: Section;
+  active: Section | 'knowledge';
   inWorkspace: boolean;
   open: boolean;
   setOpen: (next: boolean | ((value: boolean) => boolean)) => void;
@@ -133,7 +133,7 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
       ? <a className="wb-brand" href="#overview" title="返回工作台概览" onClick={close}>{brand}</a>
       : <Link className="wb-brand" href="/workspace" title="返回工作台概览" onClick={close}>{brand}</Link>}
     <button className="wb-menu" ref={menuRef} type="button" aria-controls="workbench-navigation" aria-expanded={open} onClick={() => setOpen(value => !value)} aria-label={open ? "关闭导航" : "打开导航"}><NavIcon kind={open ? "close" : "menu"}/></button>
-    {onSearch && <button type="button" className="wb-sidebar-search" onClick={onSearch} title="搜索工作台功能"><NavIcon kind="search"/><span>快速导航</span><kbd>Ctrl K</kbd></button>}
+    {onSearch && <button type="button" className="wb-sidebar-search" onPointerDown={event => event.preventDefault()} onClick={onSearch} title="搜索知识、方法、资料与功能"><NavIcon kind="search"/><span>全局搜索</span><kbd>Ctrl K</kbd></button>}
     <nav className="wb-navigation" id="workbench-navigation" aria-label="主要导航">
       {NAV_GROUPS.map(group => <div className="wb-nav-group" key={group}>
         <p className="wb-nav-label">{group}</p>
@@ -149,6 +149,7 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
     </nav>
     <div className="wb-sidebar-footer">
       <div className="wb-evidence-path" aria-label="问题、数据、洞察、行动"><span>Q</span><i/><span>D</span><i/><span>I</span><i/><span>A</span></div>
+      <Link className="wb-nav-link" href="/knowledge" aria-current={active === 'knowledge' ? 'page' : undefined}><NavIcon kind="search"/><span>知识索引</span></Link>
       <strong>问有据，见有策。</strong>
       <span className="wb-sidebar-version">EVI-X RESEARCH WORKSPACE</span>
     </div>

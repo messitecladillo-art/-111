@@ -1,0 +1,1605 @@
+{
+  "schemaVersion": 1,
+  "createdBy": "knowledge_content",
+  "design": "Intent queries authored independently of search code and observed rankings; canonical, English, mixed, misspelling, questions, ambiguity and out-of-pack zero results. Educational acceptance gold, not measured user-study queries.",
+  "queries": [
+    {
+      "id": "canonical-1",
+      "query": "p 值",
+      "expectedIds": [
+        "p-value"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-1",
+      "query": "p-value",
+      "expectedIds": [
+        "p-value"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-1",
+      "query": "p vlaue",
+      "expectedIds": [
+        "p-value"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-2",
+      "query": "置信区间",
+      "expectedIds": [
+        "confidence-interval"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-2",
+      "query": "confidence interval",
+      "expectedIds": [
+        "confidence-interval"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-2",
+      "query": "confidense interval",
+      "expectedIds": [
+        "confidence-interval"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-3",
+      "query": "效应量",
+      "expectedIds": [
+        "effect-size"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-3",
+      "query": "effect size",
+      "expectedIds": [
+        "effect-size"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-3",
+      "query": "efect size",
+      "expectedIds": [
+        "effect-size"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-4",
+      "query": "显著性水平",
+      "expectedIds": [
+        "significance-level"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-4",
+      "query": "significance level",
+      "expectedIds": [
+        "significance-level"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-4",
+      "query": "signifcance level",
+      "expectedIds": [
+        "significance-level"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-5",
+      "query": "均值标准误",
+      "expectedIds": [
+        "standard-error-mean"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-5",
+      "query": "standard error of the mean",
+      "expectedIds": [
+        "standard-error-mean"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-5",
+      "query": "standard eror of the mean",
+      "expectedIds": [
+        "standard-error-mean"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-6",
+      "query": "Cronbach α 系数",
+      "expectedIds": [
+        "cronbach-alpha"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-6",
+      "query": "Cronbach's alpha",
+      "expectedIds": [
+        "cronbach-alpha"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-6",
+      "query": "Cronback alpha",
+      "expectedIds": [
+        "cronbach-alpha"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-7",
+      "query": "效度",
+      "expectedIds": [
+        "validity"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-7",
+      "query": "validity",
+      "expectedIds": [
+        "validity"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-7",
+      "query": "validty",
+      "expectedIds": [
+        "validity"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-8",
+      "query": "反向题与反向计分",
+      "expectedIds": [
+        "reverse-item"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-8",
+      "query": "reverse-keyed item",
+      "expectedIds": [
+        "reverse-item"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-8",
+      "query": "reverse scroing",
+      "expectedIds": [
+        "reverse-item"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-9",
+      "query": "抽样框",
+      "expectedIds": [
+        "sampling-frame"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-9",
+      "query": "sampling frame",
+      "expectedIds": [
+        "sampling-frame"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-9",
+      "query": "samplng frame",
+      "expectedIds": [
+        "sampling-frame"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-10",
+      "query": "设计效应",
+      "expectedIds": [
+        "design-effect"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-10",
+      "query": "design effect",
+      "expectedIds": [
+        "design-effect"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-10",
+      "query": "design efect",
+      "expectedIds": [
+        "design-effect"
+      ],
+      "kind": "typo"
+    },
+    {
+      "id": "canonical-11",
+      "query": "有限总体修正",
+      "expectedIds": [
+        "finite-population-correction"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-11",
+      "query": "finite population correction",
+      "expectedIds": [
+        "finite-population-correction"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-11",
+      "query": "FPC 有限总体",
+      "expectedIds": [
+        "finite-population-correction"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-12",
+      "query": "缺失值",
+      "expectedIds": [
+        "missing-value"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-12",
+      "query": "missing value",
+      "expectedIds": [
+        "missing-value"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-12",
+      "query": "missing 空白",
+      "expectedIds": [
+        "missing-value"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-13",
+      "query": "Pearson 相关",
+      "expectedIds": [
+        "pearson-correlation"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-13",
+      "query": "Pearson correlation",
+      "expectedIds": [
+        "pearson-correlation"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-13",
+      "query": "Pearson 线性关系",
+      "expectedIds": [
+        "pearson-correlation"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-14",
+      "query": "Spearman 秩相关",
+      "expectedIds": [
+        "spearman-correlation"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-14",
+      "query": "Spearman rank correlation",
+      "expectedIds": [
+        "spearman-correlation"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-14",
+      "query": "Spearman 等级",
+      "expectedIds": [
+        "spearman-correlation"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-15",
+      "query": "卡方独立性检验",
+      "expectedIds": [
+        "chi-square"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-15",
+      "query": "chi-square test of independence",
+      "expectedIds": [
+        "chi-square"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-15",
+      "query": "chi square 分类分布",
+      "expectedIds": [
+        "chi-square"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-16",
+      "query": "两独立样本 t 检验",
+      "expectedIds": [
+        "t-test"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-16",
+      "query": "two-sample t-test",
+      "expectedIds": [
+        "t-test"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-16",
+      "query": "Welch 均值差",
+      "expectedIds": [
+        "t-test"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-17",
+      "query": "单因素方差分析",
+      "expectedIds": [
+        "analysis-of-variance"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-17",
+      "query": "one-way analysis of variance",
+      "expectedIds": [
+        "analysis-of-variance"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-17",
+      "query": "ANOVA 多组",
+      "expectedIds": [
+        "analysis-of-variance"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-18",
+      "query": "多重比较",
+      "expectedIds": [
+        "multiple-comparisons"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-18",
+      "query": "multiple comparisons",
+      "expectedIds": [
+        "multiple-comparisons"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-18",
+      "query": "Holm 多重",
+      "expectedIds": [
+        "multiple-comparisons"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-19",
+      "query": "结构方程模型",
+      "expectedIds": [
+        "structural-equation-model"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-19",
+      "query": "structural equation modeling",
+      "expectedIds": [
+        "structural-equation-model"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-19",
+      "query": "SEM 潜变量",
+      "expectedIds": [
+        "structural-equation-model"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-20",
+      "query": "向量",
+      "expectedIds": [
+        "vector"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-20",
+      "query": "vector",
+      "expectedIds": [
+        "vector"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-20",
+      "query": "vector 向量",
+      "expectedIds": [
+        "vector"
+      ],
+      "kind": "mixed"
+    },
+    {
+      "id": "canonical-21",
+      "query": "矩阵",
+      "expectedIds": [
+        "matrix"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-21",
+      "query": "matrix",
+      "expectedIds": [
+        "matrix"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-21",
+      "query": "矩阵的行和列是什么",
+      "expectedIds": [
+        "matrix"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-22",
+      "query": "特征值与特征向量",
+      "expectedIds": [
+        "eigenvalue"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-22",
+      "query": "eigenvalue and eigenvector",
+      "expectedIds": [
+        "eigenvalue"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-22",
+      "query": "特征值是什么",
+      "expectedIds": [
+        "eigenvalue"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-23",
+      "query": "梯度",
+      "expectedIds": [
+        "gradient"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-23",
+      "query": "gradient",
+      "expectedIds": [
+        "gradient"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-23",
+      "query": "梯度表示哪个方向",
+      "expectedIds": [
+        "gradient"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-24",
+      "query": "距离与尺度",
+      "expectedIds": [
+        "distance"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-24",
+      "query": "distance and scaling",
+      "expectedIds": [
+        "distance"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-24",
+      "query": "两个特征的量纲不同怎么算距离",
+      "expectedIds": [
+        "distance"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-25",
+      "query": "应用程序接口",
+      "expectedIds": [
+        "api"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-25",
+      "query": "application programming interface",
+      "expectedIds": [
+        "api"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-25",
+      "query": "API Key 是什么",
+      "expectedIds": [
+        "api"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-26",
+      "query": "SHA-256 文件指纹",
+      "expectedIds": [
+        "sha256"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-26",
+      "query": "SHA-256",
+      "expectedIds": [
+        "sha256"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-26",
+      "query": "文件哈希能证明数据是真的吗",
+      "expectedIds": [
+        "sha256"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-27",
+      "query": "UTF-8 字符编码",
+      "expectedIds": [
+        "utf8"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-27",
+      "query": "UTF-8",
+      "expectedIds": [
+        "utf8"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-27",
+      "query": "中文乱码与编码是什么关系",
+      "expectedIds": [
+        "utf8"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-28",
+      "query": "CSV 表格文件",
+      "expectedIds": [
+        "csv"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-28",
+      "query": "comma-separated values",
+      "expectedIds": [
+        "csv"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-28",
+      "query": "CSV 中逗号怎么处理",
+      "expectedIds": [
+        "csv"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-29",
+      "query": "JSON 数据格式",
+      "expectedIds": [
+        "json"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-29",
+      "query": "JavaScript Object Notation",
+      "expectedIds": [
+        "json"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-29",
+      "query": "JSON 语法正确就代表数据正确吗",
+      "expectedIds": [
+        "json"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-30",
+      "query": "数据库事务",
+      "expectedIds": [
+        "transaction"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-30",
+      "query": "database transaction",
+      "expectedIds": [
+        "transaction"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-30",
+      "query": "数据库操作为什么要一起提交",
+      "expectedIds": [
+        "transaction"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-31",
+      "query": "幂等性",
+      "expectedIds": [
+        "idempotency"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-31",
+      "query": "idempotency",
+      "expectedIds": [
+        "idempotency"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-31",
+      "query": "重复请求怎样保持幂等",
+      "expectedIds": [
+        "idempotency"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-32",
+      "query": "特征",
+      "expectedIds": [
+        "feature"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-32",
+      "query": "feature",
+      "expectedIds": [
+        "feature"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-32",
+      "query": "模型特征是什么意思",
+      "expectedIds": [
+        "feature"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-33",
+      "query": "过拟合",
+      "expectedIds": [
+        "overfitting"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-33",
+      "query": "overfitting",
+      "expectedIds": [
+        "overfitting"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-33",
+      "query": "训练满分却预测不好是什么问题",
+      "expectedIds": [
+        "overfitting"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-34",
+      "query": "交叉验证",
+      "expectedIds": [
+        "cross-validation"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-34",
+      "query": "cross-validation",
+      "expectedIds": [
+        "cross-validation"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-34",
+      "query": "交叉验证怎么划分重复受访者",
+      "expectedIds": [
+        "cross-validation"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-35",
+      "query": "数据泄漏",
+      "expectedIds": [
+        "data-leakage"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-35",
+      "query": "data leakage",
+      "expectedIds": [
+        "data-leakage"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-35",
+      "query": "训练前用全数据填补缺失会泄漏吗",
+      "expectedIds": [
+        "data-leakage"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-36",
+      "query": "K-means 聚类",
+      "expectedIds": [
+        "k-means"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-36",
+      "query": "K-means clustering",
+      "expectedIds": [
+        "k-means"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-36",
+      "query": "K均值聚类为什么受尺度影响",
+      "expectedIds": [
+        "k-means"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-37",
+      "query": "主成分分析",
+      "expectedIds": [
+        "principal-components"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-37",
+      "query": "principal component analysis",
+      "expectedIds": [
+        "principal-components"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-37",
+      "query": "主成分的解释方差代表什么",
+      "expectedIds": [
+        "principal-components"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-38",
+      "query": "训练集与测试集",
+      "expectedIds": [
+        "train-test-split"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-38",
+      "query": "training and test sets",
+      "expectedIds": [
+        "train-test-split"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-38",
+      "query": "测试集可以反复调参吗",
+      "expectedIds": [
+        "train-test-split"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-39",
+      "query": "目标总体",
+      "expectedIds": [
+        "population"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-39",
+      "query": "target population",
+      "expectedIds": [
+        "population"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-39",
+      "query": "调查总体与样本有什么不同",
+      "expectedIds": [
+        "population"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-40",
+      "query": "样本与分析样本",
+      "expectedIds": [
+        "sample"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-40",
+      "query": "sample and analysis sample",
+      "expectedIds": [
+        "sample"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-40",
+      "query": "图表的有效样本数怎么算",
+      "expectedIds": [
+        "sample"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-41",
+      "query": "操作化",
+      "expectedIds": [
+        "operationalization"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-41",
+      "query": "operationalization",
+      "expectedIds": [
+        "operationalization"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-41",
+      "query": "怎么把抽象概念变成测量指标",
+      "expectedIds": [
+        "operationalization"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-42",
+      "query": "李克特题项与量表",
+      "expectedIds": [
+        "likert-scale"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-42",
+      "query": "Likert item and scale",
+      "expectedIds": [
+        "likert-scale"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-42",
+      "query": "Likert 单题与量表有区别吗",
+      "expectedIds": [
+        "likert-scale"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-43",
+      "query": "预测试",
+      "expectedIds": [
+        "pilot-study"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-43",
+      "query": "pilot study and pretesting",
+      "expectedIds": [
+        "pilot-study"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-43",
+      "query": "问卷发布前怎么试填",
+      "expectedIds": [
+        "pilot-study"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-44",
+      "query": "选择偏差",
+      "expectedIds": [
+        "selection-bias"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-44",
+      "query": "selection bias",
+      "expectedIds": [
+        "selection-bias"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-44",
+      "query": "群里发问卷会有选择偏差吗",
+      "expectedIds": [
+        "selection-bias"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-45",
+      "query": "混合方法研究",
+      "expectedIds": [
+        "mixed-methods"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-45",
+      "query": "mixed methods research",
+      "expectedIds": [
+        "mixed-methods"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-45",
+      "query": "混合方法如何整合访谈与调查",
+      "expectedIds": [
+        "mixed-methods"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-46",
+      "query": "认识论",
+      "expectedIds": [
+        "epistemology"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-46",
+      "query": "epistemology",
+      "expectedIds": [
+        "epistemology"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-46",
+      "query": "认识论如何判断证据",
+      "expectedIds": [
+        "epistemology"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-47",
+      "query": "归纳推理",
+      "expectedIds": [
+        "induction"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-47",
+      "query": "inductive reasoning",
+      "expectedIds": [
+        "induction"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-47",
+      "query": "从几个事例推广叫归纳吗",
+      "expectedIds": [
+        "induction"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-48",
+      "query": "演绎推理",
+      "expectedIds": [
+        "deduction"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-48",
+      "query": "deductive reasoning",
+      "expectedIds": [
+        "deduction"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-48",
+      "query": "演绎能保证前提真实吗",
+      "expectedIds": [
+        "deduction"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-49",
+      "query": "溯因推理",
+      "expectedIds": [
+        "abduction"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-49",
+      "query": "abductive reasoning",
+      "expectedIds": [
+        "abduction"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-49",
+      "query": "看到现象怎么比较替代解释",
+      "expectedIds": [
+        "abduction"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-50",
+      "query": "可证伪性",
+      "expectedIds": [
+        "falsifiability"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-50",
+      "query": "falsifiability",
+      "expectedIds": [
+        "falsifiability"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-50",
+      "query": "可证伪是什么意思",
+      "expectedIds": [
+        "falsifiability"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-51",
+      "query": "地理信息系统",
+      "expectedIds": [
+        "gis"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-51",
+      "query": "geographic information system",
+      "expectedIds": [
+        "gis"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-51",
+      "query": "GIS 除了画地图还能做什么",
+      "expectedIds": [
+        "gis"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-52",
+      "query": "坐标参考系",
+      "expectedIds": [
+        "coordinate-reference-system"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-52",
+      "query": "coordinate reference system",
+      "expectedIds": [
+        "coordinate-reference-system"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-52",
+      "query": "经纬度能直接当米计算吗",
+      "expectedIds": [
+        "coordinate-reference-system"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-53",
+      "query": "空间自相关",
+      "expectedIds": [
+        "spatial-autocorrelation"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-53",
+      "query": "spatial autocorrelation",
+      "expectedIds": [
+        "spatial-autocorrelation"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-53",
+      "query": "空间自相关是什么意思",
+      "expectedIds": [
+        "spatial-autocorrelation"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-54",
+      "query": "生态谬误",
+      "expectedIds": [
+        "ecological-fallacy"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-54",
+      "query": "ecological fallacy",
+      "expectedIds": [
+        "ecological-fallacy"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-54",
+      "query": "地区关系为什么不能推到个人",
+      "expectedIds": [
+        "ecological-fallacy"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-55",
+      "query": "可变空间单元问题",
+      "expectedIds": [
+        "modifiable-areal-unit"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-55",
+      "query": "modifiable areal unit problem",
+      "expectedIds": [
+        "modifiable-areal-unit"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-55",
+      "query": "改变区域边界会改变统计吗",
+      "expectedIds": [
+        "modifiable-areal-unit"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-56",
+      "query": "重要性—表现分析",
+      "expectedIds": [
+        "importance-performance"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-56",
+      "query": "importance-performance analysis",
+      "expectedIds": [
+        "importance-performance"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-56",
+      "query": "重要性高表现低怎么解释",
+      "expectedIds": [
+        "importance-performance"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-57",
+      "query": "国际音标",
+      "expectedIds": [
+        "international-phonetic"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-57",
+      "query": "International Phonetic Alphabet",
+      "expectedIds": [
+        "international-phonetic"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-57",
+      "query": "IPA 音标指什么",
+      "expectedIds": [
+        "international-phonetic"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-58",
+      "query": "消费者行为",
+      "expectedIds": [
+        "consumer-behavior"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-58",
+      "query": "consumer behavior",
+      "expectedIds": [
+        "consumer-behavior"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-58",
+      "query": "消费意向与购买行为有区别吗",
+      "expectedIds": [
+        "consumer-behavior"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-59",
+      "query": "市场细分",
+      "expectedIds": [
+        "market-segmentation"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-59",
+      "query": "market segmentation",
+      "expectedIds": [
+        "market-segmentation"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-59",
+      "query": "市场细分一定要做聚类吗",
+      "expectedIds": [
+        "market-segmentation"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "canonical-60",
+      "query": "机会成本",
+      "expectedIds": [
+        "opportunity-cost"
+      ],
+      "kind": "canonical"
+    },
+    {
+      "id": "english-60",
+      "query": "opportunity cost",
+      "expectedIds": [
+        "opportunity-cost"
+      ],
+      "kind": "alias"
+    },
+    {
+      "id": "intent-60",
+      "query": "机会成本只包括花的钱吗",
+      "expectedIds": [
+        "opportunity-cost"
+      ],
+      "kind": "question"
+    },
+    {
+      "id": "ambiguous-1",
+      "query": "SEM",
+      "expectedIds": [
+        "standard-error-mean",
+        "structural-equation-model"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-2",
+      "query": "sem",
+      "expectedIds": [
+        "standard-error-mean",
+        "structural-equation-model"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-3",
+      "query": "ＳＥＭ",
+      "expectedIds": [
+        "standard-error-mean",
+        "structural-equation-model"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-4",
+      "query": "IPA",
+      "expectedIds": [
+        "importance-performance",
+        "international-phonetic"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-5",
+      "query": "ipa",
+      "expectedIds": [
+        "importance-performance",
+        "international-phonetic"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-6",
+      "query": "ＩＰＡ",
+      "expectedIds": [
+        "importance-performance",
+        "international-phonetic"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-7",
+      "query": "α",
+      "expectedIds": [
+        "significance-level",
+        "cronbach-alpha"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-8",
+      "query": "alpha",
+      "expectedIds": [
+        "significance-level",
+        "cronbach-alpha"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-9",
+      "query": "α 系数",
+      "expectedIds": [
+        "cronbach-alpha"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "ambiguous-10",
+      "query": "SEM 标准误",
+      "expectedIds": [
+        "standard-error-mean"
+      ],
+      "kind": "ambiguous",
+      "requireAll": true
+    },
+    {
+      "id": "zero-1",
+      "query": "量子纠缠",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-2",
+      "query": "伽马射线暴的余辉",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-3",
+      "query": "红烧肉的制作流程",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-4",
+      "query": "二氢杨梅素",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-5",
+      "query": "火星风化地貌",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-6",
+      "query": "俄语动词变位",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-7",
+      "query": "王者荣耀出装",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-8",
+      "query": "酒店退房时间",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-9",
+      "query": "检索词 zyxqv123abc",
+      "expectedIds": [],
+      "kind": "zero"
+    },
+    {
+      "id": "zero-10",
+      "query": "嗅觉受体基因",
+      "expectedIds": [],
+      "kind": "zero"
+    }
+  ]
+}
