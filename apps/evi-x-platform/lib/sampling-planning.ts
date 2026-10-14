@@ -4,7 +4,7 @@
  * cluster sizes; Fleiss (1981) and Guenther (1981) for two-group comparisons.
  */
 import { allocate, type AllocationMethod, type AllocationRow } from './sampling.ts';
-import { meanOf, sum, texNum, varianceOf, zCritical, zOneSided } from './sampling-core.ts';
+import { literal, meanOf, sum, texNum, varianceOf, zCritical, zOneSided } from './sampling-core.ts';
 import type { Step } from './sampling-estimators.ts';
 
 const tex = String.raw;
@@ -69,7 +69,7 @@ export function stratifiedSampleSize(strata: PlanStratum[], method: Exclude<Allo
     { label: '取整后实际达到的方差', tex: tex`V(\bar{y}_{st})=\sum_h\frac{W_h^{2}S_h^{2}}{n_h}-\frac{1}{N}\sum_h W_hS_h^{2}=${texNum(achievedV, 5)}` },
   ];
   const warnings = [...allocation.warnings];
-  if (census.size) warnings.push(`${[...census].map(i => `「${strata[i].name}」`).join('、')}按公式分配超过层规模，已普查该层后对其余各层重新求解。`);
+  if (census.size) warnings.push(`${[...census].map(i => `「${literal(strata[i].name)}」`).join('、')}按公式分配超过层规模，已普查该层后对其余各层重新求解。`);
   if (method === 'proportional' && census.size) warnings.push('比例分配下出现普查层，说明总体很小或精度要求很高。');
   return { nExact, n, rows: allocation.rows, census: [...census].map(i => strata[i].name), V, achievedV, achievedMargin: z === null ? null : z * Math.sqrt(Math.max(0, achievedV)), cost, steps, warnings };
 }
@@ -186,6 +186,11 @@ export function twoStagePlan({ components, M, N, c1, c2, constraint }: TwoStageI
     if (!(constraint.budget > 0)) throw Error('总预算须大于 0。');
     n = Math.floor(constraint.budget / (c1 + c2 * m));
     if (n < 2) throw Error('预算不足以调查 2 个初级单元。');
+    if (N !== null && n > N) {
+      // The budget buys more primary units than exist: take them all; the spare budget could raise m instead.
+      n = N;
+      warnings.push(`预算足以调查全部 ${N} 个初级单元，已取 $n=N$；剩余预算可用于增加每个单元的样本数。`);
+    }
   } else {
     const t = targetVariance(constraint.target); z = t.z; targetStep = t.step;
     n = Math.ceil((Math.max(Su, 0) + S2 / m) / (t.V + S1 * inv) - 1e-9);

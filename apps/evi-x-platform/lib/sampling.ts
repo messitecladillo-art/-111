@@ -4,6 +4,8 @@
  * Precision statements are valid only under probability sampling; callers must say so.
  */
 
+import { literal } from './sampling-core.ts';
+
 export const Z_BY_CONFIDENCE = { '0.9': 1.6448536269514722, '0.95': 1.959963984540054, '0.99': 2.5758293035489004 } as const;
 export type Confidence = keyof typeof Z_BY_CONFIDENCE;
 
@@ -130,7 +132,7 @@ export function allocate(strata: Stratum[], total: number, method: AllocationMet
     const weight = free.reduce((s, i) => s + score[i], 0);
     const exact = free.map(i => remaining * score[i] / weight);
     const high = free.filter((i, k) => exact[k] > caps[i]);
-    if (high.length) { high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`「${strata[i].name}」按公式分配超过该层规模，已全部纳入（普查该层）。`); }); continue; }
+    if (high.length) { high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`「${literal(strata[i].name)}」按公式分配超过该层规模，已全部纳入（普查该层）。`); }); continue; }
     const low = free.filter((i, k) => exact[k] < floors[i]);
     if (low.length) { low.forEach(i => { fixed.set(i, floors[i]); lifted.add(i); }); continue; }
     const rounded = roundToTotal(exact, remaining, free.map(i => caps[i]));

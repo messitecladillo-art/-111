@@ -5,7 +5,7 @@
  * interface must say so. References: Kalton & Flores-Cervantes (2003) J. Official Statistics 19(2);
  * Deville & Särndal (1992) JASA 87; checked against R survey::rake and postStratify in tests.
  */
-import { sum } from './sampling-core.ts';
+import { literal, sum } from './sampling-core.ts';
 
 export type KishSummary = { n: number; sum: number; nEff: number; deff: number; cv: number; min: number; max: number; ratio: number };
 /** Kish's effective sample size (Σw)²/Σw² and weighting design effect 1 + CV². */
@@ -26,7 +26,7 @@ export function classAdjust(classes: string[], responded: boolean[], base: numbe
     const all = sum(idx.map(i => base[i])), resp = sum(idx.filter(i => responded[i]).map(i => base[i]));
     if (resp === 0) throw Error(`调整类「${name}」中没有回答者，请与相邻类合并。`);
     const respondents = idx.filter(i => responded[i]).length;
-    if (respondents < 20) warnings.push(`调整类「${name}」只有 ${respondents} 个回答者，调整因子不稳定。`);
+    if (respondents < 20) warnings.push(`调整类「${literal(name)}」只有 ${respondents} 个回答者，调整因子不稳定。`);
     return { name, eligible: idx.length, respondents, rate: resp / all, factor: all / resp };
   });
   const factor = new Map(info.map(c => [c.name, c.factor]));
@@ -68,7 +68,7 @@ export function rake(margins: RakeMargin[], base: number[], { maxIterations = 10
     if (absent.length) throw Error(`样本中没有「${m.name}」的类别「${absent.slice(0, 3).join('」「')}」，无法校准；请合并类别。`);
     const unknown = [...new Set(m.values)].filter(c => !(c in m.targets));
     if (unknown.length) throw Error(`「${m.name}」的类别「${unknown.slice(0, 3).join('」「')}」缺少目标比例。`);
-    if (Math.abs(total - grand) > 1e-9 * grand) warnings.push(`「${m.name}」的目标合计与第一个控制变量不同，已按比例调整到相同总数。`);
+    if (Math.abs(total - grand) > 1e-9 * grand) warnings.push(`「${literal(m.name)}」的目标合计与第一个控制变量不同，已按比例调整到相同总数。`);
     return { ...m, targets: Object.fromEntries(Object.entries(m.targets).map(([c, t]) => [c, t * grand / total])) };
   });
   if (bounds && !(bounds.lower > 0 && bounds.lower < 1 && bounds.upper > 1)) throw Error('调整因子的上下限须满足 0 < 下限 < 1 < 上限。');

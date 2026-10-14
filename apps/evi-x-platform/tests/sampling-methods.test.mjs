@@ -378,3 +378,18 @@ test('the sampling lab shows unbiased designs, honest coverage and the expected 
   assert.ok(results.cluster.efficiency < 0.6, `cluster efficiency ${results.cluster.efficiency}`);
   assert.equal(results.cluster.sampleSize, 200);
 });
+
+test('review fixes: budgets cannot buy more primary units than exist; weights bind to content; names stay literal', async () => {
+  const capped = twoStagePlan({ components: { S: 10, rho: 0.1 }, M: 50, N: 10, c1: 100, c2: 10, constraint: { kind: 'budget', budget: 100000 } });
+  assert.equal(capped.n, 10);
+  assert.ok(capped.warnings.some(w => w.includes('$n=N$')));
+  assert.ok(capped.V > 0 && capped.cost === 10 * (100 + 10 * capped.m));
+  const { textHash, literal } = await import('../lib/sampling-core.ts');
+  assert.equal(textHash('a,b\n1,2'), textHash('a,b\n1,2'));
+  assert.notEqual(textHash('a,b\n1,2'), textHash('a,b\n1,3'));
+  assert.equal(textHash('').length, 32);
+  assert.equal(literal('收入($)'), '收入(＄)');
+  const { allocate } = await import('../lib/sampling.ts');
+  const warned = allocate([{ id: 'a', name: '高端$客户', size: 5, sd: 50 }, { id: 'b', name: '普通', size: 500, sd: 1 }], 50, 'neyman');
+  assert.ok(warned.warnings.some(w => w.includes('高端＄客户')) && warned.warnings.every(w => !w.includes('$')));
+});

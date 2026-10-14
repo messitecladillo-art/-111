@@ -76,6 +76,25 @@ export function seededRandom(seed: string): () => number {
   for (let i = 0; i < 15; i++) next();
   return next;
 }
+/** A 128-bit content fingerprint (cyrb128), used to bind derived results such as weights to their data. */
+export function textHash(text: string): string {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0; i < text.length; i++) {
+    const k = text.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  h1 ^= h2 ^ h3 ^ h4; h2 ^= h1; h3 ^= h1; h4 ^= h1;
+  return [h1, h2, h3, h4].map(h => (h >>> 0).toString(16).padStart(8, '0')).join('');
+}
+/** User-supplied names placed in notes that render inline math: a dollar sign must not open a formula. */
+export const literal = (text: string) => text.replace(/\$/g, '＄');
 /** Uniform integer in [0, n). */
 export const randomInt = (rand: () => number, n: number) => Math.floor(rand() * n);
 /** Standard normal deviate (Box–Muller); used only by simulations. */

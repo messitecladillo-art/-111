@@ -168,7 +168,7 @@ export default function SamplingWorkbench({ dataset }: { dataset: DatasetValue |
           <div key={estimator}>{calculator({ id: estimator as CalculatorId, mode: ESTIMATOR_MODE[estimator] })}</div>
         </div>}
         {page === 'complex' && <ComplexCalc dataset={dataset} raked={raked} />}
-        {page === 'weighting' && <WeightingCalc dataset={dataset} onWeights={setRaked} />}
+        {page === 'weighting' && <WeightingCalc dataset={dataset} shared={raked} onWeights={setRaked} />}
         {page === 'lab' && <SamplingLab />}
         {page === 'refs' && <div className={styles.refs}><ol>{HANDBOOK_REFERENCES.map(r => <li key={r}>{r}</li>)}</ol></div>}
         {chapter && <ChapterView chapter={chapter} onOpen={setPage} />}

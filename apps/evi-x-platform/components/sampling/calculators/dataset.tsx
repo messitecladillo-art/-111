@@ -1,7 +1,8 @@
 'use client';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { DatasetValue } from '@/lib/canvas/execute';
 import { tableCsv } from '@/lib/data-quality';
+import { textHash } from '@/lib/sampling-core';
 import { buildDesignRows, describeColumn, marginsFromShares, marginValues, MISSING_CATEGORY } from '@/lib/sampling-dataset';
 import { describeDesign, designEstimate, type DesignEstimate, type VarianceMethod } from '@/lib/sampling-variance';
 import { kish, postStratify, rake } from '@/lib/sampling-weights';
@@ -12,17 +13,23 @@ import styles from '../Sampling.module.css';
 
 export type SharedWeights = { key: string; values: number[]; label: string };
 export type Source = { name: string; table: SurveyTable; codes: string[]; key: string; simulated: boolean } | null;
-export const sourceKey = (table: SurveyTable, name: string) => `${name}:${table.headers.join('|')}:${table.rows.length}`;
+/**
+ * Weights are bound to the exact data they were computed on: the workspace content hash (or a hash of the
+ * pasted text) plus the missing-code setting, so a dataset replaced with the same shape cannot reuse them.
+ */
+export const sourceKey = (kind: 'workspace' | 'paste', contentHash: string, table: SurveyTable, codes: string[]) => `${kind}:${contentHash}:${table.rows.length}:${textHash(codes.join('\u0001'))}`;
 
 /** The dataset from 数据分析, or a CSV pasted here when nothing is loaded. */
 function useSource(dataset: DatasetValue | null, storageKey: string): { source: Source; picker: ReactNode; error: string | null } {
   const [paste, setPaste] = usePersistent(`${storageKey}.paste`, { text: '' });
   const [mode, setMode] = useState<'workspace' | 'paste'>(dataset ? 'workspace' : 'paste');
   const parsed = useMemo(() => attempt(() => paste.text.trim() ? parseSurveyCsv(paste.text) : null), [paste.text]);
-  const useWorkspace = mode === 'workspace' && dataset;
-  const source: Source = useWorkspace
-    ? { name: dataset.name, table: dataset.table, codes: dataset.missingCodes, key: sourceKey(dataset.table, dataset.name), simulated: dataset.kind === 'simulated' }
-    : parsed.value ? { name: '粘贴的数据', table: parsed.value, codes: [], key: sourceKey(parsed.value, 'paste'), simulated: false } : null;
+  const useWorkspace = mode === 'workspace' && !!dataset;
+  // Memoised so that results computed from the source keep their identity between renders.
+  const source = useMemo<Source>(() => useWorkspace && dataset
+    ? { name: dataset.name, table: dataset.table, codes: dataset.missingCodes, key: sourceKey('workspace', dataset.sourceHash, dataset.table, dataset.missingCodes), simulated: dataset.kind === 'simulated' }
+    : parsed.value ? { name: '粘贴的数据', table: parsed.value, codes: [], key: sourceKey('paste', textHash(paste.text), parsed.value, []), simulated: false } : null,
+  [useWorkspace, dataset, parsed.value, paste.text]);
   const picker = <>
     {dataset && <Choice label="数据来源" value={mode} options={[['workspace', `数据分析：${dataset.name}`], ['paste', '在此粘贴 CSV']] as const} onChange={setMode} />}
     {!useWorkspace && <Paste label="CSV 数据（第一行为表头）" value={paste.text} onChange={text => setPaste({ text })} rows={6} placeholder={'学校,班级,权数,满意度\n甲校,1班,32.5,4\n…'} hint={dataset ? undefined : '也可以先在「数据分析」中读取问卷数据，这里会自动使用同一份数据与缺失代码设置。'} />}
@@ -114,10 +121,9 @@ export function ComplexCalc({ dataset, raked }: { dataset: DatasetValue | null; 
 }
 
 type Control = { column: string; shares: Record<string, string> };
-export function WeightingCalc({ dataset, onWeights }: { dataset: DatasetValue | null; onWeights: (weights: SharedWeights) => void }) {
+export function WeightingCalc({ dataset, shared, onWeights }: { dataset: DatasetValue | null; shared: SharedWeights | null; onWeights: (weights: SharedWeights | null) => void }) {
   const { source, picker, error: sourceError } = useSource(dataset, 'weighting');
   const [s, set] = usePersistent('weighting.v1', { method: 'rake', controls: [] as Control[], base: '', scale: 'sample', N: '', cap: '', source: '' });
-  const [sent, setSent] = useState(false);
   const table = source?.table ?? null;
   const candidates = table ? table.headers.map((_, i) => describeColumn(table, i, source!.codes)).filter(c => c.categories.length >= 2 && c.categories.length <= 20) : [];
   const controls = useMemo(() => table ? s.controls.filter(c => table.headers.includes(c.column)) : [], [table, s.controls]);
@@ -144,6 +150,13 @@ export function WeightingCalc({ dataset, onWeights }: { dataset: DatasetValue | 
     set({ ...s, controls: [...controls, { column, shares: Object.fromEntries([...m.entries()].map(([k, v]) => [k, (v / n * 100).toFixed(1)])) }] });
   }
   const label = s.method === 'post' ? '事后分层权数' : '迭代校准权数';
+  const linked = !!shared && !!source && shared.key === source.key;
+  // While linked, the shared weights follow every recalculation; an error or an empty result unlinks them.
+  useEffect(() => {
+    if (!linked || !source) return;
+    if (!result.value) onWeights(null);
+    else if (shared!.values !== result.value.weights || shared!.label !== label) onWeights({ key: source.key, values: result.value.weights, label });
+  }, [linked, result.value, label, source, shared, onWeights]);
   const statement = result.value && summary && table ? `以${s.source.trim() || '〔请填写目标分布的来源，如统计年鉴、普查年份〕'}中${controls.map(c => `「${c.column}」`).join('、')}的分布为目标，${s.method === 'post' ? '采用事后分层法调整权数' : `采用迭代比例拟合（raking）法调整权数，经 ${result.value.iterations} 次迭代${result.value.converged ? '收敛' : '仍未完全收敛'}`}${s.cap.trim() ? `，调整因子限制在 1/${s.cap.trim()} 至 ${s.cap.trim()} 倍之间` : ''}。调整后权数的最大值与最小值之比为 ${fmt(summary.ratio, 2)}，有效样本量为 ${fmt(summary.nEff, 0)}（权数造成的设计效应 ${fmt(summary.deff, 3)}）。加权使样本在上述变量上的结构与总体一致，但只能减少与这些变量相关的偏差${source?.simulated ? '；当前数据为教学模拟数据' : ''}。` : '';
   const csv = () => { if (!table || !result.value) return ''; return tableCsv({ ...table, headers: [...table.headers, label], rows: table.rows.map((r, i) => [...r, String(result.value!.weights[i])]) }); };
   return <Calc title="权数调整：迭代校准与事后分层" intro="选择控制变量并填写总体中各类别的占比（来自统计年鉴、普查或学校名册），把样本结构调整到总体结构。目标占比默认等于样本占比，请改为可靠来源的数字。"
@@ -173,7 +186,9 @@ export function WeightingCalc({ dataset, onWeights }: { dataset: DatasetValue | 
       <Formula compact label={s.method === 'post' ? '事后分层权数' : '迭代校准'} tex={s.method === 'post' ? String.raw`w_i=d_i\cdot\frac{N_g}{\sum_{k\in r_g}d_k}` : String.raw`w_i^{(t+1)}=w_i^{(t)}\cdot\frac{T_{kc}}{\sum_{j:\,x_{jk}=c}w_j^{(t)}},\qquad n_{\text{eff}}=\frac{\left(\sum_iw_i\right)^{2}}{\sum_iw_i^{2}}`} />
       <div className={styles.row}>
         <Download label="下载带权数的数据（CSV）" filename={`${source?.name ?? '数据'}-${label}.csv`} content={csv} />
-        <button type="button" className={styles.primary} onClick={() => { onWeights({ key: source!.key, values: result.value!.weights, label }); setSent(true); }}>{sent ? '已用于复杂样本估计' : '用于复杂样本估计'}</button>
+        {linked
+          ? <><span className={styles.badge}>已用于复杂样本估计，随调整自动更新</span><button type="button" className={styles.ghost} onClick={() => onWeights(null)}>取消使用</button></>
+          : <button type="button" className={styles.primary} onClick={() => onWeights({ key: source!.key, values: result.value!.weights, label })}>用于复杂样本估计</button>}
       </div>
       <Statement text={statement} footnote="来源年份与口径请在报告中写明；非概率样本加权后仍不是概率样本。" />
       <Notes items={result.value.warnings} />
