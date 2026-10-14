@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "2026-10-15.2",
+  "release": "2026-10-15.3",
   "entries": [
     {
       "id": "abduction",
@@ -64,6 +64,91 @@
       ]
     },
     {
+      "id": "accessibility",
+      "version": 1,
+      "name": "可达性",
+      "englishName": "Accessibility",
+      "aliases": [
+        "空间可达性"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "一个地点或人群在指定出行约束下接触就业、服务或活动机会的程度。它同时涉及机会数量、位置和出行成本，不能仅用距最近设施的距离概括全部含义。",
+      "uses": [
+        "比较服务覆盖时明确目标机会、出行模式、阈值、容量与人群约束，并检查不同阈值。"
+      ],
+      "examples": [
+        "示例：15 分钟内可达两处场馆与一处场馆是不同机会覆盖；还要看容量、开放时段和实际可用性。"
+      ],
+      "confusions": [
+        {
+          "entryId": "buffer-analysis",
+          "distinction": "缓冲区只按选定距离划范围；可达性还要定义机会、阻抗、时间和人群约束。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "所有设施都在 15 分钟内就意味着服务公平吗？",
+          "answer": "不充分。容量、费用、无障碍条件和人群需求可能不同；应分组核查可实际使用的机会。"
+        }
+      ],
+      "relatedIds": [
+        "catchment-area",
+        "network-distance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "accessibility",
+          "title": "FHWA: Freight Performance Measure Primer, Chapter 4",
+          "url": "https://ops.fhwa.dot.gov/publications/fhwahop16089/chp4.htm",
+          "locator": "Accessibility；contour/cumulative opportunities and gravity measures",
+          "scope": "可达性测量概念；本条展示阈值累计机会形式，不声称它唯一或最优。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15",
+      "formula": {
+        "tex": "A_i(T)=\\sum_j O_j\\,\\mathbf{1}(c_{ij}\\leq T)",
+        "symbols": [
+          {
+            "symbol": "A_i(T)",
+            "meaning": "地点 i 在阈值 T 内累计的机会量",
+            "unit": "机会单位"
+          },
+          {
+            "symbol": "O_j",
+            "meaning": "地点 j 的机会量或容量",
+            "unit": "机会单位"
+          },
+          {
+            "symbol": "c_{ij}",
+            "meaning": "地点 i 到 j 的可用出行成本",
+            "unit": "时间或距离"
+          },
+          {
+            "symbol": "T",
+            "meaning": "与出行成本同单位的阈值"
+          },
+          {
+            "symbol": "\\mathbf{1}",
+            "meaning": "条件成立取 1，否则取 0"
+          }
+        ],
+        "conditions": [
+          "所有机会和成本采用同一时点、模式与单位；不可达记为不满足阈值。",
+          "这是累计机会指标；并未自动处理竞争、拥挤、费用或个人约束，需按研究补充。"
+        ]
+      }
+    },
+    {
       "id": "adjusted-rand-index",
       "version": 1,
       "name": "调整兰德指数",
@@ -108,6 +193,49 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "adverse-selection",
+      "version": 1,
+      "name": "逆向选择",
+      "englishName": "Adverse selection",
+      "aliases": [
+        "不利选择"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "当一方在交易前掌握另一方难以辨别的类型或质量信息时，交易条件可能使较不利的类型更倾向参与，并使较优类型退出。核心是隐藏类型与参与筛选，不是一般的选错对象。",
+      "uses": [
+        "说明保险、二手交易或平台准入问题时，明确隐含类型、选择机制和可观察信号。"
+      ],
+      "examples": [
+        "示例：统一出价无法区分设备质量时，优质设备卖家可能退出，留下的交易质量下降。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "information-asymmetry",
+        "moral-hazard"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "asymmetry",
+          "title": "Nobel Prize 2001: Markets with Asymmetric Information",
+          "url": "https://www.nobelprize.org/prizes/economic-sciences/2001/press-release/",
+          "locator": "Information asymmetry；Akerlof、Spence、Stiglitz 的贡献",
+          "scope": "已读取主站公开内容的检索缓存；直连曾返回 403。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "alternative-hypothesis",
@@ -284,6 +412,145 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "appeal-to-authority",
+      "version": 1,
+      "name": "诉诸权威",
+      "englishName": "Appeal to authority",
+      "aliases": [
+        "权威诉求"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "用某人的专业判断支持主张。依赖相关、可靠且有依据的专业意见可以合理；当专业不相关、意见有争议或权威替代了所需证据时，支持会不足。",
+      "uses": [
+        "引用专家时说明专业范围、原话内容、证据来源和其他意见。"
+      ],
+      "examples": [
+        "示例：商业名人的推荐不能单独证明统计方法适用，应回到设计、数据与方法前提。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "burden-of-proof",
+        "epistemology"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "fallacies",
+          "title": "Stanford Encyclopedia of Philosophy: Fallacies",
+          "url": "https://plato.stanford.edu/entries/fallacies/",
+          "locator": "Begging the question；straw man；appeal to authority；burden of proof",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "argument-soundness",
+      "version": 1,
+      "name": "论证健全性",
+      "englishName": "Argument soundness",
+      "aliases": [
+        "健全论证"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "演绎论证既有效且全部前提为真时具有健全性。它要求推理结构与事实依据同时成立；仅有合理结构而前提未核实，不能当作已证实结论。",
+      "uses": [
+        "在最终主张旁逐项核对前提来源与适用范围。"
+      ],
+      "examples": [
+        "示例：“所有接受访谈者均为居民”若未核实，后续逻辑再整齐也不能保证对居民的结论。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "argument-validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "informal-logic",
+          "title": "Stanford Encyclopedia of Philosophy: Informal Logic",
+          "url": "https://plato.stanford.edu/entries/logic-informal/",
+          "locator": "4.1 AV Criteria；sound argument = valid argument with true premises",
+          "scope": "演绎论证健全性的定义；与证明系统的健全性分别理解。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "argument-validity",
+      "version": 1,
+      "name": "论证有效性",
+      "englishName": "Argument validity",
+      "aliases": [
+        "演绎有效性",
+        "逻辑有效"
+      ],
+      "domain": "philosophy",
+      "depth": "deep",
+      "definition": "演绎论证中，若前提都为真则结论不可能为假的结构性质。有效性不保证前提实际上为真；它也不同于量表效度、统计显著性或结论看起来可信。",
+      "uses": [
+        "审查报告的推理链时把前提列出，检查是否存在前提真而结论假的可能情况。"
+      ],
+      "examples": [
+        "示例：“所有满足条件者可报名；甲满足条件；所以甲可报名”在指定规则含义下具有有效结构。"
+      ],
+      "confusions": [
+        {
+          "entryId": "validity",
+          "distinction": "量表效度讨论测量与解释是否得到支持；论证有效性讨论前提与结论的必然关系。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "一个结论碰巧为真，论证就有效吗？",
+          "answer": "不是。结论真可能来自巧合；要看推理结构能否保真。有效论证还须核实前提，才能形成健全论证。"
+        }
+      ],
+      "relatedIds": [
+        "deduction",
+        "argument-soundness"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "logical-consequence",
+          "title": "Stanford Encyclopedia of Philosophy: Logical Consequence",
+          "url": "https://plato.stanford.edu/entries/logical-consequence/",
+          "locator": "Truth preservation；validity and form",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "bayes-theorem",
@@ -529,6 +796,233 @@
       }
     },
     {
+      "id": "bounded-rationality",
+      "version": 1,
+      "name": "有限理性",
+      "englishName": "Bounded rationality",
+      "aliases": [
+        "受限理性"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "决策者受到信息、注意力、计算能力和时间的限制，通常无法穷尽所有方案并精确求得全局最优。研究应说明实际搜索和判断过程，而不是把偏离理想模型直接称作不理性。",
+      "uses": [
+        "设计选择题和访谈时观察用户能处理多少信息、搜索到哪里停止及采用哪些简化规则。"
+      ],
+      "examples": [
+        "示例：订票者在十分钟内筛选交通方便且价格可接受的方案，并未浏览全部赛事。"
+      ],
+      "confusions": [
+        {
+          "entryId": "loss-aversion",
+          "distinction": "有限理性是决策能力与环境约束的框架；损失厌恶是相对参照点的一种具体偏好表现。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "有限理性是否意味着人总是选错？",
+          "answer": "不意味着。简化规则可能节省时间并适应环境；应以真实任务、可得信息和决策成本评价结果。"
+        }
+      ],
+      "relatedIds": [
+        "choice-overload",
+        "framing-effect"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "simon",
+          "title": "Herbert Simon: Rational Decision-Making in Business Organizations",
+          "url": "https://www.nobelprize.org/uploads/2018/06/simon-lecture.pdf",
+          "locator": "Bounded rationality 与组织决策段落",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "brand-equity",
+      "version": 1,
+      "name": "消费者品牌资产",
+      "englishName": "Customer-based brand equity",
+      "aliases": [
+        "基于顾客的品牌资产",
+        "CBBE"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "因消费者拥有某种品牌知识，而对该品牌的营销产生不同反应的作用。研究可关注认知、联想和反应差异；它不是品牌的财务估值，也不只是知名度高低。",
+      "uses": [
+        "比较品牌方案时保持产品和刺激可比，登记认知、联想与选择结果。"
+      ],
+      "examples": [
+        "示例：同样服务内容呈现不同品牌名称时，用户评价不同，可形成品牌知识作用的研究假设。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "positioning",
+        "perceived-value"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "brand-equity",
+          "title": "Keller: Customer-Based Brand Equity",
+          "url": "https://journals.sagepub.com/doi/10.1177/002224299305700101",
+          "locator": "Abstract；Journal of Marketing 57(1), 1993",
+          "scope": "原论文公开摘要；消费者层面的品牌知识作用，不等同财务品牌估值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "buffer-analysis",
+      "version": 1,
+      "name": "缓冲区分析",
+      "englishName": "Buffer analysis",
+      "aliases": [
+        "地理缓冲区"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "围绕点、线或面创建距离阈值范围，以描述邻近区域。平面或测地距离、坐标单位、是否合并以及障碍条件需明确；几何距离圈不等于真实行程服务范围。",
+      "uses": [
+        "评价设施邻近覆盖时说明距离度量，并检查河流、道路和入口限制。"
+      ],
+      "examples": [
+        "示例：体育场周围 500 米缓冲区跨过河流，不代表河对岸居民可在短时间步行到达。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "catchment-area",
+        "geodesic-distance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "buffer",
+          "title": "Esri: Buffer",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/analysis/buffer.html",
+          "locator": "Distance；Planar and Geodesic methods",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "burden-of-proof",
+      "version": 1,
+      "name": "举证责任",
+      "englishName": "Burden of proof",
+      "aliases": [
+        "论证责任"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "提出或维护一个主张的人需给出相应支持，责任随讨论规则和既有证据而变。对方未能反驳不自动证明主张成立，也不是任何争论都必须由同一方证明全部事项。",
+      "uses": [
+        "给主张规定证据需求和反驳范围，区分未证实与已证伪。"
+      ],
+      "examples": [
+        "示例：“没人证明这个活动无效”不能作为它有效的证据；应提供效果指标和研究设计。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "argument-soundness",
+        "falsifiability"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "fallacies",
+          "title": "Stanford Encyclopedia of Philosophy: Fallacies",
+          "url": "https://plato.stanford.edu/entries/fallacies/",
+          "locator": "Begging the question；straw man；appeal to authority；burden of proof",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "catchment-area",
+      "version": 1,
+      "name": "服务覆盖范围",
+      "englishName": "Catchment area",
+      "aliases": [
+        "服务区",
+        "服务腹地"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "某设施在给定使用或出行规则下覆盖的区域。可以按网络时间阈值、实际来源或模型建立；模型服务区与实际用户来源范围不一定一致。",
+      "uses": [
+        "选址建议中说明覆盖范围来自模型还是观察，记录时刻、出行方向和竞争设施。"
+      ],
+      "examples": [
+        "示例：医院的到院十分钟服务区与外送服务的出发十分钟范围，因道路方向限制可能不同。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "accessibility",
+        "buffer-analysis"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "service-area",
+          "title": "Esri: Service Area Analysis Layer",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/help/analysis/networks/service-area-analysis-layer.html",
+          "locator": "Polygons and Lines；Travel Settings；Cutoffs",
+          "scope": "网络服务范围；出发方向、交通模式和时刻会改变范围。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "central-limit-theorem",
       "version": 1,
       "name": "中心极限定理",
@@ -685,6 +1179,135 @@
           "answer": "不能直接指出。查看比例与残差，若追加比较需预先说明多重比较规则。"
         }
       ]
+    },
+    {
+      "id": "choice-overload",
+      "version": 1,
+      "name": "选择过载",
+      "englishName": "Choice overload",
+      "aliases": [
+        "选择超载"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在部分任务中，选项增加使比较成本、困难或后悔增加，从而降低选择意愿或满意度。是否出现取决于选项复杂度、偏好明确程度和呈现方式，不是选项数量的固定阈值。",
+      "uses": [
+        "评估页面或方案菜单时同时观察任务完成、比较时间与用户是否已有明确目标。"
+      ],
+      "examples": [
+        "示例：新用户面对 30 个相近套餐可能难选；专家用户也可能受益于更丰富的选项。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "bounded-rationality",
+        "customer-journey"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "choice-overload",
+          "title": "Iyengar and Lepper: When Choice Is Demotivating",
+          "url": "https://business.columbia.edu/faculty/research/when-choice-demotivating-can-one-desire-too-much-good-thing",
+          "locator": "作者机构公开 Abstract；2000",
+          "scope": "作者机构摘要；研究结果有情境条件，不声称选项越多必定越差。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "choropleth-map",
+      "version": 1,
+      "name": "分区设色图",
+      "englishName": "Choropleth map",
+      "aliases": [
+        "分级设色图"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "按区域属性值用颜色编码的专题地图，常用于比例、密度或其他可比较指标。分级方法和区域面积会影响阅读；原始人数直接上色可能主要反映区域规模。",
+      "uses": [
+        "绘制调查地域分布时登记指标分母、分类阈值和缺失区域，避免把区域信息外推到个体。"
+      ],
+      "examples": [
+        "示例：用参与率比较街区时应显示各街区有效分母，而不是把人数最多的街区解释为参与意愿最高。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "proportional-symbol-map",
+        "ecological-fallacy"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "choropleth",
+          "title": "Esri: Normalization for Choropleth Maps",
+          "url": "https://www.esri.com/arcgis-blog/products/arcgis-online/mapping/normalization-for-choropleth-maps",
+          "locator": "Choropleth maps versus graduated/proportional symbols",
+          "scope": "作者制图指南；原始总量与归一化率采用不同表达。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "circular-reasoning",
+      "version": 1,
+      "name": "循环论证",
+      "englishName": "Circular reasoning",
+      "aliases": [
+        "乞题",
+        "预设结论"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "论证在前提或理由中已经假定了需要证明的结论，使理由无法提供独立支持。形式上有重复不一定就是谬误；关键是前提有没有独立于结论的依据。",
+      "uses": [
+        "检查研究发现与量表定义是否互相作为唯一证明，寻找外部检验。"
+      ],
+      "examples": [
+        "示例：“这个方案有效，因为它属于有效方案；它属于有效方案，因为它有效”没有独立依据。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "argument-soundness"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "fallacies",
+          "title": "Stanford Encyclopedia of Philosophy: Fallacies",
+          "url": "https://plato.stanford.edu/entries/fallacies/",
+          "locator": "Begging the question；straw man；appeal to authority；burden of proof",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "class-imbalance",
@@ -846,6 +1469,98 @@
           "answer": "通常不够。用中性追问理解与回忆过程，保存原话、观察和修订依据，而非只收满意评价。"
         }
       ]
+    },
+    {
+      "id": "collective-action",
+      "version": 1,
+      "name": "集体行动",
+      "englishName": "Collective action",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "多个主体协调行为以形成共同结果的过程，可能面临成本分担、搭便车、信息和信任问题。个体都希望共同结果出现，并不保证各自会投入。",
+      "uses": [
+        "研究公共服务协作时登记参加收益、行动成本、规则和监督，而不是只问支持态度。"
+      ],
+      "examples": [
+        "示例：居民都赞成维护球场，但实际志愿时间如何分担仍需要明确安排。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "public-good",
+        "social-norms"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ostrom",
+          "title": "Elinor Ostrom: Nobel interview transcript, 2009",
+          "url": "https://www.nobelprize.org/prizes/economic-sciences/2009/ostrom/164465-ostrom-williamson-interview-transcript/",
+          "locator": "作者关于公共池资源与共同治理的访谈",
+          "scope": "作者本人说明；用于公共池资源与合作问题，不提供通用治理成功保证。"
+        },
+        {
+          "id": "imf-public",
+          "title": "IMF Back to Basics: What Are Global Public Goods?",
+          "url": "https://www.imf.org/en/Publications/fandd/issues/2021/12/global-public-goods-chin-basics",
+          "locator": "Public goods；nonrivalry and nonexcludability",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "common-pool-resource",
+      "version": 1,
+      "name": "公共池资源",
+      "englishName": "Common-pool resource",
+      "aliases": [
+        "CPR",
+        "共有资源"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "排除使用者较困难，但某人的使用会减少其他人可用资源的资源系统。共同使用容易产生拥挤或过度提取，治理方式可以包含社群规则，而不只有私有化或政府统一管理。",
+      "uses": [
+        "研究共享场地、取水或公用资源时，记录准入、用量、监督和规则制定方式。"
+      ],
+      "examples": [
+        "示例：公共运动场时段有限，一个群体长期占用会压缩其他群体的可用时段。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "public-good",
+        "collective-action"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ostrom",
+          "title": "Elinor Ostrom: Nobel interview transcript, 2009",
+          "url": "https://www.nobelprize.org/prizes/economic-sciences/2009/ostrom/164465-ostrom-williamson-interview-transcript/",
+          "locator": "作者关于公共池资源与共同治理的访谈",
+          "scope": "作者本人说明；用于公共池资源与合作问题，不提供通用治理成功保证。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "conditional-probability",
@@ -1194,6 +1909,81 @@
       "questions": []
     },
     {
+      "id": "consumer-surplus",
+      "version": 1,
+      "name": "消费者剩余",
+      "englishName": "Consumer surplus",
+      "aliases": [],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "在指定交易中，消费者愿付金额超过实际支付金额的部分。多个单位时可按边际支付意愿累加；它是经济福利分析的概念，不能用销售收入或问卷满意度代替。",
+      "uses": [
+        "比较明确供需条件下的价格或政策变化，并说明需求估计依据和计量单位。"
+      ],
+      "examples": [
+        "示例：一位消费者愿为一张票支付 80 元，实际支付 50 元，这笔交易的消费者剩余为 30 元。"
+      ],
+      "confusions": [
+        {
+          "entryId": "customer-satisfaction",
+          "distinction": "消费者剩余是金额差额；满意度是体验评价，两者不会一一对应。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "把所有人的愿付金额相加就是消费者剩余吗？",
+          "answer": "还应扣除实际支付，并区分买到与未买到的单位；总体估计依赖需求与样本外推条件。"
+        }
+      ],
+      "relatedIds": [
+        "willingness-to-pay",
+        "marginal-utility"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-welfare",
+          "title": "MIT 14.01 2023 Lecture Summaries: Consumer Surplus",
+          "url": "https://ocw.mit.edu/courses/14-01-principles-of-microeconomics-fall-2023/mit14_01_f23_full.pdf",
+          "locator": "4.1.2 Consumer Surplus；PDF 第 17 页；边际支付意愿与价格",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15",
+      "formula": {
+        "tex": "CS=WTP-P",
+        "symbols": [
+          {
+            "symbol": "CS",
+            "meaning": "单个不可分单位交易的消费者剩余",
+            "unit": "货币"
+          },
+          {
+            "symbol": "WTP",
+            "meaning": "该单位商品的最高支付意愿",
+            "unit": "货币"
+          },
+          {
+            "symbol": "P",
+            "meaning": "该单位的实际成交价格",
+            "unit": "货币"
+          }
+        ],
+        "conditions": [
+          "公式对应一个实际获得的单位，WTP 与价格的交易条件一致。",
+          "多单位、收入效应明显或总体福利比较应采用相应模型，不能直接套单单位差额。"
+        ]
+      }
+    },
+    {
       "id": "convexity",
       "version": 1,
       "name": "凸性",
@@ -1285,6 +2075,200 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "cost-benefit-analysis",
+      "version": 1,
+      "name": "成本收益分析",
+      "englishName": "Cost-benefit analysis",
+      "aliases": [
+        "CBA"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在明确比较方案、视角和时间范围下，识别增量成本与收益，并尽可能用可比较的货币量表示。未能货币化的重要影响应单独呈现，不能随意记作零。",
+      "uses": [
+        "比较行动建议时说明基准情景、时间范围、估计来源及不确定性，不把收入当成全部社会收益。"
+      ],
+      "examples": [
+        "示例：比较两条接驳线路时，一并考虑运营投入、出行时间变化及无法可靠货币化的安全影响。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "cost-effectiveness-analysis",
+        "externality"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "green-book",
+          "title": "HM Treasury: The Green Book 2026",
+          "url": "https://www.gov.uk/government/publications/the-green-book--2/the-green-book-2026",
+          "locator": "Appraising options → Sunk costs；cost-benefit and cost-effectiveness",
+          "scope": "仅借鉴评价概念；英国公共项目的法定程序、折现参数不适用于赛事项目。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "cost-effectiveness-analysis",
+      "version": 1,
+      "name": "成本效果分析",
+      "englishName": "Cost-effectiveness analysis",
+      "aliases": [
+        "CEA"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "针对相同或可比较的目标，比较方案成本与自然单位结果，例如每增加一位有效服务对象所需成本。它不要求把所有效果货币化，但不同目标和效果口径的比值不能直接排名。",
+      "uses": [
+        "在服务提升方案之间核对结果定义、基准、周期与成本范围。"
+      ],
+      "examples": [
+        "示例：若目标是新增实际参与者，可比较两方案每增加一位参与者的增量成本；点击量不能替代参与者。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "cost-benefit-analysis",
+        "key-performance-indicator"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "oecd-efficiency",
+          "title": "OECD: Applying Evaluation Criteria Thoughtfully",
+          "url": "https://www.oecd.org/en/publications/applying-evaluation-criteria-thoughtfully_543e84ed-en/full-report/understanding-the-six-criteria-definitions-elements-for-analysis-and-key-challenges_2843ff7d.html",
+          "locator": "Efficiency；effectiveness；results chain",
+          "scope": "评价概念，不把不同目标、不同比较期的成本效果比直接并列。"
+        },
+        {
+          "id": "green-book",
+          "title": "HM Treasury: The Green Book 2026",
+          "url": "https://www.gov.uk/government/publications/the-green-book--2/the-green-book-2026",
+          "locator": "Appraising options → Sunk costs；cost-benefit and cost-effectiveness",
+          "scope": "仅借鉴评价概念；英国公共项目的法定程序、折现参数不适用于赛事项目。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "counterexample",
+      "version": 1,
+      "name": "反例",
+      "englishName": "Counterexample",
+      "aliases": [],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "与所讨论的全称命题或推理要求不相容的具体情形。一个真正属于命题范围的反例即可否定“所有都如此”，但不必否定存在性、概率或平均效应的主张。",
+      "uses": [
+        "审阅绝对化表述时核对命题量词和对象范围，再判断反例是否适用。"
+      ],
+      "examples": [
+        "示例：“所有高满意用户都会复购”可被一位不复购的高满意用户反驳；“平均更可能复购”则需别的检验。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "falsifiability",
+        "argument-validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "conditions",
+          "title": "Stanford Encyclopedia of Philosophy: Necessary and Sufficient Conditions",
+          "url": "https://plato.stanford.edu/entries/necessary-sufficient/",
+          "locator": "Standard theory；material implication and converse",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        },
+        {
+          "id": "logical-consequence",
+          "title": "Stanford Encyclopedia of Philosophy: Logical Consequence",
+          "url": "https://plato.stanford.edu/entries/logical-consequence/",
+          "locator": "Truth preservation；validity and form",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "counterfactual-reasoning",
+      "version": 1,
+      "name": "反事实推理",
+      "englishName": "Counterfactual reasoning",
+      "aliases": [
+        "反事实思考"
+      ],
+      "domain": "philosophy",
+      "depth": "deep",
+      "definition": "考察某项实际未发生的前提若不同，结果可能如何变化。推理依赖哪些背景保持不变以及替代情境如何构建；不能把另一个群体的现状直接当作同一对象的反事实。",
+      "uses": [
+        "讨论方案效果时明确比较情境、假设与可识别证据，不把想象结果登记为真实结果。"
+      ],
+      "examples": [
+        "示例：问“若没有接驳服务，这些参与者会不会仍来”，需要可信的比较信息，不能仅问服务使用者是否喜欢。"
+      ],
+      "confusions": [
+        {
+          "entryId": "abduction",
+          "distinction": "溯因比较对已观察现象的候选解释；反事实推理改变假设前提并比较可能结果，二者可配合但不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "没有对照组，还能写反事实讨论吗？",
+          "answer": "可写明确标注的假设与情景推演。要估计真实因果效果，仍需适当设计或识别假设，不能把推演值冒充实证。"
+        }
+      ],
+      "relatedIds": [
+        "explanatory-mechanism",
+        "underdetermination"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "counterfactuals",
+          "title": "Stanford Encyclopedia of Philosophy: Counterfactuals",
+          "url": "https://plato.stanford.edu/entries/counterfactuals/",
+          "locator": "Counterfactual conditionals；possible situations and causal reasoning",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "covariance",
@@ -1561,6 +2545,48 @@
       ]
     },
     {
+      "id": "cross-price-elasticity",
+      "version": 1,
+      "name": "需求交叉价格弹性",
+      "englishName": "Cross-price elasticity of demand",
+      "aliases": [
+        "交叉弹性"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "给定其他条件时，商品 A 的需求量变化百分比相对于商品 B 价格变化百分比的比值。正负方向常用于讨论替代或互补关系，但不能用两个品类销量同步变化来代替它。",
+      "uses": [
+        "分析替代选择时同时登记价格、目标商品、比较商品与其他条件。"
+      ],
+      "examples": [
+        "示例：情境中咖啡价格上升而茶的需求增加，可提出替代关系假设，再设计价格变化验证。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "price-elasticity-demand"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-cross-price",
+          "title": "MIT: Deriving Demand Curves",
+          "url": "https://ocw.mit.edu/courses/14-01sc-principles-of-microeconomics-fall-2011/pages/unit-2-consumer-theory/deriving-demand-curves/",
+          "locator": "Concept Quiz, Question 1 的解答；cross-price elasticity",
+          "scope": "课程定义，使用独立的原创例子；未复制课程试题。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "cross-validation",
       "version": 1,
       "name": "交叉验证",
@@ -1677,6 +2703,157 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "customer-journey",
+      "version": 1,
+      "name": "顾客旅程",
+      "englishName": "Customer journey",
+      "aliases": [
+        "用户旅程"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "顾客在使用前、选择购买、实际使用及之后经历的过程，并通过多个触点与组织或外部信息交互。它可以循环、跳步或跨渠道，不必是固定的线性漏斗。",
+      "uses": [
+        "用访谈、观察与行为记录建立真实路径，标注关键任务、阻碍、触点及其依据。"
+      ],
+      "examples": [
+        "示例：观赛者先看同学分享、查询赛程、购票、入场、返程，再评价体验，各步可能由不同主体负责。"
+      ],
+      "confusions": [
+        {
+          "entryId": "market-segmentation",
+          "distinction": "细分比较不同群体；旅程描述经历过程，不能仅将年龄群体排成时间线。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "画完一张旅程图就找到服务短板了吗？",
+          "answer": "旅程图整理待核验的过程。需记录哪些步骤有真实材料、哪些只是推测，再用具体体验和行为检验阻碍。"
+        }
+      ],
+      "relatedIds": [
+        "touchpoint",
+        "value-proposition"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "journey",
+          "title": "Lemon and Verhoef: Understanding Customer Experience Throughout the Customer Journey",
+          "url": "https://pure.rug.nl/ws/files/81733365/Understanding_Customer_Experience_Throughout_the_Customer_Journey.pdf",
+          "locator": "Customer Journey and Touch Points；正文页 76–78；Figure 1",
+          "scope": "作者机构版本；旅程与触点分类，不复制文章图表。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "customer-loyalty",
+      "version": 1,
+      "name": "顾客忠诚",
+      "englishName": "Customer loyalty",
+      "aliases": [
+        "用户忠诚",
+        "忠诚度"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在持续关系中对某服务或品牌的偏好、继续选择意愿与实际行为。不同维度需要分别测量；重复购买可能由转换成本或缺少替代造成，并非总是主动忠诚。",
+      "uses": [
+        "报告中区分意向、推荐和实际复购记录，避免只用一项满意评分命名忠诚度。"
+      ],
+      "examples": [
+        "示例：连续订购同一服务但明确想换，只因迁移麻烦，属于行为持续而非充分的偏好证据。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "customer-satisfaction",
+        "switching-cost"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "loyalty",
+          "title": "Singh and Sirdeshmukh: Agency and Trust Mechanisms",
+          "url": "https://journals.sagepub.com/doi/10.1177/0092070300281014",
+          "locator": "Abstract；Journal of the Academy of Marketing Science 28(1), 2000",
+          "scope": "原论文公开摘要；区分单次满意度与持续交换关系。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "customer-satisfaction",
+      "version": 1,
+      "name": "顾客满意度",
+      "englishName": "Customer satisfaction",
+      "aliases": [
+        "用户满意度",
+        "满意度"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "顾客对一项明确体验或持续关系的评价，可能涉及实际感受、先前期望及两者的差异。测量需明确对象和回忆期；不同触点的满意不能自动合成总体满意。",
+      "uses": [
+        "比较服务表现时登记体验时间、预期、未参与者筛选和量表口径。"
+      ],
+      "examples": [
+        "示例：活动组织按承诺完成，却未解决受访者最关心的返程问题，总体满意仍可能不高。"
+      ],
+      "confusions": [
+        {
+          "entryId": "customer-loyalty",
+          "distinction": "满意是评价；忠诚涉及持续偏好和行为。满意者可能转用，重复使用者也可能只是受限。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "把平均满意度提高一点就视为服务改善吗？",
+          "answer": "还需确认同一测量口径、可比人群和变化的不确定性，并查看关键触点与低分群体；平均值可能掩盖差异。"
+        }
+      ],
+      "relatedIds": [
+        "reference-dependence",
+        "customer-loyalty"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "satisfaction",
+          "title": "Oliver: A Cognitive Model of Satisfaction Decisions",
+          "url": "https://journals.sagepub.com/doi/10.1177/002224378001700405",
+          "locator": "Abstract；Journal of Marketing Research 17(4), 1980",
+          "scope": "原论文公开摘要；期望与不确认是解释框架，不假设所有满意度都服从同一公式。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "data-dictionary",
@@ -1849,6 +3026,48 @@
       "questions": []
     },
     {
+      "id": "default-effect",
+      "version": 1,
+      "name": "默认效应",
+      "englishName": "Default effect",
+      "aliases": [
+        "默认选项效应"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在需要选择的场景中，预先选定的选项可能影响最终结果，原因可包含操作成本、惯性和对推荐的推断。默认效果不是每种场景都相同，也不说明用户主动认同。",
+      "uses": [
+        "默认选项测试需保持退出容易，并记录主动更改与未操作两类行为。"
+      ],
+      "examples": [
+        "示例：报名页面默认不订阅通知与默认订阅通知，可能得到不同订阅率，须检查知情选择。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "nudge"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "thaler",
+          "title": "Richard Thaler: From Cashews to Nudges",
+          "url": "https://www.nobelprize.org/uploads/2018/01/thaler-lecture.pdf",
+          "locator": "Nudges、choice architecture、default pension plans；印刷页 510",
+          "scope": "已读取诺奖主站 PDF 的公开检索片段；直连一度失败，未声称通读全文。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "derivative",
       "version": 1,
       "name": "导数",
@@ -1978,6 +3197,46 @@
           "answer": "不一定。适当分层等设计可能提高效率；也不能把某一变量的估计值无条件用于所有变量。"
         }
       ]
+    },
+    {
+      "id": "diminishing-marginal-utility",
+      "version": 1,
+      "name": "边际效用递减",
+      "englishName": "Diminishing marginal utility",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在其他消费条件给定的某个模型或情境中，某商品数量增加时，其额外效用逐步降低。它是有关效用函数和消费情境的性质，不是所有商品、所有数量区间的普遍定律。",
+      "uses": [
+        "解释重复消费的偏好变化时，说明时间间隔、互补条件和适用范围。"
+      ],
+      "examples": [
+        "示例：连续吃相同点心时，后一份的额外满足可能减少；这不意味着收藏品也必然如此。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "marginal-utility"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-utility",
+          "title": "MIT Preferences and Utility",
+          "url": "https://ocw.mit.edu/courses/14-01sc-principles-of-microeconomics-fall-2011/pages/unit-2-consumer-theory/preferences-and-utility/",
+          "locator": "Preferences and Utility 单元及边际效用说明",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "directed-acyclic-graph",
@@ -2537,6 +3796,112 @@
       "questions": []
     },
     {
+      "id": "explanatory-mechanism",
+      "version": 1,
+      "name": "解释机制",
+      "englishName": "Explanatory mechanism",
+      "aliases": [
+        "机制解释"
+      ],
+      "domain": "philosophy",
+      "depth": "deep",
+      "definition": "通过组成要素、活动及其组织关系说明一种现象如何产生。仅提出可能路径属于候选解释；主张实际机制需要各环节的证据，不能只用一个相关或回归系数命名机制。",
+      "uses": [
+        "把研究解释拆成可观察环节，寻找支持、反例和可以区分的替代路径。"
+      ],
+      "examples": [
+        "示例：信息不清可能增加寻找成本，进而降低参与；需要核实信息接触、寻找过程和行为变化。"
+      ],
+      "confusions": [
+        {
+          "entryId": "pearson-correlation",
+          "distinction": "相关描述变量共同变化；机制解释说明产生过程，增加模型箭头不自动补足过程证据。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "访谈提到了某条路径，就能确认机制吗？",
+          "answer": "访谈提供过程线索，但仍需核对时间顺序、其他材料、反例和替代解释。先区分可能机制与已得到支持的机制。"
+        }
+      ],
+      "relatedIds": [
+        "abduction",
+        "theory-of-change"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mechanisms",
+          "title": "Stanford Encyclopedia of Philosophy: Mechanisms in Science",
+          "url": "https://plato.stanford.edu/entries/science-mechanisms/",
+          "locator": "Entities、activities、organization；how-possibly and how-actually",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "externality",
+      "version": 1,
+      "name": "外部性",
+      "englishName": "Externality",
+      "aliases": [
+        "外部效应"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "一项行为给交易双方之外的人带来收益或成本，而这些影响未充分进入行为者的决策价格或补偿安排。可以是正向或负向；发生在市场之外不等于任何影响都构成外部性。",
+      "uses": [
+        "评价赛事或商圈方案时单独记录居民、交通参与者和周边商户的受影响情况。"
+      ],
+      "examples": [
+        "示例：活动增加商户客流，也可能给附近居民带来夜间噪声；两类影响应分别测量。"
+      ],
+      "confusions": [
+        {
+          "entryId": "consumer-surplus",
+          "distinction": "消费者剩余关注参与交易的消费者福利；外部性涉及未被交易价格充分反映的第三方影响。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "看到一群人受影响，就证明存在外部性吗？",
+          "answer": "应明确谁做了什么、第三方通过何种路径受影响，以及这种影响是否已通过合同、价格或补偿被内部化。"
+        }
+      ],
+      "relatedIds": [
+        "public-good",
+        "stakeholder-analysis"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "imf-externality",
+          "title": "IMF Back to Basics: Externalities",
+          "url": "https://www.imf.org/en/publications/fandd/issues/series/back-to-basics/externalities",
+          "locator": "Externalities；positive and negative effects；private and social costs",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "falsifiability",
       "version": 1,
       "name": "可证伪性",
@@ -2808,6 +4173,275 @@
           "p值还需按单侧/双侧规则累加相应表概率。"
         ]
       }
+    },
+    {
+      "id": "framing-effect",
+      "version": 1,
+      "name": "框架效应",
+      "englishName": "Framing effect",
+      "aliases": [
+        "表述框架效应"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "同一或等价的决策后果因信息表述、突出部分或收益损失框架不同而产生不同选择。研究需要检验等价条件；不同方案本身有差异时不能仅归因于框架。",
+      "uses": [
+        "审查问卷措辞和对照方案，避免一组只强调收益、另一组只强调成本。"
+      ],
+      "examples": [
+        "示例：“九成准时”与“一成延误”描述相同记录，却可能引导不同印象。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "reference-dependence",
+        "bounded-rationality"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kahneman",
+          "title": "Daniel Kahneman: Maps of Bounded Rationality",
+          "url": "https://www.nobelprize.org/uploads/2018/06/kahnemann-lecture.pdf",
+          "locator": "Reference dependence、loss aversion 与 framing 段落",
+          "scope": "只支持行为机制解释；不把特定实验损失厌恶参数视作所有人固定值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "geocoding",
+      "version": 1,
+      "name": "地理编码",
+      "englishName": "Geocoding",
+      "aliases": [
+        "地址定位"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "将地址或地名匹配到带坐标的地理候选。结果可能是楼顶、街道或区域中心，匹配分数也不是已验证位置精度；需要保留候选、类型和人工核对记录。",
+      "uses": [
+        "涉及受访者位置时采用必要的最小精度，核查未匹配和歧义地址。"
+      ],
+      "examples": [
+        "示例：“大学路 10 号”可能在不同城市存在，缺少城市信息时不能直接接受首个坐标。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "georeferencing",
+        "coordinate-reference-system"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "geocode",
+          "title": "Esri: Locator geocode Method",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/arcpy/geocoding/locator-class.html",
+          "locator": "geocode(searchText, ...)：candidate points and score",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "geodesic-distance",
+      "version": 1,
+      "name": "测地距离",
+      "englishName": "Geodesic distance",
+      "aliases": [
+        "测地线距离"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "在指定椭球或曲面模型上沿最短测地线路径计算的距离。它不等于实际道路行程，也不同于把经纬度当平面坐标计算的直线距离。",
+      "uses": [
+        "跨较大范围测量两地距离时明确曲面模型；出行研究还需道路和交通信息。"
+      ],
+      "examples": [
+        "示例：两地点测地距离 2 千米，因桥梁位置限制，步行路径可能明显更长。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "network-distance",
+        "distance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "coordinates",
+          "title": "ArcGIS: Coordinate Systems",
+          "url": "https://developers.arcgis.com/geoanalytics-fabric/core-concepts/coordinate-systems/",
+          "locator": "Geographic and projected coordinates；planar and geodesic measurements",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "geographic-coordinate-system",
+      "version": 1,
+      "name": "地理坐标系",
+      "englishName": "Geographic coordinate system",
+      "aliases": [
+        "GCS"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "以基准、椭球及角度坐标等描述地球位置的坐标系统。经纬度是常见表达，但同一数值在不同基准下可能对应不同位置，角度差也不是固定米数。",
+      "uses": [
+        "保存完整空间参考，不只记录两列经纬度；测量距离时明确采用的曲面模型。"
+      ],
+      "examples": [
+        "示例：两个文件都有经纬度，却使用不同基准，叠加前仍需正确的坐标转换。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "projected-coordinate-system",
+        "coordinate-reference-system"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "coordinates",
+          "title": "ArcGIS: Coordinate Systems",
+          "url": "https://developers.arcgis.com/geoanalytics-fabric/core-concepts/coordinate-systems/",
+          "locator": "Geographic and projected coordinates；planar and geodesic measurements",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "georeferencing",
+      "version": 1,
+      "name": "地理配准",
+      "englishName": "Georeferencing",
+      "aliases": [
+        "空间配准"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "把图像或已有几何位置通过控制点与变换关联到地理坐标系，使其能与其他地理数据叠加。控制点的质量与分布决定可信范围；低残差不保证全图准确。",
+      "uses": [
+        "使用历史地图或扫描图时保存控制点、变换、误差和独立检查点。"
+      ],
+      "examples": [
+        "示例：控制点只集中在地图一角时，那一角拟合良好也不能证明远端位置准确。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "geocoding",
+        "coordinate-reference-system"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "georeference",
+          "title": "Esri: Overview of Georeferencing",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/help/data/imagery/overview-of-georeferencing.html",
+          "locator": "Control points；transformations；RMS error",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "getis-ord-gi-star",
+      "version": 1,
+      "name": "Getis–Ord Gi* 热点统计量",
+      "englishName": "Getis–Ord Gi*",
+      "aliases": [
+        "Gi*",
+        "统计热点分析"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "比较某位置及其邻域的加权局部总量与整体参考分布，以识别统计意义的高值或低值聚集。Gi* 一般包含自身；定义邻域与检验条件会改变热点结果。",
+      "uses": [
+        "将统计热点与单纯高值图分开，登记变量、空间权重及显著性修正。"
+      ],
+      "examples": [
+        "示例：单个高客流店铺周围都是低客流，不必构成显著高值聚集；周边共同高值更符合热点含义。"
+      ],
+      "confusions": [
+        {
+          "entryId": "spatial-kernel-density",
+          "distinction": "核密度绘制平滑强度；Gi* 在给定权重和参考条件下检验局部聚集，不由高密度直接推出显著。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "红色区域是否意味着应优先配置设施？",
+          "answer": "热点反映指定变量的聚集，设施配置还需需求、已有供给、容量、可达性与公平性依据。"
+        }
+      ],
+      "relatedIds": [
+        "spatial-weights",
+        "spatial-kernel-density"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "gi-star",
+          "title": "Esri: How Hot Spot Analysis Getis-Ord Gi* Works",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-hot-spot-analysis-getis-ord-gi-spatial-stati.html",
+          "locator": "Gi* statistic；spatial weights；FDR correction",
+          "scope": "局部统计热点检验；不等于核密度高值图。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "gis",
@@ -3211,6 +4845,48 @@
       "questions": []
     },
     {
+      "id": "income-elasticity-demand",
+      "version": 1,
+      "name": "需求收入弹性",
+      "englishName": "Income elasticity of demand",
+      "aliases": [
+        "收入弹性"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "给定价格等条件时，某商品需求量变化百分比相对于收入变化百分比的比值。正值表示该范围内收入增加伴随需求增加，负值表示需求减少；它随商品、人群和收入水平而变。",
+      "uses": [
+        "比较不同收入群体时明确：横截面差异不是同一群体收入改变后的响应。"
+      ],
+      "examples": [
+        "示例：给定价格下收入增加 5%，需求量增加 2%，该变化区间的近似收入弹性为 0.4。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "price-elasticity-demand"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-demand",
+          "title": "MIT 14.01 2023 Lecture Summaries",
+          "url": "https://ocw.mit.edu/courses/14-01-principles-of-microeconomics-fall-2023/mit14_01_f23_full.pdf",
+          "locator": "2.1 Demand；PDF 第 6–8 页",
+          "scope": "需求弹性、收入变化与替代效应；不用于将问卷意向解释为已识别的需求曲线。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "independence",
       "version": 1,
       "name": "独立性",
@@ -3310,6 +4986,59 @@
       "questions": []
     },
     {
+      "id": "information-asymmetry",
+      "version": 1,
+      "name": "信息不对称",
+      "englishName": "Information asymmetry",
+      "aliases": [
+        "非对称信息"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "参与同一决策或交易的不同主体掌握的重要信息不同，例如卖方更清楚质量、服务方更清楚投入行为。要识别信息差的内容、持有者及其对选择和激励的影响。",
+      "uses": [
+        "访谈买卖双方或服务双方，用可核验的信息比较解释信任、筛选和披露问题。"
+      ],
+      "examples": [
+        "示例：二手设备卖方知道维修史，买方只能观察外观，双方对实际质量的信息不同。"
+      ],
+      "confusions": [
+        {
+          "entryId": "selection-bias",
+          "distinction": "信息不对称描述主体的信息差；样本选择偏差描述进入样本的机制，二者并非同义。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "公开信息之后交易一定更好吗？",
+          "answer": "需看信息是否可信、易理解并影响决策，还要考虑披露成本和激励；信息数量增加本身不足以证明改善。"
+        }
+      ],
+      "relatedIds": [
+        "adverse-selection",
+        "moral-hazard"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "asymmetry",
+          "title": "Nobel Prize 2001: Markets with Asymmetric Information",
+          "url": "https://www.nobelprize.org/prizes/economic-sciences/2001/press-release/",
+          "locator": "Information asymmetry；Akerlof、Spence、Stiglitz 的贡献",
+          "scope": "已读取主站公开内容的检索缓存；直连曾返回 403。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "informed-consent",
       "version": 1,
       "name": "知情同意",
@@ -3355,6 +5084,49 @@
       "questions": []
     },
     {
+      "id": "input-output-outcome",
+      "version": 1,
+      "name": "投入、产出与结果",
+      "englishName": "Input, output, and outcome",
+      "aliases": [
+        "投入产出结果链"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "投入是资源，活动是所做工作，产出是直接形成的服务或产品，结果是对象状态或行为的变化。不同层次应分开计量；活动完成不等于最终目标实现。",
+      "uses": [
+        "审查建议评价指标是否只停留在服务数量，是否有真实结果变化的记录。"
+      ],
+      "examples": [
+        "示例：组织培训是活动，完成培训人数与提供引导次数是产出，迷路比例变化是结果。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "key-performance-indicator",
+        "theory-of-change"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "logic",
+          "title": "CDC: Step 2 Describe the Program",
+          "url": "https://www.cdc.gov/evaluation/php/evaluation-framework-action-guide/step-2-describe-the-program.html",
+          "locator": "Logic models；inputs、activities、outputs、outcomes",
+          "scope": "方案逻辑与结果链；逻辑图本身不证明干预因果效果。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "international-phonetic",
       "version": 1,
       "name": "国际音标",
@@ -3398,6 +5170,49 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "interpretivism",
+      "version": 1,
+      "name": "解释主义",
+      "englishName": "Interpretivism",
+      "aliases": [
+        "阐释取向"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "在社会研究中重视行动者赋予行为的意义以及情境理解的取向。不同传统侧重点不同；访谈不自动等于解释主义，定量信息也不必被排除。",
+      "uses": [
+        "研究体验和动机时说明如何理解语境、材料与研究者解释，并保留不同解释的依据。"
+      ],
+      "examples": [
+        "示例：学生口中的“方便”可能意味着距离短，也可能意味着时间可控，需要回到具体叙述。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "methodological-individualism",
+        "epistemology"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "method-individualism",
+          "title": "Stanford Encyclopedia of Philosophy: Methodological Individualism",
+          "url": "https://plato.stanford.edu/entries/methodological-individualism/",
+          "locator": "1–2；individual actions、Weber and interpretation",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "interquartile-range",
@@ -3634,6 +5449,125 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "key-performance-indicator",
+      "version": 1,
+      "name": "关键绩效指标",
+      "englishName": "Key performance indicator",
+      "aliases": [
+        "KPI"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "用于判断关键目标是否实现的少量指标，应定义对象、计算口径、数据来源、观察周期和目标值。易计数的活动数量不必是能衡量目标的关键指标。",
+      "uses": [
+        "为建议配套少量可获取、可比较的结果指标，同时观察可能被忽略的负面影响。"
+      ],
+      "examples": [
+        "示例：接驳方案可关注有效覆盖人数与准点率，而不仅是印了多少张宣传单。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "input-output-outcome",
+        "logic-model"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kpi",
+          "title": "GOV.UK Service Manual: Using performance data to improve your service",
+          "url": "https://www.gov.uk/service-manual/measuring-success/using-data-to-improve-your-service-an-introduction",
+          "locator": "Metrics and measurements；Choosing KPIs",
+          "scope": "一般服务绩效测量；不把英国公共服务四项指标作为本项目固定要求。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "kriging",
+      "version": 1,
+      "name": "克里金插值",
+      "englishName": "Kriging",
+      "aliases": [
+        "Kriging 插值"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "利用空间随机过程的协方差或半变异结构确定权重，对未观测位置做线性预测，并在模型条件下估计预测方差。普通克里金常假定未知但在研究范围内恒定的均值及相应空间结构。",
+      "uses": [
+        "先检查趋势、方向性、采样覆盖与变异模型，再用独立验证评估预测，不只看平滑图。"
+      ],
+      "examples": [
+        "示例：同样距离的两个测点可因整体空间结构不同得到不同权重；预测方差依赖拟合模型。"
+      ],
+      "confusions": [
+        {
+          "entryId": "spatial-kernel-density",
+          "distinction": "克里金预测空间属性值；核密度描述事件位置强度，输入含义和目标不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "预测方差小就证明预测值正确吗？",
+          "answer": "它是在指定模型和采样信息下的不确定性，通常不完整包含参数估计和模型误设；还需留出验证与敏感性检查。"
+        }
+      ],
+      "relatedIds": [
+        "spatial-autocorrelation",
+        "spatial-interpolation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kriging",
+          "title": "Esri: How Kriging Works",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-analyst/how-kriging-works.html",
+          "locator": "Kriging formula；Variography；prediction and variance",
+          "scope": "空间随机场插值；普通克里金的均值、协方差条件和模型不确定性需说明。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15",
+      "formula": {
+        "tex": "\\widehat Z(s_0)=\\sum_i\\lambda_i Z(s_i),\\qquad\\sum_i\\lambda_i=1",
+        "symbols": [
+          {
+            "symbol": "Z(s_i)",
+            "meaning": "观测位置 s_i 的属性值",
+            "unit": "原变量单位"
+          },
+          {
+            "symbol": "s_0",
+            "meaning": "待预测位置"
+          },
+          {
+            "symbol": "\\lambda_i",
+            "meaning": "由空间结构模型与位置确定的普通克里金权重"
+          }
+        ],
+        "conditions": [
+          "所写约束对应普通克里金，不是所有克里金变体。",
+          "需要合适的空间结构与均值条件、有效的变异模型和有信息的采样布局。",
+          "克里金权重可为负，不能按非负平均或概率权重解释。"
+        ]
+      }
     },
     {
       "id": "kurtosis",
@@ -4042,6 +5976,191 @@
       "questions": []
     },
     {
+      "id": "local-morans-i",
+      "version": 1,
+      "name": "局部莫兰指数",
+      "englishName": "Local Moran’s I",
+      "aliases": [
+        "局部 Moran I",
+        "Anselin Local Moran I",
+        "LISA 莫兰统计量"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "对每个空间单元评价其与邻近单元的局部关联。结合显著性与高低位置可识别高高、低低聚集及高低、低高异常。指数符号本身不能替代显著性检验和分类。",
+      "uses": [
+        "报告时同时保存权重、标准化、检验次数、显著性修正和各类空间单元。"
+      ],
+      "examples": [
+        "示例：高值街区被低值邻居包围，可能形成高低异常；须通过指定检验确认，而非只看颜色。"
+      ],
+      "confusions": [
+        {
+          "entryId": "getis-ord-gi-star",
+          "distinction": "局部 Moran 可突出聚集和空间异常；Gi* 比较局部高低总量，对自身与邻居的处理和检验含义不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "做许多局部检验为什么要考虑多重比较？",
+          "answer": "每个单元都检验会增加偶然显著的机会，应说明 FDR 等修正或探索性口径。置换次数与软件定义也要保留。"
+        }
+      ],
+      "relatedIds": [
+        "spatial-weights",
+        "spatial-autocorrelation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "local-moran",
+          "title": "Esri: How Cluster and Outlier Analysis Works",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-cluster-and-outlier-analysis-anselin-local-m.html",
+          "locator": "Local Moran I；HH/LL/HL/LH；permutation and FDR",
+          "scope": "特定实现的公式与显著性选项；权重、方差分母和检验方式须记录。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "location-allocation",
+      "version": 1,
+      "name": "选址—分配",
+      "englishName": "Location-allocation",
+      "aliases": [
+        "设施选址分配"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "在候选设施与需求点之间选择位置并分配服务关系，以满足明确目标和约束。目标可以是减少成本或提高覆盖，不同容量、公平性与阈值约束会形成不同方案。",
+      "uses": [
+        "建议新服务点时先确认需求、候选地、容量和可实施条件，再解释优化目标。"
+      ],
+      "examples": [
+        "示例：只最小化总路程可能忽略少数远端居民，需考虑最大服务时间或公平性约束。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "accessibility",
+        "stakeholder-analysis"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "location-allocation",
+          "title": "Esri: Location-Allocation Analysis Layer",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/help/analysis/networks/location-allocation-analysis-layer.html",
+          "locator": "Facilities；Demand Points；Problem Type",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "logic-model",
+      "version": 1,
+      "name": "逻辑模型",
+      "englishName": "Logic model",
+      "aliases": [
+        "项目逻辑图"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "把投入、活动、产出、短期与长期结果及假设组织成可检查的关系图。它描述项目预期怎样工作，不是已观察到的因果结果。",
+      "uses": [
+        "将建议转成可执行活动和可评价结果，并标明证据、假设与外部条件。"
+      ],
+      "examples": [
+        "示例：投入培训人员，开展引导服务，形成服务次数，期望降低迷路比例；后一步需验证。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "input-output-outcome",
+        "theory-of-change"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "logic",
+          "title": "CDC: Step 2 Describe the Program",
+          "url": "https://www.cdc.gov/evaluation/php/evaluation-framework-action-guide/step-2-describe-the-program.html",
+          "locator": "Logic models；inputs、activities、outputs、outcomes",
+          "scope": "方案逻辑与结果链；逻辑图本身不证明干预因果效果。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "logical-empiricism",
+      "version": 1,
+      "name": "逻辑经验主义",
+      "englishName": "Logical empiricism",
+      "aliases": [
+        "逻辑实证主义",
+        "Logical positivism"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "重视经验检验与逻辑澄清的二十世纪哲学运动，内部对意义、理论和验证有不同主张。它不是所有“实证研究”的同义词，也不能简化为只有可见事实才存在。",
+      "uses": [
+        "阅读方法论文献时确认作者所指的历史流派、经验检验或一般定量研究。"
+      ],
+      "examples": [
+        "示例：一篇访谈研究也可使用经验材料；经验材料的存在不使它自动属于逻辑经验主义。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "falsifiability",
+        "scientific-realism"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "empiricism",
+          "title": "Stanford Encyclopedia of Philosophy: Logical Empiricism",
+          "url": "https://plato.stanford.edu/entries/logical-empiricism/",
+          "locator": "Logical empiricism and verification；历史流派内部差异",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "logistic-regression",
       "version": 1,
       "name": "Logistic 回归",
@@ -4113,6 +6232,133 @@
           "检查分离、稀疏事件、共线性、拟合与校准；软件正则化会影响估计含义。"
         ]
       }
+    },
+    {
+      "id": "loss-aversion",
+      "version": 1,
+      "name": "损失厌恶",
+      "englishName": "Loss aversion",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在某些决策情境中，相对于参照点的损失比同规模收益引起更强反应。它区别于对风险本身的偏好；强度取决于任务、测量方式和人群，不能给所有人设同一倍数。",
+      "uses": [
+        "比较获得与失去的表述时保持实际后果一致，并把机制解释作为待检验假设。"
+      ],
+      "examples": [
+        "示例：已拥有的优惠被取消，可能比新增等额优惠更引人关注；需要实验或行为记录验证。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "reference-dependence",
+        "framing-effect"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kahneman",
+          "title": "Daniel Kahneman: Maps of Bounded Rationality",
+          "url": "https://www.nobelprize.org/uploads/2018/06/kahnemann-lecture.pdf",
+          "locator": "Reference dependence、loss aversion 与 framing 段落",
+          "scope": "只支持行为机制解释；不把特定实验损失厌恶参数视作所有人固定值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "marginal-cost",
+      "version": 1,
+      "name": "边际成本",
+      "englishName": "Marginal cost",
+      "aliases": [
+        "MC"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "产量增加一个单位引起的总成本增量。它不同于每单位平均成本；固定投入通常不随这一小步变化，但达到容量上限时新增产量可能引发新的成本。",
+      "uses": [
+        "评价扩容、加场或增加服务人数时，分开已发生费用与新增决策成本。"
+      ],
+      "examples": [
+        "示例：再接待一位参与者需要 12 元耗材，这 12 元是相应条件下的边际成本。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "sunk-cost",
+        "opportunity-cost"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "imf-supply",
+          "title": "IMF Back to Basics: Supply and Demand",
+          "url": "https://www.imf.org/en/publications/fandd/issues/series/back-to-basics/supply-and-demand",
+          "locator": "What determines supply and demand；marginal cost and utility",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "marginal-utility",
+      "version": 1,
+      "name": "边际效用",
+      "englishName": "Marginal utility",
+      "aliases": [
+        "MU"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "消费某商品再增加一个小单位时，总效用的增量。连续模型可写成效用对数量的偏导数；效用通常表示偏好排序，数值单位并非可跨人直接比较的幸福量。",
+      "uses": [
+        "说明消费者为何会在不同商品之间调整选择，明确所采用的偏好模型。"
+      ],
+      "examples": [
+        "示例：第一杯饮料解决口渴后，再买一杯可能带来更小的额外满足。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "diminishing-marginal-utility",
+        "consumer-surplus"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-utility",
+          "title": "MIT Preferences and Utility",
+          "url": "https://ocw.mit.edu/courses/14-01sc-principles-of-microeconomics-fall-2011/pages/unit-2-consumer-theory/preferences-and-utility/",
+          "locator": "Preferences and Utility 单元及边际效用说明",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "market-segmentation",
@@ -4542,6 +6788,47 @@
       "questions": []
     },
     {
+      "id": "methodological-individualism",
+      "version": 1,
+      "name": "方法论个体主义",
+      "englishName": "Methodological individualism",
+      "aliases": [],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "要求社会现象的解释联系到个体行动、互动及其理解或动机的一类方法论立场。它不等于个人利益至上，也不自动否认制度和结构对行动的限制。",
+      "uses": [
+        "连接群体描述与个体过程时说明行动者、约束与互动机制。"
+      ],
+      "examples": [
+        "示例：参与率变化可同时从学校制度和学生实际选择过程分析，不能只用一个群体平均代表所有动机。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "interpretivism",
+        "ecological-fallacy"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "method-individualism",
+          "title": "Stanford Encyclopedia of Philosophy: Methodological Individualism",
+          "url": "https://plato.stanford.edu/entries/methodological-individualism/",
+          "locator": "1–2；individual actions、Weber and interpretation",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "missing-at-random",
       "version": 1,
       "name": "随机缺失",
@@ -4835,6 +7122,49 @@
       "questions": []
     },
     {
+      "id": "moral-hazard",
+      "version": 1,
+      "name": "道德风险",
+      "englishName": "Moral hazard",
+      "aliases": [
+        "隐藏行动问题"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "当行动不能被另一方充分观察或契约化时，承担后果与选择行动的人不完全相同，激励可能使行动偏离共同目标。术语描述信息与激励结构，不是对参与者品德的判断。",
+      "uses": [
+        "研究委托服务时区分可监督结果、不可见投入与合同激励。"
+      ],
+      "examples": [
+        "示例：服务方按接单量获酬而服务努力难以观察时，增加接单可能挤压每单投入。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "adverse-selection",
+        "information-asymmetry"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "myerson",
+          "title": "Roger Myerson: Biographical",
+          "url": "https://www.nobelprize.org/prizes/economic-sciences/2007/myerson/biographical/",
+          "locator": "作者关于 hidden actions、moral hazard 与 adverse selection 的段落",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "multicollinearity",
       "version": 1,
       "name": "多重共线性",
@@ -4926,6 +7256,252 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "nearest-neighbor-index",
+      "version": 1,
+      "name": "平均最近邻指数",
+      "englishName": "Average nearest neighbor index",
+      "aliases": [
+        "ANN 指数",
+        "NNI"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "观察到的平均最近邻距离与指定完全空间随机参考下的期望距离之比。指数低于或高于 1 可提示聚集或分散，但显著性和有效性依赖区域面积、点独立性及参考模型。",
+      "uses": [
+        "分析点模式时说明观察窗口、距离度量与零假设，不把指数大小直接视作原因。"
+      ],
+      "examples": [
+        "示例：同一组门店用市界或更窄窗口计算，随机参考距离会变化，因此指数也可能改变。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "spatial-boundary-effect",
+        "distance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "nearest",
+          "title": "Esri: How Average Nearest Neighbor Works",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-average-nearest-neighbor-distance-spatial-st.html",
+          "locator": "Average nearest neighbor ratio；Study area and independence",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "necessary-condition",
+      "version": 1,
+      "name": "必要条件",
+      "englishName": "Necessary condition",
+      "aliases": [],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "在明确范围内，结果 A 成立时必须有的条件 B，通常写作 A 推出 B。缺少 B 就排除 A，但有 B 不必得到 A；现实因果必要性与形式条件还需区分。",
+      "uses": [
+        "检查资格、变量定义或主张范围时明确“必须”到底是规则、逻辑关系还是经验判断。"
+      ],
+      "examples": [
+        "示例：规则要求通过知识赛才能参加某类实践赛：通过是必要条件，但不保证完成全部参赛要求。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "sufficient-condition",
+        "argument-validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "conditions",
+          "title": "Stanford Encyclopedia of Philosophy: Necessary and Sufficient Conditions",
+          "url": "https://plato.stanford.edu/entries/necessary-sufficient/",
+          "locator": "Standard theory；material implication and converse",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "net-promoter-score",
+      "version": 1,
+      "name": "净推荐值",
+      "englishName": "Net promoter score",
+      "aliases": [
+        "NPS",
+        "净推荐者分数"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "用 0–10 分推荐意愿问题，将 9–10 分归为推荐者、7–8 分归为中立者、0–6 分归为贬损者。净推荐值为推荐者占比减贬损者占比，取值 −100 到 100；中立者仍在有效回答分母内。",
+      "uses": [
+        "用于跟踪特定服务的推荐意愿时报告题目、回忆期、有效人数及三组比例。"
+      ],
+      "examples": [
+        "示例：100 个有效回答中推荐者 40 人、贬损者 30 人、中立者 30 人，NPS 为 10。"
+      ],
+      "confusions": [
+        {
+          "entryId": "customer-satisfaction",
+          "distinction": "NPS 使用特定推荐意愿题和分类规则；满意度均值不能直接换算成 NPS。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "NPS 为 10 是 10% 的人推荐吗？",
+          "answer": "不是。它是两个比例相减后乘 100 的净值；应同时展示三类回答人数与不确定性，不能独立预测所有业务增长。"
+        }
+      ],
+      "relatedIds": [
+        "customer-loyalty",
+        "word-of-mouth"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "nps",
+          "title": "Bain: Measuring Your Net Promoter Score",
+          "url": "https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/",
+          "locator": "Promoters 9–10；Passives 7–8；Detractors 0–6；NPS calculation",
+          "scope": "指标提出方的计分规范；不采纳网页营销效果承诺。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15",
+      "formula": {
+        "tex": "NPS=100\\left(\\frac{n_{9,10}}{n}-\\frac{n_{0,\\ldots,6}}{n}\\right)",
+        "symbols": [
+          {
+            "symbol": "n",
+            "meaning": "0–10 分题的有效回答总数，包括 7–8 分"
+          },
+          {
+            "symbol": "n_{9,10}",
+            "meaning": "9 或 10 分人数"
+          },
+          {
+            "symbol": "n_{0,\\ldots,6}",
+            "meaning": "0 到 6 分人数"
+          }
+        ],
+        "conditions": [
+          "n>0；只使用同一口径的 0–10 推荐意愿题。",
+          "缺失回答不并入有效分母；抽样权重、跨期可比和区间估计需要另行声明。"
+        ]
+      }
+    },
+    {
+      "id": "network-distance",
+      "version": 1,
+      "name": "网络距离",
+      "englishName": "Network distance",
+      "aliases": [
+        "路径距离"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "沿可通行网络、按指定边权与方向累计的路径长度或成本。边权可表示距离、时间或费用；最短距离路线不一定是最短时间路线，无法连通也不能记成零。",
+      "uses": [
+        "研究交通服务时保存路网、交通模式、方向、时刻和不可达规则。"
+      ],
+      "examples": [
+        "示例：穿过河面的直线只有 300 米，但沿可步行桥梁路线需要 1.2 千米。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "geodesic-distance",
+        "topology-geographic"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "service-area",
+          "title": "Esri: Service Area Analysis Layer",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/help/analysis/networks/service-area-analysis-layer.html",
+          "locator": "Polygons and Lines；Travel Settings；Cutoffs",
+          "scope": "网络服务范围；出发方向、交通模式和时刻会改变范围。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "network-effects",
+      "version": 1,
+      "name": "网络效应",
+      "englishName": "Network effects",
+      "aliases": [
+        "网络外部性"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "一个用户从产品获得的价值会随其他用户或互补方的参与而变化。直接效应来自同类用户互动，间接效应可通过互补服务形成；用户增长带来的拥挤也可能降低价值。",
+      "uses": [
+        "讨论平台和社区方案时明确参与方、互动路径及正负作用，不用用户数增长直接证明效应。"
+      ],
+      "examples": [
+        "示例：更多同学加入互助平台可能增加匹配机会，但过量信息也可能增加筛选负担。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "externality",
+        "switching-cost"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "network-costs",
+          "title": "Farrell and Klemperer: Coordination and Lock-In",
+          "url": "https://www.nuff.ox.ac.uk/economics/papers/2006/w7/Farrell_KlempererWP.pdf",
+          "locator": "Abstract；2 Switching Costs；3 Network Effects",
+          "scope": "作者机构工作论文；区分个人迁移成本与他人使用带来的价值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "nominal-scale",
@@ -5096,6 +7672,49 @@
       }
     },
     {
+      "id": "nudge",
+      "version": 1,
+      "name": "助推",
+      "englishName": "Nudge",
+      "aliases": [
+        "行为助推"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "通过改变选择的呈现、默认或便利性来影响行为，同时保留可选方案且不主要依靠大幅改变经济激励。方案效果与自主选择条件应一起验证。",
+      "uses": [
+        "设计报名、信息呈现或健康提示时保留清晰拒绝和退出方式，登记实际行为指标。"
+      ],
+      "examples": [
+        "示例：把报名入口放到更容易找到的位置，用户仍可不报名，是一种待验证的选择环境调整。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "default-effect",
+        "bounded-rationality"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "thaler",
+          "title": "Richard Thaler: From Cashews to Nudges",
+          "url": "https://www.nobelprize.org/uploads/2018/01/thaler-lecture.pdf",
+          "locator": "Nudges、choice architecture、default pension plans；印刷页 510",
+          "scope": "已读取诺奖主站 PDF 的公开检索片段；直连一度失败，未声称通读全文。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "null-hypothesis",
       "version": 1,
       "name": "原假设",
@@ -5261,6 +7880,59 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "ontology",
+      "version": 1,
+      "name": "本体论",
+      "englishName": "Ontology",
+      "aliases": [
+        "存在论"
+      ],
+      "domain": "philosophy",
+      "depth": "deep",
+      "definition": "研究何种对象、性质或关系存在及其基本类别的问题。在研究设计中，它帮助澄清我们认为所研究的对象是什么；测量了一个分数，并不自动解决该构念如何存在。",
+      "uses": [
+        "定义研究对象和构念时区分实际行为、主观体验、社会关系和理论抽象。"
+      ],
+      "examples": [
+        "示例：把“社区归属感”视为个人体验，还是共同关系结构，会影响观察单位与测量安排。"
+      ],
+      "confusions": [
+        {
+          "entryId": "epistemology",
+          "distinction": "本体论追问对象及存在类别；认识论追问什么能算知识、怎样获得和评价知识。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "研究报告是否必须先选一种本体论标签？",
+          "answer": "不必机械贴标签。关键是清楚说明对象、观察与推断之间的假设，尤其当多种方法对对象的理解不同。"
+        }
+      ],
+      "relatedIds": [
+        "epistemology",
+        "operationalization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ontology",
+          "title": "Stanford Encyclopedia of Philosophy: Logic and Ontology",
+          "url": "https://plato.stanford.edu/entries/logic-ontology/",
+          "locator": "3 Ontology；objects、properties、relations",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "operationalization",
@@ -5864,6 +8536,100 @@
       ]
     },
     {
+      "id": "perceived-risk",
+      "version": 1,
+      "name": "感知风险",
+      "englishName": "Perceived risk",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "用户在决策中感受到的不确定性及可能损失，涉及金钱、时间、表现、安全或社会评价等维度。它是主观判断，不能直接当作事故率或损失概率的客观估计。",
+      "uses": [
+        "对拒绝参与或购买的理由分别测量担忧内容、可信信息和真实风险记录。"
+      ],
+      "examples": [
+        "示例：即使活动有安全保障，一位首次参加者仍可能担忧拥挤；应区分担忧与已发生事件。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "information-asymmetry",
+        "customer-journey"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "risk",
+          "title": "Online customer behavior: perceptions of risks incurred through online purchases",
+          "url": "https://www.nature.com/articles/s41599-020-0389-4",
+          "locator": "Perceived risk；风险维度与研究设计段落",
+          "scope": "原研究论文；概念说明不迁移其样本结果。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "perceived-value",
+      "version": 1,
+      "name": "感知价值",
+      "englishName": "Perceived value",
+      "aliases": [
+        "顾客感知价值"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "用户在具体情境下对所得利益与所付出的金钱、时间、精力等进行综合评价。它是用户的感知判断，不等同于市场价格、客观质量或组织自称的价值。",
+      "uses": [
+        "设计测量时分清利益维度与付出维度，题干保持具体情境，必要时使用已审校量表。"
+      ],
+      "examples": [
+        "示例：免费活动仍需长途往返，一些参与者可能认为总体不划算；价格为零不代表感知价值高。"
+      ],
+      "confusions": [
+        {
+          "entryId": "customer-satisfaction",
+          "distinction": "价值比较所得与付出；满意度评价体验是否符合期待，测量对象与时间点应区分。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "感知价值高，就能证明增加了真实购买吗？",
+          "answer": "可以提出行为关系假设。购买还受预算、可得性和替代方案影响，需要实际行为或适当研究设计支持。"
+        }
+      ],
+      "relatedIds": [
+        "willingness-to-pay",
+        "customer-satisfaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "perceived-value",
+          "title": "Teas and Agarwal: Extrinsic Product Cues, Quality, Sacrifice, and Value",
+          "url": "https://journals.sagepub.com/doi/10.1177/0092070300282008",
+          "locator": "Abstract；Journal of the Academy of Marketing Science 28(2), 2000",
+          "scope": "原论文公开摘要；仅支持感知质量、付出与价值的概念关系，不复制付费全文。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "permutation-test",
       "version": 1,
       "name": "置换检验",
@@ -6103,6 +8869,56 @@
       "questions": []
     },
     {
+      "id": "positioning",
+      "version": 1,
+      "name": "市场定位",
+      "englishName": "Positioning",
+      "aliases": [
+        "品牌定位"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "为明确目标对象说明产品相对替代选择的差异及希望形成的认知位置。定位应连接目标需求与可证明的优势，不能只列公司自称的特征。",
+      "uses": [
+        "把建议写成目标对象、比较对象、核心价值和证据，并用目标群体反馈验证。"
+      ],
+      "examples": [
+        "示例：一项活动为初次观赛者强调低门槛体验，仍需说明相对哪些替代活动有何具体不同。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "target-market",
+        "value-proposition"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ama-strategy",
+          "title": "AMA Marketing Competency Model",
+          "url": "https://www.ama.org/ama-marketing-competency-model/",
+          "locator": "Strategy & Planning；Positioning & Targeting",
+          "scope": "专业协会框架，只支持策略术语与实践位置。"
+        },
+        {
+          "id": "value-proposition",
+          "title": "Strategyzer: The Value Proposition Canvas",
+          "url": "https://www.strategyzer.com/library/the-value-proposition-canvas",
+          "locator": "Customer jobs、pains、gains 与价值主张匹配",
+          "scope": "框架提出者的说明；不复用其画布图形或将商业框架视为因果模型。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "positive-semidefinite",
       "version": 1,
       "name": "正半定矩阵",
@@ -6147,6 +8963,47 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "pragmatism",
+      "version": 1,
+      "name": "实用主义",
+      "englishName": "Pragmatism",
+      "aliases": [],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "以概念在实践中的可理解后果来澄清意义、重视探究与行动联系的哲学传统。不同作者有不同真理观，不能把它概括为“只要有用就都是真的”。",
+      "uses": [
+        "选择研究方法时说明决策问题与预期用途，同时保留证据和推理标准。"
+      ],
+      "examples": [
+        "示例：为改善服务联合访谈和统计，是一种任务导向安排；它不允许为了方便而忽略反例。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "epistemology",
+        "mixed-methods"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pragmatism",
+          "title": "Stanford Encyclopedia of Philosophy: Pragmatism",
+          "url": "https://plato.stanford.edu/entries/pragmatism/",
+          "locator": "The Pragmatic Maxim；practical consequences",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "precision-recall",
@@ -6271,6 +9128,126 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "present-bias",
+      "version": 1,
+      "name": "当下偏好",
+      "englishName": "Present bias",
+      "aliases": [
+        "现时偏好"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "跨期选择中，对立即可得结果的相对重视程度超过对两个未来结果的相对重视程度，可能造成计划与临近行动不一致。它不等同于任何偏好较早回报的正常折现。",
+      "uses": [
+        "研究报名或储蓄拖延时比较同一人不同时间距离的选择，不仅询问是否喜欢即时优惠。"
+      ],
+      "examples": [
+        "示例：计划下周开始复习，但到当天又改成明天；这可能涉及当下偏好，也可能受时间约束影响。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "bounded-rationality"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "present-bias",
+          "title": "David Laibson: Golden Eggs and Hyperbolic Discounting",
+          "url": "https://scholar.harvard.edu/files/laibson/files/golden_eggs_and_hyperbolic_discounting.pdf",
+          "locator": "Abstract and Introduction；dynamic inconsistency and commitment",
+          "scope": "作者机构公开原稿；跨期偏好机制，不迁移文中宏观实证结论。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "price-elasticity-demand",
+      "version": 1,
+      "name": "需求价格弹性",
+      "englishName": "Price elasticity of demand",
+      "aliases": [
+        "价格弹性",
+        "需求弹性"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "在收入、偏好等条件给定时，需求量对本商品价格变化的相对敏感程度。点弹性是需求量百分比变化与价格百分比变化的局部比值，通常保留负号；比较强弱常用其绝对值。",
+      "uses": [
+        "用于讨论调价方案，应先区分沿需求曲线的变化与人群、季节等造成的需求变化。"
+      ],
+      "examples": [
+        "示例：某种情境下价格小幅提高 1%，需求量减少约 1.5%，局部弹性约为 −1.5。"
+      ],
+      "confusions": [
+        {
+          "entryId": "pearson-correlation",
+          "distinction": "弹性描述指定需求关系中的相对变化；价格与销量相关系数没有相同单位或含义。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "问卷中问涨价后还买吗，就能得到真实弹性吗？",
+          "answer": "可以形成情景意向信息。识别实际弹性还需真实交易变化、外生价格变化或明确模型假设，并处理同期需求变化。"
+        }
+      ],
+      "relatedIds": [
+        "income-elasticity-demand",
+        "cross-price-elasticity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-demand",
+          "title": "MIT 14.01 2023 Lecture Summaries",
+          "url": "https://ocw.mit.edu/courses/14-01-principles-of-microeconomics-fall-2023/mit14_01_f23_full.pdf",
+          "locator": "2.1 Demand；PDF 第 6–8 页",
+          "scope": "需求弹性、收入变化与替代效应；不用于将问卷意向解释为已识别的需求曲线。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15",
+      "formula": {
+        "tex": "\\varepsilon_p=\\frac{\\partial Q}{\\partial P}\\frac{P}{Q}",
+        "symbols": [
+          {
+            "symbol": "Q",
+            "meaning": "条件给定时的需求量",
+            "unit": "商品数量"
+          },
+          {
+            "symbol": "P",
+            "meaning": "本商品价格",
+            "unit": "货币/件"
+          },
+          {
+            "symbol": "\\varepsilon_p",
+            "meaning": "需求价格点弹性",
+            "unit": "无量纲"
+          }
+        ],
+        "conditions": [
+          "Q 与 P 在评价点为正，条件需求函数可微。",
+          "给定其他影响需求的条件；有限区间应另报弧弹性的计算口径。"
+        ]
+      }
     },
     {
       "id": "principal-components",
@@ -6470,6 +9447,197 @@
       }
     },
     {
+      "id": "projected-coordinate-system",
+      "version": 1,
+      "name": "投影坐标系",
+      "englishName": "Projected coordinate system",
+      "aliases": [
+        "PCS"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "基于地理坐标系和地图投影，用平面坐标表达位置，并包含单位与投影参数。通常用于一定区域的平面分析；适用范围之外可能产生明显变形。",
+      "uses": [
+        "记录空间参考标识、基准、投影和单位，避免把不同平面坐标直接拼接。"
+      ],
+      "examples": [
+        "示例：一个城市的米制坐标文件不能未经转换与另一区域投影的数据直接合并。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "projection-distortion",
+        "geographic-coordinate-system"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "coordinates",
+          "title": "ArcGIS: Coordinate Systems",
+          "url": "https://developers.arcgis.com/geoanalytics-fabric/core-concepts/coordinate-systems/",
+          "locator": "Geographic and projected coordinates；planar and geodesic measurements",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "projection-distortion",
+      "version": 1,
+      "name": "投影变形",
+      "englishName": "Projection distortion",
+      "aliases": [
+        "地图投影变形"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "把曲面地球表示到平面时，面积、角度、距离或形状必有某些失真。等积、保角或特定方向等距分别保留不同性质，不能同时在全球保留一切测量。",
+      "uses": [
+        "按研究范围和测量目标选投影，并保存坐标参考与转换参数。"
+      ],
+      "examples": [
+        "示例：比较地区面积优先考虑等积性质；路径长度仍需核对投影与测地测量条件。"
+      ],
+      "confusions": [
+        {
+          "entryId": "geodesic-distance",
+          "distinction": "测地距离在曲面模型上计算；投影平面距离受投影变形影响，两种测量不能只凭数值近似互换。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "统一转换为米制坐标就保证距离准确吗？",
+          "answer": "米是单位，不能消除变形。需检查投影适用区域、尺度误差和测量目标；跨大区域可考虑测地计算。"
+        }
+      ],
+      "relatedIds": [
+        "coordinate-reference-system",
+        "projected-coordinate-system"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "projection",
+          "title": "Esri: Choose the Right Projection",
+          "url": "https://learn.arcgis.com/en/projects/choose-the-right-projection/",
+          "locator": "Conformal、equal-area、equidistant 与任务选择",
+          "scope": "只借鉴投影几何性质；涉及中国底图的来源和地图合规需另行确认。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "proportional-symbol-map",
+      "version": 1,
+      "name": "比例符号图",
+      "englishName": "Proportional symbol map",
+      "aliases": [
+        "比例圆地图"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "使用符号大小连续表达量值的地图，常用于数量或规模。圆形通常让面积而非半径与数量成比例；如果采用缩放补偿或限幅，需要在图例说明。",
+      "uses": [
+        "展示设施容量或样本人数时处理重叠，并注明零值、缺失和大小对应规则。"
+      ],
+      "examples": [
+        "示例：人数为四倍时，按面积比例编码的圆半径为两倍；半径四倍会把面积放大为十六倍。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "choropleth-map"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "proportional-symbols",
+          "title": "Esri: Proportional Symbols",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/help/mapping/layer-properties/proportional-symbology.html",
+          "locator": "Relative Size；unclassed symbols；appearance compensation",
+          "scope": "制图参数的概念说明；保持量值和符号面积的映射清楚。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "public-good",
+      "version": 1,
+      "name": "公共物品",
+      "englishName": "Public good",
+      "aliases": [
+        "公共品"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "具有非竞争性和非排他性的物品：一人使用通常不显著减少他人可用量，且阻止他人受益困难。公共部门提供的产品不必都满足这两个经济属性。",
+      "uses": [
+        "判断公共服务供给问题时，分别检查使用是否拥挤、排除是否可行及维持服务的成本。"
+      ],
+      "examples": [
+        "示例：公开发布的预警信息可同时被多人使用；收费且易拥挤的观赛座位则不符合纯公共物品条件。"
+      ],
+      "confusions": [
+        {
+          "entryId": "common-pool-resource",
+          "distinction": "公共池资源难排他但会被消耗或拥挤；纯公共物品在所讨论范围内还具有非竞争性。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "免费提供的设施一定是公共物品吗？",
+          "answer": "价格为零不决定经济属性。免费球场在满员时仍可能有竞争性，需要按实际使用条件判断。"
+        }
+      ],
+      "relatedIds": [
+        "common-pool-resource",
+        "collective-action"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "imf-public",
+          "title": "IMF Back to Basics: What Are Global Public Goods?",
+          "url": "https://www.imf.org/en/Publications/fandd/issues/2021/12/global-public-goods-chin-basics",
+          "locator": "Public goods；nonrivalry and nonexcludability",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "qualitative-coding",
       "version": 1,
       "name": "定性编码",
@@ -6662,6 +9830,49 @@
       "questions": []
     },
     {
+      "id": "raster-data",
+      "version": 1,
+      "name": "栅格数据",
+      "englishName": "Raster data",
+      "aliases": [
+        "地理栅格"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "用规则格网像元及其数值表示地理信息的数据结构，可包括连续测量或分类编码。像元尺寸、空间参考、无数据值和波段含义需要保存；格网只是表示方式。",
+      "uses": [
+        "读取遥感或格网数据时核对单位、NoData、分辨率和重采样方法。"
+      ],
+      "examples": [
+        "示例：土地类型编码 1、2、3 是类别；重采样时对它们取平均会产生没有含义的新类别。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "spatial-resolution",
+        "vector-geodata"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "qgis-raster",
+          "title": "QGIS 3.40: Raster Data",
+          "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/raster_data.html",
+          "locator": "6.1–6.5；cells、bands、Spatial Resolution",
+          "scope": "版本固定的概念文档；该版已结束维护，未推荐它作为当前安装版本。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "ratio-scale",
       "version": 1,
       "name": "等比尺度",
@@ -6756,6 +9967,49 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "reference-dependence",
+      "version": 1,
+      "name": "参照依赖",
+      "englishName": "Reference dependence",
+      "aliases": [
+        "参考点依赖"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "对结果的评价会取决于它相对某个参照点是收益还是损失。参照点可能来自现状、预期或比较对象，研究中需要指出它是什么及如何确定。",
+      "uses": [
+        "解释满意度或价格评价时记录用户预期和比较对象，避免事后随意指定参照点。"
+      ],
+      "examples": [
+        "示例：同样等待 15 分钟，承诺 10 分钟与承诺 30 分钟可能产生不同评价。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "loss-aversion",
+        "customer-satisfaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kahneman",
+          "title": "Daniel Kahneman: Maps of Bounded Rationality",
+          "url": "https://www.nobelprize.org/uploads/2018/06/kahnemann-lecture.pdf",
+          "locator": "Reference dependence、loss aversion 与 framing 段落",
+          "scope": "只支持行为机制解释；不把特定实验损失厌恶参数视作所有人固定值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "regularization",
@@ -7352,6 +10606,59 @@
       "questions": []
     },
     {
+      "id": "scientific-realism",
+      "version": 1,
+      "name": "科学实在论",
+      "englishName": "Scientific realism",
+      "aliases": [
+        "科学现实主义"
+      ],
+      "domain": "philosophy",
+      "depth": "deep",
+      "definition": "一组关于科学理论与世界关系的立场，通常认为世界独立于我们的心智，并认为成熟科学的部分理论可近似正确地描述包括不可直接观察对象在内的世界。它不保证每个模型都是真的。",
+      "uses": [
+        "讨论构念、机制和模型时分开对象的存在假设、术语含义与证据支持程度。"
+      ],
+      "examples": [
+        "示例：认为不可直接观察的机制可能真实存在，与认为某份量表已经准确测到该机制，是两个判断。"
+      ],
+      "confusions": [
+        {
+          "entryId": "logical-empiricism",
+          "distinction": "实在论讨论理论与独立世界的关系；逻辑经验主义是重视经验与逻辑的多样运动，二者不能按“用不用数据”区分。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "模型能预测就证明所设机制真实存在吗？",
+          "answer": "预测支持模型的某些用途，但不同机制可能产生同样预测。机制真实性还需要独立观察、可区分的检验和对替代解释的比较。"
+        }
+      ],
+      "relatedIds": [
+        "ontology",
+        "explanatory-mechanism"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "realism",
+          "title": "Stanford Encyclopedia of Philosophy: Scientific Realism",
+          "url": "https://plato.stanford.edu/entries/scientific-realism/",
+          "locator": "1.1–1.2；Epistemic attitude and the three dimensions of realist commitment",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "selection-bias",
       "version": 1,
       "name": "选择偏差",
@@ -7397,6 +10704,47 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "service-quality",
+      "version": 1,
+      "name": "服务质量",
+      "englishName": "Service quality",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "对服务表现是否满足明确标准或用户要求的评价，可包含可靠性、响应等不同维度。感知服务质量的题目与实际运行指标应分开，量表需适合具体服务情境。",
+      "uses": [
+        "从用户关心的服务过程建立维度，并用真实服务记录和调查信息互相检查。"
+      ],
+      "examples": [
+        "示例：“问题咨询回应及时”的评价可与真实等待时长并列，但两者不是同一变量。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "customer-satisfaction",
+        "validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "service-quality",
+          "title": "Bojanic and Rosen: Measuring Service Quality in Restaurants",
+          "url": "https://scholarsmine.mst.edu/bio_inftec_facwork/566/",
+          "locator": "作者机构公开 Abstract；Journal of Hospitality & Tourism Research 18(1), 1994",
+          "scope": "原论文公开摘要；服务质量的情境应用，不冒充已验证通用量表。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "sha256",
@@ -7722,6 +11070,47 @@
       "questions": []
     },
     {
+      "id": "social-capital",
+      "version": 1,
+      "name": "社会资本",
+      "englishName": "Social capital",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "通过社会关系、支持网络、公民参与、信任或合作规范获得的资源与协作条件。不同研究对概念边界有差异，应明确采用哪些维度，而不是把好友人数直接当作全部社会资本。",
+      "uses": [
+        "研究社区和互助行为时说明关系对象、支持类型、信任对象和可使用资源。"
+      ],
+      "examples": [
+        "示例：学生有很多线上联系人，却未必有人能提供求职信息；网络数量与可得支持需分别测量。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "social-norms",
+        "collective-action"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "social-capital",
+          "title": "OECD: Four Interpretations of Social Capital",
+          "url": "https://www.oecd.org/en/publications/four-interpretations-of-social-capital_5jzbcx010wmt-en.html",
+          "locator": "Abstract；relationships、support、civic engagement、trust",
+          "scope": "概念有多种解释，调查应明确采用的维度。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "social-desirability-bias",
       "version": 1,
       "name": "社会赞许偏差",
@@ -7765,6 +11154,49 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "social-norms",
+      "version": 1,
+      "name": "社会规范",
+      "englishName": "Social norms",
+      "aliases": [
+        "群体规范"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在特定群体和情境中对行为的共享期待，可能同时涉及别人实际怎样做和别人认为应该怎样做。它区别于个人偏好、法律命令和单纯行为频数。",
+      "uses": [
+        "问卷中分开询问自身态度、对他人行为的估计及对他人认可的预期。"
+      ],
+      "examples": [
+        "示例：“同学通常会分类垃圾”和“同学认为我应该分类”测量的是不同期待。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "social-capital",
+        "nudge"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "social-norms",
+          "title": "Stanford Encyclopedia of Philosophy: Social Norms",
+          "url": "https://plato.stanford.edu/entries/social-norms/",
+          "locator": "3–5；Empirical and normative expectations",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "spatial-autocorrelation",
@@ -7812,6 +11244,510 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "spatial-boundary-effect",
+      "version": 1,
+      "name": "空间边界效应",
+      "englishName": "Spatial boundary effect",
+      "aliases": [
+        "空间边缘效应"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "观察窗口之外的对象没有被记录时，边界附近的邻近数量、距离或密度估计可能受到系统影响。它描述测量窗口问题，不是生态学中生境交界影响的同义词。",
+      "uses": [
+        "说明研究边界与完整观察范围，按方法考虑缓冲、边缘校正或敏感性检查。"
+      ],
+      "examples": [
+        "示例：只记录校园内设施，会漏掉校门外设施，使边界附近的便利程度被低估。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "nearest-neighbor-index",
+        "spatial-kernel-density"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "edge-correction",
+          "title": "spatstat: K-function and Edge Corrections",
+          "url": "https://search.r-project.org/CRAN/refmans/spatstat.explore/html/Kest.html",
+          "locator": "Details；unobserved neighbours and border/translation/isotropic corrections",
+          "scope": "软件作者对点过程边缘校正的说明；不将某种校正自动推广到所有空间分析。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-heterogeneity",
+      "version": 1,
+      "name": "空间异质性",
+      "englishName": "Spatial heterogeneity",
+      "aliases": [],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "空间单元在属性、分布或生成过程上存在差异。人口结构、设施条件或环境不同都可能体现异质性；变量水平不同不自动说明变量关系的参数也不同。",
+      "uses": [
+        "在地理研究中报告差异层次，区分地区均值差异、方差差异和关系变化。"
+      ],
+      "examples": [
+        "示例：两个街区参与率不同，可能来自居民构成，也可能来自服务环境，需要进一步分解。"
+      ],
+      "confusions": [
+        {
+          "entryId": "spatial-autocorrelation",
+          "distinction": "异质性关注不同位置的不一致；自相关关注按权重定义的空间关联，两者可以同时存在。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "地图上有明显分区就需要局部回归吗？",
+          "answer": "先核对聚合边界、样本数与构成差异。局部模型需要足够信息并检查共线性和不稳定性，不能只为让地图更复杂。"
+        }
+      ],
+      "relatedIds": [
+        "spatial-nonstationarity",
+        "modifiable-areal-unit"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "gwmodel",
+          "title": "Lu et al.: The GWmodel R package: Further Topics for Exploring Spatial Heterogeneity using Geographically Weighted Models",
+          "url": "https://arxiv.org/abs/1312.2753",
+          "locator": "作者原稿 Abstract；局部统计与非平稳性",
+          "scope": "原作者公开摘要；区分整体空间差异与关系随位置变化。"
+        },
+        {
+          "id": "gwr",
+          "title": "Esri: Geographically Weighted Regression",
+          "url": "https://pro.arcgis.com/en/pro-app/3.3/tool-reference/spatial-statistics/geographicallyweightedregression.htm",
+          "locator": "Summary；spatially varying relationships",
+          "scope": "概念依据；证见目前没有登记 GWR 执行器。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-interpolation",
+      "version": 1,
+      "name": "空间插值",
+      "englishName": "Spatial interpolation",
+      "aliases": [
+        "地理插值"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "根据已观测位置及指定假设估计未观测位置的属性。它生成预测而非补充真实样本；适用性依赖空间过程、采样覆盖与模型检验，不能把插值结果标作原始调查。",
+      "uses": [
+        "制作连续分布图时分开观测点与预测区域，并保留验证和不确定性。"
+      ],
+      "examples": [
+        "示例：用少量监测点估计周边噪声应标为预测；不能把预测格网计入受访者样本量。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "kriging",
+        "spatial-resolution"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kriging",
+          "title": "Esri: How Kriging Works",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-analyst/how-kriging-works.html",
+          "locator": "Kriging formula；Variography；prediction and variance",
+          "scope": "空间随机场插值；普通克里金的均值、协方差条件和模型不确定性需说明。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-join",
+      "version": 1,
+      "name": "空间连接",
+      "englishName": "Spatial join",
+      "aliases": [
+        "空间关联连接"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "依据包含、相交、邻近等空间关系，把一组地理对象的属性匹配到另一组对象。一个对象可能对应多个对象，边界和匹配规则会影响计数及行数。",
+      "uses": [
+        "把样本位置关联到行政区或设施时，保留匹配关系、未匹配与多重匹配结果。"
+      ],
+      "examples": [
+        "示例：将访谈点匹配到街区，多边界点可能匹配不唯一，需要明确采用的包含规则。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "vector-geodata",
+        "topology-geographic"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "spatial-join",
+          "title": "Esri: Spatial Join",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/analysis/spatial-join.html",
+          "locator": "Join operation；Match option；Join_Count",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-kernel-density",
+      "version": 1,
+      "name": "空间核密度估计",
+      "englishName": "Spatial kernel density estimation",
+      "aliases": [
+        "空间 KDE",
+        "核密度热力图"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "在空间点周围铺设核函数并叠加，生成平滑的概率密度或事件强度图。必须说明归一化、权重、带宽、单位与观察边界；平滑高值不等于统计显著热点。",
+      "uses": [
+        "展示事件空间分布时保留点样本来源和带宽敏感性，不把缺少观测直接画作零风险。"
+      ],
+      "examples": [
+        "示例：用两个带宽绘制同一批事件，热点形状可能改变；比较图能帮助检查结论对平滑尺度的依赖。"
+      ],
+      "confusions": [
+        {
+          "entryId": "choropleth-map",
+          "distinction": "分区设色按区域聚合属性；空间核密度对点进行平滑，观察单位与尺度不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "改变带宽后的图更好看，可以只保留它吗？",
+          "answer": "应说明尺度选择依据并查看合理范围的敏感性。还需记录强度或概率密度、权重、面积单位和边缘处理。"
+        }
+      ],
+      "relatedIds": [
+        "getis-ord-gi-star",
+        "spatial-boundary-effect"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "kde",
+          "title": "Esri: How Kernel Density Works",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-analyst/how-kernel-density-works.html",
+          "locator": "Point features；Search radius；Population field；Barriers",
+          "scope": "该工具输出计数或加权强度；概率密度的归一化需另外明确。"
+        },
+        {
+          "id": "edge-correction",
+          "title": "spatstat: K-function and Edge Corrections",
+          "url": "https://search.r-project.org/CRAN/refmans/spatstat.explore/html/Kest.html",
+          "locator": "Details；unobserved neighbours and border/translation/isotropic corrections",
+          "scope": "软件作者对点过程边缘校正的说明；不将某种校正自动推广到所有空间分析。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-lag",
+      "version": 1,
+      "name": "空间滞后",
+      "englishName": "Spatial lag",
+      "aliases": [],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "将邻近单元的数值按空间权重汇总到当前单元，记为 Wy。行标准化权重下通常形成邻居加权平均；未标准化时可能是加权和。它是数据变换，不自行证明邻居的因果影响。",
+      "uses": [
+        "用来描述周边环境时，记录权重、变量单位和孤立单元的处理；空间回归需另外建立模型。"
+      ],
+      "examples": [
+        "示例：某单元两位邻居的值为 10 和 20，权重各 0.5，空间滞后值为 15。"
+      ],
+      "confusions": [
+        {
+          "entryId": "spatial-autocorrelation",
+          "distinction": "空间滞后生成一个邻近数值摘要；空间自相关评价空间关系与数值相似性的关联。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "看到自身数值和 Wy 相关，是否存在空间溢出？",
+          "answer": "可以描述关联。共同环境、测量聚合和选择机制也可能产生相关，空间溢出需要额外设计与模型识别。"
+        }
+      ],
+      "relatedIds": [
+        "spatial-weights",
+        "spatial-autocorrelation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "spatial-lag",
+          "title": "PySAL: W to Graph Migration Guide",
+          "url": "https://pysal.org/libpysal/stable/user-guide/graph/w_g_migration.html",
+          "locator": "Spatial Lag；weighted sum and row-standardized weighted average",
+          "scope": "软件作者文档，数值空间滞后；不将平均值自动解释成空间回归因果效应。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15",
+      "formula": {
+        "tex": "(Wy)_i=\\sum_j w_{ij}y_j",
+        "symbols": [
+          {
+            "symbol": "y_j",
+            "meaning": "空间单元 j 的数值",
+            "unit": "原变量单位"
+          },
+          {
+            "symbol": "w_{ij}",
+            "meaning": "单元 i 到 j 的空间权重"
+          },
+          {
+            "symbol": "(Wy)_i",
+            "meaning": "单元 i 的邻近数值摘要"
+          }
+        ],
+        "conditions": [
+          "权重矩阵与 y 使用完全一致的单元 ID 和顺序。",
+          "仅当一行权重和为 1 时可解释为加权平均；缺失值和无邻居规则需另外声明。"
+        ]
+      }
+    },
+    {
+      "id": "spatial-mismatch",
+      "version": 1,
+      "name": "空间错配",
+      "englishName": "Spatial mismatch",
+      "aliases": [
+        "就业空间错配"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "适合某人群的就业或服务机会与其居住位置在空间上不匹配，并通过通勤、费用、信息等障碍降低实际接触机会。不能仅凭两类点分布不同就推定个体无法匹配。",
+      "uses": [
+        "研究就业可得性时把岗位要求、交通模式、时间与求职者条件共同纳入。"
+      ],
+      "examples": [
+        "示例：岗位集中在远端区域，而目标人群缺少相应班次交通，可能形成需要核实的可达障碍。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "accessibility",
+        "target-market"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "spatial-mismatch",
+          "title": "Michael Stoll: Job Sprawl and Spatial Mismatch",
+          "url": "https://www.brookings.edu/articles/job-sprawl-and-the-spatial-mismatch-between-blacks-and-jobs/",
+          "locator": "作者原创研究摘要；位置、就业与通达障碍",
+          "scope": "仅借鉴空间错配概念；美国研究结果不迁移到中国调查对象。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-nonstationarity",
+      "version": 1,
+      "name": "空间非平稳性",
+      "englishName": "Spatial nonstationarity",
+      "aliases": [
+        "空间关系非平稳"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "某过程的参数或变量关系随位置变化，因而一个固定的全域关系可能无法描述各处。它比单纯地图数值不同更强，需要合适模型、样本覆盖和诊断支持。",
+      "uses": [
+        "解释不同地区同一关系为何可能不同，但不要仅凭颜色分布宣称局部系数变化。"
+      ],
+      "examples": [
+        "示例：交通时间与服务选择的关系可能在核心区和郊区不同，这是一项待检验假设。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "spatial-heterogeneity",
+        "spatial-weights"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "gwr",
+          "title": "Esri: Geographically Weighted Regression",
+          "url": "https://pro.arcgis.com/en/pro-app/3.3/tool-reference/spatial-statistics/geographicallyweightedregression.htm",
+          "locator": "Summary；spatially varying relationships",
+          "scope": "概念依据；证见目前没有登记 GWR 执行器。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-resolution",
+      "version": 1,
+      "name": "空间分辨率",
+      "englishName": "Spatial resolution",
+      "aliases": [
+        "像元空间分辨率"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "数据能够表示空间细节的尺度。栅格常用像元地面尺寸描述，但小像元不自动意味着位置准确或信息丰富；把粗数据重采样到细格网不会新增原始观测。",
+      "uses": [
+        "说明底图和空间分析的尺度，区分格网大小、源数据密度与定位精度。"
+      ],
+      "examples": [
+        "示例：将 1 千米格网插值成 10 米格网后，不能声称获得了 10 米精度的真实人口信息。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "raster-data",
+        "modifiable-areal-unit"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "qgis-raster",
+          "title": "QGIS 3.40: Raster Data",
+          "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/raster_data.html",
+          "locator": "6.1–6.5；cells、bands、Spatial Resolution",
+          "scope": "版本固定的概念文档；该版已结束维护，未推荐它作为当前安装版本。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "spatial-weights",
+      "version": 1,
+      "name": "空间权重",
+      "englishName": "Spatial weights",
+      "aliases": [
+        "空间权重矩阵",
+        "W 矩阵"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "用一组权重明确空间单元之间谁是邻居以及邻近关系的强弱。权重可由接壤、距离或网络联系构造；阈值、对角元素、孤立单元和标准化方式都会影响后续结果。",
+      "uses": [
+        "空间检验前先解释关系定义与研究机制，并比较合理备选权重的敏感性。"
+      ],
+      "examples": [
+        "示例：以共享边界定义街区邻居，与以十分钟通行范围定义邻居，会得到不同关系。"
+      ],
+      "confusions": [
+        {
+          "entryId": "coordinate-reference-system",
+          "distinction": "坐标系规定位置如何表达；空间权重规定单元之间的关系，两者都需要明确但不是同一对象。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "为什么行标准化后权重可能不再对称？",
+          "answer": "每行除以自己的权重和。两个地区邻居数量不同，即使原始相邻关系对称，归一化后的成对权重也可能不同。"
+        }
+      ],
+      "relatedIds": [
+        "spatial-lag",
+        "local-morans-i"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "weights",
+          "title": "Luc Anselin: Spatial Weights, GeoDa Workbook",
+          "url": "https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html",
+          "locator": "Spatial weights basic concepts；Queen and Rook contiguity",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "spearman-correlation",
@@ -7901,6 +11837,59 @@
           "answer": "仍需正确配对、明确观测独立性及应答范围；它也不能把关联变成因果。"
         }
       ]
+    },
+    {
+      "id": "stakeholder-analysis",
+      "version": 1,
+      "name": "利益相关者分析",
+      "englishName": "Stakeholder analysis",
+      "aliases": [
+        "相关者分析"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "识别会影响方案或受其影响的主体，整理其诉求、利益、影响力、关系与参与方式。影响力和关切度矩阵是整理判断的工具，应有材料支持并随情境更新。",
+      "uses": [
+        "设计访谈和行动建议时覆盖使用者、执行者、资源提供者及受影响者，保留分歧。"
+      ],
+      "examples": [
+        "示例：同一赛事优化可能涉及观众、学校、交通部门、商户与居民，各自诉求和权限不同。"
+      ],
+      "confusions": [
+        {
+          "entryId": "market-segmentation",
+          "distinction": "市场细分常按需求与特征区分用户；相关者分析还包括管理方、执行方和受影响的非用户。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "给相关者打影响力分数就算客观测量吗？",
+          "answer": "分数需要公开标准与材料支持，最好交叉访谈核实。不同评估者的分歧和随时间的变化都应记录。"
+        }
+      ],
+      "relatedIds": [
+        "externality",
+        "collective-action"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "stakeholders",
+          "title": "Government Analysis Function: Stakeholder Mapping",
+          "url": "https://analysisfunction.civilservice.gov.uk/policy-store/stakeholder-mapping/",
+          "locator": "How to map stakeholders；Assessing power and interest",
+          "scope": "公共部门实践方法；矩阵分数是调查判断，不是客观固定属性。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "standard-deviation",
@@ -8163,6 +12152,48 @@
       }
     },
     {
+      "id": "straw-man",
+      "version": 1,
+      "name": "稻草人论证",
+      "englishName": "Straw man",
+      "aliases": [
+        "稻草人谬误"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "把对方或替代观点改写成更弱、更夸张或不同的版本，再反驳这个版本。有效比较需要先准确呈现原观点及其条件，而不是只贴一个谬误标签。",
+      "uses": [
+        "写文献比较和答辩回应时复述对方实际主张，保留限定语和适用范围。"
+      ],
+      "examples": [
+        "示例：对方建议“部分地区增加线路”，不能改述成“所有地区都要无限增加线路”再反对。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "argument-validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "fallacies",
+          "title": "Stanford Encyclopedia of Philosophy: Fallacies",
+          "url": "https://plato.stanford.edu/entries/fallacies/",
+          "locator": "Begging the question；straw man；appeal to authority；burden of proof",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "structural-equation-model",
       "version": 1,
       "name": "结构方程模型",
@@ -8243,6 +12274,142 @@
           "answer": "不成立。模型路径是假设表达；因果解释还依赖设计、时间顺序与识别假设。"
         }
       ]
+    },
+    {
+      "id": "sufficient-condition",
+      "version": 1,
+      "name": "充分条件",
+      "englishName": "Sufficient condition",
+      "aliases": [],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "在明确范围内，有条件 A 就足以得到结果 B，通常写作 A 推出 B。没有 A 不必排除 B，因为可能存在其他充分路径。观察到几次共现不证明充分性。",
+      "uses": [
+        "写建议时避免把一个促进因素称为保证结果的条件，核对其他必要前提。"
+      ],
+      "examples": [
+        "示例：若完整满足某套判定规则便可归类，该套条件可以充分；其中单一条件不必充分。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "necessary-condition"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "conditions",
+          "title": "Stanford Encyclopedia of Philosophy: Necessary and Sufficient Conditions",
+          "url": "https://plato.stanford.edu/entries/necessary-sufficient/",
+          "locator": "Standard theory；material implication and converse",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "sunk-cost",
+      "version": 1,
+      "name": "沉没成本",
+      "englishName": "Sunk cost",
+      "aliases": [
+        "已沉没成本"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "已经发生且不能因当前选择而收回的成本。比较未来方案时，应关注方案之间会变化的收益和成本；仍可出售、退还或转用的资源价值不属于不可收回部分。",
+      "uses": [
+        "在建议阶段明确继续、停止和改造三种方案的未来增量，不用过去投入单独证明继续合理。"
+      ],
+      "examples": [
+        "示例：已付且不可退的场地费不因活动取消而回来；可退押金则仍与当前决策有关。"
+      ],
+      "confusions": [
+        {
+          "entryId": "opportunity-cost",
+          "distinction": "机会成本是当前选择放弃的最佳替代价值；沉没成本是无法随当前选择改变的过去付出。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "设备买过了，后续使用是不是零成本？",
+          "answer": "过去购买价可能已沉没，但设备仍有出售价值、占用时间和维护费；这些与当前选择有关的价值仍需计入。"
+        }
+      ],
+      "relatedIds": [
+        "marginal-cost",
+        "opportunity-cost"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "green-book",
+          "title": "HM Treasury: The Green Book 2026",
+          "url": "https://www.gov.uk/government/publications/the-green-book--2/the-green-book-2026",
+          "locator": "Appraising options → Sunk costs；cost-benefit and cost-effectiveness",
+          "scope": "仅借鉴评价概念；英国公共项目的法定程序、折现参数不适用于赛事项目。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "switching-cost",
+      "version": 1,
+      "name": "转换成本",
+      "englishName": "Switching cost",
+      "aliases": [
+        "切换成本"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "从现有产品、供应商或关系切换到替代选择时产生的额外金钱、学习、时间、关系或数据迁移成本。持续使用可能反映这种成本，而不是更高满意度。",
+      "uses": [
+        "分析用户留存时同时观察替代选项、迁移步骤与更改意向。"
+      ],
+      "examples": [
+        "示例：用户想换平台却需要重新整理历史资料和联系人，这些迁移负担构成转换成本。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "customer-loyalty",
+        "network-effects"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "network-costs",
+          "title": "Farrell and Klemperer: Coordination and Lock-In",
+          "url": "https://www.nuff.ox.ac.uk/economics/papers/2006/w7/Farrell_KlempererWP.pdf",
+          "locator": "Abstract；2 Switching Costs；3 Network Effects",
+          "scope": "作者机构工作论文；区分个人迁移成本与他人使用带来的价值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "systematic-sampling",
@@ -8373,6 +12540,56 @@
       ]
     },
     {
+      "id": "target-market",
+      "version": 1,
+      "name": "目标市场",
+      "englishName": "Target market",
+      "aliases": [
+        "目标客群"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "在可区分的群体中，组织决定优先服务或投入的一个或多个群体。它是资源与策略选择，和调查总体或已经进入样本的群体不是同一概念。",
+      "uses": [
+        "选择目标对象时比较需求、可触达性、供给能力和方案可行性，而非只看群体规模。"
+      ],
+      "examples": [
+        "示例：可调研全市观赛者，但首期接驳服务决定优先覆盖两条校区线路附近的用户。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "market-segmentation",
+        "population"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ama-segments",
+          "title": "AMA: Better Segmentation for Better Insights",
+          "url": "https://www.ama.org/marketing-news/better-segmentation-for-better-insights/",
+          "locator": "Segmentation Overview 与优先细分群体",
+          "scope": "作者在专业协会发布的实践说明；仅支持细分到目标市场的联系。"
+        },
+        {
+          "id": "ama-strategy",
+          "title": "AMA Marketing Competency Model",
+          "url": "https://www.ama.org/ama-marketing-competency-model/",
+          "locator": "Strategy & Planning；Positioning & Targeting",
+          "scope": "专业协会框架，只支持策略术语与实践位置。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "thematic-analysis",
       "version": 1,
       "name": "主题分析",
@@ -8427,6 +12644,187 @@
           "answer": "不一定。重要性要与研究问题和意义关系判断；频数也受访谈追问与样本选择影响。"
         }
       ]
+    },
+    {
+      "id": "theory-ladenness",
+      "version": 1,
+      "name": "观察的理论负载",
+      "englishName": "Theory-ladenness of observation",
+      "aliases": [
+        "理论负载性"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "观察的选择、仪器设计、分类与解释可能受到理论和背景知识影响。它提醒研究者公开测量与解释假设，不等于所有观察都任意或无法核验。",
+      "uses": [
+        "检查概念定义、编码标准和仪器假设，并让不同解释对同一材料接受检验。"
+      ],
+      "examples": [
+        "示例：把沉默编码成“不满意”已经包含一种解释，应记录标准并核查其他可能意义。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "operationalization",
+        "epistemology"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "theory-observation",
+          "title": "Stanford Encyclopedia of Philosophy: Theory and Observation in Science",
+          "url": "https://plato.stanford.edu/entries/science-theory-observation/",
+          "locator": "Theory-ladenness and observation",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "theory-of-change",
+      "version": 1,
+      "name": "变革理论",
+      "englishName": "Theory of change",
+      "aliases": [
+        "改变理论",
+        "ToC"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "对方案为何以及在何种条件下带来期望变化的解释，包含路径、必要假设与情境因素。名称含“理论”不表示路径已被验证，仍需观察和检验。",
+      "uses": [
+        "在行动方案中说明每一环为何可能发生、谁参与、依赖哪些前提以及如何检验。"
+      ],
+      "examples": [
+        "示例：接驳信息更清楚是否改善参与，需要核实信息触达、线路可用和出行需求三项条件。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "logic-model",
+        "explanatory-mechanism"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "cdc-framework",
+          "title": "CDC Program Evaluation Framework, 2024",
+          "url": "https://www.cdc.gov/mmwr/volumes/73/rr/rr7306a1.htm",
+          "locator": "Describe the Program；logic model assumptions and contextual factors",
+          "scope": "用于评价框架和可检验的路径，不代替实证因果识别。"
+        },
+        {
+          "id": "logic",
+          "title": "CDC: Step 2 Describe the Program",
+          "url": "https://www.cdc.gov/evaluation/php/evaluation-framework-action-guide/step-2-describe-the-program.html",
+          "locator": "Logic models；inputs、activities、outputs、outcomes",
+          "scope": "方案逻辑与结果链；逻辑图本身不证明干预因果效果。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "topology-geographic",
+      "version": 1,
+      "name": "地理拓扑",
+      "englishName": "Geographic topology",
+      "aliases": [
+        "空间拓扑"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "描述地理对象之间的连通、邻接与包含关系，可用于检查几何与路网是否符合规则。画面看似相接不保证数据节点连通，规则应由实际对象含义决定。",
+      "uses": [
+        "路径和覆盖分析前检查断线、重叠、空隙及应允许的特殊结构。"
+      ],
+      "examples": [
+        "示例：高架道路和地面道路在二维图上相交，却可能没有可通行连接节点。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "network-distance",
+        "spatial-join"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "qgis-topology",
+          "title": "QGIS 3.40: Topology",
+          "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/topology.html",
+          "locator": "7.1–7.3；adjacency、connectivity、topology rules",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "touchpoint",
+      "version": 1,
+      "name": "服务触点",
+      "englishName": "Touchpoint",
+      "aliases": [
+        "顾客触点",
+        "用户触点"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "用户在旅程中的一次相关接触或互动，例如查信息、咨询、付款或接收评价。触点可能由品牌、合作方、用户或社会外部主体控制，不只指广告渠道。",
+      "uses": [
+        "区分接触发生在哪里、谁控制、承担什么任务以及有哪些可改变因素。"
+      ],
+      "examples": [
+        "示例：第三方售票页面和志愿者入口指引是不同触点，需分别收集体验证据。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "customer-journey",
+        "service-quality"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "journey",
+          "title": "Lemon and Verhoef: Understanding Customer Experience Throughout the Customer Journey",
+          "url": "https://pure.rug.nl/ws/files/81733365/Understanding_Customer_Experience_Throughout_the_Customer_Journey.pdf",
+          "locator": "Customer Journey and Touch Points；正文页 76–78；Figure 1",
+          "scope": "作者机构版本；旅程与触点分类，不复制文章图表。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "train-test-split",
@@ -8530,6 +12928,47 @@
       "questions": []
     },
     {
+      "id": "transaction-cost",
+      "version": 1,
+      "name": "交易成本",
+      "englishName": "Transaction cost",
+      "aliases": [],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "达成和执行交易所需的搜寻、沟通、谈判、合同制定、监督和履约等成本。它并不等于商品生产成本或最终付款金额，也不限于平台收取的手续费。",
+      "uses": [
+        "比较服务渠道和协作方案时，把时间、信息搜寻和履约安排列入成本记录。"
+      ],
+      "examples": [
+        "示例：购买相同产品时，反复比价、确认售后和处理退货耗费的时间也是交易成本。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "marginal-cost",
+        "information-asymmetry"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "coase",
+          "title": "Ronald Coase: The Institutional Structure of Production",
+          "url": "https://www.nobelprize.org/prizes/economic-sciences/1991/coase/lecture/",
+          "locator": "Transaction costs；information、negotiation、contracts、enforcement",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "type-two-error",
       "version": 1,
       "name": "第二类错误",
@@ -8574,6 +13013,50 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "underdetermination",
+      "version": 1,
+      "name": "证据不足以唯一确定理论",
+      "englishName": "Underdetermination",
+      "aliases": [
+        "理论欠决定性",
+        "证据欠决定"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "现有证据可能同时符合多个不同解释，因而不能仅凭拟合相同就选出唯一真实理论。这不表示所有解释同样好；还可比较独立证据、假设负担和可检验预测。",
+      "uses": [
+        "在讨论中记录替代解释和最有区分力的新观察。"
+      ],
+      "examples": [
+        "示例：参与下降既可能来自票价也可能来自赛程冲突；同一次截面调查未必能区分两者。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "scientific-realism",
+        "abduction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "underdetermination",
+          "title": "Stanford Encyclopedia of Philosophy: Scientific Underdetermination",
+          "url": "https://plato.stanford.edu/entries/scientific-underdetermination/",
+          "locator": "Evidence and competing explanations",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     },
     {
       "id": "unit-of-analysis",
@@ -8750,6 +13233,100 @@
       ]
     },
     {
+      "id": "value-judgment",
+      "version": 1,
+      "name": "价值判断",
+      "englishName": "Value judgment",
+      "aliases": [
+        "规范性评价"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "依据目标或价值标准，对某结果是否值得、好坏或应如何选择作评价。事实证据能说明后果，却不能单独决定应采用何种目标；评价需公开标准和受影响对象。",
+      "uses": [
+        "建议同时说明数据依据、决策目标、分配影响与价值取舍。"
+      ],
+      "examples": [
+        "示例：即使方案提高总覆盖量，是否接受少数人覆盖下降，仍需明确公平与效率的判断标准。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "stakeholder-analysis",
+        "cost-benefit-analysis"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "value-theory",
+          "title": "Stanford Encyclopedia of Philosophy: Value Theory",
+          "url": "https://plato.stanford.edu/entries/value-theory/",
+          "locator": "1 Basic Questions；good、better、good for",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "value-proposition",
+      "version": 1,
+      "name": "价值主张",
+      "englishName": "Value proposition",
+      "aliases": [],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "针对明确对象及其任务、困难和期待，说明一种产品或方案提供什么价值以及为何值得选择。它是需要证据检验的主张，不能用宣传口号代替对用户和替代方案的理解。",
+      "uses": [
+        "把建议写成对象、未满足需求、提供方式与可检验价值四部分，并关联调查发现。"
+      ],
+      "examples": [
+        "示例：面向晚间观赛学生，提出联动接驳服务以减少返校不确定性；应先核实需求与供给条件。"
+      ],
+      "confusions": [
+        {
+          "entryId": "positioning",
+          "distinction": "定位说明相对替代选择如何被认知；价值主张说明为指定对象提供何种价值。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "“便捷、专业、高品质”算完整价值主张吗？",
+          "answer": "还缺谁在何种情境需要什么，以及哪些证据说明方案确实有帮助。可将含糊形容词改成具体服务和评价指标。"
+        }
+      ],
+      "relatedIds": [
+        "perceived-value",
+        "target-market"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "value-proposition",
+          "title": "Strategyzer: The Value Proposition Canvas",
+          "url": "https://www.strategyzer.com/library/the-value-proposition-canvas",
+          "locator": "Customer jobs、pains、gains 与价值主张匹配",
+          "scope": "框架提出者的说明；不复用其画布图形或将商业框架视为因果模型。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
       "id": "variance",
       "version": 1,
       "name": "样本方差",
@@ -8872,6 +13449,206 @@
       "updatedAt": "2026-10-14",
       "confusions": [],
       "questions": []
+    },
+    {
+      "id": "vector-geodata",
+      "version": 1,
+      "name": "地理矢量数据",
+      "englishName": "Vector geodata",
+      "aliases": [
+        "矢量地理数据"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "以点、线、面及其坐标与属性表示地理对象。这里的矢量数据是地理结构，不是机器学习特征向量；几何表示仍需空间参考、精度与拓扑检查。",
+      "uses": [
+        "研究设施、路径或边界时明确对象类型、ID 与属性，并保留几何验证结果。"
+      ],
+      "examples": [
+        "示例：场馆用点、步行路网用线、街区用面，各自对应不同的空间问题。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "raster-data",
+        "topology-geographic"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "qgis-vector",
+          "title": "QGIS 3.40: Vector Data",
+          "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/vector_data.html",
+          "locator": "Points、Polylines、Polygons 与属性",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "willingness-to-accept",
+      "version": 1,
+      "name": "接受补偿意愿",
+      "englishName": "Willingness to accept",
+      "aliases": [
+        "WTA",
+        "最低接受补偿"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "对放弃一种权益或承受明确变化，一个人愿意接受的最低补偿金额。它和为获得同一变化而愿付的金额采用不同的初始权益与问题框架，不能默认两者相等。",
+      "uses": [
+        "在设施搬迁、环境变化等方案评价中先明确权益归属与补偿场景。"
+      ],
+      "examples": [
+        "示例：示例受访者愿付 30 元获得便利，却要求 60 元补偿才愿意失去已有便利。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "willingness-to-pay",
+        "reference-dependence"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "imf-environment-valuation",
+          "title": "IMF: The Economist’s Approach to Sustainable Development",
+          "url": "https://www.elibrary.imf.org/view/journals/022/0030/004/article-A006-en.xml",
+          "locator": "Environmental valuation：willingness to pay and willingness to accept compensation",
+          "scope": "已读取原出版方公开检索片段；直连为 403，未声称已读全文。"
+        },
+        {
+          "id": "kahneman",
+          "title": "Daniel Kahneman: Maps of Bounded Rationality",
+          "url": "https://www.nobelprize.org/uploads/2018/06/kahnemann-lecture.pdf",
+          "locator": "Reference dependence、loss aversion 与 framing 段落",
+          "scope": "只支持行为机制解释；不把特定实验损失厌恶参数视作所有人固定值。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "willingness-to-pay",
+      "version": 1,
+      "name": "支付意愿",
+      "englishName": "Willingness to pay",
+      "aliases": [
+        "WTP",
+        "最大支付意愿"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "对明确商品、服务、数量和交易条件，一个人愿意支付的最高金额。陈述性问卷得到的是设定场景下的表达，实际交易或激励设计下的支付行为属于另一种证据。",
+      "uses": [
+        "为定价和服务方案提供信息，题目需明确服务内容、支付周期和是否真实付款。"
+      ],
+      "examples": [
+        "示例：对一次包含座位和接驳的观赛服务，受访者表示最多支付 80 元；这不是已经发生的购买。"
+      ],
+      "confusions": [
+        {
+          "entryId": "perceived-value",
+          "distinction": "感知价值是对所得与付出的总体评价；支付意愿以特定交易条件下的金额表达。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "为什么不能直接用平均支付意愿确定票价？",
+          "answer": "还要考虑分布、需求覆盖、成本、可替代选择和陈述偏差。不同调查方式及支付条件也会改变答案。"
+        }
+      ],
+      "relatedIds": [
+        "consumer-surplus",
+        "willingness-to-accept"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-welfare",
+          "title": "MIT 14.01 2023 Lecture Summaries: Consumer Surplus",
+          "url": "https://ocw.mit.edu/courses/14-01-principles-of-microeconomics-fall-2023/mit14_01_f23_full.pdf",
+          "locator": "4.1.2 Consumer Surplus；PDF 第 17 页；边际支付意愿与价格",
+          "scope": "概念依据；本条用途与教学例子为原创解释。"
+        },
+        {
+          "id": "green-book",
+          "title": "HM Treasury: The Green Book 2026",
+          "url": "https://www.gov.uk/government/publications/the-green-book--2/the-green-book-2026",
+          "locator": "Appraising options → Sunk costs；cost-benefit and cost-effectiveness",
+          "scope": "仅借鉴评价概念；英国公共项目的法定程序、折现参数不适用于赛事项目。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
+    },
+    {
+      "id": "word-of-mouth",
+      "version": 1,
+      "name": "口碑传播",
+      "englishName": "Word of mouth",
+      "aliases": [
+        "WOM",
+        "电子口碑",
+        "eWOM"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "人际间围绕产品、服务或体验的信息交流；在线评价和分享是其数字形式之一。主动广告、受激励推荐与自发口碑的生成机制不同，研究应登记信息来源。",
+      "uses": [
+        "评价传播渠道时区分听说、信任、实际推荐及被推荐后的行动。"
+      ],
+      "examples": [
+        "示例：看到室友的实际体验分享与看到带佣金的推广链接，应在来源记录中分别标注。"
+      ],
+      "confusions": [],
+      "questions": [],
+      "relatedIds": [
+        "net-promoter-score",
+        "touchpoint"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "word-mouth",
+          "title": "Barreto: The Word-of-Mouth Phenomenon in the Social Media Era",
+          "url": "https://journals.sagepub.com/doi/abs/10.2501/IJMR-2014-043",
+          "locator": "Abstract；International Journal of Market Research 56(5), 2014",
+          "scope": "原作者综述公开摘要；概念用于渠道辨析，未读取付费全文。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "/root/knowledge_api",
+        "reviewer": "/root/knowledge_core",
+        "checkedAt": "2026-10-14T16:58:01.089Z"
+      },
+      "updatedAt": "2026-10-15"
     }
   ]
 }
