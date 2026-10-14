@@ -10,7 +10,7 @@ const result = (id, extra = {}) => ({ id, title: '结果' + id, sourceName: '课
 const finding = (id, action) => ({ id, title: '发现' + id, question: '问题', evidenceIds: ['r1'], interpretation: '解释', alternatives: '其他解释', scope: '本样本', action, status: 'confirmed', confirmedHashes: { r1: 'b'.repeat(64) } });
 const check = (report, id) => report.checks.find(c => c.id === id);
 
-test('guidance blocks are skipped, and captions are told apart from sentences about figures', () => {
+test('old guidance blocks are skipped, and captions are told apart from sentences about figures', () => {
   assert.deepEqual(writtenLines('【写作提示】说明\n1. 第一步\n2. 第二步\n\n真正的正文\n  \n第二段'), ['真正的正文', '第二段']);
   assert.ok(isCaption('图 3-1 抽样流程'));
   assert.ok(isCaption('表2 各量表的信度'));
@@ -34,7 +34,8 @@ test('the generic template scores low and its structural gaps point to blueprint
 test('the blueprint skeleton is structurally complete but does not earn credit for its own guidance', () => {
   const skeleton = benchmarkReport(newProjectReport('骨架'));
   assert.equal(check(skeleton, 'chapters').status, 'pass');
-  assert.ok(check(skeleton, 'hints').score < 0.3);
+  assert.equal(check(skeleton, 'unwritten').status, 'fail');
+  assert.match(check(skeleton, 'unwritten').detail, /32 节尚未撰写/);
   for (const id of ['questionnaire', 'aiDisclosure', 'reproducible']) {
     assert.equal(check(skeleton, id).status, 'partial', id);
     assert.match(check(skeleton, id).detail, /尚未填写/);
@@ -72,7 +73,7 @@ test('a report that shows its evidence passes the checks built for it', () => {
   ];
   const report = benchmarkReport(content);
   for (const id of ['abstract', 'keywords', 'chapters', 'objectives', 'sampling', 'sampleSize', 'validRate', 'pilot', 'qualityControl', 'cleaning', 'reliability', 'validity',
-    'tests', 'models', 'diagnostics', 'findings', 'findingActions', 'executable', 'limitations', 'causal', 'questionnaire', 'aiDisclosure', 'referenceFormat', 'reproducible', 'captions']) {
+    'tests', 'models', 'diagnostics', 'findings', 'findingActions', 'executable', 'limitations', 'causal', 'questionnaire', 'aiDisclosure', 'referenceFormat', 'reproducible', 'captions', 'unwritten']) {
     assert.equal(check(report, id).status, 'pass', `${id}: ${check(report, id).detail}`);
   }
   assert.equal(check(report, 'simulated').status, 'na', 'the simulated result is registered but not used');

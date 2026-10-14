@@ -27,7 +27,6 @@ export type BlueprintNode = {
   optional?: boolean;
 };
 
-export const BLUEPRINT_HINT = '【写作提示】';
 export const BLUEPRINT_MODULE_LABELS: Record<BlueprintModule, string> = { design: '问卷设计', sampling: '抽样设计', analysis: '数据分析' };
 
 const chapter = (id: string, title: string, keywords: string[], purpose: string, optional = false): BlueprintNode =>
@@ -176,18 +175,6 @@ export function blueprintTitle(node: BlueprintNode, position: number): string {
   return node.title;
 }
 
-/** Writing guidance placed in a new section; the marker lets checks find guidance that was never replaced. */
-export function blueprintBody(node: BlueprintNode): string {
-  if (node.kind === 'chapter') return '';
-  const lines = [`${BLUEPRINT_HINT}${node.purpose}`, ...node.moves.map((move, i) => `${i + 1}. ${move}`)];
-  const extras: string[] = [];
-  if (node.length) extras.push(`建议约 ${node.length[0]}–${node.length[1]} 字`);
-  if (node.needs.length) extras.push(`本节应有：${node.needs.map(need => need.label).join('、')}`);
-  if (node.module) extras.push(`素材可来自「${BLUEPRINT_MODULE_LABELS[node.module]}」模块`);
-  if (extras.length) lines.push(extras.join('；') + '。');
-  return lines.join('\n');
-}
-
 export type BlueprintOptions = { includeOptional: boolean };
 /** Every included node with its numbered title, in blueprint order. */
 export function blueprintOutline(options: BlueprintOptions): { node: BlueprintNode; title: string }[] {
@@ -201,9 +188,12 @@ export function blueprintOutline(options: BlueprintOptions): { node: BlueprintNo
   });
 }
 
-/** A complete skeleton. IDs are derived from node IDs, so the same options always build the same report. */
+/**
+ * A complete skeleton of empty sections. Guidance is shown beside each section while writing, never stored in
+ * the body, so it cannot leak into an export. IDs derive from node IDs: the same options build the same report.
+ */
 export function blueprintSections(options: BlueprintOptions): ReportSection[] {
-  return blueprintOutline(options).map(({ node, title }) => ({ id: `bp-${node.id}`, title, body: blueprintBody(node), source: '' }));
+  return blueprintOutline(options).map(({ node, title }) => ({ id: `bp-${node.id}`, title, body: '', source: '' }));
 }
 
 // Arabic outline numbers need a delimiter ("3、", "1.", "2.1 "), so "5G 用户" keeps its digits.
@@ -284,7 +274,7 @@ export function insertBlueprintNode(content: EditorContent, nodeId: string): { c
     let id = `bp-${node.id}`;
     for (let n = 2; used.has(id); n++) id = `bp-${node.id}-${n}`;
     // Provisional number 1; renumbering below gives the position-correct number.
-    report.splice(at, 0, { id, title: blueprintTitle(node, 1), body: blueprintBody(node), source: '' });
+    report.splice(at, 0, { id, title: blueprintTitle(node, 1), body: '', source: '' });
     inserted.push(id);
   }
   const before = new Map(content.report.map(s => [s.id, s.title]));

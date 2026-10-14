@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BLUEPRINT, BLUEPRINT_HINT, blueprintNode, blueprintOutline, blueprintSections, chineseNumeral, insertBeforeBackMatter, insertBlueprintNode, matchBlueprintNode, renumberHeadings, stripHeadingNumber } from '../lib/report-blueprint.ts';
+import { BLUEPRINT, blueprintNode, blueprintOutline, blueprintSections, chineseNumeral, insertBeforeBackMatter, insertBlueprintNode, matchBlueprintNode, renumberHeadings, stripHeadingNumber } from '../lib/report-blueprint.ts';
 import { createEditorContent, EDITOR_LIMITS, parseEditorContent } from '../lib/editor-model.ts';
 import { reportHeadingLevel, reportPart } from '../lib/report-format.ts';
 import { newProjectReport, reportContentsEqual } from '../lib/project-report.ts';
@@ -41,11 +41,8 @@ test('the skeleton is a valid report whose parts, heading levels and titles roun
       if (node.kind === 'section') assert.equal(reportHeadingLevel(title), 2, title);
       assert.equal(matchBlueprintNode(title)?.id, node.id, `${title} is recognised as ${node.id}`);
     }
-    for (const s of sections) {
-      const node = blueprintNode(s.id.slice(3));
-      if (node.kind === 'chapter') assert.equal(s.body, '');
-      else assert.ok(s.body.startsWith(BLUEPRINT_HINT) && s.body.length <= EDITOR_LIMITS.body, s.title);
-    }
+    // Guidance is shown beside the section while writing and never stored in the body.
+    for (const s of sections) assert.equal(s.body, '', s.title);
   }
   assert.equal(blueprintSections({ includeOptional: false }).length, 40);
 });

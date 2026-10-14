@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import { ACCENTS, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
-import { blueprintSections, insertBlueprintNode } from "@/lib/report-blueprint";
+import { blueprintSections, insertBlueprintNode, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
+import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
+import BlueprintGuide from "./BlueprintGuide";
 import { useContentReveal, useKeyedListMotion } from '../motion/useWorkspaceMotion';
 import ReportStoryboard, { ReportLinkNotice } from './ReportStoryboard';
 import { LINK_LABELS, reportExportWarnings } from '@/lib/report-storyboard';
@@ -13,7 +15,7 @@ import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
 import EditorRecovery from "./EditorRecovery";
 import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-recovery";
 import { useHostedSession } from '../hosted/HostedSession';
-import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportPart, reportExportOptions } from '@/lib/report-format';
+import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
 import LatexWorkbench from './LatexWorkbench';
 import QualityStudio,{QualitySlidePreview,QualityGraphic} from './QualityStudio';
@@ -46,6 +48,28 @@ function subscribeNarrowScreen(listener: () => void) {
   return () => media.removeEventListener("change", listener);
 }
 const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
+/** Outline rows follow the document structure: front matter, chapters, their sections, then back matter. */
+function outlineKind(title: string): "front" | "chapter" | "section" | "plain" | "back" {
+  const part = reportPart(title);
+  if (part === "abstract") return "front";
+  if (part !== "body") return "back";
+  const level = reportHeadingLevel(title);
+  return level === 1 ? "chapter" : level === 2 ? "section" : "plain";
+}
+const sectionWritten = (s: ReportSection) => writtenLines(s.body).length > 0 || !!s.blocks?.some(b => b.kind !== "paragraph" || writtenLines(b.text).length > 0);
+/** Preview lines: guidance left over in old drafts shows as a marked note, since it would still export as text. */
+function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintStart" | "hint"; text: string }[] {
+  const out: { kind: "p" | "blank" | "keywords" | "hintStart" | "hint"; text: string }[] = [];
+  if (!body.trim()) return out;
+  let hint = false;
+  for (const raw of body.split(/\r\n|\r|\n/)) {
+    const line = raw.trim();
+    if (/写作提示】/.test(line)) { hint = true; out.push({ kind: "hintStart", text: line.replace(/^【[^】]*写作提示】/, "") }); continue; }
+    if (hint) { if (!line) { hint = false; out.push({ kind: "blank", text: "" }); } else out.push({ kind: "hint", text: line }); continue; }
+    out.push(!line ? { kind: "blank", text: "" } : /^关键词[:：]/.test(line) ? { kind: "keywords", text: line.replace(/^关键词[:：]\s*/, "") } : { kind: "p", text: raw });
+  }
+  return out;
+}
 
 export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void}={}) {
   const hostedSession = useHostedSession();
@@ -60,6 +84,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [blankReportConfirm, setBlankReportConfirm] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
   const [storyboardGeneration, setStoryboardGeneration] = useState(0);
   const [identityFrozen, setIdentityFrozen] = useState(false);
   const identityTransition = useRef(false);
@@ -311,15 +336,16 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }
   function applyBlueprint(includeOptional: boolean) {
     try {
-      const before = current.current;
-      // Slide links keep pointing at the removed sections, so export flags them for re-review rather than hiding their origin.
-      const orphaned = before.slides.filter(s => s.reportLink && before.report.some(r => r.id === s.reportLink!.sectionId)).length;
-      const next = parseEditorContent({ ...before, report: blueprintSections({ includeOptional }) });
+      const before = current.current, replacement = blueprintSections({ includeOptional });
+      // Links to sections the skeleton lacks stay in place, so export flags those slides for re-review rather than hiding their origin.
+      const kept = new Set(replacement.map(s => s.id));
+      const orphaned = before.slides.filter(s => s.reportLink && !kept.has(s.reportLink.sectionId)).length;
+      const next = parseEditorContent({ ...before, report: replacement });
       if (!edit(next)) return;
       setMode("report"); setSectionId(next.report[0].id); setOutlineQuery(""); setBlankReportConfirm(false);
       setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);
       previewRef.current?.scrollTo({ top: 0 });
-      setMessage(`已替换为正大杯蓝图骨架，共 ${next.report.length} 节。按各节【写作提示】撰写，完成后删除提示；可撤销。${orphaned ? `${orphaned} 页 PPT 的关联章节已移除，导出前请重新选择依据。` : ""}`);
+      setMessage(`已替换为正大杯蓝图骨架，共 ${next.report.length} 节；选中任一节即可看到写作指引。可撤销。${orphaned ? `${orphaned} 页 PPT 关联的章节不在骨架中，导出前请重新选择依据。` : ""}`);
     } catch (e) { setMessage(e instanceof Error ? e.message : "未能替换。"); }
   }
   function patchSlide(patch: Partial<Slide>) { edit({ ...content, slides: content.slides.map(s => s.id === slide.id ? { ...s, ...patch } : s) }); }
@@ -484,6 +510,8 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }, [presenting]);
   const items = mode === "report" ? content.report : content.slides;
   const itemLimit = mode === "report" ? EDITOR_LIMITS.sections : EDITOR_LIMITS.slides;
+  const navigate = localOnly && !projectBinding ? (module: BlueprintModule) => { window.location.hash = module; } : undefined;
+  const guide = mode === "report" ? matchBlueprintNode(section.title) : null;
   const selectedId = mode === "report" ? section.id : slide.id;
   const selectedIndex = items.findIndex(s => s.id === selectedId);
   const statusText = versionBusy ? "正在保存命名版本…" : phase === "loading" ? "正在读取草稿…" : phase === "saving" ? "正在保存…" : phase === "conflict" ? "版本冲突 · 已暂停保存" : phase === "error" ? "未保存 · 请重试" : dirty ? "有修改 · 即将保存" : activeDraftId ? `已保存 ${saveTime}` : "模板 · 编辑后自动保存";
@@ -539,7 +567,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
     {mode!=='slides'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
-    {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={localOnly&&!projectBinding?module=>{window.location.hash=module;}:undefined} onOpenFindings={()=>setQualityOpen(true)}/>}
+    {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding?.onSave} disabled={locked}/></div>
     <div hidden={mode==='latex'||qualityOpen}>
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
@@ -557,7 +585,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       <aside className={styles.outline} aria-label={mode === "report" ? "报告目录" : "幻灯片列表"}>
         <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / {itemLimit}</span></div>
         <input className={styles.outlineSearch} aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={e => setOutlineQuery(e.target.value)}/>
-        <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => mode === "report" ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span><span>{item.title || "未命名"}</span></span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>)}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
+        <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => { const report = mode === "report", written = report && sectionWritten(item as ReportSection); return <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} data-kind={report ? outlineKind(item.title) : undefined} data-written={report ? String(written) : undefined} title={report ? item.title || "未命名" : undefined} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => report ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}>{report ? <span className={styles.statusDot} aria-hidden="true"/> : <span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>}<span className={styles.itemTitle}>{item.title || "未命名"}</span>{report && <span className={styles.srOnly}>{written ? "（已撰写）" : "（待撰写）"}</span>}</span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>; })}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
         <button type="button" className={styles.addItem} disabled={items.length >= itemLimit || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
       </aside>
       <fieldset className={styles.fields} disabled={phase === "loading" || versionBusy}>
@@ -565,7 +593,8 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label="向上移动">↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label="向下移动">↓</button><button type="button" disabled={items.length >= itemLimit} onClick={duplicateItem}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem}>移除</button></div>
         {mode === "report" ? <>
           <label>章节标题<input maxLength={150} value={section.title} onChange={e => patchSection({ title: e.target.value })}/></label>
-          <label>正文<textarea className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder="写下本章内容，每次换行形成一个段落。"/></label>
+          {guide && <BlueprintGuide node={guide} written={section.body.replace(/\s/g, "").length} open={guideOpen} onToggle={setGuideOpen} onNavigate={navigate}/>}
+          <label>正文<textarea className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder={guide ? (guide.kind === "chapter" ? "本章导语（可选），一两句说明本章回答什么问题。" : "按上方写作指引撰写本节，每次换行形成一个段落。") : "写下本章内容，每次换行形成一个段落。"}/></label>
           <span className={styles.counter}>{section.body.length.toLocaleString()} / 12,000 字</span>
           <label>来源与说明<textarea rows={3} maxLength={1500} value={section.source} onChange={e => patchSection({ source: e.target.value })} placeholder="文献、报告页码、访谈编号或尚待核实的依据"/></label>
           <details className={styles.coverSettings}><summary>封面设置</summary><label>报告副标题<input maxLength={240} value={content.subtitle} onChange={e => edit({ ...content, subtitle: e.target.value })}/></label></details>
@@ -585,7 +614,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       <div className={styles.previewPane}>
         <div className={styles.previewHeading}><strong>实时预览</strong><span>{mode === "report" ? "正文连续预览 · 导出为 A4" : "16:9 · 原生文字可编辑"}</span></div>
         <div className={styles.previewScroll} ref={previewRef} tabIndex={0} role="region" aria-label="实时预览（可滚动）">
-          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => <section key={s.id} data-report-section={s.id} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{s.body.split("\n").map((line, i) => <p key={i}>{line || "\u00A0"}</p>)}{s.blocks?.map(block=><div key={block.id}><p>{block.text}</p>{["chart","table"].includes(block.kind)&&<QualityGraphic surface="report" quality={content.quality} object={makeSlideObject(block.kind as "chart"|"table",{evidenceId:block.evidenceId,valueColumn:block.valueColumn})}/>}</div>)}{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>)}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality}/>}
+          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => { const kind = outlineKind(s.title), empty = kind !== "chapter" && !sectionWritten(s); return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === "blank" ? <p key={i} className={styles.blank} aria-hidden="true"/> : line.kind === "keywords" ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p> : <p key={i} className={line.kind === "hintStart" ? styles.hintStart : line.kind === "hint" ? styles.hintLine : undefined}>{line.text}</p>)}{s.blocks?.map(block=><div key={block.id}><p>{block.text}</p>{["chart","table"].includes(block.kind)&&<QualityGraphic surface="report" quality={content.quality} object={makeSlideObject(block.kind as "chart"|"table",{evidenceId:block.evidenceId,valueColumn:block.valueColumn})}/>}</div>)}{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>; })}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality}/>}
         </div>
         <div className={styles.previewFoot}><span>{mode === "report" ? `${content.report.reduce((n, s) => n + s.body.length, 0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span><span>预览为版式参考 · 导出后复核分页与字体</span></div>
       </div>

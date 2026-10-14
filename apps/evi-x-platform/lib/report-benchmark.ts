@@ -132,9 +132,12 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     [...missingCore.map(insert), ...(analysisChapters.length < 2 ? ['sample', 'drivers', 'diagnosis'].filter(id => !has(id)).slice(0, 2 - analysisChapters.length).map(insert) : [])]);
   const bodyChars = prose.join('').length;
   add('length', 'structure', '正文篇幅', bodyChars / BENCHMARK_TARGETS.bodyChars, `正文论述约 ${thousands(bodyChars)} 字，满分线 ${thousands(BENCHMARK_TARGETS.bodyChars)} 字。`);
-  const hinted = content.report.filter(s => HINT.test(s.body) || (s.blocks ?? []).some(b => HINT.test(b.text)));
-  add('hints', 'structure', '写作提示已替换', hinted.length ? Math.max(0, 1 - hinted.length / content.report.length) * 0.9 : 1,
-    hinted.length ? `${hinted.length} 节仍留有【写作提示】，导出前请改写或删除，首个是「${hinted[0].title || '未命名章节'}」。` : '没有残留的写作提示。');
+  // Chapter headings may stand alone; every other section needs written text or an evidence block.
+  const writable = sections.filter(s => !(s.part === 'body' && reportHeadingLevel(s.section.title) === 1));
+  const hinted = new Set(content.report.filter(s => HINT.test(s.body) || (s.blocks ?? []).some(b => HINT.test(b.text))).map(s => s.id));
+  const unwritten = writable.filter(s => hinted.has(s.section.id) || (!s.lines.length && !(s.section.blocks ?? []).some(b => b.kind !== 'paragraph'))).map(s => s.section);
+  add('unwritten', 'structure', '各节均已撰写', unwritten.length ? Math.max(0, 1 - unwritten.length / Math.max(1, writable.length)) * 0.9 : 1,
+    unwritten.length ? `${unwritten.length} 节尚未撰写${hinted.size ? `（其中 ${hinted.size} 节仍是写作提示）` : ''}，首个是「${unwritten[0].title || '未命名章节'}」。` : '各节都已有正文。');
   const referenceEntries = sections.filter(s => s.part === 'references').flatMap(s => s.lines);
   add('references', 'structure', '参考文献数量', referenceEntries.length / BENCHMARK_TARGETS.references,
     `参考文献 ${referenceEntries.length} 条，满分线 ${BENCHMARK_TARGETS.references} 条。`, fixIfMissing('references'));
