@@ -17,7 +17,7 @@ export const FIGURE_WIDTH = 960;
 const FONT = 'Times New Roman, SimSun, Songti SC, serif';
 const INK = '#1F2329', AXIS = '#3A4049', GRID = '#E3E6EA';
 
-export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box';
+export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box' | 'coefficient';
 export type FigurePlan = { kind: FigureKind; height: number; option: EChartsOption };
 
 const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -40,11 +40,16 @@ const luminance = (hex: string) => {
 export const onFill = (fill: string) => luminance(fill) > 0.21 ? INK : '#FFFFFF';
 
 const numeric = (v: string | number | null): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
+const num = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
 const width = (s: string) => [...s].reduce((w, c) => w + (/[⺀-￿]/.test(c) ? 2 : 1), 0);
 const isPercent = (header: string) => /%|％|百分/.test(header);
 /** Axis titles in report style: "有效样本占比 (%)" → "占比（%）". */
 const axisName = (header: string) => header.replace(/\s*[（(]\s*[%％]\s*[)）]/u, '（%）').replace(/^有效样本占比/u, '占比');
-const format = (v: number, percent: boolean, integer: boolean) => percent ? `${v.toFixed(1)}%` : integer ? String(Math.round(v)) : v.toFixed(2);
+/** Negative numbers take a true minus sign, as in the text. */
+const minus = (s: string) => s.replace(/^-(?=\d)/, '−');
+const format = (v: number, percent: boolean, integer: boolean) => minus(percent ? `${v.toFixed(1)}%` : integer ? String(Math.round(v)) : v.toFixed(2));
+// Axis ticks without thousands commas (four-digit numbers stand unseparated) and free of binary noise such as 0.30000000000000004.
+const tickLabel = (v: number) => minus(String(Number(v.toPrecision(12))));
 const clamp = (v: number, low: number, high: number) => Math.min(high, Math.max(low, Math.round(v)));
 const rowsHeight = (rows: number, perRow: number, extra: number) => clamp(extra + perRow * rows, 300, 760);
 
@@ -56,7 +61,7 @@ const legend = { top: 0, left: 'center', textStyle: small, itemWidth: 18, itemHe
 const valueAxis = (name: string, extra: Record<string, unknown> = {}) => ({
   type: 'value' as const, name, nameTextStyle: { ...small, padding: [0, 0, 4, 0] },
   axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: true, lineStyle: { color: AXIS } },
-  axisLabel: small, splitLine: { show: true, lineStyle: { color: GRID, type: 'dashed' as const } }, ...extra,
+  axisLabel: { ...small, formatter: tickLabel }, splitLine: { show: true, lineStyle: { color: GRID, type: 'dashed' as const } }, ...extra,
 });
 // Sample sizes in labels read "（n=97）" with an italic n, as statistical symbols are set in print.
 const italicN = { formatter: (v: string) => v.replace(/（n=/gu, '（{n|n}='), rich: { n: { ...small, fontStyle: 'italic' as const } } };
@@ -162,17 +167,49 @@ function heatmap(c: Cells, accent: string): FigurePlan {
   } };
 }
 
-/** Counts of a crosstab as grouped bars, one shade per column category. */
-function grouped(c: Cells, accent: string): FigurePlan {
+/** Counts (or expected counts) of a crosstab as grouped bars, one shade per column category. */
+function grouped(c: Cells, accent: string, column: number, header: string): FigurePlan {
   const colors = c.colsOrdinal ? accentScale(accent, c.cols.length).reverse() : accentScale(accent, c.cols.length);
+  const integer = c.rows.every(row => c.cols.every(col => Number.isInteger(cell(c, row, col, column))));
   return { kind: 'grouped', height: 480, option: {
     ...base(), color: colors, legend,
     grid: grid({ top: 72 }),
-    xAxis: categoryAxis(c.rows, false), yAxis: valueAxis('频数'),
+    xAxis: categoryAxis(c.rows, false), yAxis: valueAxis(axisName(header)),
     series: c.cols.map((col, j) => ({
-      type: 'bar' as const, name: col, barMaxWidth: 30, data: c.rows.map(row => cell(c, row, col, 2)), itemStyle: { color: colors[j] },
-      label: { show: c.rows.length * c.cols.length <= 24, position: 'top' as const, ...small, fontSize: 16, formatter: (p: Label) => String(p.value) },
+      type: 'bar' as const, name: col, barMaxWidth: 30, data: c.rows.map(row => cell(c, row, col, column)), itemStyle: { color: colors[j] },
+      // Whole counts fit above up to 24 bars; decimals (expected counts) only when the bars are few.
+      label: { show: c.rows.length * c.cols.length <= (integer ? 24 : 12), position: 'top' as const, ...small, fontSize: 16, formatter: (p: Label) => integer ? format(Number(p.value), false, true) : minus(Number(p.value).toFixed(1)) },
     })),
+  } };
+}
+
+/** A correlation coefficient on its −1…1 scale: the estimate, its 95 % interval when known, and the zero line. */
+function coefficient(r: ResultSnapshot, accent: string): FigurePlan {
+  const rank = r.method === 'spearman', get = (label: string) => num(r.metrics.find(m => m.label === label)?.value);
+  const value = get(rank ? 'Spearman ρ' : 'Pearson r'), lo = get('95% CI 下限'), hi = get('95% CI 上限');
+  if (value === null) throw Error(`“${r.title}”的相关系数不定义，无法作图。`);
+  const symbol = rank ? 'ρ' : 'r', interval = lo !== null && hi !== null;
+  const marks: CustomSeriesOption = {
+    type: 'custom', silent: true, data: [[value, 0]],
+    renderItem: (params, api) => {
+      const area = (params as unknown as { coordSys: { x: number; y: number; width: number; height: number } }).coordSys;
+      const zero = api.coord([0, 0]), point = api.coord([value, 0]), style = { stroke: accent, lineWidth: 3 };
+      const children: object[] = [{ type: 'line', shape: { x1: zero[0], y1: area.y, x2: zero[0], y2: area.y + area.height }, style: { stroke: AXIS, lineWidth: 1.5, lineDash: [6, 5] } }];
+      if (interval) {
+        const a = api.coord([lo!, 0]), b = api.coord([hi!, 0]);
+        children.push({ type: 'line', shape: { x1: a[0], y1: a[1], x2: b[0], y2: b[1] }, style }, { type: 'line', shape: { x1: a[0], y1: a[1] - 10, x2: a[0], y2: a[1] + 10 }, style }, { type: 'line', shape: { x1: b[0], y1: b[1] - 10, x2: b[0], y2: b[1] + 10 }, style });
+      }
+      children.push({ type: 'circle', shape: { cx: point[0], cy: point[1], r: 9 }, style: { fill: accent, stroke: '#FFFFFF', lineWidth: 2 } });
+      children.push({ type: 'text', x: point[0], y: point[1] - 24, style: { text: `{i|${symbol}} = ${minus(value.toFixed(3))}`, rich: { i: { fontStyle: 'italic', fontSize: 22, fontFamily: FONT, fill: INK } }, fill: INK, fontSize: 22, fontFamily: FONT, align: 'center', verticalAlign: 'bottom' } });
+      if (interval) children.push({ type: 'text', x: point[0], y: point[1] + 24, style: { text: `95% 置信区间 [${minus(lo!.toFixed(3))}, ${minus(hi!.toFixed(3))}]`, fill: INK, fontSize: 18, fontFamily: FONT, align: 'center', verticalAlign: 'top' } });
+      return { type: 'group', children } as unknown as ReturnType<NonNullable<CustomSeriesOption['renderItem']>>;
+    },
+  };
+  return { kind: 'coefficient', height: 260, option: {
+    ...base(), grid: grid({ top: 24, bottom: 24, left: 48, right: 48 }),
+    xAxis: valueAxis(rank ? 'Spearman 秩相关系数' : 'Pearson 相关系数', { ...lowerTitle, min: -1, max: 1, interval: 0.5 }),
+    yAxis: { type: 'category', data: [''], axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } },
+    series: [marks],
   } };
 }
 
@@ -210,7 +247,7 @@ function box(r: ResultSnapshot, accent: string): FigurePlan | null {
   if (five.some(v => v === null)) return null;
   const [min, q1, median, q3, max] = five as number[];
   const integer = five.every(v => Number.isInteger(v));
-  const show = (v: number) => integer && Number.isInteger(v) ? String(v) : v.toFixed(2);
+  const show = (v: number) => minus(integer && Number.isInteger(v) ? String(v) : v.toFixed(2));
   // Two staggered rows above the box keep neighbouring numbers apart when quartiles lie close together.
   const marks: [string, number, number][] = [['最小值', min, 0], ['下四分位数', q1, 1], ['中位数', median, 0], ['上四分位数', q3, 1], ['最大值', max, 0]];
   const labels: CustomSeriesOption = {
@@ -237,12 +274,14 @@ function box(r: ResultSnapshot, accent: string): FigurePlan | null {
 /** The figure for a result and the value column the author picked. */
 export function figurePlan(r: ResultSnapshot, column: number, accent: string): FigurePlan {
   if (!/^#[0-9A-Fa-f]{6}$/.test(accent)) throw Error('图表颜色无效。');
-  if (['pearson', 'spearman', 'sampling-frame'].includes(r.method)) throw Error(`“${r.title}”不适合作图：相关系数请在正文中报告，抽样框请用表格。`);
   if (column < 1 || column >= r.headers.length) throw Error('请选择有效数值列。');
   if (!r.rows.length) throw Error(`图“${r.title}”没有数据行，请重新计算或改用表格。`);
+  if (r.method === 'pearson' || r.method === 'spearman') return coefficient(r, accent);
   if (r.method === 'crosstab' && r.headers[2] === '频数') {
     const cells = crosstabCells(r);
-    if (cells) return column === 2 ? grouped(cells, accent) : cells.cols.length > 6 ? heatmap(cells, accent) : stacked(cells, accent);
+    // Counts and expected counts are drawn as they are; the row-share column (and the category column of older
+    // blocks, which holds no numbers) shows row shares.
+    if (cells) return column === 2 || column === 4 ? grouped(cells, accent, column, r.headers[column]) : cells.cols.length > 6 ? heatmap(cells, accent) : stacked(cells, accent);
   }
   if (r.method === 'numeric') { const plan = box(r, accent); if (plan) return plan; throw Error(`“${r.title}”缺少五数概括，无法作箱线图，请改用表格。`); }
   const values = r.rows.map(row => numeric(row[column]));

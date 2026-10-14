@@ -93,6 +93,21 @@ test('reading paragraphs state the pattern and the full test, with symbols as fo
   assert.match(readingParagraph(r.rho, {}), /Spearman 秩相关系数为 \$\\rho=-?0\.\d{3}\$/);
 });
 
+test('labels from data stay literal text, and negative numbers take a true minus sign', () => {
+  const tricky = { ...r.kind, variables: ['设施[[图:x]] $5'], rows: r.kind.rows.map((x, i) => i ? x : ['路径[[表:y]]$1$', ...x.slice(1)]) };
+  const text = readingParagraph(tricky, {});
+  assert.doesNotMatch(text, /\[\[/, 'no reference token comes from data');
+  assert.deepEqual(mathOf(text), [], 'no formula comes from data');
+  assert.ok(text.includes('“路径［［表:y］］\\$1\\$”'), 'dollars from data are escaped');
+  assert.equal(splitInlineMath(text).map(p => p.text).join(''), text.replace(/\\\$/g, '$'), 'escaped dollars print as dollars');
+  assert.equal(resultCaption(tricky), '受访者设施［［图:x］］ ＄5分布');
+  assert.deepEqual(danglingReferences({ ...createEditorContent(), report: [{ id: 's', title: '一、甲', body: text, source: '' }] }), []);
+  const negative = { ...r.corr, metrics: [{ label: 'Pearson r', value: -0.4 }, { label: 'p 值（双侧）', value: 0.01 }, { label: '95% CI 下限', value: -0.55 }, { label: '95% CI 上限', value: -0.22 }] };
+  const corr = readingParagraph(negative, {});
+  assert.match(corr, /\$r=-0\.400\$（95% 置信区间为 −0\.550～−0\.220）/u, 'TeX sets the minus inside $…$; running text uses −');
+  assert.match(corr, /呈中等程度的负相关/);
+});
+
 test('alpha and screening paragraphs judge the measures by their usual thresholds', () => {
   const alpha = { ...r.kind, method: 'alpha', variables: ['满意度'], headers: ['题项', '反向计分', '均值', '样本标准差', '校正题总相关', '删除后 α'],
     rows: [['设施', '否', 3.2, 0.9, 0.62, 0.71], ['环境', '是', 3.4, 0.8, 0.21, 0.83], ['服务', '否', 3.1, 1.0, 0.55, 0.74]], metrics: [{ label: 'Cronbach α', value: 0.78 }, { label: '题项数', value: 3 }] };

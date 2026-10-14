@@ -14,14 +14,23 @@ export type ResultRefs = { figure?: string; table?: string };
 export type MethodIntro = { text: string; formulas: string[]; where: string };
 
 const num = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
-const pct = (v: number) => `${v.toFixed(1)}%`;
-const stat = (v: number) => v.toFixed(2);
-const coef = (v: number) => v.toFixed(3);
+// Running text sets negative numbers with a true minus sign; inside $…$ TeX does that itself.
+const sign = (s: string) => s.replace(/^-(?=\d)/, '−');
+const pct = (v: number) => `${sign(v.toFixed(1))}%`;
+const stat = (v: number) => sign(v.toFixed(2));
+const coef = (v: number) => sign(v.toFixed(3));
+const plain = (v: number) => sign(Number.isInteger(v) ? String(v) : v.toFixed(2));
+const tex2 = (v: number) => v.toFixed(2), tex3 = (v: number) => v.toFixed(3);
 const dof = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
-const plain = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
 /** A p value as it is set inside an inline formula. */
 const pMath = (p: number) => p < 0.001 ? 'p<0.001' : `p=${p.toFixed(3)}`;
-const quote = (s: string) => `“${s}”`;
+/**
+ * Labels come from survey data and question wording, so they are copied as literal text: a "[[图:…]]" or "$…$"
+ * inside a label must not turn into a reference or a formula.
+ */
+const literal = (s: string) => s.replace(/\[\[/g, '［［').replace(/\]\]/g, '］］').replace(/\$/g, '\\$');
+const captionText = (s: string) => s.replace(/\[\[/g, '［［').replace(/\]\]/g, '］］').replace(/\$/g, '＄');
+const quote = (s: string) => `“${literal(s)}”`;
 const metric = (r: ResultSnapshot, label: string | RegExp) =>
   num(r.metrics.find(m => typeof label === 'string' ? m.label === label : label.test(m.label))?.value);
 const row = (r: ResultSnapshot, label: string, column = 1) => num(r.rows.find(x => x[0] === label)?.[column]);
@@ -36,20 +45,22 @@ export function variableLabel(name: string): string {
     .replace(/^您的/u, '');
   return label || name.trim();
 }
-const variable = (r: ResultSnapshot, i: number) => r.variables?.[i] ? variableLabel(r.variables[i]) : '';
+/** A variable name for running text (literal; see `literal`). */
+const variable = (r: ResultSnapshot, i: number) => r.variables?.[i] ? literal(variableLabel(r.variables[i])) : '';
 
 /** A caption in report style, from the analysed variables; the registered title when they are unknown. */
 export function resultCaption(r: ResultSnapshot): string {
-  const [a, b] = [variable(r, 0), variable(r, 1)];
+  const [a, b] = [0, 1].map(i => r.variables?.[i] ? captionText(variableLabel(r.variables[i])) : '');
+  const title = captionText(r.title);
   switch (r.method) {
-    case 'frequency': return a ? `受访者${a}分布` : r.title;
-    case 'crosstab': return a && b ? `不同${a}受访者的${b}分布` : r.title;
-    case 'groups': return a && b ? `不同${a}受访者的${b}比较` : r.title;
-    case 'numeric': return a ? `${a}的分布` : r.title;
-    case 'pearson': case 'spearman': return a && b ? `${a}与${b}的相关分析` : r.title;
-    case 'alpha': return a ? `${a}量表信度分析` : r.title;
+    case 'frequency': return a ? `受访者${a}分布` : title;
+    case 'crosstab': return a && b ? `不同${a}受访者的${b}分布` : title;
+    case 'groups': return a && b ? `不同${a}受访者的${b}比较` : title;
+    case 'numeric': return a ? `${a}的分布` : title;
+    case 'pearson': case 'spearman': return a && b ? `${a}与${b}的相关分析` : title;
+    case 'alpha': return a ? `${a}量表信度分析` : title;
     case 'quality-control': return '问卷有效性筛查';
-    default: return r.title;
+    default: return title;
   }
 }
 
@@ -82,7 +93,7 @@ function frequency(r: ResultSnapshot, refs: ResultRefs): string {
   const order = categoryOrder(labels);
   if (order.ordinal && labels.length <= 6) {
     const top = [...labels].sort((a, b) => share(b) - share(a))[0];
-    return `${base}${opening}${order.labels.map(l => `${l}占 ${pct(share(l))}`).join('，')}，以${quote(top)}为主。`;
+    return `${base}${opening}${order.labels.map(l => `${literal(l)}占 ${pct(share(l))}`).join('，')}，以${quote(top)}为主。`;
   }
   const sorted = [...labels].sort((a, b) => share(b) - share(a)), [top, second, third] = sorted, last = sorted.at(-1)!;
   const lo = row(r, top, 3), hi = row(r, top, 4);
@@ -111,10 +122,10 @@ function crosstab(r: ResultSnapshot, refs: ResultRefs): string {
   const conclusion = (p: number) => significance(p,
     `${a}与${b}之间存在统计学意义上的关联，关联强度${strengthV(v)}；这一关联不能直接解释为因果关系。`,
     `现有样本不足以表明${a}与${b}之间存在关联。`);
-  if (fisher !== null) return `${opening}。由于存在期望频数小于 5 的单元格，采用 Fisher 精确检验，$${pMath(fisher)}$，Cramér $V=${coef(v)}$${conclusion(fisher)}`;
-  if (asymptotic === null) return `${opening}。Pearson $\\chi^2$ 检验结果为 $\\chi^2(${dof(df)})=${stat(chi)}$，Cramér $V=${coef(v)}$。`;
+  if (fisher !== null) return `${opening}。由于存在期望频数小于 5 的单元格，采用 Fisher 精确检验，$${pMath(fisher)}$，Cramér $V=${tex3(v)}$${conclusion(fisher)}`;
+  if (asymptotic === null) return `${opening}。Pearson $\\chi^2$ 检验结果为 $\\chi^2(${dof(df)})=${tex2(chi)}$，Cramér $V=${tex3(v)}$。`;
   const caveat = sparse > 0 ? `（有 ${sparse} 个单元格的期望频数小于 5，检验结果仅供参考）` : '';
-  return `${opening}。Pearson $\\chi^2$ 检验结果为 $\\chi^2(${dof(df)})=${stat(chi)}$，$${pMath(asymptotic)}$，Cramér $V=${coef(v)}$${caveat}${conclusion(asymptotic)}`;
+  return `${opening}。Pearson $\\chi^2$ 检验结果为 $\\chi^2(${dof(df)})=${tex2(chi)}$，$${pMath(asymptotic)}$，Cramér $V=${tex3(v)}$${caveat}${conclusion(asymptotic)}`;
 }
 
 function groups(r: ResultSnapshot, refs: ResultRefs): string {
@@ -133,13 +144,13 @@ function groups(r: ResultSnapshot, refs: ResultRefs): string {
   const conclusion = significance(p, `${two ? '两组' : '各组'}${b}均值的差异具有统计学意义`, `现有样本不足以表明${two ? '两组' : '各组'}${b}均值存在差异`);
   if (two) {
     const t = metric(r, 'Welch t'), df = metric(r, '自由度'), g = metric(r, 'Hedges g');
-    const test = t !== null && df !== null ? `$t(${dof(df)})=${stat(Math.abs(t))}$，$${pMath(p)}$` : `$${pMath(p)}$`;
-    const effect = g !== null ? `，Hedges $g=${stat(Math.abs(g))}$，效应量${effectG(g)}` : '';
+    const test = t !== null && df !== null ? `$t(${dof(df)})=${tex2(Math.abs(t))}$，$${pMath(p)}$` : `$${pMath(p)}$`;
+    const effect = g !== null ? `，Hedges $g=${tex2(Math.abs(g))}$，效应量${effectG(g)}` : '';
     return `${opening}。Welch $t$ 检验结果为 ${test}${effect}${conclusion}。`;
   }
   const f = metric(r, 'Welch F'), df1 = metric(r, '分子自由度'), df2 = metric(r, '分母自由度'), eta = metric(r, /^η²/);
-  const test = f !== null && df1 !== null && df2 !== null ? `$F(${dof(df1)},\\,${dof(df2)})=${stat(f)}$，$${pMath(p)}$` : `$${pMath(p)}$`;
-  const effect = eta !== null ? `，$\\eta^2=${coef(eta)}$，效应量${effectEta(eta)}` : '';
+  const test = f !== null && df1 !== null && df2 !== null ? `$F(${dof(df1)},\\,${dof(df2)})=${tex2(f)}$，$${pMath(p)}$` : `$${pMath(p)}$`;
+  const effect = eta !== null ? `，$\\eta^2=${tex3(eta)}$，效应量${effectEta(eta)}` : '';
   return `${opening}。Welch 方差分析结果为 ${test}${effect}${conclusion}${p < 0.05 ? '；组间差异只说明分组与得分相关，不能据此推断因果' : ''}。`;
 }
 
@@ -163,7 +174,7 @@ function correlation(r: ResultSnapshot, refs: ResultRefs): string {
   const name = rank ? 'Spearman 秩相关系数' : 'Pearson 相关系数', symbol = rank ? '\\rho' : 'r';
   if (value === null) return `${lead(refs)}${a}与${b}的有效配对不足或至少一个变量没有变异，${name}不定义。`;
   const interval = lo !== null && hi !== null ? `（95% 置信区间为 ${range(lo, hi, coef)}）` : '';
-  const head = `${lead(refs)}在 ${r.n} 对有效配对中，${a}与${b}的 ${name}为 $${symbol}=${coef(value)}$${interval}`;
+  const head = `${lead(refs)}在 ${r.n} 对有效配对中，${a}与${b}的 ${name}为 $${symbol}=${tex3(value)}$${interval}`;
   if (p === null) return `${head}。`;
   const kind = rank ? '单调' : '线性';
   return `${head}，$${pMath(p)}$${significance(p, `二者呈${strengthR(value)}${value > 0 ? '正' : '负'}相关`, `现有样本不足以表明二者存在${kind}相关`)}。相关系数只描述关联，不能据此推断因果。`;
@@ -187,7 +198,7 @@ function qualityControl(r: ResultSnapshot, refs: ResultRefs): string {
   const cited = refs.table ? referenceToken('table', refs.table) : refs.figure ? referenceToken('figure', refs.figure) : '';
   const flagged = r.rows.map(x => ({ rule: String(x[0]), count: num(x[2]) ?? 0 })).filter(x => x.count > 0);
   const screening = flagged.length
-    ? `${flagged.map(x => `${x.rule} ${x.count} 份`).join('，')}${flagged.length > 1 ? '（同一份问卷可能触发多条规则）' : ''}`
+    ? `${flagged.map(x => `${literal(x.rule)} ${x.count} 份`).join('，')}${flagged.length > 1 ? '（同一份问卷可能触发多条规则）' : ''}`
     : '所有问卷均未触发剔除规则';
   const rate = r.total > 0 ? r.n / r.total * 100 : 0;
   return `本次调查共回收问卷 ${r.total} 份。按${cited || '预先设定的'}规则逐份筛查：${screening}。剔除后得到有效问卷 ${r.n} 份，问卷有效率为 ${pct(rate)}。`;
@@ -203,7 +214,7 @@ export function readingParagraph(r: ResultSnapshot, refs: ResultRefs = {}): stri
     case 'pearson': case 'spearman': return correlation(r, refs);
     case 'alpha': return alpha(r, refs);
     case 'quality-control': return qualityControl(r, refs);
-    default: return `${lead(refs)}${r.title}的有效样本为 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}。`;
+    default: return `${lead(refs)}${literal(r.title)}的有效样本为 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}。`;
   }
 }
 
@@ -215,12 +226,12 @@ export function methodIntro(r: ResultSnapshot): MethodIntro | null {
   switch (r.method) {
     case 'crosstab': return {
       text: '两个分类变量之间是否存在关联，采用 Pearson $\\chi^2$ 独立性检验判断，并以 Cramér $V$ 系数衡量关联强度；2×2 表中有期望频数小于 5 的单元格时，改用 Fisher 精确检验。检验统计量与关联系数分别为',
-      formulas: ['\\chi^2=\\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}},\\qquad E_{ij}=\\frac{n_{i\\cdot}\\,n_{\\cdot j}}{n}', 'V=\\sqrt{\\frac{\\chi^2}{n\\,\\min(r-1,\\,c-1)}}'],
-      where: '式中，$O_{ij}$ 与 $E_{ij}$ 分别为第 $i$ 行第 $j$ 列的观测频数与期望频数，$n_{i\\cdot}$、$n_{\\cdot j}$ 为行、列合计，$r$、$c$ 为行、列类别数，$n$ 为有效样本量。',
+      formulas: ['\\chi^2=\\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}}', 'V=\\sqrt{\\frac{\\chi^2}{n\\,\\min(r-1,\\,c-1)}}'],
+      where: '式中，$O_{ij}$ 为第 $i$ 行第 $j$ 列的观测频数，$E_{ij}=n_{i\\cdot}n_{\\cdot j}/n$ 为相应的期望频数，$n_{i\\cdot}$、$n_{\\cdot j}$ 为行、列合计，$r$、$c$ 为行、列类别数，$n$ 为有效样本量。',
     };
     case 'groups': return r.rows.filter(x => num(x[2]) !== null).length === 2 ? {
       text: '两组均值的比较不假定两组方差相等，采用 Welch $t$ 检验，统计量及其自由度为',
-      formulas: ['t=\\frac{\\bar{x}_1-\\bar{x}_2}{\\sqrt{s_1^2/n_1+s_2^2/n_2}},\\qquad \\nu=\\frac{\\left(s_1^2/n_1+s_2^2/n_2\\right)^2}{\\frac{(s_1^2/n_1)^2}{n_1-1}+\\frac{(s_2^2/n_2)^2}{n_2-1}}'],
+      formulas: ['t=\\frac{\\bar{x}_1-\\bar{x}_2}{\\sqrt{s_1^2/n_1+s_2^2/n_2}}', '\\nu=\\frac{\\left(s_1^2/n_1+s_2^2/n_2\\right)^2}{\\frac{(s_1^2/n_1)^2}{n_1-1}+\\frac{(s_2^2/n_2)^2}{n_2-1}}'],
       where: '式中，$\\bar{x}_k$、$s_k^2$ 与 $n_k$ 分别为第 $k$ 组的均值、方差与样本量；效应量采用 Hedges $g$。',
     } : {
       text: '多组均值的比较不假定各组方差相等，采用 Welch 方差分析，其统计量为',

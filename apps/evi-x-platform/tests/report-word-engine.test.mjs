@@ -123,7 +123,16 @@ test('figures pick the type that fits the result and size their height to it', a
   assert.equal(groups.option.series.at(-1).type, 'custom', 'group means carry standard-deviation whiskers');
   const numeric = await snapshotRecipe(runRecipe(table, { id: 'num', method: 'numeric', x: 3, y: null, question: 'num' }, []), { ...source, title: 'num', variables: ['满意度'] }, 'num');
   assert.equal(figurePlan(numeric, 1, '#0F766E').kind, 'box', 'one numeric variable is a five-number box');
-  assert.throws(() => figurePlan({ ...results.freq, method: 'pearson' }, 1, '#0F766E'), /不适合作图/);
+  const pairs = parseSurveyCsv(['甲,乙', ...Array.from({ length: 30 }, (_, i) => `${i % 7},${(i * 3) % 11}`)].join('\n'));
+  const pearson = await snapshotRecipe(runRecipe(pairs, { id: 'r', method: 'pearson', x: 0, y: 1, question: 'r' }, []), { ...source, title: 'r' }, 'r');
+  assert.equal(figurePlan(pearson, 1, '#0F766E').kind, 'coefficient', 'a coefficient is drawn on its −1…1 scale, so older chart blocks still export');
+  assert.deepEqual([figurePlan(pearson, 1, '#0F766E').option.xAxis.min, figurePlan(pearson, 1, '#0F766E').option.xAxis.max], [-1, 1]);
+  assert.match(await figureSVG(pearson, 1, '#0F766E'), /95% 置信区间 \[/);
+  const expected = figurePlan(results.cross, 4, '#0F766E');
+  assert.equal(expected.kind, 'grouped', 'the expected-count column is drawn as it is, not as row shares');
+  assert.equal(expected.option.yAxis.name, '期望频数');
+  assert.equal(expected.option.series[0].data[0], results.cross.rows.find(r => r[0] === expected.option.xAxis.data[0] && r[1] === expected.option.series[0].name)[4]);
+  assert.equal(figurePlan(results.cross, 1, '#0F766E').kind, 'stacked', 'older blocks pointing at the category column show row shares');
   assert.throws(() => figurePlan({ ...results.freq, rows: [] }, 1, '#0F766E'), /没有数据行/);
   const heights = new Set(['cross', 'freq', 'groups'].map(id => figurePlan(results[id], id === 'freq' ? 1 : 2, '#0F766E').height));
   assert.ok(heights.size > 1, 'heights follow the content');
