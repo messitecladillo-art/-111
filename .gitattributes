@@ -32,3 +32,4 @@ corpus-source/topic-advisor/regions/source.json text eol=lf
 apps/evi-x-platform/content/topic-advisor/regions.catalog.json linguist-generated=true
 packages/evi-x-shared/fixtures/topic-region-v2.json text eol=lf
 packages/evi-x-shared/fixtures/topic-project-v2.json text eol=lf
+packages/evi-x-shared/fixtures/topic-questionnaire-transfer-v1.json text eol=lf linguist-generated=true
