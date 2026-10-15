@@ -222,7 +222,8 @@ export function readingParagraph(r: ResultSnapshot, refs: ResultRefs = {}): stri
     case 'alpha': return alpha(r, refs);
     case 'quality-control': return qualityControl(r, refs);
     // A sampling frame is part of the design, not a sample: it has units, not respondents.
-    case 'sampling-frame': return `${refs.table ? referenceToken('table', refs.table) : '下表'}列出了${literal(r.title.replace(/抽样框$/u, ''))}各阶段的抽样框与入样单位。`;
+    case 'sampling-frame': { const name = literal(r.title.replace(/抽样框$/u, ''));
+      return refs.table ? `${referenceToken('table', refs.table)}列出了${name}各阶段的抽样框与入样单位。` : `${name}采用分阶段抽样，各阶段的抽样框与入样单位须以表格列出。`; }
     default: return `${lead(refs)}${literal(r.title)}的有效样本为 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}。`;
   }
 }

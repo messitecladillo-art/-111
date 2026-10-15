@@ -77,6 +77,8 @@ test('the staged sampling design goes to the sampling section with frame tables 
   assert.deepEqual(placed.blocks.map(b => b.kind), ['table', 'paragraph']);
   assert.equal(placed.blocks[1].text, `[[表:${placed.blocks[0].id}]]列出了城区居民各阶段的抽样框与入样单位。`);
   assert.doesNotMatch(evidenceLabel(tables[0].result), /n=|有效样本/);
+  assert.throws(() => placeResult(applied.content, tables[0].result.id, { exhibits: [] }), /抽样框需要以表格呈现/);
+  assert.doesNotMatch(readingParagraph(tables[0].result, {}), /下表|\[\[/, 'without a table the text claims none');
 });
 
 test('names typed into the design stay literal text', async () => {

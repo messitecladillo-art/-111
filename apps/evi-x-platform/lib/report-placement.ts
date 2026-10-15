@@ -83,6 +83,8 @@ export function appendBlocks(content: EditorContent, sectionId: string, blocks: 
  */
 export function placeResult(content: EditorContent, resultId: string, options: { sectionId?: string; exhibits?: ExhibitKind[] } = {}): Placement {
   const r = resultFor(content.quality, resultId);
+  // A sampling frame is only legible as a table of its stages and units.
+  if (r.method === 'sampling-frame' && options.exhibits && !options.exhibits.includes('table')) throw Error('抽样框需要以表格呈现，请勾选“表”。');
   const { content: next, sectionId, created } = targetSection(content, suggestedNode(r), options.sectionId);
   const blocks: ReportBlock[] = [];
   // The method paragraph and its formulas appear once per report; later results of the same method rely on them.
