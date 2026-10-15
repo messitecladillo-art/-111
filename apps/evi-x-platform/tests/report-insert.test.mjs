@@ -119,6 +119,7 @@ test('a long group name shortens the slide caption instead of blocking the PPT e
   await assert.doesNotReject(buildPptx(content));
   assert.equal(oneLine('短标题', 5, 13), '短标题');
   assert.match(oneLine('很长'.repeat(40), 2, 13), /…$/);
+  assert.equal([...oneLine('😀'.repeat(40), 2, 13)].length, 11, 'an emoji counts as a full-width glyph: ten fit, then the ellipsis');
 });
 
 test('Word merges a frame table\'s parent units and keeps the three-line rules', async () => {

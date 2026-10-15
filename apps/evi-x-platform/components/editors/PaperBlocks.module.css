@@ -17,3 +17,4 @@
 .callout { padding: 6px 12px; text-indent: 0 !important; background: #f4f7f8; border-left: 3px solid #9fb6c0; }
 .broken { padding: 0 3px; border-radius: 3px; color: #b42318; background: #fde8e7; }
 .error { color: #b42318; font-size: 13px; text-indent: 0 !important; }
+.cite { font-size: 0.72em; line-height: 0; vertical-align: super; }

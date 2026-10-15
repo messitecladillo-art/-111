@@ -12,10 +12,12 @@ import styles from './PaperBlocks.module.css';
 type Labels = Map<string, BlockLabel>;
 const ACCENT: Record<EditorContent['accent'], string> = { teal: '#0F766E', blue: '#234E80', burgundy: '#8A3449' };
 
-/** Running text as the export prints it: references resolved, `$…$` typeset, broken references marked. */
-export function PaperText({ text, labels }: { text: string; labels: Labels }) {
-  return <>{referenceSegments(text, labels).map((segment, i) => segment.missing
-    ? <mark key={i} className={styles.broken} title="对应的图、表或公式已删除或类型不符，导出前请重新插入引用">{segment.text}</mark>
+type Citations = ReadonlyMap<string, number>;
+/** Running text as the export prints it: references resolved, citations as superscripts, `$…$` typeset, broken references marked. */
+export function PaperText({ text, labels, citations }: { text: string; labels: Labels; citations?: Citations }) {
+  return <>{referenceSegments(text, labels, citations).map((segment, i) => segment.missing
+    ? <mark key={i} className={styles.broken} title={segment.cite ? '对应的参考文献已删除，导出前请重新插入引用' : '对应的图、表或公式已删除或类型不符，导出前请重新插入引用'}>{segment.text}</mark>
+    : segment.cite ? <sup key={i} className={styles.cite}>{segment.text}</sup>
     : splitInlineMath(segment.text).map((part, j) => part.math ? <Tex key={`${i}-${j}`} tex={part.text}/> : <span key={`${i}-${j}`}>{part.text}</span>))}</>;
 }
 
@@ -52,13 +54,13 @@ function Table({ result }: { result: ResultSnapshot }) {
 }
 
 /** A section's content blocks laid out like the Word export: numbered captions, one source per result, one note per section. */
-export default function PaperBlocks({ section, content, labels }: { section: ReportSection; content: EditorContent; labels: Labels }) {
+export default function PaperBlocks({ section, content, labels, citations }: { section: ReportSection; content: EditorContent; labels: Labels; citations?: Citations }) {
   const blocks = section.blocks ?? [];
   if (!blocks.length) return null;
   const used: ResultSnapshot[] = [];
   const items = blocks.map((block, index) => {
     if (block.kind === 'formula') return <div key={block.id} className={styles.equation}><Formula tex={block.text || '\\text{（空公式）}'} number={blockLabel(labels, section.id, block.id)?.number} copyable={false} compact/></div>;
-    if (block.kind !== 'chart' && block.kind !== 'table') return <p key={block.id} className={block.kind === 'callout' ? styles.callout : undefined}><PaperText text={block.text} labels={labels}/></p>;
+    if (block.kind !== 'chart' && block.kind !== 'table') return <p key={block.id} className={block.kind === 'callout' ? styles.callout : undefined}><PaperText text={block.text} labels={labels} citations={citations}/></p>;
     let result: ResultSnapshot;
     try { result = resultFor(content.quality, block.evidenceId); } catch (error) { return <p key={block.id} className={styles.error}>{(error as Error).message}</p>; }
     if (!used.includes(result)) used.push(result);

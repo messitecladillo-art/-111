@@ -21,6 +21,13 @@ def v2():
     return value
 
 
+def reference(**fields):
+    entry = {'id': 'ref1', 'type': 'J', 'authors': ['张三', 'SMITH J'], 'title': '城市社区体育设施使用研究😀', 'source': '体育科学', 'publisher': '', 'place': '', 'year': '2023',
+             'volume': '43', 'issue': '5', 'pages': '12-20', 'edition': '', 'date': '', 'accessed': '', 'url': 'htt', 'doi': '', 'number': '', 'text': ''}
+    entry.update(fields)
+    return entry
+
+
 def bad_cases():
     cases=[]
     def add(name, change):
@@ -62,6 +69,13 @@ def bad_cases():
     add('blank variable',lambda v:v['quality']['results'][0].update(variables=[' ']))
     add('variables not a list',lambda v:v['quality']['results'][0].update(variables='渠道'))
     add('long variable',lambda v:v['quality']['results'][0].update(variables=['x'*161]))
+    add('reference unknown field',lambda v:v.update(references=[dict(reference(),extra=1)]))
+    add('reference missing field',lambda v:v.update(references=[{k:x for k,x in reference().items() if k!='doi'}]))
+    add('reference bad type',lambda v:v.update(references=[dict(reference(),type='toString')]))
+    add('reference duplicate id',lambda v:v.update(references=[reference(),reference()]))
+    add('reference multiline',lambda v:v.update(references=[dict(reference(),title='a\nb')]))
+    add('reference authors not list',lambda v:v.update(references=[dict(reference(),authors='张三')]))
+    add('reference too many',lambda v:v.update(references=[dict(reference(),id=f'r{i}') for i in range(201)]))
     return cases
 
 
@@ -82,6 +96,9 @@ def test_quality_fixture_positive_ts_python_preserves_old_versions_and_objects()
     stale=v2();stale['quality']['findings'][0]['confirmedHashes']['r1']='c'*64;fixtures.append(stale)
     for variables in (['渠道'],['年龄组','使用频次😀','c','d']):
         named=v2();named['quality']['results'][0]['variables']=variables;fixtures.append(named)
+    # A half-typed link is content, not structure: both sides keep it, the editor flags it.
+    for references in ([], [reference()], [reference(), reference(id='ref2', type='EB/OL', url='https://example.org/a', accessed='2024-10-01')]):
+        cited=content();cited['references']=references;fixtures.append(cited)
     for fixture,parsed in zip(fixtures,ts_parse(fixtures),strict=True):
         assert parsed['ok'] and report_content(fixture)==fixture and parsed['content']==fixture
 

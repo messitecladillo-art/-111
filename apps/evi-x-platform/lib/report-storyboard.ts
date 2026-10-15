@@ -1,6 +1,7 @@
 import type { EditorContent, ReportSection, Slide } from './editor-model.ts';
 import {findingSignature,verifyResearchQuality} from './research-quality.ts';
 import {referenceSegments,reportLabels,resolveReferences} from './report-numbering.ts';
+import {referenceNumbers} from './references.ts';
 import {splitInlineMath} from './inline-math.ts';
 /**
  * The slide text for an excerpt of a section. The excerpt may be copied from the editor (with [[图:…]] tokens)
@@ -8,13 +9,13 @@ import {splitInlineMath} from './inline-math.ts';
  * export does, and refuse inline formulas, which slides cannot typeset yet.
  */
 function slideText(excerpt:string,section:ReportSection,content:EditorContent,outside:string):string{
-  const labels=reportLabels(content.report),where=section.title||'未命名章节';
+  const labels=reportLabels(content.report),citations=referenceNumbers(content).numbers,where=section.title||'未命名章节';
   let text:string;
-  if(section.body.includes(excerpt))text=resolveReferences(excerpt,labels,where);
+  if(section.body.includes(excerpt))text=resolveReferences(excerpt,labels,where,citations);
   else{
     // Match against the preview text, remembering where broken references were rendered.
     let shown='';const broken:[number,number][]=[];
-    for(const segment of referenceSegments(section.body,labels)){const start=shown.length;shown+=segment.text;if(segment.missing)broken.push([start,shown.length]);}
+    for(const segment of referenceSegments(section.body,labels,citations)){const start=shown.length;shown+=segment.text;if(segment.missing)broken.push([start,shown.length]);}
     let at=shown.indexOf(excerpt),clean=false;
     if(at<0)throw Error(outside);
     for(;at>=0;at=shown.indexOf(excerpt,at+1))if(!broken.some(([a,b])=>at<b&&at+excerpt.length>a)){clean=true;break;}

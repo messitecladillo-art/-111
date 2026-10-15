@@ -8,6 +8,7 @@
 import type { EditorContent, ReportSection } from './editor-model.ts';
 import { reportHeadingLevel, reportPart, type ReportPart } from './report-format.ts';
 import { BLUEPRINT_MODULE_LABELS, blueprintNode, matchBlueprintNode, stripHeadingNumber, type BlueprintModule, type BlueprintNode } from './report-blueprint.ts';
+import { formatReference, referenceNumbers, referenceProblems } from './references.ts';
 
 export const BENCHMARK_DIMENSIONS = {
   structure: '结构完整', design: '方案严谨', data: '数据质量', analysis: '分析深度',
@@ -159,12 +160,15 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const bodyTarget = Math.min(bodyHigh, Math.max(bodyLow, BENCHMARK_RULES.bodyBase + BENCHMARK_RULES.bodyPerExhibit * analysisExhibits));
   add('length', 'structure', '正文篇幅', bodyChars / bodyTarget, `正文论述约 ${thousands(bodyChars)} 字；按本报告 ${analysisExhibits} 个分析图表估计，宜不少于 ${thousands(bodyTarget)} 字。`);
   // Chapter headings may stand alone; every other section needs written text or an evidence block.
-  const writable = sections.filter(s => !(s.part === 'body' && reportHeadingLevel(s.section.title) === 1));
+  // Chapter headings may stand alone, and a references section is written by its structured entries.
+  const writable = sections.filter(s => !(s.part === 'body' && reportHeadingLevel(s.section.title) === 1) && !(s.part === 'references' && (content.references?.length ?? 0) > 0));
   const hinted = new Set(content.report.filter(s => HINT.test(s.body) || (s.blocks ?? []).some(b => HINT.test(b.text))).map(s => s.id));
   const unwritten = writable.filter(s => hinted.has(s.section.id) || (!s.lines.length && !(s.section.blocks ?? []).some(b => b.kind !== 'paragraph'))).map(s => s.section);
   add('unwritten', 'structure', '各节均已撰写', unwritten.length ? Math.max(0, 1 - unwritten.length / Math.max(1, writable.length)) * 0.9 : 1,
     unwritten.length ? `${unwritten.length} 节尚未撰写${hinted.size ? `（其中 ${hinted.size} 节仍是写作提示）` : ''}，首个是「${unwritten[0].title || '未命名章节'}」。` : '各节都已有正文。');
-  const referenceEntries = sections.filter(s => s.part === 'references').flatMap(s => s.lines);
+  // Structured references are the list when present; older drafts list their references as lines of the section.
+  const structured = content.references ?? [];
+  const referenceEntries = structured.length ? structured.map(formatReference) : sections.filter(s => s.part === 'references').flatMap(s => s.lines);
   add('references', 'structure', '参考文献数量', referenceEntries.length / BENCHMARK_RULES.references,
     `参考文献 ${referenceEntries.length} 条，研究报告宜不少于 ${BENCHMARK_RULES.references} 条。`, fixIfMissing('references'));
   const appendices = sections.filter(s => s.part === 'appendix');
@@ -291,16 +295,17 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
 
   // 合规披露
   appendixCheck('aiDisclosure', 'compliance', 'AI 工具使用说明', /人工智能|AI|大模型|生成式/i, '附录中没有 AI 工具使用说明。', [], ['appendix.ai']);
-  const formatted = referenceEntries.filter(l => GBT_TYPE.test(l)).length;
+  // A structured record is complete when it has every item its type requires; a typed line needs its GB/T 7714 type code.
+  const formatted = structured.length ? structured.filter(e => e.type === 'other' ? GBT_TYPE.test(e.text) : !referenceProblems(e).length).length : referenceEntries.filter(l => GBT_TYPE.test(l)).length;
   add('referenceFormat', 'compliance', '文献著录格式', referenceEntries.length ? share(formatted, referenceEntries.length) / 0.8 : null,
-    `${formatted} / ${referenceEntries.length} 条文献带有 GB/T 7714 文献类型标识，如 [J]、[M]、[EB/OL]。`);
+    structured.length ? `${formatted} / ${structured.length} 条文献按 GB/T 7714 著录完整，其余缺少作者、年份、出版者等必备项。` : `${formatted} / ${referenceEntries.length} 条文献带有 GB/T 7714 文献类型标识，如 [J]、[M]、[EB/OL]。`);
   // Under the numeric system every listed reference is cited at least once: count the distinct numbers cited, ranges included.
   const citedNumbers = new Set((proseText.match(CITATION) ?? []).flatMap(mark => mark.replace(/[[\]［］\s]/gu, '').split(/[,，、]/u).flatMap(part => {
     const [a, b] = part.split(/[-–—]/u).map(Number);
     return Number.isInteger(a) && Number.isInteger(b) && b >= a && b - a < 500 ? Array.from({ length: b - a + 1 }, (_, i) => a + i) : Number.isInteger(a) ? [a] : [];
   })));
-  const listed = referenceEntries.length, covered = [...citedNumbers].filter(n => n >= 1 && n <= listed).length;
-  add('citations', 'compliance', '文献均在正文引用', listed ? covered / listed : citedNumbers.size ? 0 : null,
+  const listed = referenceEntries.length, covered = structured.length ? structured.length - referenceNumbers(content).uncited.length : [...citedNumbers].filter(n => n >= 1 && n <= listed).length;
+  add('citations', 'compliance', '文献均在正文引用', listed ? covered / listed : citedNumbers.size || /\[\[引:/.test(proseText) ? 0 : null,
     listed ? `参考文献 ${listed} 条，正文引用了其中 ${covered} 条；顺序编码制下每条文献都应在正文中被引用。` : citedNumbers.size ? '正文有文献序号标注，但没有参考文献列表。' : '还没有参考文献。');
   const simulated = usedResults.filter(r => r.classification === 'simulated');
   const declared = /模拟/.test(content.subtitle + content.title) || body.every(s => !(s.section.blocks ?? []).some(b => simulated.some(r => r.id === b.evidenceId)) || /【教学模拟数据/.test(s.section.body + s.section.source));

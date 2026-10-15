@@ -2,7 +2,7 @@ import {chartData, resultFor, verifyResearchQuality, findingNeedsReview, finding
 import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
 import {assertTrueVector} from './svg-safety.ts';
-import {blockLabel, numberedCaption, resolveReferences, type BlockLabel} from './report-numbering.ts';
+import {blockLabel, numberedCaption, referenceSegments, resolveReferences, type BlockLabel} from './report-numbering.ts';
 import {columnWeights, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
 import {splitInlineMath} from './inline-math.ts';
 import type PptxGenJS from 'pptxgenjs';
@@ -36,18 +36,22 @@ async function preview(svg:string){
 export type MathSlot={omml:string;display:boolean};
 export const mathPlaceholder=(index:number)=>`§§OMML${index}§§`;
 /** `section` is the ID of the section being written; captions look their numbers up by section and block. */
-export type WordContext={labels:Map<string,BlockLabel>;math:MathSlot[];where:string;section:string};
+export type WordContext={labels:Map<string,BlockLabel>;math:MathSlot[];where:string;section:string;citations:ReadonlyMap<string,number>};
 /** A4 text width (210 mm − 2 × 31.8 mm) in twentieths of a point, and in pixels for images. */
 export const TEXT_WIDTH={twips:8300,px:553} as const;
 export {splitInlineMath};
-/** Text runs with figure references resolved and `$…$` turned into inline equations. */
+/** Text runs with figure references resolved, citations as superscript marks and `$…$` turned into inline equations. */
 export async function richRuns(text:string,ctx:WordContext,run:Record<string,unknown>={}){
  const {TextRun}=await import('docx');const {texToOmml}=await import('./omml.ts');
- return splitInlineMath(resolveReferences(text,ctx.labels,ctx.where)).map(part=>{
+ resolveReferences(text,ctx.labels,ctx.where,ctx.citations);
+ // Plain text and resolved figure references stay one run; only a citation mark breaks it, to be set as a superscript.
+ const groups:{text:string;cite?:boolean}[]=[];
+ for(const segment of referenceSegments(text,ctx.labels,ctx.citations)){const last=groups.at(-1);if(last&&!last.cite&&!segment.cite)last.text+=segment.text;else groups.push({text:segment.text,cite:segment.cite});}
+ return groups.flatMap(segment=>segment.cite?[new TextRun({...run,text:segment.text,superScript:true})]:splitInlineMath(segment.text).map(part=>{
   if(!part.math)return new TextRun({...run,text:part.text});
   ctx.math.push({omml:texToOmml(part.text,false),display:false});
   return new TextRun({...run,text:mathPlaceholder(ctx.math.length-1)});
- });
+ }));
 }
 /** Swaps every math placeholder run in document.xml for its equation. */
 export function insertMath(documentXml:string,math:readonly MathSlot[]):string{
@@ -61,7 +65,7 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
  const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun,VerticalAlign,VerticalMergeType}=await import('docx');
  const {figureSVG,svgSize}=await import('./report-figures.ts');
  const {texToOmml}=await import('./omml.ts');
- const ctx:WordContext=context??{labels:(await import('./report-numbering.ts')).reportLabels(c.report),math:[],where:'内容块',section:''};
+ const ctx:WordContext=context??{labels:(await import('./report-numbering.ts')).reportLabels(c.report),math:[],where:'内容块',section:'',citations:(await import('./references.ts')).referenceNumbers(c).numbers};
  const sectionId=ctx.section||c.report.find(s=>s.blocks===blocks)?.id||'';
  const out:(InstanceType<typeof Paragraph>|InstanceType<typeof Table>)[]=[];
  const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'},rule=(size:number)=>({style:BorderStyle.SINGLE,size,color:'000000'});
@@ -86,7 +90,7 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
   if(!used.includes(r))used.push(r);
   // A chart and a table of the same result share one source line, placed after the second.
   const next=blocks[index+1],source=!(next&&(next.kind==='chart'||next.kind==='table')&&next.evidenceId===b.evidenceId);
-  const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where));
+  const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where,ctx.citations));
   if(b.kind==='chart'){
    const svg=await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
    // Figures share one width and size their height to the content; Word keeps the same proportions.

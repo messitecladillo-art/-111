@@ -216,3 +216,6 @@
 .saveStatus[data-motion-state=warning] { color:var(--wb-amber); }
 @keyframes receiptSpin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .studio *,.studio *::before { animation:none!important; transition:none!important; } }
+.referenceList { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.referenceList li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); text-indent: 0; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.referenceList li[data-uncited] { color: var(--wb-muted, #64748b); }

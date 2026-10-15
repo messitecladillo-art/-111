@@ -2,6 +2,7 @@ import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences
 import { blockLabel, reportLabels } from "./report-numbering.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
+import { formatReference, referenceNumbers } from './references.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -16,6 +17,13 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
   if(!report.length)throw Error(options.part==='appendix'?'请先添加独立的“附录”章节，再单独导出附录。':'报告正文至少需要一个章节。');
+  // Structured references become the numbered list of the references section; a list also typed into that section would be numbered twice.
+  const cited = referenceNumbers(content);
+  if (cited.order.length && options.part !== 'appendix') {
+    const listSection = content.report.find(s => reportPart(s.title) === 'references');
+    if (!listSection) throw Error('已录入参考文献，但报告中没有「参考文献」一节，请先插入该节。');
+    if (listSection.body.trim()) throw Error('「参考文献」一节中仍有手写条目。请在参考文献面板中转为文献条目，或清空该节正文后再导出。');
+  }
   const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel } = await import("docx");
   const {default:JSZip}=await import('jszip');
   // Chinese in 宋体 / 黑体; Latin letters and numbers in Times New Roman, as competition templates set them.
@@ -31,6 +39,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     ...[1,2,3,4,5].map(level=>({id:`Heading${level}`,name:`heading ${level}`,basedOn:'Normal',next:'Normal',quickFormat:true,run:headingRun(level),paragraph:{spacing:{line:300,before:120,after:0},...flush,keepNext:true,keepLines:true,outlineLevel:level-1}})),
     {id:'ReportSpecialHeading',name:'摘要与参考文献名称',basedOn:'Normal',next:'Normal',run:{...bodyRun,font:font('黑体'),size:28,sizeComplexScript:28},paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},...flush,keepNext:true}},
     {id:'ReportReference',name:'参考文献正文',basedOn:'Normal',run:bodyRun,paragraph:{...bodyParagraph,...flush}},
+    // Numbered entries hang: "[1]" at the margin, the entry and its wrapped lines aligned one centimetre in.
+    {id:'ReportReferenceItem',name:'参考文献条目',basedOn:'ReportReference',run:bodyRun,paragraph:{spacing:{line:300,before:0,after:0},indent:{left:567,hanging:567,firstLine:0,firstLineChars:0}}},
     {id:'ReportCaption',name:'图表题',basedOn:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:120,after:0},...flush,keepNext:true}},
     // Figure captions sit below the figure and table captions above the table; the names drive the lists of figures and tables.
     {id:'ReportFigureCaption',name:'图题',basedOn:'ReportCaption',next:'Normal',run:bodyRun,paragraph:{alignment:AlignmentType.CENTER,spacing:{line:300,before:60,after:120},...flush}},
@@ -53,7 +63,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
   if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:[new TextRun({text:content.title})]}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:[new TextRun({text:content.subtitle})]})]:[])],'cover');
   // Numbers come from the whole draft, so the main text and a separately exported appendix agree.
-  const ctx:WordContext={labels:reportLabels(content.report),math:[],where:'',section:''};
+  const ctx:WordContext={labels:reportLabels(content.report),math:[],where:'',section:'',citations:cited.numbers};
   const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>blockLabel(ctx.labels,s.id,b.id)?.kind===kind));
   let bodyStarted=false,tocInserted=false,preliminaryStarted=false;
   function toc(){
@@ -75,6 +85,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
       const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
       children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:await richRuns(line,ctx)}));
     }
+    if(part==='references')cited.order.forEach((entry,i)=>children.push(new Paragraph({style:'ReportReferenceItem',children:[new TextRun(`[${i+1}]\t`),new TextRun(formatReference(entry))]})));
     if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg,ctx));
     if(section.source)children.push(new Paragraph({style:'ReportSource',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
     if(preliminary){addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;}

@@ -5,6 +5,7 @@
  */
 import type { EditorContent, ReportSection } from './editor-model.ts';
 import { reportHeadingLevel, reportPart } from './report-format.ts';
+import { citationSegments, referenceNumbers } from './references.ts';
 
 export type LabelKind = 'figure' | 'table' | 'equation';
 export type BlockLabel = { kind: LabelKind; number: string; label: string; reference: string };
@@ -61,10 +62,15 @@ export function numberedCaption(label: BlockLabel | undefined, title: string): s
 
 export const referenceToken = (kind: LabelKind, blockId: string) => `[[${NAMES[kind]}:${blockId}]]`;
 const TOKEN = /\[\[(图|表|式):([^\]\n]{1,80})\]\]/g;
-export type ReferenceSegment = { text: string; missing?: boolean };
+/** `cite` marks a citation mark such as "[1,3]", which Word sets as a superscript. */
+export type ReferenceSegment = { text: string; missing?: boolean; cite?: boolean };
+const NO_CITATIONS: ReadonlyMap<string, number> = new Map();
 
-/** Text split into plain runs and resolved references; a reference to a missing or mismatched block is flagged. */
-export function referenceSegments(text: string, labels: Map<string, BlockLabel>): ReferenceSegment[] {
+/**
+ * Text split into plain runs, resolved figure, table and equation references, and citation marks numbered by
+ * `citations`; a reference to a missing or mismatched block, or a citation of a deleted entry, is flagged.
+ */
+export function referenceSegments(text: string, labels: Map<string, BlockLabel>, citations: ReadonlyMap<string, number> = NO_CITATIONS): ReferenceSegment[] {
   const out: ReferenceSegment[] = [];
   let last = 0;
   for (const match of text.matchAll(TOKEN)) {
@@ -74,20 +80,21 @@ export function referenceSegments(text: string, labels: Map<string, BlockLabel>)
     last = match.index + match[0].length;
   }
   if (last < text.length) out.push({ text: text.slice(last) });
-  return out;
+  return out.flatMap(segment => segment.missing || !segment.text.includes('[[引:') ? [segment] : citationSegments(segment.text, citations));
 }
 
 /** Export-time resolution: a dangling reference stops the export rather than printing a wrong number. */
-export function resolveReferences(text: string, labels: Map<string, BlockLabel>, where: string): string {
-  const segments = referenceSegments(text, labels);
+export function resolveReferences(text: string, labels: Map<string, BlockLabel>, where: string, citations: ReadonlyMap<string, number> = NO_CITATIONS): string {
+  const segments = referenceSegments(text, labels, citations);
+  if (segments.some(s => s.missing && s.cite)) throw Error(`「${where}」中有文献引用已失效（对应的参考文献已删除），请重新插入引用后再导出。`);
   if (segments.some(s => s.missing)) throw Error(`「${where}」中有图表引用已失效（对应的图、表或公式已删除、类型不符或被复制成两处），请重新插入引用后再导出。`);
   return segments.map(s => s.text).join('');
 }
 
 /** Every dangling reference in the report, for the editor to point at before export. */
 export function danglingReferences(content: EditorContent): { sectionId: string; title: string }[] {
-  const labels = reportLabels(content.report);
+  const labels = reportLabels(content.report), citations = referenceNumbers(content).numbers;
   return content.report.filter(section => [section.body, ...(section.blocks ?? []).map(b => b.text)]
-    .some(text => referenceSegments(text, labels).some(s => s.missing)))
+    .some(text => referenceSegments(text, labels, citations).some(s => s.missing)))
     .map(section => ({ sectionId: section.id, title: section.title }));
 }
