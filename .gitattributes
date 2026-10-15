@@ -33,3 +33,8 @@ apps/evi-x-platform/content/topic-advisor/regions.catalog.json linguist-generate
 packages/evi-x-shared/fixtures/topic-region-v2.json text eol=lf
 packages/evi-x-shared/fixtures/topic-project-v2.json text eol=lf
 packages/evi-x-shared/fixtures/topic-questionnaire-transfer-v1.json text eol=lf linguist-generated=true
+
+# Editorial records and draft inputs bind exact bytes, including the first Windows snapshot.
+corpus-source/topic-advisor/county-pack-01/*.json -text
+apps/evi-x-platform/content/topic-advisor/county-pack-01.json -text linguist-generated=true
+apps/evi-x-platform/content/topic-advisor/county-pack-01-candidates-v2.json -text linguist-generated=true

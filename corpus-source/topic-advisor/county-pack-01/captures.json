@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "method": "bounded_http_get_no_retries_raw_body_hash_only",
+  "sources": [
+    {
+      "id": "miit-2025-clusters",
+      "url": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "retrievedAt": "2026-10-15T09:14:10.185700+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "rawSha256": "697e604f3e067882ed56bfba096324dc5334b95af3fdced017f4acfaad51c7c3",
+      "rawBytes": 196961,
+      "contentType": "application/pdf",
+      "pageCount": 6,
+      "pageMetadata": {},
+      "auditFragment": ""
+    },
+    {
+      "id": "mct-rural-2022",
+      "url": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "retrievedAt": "2026-10-15T09:14:10.186860+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "rawSha256": "7d1c3bedb3adf97c5ef7dadfa9670697a7ce3c29900b83b4025d446051aec889",
+      "rawBytes": 238155,
+      "contentType": "text/html; charset=utf-8",
+      "pageMetadata": {},
+      "auditFragment": ""
+    },
+    {
+      "id": "tongcheng-gig-2024",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "retrievedAt": "2026-10-15T09:14:10.187502+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "rawSha256": "6971d313cdc7a690bebe59b78285a380cefd8d5a7cae66b911cadf893f34cefe",
+      "rawBytes": 62516,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "通城：“零工驿站”拓宽就业路",
+        "pubdate": "2024-05-10 16:52",
+        "contentsource": " 通城县人社局"
+      },
+      "auditFragment": "通城：“零工驿站”拓宽就业路--湖北省人力资源和社会保障厅\n5186532\n通城"
+    },
+    {
+      "id": "jinxi-chain-2025",
+      "url": "https://www.cppcc.gov.cn/zxww/2025/10/24/ARTI1761270582806325.shtml",
+      "retrievedAt": "2026-10-15T09:14:10.187502+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "failed",
+      "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.cppcc.gov.cn'. (_ssl.c:1129)>"
+    },
+    {
+      "id": "wenxi-visit-2025",
+      "url": "https://gxj.yuncheng.gov.cn/doc/2025/07/01/535999.shtml",
+      "retrievedAt": "2026-10-15T09:14:26.865201+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://gxj.yuncheng.gov.cn/doc/2025/07/01/535999.shtml",
+      "rawSha256": "8ed37942a6c956c6dfd0a0bcfc8822496a598456ce740ce41535366760d57b6e",
+      "rawBytes": 16573,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "市工信局调研闻喜工业产业发展情况",
+        "pubdate": "2025-07-01 09:07",
+        "contentsource": "运城市工业和信息化局"
+      },
+      "auditFragment": "\n设为首页\n运城市工业和信息化局\n首 页\n要闻动态\n政府信息公开\n政务服务\n政民"
+    },
+    {
+      "id": "pingyang-plan-2025",
+      "url": "https://www.zjpy.gov.cn/art/2025/5/16/art_1229252500_4291722.html",
+      "retrievedAt": "2026-10-15T09:14:27.659579+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "failed",
+      "error": "<urlopen error _ssl.c:1112: The handshake operation timed out>"
+    },
+    {
+      "id": "anxi-report-2024",
+      "url": "https://www.fjax.gov.cn/zwgk/zfxxgkzl/zfxxgkml/gzbg/202401/t20240112_2993505.htm",
+      "retrievedAt": "2026-10-15T09:14:28.282748+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.fjax.gov.cn/zwgk/zfxxgkzl/zfxxgkml/gzbg/202401/t20240112_2993505.htm",
+      "rawSha256": "7ce70799f13d01eb5401cea5f56daf095dc8502cb545543de6e283e3afc89e3c",
+      "rawBytes": 181027,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "2024年安溪县人民政府工作报告",
+        "pubdate": "2024-01-12",
+        "contentsource": "石狮市人民政府"
+      },
+      "auditFragment": "50家。加快藤铁工艺产业园、云鹤电商园建设，推进藤云工艺园扩容升级；依托藤铁工艺"
+    },
+    {
+      "id": "guangshan-digital-2026",
+      "url": "https://www.xinyang.gov.cn/2026/02-11/753589.html",
+      "retrievedAt": "2026-10-15T09:14:28.484891+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "failed",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "chengmai-report-2025",
+      "url": "https://www.hainan.gov.cn/hainan/xgwjtv/202502/6f09aeb6e899441caa9b66167b498b66.shtml",
+      "retrievedAt": "2026-10-15T09:14:46.005136+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "failed",
+      "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)>"
+    },
+    {
+      "id": "yimen-pesticide-2024",
+      "url": "https://www.ym.gov.cn/ymxzfxxgk/ymxnyjzhxxny/20241129/1570962.html",
+      "retrievedAt": "2026-10-15T09:14:46.626273+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.ym.gov.cn/ymxzfxxgk/ymxnyjzhxxny/20241129/1570962.html",
+      "rawSha256": "64c2e07326391855a797635493327e7b6652dfe1d55aba3783e9c1d8ed5bd1bd",
+      "rawBytes": 25989,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "易门县农业农村局组织开展农药包装废弃物回收处理工作",
+        "pubdate": "2024-11-29 17:58:25",
+        "contentsource": "易门县农业农村局"
+      },
+      "auditFragment": "您的位置:\n首页\n>\n政府信息公开\n>\n易门县农业农村局\n>\n综合信息\n易门县农"
+    },
+    {
+      "id": "yiwu-jobs-2025",
+      "url": "https://www.xjyiwu.gov.cn/xjyiwu/c120572/202604/c845e22a877a472aac10a1c02ef7130f.shtml",
+      "retrievedAt": "2026-10-15T09:14:46.736236+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.xjyiwu.gov.cn/xjyiwu/c120572/202604/c845e22a877a472aac10a1c02ef7130f.shtml",
+      "rawSha256": "c06213850c45138bf6e5d64dc6266ad782fb148c53be4308291648531b6615a2",
+      "rawBytes": 60327,
+      "contentType": "text/html; charset=utf-8",
+      "pageMetadata": {
+        "articletitle": "伊吾县人力资源和社会保障局2025年度工作报告",
+        "pubdate": "2026-04-01 10:34:50"
+      },
+      "auditFragment": "\n当前位置：\n首页 >> 政府信息公开 >> 各乡镇各部门链接 >> 人力资源和"
+    },
+    {
+      "id": "pingshan-tourism-2020",
+      "url": "https://www.ndrc.gov.cn/xwdt/ztzl/qgxclydxal/stzyytx/202004/t20200423_1226489.html",
+      "retrievedAt": "2026-10-15T09:15:04.649392+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.ndrc.gov.cn/xwdt/ztzl/qgxclydxal/stzyytx/202004/t20200423_1226489.html",
+      "rawSha256": "3178996031cfc8a5299f6c4895f3a741805df812f6044854fa40ddadb1ee75e4",
+      "rawBytes": 22711,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "传承红色基因  打造一流乡村旅游度假区——河北省石家庄市李家庄",
+        "pubdate": "2020-04-23 17:49:47",
+        "contentsource": "社会司"
+      },
+      "auditFragment": "发展和改革委员会\n首页 > 新闻动态 > 专题专栏 > 全国乡村旅游典型案例 >"
+    },
+    {
+      "id": "wushen-tourism",
+      "url": "https://wsq.gov.cn/qqgk/ld/ly/202403/t20240313_1762497.html",
+      "retrievedAt": "2026-10-15T09:15:05.868016+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "failed",
+      "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)>"
+    },
+    {
+      "id": "xinbin-heritage-2025",
+      "url": "https://www.ln.gov.cn/web/sqgk/whly/ajjq/4ajq/2025101516253252042/index.shtml",
+      "retrievedAt": "2026-10-15T09:15:13.288170+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.ln.gov.cn/web/sqgk/whly/ajjq/4ajq/2025101516253252042/index.shtml",
+      "rawSha256": "a47e79c66d9c555b4fc37eb24c02d07ea28b08ac042dac88e811fe52bc5169b1",
+      "rawBytes": 63372,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "createdate": "2026-05-24 11:43:34",
+        "articletitle": "赫图阿拉城（4A）",
+        "pubdate": "2025-10-11",
+        "contentsource": "省文化和旅游厅"
+      },
+      "auditFragment": "务公开\n办事服务\n互动交流\n数据发布\n省情概况\n首页 > 省情概况 > 文化旅游"
+    },
+    {
+      "id": "qianguo-lake-2026",
+      "url": "https://sthjt.jl.gov.cn/ywdt/ssdt/dfdt/202602/t20260206_3553353.html",
+      "retrievedAt": "2026-10-15T09:15:19.016026+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://sthjt.jl.gov.cn/ywdt/ssdt/dfdt/202602/t20260206_3553353.html",
+      "rawSha256": "983f52878316a1af1b236c477e62495a618cb922010c238a7fee1f6b1f9afc01",
+      "rawBytes": 37237,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "精准施策护生态 履职尽责守湖清 前郭县分局全面推进查干湖巡查与水质监测工作",
+        "pubdate": "2026-02-09 09:45:00",
+        "contentsource": "前郭县"
+      },
+      "auditFragment": "：首页 > 要闻动态 > 省市动态 > 地方动态\n当前位置 : 首页 > 地方动"
+    },
+    {
+      "id": "mohe-homestay-2023",
+      "url": "https://nynct.hlj.gov.cn/nynct/xczxxx/202310/c00_31673936.shtml",
+      "retrievedAt": "2026-10-15T09:15:22.266922+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://nynct.hlj.gov.cn/nynct/xczxxx/202310/c00_31673936.shtml",
+      "rawSha256": "98c800453073d5ed93a67960809172ee4f77df81785c971800f26d843739cefb",
+      "rawBytes": 58117,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "山村巨变入画中、生态宜居美名扬——漠河市北极镇北红村龙江民居省级试点村",
+        "pubdate": "2023-10-18 17:18:51",
+        "contentsource": "黑龙江省农业农村厅"
+      },
+      "auditFragment": "况\n新闻动态\n政务公开\n政务服务\n政民互动\n首页 > 乡村振兴 > 乡村振兴信息"
+    },
+    {
+      "id": "longsheng-culture-2022",
+      "url": "https://www.mct.gov.cn/whzx/whyw/202212/t20221220_938183.htm",
+      "retrievedAt": "2026-10-15T09:15:23.160537+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.mct.gov.cn/whzx/whyw/202212/t20221220_938183.htm",
+      "rawSha256": "b0e1c05e0a3a667797aefbad4a43fa1a862fb27ae4693c4acaecc3842199513c",
+      "rawBytes": 25466,
+      "contentType": "text/html",
+      "pageMetadata": {
+        "articletitle": "中国广西大寨村和重庆荆竹村入选联合国世界旅游组织“最佳旅游乡村”",
+        "pubdate": "2022-12-20 17:21",
+        "contentsource": "文化和旅游部政府门户网站"
+      },
+      "auditFragment": "日晚，联合国世界旅...\n当前位置：\n首页 > 信息发布 > 焦点新闻\n焦点新闻"
+    },
+    {
+      "id": "taijiang-crafts",
+      "url": "https://www.qdnrd.gov.cn/xsrd/6345.jhtml",
+      "retrievedAt": "2026-10-15T09:15:30.756149+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "retrieved",
+      "finalUrl": "https://www.qdnrd.gov.cn/xsrd/6345.jhtml",
+      "rawSha256": "04cea363ddcceeecb9c012ff594142358e43f723162665879b19dec71fceff92",
+      "rawBytes": 22681,
+      "contentType": "text/html;charset=UTF-8",
+      "pageMetadata": {},
+      "auditFragment": "初心 筑梦乡村振兴\n发布时间： 2024-12-30 16:08:43\n作者：本"
+    },
+    {
+      "id": "zhuoni-tourism",
+      "url": "https://www.zhuoni.gov.cn/info/1135/28780.htm",
+      "retrievedAt": "2026-10-15T09:15:37.065209+00:00",
+      "rights": "source_metadata_original_summary_and_tiny_audit_fragment_only",
+      "status": "failed",
+      "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)>"
+    }
+  ]
+}

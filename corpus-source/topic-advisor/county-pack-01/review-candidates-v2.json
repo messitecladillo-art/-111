@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "protocol": "agent-collab/v1",
+  "run": "20261015-topic-closure",
+  "nonce": "P3-CANDIDATE-REVIEW-1156",
+  "sender": "/root/p2_ui_review",
+  "receiver": "/root",
+  "issuedAt": "2026-10-15T11:56:00Z",
+  "expiresAt": "2026-10-15T12:30:00Z",
+  "reviewedAt": "2026-10-15T12:05:14Z",
+  "baseRevision": "26103c73e28b2d0dbec205c7087f2043850a8bbc",
+  "classification": "internal",
+  "independentReview": true,
+  "verdict": "acceptable_as_reviewed_draft_content",
+  "publicationApproved": false,
+  "target": {
+    "path": "apps/evi-x-platform/content/topic-advisor/county-pack-01-candidates-v2.json",
+    "sha256": "59a23fad2595509df853ba7c8d6a8c9e7d649c0ef9ff8a646a600e21f9018689",
+    "packId": "county-pack-01-candidates",
+    "contentVersion": "2026-10-15.2",
+    "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+    "profileCodes": ["421222", "340882", "320623"],
+    "counts": {"profiles": 3, "facts": 6, "directions": 9, "sources": 4},
+    "allProfilesRemainDraft": true
+  },
+  "boundInputs": {
+    "parentPack": {
+      "path": "apps/evi-x-platform/content/topic-advisor/county-pack-01.json",
+      "sha256": "a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58",
+      "unchanged": true
+    },
+    "supplement": {
+      "path": "corpus-source/topic-advisor/county-pack-01/supplement-20261015.json",
+      "sha256": "af301a0e0e046be2312c9f5b034e8f57888e86440421d03dbbc4ca25d0cb9c9f"
+    },
+    "priorIndependentReview": {
+      "path": ".collab/runs/20261015-topic-closure/reviews/p3-first-candidates.json",
+      "sha256": "a17855b4789065fae877710828e33b3271f34334eaf700d5f304910ffbd5efec",
+      "scope": "Prior original-body evidence and five unchanged facts/seven unchanged directions; the prior review alone did not approve this derived pack."
+    },
+    "builder": {
+      "path": "corpus-source/topic-advisor/county-pack-01/build-reviewed-candidates.py",
+      "sha256": "92a0f08b853d5f0218ca6142b2de5925ea88148381fcf13d001b1de56fcddef1"
+    },
+    "documentation": {
+      "path": "docs/topic-county-pack-01-reviewed-candidates.md",
+      "sha256": "920192f747b8aa168cc3a6aa8367bc05ac229b2e7b3c6719b5e7b463a8de8655"
+    }
+  },
+  "capabilitiesUsed": ["read_declared_local_files", "bounded_read_only_python_check", "bounded_read_only_node_check", "write_new_authorized_review_json"],
+  "capabilitiesNotUsed": ["network", "secrets", "git", "delegation", "source_edits", "publication", "browser"],
+  "networkLedger": {
+    "newOperationsThisReview": 0,
+    "priorReviewOperations": 8,
+    "evidencePolicy": "Reuse only the actual original-body reads recorded in the prior independent report and the same reviewer context. No new fetch, snippet substitution, or source-producer attestation was used as an original-body verification."
+  },
+  "observedChanges": [
+    "Exactly county-421222-direction-1 and county-340882-direction-2 changed title, question, population and minimumEvidence. Their IDs, decision owner, decision, required access, source IDs and proposed classification are unchanged.",
+    "The remaining seven directions and five existing facts are byte-value equivalent to their selected parent objects. County codes, display names, catalog references and draft statuses are unchanged.",
+    "Rudong adds county-320623-fact-2, a public-employment-service tag and an explicit historical/self-report/current-access gap. It adds one county-department source; inherited source supportedClaims are projected to the six selected facts.",
+    "No current service operation, actual recruitment access, effective vacancy, wind-industry labour shortage, causal effect or completed 2026 plan was added."
+  ],
+  "sourceEvidence": [
+    {
+      "sourceId": "miit-2025-clusters",
+      "url": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "readScope": "Actual six-page official list; listing only.",
+      "locators": ["item 66, physical page 4: Tongcheng mica electronic-materials cluster", "item 42, physical page 3: Qianshan brush-making cluster", "item 29, physical page 2: Rudong offshore-wind-equipment cluster"],
+      "dateMeaning": "2025 list; exact PDF publication date remains null because the final-notice iframe relationship was not verified.",
+      "limits": "Historical listing does not verify current jobs, demand, operational status or access."
+    },
+    {
+      "sourceId": "mct-rural-2022",
+      "url": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "readScope": "Actual data-service body, displayed cutoff and Anhui list.",
+      "locators": ["displayed data cutoff 2022-12-07", "Anhui section, Qianshan Tianzhushan town Chazhuang village; prior extracted line 326"],
+      "dateMeaning": "2022-12-07 is the data cutoff, not a publication date.",
+      "limits": "Historical listing does not verify current tourism operations, transport or service availability."
+    },
+    {
+      "sourceId": "tongcheng-gig-2024",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "readScope": "Actual title/source/date and main body describing employment stations and service windows.",
+      "locators": ["2024-05-10 16:52, source Tongcheng human-resources bureau; prior extracted line 46", "main body listing recruitment information, job registration and rest/supply services; prior lines 52-53"],
+      "dateMeaning": "Historical 2024 department report.",
+      "limits": "County author and provincial host are one source family; this is not an independent effect evaluation or current availability check."
+    },
+    {
+      "sourceId": "rudong-hr-2025-summary",
+      "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+      "readScope": "Actual page title, department attribution, publication date, 2025 results and the separately headed 2026 plans; only the employment-results subsection supports the new fact.",
+      "locators": ["page source Rudong human-resources bureau and publication 2026-01-05 15:21; prior extracted line 6", "I. 2025 results, subsection (1) employment: new nearby employment-service stations, recruitment and skills training; prior extracted lines 8-10", "II. 2026 plans starts separately; prior extracted lines 15-24, excluded from factual outcomes"],
+      "dateMeaning": "Published 2026-01-05, reporting 2025 activities. No exact event date or 2025-12-31 cutoff is invented; fact asOfDate is null.",
+      "limits": "Department annual self-report. No independent effect, present operation, sector-specific vacancy or team access is established."
+    }
+  ],
+  "factReviews": [
+    {"id": "county-421222-fact-1", "verdict": "acceptable", "basis": "Unchanged historical MIIT item 66; exact county scope retained.", "evidenceSourceIds": ["miit-2025-clusters"]},
+    {"id": "county-421222-fact-2", "verdict": "acceptable", "basis": "Unchanged 2024 department description of station functions; historical qualifier retained.", "evidenceSourceIds": ["tongcheng-gig-2024"]},
+    {"id": "county-340882-fact-1", "verdict": "acceptable", "basis": "Unchanged historical MIIT item 42; exact county scope retained.", "evidenceSourceIds": ["miit-2025-clusters"]},
+    {"id": "county-340882-fact-2", "verdict": "acceptable", "basis": "Unchanged Chazhuang village listing with the displayed 2022-12-07 data cutoff, not a claimed publication date.", "evidenceSourceIds": ["mct-rural-2022"]},
+    {"id": "county-320623-fact-1", "verdict": "acceptable", "basis": "Unchanged historical MIIT item 29; no sector vacancy or demand inference.", "evidenceSourceIds": ["miit-2025-clusters"]},
+    {"id": "county-320623-fact-2", "verdict": "acceptable", "basis": "New text narrowly attributes 2025 employment-station, recruitment and skills-training activity to the department's annual self-report. It does not use the 2026 plans or claim present service access.", "evidenceSourceIds": ["rudong-hr-2025-summary"]}
+  ],
+  "directionReviews": [
+    {"id": "county-421222-direction-1", "verdict": "acceptable", "basis": "Revised title/question/population consistently address adult jobseekers residing or working locally. The age-18 inclusion rule is explicit research design, not an official youth-policy definition. Permission, current job-material eligibility and separate intention/behaviour measurement are required; cross-sectional causal inference is explicitly excluded.", "closes": "P3-M1"},
+    {"id": "county-421222-direction-2", "verdict": "acceptable", "basis": "Unchanged proposed comparison; current station verification and recruitment remain prerequisites, with no established causal-effect claim."},
+    {"id": "county-421222-direction-3", "verdict": "acceptable", "basis": "Unchanged proposed training-needs inquiry; authorised employee/training-partner access remains required."},
+    {"id": "county-340882-direction-1", "verdict": "acceptable", "basis": "Unchanged proposed brush-industry inquiry; historical listing is background and access must be verified."},
+    {"id": "county-340882-direction-2", "verdict": "acceptable", "basis": "Revised title/question/population consistently address local adult jobseekers. Same age/local residence-or-work/job-intent rules govern recruitment. Current openings and qualifications must be verified before approved materials are used; understanding, intention and actual job-seeking action are separated.", "closes": "P3-M1"},
+    {"id": "county-340882-direction-3", "verdict": "acceptable", "basis": "Unchanged proposed tourism-service inquiry; the historical village listing does not establish current operation or access."},
+    {"id": "county-320623-direction-1", "verdict": "acceptable", "basis": "Unchanged proposed direction; the newly added county employment source does not establish wind-industry vacancies or recruitment access."},
+    {"id": "county-320623-direction-2", "verdict": "acceptable", "basis": "Unchanged proposed direction; population, permissions and minimum evidence remain the prior reviewed design."},
+    {"id": "county-320623-direction-3", "verdict": "acceptable", "basis": "Unchanged proposed direction; no fieldwork, completed validation or current access is implied."}
+  ],
+  "closedFindings": [
+    {"id": "P3-M1", "severity": "medium", "status": "closed_for_this_target_hash", "evidence": "Both formerly youth-labelled directions now consistently specify adult local jobseekers and aligned screening/minimum-evidence rules."},
+    {"id": "P3-L1", "severity": "low", "status": "closed_for_this_target_hash", "evidence": "The previously supplemental Rudong source is now explicitly integrated as a second historical source with one bounded fact and matching supportedClaims; no independent-impact claim is made."}
+  ],
+  "openFindings": [],
+  "checks": [
+    {"command": "apps/evi-x-api/.venv/Scripts/python.exe -B -X utf8 corpus-source/topic-advisor/county-pack-01/build-reviewed-candidates.py --review <primary>/.collab/runs/20261015-topic-closure/reviews/p3-first-candidates.json --self-test", "exitCode": 0, "rawChunk": "7ceb58", "result": "Read-only deterministic derivation matches candidate bytes; all three frozen-input byte drifts rejected."},
+    {"command": "Independent Python stdin assertions over parent, candidate, supplemental and prior-review bytes", "exitCode": 0, "rawChunk": "d70c48", "result": "Exact changed-field whitelist, seven unchanged directions, five unchanged facts, source-claim projection, all draft statuses and all six hashes verified."},
+    {"command": "node --experimental-strip-types --input-type=module - < independent strict-parse assertions", "exitCode": 0, "rawChunk": "1e6cf2", "result": "Strict publication-core preparation accepts 3 profiles and 15 items with the exact raw-pack hash. Zero source-read attestations and empty history produce no published profiles; no approval receipt was generated."}
+  ],
+  "unresolvedLimits": [
+    "All three profiles remain draft. This review is content evidence, not an authenticated global publication decision or a runtime/UI acceptance.",
+    "No new network retrieval was made. Original bodies were actually read in the prior bounded review but were not archived as complete response bodies; this report does not invent raw-response hashes.",
+    "Historical listing and department reporting do not establish current operations, current vacancies, team resources, recruitment access, respondent data, fieldwork or causal effects.",
+    "Publication still requires the maintainer-reviewed Git PR authority and the separate source-read, item-review and required UI-display contract. No client project owner is granted global publishing authority by this report."
+  ],
+  "nextAction": "Coordinator may use this hash-bound independent content report when preparing a separate maintainer-reviewed publication decision; keep the original pack unchanged and do not expose draft profiles as published content."
+}
