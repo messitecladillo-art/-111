@@ -27,6 +27,9 @@ import { appendEvidenceSection } from '@/lib/project-report';
 import { applyReportInsert, insertSummary, type ReportInsert } from '@/lib/report-insert';
 import { citationToken, formatReference, referenceNumbers, unfinishedReference, type ReferenceEntry } from '@/lib/references';
 import ReferencesPanel from './ReferencesPanel';
+import AppendixHelper from './AppendixHelper';
+import { appendLines } from '@/lib/report-appendices';
+import type { Questionnaire } from '@/lib/questionnaire';
 
 export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean };
@@ -76,7 +79,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled,reportInsert,onReportInsertHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled,reportInsert,onReportInsertHandled,questionnaire=null}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
@@ -633,6 +636,8 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
           <label>章节标题<input maxLength={150} value={section.title} onChange={e => patchSection({ title: e.target.value })}/></label>
           {/* Paragraph blocks written into the section (method notes, reading paragraphs) count towards its length. */}
           {guide && <BlueprintGuide node={guide} written={[section.body, ...(section.blocks ?? []).filter(b => b.kind === "paragraph").map(b => b.text)].flatMap(writtenLines).join("").replace(/\s/g, "").length} open={guideOpen} onToggle={setGuideOpen} onNavigate={navigate}/>}
+          {guide?.kind === 'appendix' && <AppendixHelper node={guide.id} content={content} questionnaire={questionnaire} disabled={locked}
+            onWrite={(lines, what) => { try { if (!edit({ ...content, report: content.report.map(s => s.id === section.id ? { ...s, body: appendLines(s.body, lines, s.title) } : s) })) return '未能写入，请稍后重试。'; setMessage(`已写入${what}（${lines.length} 段），可撤销。`); return ''; } catch (e) { return (e as Error).message; } }}/>}
           {reportPart(section.title) === 'references' && <ReferencesPanel references={content.references ?? []} numbers={citations} uncited={uncited} legacy={section.body} disabled={locked}
             onChange={(next: ReferenceEntry[]) => edit({ ...content, references: next })}
             onImport={(entries: ReferenceEntry[]) => { if (edit({ ...content, references: [...(content.references ?? []), ...entries], report: content.report.map(s => s.id === section.id ? { ...s, body: '' } : s) })) setMessage(`已把 ${entries.length} 条手写文献转为文献条目，并清空本节正文，可撤销。`); }}/>}

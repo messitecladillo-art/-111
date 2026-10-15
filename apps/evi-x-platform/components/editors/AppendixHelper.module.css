@@ -1,0 +1,16 @@
+.helper { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--wb-line); border-radius: 8px; background: var(--wb-solid); color: var(--wb-text); }
+.helper strong { font-size: 14px; }
+.helper p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--wb-muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button { padding: 4px 12px; border: 1px solid var(--wb-line-strong); border-radius: 5px; background: var(--wb-surface); color: var(--wb-text); font: inherit; font-size: 12px; cursor: pointer; }
+.actions .primary { color: var(--wb-accent-text); background: var(--wb-accent); border-color: var(--wb-accent); }
+.helper button:disabled { opacity: .45; cursor: default; }
+.choice { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 0; border: 0; font-size: 13px; }
+.choice label, .uses label { display: inline-flex; align-items: center; gap: 5px; }
+.form { display: grid; gap: 8px; }
+.form label { display: grid; gap: 4px; font-size: 12px; color: var(--wb-muted); }
+.form input, .form textarea { padding: 6px 8px; border: 1px solid var(--wb-line-strong); border-radius: 5px; background: var(--wb-surface); color: var(--wb-text); font: inherit; font-size: 13px; }
+.uses { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; border: 0; font-size: 13px; }
+.uses legend { margin-bottom: 4px; font-size: 12px; color: var(--wb-muted); }
+.problem { padding: 6px 10px; border-radius: 5px; color: var(--wb-gold-text) !important; background: var(--wb-gold-soft); border: 1px solid var(--wb-gold-line); }
+.helper input:focus-visible, .helper textarea:focus-visible, .helper button:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 1px; }

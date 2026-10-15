@@ -1079,7 +1079,7 @@ export default function EviXPlatform() {
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={workspaceDataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)}/>,
+      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={designSnapshot?.design??null}/>,
       defense: <DefenseStudio />,
       analysis: <SurveyLab onResultSnapshot={result=>{setResultProposal(result);window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
       canvas: <CanvasPanel dataset={workspaceDataset} design={designSnapshot} />,
