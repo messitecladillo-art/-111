@@ -98,6 +98,17 @@ test('correlation written as causation and undeclared simulated data are both fl
   assert.equal(check(report, 'simulated').status, 'pass');
 });
 
+test('citation coverage counts the distinct references cited, ranges included', () => {
+  const content = createEditorContent();
+  const list = Array.from({ length: 10 }, (_, i) => `[${i + 1}] 作者${i}. 题名[J]. 刊名, 2024, 1(1): 1-2.`).join('\n');
+  content.report = [section('s', '一、背景', '已有研究较多[1-10]。'), section('r', '参考文献', list)];
+  assert.equal(check(benchmarkReport(content), 'citations').status, 'pass', 'one range cites all ten');
+  content.report[0].body = '已有研究[1]。'.repeat(10);
+  const repeated = check(benchmarkReport(content), 'citations');
+  assert.equal(repeated.status, 'partial');
+  assert.match(repeated.detail, /引用了其中 1 条/, 'citing one entry ten times covers one entry');
+});
+
 test('figure references count sentences that cite a number, not words such as 代表', () => {
   const content = createEditorContent();
   content.report = [section('s', '一、分析', '如图 3-1 所示，结合表2与图4可知两组差异明显，代表3类人群。\n图 3-1 抽样流程\n表 2 信度检验')];

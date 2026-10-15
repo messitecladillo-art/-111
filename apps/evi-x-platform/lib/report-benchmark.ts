@@ -294,10 +294,14 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const formatted = referenceEntries.filter(l => GBT_TYPE.test(l)).length;
   add('referenceFormat', 'compliance', '文献著录格式', referenceEntries.length ? share(formatted, referenceEntries.length) / 0.8 : null,
     `${formatted} / ${referenceEntries.length} 条文献带有 GB/T 7714 文献类型标识，如 [J]、[M]、[EB/OL]。`);
-  const cited = count(CITATION, proseText);
-  // Under the numeric system every listed reference is cited in the text at least once.
-  const citeTarget = Math.max(1, Math.min(BENCHMARK_RULES.references, referenceEntries.length));
-  add('citations', 'compliance', '正文标注引用', cited / citeTarget, `正文有 ${cited} 处文献序号标注，参考文献 ${referenceEntries.length} 条；顺序编码制下每条文献都应在正文中被引用。`);
+  // Under the numeric system every listed reference is cited at least once: count the distinct numbers cited, ranges included.
+  const citedNumbers = new Set((proseText.match(CITATION) ?? []).flatMap(mark => mark.replace(/[[\]［］\s]/gu, '').split(/[,，、]/u).flatMap(part => {
+    const [a, b] = part.split(/[-–—]/u).map(Number);
+    return Number.isInteger(a) && Number.isInteger(b) && b >= a && b - a < 500 ? Array.from({ length: b - a + 1 }, (_, i) => a + i) : Number.isInteger(a) ? [a] : [];
+  })));
+  const listed = referenceEntries.length, covered = [...citedNumbers].filter(n => n >= 1 && n <= listed).length;
+  add('citations', 'compliance', '文献均在正文引用', listed ? covered / listed : citedNumbers.size ? 0 : null,
+    listed ? `参考文献 ${listed} 条，正文引用了其中 ${covered} 条；顺序编码制下每条文献都应在正文中被引用。` : citedNumbers.size ? '正文有文献序号标注，但没有参考文献列表。' : '还没有参考文献。');
   const simulated = usedResults.filter(r => r.classification === 'simulated');
   const declared = /模拟/.test(content.subtitle + content.title) || body.every(s => !(s.section.blocks ?? []).some(b => simulated.some(r => r.id === b.evidenceId)) || /【教学模拟数据/.test(s.section.body + s.section.source));
   add('simulated', 'compliance', '模拟数据已声明', simulated.length ? (declared ? 1 : 0) : null,

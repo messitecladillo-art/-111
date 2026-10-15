@@ -3,7 +3,7 @@
 import { useDeferredValue, useId, useMemo, useState } from 'react';
 import type { EditorContent } from '@/lib/editor-model';
 import { BENCHMARK_DIMENSIONS, benchmarkReport, type BenchmarkDimension, type BenchmarkFix } from '@/lib/report-benchmark';
-import { BLUEPRINT_MODULE_LABELS, blueprintSections, DEFAULT_REPORT_TYPE, REPORT_TYPES, reportType, type BlueprintModule } from '@/lib/report-blueprint';
+import { BLUEPRINT_MODULE_LABELS, blueprintSections, DEFAULT_REPORT_TYPE, LEGACY_SECTION_IDS, REPORT_TYPES, reportType, type BlueprintModule } from '@/lib/report-blueprint';
 import styles from './BenchmarkPanel.module.css';
 
 type Props = {
@@ -37,7 +37,7 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
   const passed = applicable.filter(c => c.status === 'pass').length;
   const replacement = useMemo(() => blueprintSections({ nodes: reportType(typeId).nodes }), [typeId]);
   const replacementIds = new Set(replacement.map(s => s.id));
-  const orphaned = content.slides.filter(slide => slide.reportLink && !replacementIds.has(slide.reportLink.sectionId)).length;
+  const orphaned = content.slides.filter(slide => slide.reportLink && !replacementIds.has(LEGACY_SECTION_IDS[slide.reportLink.sectionId] ?? slide.reportLink.sectionId)).length;
   const act = (fix: BenchmarkFix) => {
     if (fix.insert) onInsert(fix.insert);
     else if (fix.module) onNavigate?.(fix.module);

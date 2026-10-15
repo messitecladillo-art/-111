@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BLUEPRINT, blueprintNode, blueprintOutline, blueprintSections, chineseNumeral, DEFAULT_REPORT_TYPE, insertBeforeBackMatter, insertBlueprintNode, matchBlueprintNode, renumberHeadings, REPORT_TYPES, reportType, stripHeadingNumber } from '../lib/report-blueprint.ts';
+import { BLUEPRINT, blueprintNode, blueprintOutline, blueprintSections, chineseNumeral, DEFAULT_REPORT_TYPE, insertBeforeBackMatter, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, renumberHeadings, REPORT_TYPES, reportType, stripHeadingNumber } from '../lib/report-blueprint.ts';
 import { createEditorContent, EDITOR_LIMITS, parseEditorContent } from '../lib/editor-model.ts';
 import { reportHeadingLevel, reportPart } from '../lib/report-format.ts';
 import { newProjectReport, reportContentsEqual } from '../lib/project-report.ts';
@@ -67,6 +67,9 @@ test('report types are starting combinations of analysis modules, not one fixed 
   // A section brings its chapter even when only the section was asked for.
   assert.ok(blueprintSections({ nodes: ['drivers.model'] }).some(s => s.id === 'bp-drivers'));
   assert.throws(() => reportType('exemplar'), /没有这种报告类型/);
+  // Earlier skeletons' section IDs point at the sections that took them over.
+  const ids = new Set(blueprintSections({ includeOptional: true }).map(s => s.id));
+  for (const [from, to] of Object.entries(LEGACY_SECTION_IDS)) { assert.ok(!ids.has(from), from); assert.ok(ids.has(to), to); }
 });
 
 test('new project reports are deterministic, so an untouched draft is not dirty', () => {

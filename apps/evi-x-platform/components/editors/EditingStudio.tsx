@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import { ACCENTS, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
-import { blueprintSections, insertBlueprintNode, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
+import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
 import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
 import BlueprintGuide from "./BlueprintGuide";
@@ -362,8 +362,10 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       const before = current.current, replacement = blueprintSections({ nodes });
       // Links to sections the skeleton lacks stay in place, so export flags those slides for re-review rather than hiding their origin.
       const kept = new Set(replacement.map(s => s.id));
-      const orphaned = before.slides.filter(s => s.reportLink && !kept.has(s.reportLink.sectionId)).length;
-      const next = parseEditorContent({ ...before, report: replacement });
+      // Slides linked to a section an earlier skeleton named differently follow it to its new ID.
+      const slides = before.slides.map(s => s.reportLink && LEGACY_SECTION_IDS[s.reportLink.sectionId] && kept.has(LEGACY_SECTION_IDS[s.reportLink.sectionId]) ? { ...s, reportLink: { ...s.reportLink, sectionId: LEGACY_SECTION_IDS[s.reportLink.sectionId] } } : s);
+      const orphaned = slides.filter(s => s.reportLink && !kept.has(s.reportLink.sectionId)).length;
+      const next = parseEditorContent({ ...before, report: replacement, slides });
       if (!edit(next)) return;
       setMode("report"); setSectionId(next.report[0].id); setOutlineQuery(""); setBlankReportConfirm(false);
       setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);

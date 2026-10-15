@@ -203,6 +203,8 @@ export const REPORT_TYPES: readonly ReportType[] = [
     nodes: ['demand', 'demand.preference', 'demand.willingness', 'compare', 'compare.tests', 'segments', 'segments.cluster'] },
 ];
 export const DEFAULT_REPORT_TYPE = 'status';
+/** Section IDs written by earlier skeletons and the node that took each over, so links to them survive a rebuild. */
+export const LEGACY_SECTION_IDS: Readonly<Record<string, string>> = { 'bp-drivers.tests': 'bp-compare.tests', 'bp-drivers.segment': 'bp-segments.cluster' };
 export function reportType(id: string): ReportType {
   const type = REPORT_TYPES.find(t => t.id === id);
   if (!type) throw Error('没有这种报告类型。');
