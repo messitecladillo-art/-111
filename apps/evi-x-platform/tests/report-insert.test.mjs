@@ -14,6 +14,7 @@ import { applyReportInsert, insertSummary, sampleSizeInsert, samplingDesignInser
 import { groupStatement, parseSelectionTree } from '../lib/sampling-selection.ts';
 import { sampleSize, methodsStatement } from '../lib/sampling.ts';
 import { texProblem } from '../lib/omml.ts';
+import { evidenceLabel } from '../lib/quality-export.ts';
 
 const renderSvg = async svg => new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
 const report = () => parseEditorContent({ ...createEditorContent(), version: 2, report: blueprintSections({ includeOptional: false }), quality: { version: 1, results: [], findings: [] } });
@@ -71,6 +72,11 @@ test('the staged sampling design goes to the sampling section with frame tables 
   assert.equal(twice.content.quality.results.length, 2, 'inserting again reuses the registered frames');
   const frame = presentResult(tables[0].result), spans = tableSpans(tables[0].result, frame);
   assert.deepEqual(spans.map(row => row[0]), [4, 0, 0, 0], 'the first-stage frame spans all its rows');
+  // Placed through the general result catalogue, a frame still reads as a design, never as zero respondents.
+  const placed = placeResult(applied.content, tables[0].result.id);
+  assert.deepEqual(placed.blocks.map(b => b.kind), ['table', 'paragraph']);
+  assert.equal(placed.blocks[1].text, `[[表:${placed.blocks[0].id}]]列出了城区居民各阶段的抽样框与入样单位。`);
+  assert.doesNotMatch(evidenceLabel(tables[0].result), /n=|有效样本/);
 });
 
 test('names typed into the design stay literal text', async () => {
@@ -93,6 +99,11 @@ test('the sample-size calculation arrives as numbered formulas with their symbol
   assert.match(where, /^式中，\$z_\{\\alpha\/2\}\$ 为置信水平对应的标准正态分位数，\$p\$ 为预估比例，\$e\$ 为允许误差，\$N\$ 为总体规模，\$\\mathrm\{deff\}\$ 为设计效应，\$r\$ 为预计有效回收率。$/);
   const applied = applyReportInsert(report(), insert);
   assert.equal(applied.blocks.filter(b => b.kind === 'formula').length, result.steps.length);
+  assert.equal(insert.items.filter(i => i.kind === 'paragraph' && i.text.startsWith('需要说明的是：')).length, 0, 'no caveat, no caveat paragraph');
+  const tight = { ...plan, population: 150, proportion: 0.3 }, tightResult = sampleSize(tight);
+  assert.ok(tightResult.warnings.length >= 2);
+  const caveat = sampleSizeInsert(tight, tightResult, methodsStatement({ kind: 'stratified', population: '某校学生', frame: '学籍名册', plan: tight, result: tightResult })).items.at(-1);
+  assert.equal(caveat.text, `需要说明的是：${tightResult.warnings.join('')}`, 'the calculator\'s caveats travel with its formulas');
   assert.throws(() => applyReportInsert(report(), { ...insert, items: [{ kind: 'formula', tex: '\\frac{1}{' }] }), /公式无法排版/);
   assert.throws(() => applyReportInsert(report(), { ...insert, items: [] }), /没有可写入的内容/);
 });

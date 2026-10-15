@@ -91,6 +91,8 @@ export function sampleSizeInsert(plan: SizePlan, result: SizeResult, statement: 
       { kind: 'paragraph', text: '样本量依次按下列公式确定：' },
       ...result.steps.map(step => ({ kind: 'formula' as const, tex: step.formula })),
       { kind: 'paragraph', text: `式中，${symbols.join('，')}。` },
+      // The calculator's caveats (an infeasible size, an assumed proportion) travel with the numbers they qualify.
+      ...(result.warnings.length ? [{ kind: 'paragraph' as const, text: `需要说明的是：${result.warnings.map(literalText).join('')}` }] : []),
     ],
   };
 }
