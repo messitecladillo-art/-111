@@ -6,7 +6,7 @@ import { createEditorContent, parseEditorContent } from '../lib/editor-model.ts'
 import { buildDocx } from '../lib/editor-export.ts';
 import { parseSurveyCsv } from '../lib/survey-analysis.ts';
 import { runRecipe } from '../lib/analysis-recipes.ts';
-import { snapshotRecipe } from '../lib/research-quality.ts';
+import { chartData, snapshotRecipe } from '../lib/research-quality.ts';
 import { blockLabel, danglingReferences, numberedCaption, referenceSegments, referenceToken, reportLabels, resolveReferences } from '../lib/report-numbering.ts';
 import { categoryOrder, columnWeights, formatCell, presentResult, scaleScores, sectionNotes, sourceLine } from '../lib/report-tables.ts';
 import { accentScale, FIGURE_WIDTH, figurePlan, figureSVG, onFill, svgSize } from '../lib/report-figures.ts';
@@ -133,6 +133,9 @@ test('figures pick the type that fits the result and size their height to it', a
   assert.equal(expected.option.yAxis.name, '期望频数');
   assert.equal(expected.option.series[0].data[0], results.cross.rows.find(r => r[0] === expected.option.xAxis.data[0] && r[1] === expected.option.series[0].name)[4]);
   assert.equal(figurePlan(results.cross, 1, '#0F766E').kind, 'stacked', 'older blocks pointing at the category column show row shares');
+  const gaps = { ...results.cross, rows: results.cross.rows.map((r, i) => i ? r : [...r.slice(0, 4), null]) };
+  assert.throws(() => figurePlan(gaps, 4, '#0F766E'), /含缺失或非数值/, 'a selected column with gaps is refused, not drawn half empty');
+  assert.throws(() => chartData(pearson, 1), /相关系数结果不能画成柱形/, 'PPT and LaTeX charts refuse correlation rows instead of plotting r, n and p as one series');
   assert.throws(() => figurePlan({ ...results.freq, rows: [] }, 1, '#0F766E'), /没有数据行/);
   const heights = new Set(['cross', 'freq', 'groups'].map(id => figurePlan(results[id], id === 'freq' ? 1 : 2, '#0F766E').height));
   assert.ok(heights.size > 1, 'heights follow the content');

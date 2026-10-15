@@ -75,8 +75,8 @@ export function placeResult(content: EditorContent, resultId: string, options: {
   const blocks: ReportBlock[] = [];
   // The method paragraph and its formulas appear once per report; later results of the same method rely on them.
   const intro = methodIntro(r);
-  const formulas = new Set(next.report.flatMap(s => (s.blocks ?? []).filter(b => b.kind === 'formula').map(b => b.text.trim())));
-  if (intro && !intro.formulas.every(f => formulas.has(f))) blocks.push(block('paragraph', intro.text), ...intro.formulas.map(f => block('formula', f)), block('paragraph', intro.where));
+  const shown = intro && next.report.some(s => (s.blocks ?? []).some(b => b.kind === 'formula' && b.text.replace(/\s+/g, '').startsWith(intro.key)));
+  if (intro && !shown) blocks.push(block('paragraph', intro.text), ...intro.formulas.map(f => block('formula', f)), block('paragraph', intro.where));
   const refs: ResultRefs = {};
   for (const kind of options.exhibits ?? suggestedExhibits(r)) {
     const exhibit = block(kind, resultCaption(r), r.id, kind === 'chart' ? defaultColumn(r) : 1);

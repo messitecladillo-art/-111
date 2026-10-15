@@ -135,6 +135,8 @@ export function confirmFinding(finding:ResearchFinding,quality:ResearchQuality):
   return {...finding,status:'confirmed',confirmedHashes};
 }
 export function chartData(result:ResultSnapshot,valueColumn=1):{labels:string[];values:number[]} {
+  // A correlation result's rows (r, n, interval, p) are different quantities, never one series of bars or slices.
+  if(result.method==='pearson'||result.method==='spearman')throw Error('相关系数结果不能画成柱形、折线或饼图（r、n、p 不是同一组数值）。Word 报告会自动绘制系数图；PPT 与 LaTeX 中请改用表格或文字。');
   if(valueColumn<1||valueColumn>=result.headers.length)throw Error('请选择有效数值列。');
   const labels:string[]=[],values:number[]=[];
   for(const row of result.rows){if(typeof row[valueColumn]!=='number')throw Error('图表所选列含缺失或非数值，请改用表格。');labels.push(result.method==='crosstab'?String(row[0])+' · '+String(row[1]):String(row[0]));values.push(row[valueColumn] as number);}

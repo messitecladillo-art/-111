@@ -11,7 +11,11 @@ import { referenceToken } from './report-numbering.ts';
 import { categoryOrder, crosstabOrder, groupRows, scaleOrder, scaleScores } from './report-tables.ts';
 
 export type ResultRefs = { figure?: string; table?: string };
-export type MethodIntro = { text: string; formulas: string[]; where: string };
+/**
+ * `key` is how the method's defining formula begins (without spaces): a report that already shows a formula starting
+ * this way — including the combined forms written by earlier versions — does not get the method paragraph again.
+ */
+export type MethodIntro = { key: string; text: string; formulas: string[]; where: string };
 
 const num = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
 // Running text sets negative numbers with a true minus sign; inside $…$ TeX does that itself.
@@ -225,30 +229,36 @@ export function readingParagraph(r: ResultSnapshot, refs: ResultRefs = {}): stri
 export function methodIntro(r: ResultSnapshot): MethodIntro | null {
   switch (r.method) {
     case 'crosstab': return {
+      key: '\\chi^2=\\sum',
       text: '两个分类变量之间是否存在关联，采用 Pearson $\\chi^2$ 独立性检验判断，并以 Cramér $V$ 系数衡量关联强度；2×2 表中有期望频数小于 5 的单元格时，改用 Fisher 精确检验。检验统计量与关联系数分别为',
       formulas: ['\\chi^2=\\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}}', 'V=\\sqrt{\\frac{\\chi^2}{n\\,\\min(r-1,\\,c-1)}}'],
       where: '式中，$O_{ij}$ 为第 $i$ 行第 $j$ 列的观测频数，$E_{ij}=n_{i\\cdot}n_{\\cdot j}/n$ 为相应的期望频数，$n_{i\\cdot}$、$n_{\\cdot j}$ 为行、列合计，$r$、$c$ 为行、列类别数，$n$ 为有效样本量。',
     };
     case 'groups': return r.rows.filter(x => num(x[2]) !== null).length === 2 ? {
+      key: 't=\\frac{\\bar{x}_1-\\bar{x}_2}',
       text: '两组均值的比较不假定两组方差相等，采用 Welch $t$ 检验，统计量及其自由度为',
       formulas: ['t=\\frac{\\bar{x}_1-\\bar{x}_2}{\\sqrt{s_1^2/n_1+s_2^2/n_2}}', '\\nu=\\frac{\\left(s_1^2/n_1+s_2^2/n_2\\right)^2}{\\frac{(s_1^2/n_1)^2}{n_1-1}+\\frac{(s_2^2/n_2)^2}{n_2-1}}'],
       where: '式中，$\\bar{x}_k$、$s_k^2$ 与 $n_k$ 分别为第 $k$ 组的均值、方差与样本量；效应量采用 Hedges $g$。',
     } : {
+      key: 'F^{*}=',
       text: '多组均值的比较不假定各组方差相等，采用 Welch 方差分析，其统计量为',
       formulas: ['F^{*}=\\frac{\\frac{1}{k-1}\\sum_{j=1}^{k}w_j(\\bar{x}_j-\\tilde{x})^2}{1+\\frac{2(k-2)}{k^2-1}\\sum_{j=1}^{k}\\frac{(1-w_j/W)^2}{n_j-1}}'],
       where: '式中，$w_j=n_j/s_j^2$，$W=\\sum_{j=1}^{k}w_j$，$\\tilde{x}=\\sum_{j=1}^{k}w_j\\bar{x}_j/W$，$\\bar{x}_j$、$s_j^2$ 与 $n_j$ 分别为第 $j$ 组的均值、方差与样本量，$k$ 为组数；效应量采用经典方差分析的 $\\eta^2$。',
     };
     case 'pearson': return {
+      key: 'r=\\frac{\\sum',
       text: '两个数值变量之间的线性关联采用 Pearson 相关系数衡量，其定义为',
       formulas: ['r=\\frac{\\sum_{i=1}^{n}(x_i-\\bar{x})(y_i-\\bar{y})}{\\sqrt{\\sum_{i=1}^{n}(x_i-\\bar{x})^2}\\sqrt{\\sum_{i=1}^{n}(y_i-\\bar{y})^2}}'],
       where: '式中，$x_i$、$y_i$ 为第 $i$ 对有效观测值，$\\bar{x}$、$\\bar{y}$ 为其均值，$n$ 为有效配对数；95% 置信区间由 Fisher $z$ 变换得到。',
     };
     case 'spearman': return {
+      key: '\\rho=\\frac{\\sum',
       text: '有序变量或不满足正态假定的数值变量之间的单调关联采用 Spearman 秩相关系数衡量，即对两个变量的秩计算 Pearson 相关系数：',
       formulas: ['\\rho=\\frac{\\sum_{i=1}^{n}(R_i-\\bar{R})(S_i-\\bar{S})}{\\sqrt{\\sum_{i=1}^{n}(R_i-\\bar{R})^2}\\sqrt{\\sum_{i=1}^{n}(S_i-\\bar{S})^2}}'],
       where: '式中，$R_i$、$S_i$ 为第 $i$ 对观测值在各自变量中的秩（并列取平均秩），$\\bar{R}$、$\\bar{S}$ 为平均秩，$n$ 为有效配对数。',
     };
     case 'alpha': return {
+      key: '\\alpha=\\frac{k}{k-1}',
       text: '量表的内部一致性采用 Cronbach\'s $\\alpha$ 系数检验，其计算公式为',
       formulas: ['\\alpha=\\frac{k}{k-1}\\left(1-\\frac{\\sum_{i=1}^{k}s_i^2}{s_T^2}\\right)'],
       where: '式中，$k$ 为题项数，$s_i^2$ 为第 $i$ 个题项得分的方差，$s_T^2$ 为量表总分的方差；反向题先按“下限 + 上限 − 原值”重新计分。',

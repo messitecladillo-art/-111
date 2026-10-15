@@ -155,6 +155,10 @@ test('a result goes to its blueprint section with one exhibit and a reading para
   assert.deepEqual(added.map(b => b.kind), ['table', 'paragraph'], 'the method paragraph and formulas appear once per report');
   assert.ok(added[1].text.startsWith(`由[[表:${added[0].id}]]可知`));
   assert.deepEqual(placeResult(placed.content, 'corr', { exhibits: [] }).blocks.map(b => b.kind), ['paragraph', 'formula', 'paragraph', 'paragraph']);
+  // Reports written by an earlier version hold the χ² and E formulas as one combined block; the method is still recognised.
+  const combined = structuredClone(base);
+  combined.report.find(s => s.id === 'bp-drivers.tests').blocks = [{ id: 'old', kind: 'formula', text: '\\chi^2 = \\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}},\\qquad E_{ij}=\\frac{n_{i\\cdot}\\,n_{\\cdot j}}{n}', evidenceId: '', valueColumn: 1 }];
+  assert.deepEqual(placeResult(parseEditorContent(combined), 'cross').blocks.map(b => b.kind), ['chart', 'paragraph']);
 });
 
 test('a legacy report gains the blueprint chapter and section before its back matter', () => {

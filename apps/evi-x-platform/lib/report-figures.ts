@@ -281,7 +281,11 @@ export function figurePlan(r: ResultSnapshot, column: number, accent: string): F
     const cells = crosstabCells(r);
     // Counts and expected counts are drawn as they are; the row-share column (and the category column of older
     // blocks, which holds no numbers) shows row shares.
-    if (cells) return column === 2 || column === 4 ? grouped(cells, accent, column, r.headers[column]) : cells.cols.length > 6 ? heatmap(cells, accent) : stacked(cells, accent);
+    if (cells && (column === 2 || column === 4)) {
+      if (r.rows.some(row => numeric(row[column]) === null)) throw Error('图表所选列含缺失或非数值，请改用表格。');
+      return grouped(cells, accent, column, r.headers[column]);
+    }
+    if (cells) return cells.cols.length > 6 ? heatmap(cells, accent) : stacked(cells, accent);
   }
   if (r.method === 'numeric') { const plan = box(r, accent); if (plan) return plan; throw Error(`“${r.title}”缺少五数概括，无法作箱线图，请改用表格。`); }
   const values = r.rows.map(row => numeric(row[column]));
