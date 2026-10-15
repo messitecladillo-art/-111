@@ -3,7 +3,7 @@
  * text as `[[引:ID]]`, numbered in order of first citation, and printed as superscript "[1]", "[1,3]" or "[2-4]".
  * Entries never cited follow the cited ones and are reported, since the numeric system lists only what the text cites.
  */
-import type { EditorContent } from './editor-model.ts';
+import type { EditorContent, ReportSection } from './editor-model.ts';
 import { reportPart } from './report-format.ts';
 import { qualityRecord } from './research-quality.ts';
 
@@ -93,6 +93,16 @@ export function formatReference(e: ReferenceEntry): string {
 }
 /** An entry with nothing to print yet: no title (or, for a verbatim entry, no text). */
 export const unfinishedReference = (e: ReferenceEntry) => e.type === 'other' ? !e.text.trim() : !e.title.trim();
+/**
+ * The list number of the first unfinished entry that the given sections cite, or 0. An export that prints only some
+ * sections (an appendix) checks just the entries those sections cite.
+ */
+export function unfinishedCited(content: EditorContent, sections: readonly ReportSection[]): number {
+  const { numbers } = referenceNumbers(content), byId = new Map((content.references ?? []).map(e => [e.id, e]));
+  const cited = new Set(sections.flatMap(s => [s.body, ...(s.blocks ?? []).map(b => b.text)]).flatMap(text => [...text.matchAll(CITE)].map(m => m[1])));
+  const numbersOfUnfinished = [...cited].filter(id => byId.has(id) && unfinishedReference(byId.get(id)!)).map(id => numbers.get(id)!).sort((a, b) => a - b);
+  return numbersOfUnfinished[0] ?? 0;
+}
 
 const REQUIRED: Record<ReferenceType, readonly (keyof ReferenceEntry)[]> = {
   J: ['authors', 'title', 'source', 'year'], M: ['authors', 'title', 'place', 'publisher', 'year'], D: ['authors', 'title', 'place', 'publisher', 'year'],

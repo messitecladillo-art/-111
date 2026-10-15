@@ -3,7 +3,7 @@ import { chartData, resultFor, verifyResearchQuality, type ReportBlock } from '.
 import type { EditorContent, LatexReport } from './editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS, parseReportFormatOptions, parseReportFormatSettings, reportPart, type ReportFormatOptions } from './report-format.ts';
 import { referenceSegments, reportLabels, type BlockLabel } from './report-numbering.ts';
-import { formatReference, referenceNumbers, unfinishedReference } from './references.ts';
+import { formatReference, referenceNumbers, unfinishedCited, unfinishedReference } from './references.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
 export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions };
@@ -85,6 +85,7 @@ export function generateLatexBody(content: EditorContent): string {
   if (!sections.length) throw Error(part === 'appendix' ? '请先添加独立附录章节。' : '报告正文至少需要一个章节。');
   const refs: Cites = { labels: reportLabels(content.report), citations: referenceNumbers(content).numbers }, entries = referenceNumbers(content).order;
   // An appendix-only export prints no reference list, so an unfinished entry of the main report does not stop it.
+  if (part === 'appendix' && unfinishedCited(content, sections)) throw Error(`附录引用的第 ${unfinishedCited(content, sections)} 条参考文献尚未填写题名，请补全后再生成。`);
   if (part !== 'appendix' && entries.some(unfinishedReference)) throw Error(`第 ${entries.findIndex(unfinishedReference) + 1} 条参考文献尚未填写题名，请补全或删除后再生成。`);
   const paragraphs = (text: string, where: string) => text.split(/\r\n|\r|\n/).map(line => `${latexLine(line, refs, where)}\\par`).join('\n');
   // Structured references print as a hanging list in citation order, as in the Word export.

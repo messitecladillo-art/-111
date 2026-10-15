@@ -116,6 +116,12 @@ test('exports stop on a hand-typed list beside structured entries, a missing sec
   // An appendix-only export prints no reference list, so the main report's unfinished entry does not stop it.
   const appendixOnly = { ...untitled, reportFormat: { ...DEFAULT_REPORT_SETTINGS, options: { ...DEFAULT_REPORT_SETTINGS.options, part: 'appendix' } }, report: [...untitled.report, { id: 'ap', title: '附录1 调查问卷', body: '问卷全文。', source: '' }] };
   assert.match(generateLatexBody(appendixOnly), /问卷全文/);
+  // …unless the appendix itself cites the unfinished entry.
+  const blank = untitled.references.at(-1).id;
+  const citing = { ...appendixOnly, report: appendixOnly.report.map(s => s.id === 'ap' ? { ...s, body: `问卷依据${citationToken(blank)}。` } : s) };
+  assert.throws(() => generateLatexBody(citing), /附录引用的第 4 条参考文献尚未填写题名/);
+  await assert.rejects(buildDocx(citing), /附录引用的第 4 条参考文献尚未填写题名/);
+  await assert.doesNotReject(buildDocx(appendixOnly));
 });
 
 test('LaTeX and slides print citations as numbers, never as tokens', async () => {

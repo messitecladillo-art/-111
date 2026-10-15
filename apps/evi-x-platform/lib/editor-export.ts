@@ -2,7 +2,7 @@ import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences
 import { blockLabel, reportLabels } from "./report-numbering.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
-import { formatReference, referenceNumbers, unfinishedReference } from './references.ts';
+import { formatReference, referenceNumbers, unfinishedCited, unfinishedReference } from './references.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -17,6 +17,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
   if(!report.length)throw Error(options.part==='appendix'?'请先添加独立的“附录”章节，再单独导出附录。':'报告正文至少需要一个章节。');
+  // An appendix-only export prints no list, but a number it cites must still belong to a finished entry.
+  if(options.part==='appendix'&&unfinishedCited(content,report))throw Error(`附录引用的第 ${unfinishedCited(content,report)} 条参考文献尚未填写题名，请补全后再导出。`);
   // Structured references become the numbered list of the references section; a list also typed into that section would be numbered twice.
   const cited = referenceNumbers(content);
   if (cited.order.length && options.part !== 'appendix') {
