@@ -50,7 +50,32 @@ export function sectionForNode(content: EditorContent, nodeId: string): ReportSe
 }
 
 export type Placement = { content: EditorContent; sectionId: string; created: string[]; blocks: ReportBlock[] };
-const block = (kind: ReportBlock['kind'], text: string, evidenceId = '', valueColumn = 1): ReportBlock => ({ id: crypto.randomUUID(), kind, text, evidenceId, valueColumn });
+export const block = (kind: ReportBlock['kind'], text: string, evidenceId = '', valueColumn = 1): ReportBlock => ({ id: crypto.randomUUID(), kind, text, evidenceId, valueColumn });
+
+/**
+ * The section that takes new content: the chosen one, or the one the blueprint node maps to, created with its chapter
+ * where the blueprint puts it when the report has none.
+ */
+export function targetSection(content: EditorContent, node: string, sectionId?: string): { content: EditorContent; sectionId: string; created: string[] } {
+  if (sectionId !== undefined) {
+    if (!content.report.some(s => s.id === sectionId)) throw Error('目标章节不存在，请重新选择。');
+    return { content, sectionId, created: [] };
+  }
+  const existing = sectionForNode(content, node);
+  if (existing) return { content, sectionId: existing.id, created: [] };
+  const inserted = insertBlueprintNode(content, node);
+  if (inserted.content.report.length > EDITOR_LIMITS.sections) throw Error(`章节已满（${EDITOR_LIMITS.sections} 个），请先整理目录，或选择已有章节写入。`);
+  const id = inserted.content.report.find(s => inserted.inserted.includes(s.id) && matchBlueprintNode(s.title)?.id === node)?.id;
+  if (!id) throw Error('未能建立目标章节，请选择已有章节写入。');
+  return { content: inserted.content, sectionId: id, created: inserted.inserted };
+}
+
+/** The report with blocks appended to one section, validated as a whole. */
+export function appendBlocks(content: EditorContent, sectionId: string, blocks: ReportBlock[]): EditorContent {
+  const section = content.report.find(s => s.id === sectionId)!;
+  if ((section.blocks?.length ?? 0) + blocks.length > MAX_BLOCKS) throw Error(`「${section.title}」的内容块将超过 ${MAX_BLOCKS} 个，请换一个章节或先整理。`);
+  return parseEditorContent({ ...content, report: content.report.map(s => s.id === sectionId ? { ...s, blocks: [...(s.blocks ?? []), ...blocks] } : s) });
+}
 
 /**
  * The report with a result written into it. Without a section, the result goes to its blueprint section, which is
@@ -58,20 +83,7 @@ const block = (kind: ReportBlock['kind'], text: string, evidenceId = '', valueCo
  */
 export function placeResult(content: EditorContent, resultId: string, options: { sectionId?: string; exhibits?: ExhibitKind[] } = {}): Placement {
   const r = resultFor(content.quality, resultId);
-  let next = content, created: string[] = [], sectionId = options.sectionId;
-  if (sectionId !== undefined) {
-    if (!content.report.some(s => s.id === sectionId)) throw Error('目标章节不存在，请重新选择。');
-  } else {
-    const node = suggestedNode(r), existing = sectionForNode(content, node);
-    if (existing) sectionId = existing.id;
-    else {
-      const inserted = insertBlueprintNode(content, node);
-      if (inserted.content.report.length > EDITOR_LIMITS.sections) throw Error(`章节已满（${EDITOR_LIMITS.sections} 个），请先整理目录，或选择已有章节写入。`);
-      next = inserted.content; created = inserted.inserted;
-      sectionId = next.report.find(s => created.includes(s.id) && matchBlueprintNode(s.title)?.id === node)?.id;
-      if (!sectionId) throw Error('未能建立目标章节，请选择已有章节写入。');
-    }
-  }
+  const { content: next, sectionId, created } = targetSection(content, suggestedNode(r), options.sectionId);
   const blocks: ReportBlock[] = [];
   // The method paragraph and its formulas appear once per report; later results of the same method rely on them.
   const intro = methodIntro(r);
@@ -84,10 +96,7 @@ export function placeResult(content: EditorContent, resultId: string, options: {
     refs[kind === 'chart' ? 'figure' : 'table'] = exhibit.id;
   }
   blocks.push(block('paragraph', readingParagraph(r, refs)));
-  const section = next.report.find(s => s.id === sectionId)!;
-  if ((section.blocks?.length ?? 0) + blocks.length > MAX_BLOCKS) throw Error(`「${section.title}」的内容块将超过 ${MAX_BLOCKS} 个，请换一个章节或先整理。`);
-  next = { ...next, report: next.report.map(s => s.id === sectionId ? { ...s, blocks: [...(s.blocks ?? []), ...blocks] } : s) };
-  return { content: parseEditorContent(next), sectionId, created, blocks };
+  return { content: appendBlocks(next, sectionId, blocks), sectionId, created, blocks };
 }
 
 /** Method names as the result catalogue shows them. */

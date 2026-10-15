@@ -87,11 +87,11 @@ export function Notes({ items, tone = 'muted' }: { items: string[]; tone?: 'mute
   return <ul className={styles.notes} data-tone={tone}>{items.map(w => <li key={w}><Rich text={w} /></li>)}</ul>;
 }
 
-export function Statement({ title = '方法部分草稿', text, footnote }: { title?: string; text: string; footnote?: string }) {
+export function Statement({ title = '方法部分草稿', text, footnote, action }: { title?: string; text: string; footnote?: string; action?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   async function copy() { try { await navigator.clipboard.writeText(text); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); } }
   return <div className={styles.statement}>
-    <div><span>{title}</span><button type="button" onClick={() => void copy()}>{copied ? '已复制' : '复制'}</button></div>
+    <div><span>{title}</span>{action}<button type="button" onClick={() => void copy()}>{copied ? '已复制' : '复制'}</button></div>
     <p>{text}</p>
     {footnote && <small>{footnote}</small>}
   </div>;

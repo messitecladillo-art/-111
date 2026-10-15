@@ -32,8 +32,9 @@ const pMath = (p: number) => p < 0.001 ? 'p<0.001' : `p=${p.toFixed(3)}`;
  * Labels come from survey data and question wording, so they are copied as literal text: a "[[图:…]]" or "$…$"
  * inside a label must not turn into a reference or a formula.
  */
-const literal = (s: string) => s.replace(/\[\[/g, '［［').replace(/\]\]/g, '］］').replace(/\$/g, '\\$');
-const captionText = (s: string) => s.replace(/\[\[/g, '［［').replace(/\]\]/g, '］］').replace(/\$/g, '＄');
+export const literalText = (s: string) => s.replace(/\[\[/g, '［［').replace(/\]\]/g, '］］').replace(/\$/g, '\\$');
+const literal = literalText;
+export const captionText = (s: string) => s.replace(/\[\[/g, '［［').replace(/\]\]/g, '］］').replace(/\$/g, '＄');
 const quote = (s: string) => `“${literal(s)}”`;
 const metric = (r: ResultSnapshot, label: string | RegExp) =>
   num(r.metrics.find(m => typeof label === 'string' ? m.label === label : label.test(m.label))?.value);
@@ -200,12 +201,14 @@ function alpha(r: ResultSnapshot, refs: ResultRefs): string {
 
 function qualityControl(r: ResultSnapshot, refs: ResultRefs): string {
   const cited = refs.table ? referenceToken('table', refs.table) : refs.figure ? referenceToken('figure', refs.figure) : '';
-  const flagged = r.rows.map(x => ({ rule: String(x[0]), count: num(x[2]) ?? 0 })).filter(x => x.count > 0);
-  const screening = flagged.length
-    ? `${flagged.map(x => `${literal(x.rule)} ${x.count} 份`).join('，')}${flagged.length > 1 ? '（同一份问卷可能触发多条规则）' : ''}`
-    : '所有问卷均未触发剔除规则';
+  // The 处理 column says whether a rule removes the responses it flags or only marks them.
+  const flagged = r.rows.map(x => ({ rule: String(x[0]), count: num(x[2]) ?? 0, removes: x[3] !== '仅标记' })).filter(x => x.count > 0);
+  const removing = flagged.filter(x => x.removes), marking = flagged.filter(x => !x.removes);
+  const list = (xs: typeof flagged) => xs.map(x => `${literal(x.rule)} ${x.count} 份`).join('，');
+  const screening = removing.length ? `${list(removing)}${removing.length > 1 ? '（同一份问卷可能触发多条规则）' : ''}` : '没有问卷触发剔除规则';
+  const marked = marking.length ? `；${list(marking)}，仅作标记，未剔除` : '';
   const rate = r.total > 0 ? r.n / r.total * 100 : 0;
-  return `本次调查共回收问卷 ${r.total} 份。按${cited || '预先设定的'}规则逐份筛查：${screening}。剔除后得到有效问卷 ${r.n} 份，问卷有效率为 ${pct(rate)}。`;
+  return `本次调查共回收问卷 ${r.total} 份。按${cited || '预先设定的'}规则逐份筛查：${screening}${marked}。共剔除 ${r.total - r.n} 份，得到有效问卷 ${r.n} 份，问卷有效率为 ${pct(rate)}。`;
 }
 
 /** The reading paragraph for a result, citing the figure and table placed with it. */

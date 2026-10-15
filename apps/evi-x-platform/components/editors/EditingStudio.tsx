@@ -24,6 +24,7 @@ import { reportLabels, referenceToken } from '@/lib/report-numbering';
 import {appendQualityResult} from '@/lib/quality-layouts';
 import {type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
+import { applyReportInsert, insertSummary, type ReportInsert } from '@/lib/report-insert';
 
 export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean };
@@ -73,7 +74,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled,reportInsert,onReportInsertHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
@@ -293,6 +294,25 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     },0);
     return ()=>window.clearTimeout(timer);
   },[resultProposal,onResultHandled,phase,identityFrozen]);
+  // Content sent from a workbench module (sampling design, sample size) lands in its blueprint section as one undoable step.
+  useEffect(()=>{
+    if(!reportInsert||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
+    const timer=window.setTimeout(()=>{
+    if(!alive.current||identityTransition.current)return;
+    if(busy.current||versionOperation.current)return;
+    const currentContent=current.current;
+    let applied:ReturnType<typeof applyReportInsert>;
+    try{applied=applyReportInsert(currentContent,reportInsert);}
+    catch(error){setMessage(`未能写入${reportInsert.source}：${(error as Error).message}`);onReportInsertHandled?.();return;}
+    current.current=applied.content;
+    setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(applied.content);if(!blocked.current)setPhase('ready');
+    setMode('report');setSectionId(applied.sectionId);
+    const title=applied.content.report.find(s=>s.id===applied.sectionId)?.title??'';
+    setMessage(`已从${reportInsert.source}写入「${title}」${applied.created.length?'（按报告蓝图新建章节）':''}：${insertSummary(applied.blocks)}。可撤销。`);
+    onReportInsertHandled?.();
+    },0);
+    return ()=>window.clearTimeout(timer);
+  },[reportInsert,onReportInsertHandled,phase,identityFrozen]);
   function undo() {
     const previous = past[past.length - 1]; if (!previous) return;
     setPast(past.slice(0, -1)); setFuture([current.current, ...future]); current.current = previous; setContent(previous);

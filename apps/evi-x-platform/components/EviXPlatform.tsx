@@ -1033,6 +1033,8 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
 
 export default function EviXPlatform() {
   const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
+  // Paragraphs, tables and formulas a workbench module sends to the report; the editor applies each once.
+  const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
   const [workspaceDataset,setWorkspaceDataset]=useState<DatasetValue|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
@@ -1075,9 +1077,9 @@ export default function EviXPlatform() {
       </>,
       exam: <NetExamStudio />,
       preflight: <SubmissionPreflight />,
-      sampling: <SamplingWorkbench dataset={workspaceDataset} />,
+      sampling: <SamplingWorkbench dataset={workspaceDataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)}/>,
+      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)}/>,
       defense: <DefenseStudio />,
       analysis: <SurveyLab onResultSnapshot={result=>{setResultProposal(result);window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
       canvas: <CanvasPanel dataset={workspaceDataset} design={designSnapshot} />,

@@ -3,7 +3,7 @@ import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
 import {assertTrueVector} from './svg-safety.ts';
 import {blockLabel, numberedCaption, resolveReferences, type BlockLabel} from './report-numbering.ts';
-import {columnWeights, presentResult, sectionNotes, sourceLine} from './report-tables.ts';
+import {columnWeights, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
 import {splitInlineMath} from './inline-math.ts';
 import type PptxGenJS from 'pptxgenjs';
 export {assertTrueVector};
@@ -58,7 +58,7 @@ export function insertMath(documentXml:string,math:readonly MathSlot[]):string{
 }
 const ACCENT_HEX:Record<EditorContent['accent'],string>={teal:'#0F766E',blue:'#234E80',burgundy:'#8A3449'};
 export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview,context?:WordContext){
- const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun,VerticalAlign}=await import('docx');
+ const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun,VerticalAlign,VerticalMergeType}=await import('docx');
  const {figureSVG,svgSize}=await import('./report-figures.ts');
  const {texToOmml}=await import('./omml.ts');
  const ctx:WordContext=context??{labels:(await import('./report-numbering.ts')).reportLabels(c.report),math:[],where:'内容块',section:''};
@@ -103,7 +103,9 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    const all=[table.headers,...table.rows];
    // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
    const small=all.length<=16,follows=source||!!table.note;
-   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:[new TextRun({text:cell,bold:i===0})]})]}))}));
+   // A parent unit repeated on its children's rows (a sampling frame) is one vertically merged cell; covered cells stay empty.
+   const spans=tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
+   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:[new TextRun({text:cell,bold:i===0})]})]}))}));
    out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
    if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,text:table.note}));
   }

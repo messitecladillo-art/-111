@@ -4,12 +4,13 @@
  * matrix rather than one row per cell. The registered result itself is never changed.
  */
 import type { ResultSnapshot } from './research-quality.ts';
+import { mergeSpans } from './sampling-selection.ts';
 
 export type PresentedTable = { headers: string[]; rows: string[][]; note: string };
 
 // Only an explicit percent sign marks a percentage; a bare 比例 or 占比 may hold proportions between 0 and 1.
 const isPercent = (header: string) => /%|％|百分/.test(header);
-const isCount = (header: string) => /^n$|样本量|频数|人数|计数|个数|有效数/.test(header.trim());
+const isCount = (header: string) => /^n$|样本量|频数|人数|计数|个数|有效数|份数/.test(header.trim());
 const isP = (header: string) => /^p$|p\s*值|显著性|sig/i.test(header.trim());
 
 /** One cell, rounded according to what its column measures. */
@@ -157,6 +158,8 @@ export function columnWeights(table: PresentedTable): number[] {
 
 /** A one-line source note under a figure or table; method caveats are gathered once per section instead. */
 export function sourceLine(r: ResultSnapshot): string {
+  // A sampling frame is part of the design, not a sample: no sample size or data class to report.
+  if (r.method === 'sampling-frame') return '资料来源：本研究抽样设计。';
   const kind = r.classification === 'simulated' ? '；模拟数据' : r.classification === 'public' ? '；公开数据' : '；用户提供数据';
   return `资料来源：${r.sourceName}${r.sourceUrl ? `（${r.sourceUrl}）` : ''}；有效样本 n = ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${kind}。`;
 }
@@ -168,4 +171,13 @@ export function sectionNotes(results: readonly ResultSnapshot[]): string {
     .map(s => s.trim().replace(/^[；;，,\s]+|[；;，,\s]+$/gu, '')).filter(Boolean);
   const notes = firstSeen(sentences);
   return notes.length ? `注：${notes.join('；')}。` : '';
+}
+
+/**
+ * Row spans for a table whose leading columns repeat a parent unit on every child row, as a sampling frame does:
+ * 0 marks a cell covered by the merged cell above it. Other tables are not merged (null).
+ */
+export function tableSpans(r: ResultSnapshot, table: PresentedTable): number[][] | null {
+  if (r.method !== 'sampling-frame' || table.rows.length < 2) return null;
+  return mergeSpans(table.rows);
 }

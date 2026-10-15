@@ -116,7 +116,7 @@ test('alpha and screening paragraphs judge the measures by their usual threshold
   assert.match(text, /“环境”低于 0\.3/);
   assert.match(text, /删除“环境”后 \$\\alpha\$ 系数将升至 0\.830/);
   const qc = { ...r.kind, method: 'quality-control', n: 400, total: 432, headers: ['规则', '判定标准', '标记份数', '处理'], rows: [['注意力题未通过', '第 12 题未选“比较同意”', 20, '剔除'], ['作答过快', '用时少于 90 秒', 15, '剔除'], ['重复作答', '同一设备', 0, '剔除']], metrics: [] };
-  assert.equal(readingParagraph(qc, { table: 't' }), '本次调查共回收问卷 432 份。按[[表:t]]规则逐份筛查：注意力题未通过 20 份，作答过快 15 份（同一份问卷可能触发多条规则）。剔除后得到有效问卷 400 份，问卷有效率为 92.6%。');
+  assert.equal(readingParagraph(qc, { table: 't' }), '本次调查共回收问卷 432 份。按[[表:t]]规则逐份筛查：注意力题未通过 20 份，作答过快 15 份（同一份问卷可能触发多条规则）。共剔除 32 份，得到有效问卷 400 份，问卷有效率为 92.6%。');
 });
 
 test('method paragraphs carry formulas that typeset in the preview and in Word', () => {

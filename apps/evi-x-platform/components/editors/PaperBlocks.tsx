@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { blockLabel, numberedCaption, referenceSegments, type BlockLabel } from '@/lib/report-numbering';
-import { presentResult, sectionNotes, sourceLine } from '@/lib/report-tables';
+import { presentResult, sectionNotes, sourceLine, tableSpans } from '@/lib/report-tables';
 import { splitInlineMath } from '@/lib/inline-math';
 import { Formula, Tex } from '../math/Tex';
 import styles from './PaperBlocks.module.css';
@@ -36,13 +36,15 @@ function Figure({ result, column, accent }: { result: ResultSnapshot; column: nu
 }
 
 function Table({ result }: { result: ResultSnapshot }) {
-  const table = presentResult(result);
+  const table = presentResult(result), spans = tableSpans(result, table);
+  // Merged cells (a sampling frame's parent units) span their children's rows, as in Word.
+  const span = (r: number, c: number) => spans ? spans[r][c] : 1;
   return <>
     {/* Cells keep one line; a table wider than the preview scrolls sideways instead of breaking every cell. */}
     <div className={styles.tableScroll} tabIndex={0} role="region" aria-label={result.title}>
       <table className={styles.table}>
         <thead><tr>{table.headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
-        <tbody>{table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => c === 0 ? <th key={c} scope="row">{cell}</th> : <td key={c}>{cell}</td>)}</tr>)}</tbody>
+        <tbody>{table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => !span(r, c) ? null : c === 0 ? <th key={c} scope="row" rowSpan={span(r, c)}>{cell}</th> : <td key={c} rowSpan={span(r, c)}>{cell}</td>)}</tr>)}</tbody>
       </table>
     </div>
     {table.note && <p className={styles.small}>{table.note}</p>}

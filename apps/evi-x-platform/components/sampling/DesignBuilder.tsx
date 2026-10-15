@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { countWord, equalProbabilityInclusion, frameTable, groupIsProbability, groupStatement, mergeSpans, parseSelectionTree, STAGE_METHODS, type PlanGroup, type PlanStage, type StageMethod } from '@/lib/sampling-selection';
 import { texNum } from '@/lib/sampling-core';
+import { samplingDesignInsert, type ReportInsert } from '@/lib/report-insert';
 import { Formula } from '../math/Tex';
 import { Field, Notes, parseNumber, Statement, usePersistent } from './ui';
 import styles from './Sampling.module.css';
@@ -44,8 +45,9 @@ function FrameTable({ group }: { group: PlanGroup }) {
   </div>;
 }
 
-export default function DesignBuilder() {
+export default function DesignBuilder({ onReportInsert }: { onReportInsert?: (insert: ReportInsert) => void } = {}) {
   const [groups, setGroups] = usePersistent('builder.v1', { list: EXAMPLE, quota: '1:1' });
+  const [sending, setSending] = useState(false), [sendError, setSendError] = useState('');
   const update = (id: string, patch: Partial<GroupDraft>) => setGroups({ ...groups, list: groups.list.map(g => g.id === id ? { ...g, ...patch } : g) });
   const updateStage = (g: GroupDraft, id: string, patch: Partial<StageDraft>) => update(g.id, { stages: g.stages.map(s => s.id === id ? { ...s, ...patch } : s) });
   const built = useMemo(() => groups.list.map(toGroup), [groups.list]);
@@ -53,6 +55,12 @@ export default function DesignBuilder() {
   const total = built.reduce((s, g) => s + (g.completes ?? 0), 0);
   const overall = built.length > 1 ? `本研究将调查对象分为${built.map(g => `“${g.name}”`).join('与')}${countWord(built.length)}个群体，${groups.quota.trim() ? `样本量按 ${groups.quota.trim()} 配置，` : ''}分别设计抽样方案${total ? `，计划有效样本合计 ${total} 份` : ''}。` : '';
   const statement = [overall, ...built.map(groupStatement)].filter(Boolean).join('\n');
+  async function send() {
+    setSending(true); setSendError('');
+    try { onReportInsert?.(await samplingDesignInsert(built, statement)); }
+    catch (e) { setSendError((e as Error).message); }
+    finally { setSending(false); }
+  }
   return <div className={styles.builder}>
     <div className={styles.callout}>按“目标总体 → 各阶段抽样单元 → 入样单位”逐级填写。表格与方法段落会实时更新；示例中的地名与学校均为占位，请替换为你的实际抽样框。</div>
     <div className={styles.row}><Field label="各群体样本比例（可选）" value={groups.quota} onChange={quota => setGroups({ ...groups, quota })} inputMode="text" placeholder="如 1:1" /></div>
@@ -86,7 +94,8 @@ export default function DesignBuilder() {
       {probability && inclusion === null && <Formula compact label="多阶段设计的入样概率与权数" tex={String.raw`\pi_i=\prod_{k=1}^{K}\pi_{i}^{(k)},\qquad w_i=\frac{1}{\pi_i}`} />}
     </section>; })}
     <button type="button" className={styles.ghost} disabled={groups.list.length >= 4} onClick={() => setGroups({ ...groups, list: [...groups.list, { id: crypto.randomUUID(), name: `群体${groups.list.length + 1}`, population: '', completes: '', tree: '', stages: [stage(crypto.randomUUID(), '', '', 'srs')] }] })}>＋ 添加调查群体</button>
-    <Statement title="抽样设计段落草稿" text={statement} footnote="依据上方填写生成。名单来源、抽取时的随机种子与抽取记录请放入附录。" />
+    <Statement title="抽样设计段落草稿" text={statement} footnote="依据上方填写生成。名单来源、抽取时的随机种子与抽取记录请放入附录。" action={onReportInsert && <button type="button" disabled={sending || !statement} title="把段落、各群体抽样框表和入样概率公式写入报告的「抽样设计」一节" onClick={() => void send()}>{sending ? '正在写入…' : '写入报告'}</button>} />
+    {sendError && <p className={styles.error} role="alert">{sendError}</p>}
     <Notes items={allProbability ? ['所有群体的各阶段都是概率抽样，可以按多阶段设计计算抽样误差（见“复杂样本估计”）。'] : ['含有拦截、配额或方便抽样阶段的群体不是概率样本：可以用前几阶段的随机抽取说明覆盖面，但不应报告严格的抽样误差。']} />
   </div>;
 }
