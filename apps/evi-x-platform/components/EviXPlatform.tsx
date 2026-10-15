@@ -33,6 +33,9 @@ const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
 // React Flow and the canvas engine load only when the canvas is first opened.
 const ResearchCanvas = dynamic(() => import('@/components/canvas/ResearchCanvas'), { ssr: false, loading: () => <p className="wb-canvas-loading" role="status">正在载入研究画布…</p> });
 const TopicLab = dynamic(() => import('@/components/topic-lab/TopicLab'), { ssr: false, loading: () => <p className="topic-lab-loading" role="status">正在载入词云与选题…</p> });
+const TopicAdvisor = dynamic(() => import('@/components/topic-advisor/TopicAdvisor'), { ssr: false, loading: () => <p role="status">正在载入选题顾问…</p> });
+import TopicModelProposal from '@/components/topic-advisor/TopicModelProposal';
+import topicCatalog from '@/content/topic-advisor/catalog.json';
 import HostedServices from '@/components/hosted/HostedServices';
 import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
 import DiagnosisActions from "@/components/DiagnosisActions";
@@ -806,7 +809,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
   const [error, setError] = useState("");
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [resultSource,setResultSource]=useState<DiagnosisBriefSource|null>(null);
-  const [mode,setMode]=useState<"readiness"|"topics">("readiness");
+  const [mode,setMode]=useState<"advisor"|"readiness"|"topics">("advisor");
   const [topicsOpened,setTopicsOpened]=useState(false);
   const requestEpoch=useRef(0);
   const [form, setForm] = useState({
@@ -824,10 +827,10 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
     setForm((current) => ({ ...current, [field]: value }));
   };
   useEffect(()=>()=>{requestEpoch.current++;},[]);
-  const openMode=(next:"readiness"|"topics")=>{setMode(next);if(next==="topics")setTopicsOpened(true);};
-  const applyTopic=(topic:{title:string;decisionOwner:string})=>{
+  const openMode=(next:"advisor"|"readiness"|"topics")=>{setMode(next);if(next==="topics")setTopicsOpened(true);};
+  const applyTopic=(topic:{title:string;decisionOwner:string;population?:string;geography?:string;problem?:string})=>{
     requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setError('');onBriefSource?.(null);
-    setForm(current=>({...current,title:topic.title,decisionOwner:topic.decisionOwner||current.decisionOwner}));
+    setForm(current=>({...current,title:topic.title,decisionOwner:topic.decisionOwner||current.decisionOwner,population:topic.population??current.population,geography:topic.geography??current.geography,problem:topic.problem??current.problem,evidenceStatus:"proposed"}));
     setMode("readiness");
     requestAnimationFrame(()=>document.getElementById("diagnose")?.scrollIntoView({behavior:"smooth",block:"start"}));
   };
@@ -858,12 +861,13 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
   return (
     <section className="section section-diagnose" id="diagnose" aria-labelledby="diagnose-title">
       <div className="section-heading inverted">
-        <div><span className="eyebrow">Agent 诊断</span><h2 id="diagnose-title">{mode==="topics"?"从文献里找方向，用证据筛选题目":"先暴露证据缺口，再安排最短修复路径"}</h2></div>
-        <p>{mode==="topics"?"导入文献，看清领域结构、前沿与空白，再为候选题目生成逐项可追溯的证据画像。":"填写当前项目状态，缺失信息可标为未知。"}</p>
+        <div><span className="eyebrow">选题与诊断</span><h2 id="diagnose-title">{mode==="advisor"?"从身边的变化，找到值得研究的问题":mode==="topics"?"从文献里找方向，用证据筛选题目":"先暴露证据缺口，再安排最短修复路径"}</h2></div>
+        <p>{mode==="advisor"?"把热点、地区与团队资源放在一起，找到一个能做深、能落地的研究切口。":mode==="topics"?"导入文献，看清领域结构、前沿与空白，再为候选题目生成逐项可追溯的证据画像。":"填写当前项目状态，缺失信息可标为未知。"}</p>
       </div>
       <div className="diagnose-modes" role="tablist" aria-label="诊断类型">
-        {([["readiness","准备度诊断","检查证据缺口与下一步"],["topics","词云与选题","文献图谱 · 研究空白 · 证据画像"]] as const).map(([id,label,hint])=><button key={id} type="button" role="tab" id={`dg-tab-${id}`} aria-selected={mode===id} aria-controls={`dg-panel-${id}`} tabIndex={mode===id?0:-1} onClick={()=>openMode(id)} onKeyDown={event=>{if(event.key!=="ArrowRight"&&event.key!=="ArrowLeft")return;event.preventDefault();const next=id==="readiness"?"topics":"readiness";openMode(next);document.getElementById(`dg-tab-${next}`)?.focus();}}><strong>{label}</strong><small>{hint}</small></button>)}
+        {([["advisor","选题顾问","热点线索 · 地区资源 · 研究切口"],["readiness","项目诊断","检查证据缺口与下一步"],["topics","文献图谱","领域结构 · 研究空白 · 证据画像"]] as const).map(([id,label,hint])=><button key={id} type="button" role="tab" id={`dg-tab-${id}`} aria-selected={mode===id} aria-controls={`dg-panel-${id}`} tabIndex={mode===id?0:-1} onClick={()=>openMode(id)} onKeyDown={event=>{if(!["ArrowRight","ArrowLeft","Home","End"].includes(event.key))return;event.preventDefault();const order=["advisor","readiness","topics"] as const;const index=order.indexOf(id);const next=event.key==="Home"?order[0]:event.key==="End"?order[2]:order[(index+(event.key==="ArrowRight"?1:2))%3];openMode(next);document.getElementById(`dg-tab-${next}`)?.focus();}}><strong>{label}</strong><small>{hint}</small></button>)}
       </div>
+      <div role="tabpanel" id="dg-panel-advisor" aria-labelledby="dg-tab-advisor" hidden={mode!=="advisor"}><TopicAdvisor onUseTopic={applyTopic} renderEnhancement={context=><TopicModelProposal {...context} catalogVersion={topicCatalog.contentVersion} onUseTopic={applyTopic}/>}/></div>
       <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic}/>}</div>
       <div role="tabpanel" id="dg-panel-readiness" aria-labelledby="dg-tab-readiness" hidden={mode!=="readiness"}>
       <div className="diagnose-grid">

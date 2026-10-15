@@ -9,7 +9,7 @@
     "dev": "next dev --webpack --hostname 127.0.0.1 --port 3180",
     "dev:editor": "node scripts/start-editor.mjs",
     "dev:native-shell": "node native-shell/server.mjs",
-    "prebuild": "npm run contract:check && npm run rules:check && node scripts/sync-defense-corpus.mjs && npm run security:assets && npm run knowledge:assets && npm run knowledge:check",
+    "prebuild": "npm run contract:check && npm run rules:check && node scripts/sync-defense-corpus.mjs && npm run security:assets && npm run knowledge:assets && npm run knowledge:check && npm run topic:check",
     "build": "next build --webpack",
     "postbuild": "node scripts/check-hosted-build.mjs",
     "start": "node scripts/start-hosted.mjs",
@@ -42,7 +42,10 @@
     "security:cloud-bundle": "node scripts/check-cloud-bundle-isolation.mjs",
     "db:generate": "drizzle-kit generate",
     "test:legacy:http": "node tests/run-tests.mjs",
-    "test:unit": "node scripts/run-unit-tests.mjs"
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "topic:check": "node --experimental-strip-types scripts/train-topic-advisor.mjs --check && node scripts/sync-topic-advisor.mjs",
+    "topic:train": "node --experimental-strip-types scripts/train-topic-advisor.mjs",
+    "test:topics": "node --experimental-strip-types --test tests/topic-*.test.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "3.1.1",

@@ -19,6 +19,7 @@ from .security import keyed, random_token, code_verifier, config_view, encrypt, 
 from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_proposal
 from . import silicon, surveys
 from .knowledge import register_knowledge
+from .topics import register_topics
 from .reports import register_reports
 from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
@@ -921,6 +922,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
 
     surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
     register_knowledge(app, settings, db, session_user, owned_project, lock_user, operation, config=knowledge_config)
+    register_topics(app, settings, db, session_user, lock_user, operation, owned_service, generator)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)
     return app

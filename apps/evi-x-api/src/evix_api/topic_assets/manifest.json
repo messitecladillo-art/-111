@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "sha256": {
+    "catalog": "fc56061d01cd84ca1f84cec6bc048ed36d5e3e49620119c01747f93dd65decbc",
+    "sources": "904b15899ac0f96796a214829297ddacf38a283ef83fe4653a7268f5c09961a7",
+    "hotspot-events": "2fa8c95c79eab6c9e26f49cbb55ff5358a0a848990197f100623af352a279bdf",
+    "train": "18f067e920f8a35a94d72ffafe09b5969d9f11808a6aa03c59e56fb82c454e1f"
+  }
+}
