@@ -17,7 +17,7 @@ const MAX_BLOCKS = 60;
 export function suggestedNode(r: ResultSnapshot): string {
   switch (r.method) {
     case 'frequency': case 'numeric': return DEMOGRAPHIC.test(r.variables?.[0] ?? '') ? 'sample.profile' : 'sample.descriptive';
-    case 'crosstab': case 'groups': case 'pearson': case 'spearman': return 'drivers.tests';
+    case 'crosstab': case 'groups': case 'pearson': case 'spearman': return 'compare.tests';
     case 'alpha': return 'data.testing';
     case 'quality-control': return 'data.cleaning';
     case 'sampling-frame': return 'design.sampling';

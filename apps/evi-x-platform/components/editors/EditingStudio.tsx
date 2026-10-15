@@ -357,9 +357,9 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       setMessage(`已插入${titles}${renumbered ? `，并重排了 ${renumbered} 个章节序号` : ""}。可撤销。`);
     } catch (e) { setMessage(e instanceof Error ? e.message : "未能插入。"); }
   }
-  function applyBlueprint(includeOptional: boolean) {
+  function applyBlueprint(nodes: readonly string[]) {
     try {
-      const before = current.current, replacement = blueprintSections({ includeOptional });
+      const before = current.current, replacement = blueprintSections({ nodes });
       // Links to sections the skeleton lacks stay in place, so export flags those slides for re-review rather than hiding their origin.
       const kept = new Set(replacement.map(s => s.id));
       const orphaned = before.slides.filter(s => s.reportLink && !kept.has(s.reportLink.sectionId)).length;
@@ -368,7 +368,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       setMode("report"); setSectionId(next.report[0].id); setOutlineQuery(""); setBlankReportConfirm(false);
       setStoryboardOpen(false); setStoryboardGeneration(value => value + 1);
       previewRef.current?.scrollTo({ top: 0 });
-      setMessage(`已替换为正大杯蓝图骨架，共 ${next.report.length} 节；选中任一节即可看到写作指引。可撤销。${orphaned ? `${orphaned} 页 PPT 关联的章节不在骨架中，导出前请重新选择依据。` : ""}`);
+      setMessage(`已按所选报告类型重建骨架，共 ${next.report.length} 节；选中任一节即可看到写作指引，分析模块可随时增删。可撤销。${orphaned ? `${orphaned} 页 PPT 关联的章节不在骨架中，导出前请重新选择依据。` : ""}`);
     } catch (e) { setMessage(e instanceof Error ? e.message : "未能替换。"); }
   }
   /** Inserts a reference token at the cursor and keeps the caret after it. */

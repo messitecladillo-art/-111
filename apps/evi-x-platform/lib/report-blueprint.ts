@@ -1,7 +1,9 @@
 /**
- * Structural blueprint of a 正大杯-style market-survey report: the chapters a strong entry carries,
- * what each section must achieve, the writing moves inside it and the evidence it should show.
- * The wording is original; only the structure reflects what well-reviewed entries contain.
+ * Structural blueprint of a survey research report, as a library rather than one fixed outline. A common frame —
+ * abstract, introduction, survey design, data processing, sample, conclusions, references, appendices — holds for
+ * every survey report; the analysis chapters are modules chosen by the research questions (status, group differences,
+ * drivers, segments, demand, evaluation, plan design, text). REPORT_TYPES are only starting combinations.
+ * Wording is original; no chapter list, count or phrase is taken from any single report.
  */
 import type { EditorContent, ReportSection } from './editor-model.ts';
 import { reportHeadingLevel, reportPart } from './report-format.ts';
@@ -94,7 +96,7 @@ export const BLUEPRINT: readonly BlueprintNode[] = [
     ['信度：Cronbach α 系数', '效度：KMO 值与 Bartlett 球形检验', '结论：是否适合进一步分析'],
     { needs: [{ element: 'table', label: '信度与效度检验表' }], module: 'analysis', length: [400, 1000] }),
 
-  chapter('sample', '样本特征与描述性分析', ['样本特征', '描述性', '受访'], '说明样本是谁，以及核心变量的基本分布。'),
+  chapter('sample', '样本特征与描述性分析', ['样本特征', '描述性', '受访', '现状描述'], '说明样本是谁，以及核心行为与态度的基本分布。'),
   section('sample.profile', '样本特征分析', ['样本特征', '样本结构', '人口统计'], '描述样本结构并说明代表性。',
     ['性别、年龄、身份等结构', '与总体结构的对比或代表性说明'],
     { needs: [{ element: 'figure', label: '样本结构图' }], module: 'analysis', length: [500, 1200] }),
@@ -102,30 +104,43 @@ export const BLUEPRINT: readonly BlueprintNode[] = [
     ['主要行为与态度变量的分布', '不同群体之间的对比'],
     { needs: [{ element: 'figure', label: '核心变量分布图' }], module: 'analysis', length: [800, 2500] }),
 
-  chapter('drivers', '影响因素分析', ['影响因素', '驱动因素'], '回答哪些因素与目标行为或态度有关，关系有多强。'),
-  section('drivers.tests', '差异检验与相关分析', ['差异检验', '假设检验', '相关分析', '相关性'], '先判断哪些因素存在显著关联。',
-    ['按变量类型选择检验方法，并说明理由', '检验结果表：统计量、自由度、p 值', '相关矩阵或热力图', '小结：哪些因素存在显著关联'],
-    { needs: [{ element: 'table', label: '检验结果表' }, { element: 'figure', label: '相关热力图' }], module: 'analysis', length: [1000, 2500] }),
-  section('drivers.model', '回归模型分析', ['回归', 'Logistic', 'logit', '模型分析'], '量化各因素的影响方向与大小。',
+  // Analysis modules: a report includes the ones its research questions need; none is required by itself.
+  chapter('demand', '需求与意愿分析', ['需求与意愿', '需求分析', '意愿分析', '偏好分析'], '回答目标人群需要什么、愿意为什么付出。', true),
+  section('demand.preference', '需求与偏好', ['需求', '偏好', '属性重要性', '联合分析'], '说明目标人群最看重哪些属性、偏好哪些方案。',
+    ['需求或偏好的分布，按重要性排序', '不同人群偏好的差异', '偏好结构对产品或服务设计的含义'],
+    { optional: true, needs: [{ element: 'figure', label: '需求或偏好分布图' }], module: 'analysis', length: [600, 1800] }),
+  section('demand.willingness', '参与与支付意愿', ['支付意愿', '购买意愿', '参与意愿', '意愿'], '估计意愿的水平及其分布。',
+    ['意愿的测量方式与分布', '意愿与价格、收入等因素的关系', '意愿转化为实际行为的条件与限制'],
+    { optional: true, needs: [{ element: 'figure', label: '意愿分布图' }], module: 'analysis', length: [600, 1800] }),
+
+  chapter('compare', '群体差异与关联分析', ['群体差异', '差异与关联', '关联分析', '交叉分析'], '判断不同群体之间是否存在差异、变量之间是否相关。', true),
+  section('compare.tests', '差异检验与相关分析', ['差异检验', '假设检验', '相关分析', '相关性', '交叉分析'], '先判断哪些差异与关联具有统计学意义。',
+    ['按变量类型选择检验方法，并说明理由', '检验结果：统计量、自由度、p 值与效应量', '小结：哪些差异或关联有统计学意义，强度如何'],
+    { optional: true, needs: [{ element: 'table', label: '检验结果图表' }], module: 'analysis', length: [800, 2500] }),
+
+  chapter('drivers', '影响因素分析', ['影响因素', '驱动因素'], '量化各因素与目标行为或态度的关系方向与大小。', true),
+  section('drivers.model', '回归模型分析', ['回归', 'Logistic', 'logit', '模型分析'], '在控制其他因素后估计各因素的作用。',
     ['模型形式与变量编码，写出公式', '估计结果表', '效应解读，如 OR、RRR 或边际效应', '模型检验与诊断', '不同群体之间的比较'],
-    { needs: [{ element: 'formula', label: '模型公式' }, { element: 'table', label: '估计结果表' }, { element: 'figure', label: '系数图' }], module: 'analysis', length: [1500, 4000] }),
-  section('drivers.segment', '细分人群与画像', ['聚类', '细分', '画像', '分群'], '找出值得优先争取的人群。',
+    { optional: true, needs: [{ element: 'formula', label: '模型公式' }, { element: 'table', label: '估计结果表' }], module: 'analysis', length: [1500, 4000] }),
+
+  chapter('segments', '人群细分与画像', ['人群细分', '细分与画像', '人群画像', '分群'], '找出需要区别对待的人群。', true),
+  section('segments.cluster', '聚类与人群画像', ['聚类', '细分', '画像', '分群'], '用可复核的方法划分人群并描述各类特征。',
     ['聚类变量与标准化方式', '确定类别数的依据，如轮廓系数', '各类人群的画像与规模'],
     { optional: true, needs: [{ element: 'figure', label: '聚类结果图' }], module: 'analysis', length: [800, 2000] }),
 
-  chapter('diagnosis', '评价与问题诊断', ['问题诊断', '评价', '现存问题', '反馈'], '把评价结果转化为排好先后的问题清单。'),
+  chapter('diagnosis', '评价与问题诊断', ['问题诊断', '评价', '现存问题', '反馈'], '把评价结果转化为排好先后的问题清单。', true),
   section('diagnosis.evaluation', '满意度与绩效评价', ['IPA', '满意度', '绩效评价', '重要性'], '找出重要但表现不佳的环节。',
-    ['评价指标体系', '重要性与表现或满意度的测量', '四象限划分与解读'],
-    { needs: [{ element: 'figure', label: '象限图' }], module: 'analysis', length: [1000, 3000] }),
+    ['评价指标体系', '重要性与表现或满意度的测量', '划分优先改进的环节并解读'],
+    { optional: true, needs: [{ element: 'figure', label: '评价结果图' }], module: 'analysis', length: [1000, 3000] }),
   section('diagnosis.problems', '现存问题归纳', ['现存问题', '问题归纳', '问题探究', '困境'], '把分散的结果归并成少数几个问题。',
-    ['把检验、模型与评价结果归并为三到五个问题', '每个问题注明证据所在的图表'], { length: [600, 1500] }),
+    ['把前文结果归并为三到五个问题', '每个问题注明证据所在的图表'], { optional: true, length: [600, 1500] }),
 
-  chapter('plan', '改进方案与评估', ['改进方案', '优化方案', '提升路径', '优化路径'], '给出排好优先级、算过成本的方案。'),
+  chapter('plan', '方案设计与评估', ['改进方案', '优化方案', '提升路径', '优化路径', '方案评估'], '给出排好优先级、算过成本的方案。', true),
   section('plan.priority', '方案优先级与成本评估', ['优先级', '成本', '权重', 'AHP', '层次分析'], '在有限资源下决定先做什么。',
     ['评估指标与赋权方法', '一致性检验', '成本与效果或支持度的对比'],
     { optional: true, needs: [{ element: 'table', label: '权重或成本表' }], length: [800, 2000] }),
   section('plan.measures', '分层面改进措施', ['改进措施', '改进策略', '层面'], '把问题逐一落到可执行的措施。',
-    ['按层面逐项写：问题、措施、执行主体、所需资源、评估指标'], { length: [1200, 3500] }),
+    ['按层面逐项写：问题、措施、执行主体、所需资源、评估指标'], { optional: true, length: [1200, 3500] }),
   section('plan.feasibility', '方案可行性与预期效果', ['可行性', '转化潜力', '预期效果'], '估计方案能带来多大改变。',
     ['支持率、意愿或成本约束下的预期效果', '实施风险与应对'], { optional: true, length: [500, 1200] }),
 
@@ -175,10 +190,39 @@ export function blueprintTitle(node: BlueprintNode, position: number): string {
   return node.title;
 }
 
-export type BlueprintOptions = { includeOptional: boolean };
+/** A starting combination of analysis modules for a common kind of survey report; authors add or drop modules freely. */
+export type ReportType = { id: string; label: string; summary: string; nodes: readonly string[] };
+export const REPORT_TYPES: readonly ReportType[] = [
+  { id: 'status', label: '现状—问题—对策', summary: '描述现状，比较群体差异，归纳问题并提出对策。适用面最广，民生、消费、校园与社会议题多属此类。',
+    nodes: ['compare', 'compare.tests', 'diagnosis', 'diagnosis.problems'] },
+  { id: 'drivers', label: '影响因素', summary: '找出与目标行为或态度相关的因素，并用模型量化其方向与大小。',
+    nodes: ['compare', 'compare.tests', 'drivers', 'drivers.model'] },
+  { id: 'evaluation', label: '满意度与服务评价', summary: '建立评价指标，找出重要但表现不佳的环节，据此设计改进措施。',
+    nodes: ['compare', 'compare.tests', 'diagnosis', 'diagnosis.evaluation', 'diagnosis.problems', 'plan', 'plan.measures'] },
+  { id: 'demand', label: '需求与意愿', summary: '摸清目标人群的需求、偏好与参与或支付意愿，并区分值得优先争取的人群。',
+    nodes: ['demand', 'demand.preference', 'demand.willingness', 'compare', 'compare.tests', 'segments', 'segments.cluster'] },
+];
+export const DEFAULT_REPORT_TYPE = 'status';
+export function reportType(id: string): ReportType {
+  const type = REPORT_TYPES.find(t => t.id === id);
+  if (!type) throw Error('没有这种报告类型。');
+  return type;
+}
+
+/**
+ * Which optional nodes a skeleton includes: `includeOptional` takes every module; otherwise `nodes` lists the optional
+ * chapters and sections wanted (a section brings its chapter). Without either, the default report type is used.
+ */
+export type BlueprintOptions = { includeOptional?: boolean; nodes?: readonly string[] };
+function included(options: BlueprintOptions): (node: BlueprintNode) => boolean {
+  if (options.includeOptional) return () => true;
+  const wanted = new Set(options.nodes ?? reportType(DEFAULT_REPORT_TYPE).nodes);
+  for (const id of [...wanted]) { const node = blueprintNode(id); if (node.kind === 'section') wanted.add(node.chapter); }
+  return node => !node.optional || wanted.has(node.id);
+}
 /** Every included node with its numbered title, in blueprint order. */
-export function blueprintOutline(options: BlueprintOptions): { node: BlueprintNode; title: string }[] {
-  const nodes = BLUEPRINT.filter(node => options.includeOptional || !node.optional);
+export function blueprintOutline(options: BlueprintOptions = {}): { node: BlueprintNode; title: string }[] {
+  const nodes = BLUEPRINT.filter(included(options));
   let chapterCount = 0, sectionCount = 0, appendixCount = 0;
   return nodes.map(node => {
     if (node.kind === 'chapter') { chapterCount++; sectionCount = 0; return { node, title: blueprintTitle(node, chapterCount) }; }
@@ -192,7 +236,7 @@ export function blueprintOutline(options: BlueprintOptions): { node: BlueprintNo
  * A complete skeleton of empty sections. Guidance is shown beside each section while writing, never stored in
  * the body, so it cannot leak into an export. IDs derive from node IDs: the same options build the same report.
  */
-export function blueprintSections(options: BlueprintOptions): ReportSection[] {
+export function blueprintSections(options: BlueprintOptions = {}): ReportSection[] {
   return blueprintOutline(options).map(({ node, title }) => ({ id: `bp-${node.id}`, title, body: '', source: '' }));
 }
 

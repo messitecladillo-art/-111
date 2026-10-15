@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BENCHMARK_DIMENSIONS, benchmarkReport, isCaption, writtenLines } from '../lib/report-benchmark.ts';
+import { BENCHMARK_DIMENSIONS, BENCHMARK_RULES, benchmarkReport, isCaption, writtenLines } from '../lib/report-benchmark.ts';
+import { blueprintSections, reportType } from '../lib/report-blueprint.ts';
 import { createEditorContent } from '../lib/editor-model.ts';
 import { newProjectReport } from '../lib/project-report.ts';
 
@@ -35,12 +36,13 @@ test('the blueprint skeleton is structurally complete but does not earn credit f
   const skeleton = benchmarkReport(newProjectReport('骨架'));
   assert.equal(check(skeleton, 'chapters').status, 'pass');
   assert.equal(check(skeleton, 'unwritten').status, 'fail');
-  assert.match(check(skeleton, 'unwritten').detail, /32 节尚未撰写/);
+  assert.match(check(skeleton, 'unwritten').detail, /\d+ 节尚未撰写/);
   for (const id of ['questionnaire', 'aiDisclosure', 'reproducible']) {
     assert.equal(check(skeleton, id).status, 'partial', id);
     assert.match(check(skeleton, id).detail, /尚未填写/);
   }
-  for (const id of ['abstract', 'references', 'sampling', 'tests', 'models']) assert.equal(check(skeleton, id).status, 'fail', id);
+  for (const id of ['abstract', 'references', 'sampling', 'tests']) assert.equal(check(skeleton, id).status, 'fail', id);
+  for (const id of ['models', 'reliability', 'validity', 'formulas']) assert.equal(check(skeleton, id).status, 'na', `${id} applies only once the report needs it`);
   assert.ok(skeleton.score < 15, `headings alone earn little: ${skeleton.score}`);
 });
 
@@ -60,12 +62,13 @@ test('a report that shows its evidence passes the checks built for it', () => {
     section('s31', '（一）预调查', '预调查共发放问卷 60 份，回收有效问卷 56 份，据此删除了两道表述含糊的题目。'),
     section('s32', '（二）正式调查数据处理', '正式调查共发放 430 份，回收有效问卷 402 份，有效回收率为 93.5%。剔除规则包括注意力题答错、作答时长低于 90 秒以及逻辑矛盾。'),
     section('s33', '（三）正式调查数据检验', '各量表的 Cronbach α 系数均在 0.82 以上，KMO 值为 0.87，Bartlett 球形检验显著，适合进一步分析。'),
-    section('c4', '四、影响因素分析'),
+    section('c35', '四、样本特征与描述性分析'), section('s351', '（一）样本特征分析', '受访者中女性占 52.3%，18–34 岁占 41.0%，与全市人口结构基本一致。'),
+    section('c4', '五、影响因素分析'),
     section('s41', '（一）差异检验与相关分析', '卡方检验显示不同年龄组的参与频率存在显著差异（χ²=18.4，p<0.001）。如图 4-1 所示，结合表 4-1 可知青年组参与更频繁。\n图 4-1 各年龄组参与频率\n表 4-1 卡方检验结果',
       { blocks: [{ id: 'c', kind: 'chart', text: '图 4-2 参与频率', evidenceId: 'r1', valueColumn: 1 }] }),
     section('s42', '（二）回归模型分析', '多分类 Logistic 回归的伪 R² 为 0.21，似然比检验显著，未发现严重的多重共线性（VIF 均小于 3）。'),
-    section('c5', '五、评价与问题诊断'), section('s51', '（一）满意度与绩效评价', 'IPA 分析显示导览服务重要性高而满意度低，应优先改进。'),
-    section('c6', '六、结论与建议'),
+    section('c5', '六、评价与问题诊断'), section('s51', '（一）满意度与绩效评价', 'IPA 分析显示导览服务重要性高而满意度低，应优先改进。'),
+    section('c6', '七、结论与建议'),
     section('s61', '（一）对策建议', '建议由街道文化站牵头、社区协会配合开展周末活动，以季度到场人次作为评估指标。'),
     section('s62', '（二）研究局限与展望', '本研究样本限于一个城市，结论外推需谨慎。'),
     section('r', '参考文献', '[1] 张某. 城市文化消费研究[J]. 统计研究, 2024, 41(2): 1-10.\n[2] 李某. 抽样调查[M]. 北京: 某出版社, 2020.\n[3] 王某. 居民活动参与[D]. 某大学, 2023.'),
@@ -99,4 +102,43 @@ test('figure references count sentences that cite a number, not words such as �
   const content = createEditorContent();
   content.report = [section('s', '一、分析', '如图 3-1 所示，结合表2与图4可知两组差异明显，代表3类人群。\n图 3-1 抽样流程\n表 2 信度检验')];
   assert.match(check(benchmarkReport(content), 'figureReferences').detail, /引用图表 3 次，图表共 2 个/);
+});
+
+test('the rules are general norms; nothing counts figures, tables or formulas against one report', () => {
+  for (const key of ['figures', 'tables', 'formulas', 'methods', 'bodyChars']) assert.ok(!(key in BENCHMARK_RULES), key);
+  // Formulas follow the methods a report uses, not a fixed number.
+  const content = createEditorContent();
+  content.report = [section('s', '一、分析', '卡方检验表明两组差异显著（χ²=8.2，p=0.004）。')];
+  assert.match(check(benchmarkReport(content), 'formulas').detail, /用到 1 种检验或模型方法，独立公式 0 个/);
+});
+
+test('a report of another type is judged on its own modules, without the exemplar\'s models or scales', () => {
+  const content = createEditorContent();
+  content.version = 2;
+  content.quality = { version: 1, results: [result('r1'), result('r2')], findings: [] };
+  content.report = blueprintSections({ nodes: reportType('demand').nodes }).map(s =>
+    s.id === 'bp-demand.preference' ? { ...s, body: '受访者最看重价格（选择率 61.2%）与便利性（48.5%），其次是品牌（22.0%）。如[[图:p]]所示，青年更看重便利。', blocks: [{ id: 'p', kind: 'chart', text: '需求排序', evidenceId: 'r1', valueColumn: 1 }] }
+      : s.id === 'bp-compare.tests' ? { ...s, body: '卡方检验显示不同年龄组的偏好存在差异（χ²=12.4，p=0.006），见[[表:t]]。', blocks: [{ id: 't', kind: 'table', text: '检验结果', evidenceId: 'r2', valueColumn: 1 }] } : s);
+  const report = benchmarkReport(content);
+  assert.equal(check(report, 'chapters').status, 'pass', check(report, 'chapters').detail);
+  assert.match(check(report, 'chapters').detail, /需求与意愿分析/);
+  for (const id of ['reliability', 'validity']) assert.equal(check(report, id).status, 'na', 'no scale, no reliability or validity check');
+  // The preference section asks a modelling question (structure of preferences) only once written.
+  assert.notEqual(check(report, 'models').status, 'pass');
+  assert.equal(check(report, 'coverage').status, 'pass', check(report, 'coverage').detail);
+  assert.equal(check(report, 'redundancy').status, 'pass');
+});
+
+test('exhibits are balanced against their reading, shown once, and the expected length follows the analysis', () => {
+  const content = createEditorContent();
+  content.version = 2;
+  content.quality = { version: 1, results: [result('r1'), result('r2'), result('r3')], findings: [] };
+  const charts = ['r1', 'r2', 'r3'].flatMap((r, i) => [{ id: 'c' + i, kind: 'chart', text: '图' + i, evidenceId: r, valueColumn: 1 }, { id: 't' + i, kind: 'table', text: '表' + i, evidenceId: r, valueColumn: 1 }]);
+  content.report = [section('c', '四、样本特征与描述性分析'), section('s', '（二）描述性统计分析', '各题分布见图表。', { blocks: charts })];
+  const stacked = benchmarkReport(content);
+  assert.equal(check(stacked, 'balance').status, 'partial', check(stacked, 'balance').detail);
+  assert.match(check(stacked, 'balance').detail, /图表偏多而解读偏少/);
+  assert.equal(check(stacked, 'redundancy').status, 'partial');
+  assert.match(check(stacked, 'redundancy').detail, /3 个结果同时用图和表呈现/);
+  assert.match(check(stacked, 'length').detail, /按本报告 6 个分析图表估计，宜不少于 9,600 字/);
 });

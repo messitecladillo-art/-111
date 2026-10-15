@@ -134,14 +134,14 @@ test('method paragraphs carry formulas that typeset in the preview and in Word',
 test('a result goes to its blueprint section with one exhibit and a reading paragraph that cites it', () => {
   assert.equal(suggestedNode(r.gender), 'sample.profile', 'demographics describe the sample');
   assert.equal(suggestedNode(r.kind), 'sample.descriptive');
-  assert.equal(suggestedNode(r.cross), 'drivers.tests');
+  assert.equal(suggestedNode(r.cross), 'compare.tests');
   assert.deepEqual(suggestedExhibits(r.corr), [], 'a single coefficient is reported in the text');
   assert.equal(defaultColumn(r.cross), 3);
   const base = { ...createEditorContent(), version: 2, report: blueprintSections({ includeOptional: false }), quality: { version: 1, results: Object.values(r), findings: [] } };
   const placed = placeResult(parseEditorContent(base), 'cross');
   assert.deepEqual(placed.created, [], 'the blueprint report already has the section');
   const section = placed.content.report.find(s => s.id === placed.sectionId);
-  assert.equal(matchBlueprintNode(section.title).id, 'drivers.tests');
+  assert.equal(matchBlueprintNode(section.title).id, 'compare.tests');
   assert.deepEqual(section.blocks.map(b => b.kind), ['paragraph', 'formula', 'formula', 'paragraph', 'chart', 'paragraph']);
   const chart = section.blocks.find(b => b.kind === 'chart');
   assert.equal(chart.text, '不同年龄组受访者的使用频次分布');
@@ -157,7 +157,7 @@ test('a result goes to its blueprint section with one exhibit and a reading para
   assert.deepEqual(placeResult(placed.content, 'corr', { exhibits: [] }).blocks.map(b => b.kind), ['paragraph', 'formula', 'paragraph', 'paragraph']);
   // Reports written by an earlier version hold the χ² and E formulas as one combined block; the method is still recognised.
   const combined = structuredClone(base);
-  combined.report.find(s => s.id === 'bp-drivers.tests').blocks = [{ id: 'old', kind: 'formula', text: '\\chi^2 = \\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}},\\qquad E_{ij}=\\frac{n_{i\\cdot}\\,n_{\\cdot j}}{n}', evidenceId: '', valueColumn: 1 }];
+  combined.report.find(s => s.id === 'bp-compare.tests').blocks = [{ id: 'old', kind: 'formula', text: '\\chi^2 = \\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}},\\qquad E_{ij}=\\frac{n_{i\\cdot}\\,n_{\\cdot j}}{n}', evidenceId: '', valueColumn: 1 }];
   assert.deepEqual(placeResult(parseEditorContent(combined), 'cross').blocks.map(b => b.kind), ['chart', 'paragraph']);
 });
 

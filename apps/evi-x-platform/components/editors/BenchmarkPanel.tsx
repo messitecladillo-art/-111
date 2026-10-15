@@ -3,23 +3,24 @@
 import { useDeferredValue, useId, useMemo, useState } from 'react';
 import type { EditorContent } from '@/lib/editor-model';
 import { BENCHMARK_DIMENSIONS, benchmarkReport, type BenchmarkDimension, type BenchmarkFix } from '@/lib/report-benchmark';
-import { BLUEPRINT_MODULE_LABELS, blueprintSections, type BlueprintModule } from '@/lib/report-blueprint';
+import { BLUEPRINT_MODULE_LABELS, blueprintSections, DEFAULT_REPORT_TYPE, REPORT_TYPES, reportType, type BlueprintModule } from '@/lib/report-blueprint';
 import styles from './BenchmarkPanel.module.css';
 
 type Props = {
   content: EditorContent;
   disabled?: boolean;
   onInsert: (nodeId: string) => void;
-  onApplyBlueprint: (includeOptional: boolean) => void;
+  /** Rebuilds the outline from the frame plus the chosen analysis modules. */
+  onApplyBlueprint: (nodes: readonly string[]) => void;
   /** Present only where the other workspace modules are reachable. */
   onNavigate?: (module: BlueprintModule) => void;
   onOpenFindings: () => void;
 };
 
 const PRIORITY = 6;
-const level = (score: number) => score >= 0.85 ? 'strong' : score >= 0.6 ? 'fair' : 'weak';
+const level = (score: number | null) => score === null ? 'na' : score >= 0.85 ? 'strong' : score >= 0.6 ? 'fair' : 'weak';
 
-/** Rule-based comparison with the competition blueprint; every gap links to the place that fills it. */
+/** Rule-based check against general survey-report criteria; every gap links to the place that fills it. */
 export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlueprint, onNavigate, onOpenFindings }: Props) {
   const id = useId();
   const deferred = useDeferredValue(content);
@@ -27,14 +28,14 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
   const [focus, setFocus] = useState<BenchmarkDimension | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [includeOptional, setIncludeOptional] = useState(false);
+  const [typeId, setTypeId] = useState(DEFAULT_REPORT_TYPE);
   const gaps = result.checks.filter(c => c.status === 'fail' || c.status === 'partial');
   // Missing items before thin ones; within each, the furthest from the line first.
   const ranked = [...gaps].sort((a, b) => a.status === b.status ? a.score - b.score : a.status === 'fail' ? -1 : 1);
   const listed = focus ? ranked.filter(c => c.dimension === focus) : showAll ? ranked : ranked.slice(0, PRIORITY);
   const applicable = result.checks.filter(c => c.status !== 'na');
   const passed = applicable.filter(c => c.status === 'pass').length;
-  const replacement = useMemo(() => blueprintSections({ includeOptional }), [includeOptional]);
+  const replacement = useMemo(() => blueprintSections({ nodes: reportType(typeId).nodes }), [typeId]);
   const replacementIds = new Set(replacement.map(s => s.id));
   const orphaned = content.slides.filter(slide => slide.reportLink && !replacementIds.has(slide.reportLink.sectionId)).length;
   const act = (fix: BenchmarkFix) => {
@@ -45,7 +46,7 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
 
   return <details className={styles.panel}>
     <summary className={styles.summary}>
-      <span className={styles.title}>对标体检</span>
+      <span className={styles.title}>报告体检</span>
       <span className={styles.score} data-level={level(result.score / 100)}><b>{result.score}</b>分</span>
       <span className={styles.meta}>{passed} / {applicable.length} 项达标<span aria-hidden="true"> · </span>{gaps.length} 项待补</span>
     </summary>
@@ -55,9 +56,9 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
           const open = gaps.filter(c => c.dimension === d.id).length;
           return <button key={d.id} type="button" className={styles.tile} data-level={level(d.score)} aria-pressed={focus === d.id} onClick={() => { setFocus(focus === d.id ? null : d.id); setShowAll(false); }}>
             <span className={styles.tileLabel}>{d.label}</span>
-            <span className={styles.tileScore}>{Math.round(d.score * 100)}</span>
-            <span className={styles.track} aria-hidden="true"><span data-level={level(d.score)} style={{ inlineSize: `${Math.max(2, Math.round(d.score * 100))}%` }}/></span>
-            <span className={styles.tileMeta}>{open ? `${open} 项待补` : '已达标'}</span>
+            <span className={styles.tileScore}>{d.score === null ? '—' : Math.round(d.score * 100)}</span>
+            <span className={styles.track} aria-hidden="true"><span data-level={level(d.score)} style={{ inlineSize: `${d.score === null ? 0 : Math.max(2, Math.round(d.score * 100))}%` }}/></span>
+            <span className={styles.tileMeta}>{d.score === null ? '尚不适用' : open ? `${open} 项待补` : '已达标'}</span>
           </button>;
         })}
       </div>
@@ -85,18 +86,18 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
         })}
       </ul> : <p className={styles.done}>{focus ? '这一维度已全部达标。' : '全部检查项均已达标。'}</p>}
       <div className={styles.footer}>
-        <p className={styles.note}>体检按固定规则检查结构与证据的呈现，不评判研究结论本身。满分线约为一份评审认可的优秀参赛报告相应统计的六成。</p>
+        <p className={styles.note}>体检按调查报告的通用规范检查结构与证据的呈现，不评判研究结论本身；只检查适用于本报告的项目，数量要求随本报告的分析规模变化，不以任何一篇报告为模板。</p>
         {confirming
           ? <div className={styles.confirm} role="region" aria-label="重建骨架确认">
-            <p>将当前 {content.report.length} 个章节替换为蓝图骨架（{replacement.length} 节）？PPT、LaTeX 与研究发现保留，替换后可撤销。
+            <p>选择与研究问题相符的报告类型，将当前 {content.report.length} 个章节替换为对应骨架（{replacement.length} 节）？PPT、LaTeX 与研究发现保留，替换后可撤销；之后仍可从体检或写作指引中增删分析模块。
               {orphaned > 0 && <strong className={styles.warn}>有 {orphaned} 页 PPT 关联的章节不在骨架中，替换后会标记为“关联章节已移除”，导出前需重新选择依据。</strong>}</p>
-            <label className={styles.check} htmlFor={id + '-optional'}><input id={id + '-optional'} type="checkbox" checked={includeOptional} onChange={event => setIncludeOptional(event.target.checked)}/>包含可选章节：网络文本、人群画像、方案优先级与可行性</label>
+            <fieldset className={styles.types}><legend>报告类型</legend>{REPORT_TYPES.map(type => <label key={type.id} htmlFor={`${id}-${type.id}`}><input id={`${id}-${type.id}`} type="radio" name={`${id}-type`} checked={typeId === type.id} onChange={() => setTypeId(type.id)}/><span><b>{type.label}</b><small>{type.summary}</small></span></label>)}</fieldset>
             <div className={styles.confirmActions}>
               <button type="button" onClick={() => setConfirming(false)}>取消</button>
-              <button type="button" className={styles.primary} disabled={disabled} onClick={() => { onApplyBlueprint(includeOptional); setConfirming(false); }}>替换为蓝图骨架</button>
+              <button type="button" className={styles.primary} disabled={disabled} onClick={() => { onApplyBlueprint(reportType(typeId).nodes); setConfirming(false); }}>替换为「{reportType(typeId).label}」骨架</button>
             </div>
           </div>
-          : <button type="button" className={styles.rebuild} disabled={disabled} onClick={() => setConfirming(true)}>按正大杯蓝图重建骨架</button>}
+          : <button type="button" className={styles.rebuild} disabled={disabled} onClick={() => setConfirming(true)}>按研究类型重建骨架</button>}
       </div>
     </div>
   </details>;
