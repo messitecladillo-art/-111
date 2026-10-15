@@ -23,13 +23,14 @@ const label=node=>node==null?'':Array.isArray(node)?node.map(label).join(''):typ
 function field(s,aria){const n=nodes(s.tree).find(n=>n.props?.['aria-label']===aria);assert.ok(n,aria);return n;}
 function button(s,name){const n=nodes(s.tree).find(n=>n.type==='button'&&label(n)===name);assert.ok(n,`Button ${name}`);return n;}
 function text(s){return label(s.tree);}
-function received(body,status='ready'){
+function received(body,status='ready',versions=proposal.TOPIC_SOURCE_VERSIONS){
   return {id:body.idempotencyKey,status,classification:'proposed',serviceId:body.serviceId,serviceRevision:body.serviceRevision,catalogVersion:body.catalogVersion,
-    inputFingerprint:createHash('sha256').update(stableStringify({profile:body.profile,candidateIds:body.candidateIds,goal:body.goal,catalogVersion:body.catalogVersion,lookupId:body.lookupId??null})).digest('hex'),
+    inputFingerprint:createHash('sha256').update(stableStringify({profile:body.profile,candidateIds:body.candidateIds,goal:body.goal,catalogVersion:body.catalogVersion,lookupId:body.lookupId??null,...(body.profile.schemaVersion===2?{sourceVersions:versions}:{})})).digest('hex'),
+    ...(body.profile.schemaVersion===2?{sourceVersions:JSON.parse(JSON.stringify(versions))}:{}),
     createdAt:stamp,finishedAt:status==='running'?null:stamp,proposal:status==='ready'?{classification:'proposed',items:body.candidateIds.map(patternId=>({patternId,title:'拟议武汉服务调查',researchQuestion:'哪些服务入口值得先验证？',decisionOwner:'拟沟通的社区合作方',decision:'选择服务入口',whyHere:'武汉背景，渠道仍待确认',firstWeekPlan:['核对公开资料','联系拟调查对象'],unknowns:['尚未确认访问渠道'],sourceIds:['s1']}))}:null,
     sources:[{id:'s1',title:'合成验收来源',url:'https://example.org/source'}],trainingExampleIds:['synthetic-1'],errorCode:status==='outcome_unknown'?'provider_timeout':null,providerMode:'fixture'};
 }
-function make({owner=account,storage=new Map(),drafts=new Map(),services=[service],holdVerification=false}={}){
+function make({owner=account,storage=new Map(),drafts=new Map(),services=[service],holdVerification=false,profile:profileInput}={}){
   let ownerNow=owner,epoch=1,alive=true,cells=[],index=0,effects=[],dirty=true,tree,props;
   const calls=[],reads=[],adoptions=[],downloads=[],verifications=[],unsaved=new Map();
   let writesAfterUnmount=0,releaseVerification;
@@ -52,7 +53,7 @@ function make({owner=account,storage=new Map(),drafts=new Map(),services=[servic
     URL:{createObjectURL:()=> 'blob:synthetic-receipt',revokeObjectURL(){}},setTimeout:fn=>{fn();},
     document:{createElement:()=>{const a={click:()=>downloads.push(a.download)};return a;}}};
   vm.runInNewContext(compiled,box);
-  props={profile:parseTopicProfile({region:'湖北',city:'武汉',referenceDate:'2026-10-15'}),recommendation:{patternId:'p1',title:'武汉研究方向',population:'拟调查居民'},stale:false,catalogVersion:'test-v1',onUseTopic:value=>adoptions.push(value)};
+  props={profile:profileInput??parseTopicProfile({region:'湖北',city:'武汉',referenceDate:'2026-10-15'}),recommendation:{patternId:'p1',title:'武汉研究方向',population:'拟调查居民'},stale:false,catalogVersion:'test-v1',onUseTopic:value=>adoptions.push(value)};
   const s={
     async settle(){for(let n=0;n<30;n++){index=0;dirty=false;tree=box.exports.default(props);const queue=effects;effects=[];queue.forEach(fn=>fn());await tick();if(!dirty&&!effects.length)return;}throw Error('Unstable component effects');},
     async until(predicate){for(let n=0;n<100;n++){await s.settle();if(predicate())return;await new Promise(resolve=>setTimeout(resolve,2));}throw Error('Expected component state did not arrive');},
@@ -61,7 +62,7 @@ function make({owner=account,storage=new Map(),drafts=new Map(),services=[servic
     get writesAfterUnmount(){return writesAfterUnmount;},
     get verificationPending(){return Boolean(releaseVerification);},finishVerification(){assert.ok(releaseVerification);releaseVerification();},
     update(patch){props={...props,...patch};},switchAccount(id){ownerNow=id;epoch++;},
-    resolve(index,status='ready'){const c=calls[index];c.saved=received(c.body,status);c.resolve(c.saved);},
+    resolve(index,status='ready',versions=proposal.TOPIC_SOURCE_VERSIONS){const c=calls[index];c.saved=received(c.body,status,versions);c.resolve(c.saved);},
     unmount(){alive=false;cells.forEach(c=>c.cleanup?.());},
   };return s;
 }
@@ -104,11 +105,44 @@ test('receipt with a changed fingerprint never unlocks adoption',async()=>{
   const s=make();await launch(s);s.calls[0].resolve({...received(s.calls[0].body),inputFingerprint:'0'.repeat(64)});await s.until(()=>text(s).includes('材料指纹不一致'));assert.ok(!text(s).includes('采用此提案'));assert.equal(button(s,'生成细化提案').props.disabled,true);s.unmount();
 });
 test('partial date edits remain rendered and cannot be dispatched',async()=>{
-  const s=make();await s.settle();s.update({profile:{...s.props.profile,referenceDate:'2026-10-'}});await s.settle();await consent(s);button(s,'生成细化提案').props.onClick();assert.equal(s.calls.length,0);assert.ok(text(s).includes('检查天数与预算'));s.unmount();
+  const s=make();await s.settle();s.update({profile:{...s.props.profile,referenceDate:'2026-10-'}});await s.settle();await consent(s);button(s,'生成细化提案').props.onClick();assert.equal(s.calls.length,0);assert.ok(text(s).includes('参考日期'));s.unmount();
 });
 test('history retrieval and receipt download do not dispatch a second model call',async()=>{
   const s=make();await launch(s);s.resolve(0);await s.until(()=>text(s).includes('细化提案已返回'));button(s,'查找之前的调用').props.onClick();await s.until(()=>text(s).includes('下载回执'));button(s,'下载回执').props.onClick();await s.until(()=>s.downloads.length===1);assert.equal(s.calls.length,1);assert.ok(s.downloads[0].includes(s.calls[0].body.idempotencyKey));s.unmount();
 });
 test('goal draft restores for its owner but does not leak to a different account',async()=>{
   const s=make();await s.settle();field(s,'选题细化要求').props.onChange({target:{value:'尚未发送的中文要求'}});await s.settle();s.unmount();const restored=make({drafts:s.drafts});await restored.settle();assert.equal(field(restored,'选题细化要求').props.value,'尚未发送的中文要求');restored.unmount();const other=make({owner:'account-b',drafts:s.drafts,storage:s.storage});await other.settle();assert.equal(field(other,'选题细化要求').props.value,'');other.unmount();
+});
+
+const v2Profile=(code='420106')=>parseTopicProfile({region:'山西',city:'晋城',referenceDate:'2026-10-15',schemaVersion:2,regionRef:{code,catalogVersion:proposal.TOPIC_SOURCE_VERSIONS.regionCatalog.catalogVersion}});
+test('v2 actual handlers bind receipt versions outside unchanged request body and hand off the canonical full path',async()=>{
+  const s=make({profile:v2Profile()});await launch(s);
+  assert.equal(Object.hasOwn(s.calls[0].body,'sourceVersions'),false);
+  assert.deepEqual(JSON.parse(s.storage.get(key(account))).sourceVersions,proposal.TOPIC_SOURCE_VERSIONS);
+  const lookup=nodes(s.tree).find(n=>n.type==='KnowledgeLookupPanel');assert.ok(lookup.props.initialQuery.startsWith('湖北省 · 武汉市 · 武昌区'));
+  s.resolve(0);await s.until(()=>text(s).includes('细化提案已返回'));button(s,'采用此提案，继续项目诊断').props.onClick();
+  assert.equal(s.adoptions[0].geography,'湖北省 · 武汉市 · 武昌区');assert.equal(s.calls.length,1);s.unmount();
+});
+test('v2 explicit unset never uses retained legacy city for search, displayed scope or adopted geography',async()=>{
+  const s=make({profile:{...v2Profile(),region:'湖北',city:'武汉',regionRef:null}});await launch(s);
+  const lookup=nodes(s.tree).find(n=>n.type==='KnowledgeLookupPanel');assert.ok(lookup.props.initialQuery.startsWith('全国 '));assert.ok(text(s).includes('地区：未选择地区'));
+  s.resolve(0);await s.until(()=>text(s).includes('细化提案已返回'));button(s,'采用此提案，继续项目诊断').props.onClick();assert.equal(s.adoptions[0].geography,'');s.unmount();
+});
+test('new dispatch and consent reject stale refs with the actionable directory reason',async()=>{
+  const stale={...v2Profile(),regionRef:{code:'420106',catalogVersion:'cn-admin-2024-old'}},s=make({profile:stale});await s.settle();await consent(s);
+  assert.equal(field(s,'确认选题模型调用').props.disabled,true);assert.equal(button(s,'生成细化提案').props.disabled,true);button(s,'生成细化提案').props.onClick();assert.equal(s.calls.length,0);
+  assert.ok(text(s).includes('确认迁移'));assert.ok(!text(s).includes('天数与预算'));s.unmount();
+});
+test('wrong v2 metadata never unlocks adoption or loses an uncertain original request',async()=>{
+  const s=make({profile:v2Profile()});await launch(s);const original=JSON.stringify(s.calls[0].body),bad=received(s.calls[0].body);bad.sourceVersions.topicDigest='0'.repeat(64);s.calls[0].resolve(bad);
+  await s.until(()=>text(s).includes('来源版本与原请求不一致'));assert.ok(!text(s).includes('采用此提案'));assert.ok(s.storage.has(key(account)));
+  button(s,'核对原请求').props.onClick();await s.settle();assert.equal(JSON.stringify(s.calls[1].body),original);s.resolve(1);await s.until(()=>text(s).includes('细化提案已返回'));s.unmount();
+});
+test('old bound v2 unknown calls recover exact raw bytes across directory change and reconcile without a fresh dispatch',async()=>{
+  const oldVersions={topicDigest:'a'.repeat(64),regionCatalog:{catalogVersion:'cn-admin-2024-old',asOf:'2024-12-31',catalogSha256:'b'.repeat(64)}},body={serviceId:service.id,serviceRevision:1,idempotencyKey:'22222222-2222-4222-8222-222222222222',consent:true,catalogVersion:'test-v1',profile:{...v2Profile(),city:' 原始旧城市 ',regionRef:{code:'420106',catalogVersion:oldVersions.regionCatalog.catalogVersion}},candidateIds:['p1'],goal:' 原始旧要求 '};
+  const pending={schemaVersion:1,accountId:account,body,snapshotKey:JSON.stringify([parseTopicProfile(body.profile),body.candidateIds,body.catalogVersion,oldVersions]),sourceVersions:oldVersions},storage=new Map([[key(account),JSON.stringify(pending)]]);
+  const s=make({profile:v2Profile(),storage});await s.settle();assert.equal(s.calls.length,0);assert.equal(button(s,'生成细化提案').props.disabled,true);
+  button(s,'核对原请求').props.onClick();await s.settle();assert.equal(JSON.stringify(s.calls[0].body),JSON.stringify(body));s.resolve(0,'outcome_unknown',oldVersions);await s.until(()=>text(s).includes('调用结果待核对'));s.unmount();
+  const recovered=make({profile:v2Profile('420100'),storage,drafts:s.drafts});await recovered.settle();button(recovered,'核对原请求').props.onClick();await recovered.settle();assert.equal(JSON.stringify(recovered.calls[0].body),JSON.stringify(body));recovered.resolve(0,'ready',oldVersions);await recovered.until(()=>text(recovered).includes('细化提案已返回'));
+  assert.equal(button(recovered,'采用此提案，继续项目诊断').props.disabled,true);assert.equal(recovered.calls.length,1);assert.ok(text(recovered).includes('保留供对照'));recovered.unmount();
 });

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .contracts import ApiError, body, canonical, fingerprint, integer, object_fields, text, uuid_string
 from .models import Base, new_id, now
 from .topics import ACCESS, RESOURCES, day, profile_input
+from .topic_regions import assert_profile_region_executable
 
 MAX_DOCUMENT_BYTES = 300_000
 ID_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}"
@@ -118,14 +119,17 @@ def source_input(value):
             raise ApiError() from None
 
 
-def topic_document(value):
-    """Strict v1 JSON contract; references stay local to this immutable snapshot."""
+def topic_document(value, *, require_current=True):
+    """Strict v1/v2 contract; historical reads may preserve old reference shapes."""
     d = object_fields(value, ("schemaVersion", "profile", "candidate", "shortlistIds", "selected", "brief", "verification", "provenance"))
-    if type(d["schemaVersion"]) is not int or d["schemaVersion"] != 1:
+    if type(d["schemaVersion"]) is not int or d["schemaVersion"] not in (1, 2):
         raise ApiError()
-    # Validate with the same existing strict v1 parser used by model refinement.
+    profile = d["profile"]
+    if not isinstance(profile, dict) or (d["schemaVersion"] == 1 and ("schemaVersion" in profile or "regionRef" in profile)) or (d["schemaVersion"] == 2 and (type(profile.get("schemaVersion")) is not int or profile.get("schemaVersion") != 2 or "regionRef" not in profile)):
+        raise ApiError()
+    # Reads never rewrite the immutable snapshot; writes/execution require current refs.
     try:
-        profile_input(d["profile"])
+        profile_input(profile, require_current=require_current)
     except (OverflowError, ValueError):
         # Extremely large JSON integers must remain a 422, not overflow the
         # existing profile parser's finite-number conversion into a 500.
@@ -184,6 +188,7 @@ def topic_document(value):
 
 
 def confirmable(document):
+    assert_profile_region_executable(document["profile"])
     brief = document["brief"]
     if any(not brief[key].strip() for key in ("title", "decisionOwner", "decision", "population", "geography")) or not any(q["text"].strip() for q in brief["questions"]):
         raise ApiError(422, "brief_incomplete", "请补充题目、决策对象、决策、人群、地域和至少一个研究问题。")

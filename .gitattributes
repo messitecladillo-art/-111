@@ -25,3 +25,10 @@ apps/evi-x-api/src/evix_api/knowledge-catalog.json linguist-generated=true
 
 apps/evi-x-platform/content/topic-advisor/*.json text eol=lf
 apps/evi-x-api/src/evix_api/topic_assets/*.json text eol=lf linguist-generated=true
+
+# Region snapshots and upstream notices are verified as exact original bytes.
+corpus-source/topic-advisor/regions/areacodes* -text linguist-vendored=true
+corpus-source/topic-advisor/regions/source.json text eol=lf
+apps/evi-x-platform/content/topic-advisor/regions.catalog.json linguist-generated=true
+packages/evi-x-shared/fixtures/topic-region-v2.json text eol=lf
+packages/evi-x-shared/fixtures/topic-project-v2.json text eol=lf

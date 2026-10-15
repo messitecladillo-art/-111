@@ -1,5 +1,6 @@
 import { ACCESS_OPTIONS, RESOURCE_OPTIONS, SETTING_OPTIONS, DOMAIN_OPTIONS, FEATURE_NAMES } from './types.ts';
 import { rejectDuplicateMembers } from '../questionnaire.ts';
+import { parseProfileRegionFields, assertProfileRegionExecutable } from './geography.ts';
 import type { AccessStatus, TopicProfile, TopicCandidate, TopicDraft, TopicCatalog, TopicSources, TopicEvents, TopicTraining, TopicRankerModel, TopicBundle } from './types.ts';
 
 export class TopicInputError extends Error {
@@ -60,7 +61,8 @@ function statuses(input: unknown, options: { id: string }[], where: string): Rec
 }
 export function parseTopicProfile(input: unknown): TopicProfile {
   const p = object(input, '研究背景');
-  keys(p, ['region', 'city', 'school', 'schoolContext', 'discipline', 'interests', 'domains', 'days', 'budgetYuan', 'access', 'resources', 'sensitiveData', 'referenceDate', 'competitionWindow'], '研究背景');
+  keys(p, ['region', 'city', 'school', 'schoolContext', 'discipline', 'interests', 'domains', 'days', 'budgetYuan', 'access', 'resources', 'sensitiveData', 'referenceDate', 'competitionWindow', 'schemaVersion', 'regionRef'], '研究背景');
+  const regionFields = parseProfileRegionFields(p);
   let competitionWindow: TopicProfile['competitionWindow'] = null;
   if (p.competitionWindow != null) {
     const w = object(p.competitionWindow, '比赛时间范围'); keys(w, ['start', 'end'], '比赛时间范围');
@@ -74,8 +76,12 @@ export function parseTopicProfile(input: unknown): TopicProfile {
     days: numberOrNull(p.days, '可用天数', 3660, true), budgetYuan: numberOrNull(p.budgetYuan, '预算', 1e8, true),
     access: statuses(p.access, ACCESS_OPTIONS, '样本渠道'), resources: statuses(p.resources, RESOURCE_OPTIONS, '团队资源'),
     sensitiveData: p.sensitiveData === undefined ? 'avoid' : enumeration(p.sensitiveData, ['avoid', 'review_required', 'approved'] as const, '敏感研究设置'),
-    referenceDate: date(p.referenceDate, '参考日期', true), competitionWindow,
+    referenceDate: date(p.referenceDate, '参考日期', true), competitionWindow, ...regionFields,
   };
+}
+/** History/read parsing remains shape-only; execution explicitly requires the active directory. */
+export function parseExecutableTopicProfile(input: unknown): TopicProfile {
+  const profile = parseTopicProfile(input); assertProfileRegionExecutable(profile); return profile;
 }
 export function parseTopicCandidate(input: unknown): TopicCandidate {
   const c = object(input, '候选选题');
@@ -89,8 +95,10 @@ export function parseTopicDraft(input: unknown): TopicDraft {
     try { const raw = data; data = JSON.parse(raw); rejectDuplicateMembers(raw); } catch { fail('选题草稿', 'JSON 格式无效、字段重复或嵌套过深'); }
   }
   const d = object(data, '选题草稿'); keys(d, ['schemaVersion', 'profile', 'candidate'], '选题草稿');
-  if (d.schemaVersion !== 1) fail('选题草稿', '版本不支持，请使用版本 1');
-  return { schemaVersion: 1, profile: parseTopicProfile(d.profile), candidate: d.candidate == null ? null : parseTopicCandidate(d.candidate) };
+  if (d.schemaVersion !== 1 && d.schemaVersion !== 2) fail('选题草稿', '版本不支持，请使用版本 1 或 2');
+  const profile = parseTopicProfile(d.profile);
+  if ((d.schemaVersion === 2) !== (profile.schemaVersion === 2)) fail('选题草稿', '草稿版本与研究背景版本不一致');
+  return { schemaVersion: d.schemaVersion as 1 | 2, profile, candidate: d.candidate == null ? null : parseTopicCandidate(d.candidate) };
 }
 export const exportTopicDraft = (draft: TopicDraft): string => JSON.stringify(parseTopicDraft(draft), null, 2);
 /** Opaque, account-and-project scoped storage. No global or anonymous fallback. */
