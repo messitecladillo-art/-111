@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "packId": "topic-calibration-v1",
+  "baseRevision": "e16a662d20914bfcac717d95166033bd9e16a30a",
+  "evaluationClass": "public_calibration",
+  "frozenAt": "2026-10-15T20:16:06.832Z",
+  "files": {
+    ".gitattributes": "b5322ba3dad602b496ef45d1138722ce1b8da537567e26a4eea083530e0e99a5",
+    "apps/evi-x-platform/content/topic-advisor/catalog.json": "fc56061d01cd84ca1f84cec6bc048ed36d5e3e49620119c01747f93dd65decbc",
+    "apps/evi-x-platform/content/topic-advisor/hotspot-events.json": "2fa8c95c79eab6c9e26f49cbb55ff5358a0a848990197f100623af352a279bdf",
+    "apps/evi-x-platform/content/topic-advisor/ranker.json": "048412a3a0bf9188625635d6ad53e6ec4b1fe5303246f5dff40868a77cc12ac8",
+    "apps/evi-x-platform/content/topic-advisor/regions.catalog.json": "db55266d7e1ca53cc75c6f7b83bfad03a216b950a2700441611660bf7a942595",
+    "apps/evi-x-platform/content/topic-advisor/sources.json": "904b15899ac0f96796a214829297ddacf38a283ef83fe4653a7268f5c09961a7",
+    "apps/evi-x-platform/content/topic-advisor/train.json": "18f067e920f8a35a94d72ffafe09b5969d9f11808a6aa03c59e56fb82c454e1f",
+    "apps/evi-x-platform/lib/questionnaire.ts": "4509b89a302ea49e00e5be2d6c5ecf5bf8f4f42437d4082183babdeeedd1aed4",
+    "apps/evi-x-platform/lib/topic-advisor/core.ts": "c5833f2d20cd6bf4103cb3bb4c4ed624a566ca1ae65958df0808093d4f5e9ca3",
+    "apps/evi-x-platform/lib/topic-advisor/geography.ts": "796d54c479450abcad7c0922d92dad151ce5da3dd723ab2f6e418a5863714acc",
+    "apps/evi-x-platform/lib/topic-advisor/parse.ts": "10c56d741226be7242ddde48e330c28594596a29dc71b17b0df570055a18d916",
+    "apps/evi-x-platform/lib/topic-advisor/regions.ts": "670e03c344f7ecc0386b1b9b08b8fd1865f0a6b41daa01835c9b6c3c39301122",
+    "apps/evi-x-platform/lib/topic-advisor/training.ts": "fd66787b246cc71a0c7a6bb090adb30abf9be3440de7daf668b1fda5d2089927",
+    "apps/evi-x-platform/lib/topic-advisor/types.ts": "434c7271c333c1b8def146f1b2dc08484d68fddab6b098fde499899a74a1554d",
+    "apps/evi-x-platform/scripts/evaluate-topic-advisor.mjs": "d6c7ddf2f9e13ea3ac2d02733cd2725b75bf9da24441b382cf4e0cbd95f37db8",
+    "apps/evi-x-platform/scripts/topic-evaluation.mjs": "bcf5da0e10cf9c331b867e202ea71e5cbd6a05a7614fe858ec5c43de1def307b",
+    "apps/evi-x-platform/scripts/train-topic-advisor.mjs": "b3a8a15b44ececa613d6418b89077938286c6b498c84b2bcf29c4da76582b094",
+    "evals/topic-advisor/labels-v1.json": "460cdb256d0b23e588427c75f87594f4d93eda337216d3da1454c42f06616f03",
+    "evals/topic-advisor/reviewer-bindings-v1.json": "8ad312678b2f5ea0e5040917db69439d5790975621dc1ad5884e00e440397e26",
+    "evals/topic-advisor/reviews-v1.json": "20a3f709f79958357853589b1fd1ca848f1b9140987c362ee9b145f612377e6c",
+    "evals/topic-advisor/scenarios-v1.json": "f089144d968d78cbfc54ea9ab1cbcdf185a29c6166a0e18477c01faeefcb47e5"
+  },
+  "sealedAt": "2026-10-15T21:06:18.303919+00:00"
+}
