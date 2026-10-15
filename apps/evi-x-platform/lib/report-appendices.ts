@@ -8,7 +8,8 @@ import { QUESTION_TYPES, type DesignQuestion, type Questionnaire } from './quest
 import { METHOD_LABELS, targetSection } from './report-placement.ts';
 import { literalText } from './report-templates.ts';
 
-const letter = (i: number) => String.fromCharCode(65 + (i % 26));
+/** Option labels A … Z, then AA, AB …, so up to thirty options stay distinct. */
+const letter = (i: number): string => i < 26 ? String.fromCharCode(65 + i) : letter(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26));
 function questionLines(q: DesignQuestion, index: number, all: readonly DesignQuestion[]): string[] {
   const parent = q.condition ? all.findIndex(x => x.id === q.condition!.questionId) : -1;
   const when = parent >= 0 ? `（第 ${parent + 1} 题选择${q.condition!.codes.map(code => `“${all[parent].choices.find(c => c.code === code)?.label ?? code}”`).join('或')}者回答）` : '';
@@ -19,7 +20,9 @@ function questionLines(q: DesignQuestion, index: number, all: readonly DesignQue
     return options.join('　').length <= 60 ? [head, options.join('　')] : [head, ...options];
   }
   if (q.type === 'likert') {
-    const min = q.min ?? 1, max = q.max ?? 5, points = Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => `○${min + i}`);
+    // Points are listed for an ordinary scale (up to eleven whole points); any other range is described by its ends.
+    const min = q.min ?? 1, max = q.max ?? 5, listable = Number.isInteger(min) && Number.isInteger(max) && max >= min && max - min <= 10;
+    const points = listable ? Array.from({ length: max - min + 1 }, (_, i) => `○${min + i}`) : [`在 ${min} 到 ${max} 之间作答：________`];
     const anchors = [q.minLabel && `${min} = ${q.minLabel}`, q.maxLabel && `${max} = ${q.maxLabel}`].filter(Boolean).join('，');
     return [head + (anchors ? `（${anchors}）` : ''), points.join('　')];
   }
@@ -47,14 +50,14 @@ export function dataAppendix(content: EditorContent): string[] {
 }
 
 export type AiUse = { used: boolean; tools: string; uses: string[]; sections: string; checking: string };
-export const AI_USES = ['文献检索与梳理', '问卷题目拟稿', '数据分析代码', '文字润色与改写', '翻译', '图表与排版建议'] as const;
+export const AI_USES = ['文献检索与梳理', '问卷题目拟稿', '章节文字拟稿', '数据分析代码', '文字润色与改写', '翻译', '图表与排版建议'] as const;
 export const DEFAULT_AI_CHECKING = '所有生成内容均由小组成员逐条核对并修改；报告中的数据、统计量、图表与公式均由登记的分析结果直接生成，未使用生成式人工智能产生任何数字。';
 /** The AI-use statement from the author's own answers, plus what the platform generated without AI. */
 export function aiAppendix(answer: AiUse, content: EditorContent): string[] {
   const blocks = content.report.flatMap(s => s.blocks ?? []);
   const count = (kind: string) => blocks.filter(b => b.kind === kind).length;
   const generated = [count('chart') && `统计图 ${count('chart')} 幅`, count('table') && `统计表 ${count('table')} 张`, count('formula') && `公式 ${count('formula')} 个`].filter(Boolean).join('、');
-  const platform = `报告中的${generated || '统计图表与公式'}及其读数段由研究平台根据登记的分析结果按固定规则生成，不涉及生成式人工智能。`;
+  const platform = generated ? `报告中的${generated}及其读数段由研究平台根据登记的分析结果按固定规则生成，不涉及生成式人工智能。` : '报告中暂无由研究平台生成的统计图、表与公式。';
   if (!answer.used) return ['本研究在选题、调查设计、数据处理、分析与报告撰写过程中未使用生成式人工智能工具。', platform];
   const tools = answer.tools.trim(), uses = answer.uses.filter(Boolean), sections = answer.sections.trim();
   if (!tools || !uses.length) throw Error('请填写使用的工具与版本，并至少选择一项用途。');

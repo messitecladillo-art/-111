@@ -314,7 +314,13 @@ export async function figureSVG(r: ResultSnapshot, column: number, accent: strin
     chart.setOption(plan.option);
     const svg = chart.renderToSVGString()
       .replace(/<style\b[\s\S]*?<\/style>/g, '')
-      .replace(/\s(?:class|pointer-events)="[^"]*"/g, '');
+      .replace(/\s(?:class|pointer-events)="[^"]*"/g, '')
+      // Word's SVG renderer ignores the CSS font shorthand ECharts writes for rich text; spell it out as properties.
+      .replace(/font:\s*([^;"]*?)(\d+(?:\.\d+)?px)\s+([^;"]+)/g, (_m, lead: string, size: string, family: string) => {
+        const words = lead.trim().split(/\s+/);
+        const style = words.find(w => /^(?:italic|oblique)$/.test(w)) ?? 'normal', weight = words.find(w => /^(?:bold|bolder|lighter|\d{3})$/.test(w)) ?? 'normal';
+        return `font-style:${style};font-weight:${weight};font-size:${size};font-family:${family.trim()}`;
+      });
     return assertTrueVector(svg);
   } finally { chart.dispose(); }
 }

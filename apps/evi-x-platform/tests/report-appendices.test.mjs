@@ -29,6 +29,11 @@ test('the questionnaire appendix prints the introduction, every question, its op
   assert.ok(lines.includes('○1　○2　○3　○4　○5'));
   assert.ok(lines.includes('4. 您每次步行到设施需要多少分钟？（数值）（第 1 题选择“女”者回答）'));
   assert.ok(lines.includes('5. 您对设施还有哪些建议？（开放题）'));
+  // Thirty options keep distinct labels; a scale with an unusual range is described by its ends, never expanded.
+  const thirty = questionnaireAppendix({ ...design, questions: [question('m', '多选', 'multi', { choices: Array.from({ length: 30 }, (_, i) => ({ code: String(i), label: `选项${i}` })) })] });
+  assert.ok(thirty.includes('□Z. 选项25') && thirty.includes('□AA. 选项26') && thirty.includes('□AD. 选项29'));
+  const wide = questionnaireAppendix({ ...design, questions: [question('w', '打分', 'likert', { min: 0, max: 1000000 })] });
+  assert.ok(wide.includes('在 0 到 1000000 之间作答：________'));
   const odd = questionnaireAppendix({ ...design, questions: [question('x', '月花费超过 $100 吗[[图:a]]？', 'text')] });
   assert.deepEqual(splitInlineMath(odd.join('\n')).filter(p => p.math), [], 'typed text never becomes a formula');
   assert.doesNotMatch(odd.join(''), /\[\[/);
@@ -55,6 +60,7 @@ test('the AI statement comes from the author\'s answers and names what the platf
   assert.equal(used[0], '本研究在以下环节使用了生成式人工智能工具：某大模型 4.0。用途为文献检索与梳理、文字润色与改写，涉及第一章、第四章。');
   assert.equal(used[1], DEFAULT_AI_CHECKING);
   assert.throws(() => aiAppendix({ used: true, tools: '', uses: [], sections: '', checking: '' }, content), /请填写使用的工具与版本/);
+  assert.equal(aiAppendix({ used: false, tools: '', uses: [], sections: '', checking: '' }, createEditorContent())[1], '报告中暂无由研究平台生成的统计图、表与公式。', 'a text-only report claims no generated exhibits');
 });
 
 test('appendix text lands in its blueprint appendix, after anything already written, within the body limit', () => {

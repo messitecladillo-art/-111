@@ -251,9 +251,11 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   add('numeric', 'analysis', '结果段落有数据', resultParagraphs.length >= 5 ? share(numeric, resultParagraphs.length) / BENCHMARK_RULES.numericShare : null,
     `分析章节中 ${Math.round(share(numeric, resultParagraphs.length) * 100)}% 的段落含具体数据，宜在 ${BENCHMARK_RULES.numericShare * 100}% 以上。`);
   // Every analysis section the report has should show its evidence.
-  const shown = analysis.filter(s => s.lines.length > 0 || !!s.section.blocks?.length), backed = shown.filter(s => exhibitsIn(s) > 0);
+  // A section shows its own exhibit or cites one shown elsewhere (a problem summary pointing at the figures it rests on).
+  const cites = (s: Scanned) => s.lines.some(l => new RegExp(FIGURE_REFERENCE.source, 'u').test(l) || /\[\[(?:图|表):/.test(l));
+  const shown = analysis.filter(s => s.lines.length > 0 || !!s.section.blocks?.length), backed = shown.filter(s => exhibitsIn(s) > 0 || cites(s));
   add('coverage', 'analysis', '分析小节有证据', shown.length ? backed.length / shown.length : null,
-    !shown.length ? '还没有写入分析小节。' : backed.length === shown.length ? `${shown.length} 个分析小节都有图或表。` : `「${stripHeadingNumber(shown.find(s => !exhibitsIn(s))!.section.title)}」等 ${shown.length - backed.length} 个分析小节没有图或表。`, [go('analysis')]);
+    !shown.length ? '还没有写入分析小节。' : backed.length === shown.length ? `${shown.length} 个分析小节都有图或表。` : `「${stripHeadingNumber(shown.find(s => !backed.includes(s))!.section.title)}」等 ${shown.length - backed.length} 个分析小节既没有图表，也没有引用图表。`, [go('analysis')]);
 
   // 图表规范
   // Exhibits balanced against the text that reads them: neither charts stacked without reading nor long text without evidence.

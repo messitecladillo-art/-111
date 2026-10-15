@@ -52,7 +52,8 @@ type Cites = { labels: Map<string, BlockLabel>; citations: ReadonlyMap<string, n
 function latexLine(text: string, refs: Cites, where: string): string {
   const segments = referenceSegments(text, refs.labels, refs.citations);
   if (segments.some(s => s.missing)) throw Error(`「${where}」中有${segments.some(s => s.missing && s.cite) ? '文献' : '图表'}引用已失效，请重新插入引用后再生成。`);
-  return segments.map(s => s.cite ? `\\textsuperscript{${escapeLatexText(s.text)}}` : escapeLatexParagraphText(s.text)).join('');
+  // The editor writes a literal dollar as \$; LaTeX escapes the dollar itself.
+  return segments.map(s => s.cite ? `\\textsuperscript{${escapeLatexText(s.text)}}` : escapeLatexParagraphText(s.text.replace(/\\\$/g, '$'))).join('');
 }
 
 function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites = { labels: reportLabels(content.report), citations: referenceNumbers(content).numbers }, where = '内容块'): string {

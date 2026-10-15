@@ -63,3 +63,13 @@ test('invalid TeX fails with a readable message instead of producing broken equa
   assert.throws(() => texToOmml(String.raw`\frac{a`), /公式无法解析/);
   assert.throws(() => texToOmml('  '), /公式为空/);
 });
+
+test('function names become Word functions, scripted or not, so Word spaces them', () => {
+  const log = texToOmml(String.raw`\log_2 x+\sin x`);
+  assert.match(log, /<m:func><m:fName><m:sSub><m:e>[\s\S]*?log[\s\S]*?<\/m:sSub><\/m:fName><m:e>[\s\S]*?x[\s\S]*?<\/m:e><\/m:func>/, 'log₂ keeps its subscript and takes x');
+  assert.match(log, /<m:func><m:fName>[\s\S]*?sin[\s\S]*?<\/m:fName><m:e>[\s\S]*?x/);
+  const min = texToOmml(String.raw`V=\sqrt{\frac{\chi^2}{n\,\min(r-1,\,c-1)}}`);
+  assert.match(min, /<m:func><m:fName>[\s\S]*?min[\s\S]*?<\/m:fName><m:e>[\s\S]*?\([\s\S]*?\)[\s\S]*?<\/m:e><\/m:func>/, 'the bracketed group is the argument');
+  assert.doesNotMatch(texToOmml(String.raw`\left(\min\right)`), /<m:func>/, 'a name with nothing to apply to stays a plain name');
+  assert.doesNotMatch(min, /⁡/);
+});

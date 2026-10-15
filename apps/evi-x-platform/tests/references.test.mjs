@@ -125,6 +125,9 @@ test('exports stop on a hand-typed list beside structured entries, a missing sec
 });
 
 test('LaTeX and slides print citations as numbers, never as tokens', async () => {
+  const dollars = cited(); dollars.report[0].body += '会费 \\$5。';
+  assert.match(generateLatexBody(dollars), /会费 \\\$5。/, 'a literal dollar prints once, without the editor escape');
+  assert.doesNotMatch(generateLatexBody(dollars), /textbackslash/);
   const latex = generateLatexBody(cited());
   assert.match(latex, /\\textsuperscript\{\[1,2\]\}/);
   assert.match(latex, /\\hangindent=2em\\hangafter=1 \[1\]~金勇进/);

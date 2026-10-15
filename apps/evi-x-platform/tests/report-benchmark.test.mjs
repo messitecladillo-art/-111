@@ -98,6 +98,17 @@ test('correlation written as causation and undeclared simulated data are both fl
   assert.equal(check(report, 'simulated').status, 'pass');
 });
 
+test('a summary section that cites exhibits shown elsewhere counts as backed by evidence', () => {
+  const content = createEditorContent();
+  content.version = 2;
+  content.quality = { version: 1, results: [result('r1')], findings: [] };
+  content.report = [section('c', '五、群体差异与关联分析'), section('t', '（一）差异检验与相关分析', '卡方检验显示差异显著（χ²=8.2，p=0.004），见[[图:f]]。', { blocks: [{ id: 'f', kind: 'chart', text: '分布', evidenceId: 'r1', valueColumn: 1 }] }),
+    section('d', '六、评价与问题诊断'), section('p', '（一）现存问题归纳', '综合[[图:f]]，可归纳出两个问题。')];
+  assert.equal(check(benchmarkReport(content), 'coverage').status, 'pass');
+  content.report[3].body = '可归纳出两个问题。';
+  assert.match(check(benchmarkReport(content), 'coverage').detail, /既没有图表，也没有引用图表/);
+});
+
 test('citation coverage counts the distinct references cited, ranges included', () => {
   const content = createEditorContent();
   const list = Array.from({ length: 10 }, (_, i) => `[${i + 1}] 作者${i}. 题名[J]. 刊名, 2024, 1(1): 1-2.`).join('\n');

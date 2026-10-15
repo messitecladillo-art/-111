@@ -142,6 +142,13 @@ test('figures pick the type that fits the result and size their height to it', a
   const svg = await figureSVG(results.cross, 3, '#0F766E');
   assert.match(svg, /^<svg/);
   assert.doesNotMatch(svg, /<style|class=|pointer-events/);
+  // Word's SVG renderer ignores the CSS font shorthand: every text states its size and family as properties.
+  for (const [id, column] of [['cross', 3], ['freq', 1], ['groups', 2]]) {
+    const figure = await figureSVG(results[id], column, '#0F766E');
+    assert.doesNotMatch(figure, /font:/, id);
+    for (const text of figure.match(/<text\b[^>]*>/g)) assert.match(text, /font-size:\d+(?:\.\d+)?px;?[^"]*font-family:/, `${id}: ${text.slice(0, 80)}`);
+  }
+  assert.match(await figureSVG(results.freq, 1, '#0F766E'), /font-style:italic[^>]*>n</, 'the italic n survives the rewrite');
   assert.match(svg, /Times New Roman/);
   assert.equal(svgSize(svg).width, FIGURE_WIDTH);
   assert.equal(svgSize(svg).height, cross.height);

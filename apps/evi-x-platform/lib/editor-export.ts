@@ -87,7 +87,9 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
     if(section.body)for(const line of section.body.split('\n')){
       const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
-      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:await richRuns(line,ctx)}));
+      // "关键词：" opens the keyword line in bold, as abstracts set it.
+      const keywords=part==='abstract'?/^(关键词[:：])\s*/.exec(line):null;
+      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:keywords?[new TextRun({text:keywords[1],bold:true,font:font('黑体')}),...await richRuns(line.slice(keywords[0].length),ctx)]:await richRuns(line,ctx)}));
     }
     if(part==='references')cited.order.forEach((entry,i)=>children.push(new Paragraph({style:'ReportReferenceItem',children:[new TextRun(`[${i+1}]\t`),new TextRun(formatReference(entry))]})));
     if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg,ctx));

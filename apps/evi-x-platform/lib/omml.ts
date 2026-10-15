@@ -78,6 +78,31 @@ function sequence(nodes: Node[]): string {
       k = close;
       continue;
     }
+    // A function name ("min", "log₂") applied to its argument becomes a Word function, which Word spaces and sets
+    // upright itself; the argument is the following bracketed group, or the next single term.
+    // KaTeX puts the function-application mark (U+2061) after a plain name (sin x) or inside a scripted one's base (log₂).
+    const applies = (m: Node | undefined) => m?.tag === 'mo' && text(m) === '\u2061';
+    const scripted = ['msub', 'msup', 'msubsup'].includes(n.tag) && (() => { const b = elements(n)[0]; const inner = b?.tag === 'mrow' ? elements(b) : b ? [b] : []; return applies(inner.at(-1)); })();
+    const plain = applies(nodes[k + 1]), start = plain ? k + 2 : k + 1;
+    if ((plain || scripted) && start >= nodes.length) { out += convert(n); k = start - 1; continue; }
+    if (plain || scripted) {
+      let end = start;
+      const next = nodes[end];
+      if (next?.tag === 'mo' && (OPEN.includes(text(next)) || (next.attrs.fence === 'true' && text(next) === ''))) {
+        const fenced = next.attrs.fence === 'true';
+        let depth = 0;
+        for (let j = end; j < nodes.length; j++) {
+          const m = nodes[j];
+          if (m.tag !== 'mo' || (m.attrs.fence === 'true') !== fenced) continue;
+          const t = text(m);
+          if (OPEN.includes(t) || (fenced && t === '' && j === end)) depth++;
+          else if ((CLOSE.includes(t) || (fenced && t === '')) && --depth === 0) { end = j; break; }
+        }
+      }
+      out += `<m:func><m:fName>${convert(n)}</m:fName><m:e>${sequence(nodes.slice(start, end + 1))}</m:e></m:func>`;
+      k = end;
+      continue;
+    }
     // A big operator takes the following terms as its operand, up to the next relation or sum.
     const base = ['munderover', 'munder', 'mover', 'msubsup', 'msub', 'msup'].includes(n.tag) ? elements(n)[0] : null;
     if (base?.tag === 'mo' && NARY.has(text(base))) {
@@ -110,7 +135,8 @@ function convert(n: Node): string {
     case 'mn': return run(text(n), n.attrs.mathvariant === 'bold' ? 'b' : 'p');
     case 'mo': {
       const t = text(n);
-      return t === '⁡' || t === '⁢' || t === '⁣' ? '' : run(t, 'p');
+      // Function application, invisible times and invisible separator carry no glyph.
+      return t === '\u2061' || t === '\u2062' || t === '\u2063' ? '' : run(t, 'p');
     }
     case 'mtext': {
       const t = text(n);

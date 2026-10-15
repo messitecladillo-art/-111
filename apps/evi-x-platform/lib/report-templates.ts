@@ -238,18 +238,18 @@ export function methodIntro(r: ResultSnapshot): MethodIntro | null {
       key: '\\chi^2=\\sum',
       text: '两个分类变量之间是否存在关联，采用 Pearson $\\chi^2$ 独立性检验判断，并以 Cramér $V$ 系数衡量关联强度；2×2 表中有期望频数小于 5 的单元格时，改用 Fisher 精确检验。检验统计量与关联系数分别为',
       formulas: ['\\chi^2=\\sum_{i=1}^{r}\\sum_{j=1}^{c}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}}', 'V=\\sqrt{\\frac{\\chi^2}{n\\,\\min(r-1,\\,c-1)}}'],
-      where: '式中，$O_{ij}$ 为第 $i$ 行第 $j$ 列的观测频数，$E_{ij}=n_{i\\cdot}n_{\\cdot j}/n$ 为相应的期望频数，$n_{i\\cdot}$、$n_{\\cdot j}$ 为行、列合计，$r$、$c$ 为行、列类别数，$n$ 为有效样本量。',
+      where: '式中，$O_{ij}$ 为第 $i$ 行第 $j$ 列的观测频数，$E_{ij}=n_{i\\cdot}n_{\\cdot j}/n$ 为相应的期望频数，$n_{i\\cdot}$、$n_{\\cdot j}$ 为行、列合计，$r$、$c$ 为行、列类别数，$n$ 为有效样本量。检验的适用条件是观测相互独立，期望频数小于 5 的单元格不超过 20%，且没有期望频数小于 1 的单元格。',
     };
     case 'groups': return r.rows.filter(x => num(x[2]) !== null).length === 2 ? {
       key: 't=\\frac{\\bar{x}_1-\\bar{x}_2}',
       text: '两组均值的比较不假定两组方差相等，采用 Welch $t$ 检验，统计量及其自由度为',
       formulas: ['t=\\frac{\\bar{x}_1-\\bar{x}_2}{\\sqrt{s_1^2/n_1+s_2^2/n_2}}', '\\nu=\\frac{\\left(s_1^2/n_1+s_2^2/n_2\\right)^2}{\\frac{(s_1^2/n_1)^2}{n_1-1}+\\frac{(s_2^2/n_2)^2}{n_2-1}}'],
-      where: '式中，$\\bar{x}_k$、$s_k^2$ 与 $n_k$ 分别为第 $k$ 组的均值、方差与样本量；效应量采用 Hedges $g$。',
+      where: '式中，$\\bar{x}_k$、$s_k^2$ 与 $n_k$ 分别为第 $k$ 组的均值、方差与样本量；效应量采用 Hedges $g$。该检验不要求两组方差齐性，但要求两组观测相互独立。',
     } : {
       key: 'F^{*}=',
       text: '多组均值的比较不假定各组方差相等，采用 Welch 方差分析，其统计量为',
       formulas: ['F^{*}=\\frac{\\frac{1}{k-1}\\sum_{j=1}^{k}w_j(\\bar{x}_j-\\tilde{x})^2}{1+\\frac{2(k-2)}{k^2-1}\\sum_{j=1}^{k}\\frac{(1-w_j/W)^2}{n_j-1}}'],
-      where: '式中，$w_j=n_j/s_j^2$，$W=\\sum_{j=1}^{k}w_j$，$\\tilde{x}=\\sum_{j=1}^{k}w_j\\bar{x}_j/W$，$\\bar{x}_j$、$s_j^2$ 与 $n_j$ 分别为第 $j$ 组的均值、方差与样本量，$k$ 为组数；效应量采用经典方差分析的 $\\eta^2$。',
+      where: '式中，$w_j=n_j/s_j^2$，$W=\\sum_{j=1}^{k}w_j$，$\\tilde{x}=\\sum_{j=1}^{k}w_j\\bar{x}_j/W$，$\\bar{x}_j$、$s_j^2$ 与 $n_j$ 分别为第 $j$ 组的均值、方差与样本量，$k$ 为组数；效应量采用经典方差分析的 $\\eta^2$。该方法不要求各组方差齐性，但要求各组观测相互独立，组内样本过小或分布严重偏斜时应对照秩检验。',
     };
     case 'pearson': return {
       key: 'r=\\frac{\\sum',
