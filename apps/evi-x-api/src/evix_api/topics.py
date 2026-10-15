@@ -246,7 +246,12 @@ def register_topics(app, settings, db, session_user, lock_user, operation, owned
         count = session.scalar(select(func.count()).select_from(RateEvent).where(RateEvent.scope == scope, RateEvent.created_at > now() - timedelta(hours=1)))
         if count >= 12:
             raise ApiError(429, "call_rate_limit", "每小时最多12次选题细化。")
-        active = session.execute(select(Operation).where(Operation.user_id == user.id, Operation.scope == SCOPE, Operation.key != op.key)).scalars().all()
+        # Only running receipts need to enter Python for expiry. Terminal and
+        # unknown response payloads remain in the database, regardless of history size.
+        active = session.execute(select(Operation).where(
+            Operation.user_id == user.id, Operation.scope == SCOPE, Operation.key != op.key,
+            Operation.response["status"].as_string() == "running",
+        )).scalars().all()
         for previous in active:
             expire_receipt(previous)
             if previous.response and previous.response["status"] == "running":
@@ -264,7 +269,17 @@ def register_topics(app, settings, db, session_user, lock_user, operation, owned
         if key in message:
             raise ApiError(422, "sensitive_input", "选题材料包含服务密钥，请移除后重试。")
         input_fingerprint = fingerprint({"profile": data["profile"], "candidateIds": data["candidateIds"], "goal": data["goal"], "catalogVersion": data["catalogVersion"], "lookupId": data.get("lookupId")})
-        if any(previous.response and previous.response["status"] == "outcome_unknown" and previous.response["inputFingerprint"] == input_fingerprint and previous.response["serviceId"] == service.id for previous in active):
+        # Flush expired running rows before testing the database state. This is
+        # still the same transaction: a rejected request rolls back as before.
+        session.flush()
+        unknown_exists = select(Operation.key).where(
+            Operation.user_id == user.id, Operation.scope == SCOPE, Operation.key != op.key,
+            Operation.response["status"].as_string() == "outcome_unknown",
+            Operation.response["inputFingerprint"].as_string() == input_fingerprint,
+            Operation.response["serviceId"].as_string() == service.id,
+        ).exists()
+        # No recency window or history limit may hide a possibly billable call.
+        if session.scalar(select(unknown_exists)):
             raise ApiError(409, "outcome_unknown", "相同材料有待核对的调用，请查看原回执。")
         op.response = {"id": op.key, "status": "running", "classification": "proposed", "serviceId": service.id, "serviceRevision": service.revision,
             "catalogVersion": data["catalogVersion"], "inputFingerprint": input_fingerprint, "createdAt": iso(now()), "finishedAt": None,

@@ -3,13 +3,15 @@ import asyncio
 import copy
 import json
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import timedelta
 from uuid import uuid4
 from threading import Event
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select, text, update
+from sqlalchemy import event, select, text, update
 from evix_api.models import Operation, RateEvent, Session, Service, now
+from evix_api.contracts import canonical
 from evix_api.knowledge_models import KnowledgeLookup, KnowledgeMonthlyBudget, KnowledgeDailyBudget
 from evix_api.provider import ProviderFailure
 from evix_api.security import keyed
@@ -311,3 +313,113 @@ def test_topics_history_is_personal_bounded_recovers_after_logout_and_preserves_
     assert recovered.get(PATH).json()["receipts"] == history
     assert recovered.get(PATH + "/" + first["id"]).json() == old
     assert provider.calls == 2
+
+
+@contextmanager
+def operation_reads(engine, uid):
+    """Observe actual ORM materialization and full-response result row counts."""
+    reads = {"loaded_keys": set(), "response_rows": []}
+
+    def loaded(operation, context):
+        if operation.user_id == uid and operation.scope == SCOPE:
+            reads["loaded_keys"].add(operation.key)
+
+    def executed(connection, cursor, statement, parameters, context, executemany):
+        columns = [column[0] for column in cursor.description or ()]
+        if statement.lstrip().upper().startswith("SELECT") and "response" in columns:
+            reads["response_rows"].append(cursor.rowcount)
+
+    event.listen(Operation, "load", loaded)
+    event.listen(engine, "after_cursor_execute", executed)
+    try:
+        yield reads
+    finally:
+        event.remove(Operation, "load", loaded)
+        event.remove(engine, "after_cursor_execute", executed)
+
+
+def test_topics_large_history_queries_keep_terminal_payloads_in_database(harness, pg_engine, settings):
+    _, login, _, provider = harness
+    owner, identity = login()
+    _, foreign_identity = login("b@example.test")
+    service, _, data = setup(owner)
+    first = owner.post(PATH, json=data).json()
+    assert first["status"] == "ready" and provider.calls == 1
+    uid = identity["user"]["id"]
+    other_service = owner.post("/api/services", json=service_input(capabilities=["research"])).json()
+    # Synthetic large receipts are persisted directly; they are not extra model
+    # calls. None of these completed or unrelated unknown payloads need loading.
+    large_sources = first["sources"] + [{"id": f"synthetic-{i}", "title": "合成来源", "snippet": "x" * 800} for i in range(40)]
+    histories = []
+    for index in range(640):
+        receipt_id = str(uuid4())
+        status = ("ready" if index % 2 else "failed") if index < 512 else "outcome_unknown"
+        receipt = {**first, "id": receipt_id, "status": status, "sources": large_sources,
+                   "createdAt": (now() - timedelta(days=1, seconds=index)).isoformat(),
+                   "inputFingerprint": f"{index + 1:064x}"}
+        if status != "ready":
+            receipt["proposal"] = None
+        histories.append({"user_id": uid, "scope": SCOPE, "key": receipt_id, "payload_hash": "0" * 64, "response": receipt})
+    wrong_service_id = str(uuid4())
+    wrong_service = {**first, "id": wrong_service_id, "status": "outcome_unknown", "proposal": None, "serviceId": other_service["id"]}
+    histories.append({"user_id": uid, "scope": SCOPE, "key": wrong_service_id, "payload_hash": "0" * 64, "response": wrong_service})
+    as_user(pg_engine, uid, lambda c: c.execute(Operation.__table__.insert(), histories))
+    foreign_id = str(uuid4())
+    foreign = {**first, "id": foreign_id, "status": "outcome_unknown", "proposal": None}
+    foreign_uid = foreign_identity["user"]["id"]
+    as_user(pg_engine, foreign_uid, lambda c: c.execute(Operation.__table__.insert().values(
+        user_id=foreign_uid, scope=SCOPE, key=foreign_id, payload_hash="0" * 64, response=foreign)))
+
+    next_data = {**data, "idempotencyKey": str(uuid4())}
+    with operation_reads(pg_engine, uid) as reads:
+        accepted = owner.post(PATH, json=next_data)
+    assert accepted.status_code == 201 and accepted.json()["status"] == "ready", accepted.text
+    assert provider.calls == 2
+    assert reads["loaded_keys"] <= {next_data["idempotencyKey"]}
+    assert reads["response_rows"] and all(0 <= rows <= 1 for rows in reads["response_rows"])
+
+    # The matching unknown is older than every large terminal/unrelated record.
+    # A recency cap must never hide it and permit another possibly billable call.
+    unknown_data = {**data, "idempotencyKey": str(uuid4())}
+    unknown = {**first, "id": unknown_data["idempotencyKey"], "status": "outcome_unknown", "proposal": None,
+               "createdAt": (now() - timedelta(days=365)).isoformat(), "errorCode": "provider_timeout"}
+    as_user(pg_engine, uid, lambda c: c.execute(Operation.__table__.insert().values(
+        user_id=uid, scope=SCOPE, key=unknown["id"], payload_hash=keyed(settings, "operation-payload/v1", canonical(unknown_data)), response=unknown)))
+    blocked_data = {**data, "idempotencyKey": str(uuid4())}
+    with operation_reads(pg_engine, uid) as reads:
+        blocked = owner.post(PATH, json=blocked_data)
+    assert blocked.status_code == 409 and blocked.json()["error"]["code"] == "outcome_unknown"
+    assert reads["loaded_keys"] == set()
+    assert reads["response_rows"] and all(rows == 0 for rows in reads["response_rows"])
+    assert provider.calls == 2
+    assert owner.post(PATH, json=unknown_data).json() == unknown
+    assert provider.calls == 2
+    assert as_user(pg_engine, uid, lambda c: c.execute(select(Operation.key).where(Operation.scope == SCOPE, Operation.key == blocked_data["idempotencyKey"])).scalar_one_or_none()) is None
+
+
+def test_topics_expired_running_is_visible_to_unknown_query_without_changing_rollback(harness, pg_engine, settings):
+    _, login, _, provider = harness
+    owner, identity = login()
+    _, _, data = setup(owner)
+    first = owner.post(PATH, json=data).json()
+    assert first["status"] == "ready" and provider.calls == 1
+    uid = identity["user"]["id"]
+    stale = {**first, "status": "running", "proposal": None, "createdAt": (now() - timedelta(minutes=4)).isoformat(), "finishedAt": None}
+    as_user(pg_engine, uid, lambda c: c.execute(update(Operation).where(Operation.scope == SCOPE, Operation.key == first["id"]).values(response=stale)))
+    blocked_data = {**data, "idempotencyKey": str(uuid4())}
+    with operation_reads(pg_engine, uid) as reads:
+        blocked = owner.post(PATH, json=blocked_data)
+    assert blocked.status_code == 409 and blocked.json()["error"]["code"] == "outcome_unknown"
+    assert reads["loaded_keys"] == {first["id"]} and provider.calls == 1
+    # Rejection still rolls the entire attempted reservation/expiry transaction
+    # back. A later permitted call commits expiry; neither branch re-dispatches it.
+    persisted = as_user(pg_engine, uid, lambda c: c.execute(select(Operation.response).where(Operation.scope == SCOPE, Operation.key == first["id"])).scalar_one())
+    assert persisted == stale
+    assert as_user(pg_engine, uid, lambda c: c.execute(select(Operation.key).where(Operation.scope == SCOPE, Operation.key == blocked_data["idempotencyKey"])).scalar_one_or_none()) is None
+    scope = keyed(settings, "topic-call-rate/v1", uid)
+    assert len(as_user(pg_engine, uid, lambda c: c.execute(select(RateEvent.id).where(RateEvent.scope == scope)).all())) == 1
+    different = owner.post(PATH, json={**data, "idempotencyKey": str(uuid4()), "goal": "另一个待核验研究问题"})
+    assert different.status_code == 201 and different.json()["status"] == "ready" and provider.calls == 2
+    persisted = as_user(pg_engine, uid, lambda c: c.execute(select(Operation.response).where(Operation.scope == SCOPE, Operation.key == first["id"])).scalar_one())
+    assert persisted["status"] == "outcome_unknown" and persisted["errorCode"] == "interrupted_call"
+    assert owner.post(PATH, json=data).json() == persisted and provider.calls == 2
