@@ -84,7 +84,8 @@ export function generateLatexBody(content: EditorContent): string {
   const sections = content.report.filter(section => (reportPart(section.title) === 'appendix') === (part === 'appendix'));
   if (!sections.length) throw Error(part === 'appendix' ? '请先添加独立附录章节。' : '报告正文至少需要一个章节。');
   const refs: Cites = { labels: reportLabels(content.report), citations: referenceNumbers(content).numbers }, entries = referenceNumbers(content).order;
-  if (entries.some(unfinishedReference)) throw Error(`第 ${entries.findIndex(unfinishedReference) + 1} 条参考文献尚未填写题名，请补全或删除后再生成。`);
+  // An appendix-only export prints no reference list, so an unfinished entry of the main report does not stop it.
+  if (part !== 'appendix' && entries.some(unfinishedReference)) throw Error(`第 ${entries.findIndex(unfinishedReference) + 1} 条参考文献尚未填写题名，请补全或删除后再生成。`);
   const paragraphs = (text: string, where: string) => text.split(/\r\n|\r|\n/).map(line => `${latexLine(line, refs, where)}\\par`).join('\n');
   // Structured references print as a hanging list in citation order, as in the Word export.
   const list = entries.map((entry, i) => `\\noindent\\hangindent=2em\\hangafter=1 [${i + 1}]~${escapeLatexParagraphText(formatReference(entry))}\\par`).join('\n');

@@ -72,9 +72,13 @@ export function formatReference(e: ReferenceEntry): string {
   if (e.type === 'other') return e.text.trim();
   // Items left blank are left out with their punctuation, so an unfinished record never prints stray marks.
   const t = (s: string) => s.trim(), who = authorList(e), head = who ? `${who}. ` : '';
-  const publication = (place: string, publisher: string, year: string, pages = '') =>
-    [[t(place), t(publisher)].filter(Boolean).join(': '), t(year)].filter(Boolean).join(', ') + (t(pages) ? `: ${t(pages)}` : '');
-  const issue = `${t(e.year)}${t(e.volume) ? `, ${t(e.volume)}` : ''}${t(e.issue) ? `(${t(e.issue)})` : ''}${t(e.pages) ? `: ${t(e.pages)}` : ''}`;
+  // Pages follow the year or volume with a colon ("2015: 12-20", "43(5): 12-20"); after a publisher alone, a comma.
+  const publication = (place: string, publisher: string, year: string, pages = '') => {
+    const issuer = [t(place), t(publisher)].filter(Boolean).join(': '), dated = t(year) ? `${t(year)}${t(pages) ? `: ${t(pages)}` : ''}` : t(pages);
+    return [issuer, dated].filter(Boolean).join(', ');
+  };
+  const dated = [t(e.year), `${t(e.volume)}${t(e.issue) ? `(${t(e.issue)})` : ''}`].filter(Boolean).join(', ');
+  const issue = t(e.pages) ? (dated ? `${dated}: ${t(e.pages)}` : t(e.pages)) : dated;
   const parts = (title: string, rest: string) => end(`${head}${title}${rest ? `. ${rest}` : ''}`);
   switch (e.type) {
     case 'J': return parts(`${t(e.title)}[J]`, [t(e.source), issue].filter(Boolean).join(', ')) + (t(e.doi) ? ` DOI: ${t(e.doi)}.` : '');

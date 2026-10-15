@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { createEditorContent, parseEditorContent } from '../lib/editor-model.ts';
 import { buildDocx } from '../lib/editor-export.ts';
 import { generateLatexBody } from '../lib/latex-report.ts';
+import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 import { buildStoryboard } from '../lib/report-storyboard.ts';
 import { danglingReferences, referenceSegments, reportLabels } from '../lib/report-numbering.ts';
 import { benchmarkReport } from '../lib/report-benchmark.ts';
@@ -32,7 +33,16 @@ test('entries print in GB/T 7714—2015 form for each type', () => {
   assert.equal(formatReference(entry('J', { title: '只有题名' })), '只有题名[J].');
   assert.equal(formatReference(entry('M', { authors: ['甲'], title: '书名', publisher: '某出版社' })), '甲. 书名[M]. 某出版社.');
   assert.equal(formatReference(entry('EB/OL', { title: '网页', url: 'https://example.org' })), '网页[EB/OL]. https://example.org.');
-  for (const type of ['J', 'M', 'D', 'C', 'R', 'N', 'S', 'EB/OL']) assert.doesNotMatch(formatReference(entry(type, { title: '题名' })), /,\s*[,.:]|:\s*[,.]|\.\s*\./, type);
+  for (const type of ['J', 'M', 'D', 'C', 'R', 'N', 'S', 'EB/OL']) assert.doesNotMatch(formatReference(entry(type, { title: '题名' })), /,\s*[,.:]|:\s*[,.:]|\.\s*\./, type);
+  // Partly filled records: whatever subset is present, no doubled separators.
+  const partial = [
+    entry('J', { title: '题名', source: '刊名', volume: '43', issue: '5', pages: '12-20' }), entry('J', { title: '题名', pages: '12-20' }), entry('J', { title: '题名', year: '2023', pages: '12-20' }),
+    entry('M', { title: '书名', publisher: '出版社', pages: '12' }), entry('M', { title: '书名', place: '北京', year: '2015', pages: '12' }), entry('C', { title: '题名', source: '文集', pages: '3-9' }),
+  ];
+  for (const e of partial) assert.doesNotMatch(formatReference(e), /,\s*[,.:]|:\s*[,.:]|\.\s*\./, formatReference(e));
+  assert.equal(formatReference(partial[0]), '题名[J]. 刊名, 43(5): 12-20.', 'pages follow 卷(期) with a colon even before the year is known');
+  assert.equal(formatReference(partial[2]), '题名[J]. 2023: 12-20.');
+  assert.equal(formatReference(partial[4]), '书名[M]. 北京, 2015: 12.');
   assert.deepEqual(referenceProblems({ ...E, url: 'example.org', accessed: '2024年10月1日' }), ['链接须以 http:// 或 https:// 开头且不含空格', '日期写作 YYYY-MM-DD']);
 });
 
@@ -103,6 +113,9 @@ test('exports stop on a hand-typed list beside structured entries, a missing sec
   const untitled = cited(); untitled.references = [...untitled.references, emptyReference('J')];
   await assert.rejects(buildDocx(untitled), /第 4 条参考文献尚未填写题名/);
   assert.throws(() => generateLatexBody(untitled), /尚未填写题名/);
+  // An appendix-only export prints no reference list, so the main report's unfinished entry does not stop it.
+  const appendixOnly = { ...untitled, reportFormat: { ...DEFAULT_REPORT_SETTINGS, options: { ...DEFAULT_REPORT_SETTINGS.options, part: 'appendix' } }, report: [...untitled.report, { id: 'ap', title: '附录1 调查问卷', body: '问卷全文。', source: '' }] };
+  assert.match(generateLatexBody(appendixOnly), /问卷全文/);
 });
 
 test('LaTeX and slides print citations as numbers, never as tokens', async () => {
