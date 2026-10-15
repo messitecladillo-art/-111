@@ -27,3 +27,4 @@
 .form input, .form select { padding: 6px 8px; border: 1px solid var(--wb-line-strong); border-radius: 5px; background: var(--wb-surface); color: var(--wb-text); font: inherit; font-size: 13px; }
 .form input:focus-visible, .form select:focus-visible, .panel button:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 1px; }
 @media (max-width: 600px) { .row { grid-template-columns: auto minmax(0, 1fr); } .rowActions { grid-column: 1 / -1; justify-content: flex-end; } .flags { margin-left: 0; } }
+.problem { margin: 0; padding: 6px 10px; border-radius: 5px; font-size: 12px; line-height: 1.6; color: var(--wb-gold-text); background: var(--wb-gold-soft); border: 1px solid var(--wb-gold-line); }

@@ -2,7 +2,7 @@ import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences
 import { blockLabel, reportLabels } from "./report-numbering.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
-import { formatReference, referenceNumbers } from './references.ts';
+import { formatReference, referenceNumbers, unfinishedReference } from './references.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -23,6 +23,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     const listSection = content.report.find(s => reportPart(s.title) === 'references');
     if (!listSection) throw Error('已录入参考文献，但报告中没有「参考文献」一节，请先插入该节。');
     if (listSection.body.trim()) throw Error('「参考文献」一节中仍有手写条目。请在参考文献面板中转为文献条目，或清空该节正文后再导出。');
+    const blank = cited.order.findIndex(unfinishedReference);
+    if (blank >= 0) throw Error(`第 ${blank + 1} 条参考文献尚未填写题名，请补全或删除后再导出。`);
   }
   const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel } = await import("docx");
   const {default:JSZip}=await import('jszip');

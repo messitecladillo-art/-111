@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { emptyReference, formatReference, importReferenceLines, REFERENCE_LIMIT, REFERENCE_TYPES, referenceProblems, type ReferenceEntry, type ReferenceType } from '@/lib/references';
+import { emptyReference, formatReference, importReferenceLines, REFERENCE_LIMIT, REFERENCE_TYPES, referenceProblems, unfinishedReference, type ReferenceEntry, type ReferenceType } from '@/lib/references';
 import styles from './ReferencesPanel.module.css';
 
 type Field = { key: keyof ReferenceEntry; label: string; placeholder?: string; wide?: boolean };
@@ -38,7 +38,9 @@ export default function ReferencesPanel({ references, numbers, uncited, legacy, 
   // Author lists are typed as text; keep the draft so a trailing comma survives until the next name is typed.
   const [authorDraft, setAuthorDraft] = useState<{ id: string; text: string } | null>(null);
   const ordered = [...references].sort((a, b) => (numbers.get(a.id) ?? 1e9) - (numbers.get(b.id) ?? 1e9));
-  const imports = legacy.trim() ? importReferenceLines(legacy) : [];
+  // The typed list converts as a whole or not at all; a reason is shown instead of dropping lines.
+  let imports: ReferenceEntry[] = [], importProblem = '';
+  if (legacy.trim()) try { imports = importReferenceLines(legacy, references.length); } catch (e) { importProblem = (e as Error).message; }
   const update = (id: string, patch: Partial<ReferenceEntry>) => onChange(references.map(e => e.id === id ? { ...e, ...patch } : e));
   function add() { const entry = emptyReference('J'); onChange([...references, entry]); setOpen(entry.id); }
   function remove(entry: ReferenceEntry) {
@@ -53,14 +55,15 @@ export default function ReferencesPanel({ references, numbers, uncited, legacy, 
         <button type="button" className={styles.primary} disabled={disabled || references.length >= REFERENCE_LIMIT} onClick={add}>＋ 添加文献</button>
         {imports.length > 0 && <button type="button" disabled={disabled} onClick={() => onImport(imports)}>把本节正文的 {imports.length} 条转为文献条目</button>}
       </div>
+      {importProblem && <p className={styles.problem} role="status">本节正文暂不能转换：{importProblem}</p>}
     </header>
     {ordered.length > 0 && <ol className={styles.list}>
       {ordered.map(entry => {
-        const editing = open === entry.id, problems = referenceProblems(entry), text = formatReference(entry);
+        const editing = open === entry.id, problems = referenceProblems(entry), text = unfinishedReference(entry) ? '' : formatReference(entry);
         return <li key={entry.id} className={styles.entry} data-editing={editing}>
           <div className={styles.row}>
             <span className={styles.number}>[{numbers.get(entry.id)}]</span>
-            <span className={styles.text}>{text || <em>空条目，点「编辑」填写</em>}</span>
+            <span className={styles.text}>{text || <em>尚未填写题名，点「编辑」完成著录</em>}</span>
             <span className={styles.rowActions}>
               <button type="button" aria-expanded={editing} onClick={() => setOpen(editing ? null : entry.id)}>{editing ? '完成' : '编辑'}</button>
               <button type="button" disabled={disabled} onClick={() => remove(entry)}>删除</button>

@@ -70,19 +70,25 @@ const end = (s: string) => /[.。]$/.test(s) ? s : `${s}.`;
 /** One entry formatted for the reference list (without its number). */
 export function formatReference(e: ReferenceEntry): string {
   if (e.type === 'other') return e.text.trim();
-  const who = authorList(e), head = who ? `${who}. ` : '';
-  const yearPages = (year: string) => `${year}${e.pages ? `: ${e.pages}` : ''}`;
+  // Items left blank are left out with their punctuation, so an unfinished record never prints stray marks.
+  const t = (s: string) => s.trim(), who = authorList(e), head = who ? `${who}. ` : '';
+  const publication = (place: string, publisher: string, year: string, pages = '') =>
+    [[t(place), t(publisher)].filter(Boolean).join(': '), t(year)].filter(Boolean).join(', ') + (t(pages) ? `: ${t(pages)}` : '');
+  const issue = `${t(e.year)}${t(e.volume) ? `, ${t(e.volume)}` : ''}${t(e.issue) ? `(${t(e.issue)})` : ''}${t(e.pages) ? `: ${t(e.pages)}` : ''}`;
+  const parts = (title: string, rest: string) => end(`${head}${title}${rest ? `. ${rest}` : ''}`);
   switch (e.type) {
-    case 'J': return end(`${head}${e.title}[J]. ${e.source}, ${e.year}${e.volume ? `, ${e.volume}` : ''}${e.issue ? `(${e.issue})` : ''}${e.pages ? `: ${e.pages}` : ''}`) + (e.doi ? ` DOI: ${e.doi}.` : '');
-    case 'M': return end(`${head}${e.title}[M]. ${e.edition ? `${e.edition}. ` : ''}${e.place}: ${e.publisher}, ${yearPages(e.year)}`);
-    case 'D': return end(`${head}${e.title}[D]. ${e.place}: ${e.publisher}, ${e.year}`);
-    case 'C': return end(`${head}${e.title}[C]//${e.source}. ${e.place}: ${e.publisher}, ${yearPages(e.year)}`);
-    case 'R': return end(`${head}${e.title}${e.number ? `: ${e.number}` : ''}[R]. ${e.place ? `${e.place}: ` : ''}${e.publisher}, ${e.year}`);
-    case 'N': return end(`${head}${e.title}[N]. ${e.source}, ${e.date}${e.pages ? `(${e.pages})` : ''}`);
-    case 'S': return end(`${head}${e.title}: ${e.number}[S]. ${e.place ? `${e.place}: ` : ''}${e.publisher}${e.year ? `, ${e.year}` : ''}`);
-    case 'EB/OL': return end(`${head}${e.title}[EB/OL]. ${e.date ? `(${e.date})` : ''}[${e.accessed}]. ${e.url}`);
+    case 'J': return parts(`${t(e.title)}[J]`, [t(e.source), issue].filter(Boolean).join(', ')) + (t(e.doi) ? ` DOI: ${t(e.doi)}.` : '');
+    case 'M': return parts(`${t(e.title)}[M]`, [t(e.edition), publication(e.place, e.publisher, e.year, e.pages)].filter(Boolean).join('. '));
+    case 'D': return parts(`${t(e.title)}[D]`, publication(e.place, e.publisher, e.year));
+    case 'C': return parts(`${t(e.title)}[C]${t(e.source) ? `//${t(e.source)}` : ''}`, publication(e.place, e.publisher, e.year, e.pages));
+    case 'R': return parts(`${t(e.title)}${t(e.number) ? `: ${t(e.number)}` : ''}[R]`, publication(e.place, e.publisher, e.year));
+    case 'N': return parts(`${t(e.title)}[N]`, [t(e.source), `${t(e.date)}${t(e.pages) ? `(${t(e.pages)})` : ''}`].filter(Boolean).join(', '));
+    case 'S': return parts(`${t(e.title)}${t(e.number) ? `: ${t(e.number)}` : ''}[S]`, publication(e.place, e.publisher, e.year));
+    case 'EB/OL': return parts(`${t(e.title)}[EB/OL]`, [`${t(e.date) ? `(${t(e.date)})` : ''}${t(e.accessed) ? `[${t(e.accessed)}]` : ''}`, t(e.url)].filter(Boolean).join('. '));
   }
 }
+/** An entry with nothing to print yet: no title (or, for a verbatim entry, no text). */
+export const unfinishedReference = (e: ReferenceEntry) => e.type === 'other' ? !e.text.trim() : !e.title.trim();
 
 const REQUIRED: Record<ReferenceType, readonly (keyof ReferenceEntry)[]> = {
   J: ['authors', 'title', 'source', 'year'], M: ['authors', 'title', 'place', 'publisher', 'year'], D: ['authors', 'title', 'place', 'publisher', 'year'],
@@ -155,9 +161,13 @@ export function resolveCitations(text: string, numbers: ReadonlyMap<string, numb
 
 /**
  * Lines of an older references section written by hand, as raw entries: a leading "[n]" is dropped and the rest kept
- * verbatim, so they can be numbered and cited like any other entry.
+ * verbatim (tabs become spaces), so they can be numbered and cited like any other entry. Nothing is ever cut: a line
+ * too long, or more lines than the list can hold beside `existing` entries, refuses the whole import.
  */
-export function importReferenceLines(body: string): ReferenceEntry[] {
-  return body.split(/\r\n|\r|\n/).map(l => l.trim().replace(/^[[［]\s*\d+\s*[\]］]\s*/u, '')).filter(Boolean).slice(0, REFERENCE_LIMIT)
-    .map(text => ({ ...emptyReference('other'), text: text.slice(0, LIMITS.text) }));
+export function importReferenceLines(body: string, existing = 0): ReferenceEntry[] {
+  const lines = body.split(/\r\n|\r|\n/).map(l => l.replace(/[\u0000-\u001f\u007f]/gu, ' ').trim().replace(/^[[［]\s*\d+\s*[\]］]\s*/u, '')).filter(Boolean);
+  const long = lines.findIndex(l => l.length > LIMITS.text);
+  if (long >= 0) throw Error(`第 ${long + 1} 条超过 ${LIMITS.text} 字，请先在正文中拆分或删减，再转为文献条目。`);
+  if (existing + lines.length > REFERENCE_LIMIT) throw Error(`转换后将有 ${existing + lines.length} 条文献，超过 ${REFERENCE_LIMIT} 条上限；请先删去部分条目。`);
+  return lines.map(text => ({ ...emptyReference('other'), text }));
 }

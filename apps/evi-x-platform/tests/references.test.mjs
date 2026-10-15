@@ -28,6 +28,11 @@ test('entries print in GB/T 7714—2015 form for each type', () => {
   assert.equal(formatReference(entry('N', { authors: ['赵六'], title: '社区健身点增至三百个', source: '某市日报', date: '2024-03-01', pages: '05' })), '赵六. 社区健身点增至三百个[N]. 某市日报, 2024-03-01(05).');
   assert.equal(formatReference(entry('other', { text: '某作者. 某题名[R]. 某机构, 2020.' })), '某作者. 某题名[R]. 某机构, 2020.');
   assert.deepEqual(missingFields(entry('J', { title: '只有题名' })), ['责任者', '刊名或文集名', '年份']);
+  // Blank items drop out with their punctuation while a record is being filled in.
+  assert.equal(formatReference(entry('J', { title: '只有题名' })), '只有题名[J].');
+  assert.equal(formatReference(entry('M', { authors: ['甲'], title: '书名', publisher: '某出版社' })), '甲. 书名[M]. 某出版社.');
+  assert.equal(formatReference(entry('EB/OL', { title: '网页', url: 'https://example.org' })), '网页[EB/OL]. https://example.org.');
+  for (const type of ['J', 'M', 'D', 'C', 'R', 'N', 'S', 'EB/OL']) assert.doesNotMatch(formatReference(entry(type, { title: '题名' })), /,\s*[,.:]|:\s*[,.]|\.\s*\./, type);
   assert.deepEqual(referenceProblems({ ...E, url: 'example.org', accessed: '2024年10月1日' }), ['链接须以 http:// 或 https:// 开头且不含空格', '日期写作 YYYY-MM-DD']);
 });
 
@@ -43,7 +48,12 @@ test('the parser keeps structure strict and content lenient, so half-typed links
   const { id, ...rest } = J;
   assert.throws(() => parseReferences([rest]), /字段不完整/);
   void id;
-  assert.deepEqual(importReferenceLines('[1] 甲. 题名[J]. 刊, 2020.\n\n［2］乙. 书名[M]. 北京: 出版社, 2019.').map(e => [e.type, e.text]), [['other', '甲. 题名[J]. 刊, 2020.'], ['other', '乙. 书名[M]. 北京: 出版社, 2019.']]);
+  assert.deepEqual(importReferenceLines('[1] 甲. 题名[J]. 刊, 2020.\n\n［2］乙.\t书名[M]. 北京: 出版社, 2019.').map(e => [e.type, e.text]), [['other', '甲. 题名[J]. 刊, 2020.'], ['other', '乙. 书名[M]. 北京: 出版社, 2019.']]);
+  assert.doesNotThrow(() => parseReferences(importReferenceLines('甲\t乙.')), 'tabs never make an imported entry invalid');
+  // Nothing is cut: an over-long line or a list beyond the limit refuses the whole import.
+  assert.throws(() => importReferenceLines('甲'.repeat(1001)), /第 1 条超过 1000 字/);
+  assert.throws(() => importReferenceLines(Array.from({ length: 200 }, (_, i) => `[${i + 1}] 条目${i}`).join('\n'), 1), /转换后将有 201 条文献/);
+  assert.equal(importReferenceLines(Array.from({ length: 199 }, (_, i) => `条目${i}`).join('\n'), 1).length, 199);
 });
 
 test('numbers follow the first citation; marks merge, ranges collapse, unknown entries are flagged', () => {
@@ -90,6 +100,9 @@ test('exports stop on a hand-typed list beside structured entries, a missing sec
   await assert.rejects(buildDocx(noSection), /没有「参考文献」一节/);
   const dangling = cited(); dangling.references = dangling.references.filter(e => e.id !== 'j');
   await assert.rejects(buildDocx(dangling), /文献引用已失效/);
+  const untitled = cited(); untitled.references = [...untitled.references, emptyReference('J')];
+  await assert.rejects(buildDocx(untitled), /第 4 条参考文献尚未填写题名/);
+  assert.throws(() => generateLatexBody(untitled), /尚未填写题名/);
 });
 
 test('LaTeX and slides print citations as numbers, never as tokens', async () => {
