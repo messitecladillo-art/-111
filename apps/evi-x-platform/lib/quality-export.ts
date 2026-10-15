@@ -115,6 +115,8 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
  if(notes)out.push(new Paragraph({style:'ReportNote',text:notes}));
  return out;
 }
+/** One line of at most the width a box holds, shortened with an ellipsis; CJK characters take a full em, others about half. */
+export function oneLine(text:string,w:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));let used=0,out='';for(const c of text){const width=/[\u3000-\uffff]/.test(c)?1:.55;if(used+width>slots-1){return out+'…';}used+=width;out+=c;}return out;}
 function fitText(text:string,w:number,h:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));const lines=text.split(/\r?\n/).reduce((n,l)=>n+Math.max(1,Math.ceil(Array.from(l).reduce((a,c)=>a+(/[\u3000-\uffff]/.test(c)?1:.55),0)/slots)),0);if(lines*fs*1.22>h*72)throw Error('文本超出对象尺寸，请扩大对象或分拆幻灯片。');}
 export function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:SlideObject[],c:EditorContent){
  const evidence=new Map<string,ResultSnapshot>();
@@ -133,7 +135,8 @@ export function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:S
   else{if(o.rotation!==0||o.opacity!==1)throw Error('原生图表和表格暂不支持旋转或透明度，请恢复为 0° 和完全不透明。');const r=resultFor(c.quality,o.evidenceId);evidence.set(r.id,r);
    if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
    else{assertTableRows(r);const rows=[r.headers,...r.rows],fs=Math.max(14,o.fontSize),rowH=fs*1.45/72;if(rows.length>15||r.headers.length>8||rows.length*rowH>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');const none={type:'solid' as const,pt:0,color:'FFFFFF'};const cells=rows.map((row,i)=>row.map(cell=>{fitText(valueText(cell),box.w/r.headers.length-.1,rowH,fs);return{text:valueText(cell),options:{bold:i===0,align:'center' as const,border:[i===0?{type:'solid' as const,pt:1.5,color:'000000'}:none,none,i===0?{type:'solid' as const,pt:.75,color:'000000'}:i===rows.length-1?{type:'solid' as const,pt:1.5,color:'000000'}:none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}};}));slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});}
-   const caption=r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:`n=${r.n} / ${r.total} · ${r.sourceName}`;fitText(caption,box.w,.27,13);
+   // The caption keeps one line: a long group or source name is shortened rather than blocking the export.
+   const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
    slide.addText(caption,{x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
   }
  }return [...evidence.values()].map(evidenceLabel).join('\n');

@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import JSZip from 'jszip';
 import sharp from 'sharp';
 import { createEditorContent, parseEditorContent } from '../lib/editor-model.ts';
-import { buildDocx } from '../lib/editor-export.ts';
-import { snapshotRecipe } from '../lib/research-quality.ts';
+import { buildDocx, buildPptx } from '../lib/editor-export.ts';
+import { makeSlideObject, snapshotRecipe } from '../lib/research-quality.ts';
 import { qualityResult } from '../lib/data-quality.ts';
 import { blueprintSections, matchBlueprintNode } from '../lib/report-blueprint.ts';
 import { placeResult } from '../lib/report-placement.ts';
@@ -14,7 +14,7 @@ import { applyReportInsert, insertSummary, sampleSizeInsert, samplingDesignInser
 import { groupStatement, parseSelectionTree } from '../lib/sampling-selection.ts';
 import { sampleSize, methodsStatement } from '../lib/sampling.ts';
 import { texProblem } from '../lib/omml.ts';
-import { evidenceLabel } from '../lib/quality-export.ts';
+import { evidenceLabel, oneLine } from '../lib/quality-export.ts';
 
 const renderSvg = async svg => new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
 const report = () => parseEditorContent({ ...createEditorContent(), version: 2, report: blueprintSections({ includeOptional: false }), quality: { version: 1, results: [], findings: [] } });
@@ -108,6 +108,17 @@ test('the sample-size calculation arrives as numbered formulas with their symbol
   assert.equal(caveat.text, `需要说明的是：${tightResult.warnings.join('')}`, 'the calculator\'s caveats travel with its formulas');
   assert.throws(() => applyReportInsert(report(), { ...insert, items: [{ kind: 'formula', tex: '\\frac{1}{' }] }), /公式无法排版/);
   assert.throws(() => applyReportInsert(report(), { ...insert, items: [] }), /没有可写入的内容/);
+});
+
+test('a long group name shortens the slide caption instead of blocking the PPT export', async () => {
+  const long = [{ ...groups[1], name: '某市各区县全日制普通高等学校与职业院校在校本科及专科学生群体'.repeat(2) }];
+  const insert = await samplingDesignInsert(long, groupStatement(long[0]));
+  const applied = applyReportInsert(report(), insert), frame = insert.items.find(i => i.kind === 'table').result;
+  const slide = { ...applied.content.slides[0], layout: 'chart', objects: [makeSlideObject('table', { evidenceId: frame.id, x: 5, y: 10, width: 60, height: 60, fontSize: 14 })] };
+  const content = parseEditorContent({ ...applied.content, slides: [slide, ...applied.content.slides.slice(1)] });
+  await assert.doesNotReject(buildPptx(content));
+  assert.equal(oneLine('短标题', 5, 13), '短标题');
+  assert.match(oneLine('很长'.repeat(40), 2, 13), /…$/);
 });
 
 test('Word merges a frame table\'s parent units and keeps the three-line rules', async () => {
