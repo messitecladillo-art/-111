@@ -38,3 +38,5 @@ packages/evi-x-shared/fixtures/topic-questionnaire-transfer-v1.json text eol=lf 
 corpus-source/topic-advisor/county-pack-01/*.json -text
 apps/evi-x-platform/content/topic-advisor/county-pack-01.json -text linguist-generated=true
 apps/evi-x-platform/content/topic-advisor/county-pack-01-candidates-v2.json -text linguist-generated=true
+corpus-source/topic-advisor/county-publications.json text eol=lf
+apps/evi-x-platform/content/topic-advisor/published-counties.json linguist-generated=true
