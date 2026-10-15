@@ -10,6 +10,9 @@ import * as editor from '../lib/editor-model.ts';
 import * as reports from '../lib/project-report.ts';
 import * as collection from '../lib/survey-collection.ts';
 import * as research from '../lib/research-flow.ts';
+import * as mapping from '../lib/questionnaire-mapping.ts';
+import * as topicApi from '../lib/topic-questionnaire-api.ts';
+
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
@@ -55,10 +58,11 @@ function questionnaireScreen({ invalidCurrent = false, denied = false, tab } = {
   const latest = { ...head, revision: 2, design: submitted };
   const pending = { design: submitted, expectedRevision: 1, idempotencyKey: requestId };
   let cache, resolveSave, calls = [], reads = 0;
-  const auth = { session: { user: { id: projectId }, mode: 'local_test' }, getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false, tab }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
-  const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
+  const auth = { session: { user: { id: projectId }, mode: 'local_test' }, identityEpoch:1,isCurrentAccount:()=>true,getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false, tab }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
+  const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if(url.endsWith('/topic-binding')){return{versionId:projectId,binding:null,bindingHash:null,designTransferHash:'a'.repeat(64)};} if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
   const screen = mount('../components/hosted/HostedProject.tsx', {
     'next/link': { default: 'a' }, 'next/dynamic': { default: () => 'DynamicComponent' }, '@evix/shared': shared, '@/lib/questionnaire-library': library,
+    '@/lib/questionnaire-mapping':mapping,'@/components/topic-advisor/TopicQuestionnaireProposal':{default:'TopicQuestionnaireProposal'},'@/lib/topic-questionnaire-api':{...topicApi,verifyTopicBindingReceipt:async raw=>raw},
     './api-client': api, './HostedFrame': { LoginRequired: 'LoginRequired' }, './HostedSession': { useHostedSession: () => auth }, './HostedMembers': { default: 'HostedMembers' },
     './silicon-runner': { serviceNames: () => new Map(), createSiliconRunner: () => null }, '@/components/motion/useWorkspaceMotion': { useContentReveal: () => null, useKeyedListMotion: () => null },
   }, { projectId }, 'ProjectEditor');
