@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "packId": "topic-calibration-v1",
+  "baseRevision": "e16a662d20914bfcac717d95166033bd9e16a30a",
+  "issuedAt": "2026-10-15T19:58:12.728Z",
+  "reviewers": [
+    {
+      "reviewerId": "reviewer-a",
+      "actor": "root-topic-calibration-a",
+      "protocol": "agent-collab/v1",
+      "runId": "20261016-topic-calibration",
+      "taskId": "20261016-topic-calibration/reviewer-a",
+      "sender": "/root/topic_calibration_a",
+      "receiver": "/root",
+      "nonce": "TOPIC-CALIBRATION-v1-A",
+      "idempotencyKey": "TOPIC-CALIBRATION-v1-A/attempt-1",
+      "rawReviewSha256": "c2cac7172b8e32265fa85058743a88f9a6eff2e3c96c51688a6e787ebd3f9b51"
+    },
+    {
+      "reviewerId": "reviewer-b",
+      "actor": "root-topic-calibration-b",
+      "protocol": "agent-collab/v1",
+      "runId": "20261016-topic-calibration",
+      "taskId": "topic-calibration/reviewer-b",
+      "sender": "/root/topic_calibration_b",
+      "receiver": "/root",
+      "nonce": "TOPIC-CALIBRATION-v1-B",
+      "idempotencyKey": "20261016-topic-calibration/reviewer-b/labels-v1",
+      "rawReviewSha256": "5624df7854fa083d8692e9570f74a80268270516c7930a821c2cc8137d7f6658"
+    }
+  ]
+}
