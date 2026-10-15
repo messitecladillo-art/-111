@@ -48,14 +48,14 @@ function nodes(node) { if (!node || typeof node !== 'object') return []; if (Arr
 function button(screen, text) { const found = nodes(screen.tree).find(n => n.type === 'button' && n.props.children === text); assert.ok(found, `Missing button: ${text}`); return found; }
 class HostedApiError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
 
-function questionnaireScreen({ invalidCurrent = false, denied = false } = {}) {
+function questionnaireScreen({ invalidCurrent = false, denied = false, tab } = {}) {
   const oldDesign = shared.newQuestionnaire(), submitted = { ...oldDesign, title: '已提交问卷' };
   const local = { ...submitted, title: '等待回执时的新编辑' };
   const head = { id: projectId, projectId, revision: 1, design: oldDesign, updatedAt: timestamp };
   const latest = { ...head, revision: 2, design: submitted };
   const pending = { design: submitted, expectedRevision: 1, idempotencyKey: requestId };
   let cache, resolveSave, calls = [], reads = 0;
-  const auth = { session: { user: { id: projectId }, mode: 'local_test' }, getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
+  const auth = { session: { user: { id: projectId }, mode: 'local_test' }, getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false, tab }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
   const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
   const screen = mount('../components/hosted/HostedProject.tsx', {
     'next/link': { default: 'a' }, 'next/dynamic': { default: () => 'DynamicComponent' }, '@evix/shared': shared, '@/lib/questionnaire-library': library,
@@ -64,6 +64,17 @@ function questionnaireScreen({ invalidCurrent = false, denied = false } = {}) {
   }, { projectId }, 'ProjectEditor');
   return { screen, pending, latest, local, get cache() { return cache; }, get calls() { return calls; }, get reads() { return reads; }, resolve: () => resolveSave() };
 }
+
+test('each cached lazy project tab remounts its content instead of restoring an empty panel', async () => {
+  for (const tab of ['topic', 'silicon', 'collection', 'analysis', 'report', 'defense']) {
+    const s = questionnaireScreen({ tab }); await s.screen.settle();
+    assert.equal(s.cache.tab, tab);
+    const activePanels = nodes(s.screen.tree).filter(node => node.type === 'div' && node.props.hidden === false && nodes(node.props.children).some(child => child.type === 'DynamicComponent'));
+    assert.equal(activePanels.length, 1, `cached ${tab} must have a mounted active editor`);
+    assert.equal(s.cache.snapshot.design.title, s.local.title, 'restoring a tab keeps the questionnaire draft');
+    s.screen.unmount();
+  }
+});
 
 test('questionnaire recovers the exact pending save despite a newer head and invalid current edit', async () => {
   const s = questionnaireScreen({ invalidCurrent: true }); await s.screen.settle();

@@ -170,3 +170,6 @@
 @media (max-width: 1280px) { .root { padding: 22px 20px 0; } .layout { grid-template-columns: 250px minmax(0, 1fr); gap: 22px; } .profile { padding-right: 19px; } .header { gap: 18px; } .draftActions { max-width: 230px; } .detail { padding: 22px 20px 0; } .tabs button { padding-inline: 9px !important; font-size: 12px !important; } .profileHeading { gap: 7px; } .profileHeading h4 { font-size: 15px; } .detailFooter { flex-wrap: wrap; } }
 @media (max-width: 1000px) { .header { flex-wrap: wrap; } .draftActions { max-width: none; justify-content: flex-start; } .draftActions > span { flex-basis: auto; text-align: left; padding-top: 5px; } .layout { grid-template-columns: 220px minmax(0, 1fr); gap: 18px; } .recommendations { grid-template-columns: 1fr; } .recommendation:nth-child(odd) { border-right: 0; } .dimensions { grid-template-columns: 1fr; } .dimensions details:nth-child(even) { padding-left: 0; } .empty { padding: 28px 10px; } .workspaceTop > .step { display: none; } .footer { flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+.profile { margin: 0; border: 0; border-right: 1px solid var(--ta-line); }
+.candidateFieldset { min-width: 0; margin: 0; border: 0; padding: 0; }

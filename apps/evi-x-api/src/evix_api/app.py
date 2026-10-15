@@ -20,6 +20,7 @@ from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_prop
 from . import silicon, surveys
 from .knowledge import register_knowledge
 from .topics import register_topics
+from .topic_projects import register_topic_projects
 from .reports import register_reports
 from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
@@ -28,7 +29,7 @@ from .submission_preflight_routes import TemporarySubmissionPreflights
 from .net_exam import NetExamBank
 
 
-SCHEMA_REVISION = "0005_knowledge"
+SCHEMA_REVISION = "0006_topic_projects"
 
 
 def iso(value):
@@ -923,6 +924,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
     register_knowledge(app, settings, db, session_user, owned_project, lock_user, operation, config=knowledge_config)
     register_topics(app, settings, db, session_user, lock_user, operation, owned_service, generator)
+    register_topic_projects(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)
     return app
