@@ -38,3 +38,22 @@ packages/evi-x-shared/fixtures/topic-questionnaire-transfer-v1.json text eol=lf 
 corpus-source/topic-advisor/county-pack-01/*.json -text
 apps/evi-x-platform/content/topic-advisor/county-pack-01.json -text linguist-generated=true
 apps/evi-x-platform/content/topic-advisor/county-pack-01-candidates-v2.json -text linguist-generated=true
+corpus-source/topic-advisor/county-publications.json text eol=lf
+apps/evi-x-platform/content/topic-advisor/published-counties.json linguist-generated=true
+
+# Offline topic calibration freezes exact source bytes across Windows and Linux.
+.gitattributes text eol=lf
+apps/evi-x-platform/lib/topic-advisor/core.ts text eol=lf
+apps/evi-x-platform/lib/topic-advisor/types.ts text eol=lf
+apps/evi-x-platform/lib/topic-advisor/parse.ts text eol=lf
+apps/evi-x-platform/lib/topic-advisor/geography.ts text eol=lf
+apps/evi-x-platform/lib/topic-advisor/regions.ts text eol=lf
+apps/evi-x-platform/lib/topic-advisor/training.ts text eol=lf
+apps/evi-x-platform/lib/questionnaire.ts text eol=lf
+apps/evi-x-platform/scripts/train-topic-advisor.mjs text eol=lf
+apps/evi-x-platform/scripts/topic-evaluation.mjs text eol=lf
+apps/evi-x-platform/scripts/evaluate-topic-advisor.mjs text eol=lf
+apps/evi-x-platform/tests/topic-evaluation.test.mjs text eol=lf
+evals/topic-advisor/*.json text eol=lf
+# Preserve the exact scenario bytes read by the archived independent reviews.
+evals/topic-advisor/scenarios-v1.json -text -eol
