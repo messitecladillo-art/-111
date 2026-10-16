@@ -13,6 +13,14 @@ import * as research from '../lib/research-flow.ts';
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
+// Keep the component boundary lightweight while executing the production permission guard.
+const studioSource = fs.readFileSync(new URL('../components/editors/EditingStudio.tsx', import.meta.url), 'utf8');
+const studioAst = ts.createSourceFile('EditingStudio.tsx', studioSource, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
+const guardDeclaration = studioAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'createReportPermissionGuard');
+assert.ok(guardDeclaration, 'EditingStudio must export its production permission guard');
+const guardModule = { exports: {} };
+vm.runInNewContext(ts.transpileModule(guardDeclaration.getText(studioAst), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, guardModule);
+const editingStudioBoundary = { default: 'EditingStudio', createReportPermissionGuard: guardModule.exports.createReportPermissionGuard };
 const projectId = 'a51fd4b9-7672-491b-9251-dea7809cfc8a';
 const requestId = '49e8b234-6365-4916-a6d4-fc4e7930af34';
 const timestamp = '2026-10-11T00:00:00Z';
@@ -35,7 +43,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, ...mocks };
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, window: { confirm: () => true }, location: { reload() {} }, ...globals };
+  const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, queueMicrotask, window: { confirm: () => true }, location: { reload() {} }, ...globals };
   vm.runInNewContext(compiled + (internalExport ? `\nexports.__tested = ${internalExport};` : ''), box);
   const component = internalExport ? box.exports.__tested : box.exports.default;
   return {
@@ -101,7 +109,7 @@ test('report pending retry resolves a newer head and preserves edits made before
   let cache, resolveSave, body;
   const auth = { session: { user: { id: projectId } }, getDraft: () => ({ content: submitted, head: old, pending, conflict: false }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, request) => { body = request; return new Promise(resolve => { resolveSave = resolve; }); } };
   const screen = mount('../components/hosted/HostedReport.tsx', {
-    '../editors/EditingStudio': { default: 'EditingStudio' }, '@/lib/editor-model': editor, '@/lib/project-report': reports,
+    '../editors/EditingStudio': editingStudioBoundary, '@/lib/editor-model': editor, '@/lib/project-report': reports,
     './api-client': { hostedRequest: async url => url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: latest }, errorMessage: e => e.message, HostedApiError }, './HostedSession': { useHostedSession: () => auth },
   }, { projectId, title: content.title, writable: true, proposal: null, onProposalConsumed() {} });
   await screen.settle(); assert.equal(button(screen, '载入最新版本').props.disabled, true); assert.equal(button(screen, '核对并重试原保存').props.disabled, false);
@@ -118,7 +126,7 @@ test('report format save receipt clears dirty status but later edits remain unsa
   let finishSave,request,cache,unsaved;
   const auth={session:{user:{id:projectId}},getDraft:()=>undefined,cacheDraft:(_key,value)=>{cache=value;},setUnsaved:(_key,value)=>{unsaved=value;},mutate:(_path,body)=>{request=body;return new Promise(resolve=>{finishSave=()=>{const saved=editor.parseEditorContent(body.content);if(saved.reportFormat)saved.reportFormat.options=Object.fromEntries(Object.entries(saved.reportFormat.options).reverse());head={...head,revision:head.revision+1,content:saved};resolve(head);};});}};
   const screen=mount('../components/hosted/HostedReport.tsx',{
-    '../editors/EditingStudio':{default:'EditingStudio'},'@/lib/editor-model':editor,'@/lib/project-report':reports,
+    '../editors/EditingStudio':editingStudioBoundary,'@/lib/editor-model':editor,'@/lib/project-report':reports,
     './api-client':{hostedRequest:async url=>url.endsWith('/versions')?{versions:[],nextBeforeRevision:null}:{report:head},errorMessage:e=>e.message,HostedApiError},'./HostedSession':{useHostedSession:()=>auth},
   },{projectId,title:initial.title,writable:true,proposal:null,onProposalConsumed(){}});
   const binding=()=>nodes(screen.tree).find(n=>n.props?.projectBinding).props.projectBinding;
