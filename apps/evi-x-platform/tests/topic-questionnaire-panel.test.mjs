@@ -72,6 +72,25 @@ test('read-only users may preview but cannot edit mappings or adopt fields even 
   const s=make({props:{writable:false}});await preview(s);assert.ok(text(s).includes('只读模式'));field(s,'采用字段 brief:title').props.onChange({target:{checked:true}});await s.settle();button(s,'采用 0 个所选字段').props.onClick();await s.settle();assert.equal(s.applications.length,0);assert.equal(s.coreCalls.filter(c=>c.name==='applyTopicQuestionnaire').length,0);s.unmount();
 });
 
+test('receipt-only blockers preserve owner permissions, valid preview and selected fields without false stale or input notices',async()=>{
+  const s=make();await preview(s);await select(s,'brief:title');const retained=button(s,'采用 1 个所选字段').props.onClick,selectedField=field(s,'采用字段 brief:title').props.onChange,oldMapping=field(s,'题目 demo-experience 关联研究问题 rq-clarity').props.onChange;
+  for(const disabledReason of ['正在等待本次保存回执，请保留当前提案。','保存回执尚待核对。请使用原保存请求核对，所选字段仍保留。']){
+    s.update({disabledReason});await s.settle();assert.ok(text(s).includes(disabledReason));assert.ok(!text(s).includes('当前为只读模式'));assert.ok(!text(s).includes('问卷仍有未完成输入'));assert.ok(!text(s).includes('旧提案保留供核对'));assert.equal(field(s,'采用字段 brief:title').props.checked,true);assert.equal(button(s,'采用 1 个所选字段').props.disabled,true);assert.equal(button(s,'重新预览字段变化').props.disabled,true);
+    retained();selectedField({target:{checked:false}});oldMapping({target:{checked:true}});await s.settle();assert.equal(s.applications.length,0);assert.equal(field(s,'采用字段 brief:title').props.checked,true);assert.equal(field(s,'题目 demo-experience 关联研究问题 rq-clarity').props.checked,false);
+  }
+  s.update({disabledReason:''});await s.settle();assert.equal(button(s,'采用 1 个所选字段').props.disabled,false);button(s,'采用 1 个所选字段').props.onClick();await s.until(()=>s.applications.length===1);s.unmount();
+});
+
+test('a lost receipt shows explicit reconciliation status while actual content changes still invalidate the proposal',async()=>{
+  let rejectSave;const s=make({parentApply:()=>new Promise((_resolve,reject)=>{rejectSave=reject;})});await preview(s);await select(s,'brief:title');button(s,'采用 1 个所选字段').props.onClick();await s.until(()=>s.applications.length===1);
+  s.update({disabledReason:'正在等待本次保存回执，请保留当前提案。'});await s.settle();rejectSave(Error('保存回执尚待核对'));s.update({disabledReason:'保存回执尚待核对。请使用原保存请求核对，所选字段仍保留。'});await s.until(()=>text(s).includes('尚未确认应用完成'));assert.ok(!text(s).includes('当前为只读模式'));assert.ok(!text(s).includes('问卷仍有未完成输入'));assert.ok(!text(s).includes('旧提案保留供核对'));assert.equal(field(s,'采用字段 brief:title').props.checked,true);assert.equal(s.applications.length,1);
+  s.update({target:{...s.props.target,design:{...s.props.target.design,title:'真实后续编辑'}}});await s.settle();assert.ok(text(s).includes('旧提案保留供核对'));assert.equal(button(s,'采用 1 个所选字段').props.disabled,true);s.unmount();
+});
+
+test('a host blocker arriving during core apply prevents a new parent dispatch without fabricating stale source state',async()=>{
+  const s=make({holdApply:true});await preview(s);await select(s,'brief:title');button(s,'采用 1 个所选字段').props.onClick();await s.until(()=>s.pendingApply===1);s.update({disabledReason:'已有保存正在核对，请稍后继续。'});await s.settle();s.releaseApply();await s.until(()=>text(s).includes('已有保存正在核对'));await tick();await s.settle();assert.equal(s.applications.length,0);assert.ok(!text(s).includes('旧提案保留供核对'));assert.equal(field(s,'采用字段 brief:title').props.checked,true);s.unmount();
+});
+
 test('source or target edits keep old diffs readable and permanently stale until a fresh preview, including edit-undo',async()=>{
   for(const kind of ['source','target','binding']){
     const s=make();await preview(s);await select(s,'brief:title');const before=s.props;

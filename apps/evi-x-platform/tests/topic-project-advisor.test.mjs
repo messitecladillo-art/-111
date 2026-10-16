@@ -27,11 +27,21 @@ function make({pinnedComparisonId='',shortlistIds=[],managed=true,initialProfile
   const wrapped={...topic};for(const name of['parseTopicDraft','profileFingerprint','profileRegionStatus','regionPath','recommendTopics','evaluateCandidate','eventLeadsForProfile'])wrapped[name]=(...args)=>topic[name](...args.map(plain));
   const jsx=(type,props,key)=>({type,props,key});
   const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/hosted/HostedSession':{useHostedSession:()=>({session:{user:{id:'account-a'}},identityEpoch:1,getDraft:key=>drafts.get(key),cacheDraft:(key,value)=>drafts.set(key,value),setUnsaved(){},isCurrentAccount:(id,epoch)=>id===auth.session.user.id&&epoch===auth.identityEpoch})},'@/components/workbench/shell-kit':{useWorkbenchTheme:()=> 'light'},'@/lib/topic-advisor':wrapped,'@/lib/topic-advisor/client-bundle':{TOPIC_BUNDLE:bundle},'./TopicAdvisor.module.css':{default:{}},'./RegionPicker':{default:'RegionPicker'},'./draft':{readTopicBackup,topicDraftFor:(...args)=>topicDraftFor(...args.map(plain)),MAX_TOPIC_BACKUP_BYTES}};
+  imports['./PublishedCountyEvidence']={default:'PublishedCountyEvidence'};
   // Stable auth callbacks mirror the real context and prevent false rerender loops.
   const auth=imports['@/components/hosted/HostedSession'].useHostedSession();imports['@/components/hosted/HostedSession'].useHostedSession=()=>auth;
   const box={exports:{},require:name=>{assert.ok(name in imports,name);return imports[name];},JSON,Date,Intl,console,crypto,structuredClone,queueMicrotask,document:{getElementById:()=>null}};vm.runInNewContext(compiled,box);
   const s={get tree(){return tree;},changes,drafts,adoptions,async settle(){for(let n=0;n<40;n++){index=0;dirty=false;tree=box.exports.default(props);const queue=effects;effects=[];queue.forEach(fn=>fn());await tick();if(!dirty&&!effects.length)return;}throw Error('Unstable effects');},update(patch){props={...props,...patch};},switchAccount(id){auth.session={user:{id}};auth.identityEpoch++;},picker(){return nodes(tree).find(v=>v.type==='RegionPicker');},async importBackup(value){const input=nodes(tree).find(v=>v.props?.['aria-label']==='重新打开选题草稿');assert.ok(input);const raw=JSON.stringify(value);await input.props.onChange({target:{value:'file',files:[{size:Buffer.byteLength(raw),text:async()=>raw}]}});await s.settle();},async recommend(){button(s,'发现适合我的方向↗').props.onClick();await s.settle();},checkbox(id){const item=nodes(tree).find(v=>v.type==='article'&&v.key===id);assert.ok(item,id);return nodes(item).find(v=>v.type==='input'&&v.props.type==='checkbox');},unmount(){cells.forEach(c=>c.cleanup?.());alive=false;}};return s;
 }
+
+test('county evidence receives the current profile independently of a recommendation run and never adopts a topic',async()=>{
+  const initialProfile={...structuredClone(profile),schemaVersion:2,regionRef:{code:'421222',catalogVersion:topic.TOPIC_REGION_CATALOG.catalogVersion}};
+  const s=make({initialProfile});await s.settle();
+  const evidence=()=>nodes(s.tree).find(node=>node.type==='PublishedCountyEvidence');
+  assert.equal(evidence().props.profile.regionRef.code,'421222');assert.equal(s.adoptions.length,0);
+  s.picker().props.onChange({code:'320623',catalogVersion:topic.TOPIC_REGION_CATALOG.catalogVersion});await s.settle();
+  assert.equal(evidence().props.profile.regionRef.code,'320623');assert.equal(s.adoptions.length,0);s.unmount();
+});
 
 test('adopted comparison stays checked, cannot be removed, and clear retains exactly that ID',async()=>{
   const pin=recommendations[0].patternId,s=make({pinnedComparisonId:pin});await s.settle();await s.recommend();assert.equal(s.checkbox(pin).props.checked,true);assert.equal(s.checkbox(pin).props.disabled,true);assert.ok(label(s.tree).includes('已采用'));

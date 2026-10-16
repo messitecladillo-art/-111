@@ -3,18 +3,37 @@ import {DESIGN_LIMITS,type Questionnaire} from './questionnaire.ts';
 import {parseQuestionnaireLibraryContent,parseQuestionnaireRepairOrigin,type QuestionnaireRepairOrigin,type QuestionnaireRepairOriginInput,type QuestionnaireVersion} from './questionnaire-library.ts';
 import {verifyQuestionnaireVersion} from './questionnaire-version.ts';
 import {verifyQuestionnaireReviewReceipt,type QuestionnaireReviewFinding,type QuestionnaireReviewRecord} from './questionnaire-review.ts';
+import {parseTopicQuestionnaireBinding,type TopicQuestionnaireBinding} from './topic-questionnaire.ts';
+import type {TopicBindingRestoreOrigin} from './topic-questionnaire-api.ts';
 
-export type QuestionnaireRevision = {content:Questionnaire;repairOrigin:QuestionnaireRepairOrigin|null};
+export type QuestionnaireRevision = {content:Questionnaire;repairOrigin:QuestionnaireRepairOrigin|null;topicBinding:TopicQuestionnaireBinding|null;topicRestoreOrigin:TopicBindingRestoreOrigin|null};
 export type QuestionnaireRevisionHistory = {past:QuestionnaireRevision[];present:QuestionnaireRevision;future:QuestionnaireRevision[]};
-export function revisionSnapshot(content:Questionnaire,repairOrigin:QuestionnaireRepairOrigin|null=null):QuestionnaireRevision {
-  return {content:parseQuestionnaireLibraryContent(content).content,repairOrigin:repairOrigin===null?null:parseQuestionnaireRepairOrigin(repairOrigin)};
+export function parseQuestionnaireTopicOrigin(value:unknown):TopicBindingRestoreOrigin|null {
+  if(value===null)return null;
+  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('问卷绑定恢复来源无效。');
+  const row=value as Record<string,unknown>,keys=Object.keys(row).sort().join(','),id=keys==='questionnaireVersionId'?row.questionnaireVersionId:keys==='applicationVersionId,phase'&&row.phase==='before'?row.applicationVersionId:null;
+  if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))throw Error('问卷绑定恢复来源无效。');
+  return keys==='questionnaireVersionId'?{questionnaireVersionId:id}:{applicationVersionId:id,phase:'before'};
 }
-export function initialRevisionHistory(content:Questionnaire):QuestionnaireRevisionHistory {
-  return {past:[],present:revisionSnapshot(content),future:[]};
+export function revisionSnapshot(content:Questionnaire,repairOrigin:QuestionnaireRepairOrigin|null=null,topicBinding:TopicQuestionnaireBinding|null=null,topicRestoreOrigin:TopicBindingRestoreOrigin|null=null):QuestionnaireRevision {
+  return {content:parseQuestionnaireLibraryContent(content).content,repairOrigin:repairOrigin===null?null:parseQuestionnaireRepairOrigin(repairOrigin),topicBinding:topicBinding===null?null:parseTopicQuestionnaireBinding(topicBinding),topicRestoreOrigin:parseQuestionnaireTopicOrigin(topicRestoreOrigin)};
+}
+export function initialRevisionHistory(content:Questionnaire,topicBinding:TopicQuestionnaireBinding|null=null,topicRestoreOrigin:TopicBindingRestoreOrigin|null=null):QuestionnaireRevisionHistory {
+  return {past:[],present:revisionSnapshot(content,null,topicBinding,topicRestoreOrigin),future:[]};
 }
 /** Omitted origin means ordinary edit; explicit null means unrelated replacement/copy. */
-export function commitQuestionnaireRevision(history:QuestionnaireRevisionHistory,content:Questionnaire,repairOrigin:QuestionnaireRepairOrigin|null=history.present.repairOrigin):QuestionnaireRevisionHistory {
-  return {past:[...history.past,history.present].slice(-DESIGN_LIMITS.history),present:revisionSnapshot(content,repairOrigin),future:[]};
+export function commitQuestionnaireRevision(history:QuestionnaireRevisionHistory,content:Questionnaire,repairOrigin:QuestionnaireRepairOrigin|null=history.present.repairOrigin,topicBinding:TopicQuestionnaireBinding|null=history.present.topicBinding??null,topicRestoreOrigin:TopicBindingRestoreOrigin|null=history.present.topicRestoreOrigin??null):QuestionnaireRevisionHistory {
+  return {past:[...history.past,history.present].slice(-DESIGN_LIMITS.history),present:revisionSnapshot(content,repairOrigin,topicBinding,topicRestoreOrigin),future:[]};
+}
+/** One saved application is one undo step. Its before binding is resolved by the immutable server audit. */
+export function commitTopicQuestionnaireRevision(history:QuestionnaireRevisionHistory,content:Questionnaire,binding:TopicQuestionnaireBinding,applicationVersionId:string):QuestionnaireRevisionHistory {
+  const before=revisionSnapshot(history.present.content,history.present.repairOrigin,history.present.topicBinding??null,{applicationVersionId,phase:'before'});
+  // Unsaved older edits can share this exact before binding without having an immutable origin yet.
+  // The server audit authenticates that binding independently of their different questionnaire text.
+  const bindingKey=(value:TopicQuestionnaireBinding|null)=>JSON.stringify(value===null?null:parseTopicQuestionnaireBinding(value));
+  const beforeKey=bindingKey(before.topicBinding);
+  const past=history.past.map(entry=>entry.topicRestoreOrigin==null&&bindingKey(entry.topicBinding??null)===beforeKey?revisionSnapshot(entry.content,entry.repairOrigin,entry.topicBinding??null,before.topicRestoreOrigin):entry);
+  return commitQuestionnaireRevision({...history,past,present:before},content,null,binding,{questionnaireVersionId:applicationVersionId});
 }
 export function travelQuestionnaireRevision(history:QuestionnaireRevisionHistory,back:boolean):QuestionnaireRevisionHistory {
   const target=back?history.past.at(-1):history.future[0];
