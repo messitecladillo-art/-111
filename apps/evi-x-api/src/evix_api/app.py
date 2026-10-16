@@ -775,7 +775,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
         except ApiError:
             response.update(status="failed", answers=[], error="invalid_response")
         except Exception:
-            response.update(status="failed", answers=[], error="provider_failure")
+            response.update(status="outcome_unknown", answers=[], error="provider_failure")
         return response, calls
 
     async def silicon_worker(run_id, user_id, plan, services):
