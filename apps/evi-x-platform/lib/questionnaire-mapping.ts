@@ -5,13 +5,15 @@ import type { ResearchLink } from './research-link.ts';
 import type {ImportMetadata} from './survey-import-metadata.ts';
 import { assessEligibility, type RowEligibilityAssessment } from './row-eligibility.ts';
 import { routingEvidence, type RoutingChoice, type RoutingEvidence } from './routing-evidence.ts';
+import type {TopicQuestionnaireBinding} from './topic-questionnaire.ts';
+import type {TopicBindingRestoreOrigin} from './topic-questionnaire-api.ts';
 
 export const MAPPING_VERSION = 'questionnaire-mapping/v1';
 export const PARSER_VERSION = 'survey-csv/v1';
 export type DatasetIdentity = { sourceHash: string; interpretationHash: string; parser: string; encoding: string; delimiter: string; headers: string[]; rows: number; importMetadata?:ImportMetadata };
 export type Assignment = { questionId: string; column: string; representation: 'code' | 'label' };
 export type Mapping = { design: Questionnaire; assignments: Assignment[]; confirmed: string | null; sourceSignature: string | null };
-export type DesignSnapshot = { design: Questionnaire; pending: boolean };
+export type DesignSnapshot = { design: Questionnaire; pending: boolean; topicBinding?:TopicQuestionnaireBinding|null; topicRestoreOrigin?:TopicBindingRestoreOrigin|null; editRevision?:number };
 export type DesignTransfer = { id: string; snapshot: DesignSnapshot };
 export function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
