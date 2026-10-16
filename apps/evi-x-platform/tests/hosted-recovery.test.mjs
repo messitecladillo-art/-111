@@ -72,6 +72,7 @@ function questionnaireScreen({ invalidCurrent = false, denied = false, tab } = {
     'next/link': { default: 'a' }, 'next/dynamic': { default: () => 'DynamicComponent' }, '@evix/shared': shared, '@/lib/questionnaire-library': library,
     '@/lib/questionnaire-mapping':mapping,'@/components/topic-advisor/TopicQuestionnaireProposal':{default:'TopicQuestionnaireProposal'},'@/lib/topic-questionnaire-api':{...topicApi,verifyTopicBindingReceipt:async raw=>raw},
     './api-client': api, './HostedFrame': { LoginRequired: 'LoginRequired' }, './HostedSession': { useHostedSession: () => auth }, './HostedMembers': { default: 'HostedMembers' },
+    '../research-view/ResearchViewHost': { default: 'ResearchViewHost' },
     './silicon-runner': { serviceNames: () => new Map(), createSiliconRunner: () => null }, '@/components/motion/useWorkspaceMotion': { useContentReveal: () => null, useKeyedListMotion: () => null },
   }, { projectId }, 'ProjectEditor');
   return { screen, pending, latest, local, get cache() { return cache; }, get calls() { return calls; }, get reads() { return reads; }, resolve: () => resolveSave() };
