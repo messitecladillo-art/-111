@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "nonce": "P3_PACK01-RECOVERY-20261015-01",
+  "attemptedAt": "2026-10-15",
+  "sources": [
+    {"id":"jinxi-chain-2025","status":"failed","method":"web.open","failure":"502 Bad Gateway；未获得正文"},
+    {"id":"pingyang-plan-2025","status":"failed","method":"web.open","failure":"Timeout fetching；未获得正文"},
+    {"id":"guangshan-digital-2026","status":"failed","method":"web.open","failure":"403 Forbidden；未绕过访问限制"},
+    {"id":"chengmai-report-2025","status":"failed","method":"web.open","failure":"Timeout fetching；未获得正文"},
+    {"id":"wushen-tourism","status":"retrieved","method":"web.open text extraction","publishedAt":"2026-03-12","locator":"页面发布日期；四、巴图湾红色文化小镇简介，正文第1—3段","originalSummary":"旗文化和旅游局的介绍将巴图湾村与红色文化小镇对应，并描述展板、多媒体和场景复原等展陈形式。","fingerprintScope":"original_summary_only_not_original_http_body","auditFragment":"巴图湾红色文化小镇位于乌审旗无定河镇巴图湾村"},
+    {"id":"zhuoni-tourism","status":"failed","method":"web.open","failure":"Cache miss；未获得正文"}
+  ]
+}

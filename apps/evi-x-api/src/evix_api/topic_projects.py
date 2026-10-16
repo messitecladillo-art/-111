@@ -18,7 +18,7 @@ ID_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}"
 
 class TopicProjectVersion(Base):
     __tablename__ = "topic_project_versions"
-    __table_args__ = (UniqueConstraint("project_id", "revision"),)
+    __table_args__ = (UniqueConstraint("project_id", "revision"), UniqueConstraint("project_id", "id", "content_hash"))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     revision: Mapped[int] = mapped_column(Integer)
