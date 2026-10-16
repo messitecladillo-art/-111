@@ -71,5 +71,11 @@ test('function names become Word functions, scripted or not, so Word spaces them
   const min = texToOmml(String.raw`V=\sqrt{\frac{\chi^2}{n\,\min(r-1,\,c-1)}}`);
   assert.match(min, /<m:func><m:fName>[\s\S]*?min[\s\S]*?<\/m:fName><m:e>[\s\S]*?\([\s\S]*?\)[\s\S]*?<\/m:e><\/m:func>/, 'the bracketed group is the argument');
   assert.doesNotMatch(texToOmml(String.raw`\left(\min\right)`), /<m:func>/, 'a name with nothing to apply to stays a plain name');
+  // An operator or relation after the name is not its argument.
+  for (const tex of [String.raw`\sin+x`, String.raw`\log_2=y`, String.raw`\max,\min`]) {
+    const omml = texToOmml(tex);
+    assert.doesNotMatch(omml, /<m:func>/, tex);
+    assert.match(omml, /<m:t xml:space="preserve">[+=,]<\/m:t>/, tex);
+  }
   assert.doesNotMatch(min, /⁡/);
 });

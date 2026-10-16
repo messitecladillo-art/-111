@@ -84,7 +84,9 @@ function sequence(nodes: Node[]): string {
     const applies = (m: Node | undefined) => m?.tag === 'mo' && text(m) === '\u2061';
     const scripted = ['msub', 'msup', 'msubsup'].includes(n.tag) && (() => { const b = elements(n)[0]; const inner = b?.tag === 'mrow' ? elements(b) : b ? [b] : []; return applies(inner.at(-1)); })();
     const plain = applies(nodes[k + 1]), start = plain ? k + 2 : k + 1;
-    if ((plain || scripted) && start >= nodes.length) { out += convert(n); k = start - 1; continue; }
+    // KaTeX marks the name even when no operand follows (\sin + x): an operator or relation is not an argument.
+    const operand = nodes[start], opens = operand?.tag === 'mo' && (OPEN.includes(text(operand)) || (operand.attrs.fence === 'true' && text(operand) === ''));
+    if ((plain || scripted) && (start >= nodes.length || (operand.tag === 'mo' && !opens))) { out += convert(n); k = start - 1; continue; }
     if (plain || scripted) {
       let end = start;
       const next = nodes[end];

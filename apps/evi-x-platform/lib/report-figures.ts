@@ -63,8 +63,8 @@ const valueAxis = (name: string, extra: Record<string, unknown> = {}) => ({
   axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: true, lineStyle: { color: AXIS } },
   axisLabel: { ...small, formatter: tickLabel }, splitLine: { show: true, lineStyle: { color: GRID, type: 'dashed' as const } }, ...extra,
 });
-// Sample sizes in labels read "（n=97）" with an italic n, as statistical symbols are set in print.
-const italicN = { formatter: (v: string) => v.replace(/（n=/gu, '（{n|n}='), rich: { n: { ...small, fontStyle: 'italic' as const } } };
+// Sample sizes in labels read "（n = 97）" with an italic n, spaced like every other "n = …" in the report.
+const italicN = { formatter: (v: string) => v.replace(/（n = /gu, '（{n|n} = '), rich: { n: { ...small, fontStyle: 'italic' as const } } };
 const categoryAxis = (labels: string[], horizontal: boolean) => ({
   type: 'category' as const, data: labels, axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: false },
   axisLabel: { ...small, interval: 0, ...italicN, ...(horizontal ? {} : { overflow: 'break' as const, width: Math.max(80, 820 / Math.max(1, labels.length)) }) },
@@ -123,7 +123,7 @@ function crosstabCells(r: ResultSnapshot): Cells | null {
   return { rows, cols, colsOrdinal, at, rowTotals };
 }
 const cell = (c: Cells, row: string, col: string, index: number) => numeric(c.at.get(`${row}\u0000${col}`)![index])!;
-const withN = (c: Cells) => c.rows.map((row, i) => `${row}（n=${c.rowTotals[i]}）`);
+const withN = (c: Cells) => c.rows.map((row, i) => `${row}（n = ${c.rowTotals[i]}）`);
 
 /** Row shares as 100 % stacked bars: each group's answers side by side, read against the same 0–100 scale. */
 function stacked(c: Cells, accent: string): FigurePlan {
@@ -215,7 +215,7 @@ function coefficient(r: ResultSnapshot, accent: string): FigurePlan {
 
 /** Group means as bars with ±1 sample standard deviation whiskers; group sizes travel with the labels. */
 function means(r: ResultSnapshot, column: number, accent: string): FigurePlan {
-  const rows = groupRows(r), labels = rows.map(row => `${row[0]}（n=${row[1]}）`), values = rows.map(row => numeric(row[column]) ?? 0);
+  const rows = groupRows(r), labels = rows.map(row => `${row[0]}（n = ${row[1]}）`), values = rows.map(row => numeric(row[column]) ?? 0);
   const plan = bars(labels, values, r.headers[column], accent);
   const sd = column === 2 ? rows.map(row => numeric(row[3])) : null;
   if (!sd || sd.some(v => v === null)) return plan;
@@ -262,7 +262,7 @@ function box(r: ResultSnapshot, accent: string): FigurePlan | null {
     labels,
   ];
   if (mean !== null) series.push({ type: 'scatter', data: [[mean, 0]], symbol: 'diamond', symbolSize: 16, itemStyle: { color: accent, opacity: 1 }, z: 5,
-    label: { show: true, position: 'bottom', distance: 26, ...small, fontSize: 18, opacity: 1, textBorderWidth: 0, formatter: () => `均值 ${show(mean)}` } });
+    label: { show: true, position: 'bottom', distance: 44, ...small, fontSize: 18, opacity: 1, textBorderWidth: 0, formatter: () => `均值 ${show(mean)}` } });
   return { kind: 'box', height: 300, option: {
     ...base(), grid: grid({ top: 24, bottom: 24, left: 40, right: 48 }),
     xAxis: valueAxis(r.variables?.[0] ?? '数值', { ...lowerTitle, scale: true }),
@@ -316,11 +316,12 @@ export async function figureSVG(r: ResultSnapshot, column: number, accent: strin
       .replace(/<style\b[\s\S]*?<\/style>/g, '')
       .replace(/\s(?:class|pointer-events)="[^"]*"/g, '')
       // Word's SVG renderer ignores the CSS font shorthand ECharts writes for rich text; spell it out as properties.
-      .replace(/font:\s*([^;"]*?)(\d+(?:\.\d+)?px)\s+([^;"]+)/g, (_m, lead: string, size: string, family: string) => {
+      // Only style attributes inside tags change: chart text is escaped, so a label that reads like CSS stays as written.
+      .replace(/<[^>]+>/g, tag => tag.replace(/(\sstyle=")([^"]*)"/g, (_s, open: string, css: string) => `${open}${css.replace(/font:\s*([^;"]*?)(\d+(?:\.\d+)?px)\s+([^;"]+)/g, (_m, lead: string, size: string, family: string) => {
         const words = lead.trim().split(/\s+/);
         const style = words.find(w => /^(?:italic|oblique)$/.test(w)) ?? 'normal', weight = words.find(w => /^(?:bold|bolder|lighter|\d{3})$/.test(w)) ?? 'normal';
         return `font-style:${style};font-weight:${weight};font-size:${size};font-family:${family.trim()}`;
-      });
+      })}"`));
     return assertTrueVector(svg);
   } finally { chart.dispose(); }
 }

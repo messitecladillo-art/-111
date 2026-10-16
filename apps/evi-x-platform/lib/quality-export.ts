@@ -40,6 +40,24 @@ export type WordContext={labels:Map<string,BlockLabel>;math:MathSlot[];where:str
 /** A4 text width (210 mm − 2 × 31.8 mm) in twentieths of a point, and in pixels for images. */
 export const TEXT_WIDTH={twips:8300,px:553} as const;
 export {splitInlineMath};
+/**
+ * Characters that Word, under the East Asian font hint Chinese text carries, would set in the Chinese face although they
+ * belong to Latin type: accented letters, Greek, superscripts, °, ±, ×, ÷, the en dash, the minus and comparison signs.
+ * They get runs of their own in Times New Roman, so "Cramér", "α", "χ²" and "2×2" keep their Western shapes;
+ * Chinese quotation marks and dashes keep the Chinese face.
+ */
+const LATIN=/[\u00B0-\u00B3\u00B5\u00B9\u00C0-\u024F\u0370-\u03FF\u2013\u2070-\u209F\u2212\u2248\u2260\u2264\u2265]+/gu;
+export function fontSegments(text:string):{text:string;latin:boolean}[]{
+ const out:{text:string;latin:boolean}[]=[];let last=0;
+ for(const m of text.matchAll(LATIN)){if(m.index>last)out.push({text:text.slice(last,m.index),latin:false});out.push({text:m[0],latin:true});last=m.index+m[0].length;}
+ if(last<text.length||!out.length)out.push({text:text.slice(last),latin:false});
+ return out;
+}
+/** Runs of one text, its Latin-only characters set in Times New Roman whatever the paragraph's Chinese face. */
+export function textRuns(TextRun:typeof import('docx').TextRun,text:string,run:Record<string,unknown>={}){
+ const font=run.font&&typeof run.font==='object'?run.font:{};
+ return fontSegments(text).map(s=>new TextRun({...run,text:s.text,...(s.latin?{font:{...font,eastAsia:'Times New Roman',hint:'default'}}:{})}));
+}
 /** Text runs with figure references resolved, citations as superscript marks and `$…$` turned into inline equations. */
 export async function richRuns(text:string,ctx:WordContext,run:Record<string,unknown>={}){
  const {TextRun}=await import('docx');const {texToOmml}=await import('./omml.ts');
@@ -47,8 +65,8 @@ export async function richRuns(text:string,ctx:WordContext,run:Record<string,unk
  // Plain text and resolved figure references stay one run; only a citation mark breaks it, to be set as a superscript.
  const groups:{text:string;cite?:boolean}[]=[];
  for(const segment of referenceSegments(text,ctx.labels,ctx.citations)){const last=groups.at(-1);if(last&&!last.cite&&!segment.cite)last.text+=segment.text;else groups.push({text:segment.text,cite:segment.cite});}
- return groups.flatMap(segment=>segment.cite?[new TextRun({...run,text:segment.text,superScript:true})]:splitInlineMath(segment.text).map(part=>{
-  if(!part.math)return new TextRun({...run,text:part.text});
+ return groups.flatMap(segment=>segment.cite?[new TextRun({...run,text:segment.text,superScript:true})]:splitInlineMath(segment.text).flatMap(part=>{
+  if(!part.math)return textRuns(TextRun,part.text,run);
   ctx.math.push({omml:texToOmml(part.text,false),display:false});
   return new TextRun({...run,text:mathPlaceholder(ctx.math.length-1)});
  }));
@@ -96,27 +114,27 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    // Figures share one width and size their height to the content; Word keeps the same proportions.
    const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
-   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:[new TextRun(caption)]}));
+   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:textRuns(TextRun,caption)}));
   }else{
    assertTableRows(r);
    const table=presentResult(r);
    if(table.headers.length>10)throw Error('表格超过 10 列，请分拆后导出 Word。');
    const weights=columnWeights(table),total=weights.reduce((a,v)=>a+v,0);
    const widths=weights.map(w=>Math.round(TEXT_WIDTH.twips*w/total));
-   out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:[new TextRun(caption)]}));
+   out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:textRuns(TextRun,caption)}));
    const all=[table.headers,...table.rows];
    // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
    const small=all.length<=16,follows=source||!!table.note;
    // A parent unit repeated on its children's rows (a sampling frame) is one vertically merged cell; covered cells stay empty.
    const spans=tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
-   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:[new TextRun({text:cell,bold:i===0})]})]}))}));
+   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,cell,{bold:i===0})})]}))}));
    out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
-   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,text:table.note}));
+   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,table.note)}));
   }
-  if(source)out.push(new Paragraph({style:'ReportSource',text:sourceLine(r)}));
+  if(source)out.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,sourceLine(r))}));
  }
  const notes=sectionNotes(used);
- if(notes)out.push(new Paragraph({style:'ReportNote',text:notes}));
+ if(notes)out.push(new Paragraph({style:'ReportNote',children:textRuns(TextRun,notes)}));
  return out;
 }
 /** One line of at most the width a box holds, shortened with an ellipsis; CJK characters take a full em, others about half. */

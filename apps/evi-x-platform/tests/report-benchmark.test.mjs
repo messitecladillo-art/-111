@@ -107,6 +107,24 @@ test('a summary section that cites exhibits shown elsewhere counts as backed by 
   assert.equal(check(benchmarkReport(content), 'coverage').status, 'pass');
   content.report[3].body = '可归纳出两个问题。';
   assert.match(check(benchmarkReport(content), 'coverage').detail, /既没有图表，也没有引用图表/);
+  // A reference that reaches no exhibit is not evidence.
+  for (const body of ['综合图 9-9，可归纳出两个问题。', '综合[[图:nope]]，可归纳出两个问题。', '综合[[表:f]]，可归纳出两个问题。']) {
+    content.report[3].body = body;
+    assert.equal(check(benchmarkReport(content), 'coverage').status, 'partial', body);
+  }
+  content.report[3].body = '综合图 1－1，可归纳出两个问题。';
+  assert.equal(check(benchmarkReport(content), 'coverage').status, 'pass', 'a typed number reaches the numbered chart');
+});
+
+test('screening rules are recognised in the platform\'s own names and from a screening table in the report', () => {
+  const content = createEditorContent();
+  content.version = 2;
+  content.report = [section('c', '三、调查数据处理及检验'), section('s', '（二）正式调查数据处理', '共回收问卷 452 份，作答过快 9 份，答案完全重复 2 份，均予剔除。')];
+  assert.equal(check(benchmarkReport(content), 'cleaning').status, 'pass');
+  const qc = result('qc', { method: 'quality-control', headers: ['规则', '判定标准', '标记份数', '处理'], rows: [['注意力题未通过', '第 9 题', 12, '剔除'], ['同一 IP 重复提交', '两次以上', 4, '仅标记']] });
+  content.quality = { version: 1, results: [qc], findings: [] };
+  content.report[1] = section('s', '（二）正式调查数据处理', '共回收问卷 452 份，剔除 12 份，有效率 97.3%。', { blocks: [{ id: 't', kind: 'table', text: '问卷有效性筛查', evidenceId: 'qc', valueColumn: 1 }] });
+  assert.equal(check(benchmarkReport(content), 'cleaning').status, 'pass', check(benchmarkReport(content), 'cleaning').detail);
 });
 
 test('citation coverage counts the distinct references cited, ranges included', () => {
@@ -120,10 +138,10 @@ test('citation coverage counts the distinct references cited, ranges included', 
   assert.match(repeated.detail, /引用了其中 1 条/, 'citing one entry ten times covers one entry');
 });
 
-test('figure references count sentences that cite a number, not words such as 代表', () => {
+test('figure references count sentences that cite an exhibit the report has, not words such as 代表 or numbers nothing carries', () => {
   const content = createEditorContent();
   content.report = [section('s', '一、分析', '如图 3-1 所示，结合表2与图4可知两组差异明显，代表3类人群。\n图 3-1 抽样流程\n表 2 信度检验')];
-  assert.match(check(benchmarkReport(content), 'figureReferences').detail, /引用图表 3 次，图表共 2 个/);
+  assert.match(check(benchmarkReport(content), 'figureReferences').detail, /引用图表 2 次，图表共 2 个/);
 });
 
 test('the rules are general norms; nothing counts figures, tables or formulas against one report', () => {

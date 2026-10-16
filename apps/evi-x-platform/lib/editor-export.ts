@@ -1,4 +1,4 @@
-import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, insertMath, richRuns, type SvgPreviewRenderer, type WordContext } from "./quality-export.ts";
+import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, insertMath, richRuns, textRuns, type SvgPreviewRenderer, type WordContext } from "./quality-export.ts";
 import { blockLabel, reportLabels } from "./report-numbering.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
@@ -64,8 +64,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   function addSection(children:ConstructorParameters<typeof Document>[0]["sections"][number]["children"],kind:'cover'|'preliminary'|'body',restart?:number){
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
-  const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
-  if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:[new TextRun({text:content.title})]}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:[new TextRun({text:content.subtitle})]})]:[])],'cover');
+  const title=()=>new Paragraph({style:'Title',children:textRuns(TextRun,content.title,{...bodyRun,size:32,sizeComplexScript:32,bold:true})});
+  if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:textRuns(TextRun,content.title)}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:textRuns(TextRun,content.subtitle)})]:[])],'cover');
   // Numbers come from the whole draft, so the main text and a separately exported appendix agree.
   const ctx:WordContext={labels:reportLabels(content.report),math:[],where:'',section:'',citations:cited.numbers};
   const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>blockLabel(ctx.labels,s.id,b.id)?.kind===kind));
@@ -83,17 +83,19 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     if(!preliminary)toc();
     ctx.where=section.title||'未命名章节';ctx.section=section.id;
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
-    const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
+    const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:textRuns(TextRun,section.title||'未命名章节')})];
     // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
-    if(section.body)for(const line of section.body.split('\n')){
+    const lines=section.body?section.body.split('\n'):[];
+    for(const [i,line] of lines.entries()){
       const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
       // "关键词：" opens the keyword line in bold, as abstracts set it.
       const keywords=part==='abstract'?/^(关键词[:：])\s*/.exec(line):null;
-      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:keywords?[new TextRun({text:keywords[1],bold:true,font:font('黑体')}),...await richRuns(line.slice(keywords[0].length),ctx)]:await richRuns(line,ctx)}));
+      // A questionnaire item stays on the page of the options printed under it.
+      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',...(/^[○□]/.test(lines[i+1]??'')?{keepNext:true}:{}),children:keywords?[new TextRun({text:keywords[1],bold:true,font:font('黑体')}),...await richRuns(line.slice(keywords[0].length),ctx)]:await richRuns(line,ctx)}));
     }
-    if(part==='references')cited.order.forEach((entry,i)=>children.push(new Paragraph({style:'ReportReferenceItem',children:[new TextRun(`[${i+1}]\t`),new TextRun(formatReference(entry))]})));
+    if(part==='references')cited.order.forEach((entry,i)=>children.push(new Paragraph({style:'ReportReferenceItem',children:[new TextRun(`[${i+1}]\t`),...textRuns(TextRun,formatReference(entry))]})));
     if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg,ctx));
-    if(section.source)children.push(new Paragraph({style:'ReportSource',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
+    if(section.source)children.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,`来源 / 说明：${section.source}`)}));
     if(preliminary){addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;}
     else if(part==='body'&&bodyStarted){const index=sections.length-1;sections[index]={...sections[index],children:[...sections[index].children,...children]};}
     else {addSection(children,'body',bodyStarted?undefined:1);bodyStarted=true;}

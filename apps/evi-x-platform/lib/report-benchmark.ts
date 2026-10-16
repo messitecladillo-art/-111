@@ -9,6 +9,7 @@ import type { EditorContent, ReportSection } from './editor-model.ts';
 import { reportHeadingLevel, reportPart, type ReportPart } from './report-format.ts';
 import { BLUEPRINT_MODULE_LABELS, blueprintNode, matchBlueprintNode, stripHeadingNumber, type BlueprintModule, type BlueprintNode } from './report-blueprint.ts';
 import { formatReference, referenceNumbers, referenceProblems } from './references.ts';
+import { reportLabels } from './report-numbering.ts';
 
 export const BENCHMARK_DIMENSIONS = {
   structure: '结构完整', design: '方案严谨', data: '数据质量', analysis: '分析深度',
@@ -61,8 +62,10 @@ const CAPTION = /^(图|表)\s*[0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)*
 export const isCaption = (line: string) => CAPTION.test(line) && line.length <= 50 && !/[，。；：]/.test(line);
 const isHeading = (line: string) => line.length <= 40 && !/[。；]/.test(line) && reportHeadingLevel(line) !== null;
 // A figure or table number cited in a sentence; the preceding character rules out words such as 代表、发表.
-const FIGURE_REFERENCE = /(?:^|[\s，。；：、（(“"如见由据从在和与及即照详合])(?:图|表)\s*[0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?/gu;
-const FIGURE_TOKEN = /\[\[(?:图|表):[^\]\n]+\]\]/gu;
+const FIGURE_REFERENCE = /(?:^|[\s，。；：、（(“"如见由据从在和与及即照详合])((?:图|表)\s*[0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?)/gu;
+const FIGURE_TOKEN = /\[\[(图|表):([^\]\n]{1,80})\]\]/gu;
+/** "图 4－1", "图4.1" and "图 4-1" name the same exhibit. */
+const exhibitNumber = (text: string) => text.replace(/\s+/gu, '').replace(/[０-９]/gu, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/[－—.．]/gu, '-');
 const CITATION = /[[［]\s*\d+(?:\s*[-–—,，、]\s*\d+)*\s*[\]］]/gu;
 const GBT_TYPE = /\[(?:J|M|D|C|N|R|S|P|Z|G|A|EB\/OL|DB\/OL|CP\/DK|[JMDCNRSPZG]\/OL)\]/u;
 
@@ -127,6 +130,13 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const exhibitsIn = (s: Scanned) => (s.section.blocks ?? []).filter(b => b.kind === 'chart' || b.kind === 'table').length + s.lines.filter(isCaption).length;
   const analysisExhibits = analysis.reduce((sum, s) => sum + exhibitsIn(s), 0);
   const analysisProse = analysis.flatMap(s => s.lines).filter(l => !isCaption(l) && !isHeading(l));
+  // A reference counts only when it reaches an exhibit: an inserted reference to a chart or table block,
+  // or a typed number that a numbered block or a typed caption carries.
+  const labels = reportLabels(content.report);
+  const numbers = new Set([...labels.values()].filter(l => l.kind !== 'equation').map(l => exhibitNumber(l.reference)));
+  for (const line of bodyLines) { const caption = CAPTION.exec(line); if (caption && isCaption(line)) numbers.add(exhibitNumber(caption[0])); }
+  const exhibitReferences = (text: string) => [...text.matchAll(FIGURE_REFERENCE)].filter(m => numbers.has(exhibitNumber(m[1]))).length
+    + [...text.matchAll(FIGURE_TOKEN)].filter(m => labels.get(m[2])?.kind === (m[1] === '图' ? 'figure' : 'table')).length;
 
   const checks: BenchmarkCheck[] = [];
   const add = (id: string, dimension: BenchmarkDimension, label: string, score: number | null, detail: string, fixes: BenchmarkFix[] = []) => {
@@ -212,8 +222,12 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     qcChars >= 150 ? '质量控制措施已分环节说明。' : '质量控制措施偏少，建议按设计、实施、录入、清洗分环节写。', fixIfMissing('design.qc'));
 
   // 数据质量
-  const CLEANING = [/注意力|甄别题|陷阱题|测谎/, /作答时长|答题时长|用时过短|作答时间/, /逻辑矛盾|前后矛盾|逻辑检验|逻辑校验/, /规律作答|直线作答|连续相同|同一选项/, /缺失值|缺失处理/];
-  const rules = CLEANING.filter(re => re.test(proseText)).length;
+  // Kinds of screening rule, in the words reports use and the names the platform's own screening gives them.
+  const CLEANING = [/注意力|甄别题|陷阱题|测谎/, /作答时长|答题时长|用时过短|用时过少|作答时间|作答过快|答题过快/, /逻辑矛盾|前后矛盾|逻辑检验|逻辑校验/,
+    /规律作答|直线作答|连续相同|同一选项/, /重复提交|重复作答|答案完全重复|答案雷同|同一\s*IP/i, /缺失值|缺失处理/];
+  // A screening table placed in the report names its rules even where the prose only gives the counts.
+  const screening = [proseText, ...usedResults.filter(r => r.method === 'quality-control').flatMap(r => r.rows.map(row => String(row[0] ?? '')))].join('\n');
+  const rules = CLEANING.filter(re => re.test(screening)).length;
   add('cleaning', 'data', '清洗与剔除规则', rules >= 2 ? 1 : rules ? 0.5 : 0, `写明了 ${rules} 类剔除或处理规则，至少 2 类。`, [...fixIfMissing('data.cleaning'), go('analysis')]);
   const reportedNumber = (head: string) => new RegExp(`(?:${head})[^。\\n]{0,80}?[0-9]\\.[0-9]+`, 'iu');
   // Reliability and validity apply to multi-item scales; a survey of single questions has none to report.
@@ -252,7 +266,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     `分析章节中 ${Math.round(share(numeric, resultParagraphs.length) * 100)}% 的段落含具体数据，宜在 ${BENCHMARK_RULES.numericShare * 100}% 以上。`);
   // Every analysis section the report has should show its evidence.
   // A section shows its own exhibit or cites one shown elsewhere (a problem summary pointing at the figures it rests on).
-  const cites = (s: Scanned) => s.lines.some(l => new RegExp(FIGURE_REFERENCE.source, 'u').test(l) || /\[\[(?:图|表):/.test(l));
+  const cites = (s: Scanned) => s.lines.some(l => exhibitReferences(l) > 0);
   const shown = analysis.filter(s => s.lines.length > 0 || !!s.section.blocks?.length), backed = shown.filter(s => exhibitsIn(s) > 0 || cites(s));
   add('coverage', 'analysis', '分析小节有证据', shown.length ? backed.length / shown.length : null,
     !shown.length ? '还没有写入分析小节。' : backed.length === shown.length ? `${shown.length} 个分析小节都有图或表。` : `「${stripHeadingNumber(shown.find(s => !backed.includes(s))!.section.title)}」等 ${shown.length - backed.length} 个分析小节既没有图表，也没有引用图表。`, [go('analysis')]);
@@ -268,7 +282,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     doubled.length ? `${doubled.length} 个结果同时用图和表呈现；表格不增加信息时保留一种即可。` : '每个结果只用一种图表呈现。');
   const titled = evidenceBlocks.filter(b => b.text.trim()).length;
   add('captions', 'figures', '图表有标题', evidenceBlocks.length ? share(titled, evidenceBlocks.length) : null, `${titled} / ${evidenceBlocks.length} 个图表块填写了标题。`);
-  const references = count(FIGURE_REFERENCE, proseText) + count(FIGURE_TOKEN, proseText);
+  const references = exhibitReferences(proseText);
   add('figureReferences', 'figures', '正文引用图表', figures + tables ? references / (figures + tables) : null,
     `正文引用图表 ${references} 次，图表共 ${figures + tables} 个；每个图表都应在正文中被引用并解读。`);
   const lengths = paragraphs.map(l => l.length).sort((a, b) => a - b);

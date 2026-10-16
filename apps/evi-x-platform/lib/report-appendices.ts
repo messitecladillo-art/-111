@@ -10,23 +10,35 @@ import { literalText } from './report-templates.ts';
 
 /** Option labels A … Z, then AA, AB …, so up to thirty options stay distinct. */
 const letter = (i: number): string => i < 26 ? String.fromCharCode(65 + i) : letter(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26));
+/** Printed width in Chinese characters: CJK characters and symbols such as ○ take a full em, Latin letters and digits half. */
+const printed = (text: string) => [...text].reduce((w, c) => w + (c.codePointAt(0)! >= 0x2000 ? 1 : 0.5), 0);
+/** An A4 line of body text holds about 34 characters; options are packed into lines that fit, never split across one. */
+const OPTION_LINE = 30;
+function packOptions(options: readonly string[]): string[] {
+  const lines: string[] = [];
+  for (const option of options) {
+    const last = lines.at(-1);
+    if (last !== undefined && printed(last) + 1 + printed(option) <= OPTION_LINE) lines[lines.length - 1] = `${last}　${option}`;
+    else lines.push(option);
+  }
+  return lines;
+}
 function questionLines(q: DesignQuestion, index: number, all: readonly DesignQuestion[]): string[] {
   const parent = q.condition ? all.findIndex(x => x.id === q.condition!.questionId) : -1;
   const when = parent >= 0 ? `（第 ${parent + 1} 题选择${q.condition!.codes.map(code => `“${all[parent].choices.find(c => c.code === code)?.label ?? code}”`).join('或')}者回答）` : '';
   const head = `${index + 1}. ${q.text.trim()}（${QUESTION_TYPES[q.type]}）${when}`;
   if (q.type === 'single' || q.type === 'multi') {
-    const options = q.choices.map((c, i) => `${q.type === 'single' ? '○' : '□'}${letter(i)}. ${c.label}`);
-    // Short options share one line; long ones stand one per line.
-    return options.join('　').length <= 60 ? [head, options.join('　')] : [head, ...options];
+    return [head, ...packOptions(q.choices.map((c, i) => `${q.type === 'single' ? '○' : '□'}${letter(i)}. ${c.label}`))];
   }
   if (q.type === 'likert') {
     // Points are listed for an ordinary scale (up to eleven whole points); any other range is described by its ends.
     const min = q.min ?? 1, max = q.max ?? 5, listable = Number.isInteger(min) && Number.isInteger(max) && max >= min && max - min <= 10;
-    const points = listable ? Array.from({ length: max - min + 1 }, (_, i) => `○${min + i}`) : [`在 ${min} 到 ${max} 之间作答：________`];
     const anchors = [q.minLabel && `${min} = ${q.minLabel}`, q.maxLabel && `${max} = ${q.maxLabel}`].filter(Boolean).join('，');
-    return [head + (anchors ? `（${anchors}）` : ''), points.join('　')];
+    const question = head + (anchors ? `（${anchors}）` : '');
+    return listable ? [question, ...packOptions(Array.from({ length: max - min + 1 }, (_, i) => `○${min + i}`))] : [`${question}在 ${min} 到 ${max} 之间作答：________`];
   }
-  return [head, q.type === 'number' ? '________' : '__________________________'];
+  // The answer line follows the question in the same paragraph, so a page break never separates them.
+  return [`${head}${q.type === 'number' ? '________' : '__________________________'}`];
 }
 
 /** The full questionnaire as appendix lines: title, introduction, then every question with its options. */
@@ -35,16 +47,29 @@ export function questionnaireAppendix(q: Questionnaire): string[] {
   return lines.filter(Boolean).map(literalText);
 }
 
-/** The processing record of every registered result: source, method, sample, filter scope, missing codes, quality control. */
+/**
+ * The processing record of every registered result: method, sample, filter scope, missing codes and quality control,
+ * grouped by data source so a source shared by many analyses is named once; sampling frames close the list.
+ */
 export function dataAppendix(content: EditorContent): string[] {
   const results = content.quality?.results ?? [];
   if (!results.length) return [];
   const kind = (c: string) => c === 'simulated' ? '模拟数据' : c === 'public' ? '公开数据' : '用户提供数据';
   const record = (warnings: readonly string[]) => warnings.filter(w => /^原表|^缺失编码|^质控/.test(w)).map(w => w.replace(/[。；]$/u, ''));
+  const groups = new Map<string, typeof results>();
+  for (const r of results) {
+    const key = r.method === 'sampling-frame' ? '' : `${r.sourceName}（${kind(r.classification)}）`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const ordered = [...groups].sort(([a], [b]) => Number(a === '') - Number(b === ''));
+  let n = 0;
+  const item = (r: (typeof results)[number]) => literalText(`${++n}. ${r.title}（${METHOD_LABELS[r.method] ?? r.method}）`
+    + (r.method === 'sampling-frame' ? '。' : `：有效样本 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${record(r.warnings).map(w => `；${w}`).join('')}。`));
+  const single = ordered.length === 1 && ordered[0][0] !== '';
   return [
-    `本报告的统计结果来自以下 ${results.length} 项已登记的分析，每项均记录数据来源、计算口径与有效样本：`,
-    ...results.map((r, i) => literalText(`${i + 1}. ${r.title}（${METHOD_LABELS[r.method] ?? r.method}）：数据来源为${r.sourceName}（${kind(r.classification)}）`
-      + (r.method === 'sampling-frame' ? '。' : `；有效样本 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${record(r.warnings).map(w => `；${w}`).join('')}。`))),
+    single ? literalText(`本报告的统计结果来自以下 ${results.length} 项已登记的分析，数据均来自${ordered[0][0]}：`)
+      : `本报告的统计结果来自以下 ${results.length} 项已登记的分析，按数据来源列出：`,
+    ...ordered.flatMap(([source, list]) => [...(single ? [] : [literalText(source ? `数据来源：${source}` : '抽样设计：')]), ...list.map(item)]),
     '各结果的计算前提（缺失处理、是否加权、检验的适用条件）见正文各节的注释。',
   ];
 }

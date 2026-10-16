@@ -10,7 +10,7 @@ import { chartData, snapshotRecipe } from '../lib/research-quality.ts';
 import { blockLabel, danglingReferences, numberedCaption, referenceSegments, referenceToken, reportLabels, resolveReferences } from '../lib/report-numbering.ts';
 import { categoryOrder, columnWeights, formatCell, presentResult, scaleScores, sectionNotes, sourceLine } from '../lib/report-tables.ts';
 import { accentScale, FIGURE_WIDTH, figurePlan, figureSVG, onFill, svgSize } from '../lib/report-figures.ts';
-import { splitInlineMath } from '../lib/quality-export.ts';
+import { fontSegments, splitInlineMath } from '../lib/quality-export.ts';
 import { buildStoryboard } from '../lib/report-storyboard.ts';
 
 const renderSvg = async svg => new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
@@ -149,6 +149,9 @@ test('figures pick the type that fits the result and size their height to it', a
     for (const text of figure.match(/<text\b[^>]*>/g)) assert.match(text, /font-size:\d+(?:\.\d+)?px;?[^"]*font-family:/, `${id}: ${text.slice(0, 80)}`);
   }
   assert.match(await figureSVG(results.freq, 1, '#0F766E'), /font-style:italic[^>]*>n</, 'the italic n survives the rewrite');
+  // Only style attributes are rewritten; a category that reads like CSS is drawn as written.
+  const css = { ...results.freq, rows: results.freq.rows.map((row, i) => i ? row : ['font: 20px Arial', ...row.slice(1)]) };
+  assert.match(await figureSVG(css, 1, '#0F766E'), />font: 20px Arial</);
   assert.match(svg, /Times New Roman/);
   assert.equal(svgSize(svg).width, FIGURE_WIDTH);
   assert.equal(svgSize(svg).height, cross.height);
@@ -214,4 +217,21 @@ test('Word export carries native equations, numbered captions, resolved referenc
   const broken = structuredClone(content);
   broken.report[1].body = '见[[图:missing]]';
   await assert.rejects(buildDocx(parseEditorContent(broken), undefined, renderSvg), /引用已失效/);
+});
+
+test('Latin-only characters in Chinese text keep the Latin face: accents, Greek, superscripts and the times sign', async () => {
+  assert.deepEqual(fontSegments('Cramér V 与 χ² 检验，2×2 表“甲”——乙'), [
+    { text: 'Cram', latin: false }, { text: 'é', latin: true }, { text: 'r V 与 ', latin: false }, { text: 'χ²', latin: true },
+    { text: ' 检验，2', latin: false }, { text: '×', latin: true }, { text: '2 表“甲”——乙', latin: false },
+  ], 'Chinese quotation marks and dashes stay with the Chinese text');
+  assert.deepEqual(fontSegments(''), [{ text: '', latin: false }]);
+  const content = createEditorContent();
+  content.version = 2;
+  content.report = [section('c1', '一、α 系数', 'Cronbach 的 α 系数为 0.82，18–24 岁占 20.2%[[引:r]]。'), section('c2', '参考文献', '')];
+  content.references = [{ id: 'r', type: 'M', authors: ['CRAMÉR H'], title: 'Mathematical methods of statistics', source: '', publisher: 'Princeton University Press', place: 'Princeton', year: '1946',
+    volume: '', issue: '', pages: '', edition: '', date: '', accessed: '', url: '', doi: '', number: '', text: '' }];
+  const zip = await JSZip.loadAsync(await (await buildDocx(parseEditorContent(content), undefined, renderSvg)).arrayBuffer());
+  const xml = await zip.file('word/document.xml').async('string');
+  for (const text of ['α', '–', 'É']) assert.match(xml, new RegExp(`<w:rFonts w:eastAsia="Times New Roman" w:hint="default"/>(?:(?!</w:r>).)*<w:t xml:space="preserve">${text}</w:t>`), text);
+  assert.match(xml, /<w:t xml:space="preserve">Cronbach 的 <\/w:t>/, 'the rest of the sentence keeps the paragraph font');
 });
