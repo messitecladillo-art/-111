@@ -1,4 +1,5 @@
 /** Authored research guidance; none of these types represents measured field evidence. */
+import type { ProfileRegionFields } from './geography.ts';
 export type AccessStatus = 'confirmed' | 'possible' | 'unavailable';
 export type TopicProfile = {
   region: string; city: string; school: string; schoolContext: string[]; discipline: string;
@@ -6,7 +7,7 @@ export type TopicProfile = {
   access: Record<string, AccessStatus>; resources: Record<string, AccessStatus>;
   sensitiveData: 'avoid' | 'review_required' | 'approved';
   referenceDate: string; competitionWindow: { start: string; end: string } | null;
-};
+} & ProfileRegionFields;
 export const EMPTY_TOPIC_PROFILE: TopicProfile = {
   region: '', city: '', school: '', schoolContext: [], discipline: '', interests: [], domains: [],
   days: null, budgetYuan: null, access: {}, resources: {}, sensitiveData: 'avoid', referenceDate: '', competitionWindow: null,
@@ -91,4 +92,4 @@ export type TopicCandidate = {
 };
 export const EMPTY_TOPIC_CANDIDATE: TopicCandidate = { title: '', decisionOwner: '', decision: '', population: '', geography: '', accessNeeds: [], resourceNeeds: [], evidencePlan: '', differentiators: [], action: '', sensitive: false };
 export type CandidateEvaluation = TopicRecommendation & { matchedPatterns: Array<{ patternId: string; title: string; sharedTerms: string[]; sourceIds: string[] }> };
-export type TopicDraft = { schemaVersion: 1; profile: TopicProfile; candidate: TopicCandidate | null };
+export type TopicDraft = { schemaVersion: 1 | 2; profile: TopicProfile; candidate: TopicCandidate | null };

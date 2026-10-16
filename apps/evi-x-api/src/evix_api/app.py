@@ -21,6 +21,7 @@ from . import silicon, surveys
 from .knowledge import register_knowledge
 from .topics import register_topics
 from .topic_projects import register_topic_projects
+from .topic_questionnaire import questionnaire_save_body, prepare_binding_save, persist_binding, topic_binding_receipt
 from .reports import register_reports
 from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
@@ -29,7 +30,7 @@ from .submission_preflight_routes import TemporarySubmissionPreflights
 from .net_exam import NetExamBank
 
 
-SCHEMA_REVISION = "0006_topic_projects"
+SCHEMA_REVISION = "0007_topic_questionnaire"
 
 
 def iso(value):
@@ -603,7 +604,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
 
     @app.post("/api/projects/{project_id}/questionnaire/versions", status_code=201)
     async def save_questionnaire(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
-        data = await body(request, ("design", "expectedRevision", "idempotencyKey"), ("sourceProposalId",))
+        data = await questionnaire_save_body(request)
         p, _ = owned_project(session, user, project_id, edit=True, lock=True)
         op, repeated = operation(session, user, "questionnaire:" + p.id, data)
         if repeated:
@@ -622,14 +623,28 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                 raise ApiError(404, "not_found", "建议不存在。")
             if proposal.status != "ready" or proposal.input_revision != expected:
                 raise ApiError(409, "stale_proposal", "建议基于旧版本，不能用来替换当前问卷。")
+        current = session.execute(select(Version).where(Version.project_id == p.id).order_by(Version.revision.desc()).limit(1)).scalar_one_or_none()
+        if (current.revision if current else 0) != expected:
+            raise ApiError(409, "revision_conflict", "问卷基础版本与项目记录不符。")
+        binding_state = prepare_binding_save(session, p, current, design, data.get("topicBindingMutation"), provided="topicBindingMutation" in data)
         v = Version(id=new_id(), project_id=p.id, revision=expected + 1, created_by=user.id, design=design, design_hash=fingerprint(design), source_proposal_id=source)
         session.add(v)
         p.questionnaire_revision += 1
         p.revision += 1
         session.flush()
+        persist_binding(session, v, user, binding_state)
         op.response = head(v)
         session.commit()
         return op.response
+
+    @app.get("/api/projects/{project_id}/questionnaire/versions/{version_id}/topic-binding")
+    def get_questionnaire_topic_binding(project_id: str, version_id: str, user=Depends(auth), session=Depends(db)):
+        p, _ = owned_project(session, user, project_id)
+        uuid_string(version_id)
+        v = session.execute(select(Version).where(Version.project_id == p.id, Version.id == version_id)).scalar_one_or_none()
+        if v is None:
+            raise ApiError(404, "not_found", "版本不存在。")
+        return topic_binding_receipt(session, v)
 
     def expire_pending(session, user):
         session.execute(update(Proposal).where(Proposal.user_id == user.id, Proposal.status == "running", Proposal.created_at < now() - timedelta(seconds=settings.proposal_stale_seconds)).values(status="outcome_unknown", error_code="interrupted_call", finished_at=now()))
@@ -777,7 +792,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
         except ApiError:
             response.update(status="failed", answers=[], error="invalid_response")
         except Exception:
-            response.update(status="failed", answers=[], error="provider_failure")
+            response.update(status="outcome_unknown", answers=[], error="provider_failure")
         return response, calls
 
     async def silicon_worker(run_id, user_id, plan, services):

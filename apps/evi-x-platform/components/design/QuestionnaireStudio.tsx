@@ -7,13 +7,15 @@ import QuestionBlocks from "./QuestionBlocks";
 import QuestionnairePlatformExport from "./QuestionnairePlatformExport";
 import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
 import { appendMaterialQuestionGroup } from "@/lib/research-materials";
-import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
+import {canonical,type DesignSnapshot} from '@/lib/questionnaire-mapping';
 import DiagnosisBriefProposal from './DiagnosisBriefProposal';
 import type { DiagnosisBriefSource } from '@/lib/diagnosis-actions';
 import QuestionnaireLibrary from './QuestionnaireLibrary';
 import type {QuestionnaireRepairOrigin} from '@/lib/questionnaire-library';
 import {parseQuestionnaireLibraryContent} from '@/lib/questionnaire-library';
-import {initialRevisionHistory,commitQuestionnaireRevision,travelQuestionnaireRevision,type QuestionnaireRevisionHistory} from '@/lib/questionnaire-revision';
+import {initialRevisionHistory,commitQuestionnaireRevision,commitTopicQuestionnaireRevision,revisionSnapshot,travelQuestionnaireRevision,type QuestionnaireRevisionHistory} from '@/lib/questionnaire-revision';
+import type {TopicQuestionnaireBinding} from '@/lib/topic-questionnaire';
+import type {TopicBindingRestoreOrigin} from '@/lib/topic-questionnaire-api';
 import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
 import {useHostedSession} from '../hosted/HostedSession';
 import {useContentReveal,useKeyedListMotion} from '@/components/motion/useWorkspaceMotion';
@@ -26,15 +28,18 @@ function download(value: string, name: string, mime: string) {
 }
 
 type NumericDrafts=Record<string,{questionId:string;field:'min'|'max';raw:string;error:string}>;
-type SessionDesignDraft={history:History;numericDrafts:NumericDrafts;activeId:string};
-export type HostedDesignBridge = { initialDesign: Questionnaire; cacheKey?:string; load?: { id: string; design: Questionnaire }; savedFingerprint?: string; onLoaded?: () => void; onDetachProposal?: () => void };
+type SessionDesignDraft={history:History;numericDrafts:NumericDrafts;activeId:string;editRevision?:number};
+export type HostedDesignLoad = {id:string;design:Questionnaire;topicBinding?:TopicQuestionnaireBinding|null;topicRestoreOrigin?:TopicBindingRestoreOrigin|null;expectedEditRevision?:number;expectedBefore?:string;applicationVersionId?:string;metadataOnly?:boolean};
+export type HostedDesignBridge = { initialDesign: Questionnaire; initialBinding?:TopicQuestionnaireBinding|null; initialRestoreOrigin?:TopicBindingRestoreOrigin|null; writable?:boolean; cacheKey?:string; load?:HostedDesignLoad; savedFingerprint?:string; savedBinding?:TopicQuestionnaireBinding|null; onLoaded?:(id:string,accepted:boolean)=>void; onEdit?:()=>void; onDetachProposal?: () => void };
+function cachedHistory(value:History|undefined):History|undefined {try{if(!value)return;const copy=(r:History['present'])=>revisionSnapshot(r.content,r.repairOrigin,r.topicBinding??null,r.topicRestoreOrigin??null);return{past:value.past.slice(-DESIGN_LIMITS.history).map(copy),present:copy(value.present),future:value.future.slice(0,DESIGN_LIMITS.history).map(copy)};}catch{return;}}
 export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,onBriefHandled,agentProposal,onAgentHandled,onAgentApplied,localOnly=false,hosted}:{onSnapshot?:(value:DesignSnapshot)=>void;onAnalyze?:(value:DesignSnapshot)=>void;briefSource?:DiagnosisBriefSource|null;onBriefHandled?:()=>void;agentProposal?:AgentQuestionnaireProposal|null;onAgentHandled?:()=>void;onAgentApplied?:(value:AgentQuestionnaireProposal)=>void;localOnly?:boolean;hosted?:HostedDesignBridge}={}) {
   const session=useHostedSession();
   // Read once at mount; state rather than a ref so the initializers below may use it during render.
   const [cached]=useState(()=>(hosted?.cacheKey?session.getDraft(hosted.cacheKey):undefined) as SessionDesignDraft|undefined);
-  const [history, setHistory] = useState<History>(()=>cached?.history||(hosted?initialRevisionHistory(hosted.initialDesign):initial()));
+  const [history, setHistory] = useState<History>(()=>cachedHistory(cached?.history)||(hosted?initialRevisionHistory(hosted.initialDesign,hosted.initialBinding??null,hosted.initialRestoreOrigin??null):initial()));
   const [activeId, setActiveId] = useState(()=>cached?.activeId||hosted?.initialDesign.questions[0]?.id || "initial-question");
   const [reading, setReading] = useState(false);
+  const [composing,setComposing]=useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [view, setView] = useState<"assemble" | "edit" | "review">("edit");
@@ -52,15 +57,17 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const {setUnsaved,cacheDraft}=session, isHosted=!!hosted, userId=session.session?.user?.id;
   const cacheKey=hosted?.cacheKey, savedFingerprint=hosted?.savedFingerprint, hostedLoad=hosted?.load, onLoaded=hosted?.onLoaded;
   useEffect(()=>{if(localOnly&&!isHosted)setUnsaved('local-questionnaire',dirty);return()=>{if(!isHosted)setUnsaved('local-questionnaire',false);};},[dirty,localOnly,isHosted,setUnsaved]);
-  const [previewRevision,setPreviewRevision]=useState(0);
+  const [previewRevision,setPreviewRevision]=useState(cached?.editRevision??0);
   const [libraryResetKey,setLibraryResetKey]=useState(0);
   const libraryIdentity=useRef(0);
   function detachLibrary(){libraryIdentity.current++;setLibraryResetKey(libraryIdentity.current);}
   const [numericDrafts, setNumericDrafts] = useState<NumericDrafts>(()=>cached?.numericDrafts||{});
-  const editRevision = useRef(0), readEpoch = useRef(0);
+  const editRevision = useRef(cached?.editRevision??0), readEpoch = useRef(0);
+  const liveHosted=useRef(hosted),liveHistory=useRef(history),inputPending=useRef(false);
+  useLayoutEffect(()=>{liveHosted.current=hosted;liveHistory.current=history;},[hosted,history]);
   const agentProposalRef=useRef(agentProposal);
   useLayoutEffect(()=>{agentProposalRef.current=agentProposal;},[agentProposal]);
-  function markEdit(){const revision=editRevision.current+1;editRevision.current=revision;setPreviewRevision(revision);}
+  function markEdit(){const revision=editRevision.current+1;editRevision.current=revision;liveHosted.current?.onEdit?.();setPreviewRevision(revision);}
   const input = useRef<HTMLInputElement>(null);
   const variableInput = useRef<HTMLInputElement>(null), pendingFocus = useRef(false);
   const editorRef = useRef<HTMLDivElement>(null), briefRef = useRef<HTMLDetailsElement>(null);
@@ -76,6 +83,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   }, []);
   const design = history.present.content;
   const repairOrigin = history.present.repairOrigin;
+  const topicBinding=history.present.topicBinding??null,topicRestoreOrigin=history.present.topicRestoreOrigin??null;
   const active = design.questions.find(q => q.id === activeId) || design.questions[0];
   const activeIndex = active ? design.questions.findIndex(q => q.id === active.id) : -1;
   const issues = useMemo(() => questionnaireIssues(design), [design]);
@@ -83,16 +91,37 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   const blockers = issues.filter(i => i.level === "blocker");
   const pendingNumbers = Object.entries(numericDrafts).filter(([,draft])=>draft.error);
   const hasPendingNumbers=pendingNumbers.length>0;
-  useLayoutEffect(()=>{if(cacheKey&&userId)cacheDraft(cacheKey,{history,numericDrafts,activeId},hasPendingNumbers||savedFingerprint!==parseQuestionnaireLibraryContent(design).serialized,userId);},[history,numericDrafts,activeId,hasPendingNumbers,design,cacheKey,savedFingerprint,userId,cacheDraft]);
-  useLayoutEffect(()=>{onSnapshot?.({design,pending:hasPendingNumbers});},[design,hasPendingNumbers,onSnapshot]);
+  const pendingInput=hasPendingNumbers||reading||!!confirmation||composing;
+  useLayoutEffect(()=>{inputPending.current=pendingInput;},[pendingInput]);
+  useLayoutEffect(()=>{if(cacheKey&&userId)cacheDraft(cacheKey,{history,numericDrafts,activeId,editRevision:previewRevision},pendingInput||savedFingerprint!==parseQuestionnaireLibraryContent(design).serialized||canonical(hosted?.savedBinding??null)!==canonical(topicBinding),userId);},[history,numericDrafts,activeId,pendingInput,design,topicBinding,previewRevision,cacheKey,savedFingerprint,userId,cacheDraft,hosted?.savedBinding]);
+  useLayoutEffect(()=>{onSnapshot?.(isHosted?{design,pending:pendingInput,topicBinding,topicRestoreOrigin,editRevision:previewRevision}:{design,pending:pendingInput});},[design,pendingInput,topicBinding,topicRestoreOrigin,previewRevision,onSnapshot,isHosted]);
+  const publicationAck=useRef<{id:string;signature:string;editRevision:number}|null>(null);
+  // Positive acknowledgement follows this render's history cache and paired snapshot publication.
+  useLayoutEffect(()=>{
+    const pending=publicationAck.current;if(!pending)return;
+    publicationAck.current=null;
+    const accepted=liveHosted.current?.writable!==false&&!pendingInput&&editRevision.current===pending.editRevision&&canonical(history.present)===pending.signature;
+    if(!accepted)setError('载入后又出现新编辑或未完成输入，已保留当前内容，请核对保存结果。');
+    liveHosted.current?.onLoaded?.(pending.id,accepted);
+  },[history,previewRevision,pendingInput]);
   const loadedIntent=useRef('');
   useEffect(()=>{
     if(!hostedLoad || hostedLoad.id===loadedIntent.current)return;
-    const safe=parseQuestionnaire(JSON.stringify(hostedLoad.design));loadedIntent.current=hostedLoad.id;
-    setHistory(h=>commitQuestionnaireRevision(h,safe,null));markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已按确认载入设计；可撤销恢复先前本地内容。');onLoaded?.();
+    loadedIntent.current=hostedLoad.id;
+    const live=liveHistory.current;
+    if(liveHosted.current?.writable===false||inputPending.current||hostedLoad.expectedEditRevision!==undefined&&hostedLoad.expectedEditRevision!==editRevision.current||hostedLoad.expectedBefore!==undefined&&hostedLoad.expectedBefore!==canonical({design:live.present.content,binding:live.present.topicBinding??null})){
+      setError('载入前已有新编辑或未完成输入，已保留当前内容，请重新核对保存结果。');onLoaded?.(hostedLoad.id,false);return;
+    }
+    try{
+      const safe=parseQuestionnaire(JSON.stringify(hostedLoad.design));
+      const binding=hostedLoad.topicBinding===undefined?live.present.topicBinding??null:hostedLoad.topicBinding,origin=hostedLoad.topicRestoreOrigin===undefined?live.present.topicRestoreOrigin??null:hostedLoad.topicRestoreOrigin;
+      const next=hostedLoad.metadataOnly?{...live,present:revisionSnapshot(live.present.content,live.present.repairOrigin,binding,origin)}:hostedLoad.applicationVersionId&&binding?commitTopicQuestionnaireRevision(live,safe,binding,hostedLoad.applicationVersionId):commitQuestionnaireRevision(live,safe,null,binding,origin);
+      publicationAck.current={id:hostedLoad.id,signature:canonical(next.present),editRevision:editRevision.current+1};
+      setHistory(next);markEdit();setNumericDrafts({});setAnswers({});setDirty(true);setActiveId(safe.questions[0]?.id||'');setNotice('已载入内容与来源绑定；可一起撤销恢复。');
+    }catch(cause){setError(cause instanceof Error?cause.message:'载入未完成，当前设计已保留。');onLoaded?.(hostedLoad.id,false);}
   },[hostedLoad,onLoaded]);
   // When the design comes back to the saved version, it is clean again (adjusted during render, not in an effect).
-  const savedMatch=useMemo(()=>!!hosted&&hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers,[hosted,design,hasPendingNumbers]);
+  const savedMatch=useMemo(()=>!!hosted&&hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&canonical(hosted.savedBinding??null)===canonical(topicBinding)&&!pendingInput,[hosted,design,topicBinding,pendingInput]);
   const [lastSavedMatch,setLastSavedMatch]=useState(savedMatch);
   if(savedMatch!==lastSavedMatch){setLastSavedMatch(savedMatch);if(savedMatch)setDirty(false);}
   const activeIssueId = active ? `design-${active.id}-issues` : undefined;
@@ -109,7 +138,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     const unload = (event: BeforeUnloadEvent) => { if (dirty) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", unload); return () => window.removeEventListener("beforeunload", unload);
   }, [dirty]);
-  useEffect(() => () => { readEpoch.current++; confirmOperation.current?.resolve(false); confirmOperation.current=null; }, []);
+  useEffect(() => () => { readEpoch.current++;publicationAck.current=null; confirmOperation.current?.resolve(false); confirmOperation.current=null; }, []);
   useEffect(() => {
     const dialog = confirmDialog.current;
     if (!confirmation || !dialog) return;
@@ -184,6 +213,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
   }
 
   function commit(next: Questionnaire, message = "", origin?:QuestionnaireRepairOrigin|null) {
+    if(liveHosted.current?.writable===false)return false;
     try {
       const safe = parseQuestionnaire(JSON.stringify(next));
       markEdit(); setDirty(true); setAnswers({}); setError(""); setNotice(message);
@@ -195,6 +225,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     if (active) commit({ ...design, questions: design.questions.map(q => q.id === active.id ? { ...q, ...patch } : q) });
   }
   function travel(back: boolean) {
+    if(liveHosted.current?.writable===false||inputPending.current)return;
     const target = back ? history.past.at(-1) : history.future[0]; if (!target) return;
     markEdit(); setDirty(true); setAnswers({}); setNumericDrafts({}); setError(""); setNotice(`${back ? "已撤销。" : "已重做。"}${pendingNumbers.length?'未应用的数值输入也已清除。':''}`);
     setHistory(travelQuestionnaireRevision(history,back));detachLibrary();hosted?.onDetachProposal?.();
@@ -288,7 +319,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     }catch(e){setError((e as Error).message);}
   }
 
-  return <section className={styles.studio} id="design" aria-label="问卷设计工作台">
+  return <section className={styles.studio} id="design" aria-label="问卷设计工作台" onCompositionStart={()=>{inputPending.current=true;markEdit();setComposing(true);}} onCompositionEnd={()=>{markEdit();setComposing(false);}}>
     {agentProposal&&<div role="region" aria-label="模型问卷草案预览" className={styles.notice}><strong>待确认的模型草案：{agentProposal.design.title}</strong><p>{agentProposal.model} · 服务配置 v{agentProposal.serviceRevision} · {agentProposal.design.questions.length} 道拟议题项。应用后仍需机器检查与预测试。</p><ol ref={agentPreviewMotion}>{agentProposal.design.questions.map(q=><li key={q.id}>{q.text}</li>)}</ol><button type="button" disabled={reading||hasPendingNumbers||!!confirmation} onClick={applyAgentProposal}>确认应用草案</button><button type="button" disabled={!!confirmation} onClick={()=>onAgentHandled?.()}>保留现有设计</button></div>}
     <header className={styles.heading}>
       <div className={styles.documentTitle}><div className={styles.documentState}><span>问卷设计</span><small>待实施草稿</small><small>{hosted?(hosted.savedFingerprint===parseQuestionnaireLibraryContent(design).serialized&&!hasPendingNumbers?'已保存到项目':'有未保存修改'):'本页编辑 · 不自动保存'}</small></div><h2>{design.title || '未命名问卷设计'}</h2></div>

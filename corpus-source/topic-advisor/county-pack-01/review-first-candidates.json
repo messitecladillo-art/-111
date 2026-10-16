@@ -1,0 +1,476 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "agent-collab/v1",
+  "nonce": "P3-REVIEW-1137",
+  "sender": "/root/p2_ui_review",
+  "receiver": "/root",
+  "issuedAt": "2026-10-15T11:37:00Z",
+  "reviewedAt": "2026-10-15T11:39:30Z",
+  "expiresAt": "2026-10-15T12:15:00Z",
+  "classification": "internal_review_of_public_primary_sources",
+  "independentReviewer": true,
+  "canDelegate": false,
+  "input": {
+    "baseRevision": "26103c73e28b2d0dbec205c7087f2043850a8bbc",
+    "packPath": "apps/evi-x-platform/content/topic-advisor/county-pack-01.json",
+    "packSha256": "a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58",
+    "countyCodes": [
+      "421222",
+      "340882",
+      "320623"
+    ],
+    "scope": "Only five frozen-pack facts, nine authored proposed directions, and related primary-source bodies. Rudong supplemental claims reviewed separately; no changes to the pack."
+  },
+  "verdict": {
+    "overall": "revise_before_first_release",
+    "materialFalseFactFound": false,
+    "facts": {
+      "acceptable": 5,
+      "revise": 0,
+      "unsupported": 0
+    },
+    "directions": {
+      "acceptable": 7,
+      "revise": 2,
+      "unsupported": 0
+    },
+    "publicationApproved": false,
+    "summary": "Five narrowly historical facts match primary bodies. Two youth directions need a consistent adult-youth and local sampling scope. None of the sources establishes current vacancies, current operational availability, team access, market demand, causal effects or completed fieldwork."
+  },
+  "capabilitiesUsed": [
+    "bounded_local_read",
+    "public_primary_web_open",
+    "official_domain_search",
+    "new_assigned_review_report"
+  ],
+  "capabilitiesNotUsed": [
+    "paid_tools",
+    "authentication",
+    "secrets",
+    "TLS_bypass",
+    "source_edits",
+    "publication",
+    "git_mutation",
+    "delegation"
+  ],
+  "sourceReview": [
+    {
+      "id": "miit-2025-clusters",
+      "url": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "verdict": "acceptable",
+      "actualOriginalBodyRead": true,
+      "readScope": "Text extraction of the six-page ministry-hosted PDF, title and the rows for the three selected counties.",
+      "locator": "Attachment 1; item29 physical page2; item42 physical page3; item66 physical page4; extracted lines33,47,72.",
+      "supports": "The named Rudong offshore-wind-equipment, Qianshan brush-making and Tongcheng mica-electronic-material clusters appear in the 2025 fourth-batch list.",
+      "notSupported": [
+        "Current recruitment or training availability",
+        "Market demand or unmet service need",
+        "Access to any enterprise, worker or procurement respondent",
+        "Later deregistration or present operational status"
+      ],
+      "rawBodyStored": false,
+      "rawBodySha256IndependentlyComputed": false
+    },
+    {
+      "id": "miit-final-notice-context",
+      "url": "https://www.miit.gov.cn/zwgk/zcwj/wjfb/tg/art/2025/art_84aa1e893c174f64973537495109d6aa.html",
+      "verdict": "acceptable",
+      "actualOriginalBodyRead": true,
+      "readScope": "Full returned notice body and metadata; no extra attachment link followed.",
+      "locator": "Metadata lines6-17; notice body21-40.",
+      "supports": "The ministry final notice is dated2025-10-13 and published2025-10-31; it distinguishes final determination from the preceding publicity procedure.",
+      "limitation": "The PDF body was read separately. The notice's embedded iframe attachment target was not followed under the eight-operation cap. Keep PDF-specific date provenance conservative unless the attachment relationship is recorded.",
+      "rawBodyStored": false
+    },
+    {
+      "id": "mct-rural-2022",
+      "url": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "verdict": "acceptable",
+      "actualOriginalBodyRead": true,
+      "readScope": "Returned data-service body, explicit cutoff and Anhui list containing the named village.",
+      "locator": "Header cutoff2022-12-07 at line4; Anhui section307-330, exact village at326.",
+      "supports": "The data page lists Chazhuang village in Tianzhushan town of Qianshan.",
+      "notSupported": [
+        "Current opening, transport, accommodation or visitor volume",
+        "County-wide tourism conditions",
+        "Current service quality or current designation changes"
+      ],
+      "rawBodyStored": false
+    },
+    {
+      "id": "tongcheng-gig-2024",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "verdict": "acceptable",
+      "actualOriginalBodyRead": true,
+      "readScope": "Title/date/origin and complete substantive paragraphs of the provincial portal article attributed to Tongcheng county's human-resources bureau.",
+      "locator": "Date/origin at46; historical stations and service functions at52; reported activity at53.",
+      "supports": "The2024 county-authored report describes the employment-station network, recruitment-information and job-registration functions, plus rest/basic amenities.",
+      "temporalInterpretation": "Historical county-department self-report dated2024-05-10, not independent evidence of current availability or service effects.",
+      "notSupported": [
+        "Current operating sites and opening hours",
+        "Present use/non-use group differences",
+        "Causal effectiveness or representative user satisfaction"
+      ],
+      "rawBodyStored": false
+    },
+    {
+      "id": "rudong-hr-2025-summary",
+      "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+      "verdict": "acceptable",
+      "actualOriginalBodyRead": true,
+      "readScope": "Returned full annual summary and next-year-plan body; title, attribution and publication time.",
+      "locator": "Metadata at6;2025 results section8-14, employment/training at10 and internship at12;2026 plans separately15-24.",
+      "supports": "The county bureau's2025 summary reports employment-service stations, recruitment, vocational training and internship-base/placement activity.",
+      "temporalInterpretation": "Published2026-01-05 about2025 departmental activity;2026 future-plan paragraphs are not completed outcomes.",
+      "notSupported": [
+        "Wind-industry-specific job shortages",
+        "Current job validity or current service opening",
+        "Independent program impact",
+        "Team recruitment access"
+      ],
+      "integrationStatus": "Exists only in supplement-20261015.json, not the frozen pack's sources or Rudong facts.",
+      "rawBodyStored": false
+    }
+  ],
+  "sourceIndependence": "Ministry industrial recognition, tourism directory and county-department reporting are separate document families supporting different claims. Different facts or URLs do not independently corroborate the same effect. Provincial hosting of a county-authored report is one source family, not two.",
+  "facts": [
+    {
+      "id": "county-421222-fact-1",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "locator": "Item66, physical page4.",
+      "assessment": "Exact county and industry match; historical listing language and unknown precise PDF date are appropriately narrow."
+    },
+    {
+      "id": "county-421222-fact-2",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "tongcheng-gig-2024"
+      ],
+      "locator": "Article2024-05-10, main stations/functions paragraph, extracted line52.",
+      "assessment": "The stated service functions are supported as the bureau's historical description; no current operating claim is made."
+    },
+    {
+      "id": "county-340882-fact-1",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "locator": "Item42, physical page3.",
+      "assessment": "Exact county-level city and industry match; no inference of current jobs, demand or respondent access."
+    },
+    {
+      "id": "county-340882-fact-2",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "mct-rural-2022"
+      ],
+      "locator": "Data cutoff header and Anhui section, Chazhuang village entry.",
+      "assessment": "The stated2022-12-07 cutoff and village-level scope match; it is not described as a publication date or current service condition."
+    },
+    {
+      "id": "county-320623-fact-1",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "locator": "Item29, physical page2.",
+      "assessment": "Exact county and industry match; the fact does not establish current wind-sector vacancies."
+    }
+  ],
+  "supplementalClaims": [
+    {
+      "id": "rudong-supplement-claim-1",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "rudong-hr-2025-summary"
+      ],
+      "locator": "2025 results, employment subsection, extracted line10.",
+      "assessment": "Employment stations, recruitment and skills training are reported by the county bureau for2025; retain explicit self-report and historical wording."
+    },
+    {
+      "id": "rudong-supplement-claim-2",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "rudong-hr-2025-summary"
+      ],
+      "locator": "2025 results, talent subsection, extracted line12.",
+      "assessment": "Internship bases, developed placements and participants are reported for2025. Do not substitute the2026 targets in the later plan subsection."
+    }
+  ],
+  "directions": [
+    {
+      "id": "county-421222-direction-1",
+      "verdict": "revise",
+      "severity": "medium",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "issue": "Title/question target youth, while population is all local adult jobseekers. The sampling population can therefore fail to answer the stated question.",
+      "requiredRevision": "Define a declared adult-youth age band and local residence/work/intent scope consistently in title, question and population, or broaden the title/question to adult jobseekers. Do not invent current access.",
+      "methodNote": "If an effect of information format is later claimed, use an appropriate comparison/intervention; an understanding task or consultation intention alone is not observed job-seeking behavior."
+    },
+    {
+      "id": "county-421222-direction-2",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "tongcheng-gig-2024"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "User/non-user comparison is a proposed design rather than a reported difference. Existing minimum evidence correctly begins with verifying current stations and recruiting by actual use history.",
+      "unresolved": [
+        "Current sites/opening and permission",
+        "Sampling comparability and non-user reachability"
+      ]
+    },
+    {
+      "id": "county-421222-direction-3",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "Training preferences are a tentative decision problem, not a claim of an existing shortage. Retain actual role stratification, current training-condition checks and permission/confidentiality limits.",
+      "unresolved": [
+        "Actual industry-worker and training-partner access",
+        "Whether an identified organization can act on results"
+      ]
+    },
+    {
+      "id": "county-340882-direction-1",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "A bounded product-use procurement study is a plausible proposal; the minimum evidence already requires verified products and real purchasing histories. No unmet market need is stated as fact.",
+      "unresolved": [
+        "Specific product/use scope",
+        "Authorized buyer/dealer recruitment"
+      ]
+    },
+    {
+      "id": "county-340882-direction-2",
+      "verdict": "revise",
+      "severity": "medium",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "issue": "Title/question concern local youth, but population is any volunteering adult jobseeker, with no youth or local criterion.",
+      "requiredRevision": "Specify a declared adult-youth age band and local geographic eligibility, or revise the title/question. Verify actual roles/open positions before showing role materials; the cluster list does not establish vacancies.",
+      "unresolved": [
+        "Current role materials and permission",
+        "Reachable adult-youth sample"
+      ]
+    },
+    {
+      "id": "county-340882-direction-3",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "mct-rural-2022"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "The proposal stays at Chazhuang village and asks rather than asserts first/repeat visitor differences. Its current-opening/transport check and actual-visit recruitment condition are appropriate.",
+      "unresolved": [
+        "Current village access, transport and operator permission",
+        "Feasible first/repeat visitor recruitment"
+      ]
+    },
+    {
+      "id": "county-320623-direction-1",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "Employment perceptions are proposed; current vacancies and qualifications are explicitly to be verified. The supplemental annual report cannot establish wind-sector-specific openings.",
+      "unresolved": [
+        "Actual open roles and qualifications",
+        "Adult jobseeker recruitment and permissions"
+      ]
+    },
+    {
+      "id": "county-320623-direction-2",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "Authorized service/procurement interviews are conditional on real contacts. Sea-site exclusion and confidential-parameter limits prevent the proposal from assuming field access.",
+      "unresolved": [
+        "Real equipment-service context and decision owner",
+        "Permission to contact supply/procurement staff"
+      ]
+    },
+    {
+      "id": "county-320623-direction-3",
+      "verdict": "acceptable",
+      "evidenceSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "supportType": "historical_context_only; authored research question",
+      "assessment": "Workplace, travel and services are proposed observations, not inferred from cluster recognition. Keep the service operator tentative; an industrial cluster does not itself prove one physical industrial park.",
+      "unresolved": [
+        "Actual workplaces and service operators",
+        "Authorized worker recruitment and real service-use histories"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "P3-M1",
+      "severity": "medium",
+      "path": "apps/evi-x-platform/content/topic-advisor/county-pack-01.json",
+      "objectIds": [
+        "county-421222-direction-1",
+        "county-340882-direction-2"
+      ],
+      "category": "question_population_scope_mismatch",
+      "repro": "Read the two youth titles/questions, then their population fields: both admit adult respondents outside the stated youth/local target.",
+      "requiredAction": "Align target eligibility and title/question without inventing age conventions, resource availability or access.",
+      "releaseBlockingForThoseDirections": true
+    },
+    {
+      "id": "P3-L1",
+      "severity": "low",
+      "path": "corpus-source/topic-advisor/county-pack-01/supplement-20261015.json",
+      "objectIds": [
+        "county-320623",
+        "rudong-hr-2025-summary"
+      ],
+      "category": "supplement_not_integrated",
+      "repro": "Frozen pack contains14 sources and Rudong's sole MIIT fact; the independently verified county-bureau annual source remains outside that content version.",
+      "requiredAction": "If the first release claims the supplementary coverage, integrate it through a new reviewed content version with exact historical/self-report boundaries. Do not change source count claims based only on this review report.",
+      "releaseBlockingForExistingNarrowFact": false
+    }
+  ],
+  "countyRecommendations": [
+    {
+      "code": "421222",
+      "verdict": "revise",
+      "reason": "Both facts acceptable; revise youth sampling scope in direction1 before releasing that direction."
+    },
+    {
+      "code": "340882",
+      "verdict": "revise",
+      "reason": "Both facts acceptable; revise adult-youth/local sampling scope in direction2 before releasing that direction."
+    },
+    {
+      "code": "320623",
+      "verdict": "acceptable",
+      "scope": "One frozen historical fact and three explicitly proposed, access-conditional research directions.",
+      "reason": "No material unsupported fact found. Supplemental annual source is acceptable separately, but has not been integrated; do not claim that the frozen profile already has two sources."
+    }
+  ],
+  "unresolved": [
+    "No current operational, recruitment, firm-access, traveler-access or team-resource verification was performed or inferred.",
+    "No later change/withdrawal monitoring was performed for the industrial or tourism listings; their role here is historical context.",
+    "The two youth sampling definitions remain producer/root work; this reviewer did not edit them.",
+    "Rudong supplement integration and final publication decisions require a separately versioned content change and root acceptance.",
+    "The MIIT final notice was read, but its iframe attachment target was not followed after the public request budget reached8."
+  ],
+  "requestLedger": [
+    {
+      "id": "review-req-01",
+      "operation": "open",
+      "url": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "status": "original_pdf_text_read",
+      "bodyRead": true,
+      "scope": "Six-page extraction; selected rows29,42,66."
+    },
+    {
+      "id": "review-req-02",
+      "operation": "open",
+      "url": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "status": "original_data_page_text_read",
+      "bodyRead": true,
+      "scope": "Cutoff and Anhui/Chazhuang entry."
+    },
+    {
+      "id": "review-req-03",
+      "operation": "open",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "status": "metadata_returned_body_not_exposed_in_batched_response",
+      "bodyRead": false,
+      "nextRequest": "review-req-05"
+    },
+    {
+      "id": "review-req-04",
+      "operation": "open",
+      "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+      "status": "metadata_returned_body_not_exposed_in_batched_response",
+      "bodyRead": false,
+      "nextRequest": "review-req-06"
+    },
+    {
+      "id": "review-req-05",
+      "operation": "open",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "lineWindow": 20,
+      "status": "original_article_body_read",
+      "bodyRead": true,
+      "scope": "Date/origin and substantive paragraphs52-53."
+    },
+    {
+      "id": "review-req-06",
+      "operation": "open",
+      "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+      "lineWindow": 0,
+      "status": "original_annual_report_and_plan_body_read",
+      "bodyRead": true,
+      "scope": "2025 results separated from2026 plans."
+    },
+    {
+      "id": "review-req-07",
+      "operation": "search_query",
+      "query": "site.miit.gov.cn \"2025年度（第四批）中小企业特色产业集群\" 名单 公示 认定",
+      "domains": [
+        "miit.gov.cn"
+      ],
+      "status": "discovery_only",
+      "bodyRead": false,
+      "selectedUrl": "https://www.miit.gov.cn/zwgk/zcwj/wjfb/tg/art/2025/art_84aa1e893c174f64973537495109d6aa.html",
+      "usedAsStandaloneClaimEvidence": false
+    },
+    {
+      "id": "review-req-08",
+      "operation": "open",
+      "url": "https://www.miit.gov.cn/zwgk/zcwj/wjfb/tg/art/2025/art_84aa1e893c174f64973537495109d6aa.html",
+      "status": "original_final_notice_body_read",
+      "bodyRead": true,
+      "scope": "Final determination and separate composition/publication dates."
+    }
+  ],
+  "requestBudget": {
+    "maximumIndividualOperations": 8,
+    "used": 8,
+    "opens": 7,
+    "searches": 1,
+    "additionalNetworkOperations": 0,
+    "retries": 0,
+    "stoppedAtCap": true,
+    "paidCalls": 0
+  },
+  "evidencePolicy": {
+    "searchSnippetsUsedForVerification": false,
+    "localAuthorSummariesUsedAsPrimaryVerification": false,
+    "fullWebBodiesArchived": false,
+    "verbatimBodyQuotesStored": 0,
+    "readScopeAndLocatorsRecorded": true,
+    "currentStatusNotInferredFromHistoricalSources": true
+  },
+  "checks": {
+    "inputSha256Verified": true,
+    "scopedFrozenPackFactCount": 5,
+    "scopedFrozenPackDirectionCount": 9,
+    "allScopedFactsHistoricalReference": true,
+    "allScopedDirectionsProposed": true,
+    "codeTestsRun": false,
+    "reason": "Content evidence review; no code change or fieldwork performed. Scoped JSON consistency validation follows report creation."
+  },
+  "nextAction": "Root/producers revise the two population scopes, decide whether to integrate the separately reviewed Rudong annual source in a new content version, and retain human publication approval. No publication action is authorized by this report."
+}

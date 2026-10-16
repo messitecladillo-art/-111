@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "classification": "synthetic_contract_reference",
+  "hashContract": "evix-topic-transfer-json/1",
+  "notes": [
+    "Authored byte-level vectors, not fieldwork or generated model output. Expected bodies are manually specified typed encodings; hashes use Node standard SHA-256 without importing either implementation.",
+    "Numbers are JSON binary64 values; 1 and 1.0 share bytes, negative zero normalizes to positive zero, and an out-of-safe-integer decimal rounds exactly as JSON.parse.",
+    "String bytes have no NFC/NFKC normalization; keys sort by UTF16 code units, including nested objects. Limits include the domain prefix: 2000000 bytes, depth16 with root0,160000 value nodes."
+  ],
+  "cases": [
+    {
+      "id": "null",
+      "inputJson": "null",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004e",
+      "sha256": "57628c3c568d7039a308e2070b29d1d2b2a5e636fe3d1f7aeefd5a2938a9f8e5"
+    },
+    {
+      "id": "false",
+      "inputJson": "false",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310046",
+      "sha256": "981349ef75c3de2172ee9148eff87ec06424117b79eb6aeaadc07194dd631ab1"
+    },
+    {
+      "id": "true",
+      "inputJson": "true",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310054",
+      "sha256": "c53fd7d4754e163692b90909148c129e395722e00f6f1db44ac137f59ac09d21"
+    },
+    {
+      "id": "positive-zero",
+      "inputJson": "0",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004430303030303030303030303030303030",
+      "sha256": "b4c8acdc67a7d25f167719d3ab09b94647ebfb2733bfcc3fafb662766329f7b8"
+    },
+    {
+      "id": "negative-zero",
+      "inputJson": "-0.0",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004430303030303030303030303030303030",
+      "sha256": "b4c8acdc67a7d25f167719d3ab09b94647ebfb2733bfcc3fafb662766329f7b8"
+    },
+    {
+      "id": "integer-one",
+      "inputJson": "1",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004433666630303030303030303030303030",
+      "sha256": "c361f2ec0f4a9f029587ab5afecb027d40857eea3acd5a6f5ec9ee4d1f025334"
+    },
+    {
+      "id": "decimal-one",
+      "inputJson": "1.0",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004433666630303030303030303030303030",
+      "sha256": "c361f2ec0f4a9f029587ab5afecb027d40857eea3acd5a6f5ec9ee4d1f025334"
+    },
+    {
+      "id": "negative-fraction",
+      "inputJson": "-2.5",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004463303034303030303030303030303030",
+      "sha256": "6b65f18408983a7d9e52a0c0d6fb2c702c043eca1eb77798354d2697d495aa6a"
+    },
+    {
+      "id": "decimal-tenth",
+      "inputJson": "0.1",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004433666239393939393939393939393961",
+      "sha256": "7874bd4bb8c7fabd8379541207c9a815221069d6ff76bed6b9b3f43c6d6bb919"
+    },
+    {
+      "id": "small-exponent",
+      "inputJson": "1e-7",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004433653761643766323961626361663438",
+      "sha256": "32c3ceef187f9f532b79bb8753622694df4e469a1337f335e5f1258bdd4892f9"
+    },
+    {
+      "id": "smallest-subnormal",
+      "inputJson": "5e-324",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004430303030303030303030303030303031",
+      "sha256": "5183a774d59c1060016a6a4cda99cece4b10d76922ea5cddcba5f914aa348f41"
+    },
+    {
+      "id": "largest-subnormal",
+      "inputJson": "2.225073858507201e-308",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004430303066666666666666666666666666",
+      "sha256": "a7e70c9d6ab44ee2d308c3a77775c8977171f9450b9702cde992f330b9c601c3"
+    },
+    {
+      "id": "smallest-normal",
+      "inputJson": "2.2250738585072014e-308",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004430303130303030303030303030303030",
+      "sha256": "8a26f0c5c46a4ecba700288d239c054ad9dc3ef08a6d49998bfb14e187dfa749"
+    },
+    {
+      "id": "largest-finite",
+      "inputJson": "1.7976931348623157e308",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004437666566666666666666666666666666",
+      "sha256": "c60f92a779cb861ed97fed2f7192f878719323cea04e13a22f9fdca93512c61c"
+    },
+    {
+      "id": "binary64-integer-rounding",
+      "inputJson": "9007199254740993",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004434333430303030303030303030303030",
+      "sha256": "f7540f96f6a98604571c55e21be6060f724b3b9f81237d199a3826ef53e33870"
+    },
+    {
+      "id": "empty-string",
+      "inputJson": "\"\"",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310053303a",
+      "sha256": "bff81343add8be4beecd53f6baa8b3cb6c95241375981ee9edd1dcfe713d949d"
+    },
+    {
+      "id": "unicode-string",
+      "inputJson": "\"汉😀é\\n\"",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31005331313ae6b189f09f988065cc810a",
+      "sha256": "82a24654ca61d8ed2027548484ecb21cf74a5035649880a24b6a63a8a0636b81"
+    },
+    {
+      "id": "composed-string",
+      "inputJson": "\"é\"",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310053323ac3a9",
+      "sha256": "718f346801c50d24aa47a7e443eab522d25cc3cced844f1c2e7ac73368d7fd2a"
+    },
+    {
+      "id": "decomposed-string",
+      "inputJson": "\"é\"",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310053333a65cc81",
+      "sha256": "3ae7536ff78109366544e82c4563b676a077dde6cddced4d5e2cceccf10fbbd5"
+    },
+    {
+      "id": "escaped-surrogate-pair",
+      "inputJson": "\"\\ud83d\\ude00\"",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310053343af09f9880",
+      "sha256": "dc780fc268ac4190f3fce5921a15e923118e5e4fb9e39e978c7ff4a6346887b2"
+    },
+    {
+      "id": "empty-array",
+      "inputJson": "[]",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310041303a",
+      "sha256": "067d49f9e7f8f62848a76f16ab5f13859f43eb0e4817c81f834becc6185306e1"
+    },
+    {
+      "id": "empty-object",
+      "inputJson": "{}",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004f303a",
+      "sha256": "cd51a6980435fdb26fb7c8d8099aebb727627d0463179ea2afefe86757d0c8b7"
+    },
+    {
+      "id": "mixed-array",
+      "inputJson": "[null,true,false,0,1,\"x\"]",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f310041363a4e54464430303030303030303030303030303030443366663030303030303030303030303053313a78",
+      "sha256": "10f435b2c55f66dbd779fa15ca01a502473cca0cf3cb4b13753af7461b362397"
+    },
+    {
+      "id": "utf16-key-order",
+      "inputJson": "{\"\\ue000\":\"bmp\",\"\\ud83d\\ude00\":\"astral\",\"a\":-0.0}",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004f333a53313a61443030303030303030303030303030303053343af09f988053363a61737472616c53333aee808053333a626d70",
+      "sha256": "a3f99190b29e5ab2b40ae4753f165cd60f59e723761c87862d1136f01ae9f574"
+    },
+    {
+      "id": "nested-unicode-and-numeric-keys",
+      "inputJson": "{\"z\":[1,null,true,\"汉\"],\"a\":{\"2\":false,\"10\":0.1},\"😀\":{\"\":\"E\",\"𐀀\":\"A\"}}",
+      "encodedHex": "657669782d746f7069632d7472616e736665722d6a736f6e2f31004f333a53313a614f323a53323a3130443366623939393939393939393939396153313a324653313a7a41343a44336666303030303030303030303030304e5453333ae6b18953343af09f98804f323a53343af090808053313a4153333aee808053313a45",
+      "sha256": "6dccc91da336a7ba9569f5e93c2b2ff0c54c84098e46e4437663b97205479349"
+    }
+  ],
+  "invalidCases": [
+    {
+      "id": "lone-high-surrogate",
+      "inputJson": "\"\\ud800\""
+    },
+    {
+      "id": "lone-low-surrogate",
+      "inputJson": "\"\\udfff\""
+    },
+    {
+      "id": "high-followed-by-text",
+      "inputJson": "\"\\ud800x\""
+    },
+    {
+      "id": "lone-surrogate-key",
+      "inputJson": "{\"\\ud800\":1}"
+    },
+    {
+      "id": "prototype-key",
+      "inputJson": "{\"__proto__\":null}"
+    },
+    {
+      "id": "nested-constructor-key",
+      "inputJson": "{\"x\":{\"constructor\":1}}"
+    },
+    {
+      "id": "prototype-member",
+      "inputJson": "{\"prototype\":[]}"
+    },
+    {
+      "id": "overflow-number",
+      "inputJson": "1e309"
+    }
+  ]
+}

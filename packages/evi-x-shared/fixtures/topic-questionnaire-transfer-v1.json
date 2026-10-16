@@ -1,0 +1,2348 @@
+{
+  "schemaVersion": 1,
+  "hashContract": "evix-topic-transfer-json/1",
+  "classification": "synthetic_contract_fixture",
+  "cases": [
+    {
+      "id": "partial-title-with-unselected-mapping",
+      "source": {
+        "brief": {
+          "title": "武汉社区服务研究 🧭",
+          "decisionOwner": "拟联系的服务负责人",
+          "decision": "比较说明展示方式，决定优先试点哪种方案",
+          "population": "拟调查成年使用者",
+          "geography": "湖北省 · 武汉市",
+          "inclusion": "近期使用者",
+          "exclusion": "未成年人",
+          "evidencePlan": "拟开展访谈与观察，尚未执行",
+          "questions": [
+            {
+              "id": "rq-clarity",
+              "text": "说明清晰程度与办理困难如何关联？"
+            },
+            {
+              "id": "rq-access",
+              "text": "不同渠道使用者的办理经历有什么差异？"
+            }
+          ],
+          "constructs": [
+            {
+              "id": "c-clarity",
+              "name": "说明清晰度",
+              "questionIds": [
+                "rq-clarity"
+              ]
+            }
+          ],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [
+            "先核对渠道与许可"
+          ],
+          "sources": [
+            {
+              "id": "source-reference",
+              "title": "教学用来源定位",
+              "url": "https://example.org/reference",
+              "locator": "合成合同样例，无实地证据",
+              "coverage": "reference",
+              "publishedAt": "",
+              "retrievedAt": ""
+            }
+          ]
+        },
+        "version": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "revision": 1,
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "createdAt": "2026-10-15T08:00:00Z",
+          "createdBy": "20000000-0000-4000-8000-000000000001"
+        },
+        "dirty": false,
+        "decisionRevision": 1
+      },
+      "target": {
+        "design": {
+          "schema": "questionnaire-design/v1",
+          "classification": "proposed",
+          "title": "校园服务体验 · 教学问卷草稿",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "geography": "",
+          "period": "过去 30 天",
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "pilotNotes": "",
+          "questions": [
+            {
+              "id": "demo-screen",
+              "variable": "USED",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "single",
+              "required": false,
+              "purpose": "screening",
+              "researchQuestion": "",
+              "construct": "",
+              "analysis": "routing",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "source": "",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": "使用过"
+                },
+                {
+                  "code": "0",
+                  "label": "未使用过"
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "",
+              "maxLabel": "",
+              "reverse": false,
+              "condition": null
+            },
+            {
+              "id": "demo-experience",
+              "variable": "CLARITY",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "required": false,
+              "purpose": "research",
+              "researchQuestion": "服务流程的清晰程度如何？",
+              "construct": "流程清晰度",
+              "analysis": "description",
+              "decisionUse": "识别流程说明的改进需求。",
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "完全不清楚",
+              "maxLabel": "非常清楚",
+              "reverse": false,
+              "condition": {
+                "questionId": "demo-screen",
+                "codes": [
+                  "1"
+                ]
+              }
+            },
+            {
+              "id": "demo-open",
+              "variable": "SUGGESTION",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "required": false,
+              "purpose": "research",
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "construct": "",
+              "analysis": "coding",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "source": "",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "",
+              "maxLabel": "",
+              "reverse": false,
+              "condition": {
+                "questionId": "demo-screen",
+                "codes": [
+                  "1"
+                ]
+              }
+            }
+          ]
+        },
+        "pending": false,
+        "versionId": "30000000-0000-4000-8000-000000000002",
+        "revision": 2
+      },
+      "mappings": [
+        {
+          "questionId": "demo-experience",
+          "researchQuestionIds": [
+            "rq-clarity"
+          ],
+          "constructIds": [
+            "c-clarity"
+          ]
+        }
+      ],
+      "selectedChangeIds": [
+        "brief:title"
+      ],
+      "beforeBinding": null,
+      "expected": {
+        "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+        "after": {
+          "classification": "proposed",
+          "geography": "",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "period": "过去 30 天",
+          "pilotNotes": "",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "questions": [
+            {
+              "analysis": "routing",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": "使用过"
+                },
+                {
+                  "code": "0",
+                  "label": "未使用过"
+                }
+              ],
+              "condition": null,
+              "construct": "",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "id": "demo-screen",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "screening",
+              "required": false,
+              "researchQuestion": "",
+              "reverse": false,
+              "source": "",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "single",
+              "variable": "USED"
+            },
+            {
+              "analysis": "description",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "流程清晰度",
+              "decisionUse": "识别流程说明的改进需求。",
+              "id": "demo-experience",
+              "max": 5,
+              "maxLabel": "非常清楚",
+              "min": 1,
+              "minLabel": "完全不清楚",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "服务流程的清晰程度如何？",
+              "reverse": false,
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "variable": "CLARITY"
+            },
+            {
+              "analysis": "coding",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "id": "demo-open",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "reverse": false,
+              "source": "",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "variable": "SUGGESTION"
+            }
+          ],
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "schema": "questionnaire-design/v1",
+          "title": "武汉社区服务研究 🧭"
+        },
+        "binding": {
+          "schema": "topic-questionnaire-binding/v1",
+          "classification": "proposed",
+          "sources": [
+            {
+              "version": {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "revision": 1,
+                "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "createdAt": "2026-10-15T08:00:00Z",
+                "createdBy": "20000000-0000-4000-8000-000000000001"
+              },
+              "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "brief": {
+                "title": "武汉社区服务研究 🧭",
+                "decisionOwner": "拟联系的服务负责人",
+                "decision": "比较说明展示方式，决定优先试点哪种方案",
+                "population": "拟调查成年使用者",
+                "geography": "湖北省 · 武汉市",
+                "inclusion": "近期使用者",
+                "exclusion": "未成年人",
+                "evidencePlan": "拟开展访谈与观察，尚未执行",
+                "questions": [
+                  {
+                    "id": "rq-clarity",
+                    "text": "说明清晰程度与办理困难如何关联？"
+                  },
+                  {
+                    "id": "rq-access",
+                    "text": "不同渠道使用者的办理经历有什么差异？"
+                  }
+                ],
+                "constructs": [
+                  {
+                    "id": "c-clarity",
+                    "name": "说明清晰度",
+                    "questionIds": [
+                      "rq-clarity"
+                    ]
+                  }
+                ],
+                "differentiators": [],
+                "unknowns": [],
+                "firstWeekPlan": [
+                  "先核对渠道与许可"
+                ],
+                "sources": [
+                  {
+                    "id": "source-reference",
+                    "title": "教学用来源定位",
+                    "url": "https://example.org/reference",
+                    "locator": "合成合同样例，无实地证据",
+                    "coverage": "reference",
+                    "publishedAt": "",
+                    "retrievedAt": ""
+                  }
+                ]
+              }
+            }
+          ],
+          "applications": [
+            {
+              "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+              "sourceVersionId": "10000000-0000-4000-8000-000000000001",
+              "sourceContentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourceBriefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "before": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "f8ae12a5a3e2cdef198200bff63172a6be1484f62bfe9da75ff23bf54817d75a"
+              },
+              "after": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "84299b8347c47227a2b6d42368aa9711adf182627bbd9088a78d84d7eb18dd8e"
+              },
+              "changes": [
+                {
+                  "id": "brief:title",
+                  "kind": "brief",
+                  "field": "title",
+                  "questionId": null,
+                  "researchQuestionIds": [],
+                  "constructIds": []
+                }
+              ]
+            }
+          ]
+        },
+        "bindingHash": "7d1d3e89867d6fb7bc7a98ed4ca2f669029aaf6ab153237be9416af6048381f2",
+        "mutation": {
+          "kind": "apply",
+          "hashContract": "evix-topic-transfer-json/1",
+          "expectedBindingHash": null,
+          "source": {
+            "versionId": "10000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+            "expectedDecisionRevision": 1
+          },
+          "target": {
+            "baseVersionId": "30000000-0000-4000-8000-000000000002",
+            "baseRevision": 2,
+            "beforeContentHash": "f8ae12a5a3e2cdef198200bff63172a6be1484f62bfe9da75ff23bf54817d75a"
+          },
+          "beforeDesign": {
+            "classification": "proposed",
+            "geography": "",
+            "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+            "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+            "period": "过去 30 天",
+            "pilotNotes": "",
+            "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+            "questions": [
+              {
+                "analysis": "routing",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": "使用过"
+                  },
+                  {
+                    "code": "0",
+                    "label": "未使用过"
+                  }
+                ],
+                "condition": null,
+                "construct": "",
+                "decisionUse": "只向使用过服务的同学询问体验。",
+                "id": "demo-screen",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "screening",
+                "required": false,
+                "researchQuestion": "",
+                "reverse": false,
+                "source": "",
+                "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+                "type": "single",
+                "variable": "USED"
+              },
+              {
+                "analysis": "description",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "流程清晰度",
+                "decisionUse": "识别流程说明的改进需求。",
+                "id": "demo-experience",
+                "max": 5,
+                "maxLabel": "非常清楚",
+                "min": 1,
+                "minLabel": "完全不清楚",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "服务流程的清晰程度如何？",
+                "reverse": false,
+                "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+                "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+                "type": "likert",
+                "variable": "CLARITY"
+              },
+              {
+                "analysis": "coding",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "",
+                "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+                "id": "demo-open",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "哪些环节存在具体阻碍？",
+                "reverse": false,
+                "source": "",
+                "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+                "type": "text",
+                "variable": "SUGGESTION"
+              }
+            ],
+            "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+            "schema": "questionnaire-design/v1",
+            "title": "校园服务体验 · 教学问卷草稿"
+          },
+          "afterContentHash": "84299b8347c47227a2b6d42368aa9711adf182627bbd9088a78d84d7eb18dd8e",
+          "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+          "mappings": [
+            {
+              "questionId": "demo-experience",
+              "researchQuestionIds": [
+                "rq-clarity"
+              ],
+              "constructIds": [
+                "c-clarity"
+              ]
+            }
+          ],
+          "selectedChangeIds": [
+            "brief:title"
+          ]
+        }
+      }
+    },
+    {
+      "id": "mapped-rq-and-construct",
+      "source": {
+        "brief": {
+          "title": "武汉社区服务研究 🧭",
+          "decisionOwner": "拟联系的服务负责人",
+          "decision": "比较说明展示方式，决定优先试点哪种方案",
+          "population": "拟调查成年使用者",
+          "geography": "湖北省 · 武汉市",
+          "inclusion": "近期使用者",
+          "exclusion": "未成年人",
+          "evidencePlan": "拟开展访谈与观察，尚未执行",
+          "questions": [
+            {
+              "id": "rq-clarity",
+              "text": "说明清晰程度与办理困难如何关联？"
+            },
+            {
+              "id": "rq-access",
+              "text": "不同渠道使用者的办理经历有什么差异？"
+            }
+          ],
+          "constructs": [
+            {
+              "id": "c-clarity",
+              "name": "说明清晰度",
+              "questionIds": [
+                "rq-clarity"
+              ]
+            }
+          ],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [
+            "先核对渠道与许可"
+          ],
+          "sources": [
+            {
+              "id": "source-reference",
+              "title": "教学用来源定位",
+              "url": "https://example.org/reference",
+              "locator": "合成合同样例，无实地证据",
+              "coverage": "reference",
+              "publishedAt": "",
+              "retrievedAt": ""
+            }
+          ]
+        },
+        "version": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "revision": 1,
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "createdAt": "2026-10-15T08:00:00Z",
+          "createdBy": "20000000-0000-4000-8000-000000000001"
+        },
+        "dirty": false,
+        "decisionRevision": 1
+      },
+      "target": {
+        "design": {
+          "schema": "questionnaire-design/v1",
+          "classification": "proposed",
+          "title": "校园服务体验 · 教学问卷草稿",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "geography": "",
+          "period": "过去 30 天",
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "pilotNotes": "",
+          "questions": [
+            {
+              "id": "demo-screen",
+              "variable": "USED",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "single",
+              "required": false,
+              "purpose": "screening",
+              "researchQuestion": "",
+              "construct": "",
+              "analysis": "routing",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "source": "",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": "使用过"
+                },
+                {
+                  "code": "0",
+                  "label": "未使用过"
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "",
+              "maxLabel": "",
+              "reverse": false,
+              "condition": null
+            },
+            {
+              "id": "demo-experience",
+              "variable": "CLARITY",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "required": false,
+              "purpose": "research",
+              "researchQuestion": "服务流程的清晰程度如何？",
+              "construct": "流程清晰度",
+              "analysis": "description",
+              "decisionUse": "识别流程说明的改进需求。",
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "完全不清楚",
+              "maxLabel": "非常清楚",
+              "reverse": false,
+              "condition": {
+                "questionId": "demo-screen",
+                "codes": [
+                  "1"
+                ]
+              }
+            },
+            {
+              "id": "demo-open",
+              "variable": "SUGGESTION",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "required": false,
+              "purpose": "research",
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "construct": "",
+              "analysis": "coding",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "source": "",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "",
+              "maxLabel": "",
+              "reverse": false,
+              "condition": {
+                "questionId": "demo-screen",
+                "codes": [
+                  "1"
+                ]
+              }
+            }
+          ]
+        },
+        "pending": false,
+        "versionId": "30000000-0000-4000-8000-000000000002",
+        "revision": 2
+      },
+      "mappings": [
+        {
+          "questionId": "demo-experience",
+          "researchQuestionIds": [
+            "rq-clarity"
+          ],
+          "constructIds": [
+            "c-clarity"
+          ]
+        }
+      ],
+      "selectedChangeIds": [
+        "brief:geography",
+        "question:demo-experience:researchQuestion",
+        "question:demo-experience:construct"
+      ],
+      "beforeBinding": null,
+      "expected": {
+        "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+        "after": {
+          "classification": "proposed",
+          "geography": "湖北省 · 武汉市",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "period": "过去 30 天",
+          "pilotNotes": "",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "questions": [
+            {
+              "analysis": "routing",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": "使用过"
+                },
+                {
+                  "code": "0",
+                  "label": "未使用过"
+                }
+              ],
+              "condition": null,
+              "construct": "",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "id": "demo-screen",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "screening",
+              "required": false,
+              "researchQuestion": "",
+              "reverse": false,
+              "source": "",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "single",
+              "variable": "USED"
+            },
+            {
+              "analysis": "description",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "说明清晰度",
+              "decisionUse": "识别流程说明的改进需求。",
+              "id": "demo-experience",
+              "max": 5,
+              "maxLabel": "非常清楚",
+              "min": 1,
+              "minLabel": "完全不清楚",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "说明清晰程度与办理困难如何关联？",
+              "reverse": false,
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "variable": "CLARITY"
+            },
+            {
+              "analysis": "coding",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "id": "demo-open",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "reverse": false,
+              "source": "",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "variable": "SUGGESTION"
+            }
+          ],
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "schema": "questionnaire-design/v1",
+          "title": "校园服务体验 · 教学问卷草稿"
+        },
+        "binding": {
+          "schema": "topic-questionnaire-binding/v1",
+          "classification": "proposed",
+          "sources": [
+            {
+              "version": {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "revision": 1,
+                "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "createdAt": "2026-10-15T08:00:00Z",
+                "createdBy": "20000000-0000-4000-8000-000000000001"
+              },
+              "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "brief": {
+                "title": "武汉社区服务研究 🧭",
+                "decisionOwner": "拟联系的服务负责人",
+                "decision": "比较说明展示方式，决定优先试点哪种方案",
+                "population": "拟调查成年使用者",
+                "geography": "湖北省 · 武汉市",
+                "inclusion": "近期使用者",
+                "exclusion": "未成年人",
+                "evidencePlan": "拟开展访谈与观察，尚未执行",
+                "questions": [
+                  {
+                    "id": "rq-clarity",
+                    "text": "说明清晰程度与办理困难如何关联？"
+                  },
+                  {
+                    "id": "rq-access",
+                    "text": "不同渠道使用者的办理经历有什么差异？"
+                  }
+                ],
+                "constructs": [
+                  {
+                    "id": "c-clarity",
+                    "name": "说明清晰度",
+                    "questionIds": [
+                      "rq-clarity"
+                    ]
+                  }
+                ],
+                "differentiators": [],
+                "unknowns": [],
+                "firstWeekPlan": [
+                  "先核对渠道与许可"
+                ],
+                "sources": [
+                  {
+                    "id": "source-reference",
+                    "title": "教学用来源定位",
+                    "url": "https://example.org/reference",
+                    "locator": "合成合同样例，无实地证据",
+                    "coverage": "reference",
+                    "publishedAt": "",
+                    "retrievedAt": ""
+                  }
+                ]
+              }
+            }
+          ],
+          "applications": [
+            {
+              "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+              "sourceVersionId": "10000000-0000-4000-8000-000000000001",
+              "sourceContentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourceBriefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "before": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "f8ae12a5a3e2cdef198200bff63172a6be1484f62bfe9da75ff23bf54817d75a"
+              },
+              "after": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "f2ae8c0954e5b493cf0ecd44fa8edc5496ac0a7c2719c580f2482a0772efbc67"
+              },
+              "changes": [
+                {
+                  "id": "brief:geography",
+                  "kind": "brief",
+                  "field": "geography",
+                  "questionId": null,
+                  "researchQuestionIds": [],
+                  "constructIds": []
+                },
+                {
+                  "id": "question:demo-experience:researchQuestion",
+                  "kind": "question",
+                  "field": "researchQuestion",
+                  "questionId": "demo-experience",
+                  "researchQuestionIds": [
+                    "rq-clarity"
+                  ],
+                  "constructIds": []
+                },
+                {
+                  "id": "question:demo-experience:construct",
+                  "kind": "question",
+                  "field": "construct",
+                  "questionId": "demo-experience",
+                  "researchQuestionIds": [
+                    "rq-clarity"
+                  ],
+                  "constructIds": [
+                    "c-clarity"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "bindingHash": "8e7474b1c4b6588cbb7ec6904cd172a52713d3f363ebacea5dab0d4dd9097e16",
+        "mutation": {
+          "kind": "apply",
+          "hashContract": "evix-topic-transfer-json/1",
+          "expectedBindingHash": null,
+          "source": {
+            "versionId": "10000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+            "expectedDecisionRevision": 1
+          },
+          "target": {
+            "baseVersionId": "30000000-0000-4000-8000-000000000002",
+            "baseRevision": 2,
+            "beforeContentHash": "f8ae12a5a3e2cdef198200bff63172a6be1484f62bfe9da75ff23bf54817d75a"
+          },
+          "beforeDesign": {
+            "classification": "proposed",
+            "geography": "",
+            "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+            "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+            "period": "过去 30 天",
+            "pilotNotes": "",
+            "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+            "questions": [
+              {
+                "analysis": "routing",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": "使用过"
+                  },
+                  {
+                    "code": "0",
+                    "label": "未使用过"
+                  }
+                ],
+                "condition": null,
+                "construct": "",
+                "decisionUse": "只向使用过服务的同学询问体验。",
+                "id": "demo-screen",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "screening",
+                "required": false,
+                "researchQuestion": "",
+                "reverse": false,
+                "source": "",
+                "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+                "type": "single",
+                "variable": "USED"
+              },
+              {
+                "analysis": "description",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "流程清晰度",
+                "decisionUse": "识别流程说明的改进需求。",
+                "id": "demo-experience",
+                "max": 5,
+                "maxLabel": "非常清楚",
+                "min": 1,
+                "minLabel": "完全不清楚",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "服务流程的清晰程度如何？",
+                "reverse": false,
+                "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+                "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+                "type": "likert",
+                "variable": "CLARITY"
+              },
+              {
+                "analysis": "coding",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "",
+                "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+                "id": "demo-open",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "哪些环节存在具体阻碍？",
+                "reverse": false,
+                "source": "",
+                "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+                "type": "text",
+                "variable": "SUGGESTION"
+              }
+            ],
+            "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+            "schema": "questionnaire-design/v1",
+            "title": "校园服务体验 · 教学问卷草稿"
+          },
+          "afterContentHash": "f2ae8c0954e5b493cf0ecd44fa8edc5496ac0a7c2719c580f2482a0772efbc67",
+          "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+          "mappings": [
+            {
+              "questionId": "demo-experience",
+              "researchQuestionIds": [
+                "rq-clarity"
+              ],
+              "constructIds": [
+                "c-clarity"
+              ]
+            }
+          ],
+          "selectedChangeIds": [
+            "brief:geography",
+            "question:demo-experience:researchQuestion",
+            "question:demo-experience:construct"
+          ]
+        }
+      }
+    },
+    {
+      "id": "unicode-and-binary64-manual-draft",
+      "source": {
+        "brief": {
+          "title": "武汉社区服务研究 🧭",
+          "decisionOwner": "拟联系的服务负责人",
+          "decision": "比较说明展示方式，决定优先试点哪种方案",
+          "population": "拟调查成年使用者",
+          "geography": "湖北省 · 武汉市",
+          "inclusion": "近期使用者",
+          "exclusion": "未成年人",
+          "evidencePlan": "拟开展访谈与观察，尚未执行",
+          "questions": [
+            {
+              "id": "rq-clarity",
+              "text": "说明清晰程度与办理困难如何关联？"
+            },
+            {
+              "id": "rq-access",
+              "text": "不同渠道使用者的办理经历有什么差异？"
+            }
+          ],
+          "constructs": [
+            {
+              "id": "c-clarity",
+              "name": "说明清晰度",
+              "questionIds": [
+                "rq-clarity"
+              ]
+            }
+          ],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [
+            "先核对渠道与许可"
+          ],
+          "sources": [
+            {
+              "id": "source-reference",
+              "title": "教学用来源定位",
+              "url": "https://example.org/reference",
+              "locator": "合成合同样例，无实地证据",
+              "coverage": "reference",
+              "publishedAt": "",
+              "retrievedAt": ""
+            }
+          ]
+        },
+        "version": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "revision": 1,
+          "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "createdAt": "2026-10-15T08:00:00Z",
+          "createdBy": "20000000-0000-4000-8000-000000000001"
+        },
+        "dirty": false,
+        "decisionRevision": 1
+      },
+      "target": {
+        "design": {
+          "schema": "questionnaire-design/v1",
+          "classification": "proposed",
+          "title": "校园服务体验 · 教学问卷草稿",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "geography": "",
+          "period": "过去 30 天",
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "pilotNotes": "",
+          "questions": [
+            {
+              "id": "demo-screen",
+              "variable": "USED",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "number",
+              "required": false,
+              "purpose": "screening",
+              "researchQuestion": "",
+              "construct": "",
+              "analysis": "routing",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "source": "",
+              "choices": [],
+              "min": 0,
+              "max": 1e-7,
+              "minLabel": "",
+              "maxLabel": "",
+              "reverse": false,
+              "condition": null
+            },
+            {
+              "id": "demo-experience",
+              "variable": "CLARITY",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "required": false,
+              "purpose": "research",
+              "researchQuestion": "服务流程的清晰程度如何？",
+              "construct": "流程清晰度",
+              "analysis": "description",
+              "decisionUse": "识别流程说明的改进需求。",
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "完全不清楚",
+              "maxLabel": "非常清楚",
+              "reverse": false,
+              "condition": null
+            },
+            {
+              "id": "demo-open",
+              "variable": "SUGGESTION",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "required": false,
+              "purpose": "research",
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "construct": "",
+              "analysis": "coding",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "source": "",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "min": 1,
+              "max": 5,
+              "minLabel": "",
+              "maxLabel": "",
+              "reverse": false,
+              "condition": {
+                "questionId": "demo-screen",
+                "codes": [
+                  "1"
+                ]
+              }
+            }
+          ]
+        },
+        "pending": false,
+        "versionId": "30000000-0000-4000-8000-000000000002",
+        "revision": 2
+      },
+      "mappings": [],
+      "selectedChangeIds": [
+        "brief:title",
+        "brief:objective"
+      ],
+      "beforeBinding": null,
+      "expected": {
+        "proposalId": "2a967da4a5bc92cf62e4a8b9441ab2bdcbb6d2cc6a33df123824172cd4ff26d2",
+        "after": {
+          "classification": "proposed",
+          "geography": "",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "objective": "决策主体：拟联系的服务负责人\n决策问题：比较说明展示方式，决定优先试点哪种方案",
+          "period": "过去 30 天",
+          "pilotNotes": "",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "questions": [
+            {
+              "analysis": "routing",
+              "choices": [],
+              "condition": null,
+              "construct": "",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "id": "demo-screen",
+              "max": 1e-7,
+              "maxLabel": "",
+              "min": 0,
+              "minLabel": "",
+              "purpose": "screening",
+              "required": false,
+              "researchQuestion": "",
+              "reverse": false,
+              "source": "",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "number",
+              "variable": "USED"
+            },
+            {
+              "analysis": "description",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": null,
+              "construct": "流程清晰度",
+              "decisionUse": "识别流程说明的改进需求。",
+              "id": "demo-experience",
+              "max": 5,
+              "maxLabel": "非常清楚",
+              "min": 1,
+              "minLabel": "完全不清楚",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "服务流程的清晰程度如何？",
+              "reverse": false,
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "variable": "CLARITY"
+            },
+            {
+              "analysis": "coding",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "id": "demo-open",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "reverse": false,
+              "source": "",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "variable": "SUGGESTION"
+            }
+          ],
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "schema": "questionnaire-design/v1",
+          "title": "武汉社区服务研究 🧭"
+        },
+        "binding": {
+          "schema": "topic-questionnaire-binding/v1",
+          "classification": "proposed",
+          "sources": [
+            {
+              "version": {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "revision": 1,
+                "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "createdAt": "2026-10-15T08:00:00Z",
+                "createdBy": "20000000-0000-4000-8000-000000000001"
+              },
+              "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "brief": {
+                "title": "武汉社区服务研究 🧭",
+                "decisionOwner": "拟联系的服务负责人",
+                "decision": "比较说明展示方式，决定优先试点哪种方案",
+                "population": "拟调查成年使用者",
+                "geography": "湖北省 · 武汉市",
+                "inclusion": "近期使用者",
+                "exclusion": "未成年人",
+                "evidencePlan": "拟开展访谈与观察，尚未执行",
+                "questions": [
+                  {
+                    "id": "rq-clarity",
+                    "text": "说明清晰程度与办理困难如何关联？"
+                  },
+                  {
+                    "id": "rq-access",
+                    "text": "不同渠道使用者的办理经历有什么差异？"
+                  }
+                ],
+                "constructs": [
+                  {
+                    "id": "c-clarity",
+                    "name": "说明清晰度",
+                    "questionIds": [
+                      "rq-clarity"
+                    ]
+                  }
+                ],
+                "differentiators": [],
+                "unknowns": [],
+                "firstWeekPlan": [
+                  "先核对渠道与许可"
+                ],
+                "sources": [
+                  {
+                    "id": "source-reference",
+                    "title": "教学用来源定位",
+                    "url": "https://example.org/reference",
+                    "locator": "合成合同样例，无实地证据",
+                    "coverage": "reference",
+                    "publishedAt": "",
+                    "retrievedAt": ""
+                  }
+                ]
+              }
+            }
+          ],
+          "applications": [
+            {
+              "proposalId": "2a967da4a5bc92cf62e4a8b9441ab2bdcbb6d2cc6a33df123824172cd4ff26d2",
+              "sourceVersionId": "10000000-0000-4000-8000-000000000001",
+              "sourceContentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourceBriefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "before": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "2f93020ba4d2d126b3aecc3e437678054a3528713608c04aef34e187013d9823"
+              },
+              "after": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "17062de89f356a9f77441f50f7594909ac7d211ee57d56efb78c7d404f403c9a"
+              },
+              "changes": [
+                {
+                  "id": "brief:title",
+                  "kind": "brief",
+                  "field": "title",
+                  "questionId": null,
+                  "researchQuestionIds": [],
+                  "constructIds": []
+                },
+                {
+                  "id": "brief:objective",
+                  "kind": "brief",
+                  "field": "objective",
+                  "questionId": null,
+                  "researchQuestionIds": [],
+                  "constructIds": []
+                }
+              ]
+            }
+          ]
+        },
+        "bindingHash": "beb4734f095bb971d7d4622711dad710619eaac935de9e9e72f98a33df1d5177",
+        "mutation": {
+          "kind": "apply",
+          "hashContract": "evix-topic-transfer-json/1",
+          "expectedBindingHash": null,
+          "source": {
+            "versionId": "10000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+            "expectedDecisionRevision": 1
+          },
+          "target": {
+            "baseVersionId": "30000000-0000-4000-8000-000000000002",
+            "baseRevision": 2,
+            "beforeContentHash": "2f93020ba4d2d126b3aecc3e437678054a3528713608c04aef34e187013d9823"
+          },
+          "beforeDesign": {
+            "classification": "proposed",
+            "geography": "",
+            "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+            "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+            "period": "过去 30 天",
+            "pilotNotes": "",
+            "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+            "questions": [
+              {
+                "analysis": "routing",
+                "choices": [],
+                "condition": null,
+                "construct": "",
+                "decisionUse": "只向使用过服务的同学询问体验。",
+                "id": "demo-screen",
+                "max": 1e-7,
+                "maxLabel": "",
+                "min": 0,
+                "minLabel": "",
+                "purpose": "screening",
+                "required": false,
+                "researchQuestion": "",
+                "reverse": false,
+                "source": "",
+                "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+                "type": "number",
+                "variable": "USED"
+              },
+              {
+                "analysis": "description",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": null,
+                "construct": "流程清晰度",
+                "decisionUse": "识别流程说明的改进需求。",
+                "id": "demo-experience",
+                "max": 5,
+                "maxLabel": "非常清楚",
+                "min": 1,
+                "minLabel": "完全不清楚",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "服务流程的清晰程度如何？",
+                "reverse": false,
+                "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+                "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+                "type": "likert",
+                "variable": "CLARITY"
+              },
+              {
+                "analysis": "coding",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "",
+                "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+                "id": "demo-open",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "哪些环节存在具体阻碍？",
+                "reverse": false,
+                "source": "",
+                "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+                "type": "text",
+                "variable": "SUGGESTION"
+              }
+            ],
+            "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+            "schema": "questionnaire-design/v1",
+            "title": "校园服务体验 · 教学问卷草稿"
+          },
+          "afterContentHash": "17062de89f356a9f77441f50f7594909ac7d211ee57d56efb78c7d404f403c9a",
+          "proposalId": "2a967da4a5bc92cf62e4a8b9441ab2bdcbb6d2cc6a33df123824172cd4ff26d2",
+          "mappings": [],
+          "selectedChangeIds": [
+            "brief:title",
+            "brief:objective"
+          ]
+        }
+      }
+    },
+    {
+      "id": "append-second-source-preserving-first",
+      "source": {
+        "brief": {
+          "title": "武汉社区服务研究 🧭",
+          "decisionOwner": "拟联系的服务负责人",
+          "decision": "比较说明展示方式，决定优先试点哪种方案",
+          "population": "拟调查成年使用者",
+          "geography": "湖北省 · 武汉市",
+          "inclusion": "近期使用者",
+          "exclusion": "未成年人",
+          "evidencePlan": "拟开展访谈与观察，尚未执行",
+          "questions": [
+            {
+              "id": "rq-clarity",
+              "text": "说明清晰程度与办理困难如何关联？ 拟复核。"
+            },
+            {
+              "id": "rq-access",
+              "text": "不同渠道使用者的办理经历有什么差异？"
+            }
+          ],
+          "constructs": [
+            {
+              "id": "c-clarity",
+              "name": "说明清晰度",
+              "questionIds": [
+                "rq-clarity"
+              ]
+            }
+          ],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [
+            "先核对渠道与许可"
+          ],
+          "sources": [
+            {
+              "id": "source-reference",
+              "title": "教学用来源定位",
+              "url": "https://example.org/reference",
+              "locator": "合成合同样例，无实地证据",
+              "coverage": "reference",
+              "publishedAt": "",
+              "retrievedAt": ""
+            }
+          ]
+        },
+        "version": {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "revision": 2,
+          "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "createdAt": "2026-10-15T08:00:00Z",
+          "createdBy": "20000000-0000-4000-8000-000000000001"
+        },
+        "dirty": false,
+        "decisionRevision": 3
+      },
+      "target": {
+        "design": {
+          "classification": "proposed",
+          "geography": "湖北省 · 武汉市",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "period": "过去 30 天",
+          "pilotNotes": "",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "questions": [
+            {
+              "analysis": "routing",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": "使用过"
+                },
+                {
+                  "code": "0",
+                  "label": "未使用过"
+                }
+              ],
+              "condition": null,
+              "construct": "",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "id": "demo-screen",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "screening",
+              "required": false,
+              "researchQuestion": "",
+              "reverse": false,
+              "source": "",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "single",
+              "variable": "USED"
+            },
+            {
+              "analysis": "description",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "说明清晰度",
+              "decisionUse": "识别流程说明的改进需求。",
+              "id": "demo-experience",
+              "max": 5,
+              "maxLabel": "非常清楚",
+              "min": 1,
+              "minLabel": "完全不清楚",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "说明清晰程度与办理困难如何关联？",
+              "reverse": false,
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "variable": "CLARITY"
+            },
+            {
+              "analysis": "coding",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "id": "demo-open",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "reverse": false,
+              "source": "",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "variable": "SUGGESTION"
+            }
+          ],
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "schema": "questionnaire-design/v1",
+          "title": "校园服务体验 · 教学问卷草稿"
+        },
+        "pending": false,
+        "versionId": "30000000-0000-4000-8000-000000000002",
+        "revision": 2
+      },
+      "mappings": [
+        {
+          "questionId": "demo-experience",
+          "researchQuestionIds": [
+            "rq-clarity"
+          ],
+          "constructIds": [
+            "c-clarity"
+          ]
+        }
+      ],
+      "selectedChangeIds": [
+        "question:demo-experience:researchQuestion"
+      ],
+      "beforeBinding": {
+        "schema": "topic-questionnaire-binding/v1",
+        "classification": "proposed",
+        "sources": [
+          {
+            "version": {
+              "id": "10000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "createdAt": "2026-10-15T08:00:00Z",
+              "createdBy": "20000000-0000-4000-8000-000000000001"
+            },
+            "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+            "brief": {
+              "title": "武汉社区服务研究 🧭",
+              "decisionOwner": "拟联系的服务负责人",
+              "decision": "比较说明展示方式，决定优先试点哪种方案",
+              "population": "拟调查成年使用者",
+              "geography": "湖北省 · 武汉市",
+              "inclusion": "近期使用者",
+              "exclusion": "未成年人",
+              "evidencePlan": "拟开展访谈与观察，尚未执行",
+              "questions": [
+                {
+                  "id": "rq-clarity",
+                  "text": "说明清晰程度与办理困难如何关联？"
+                },
+                {
+                  "id": "rq-access",
+                  "text": "不同渠道使用者的办理经历有什么差异？"
+                }
+              ],
+              "constructs": [
+                {
+                  "id": "c-clarity",
+                  "name": "说明清晰度",
+                  "questionIds": [
+                    "rq-clarity"
+                  ]
+                }
+              ],
+              "differentiators": [],
+              "unknowns": [],
+              "firstWeekPlan": [
+                "先核对渠道与许可"
+              ],
+              "sources": [
+                {
+                  "id": "source-reference",
+                  "title": "教学用来源定位",
+                  "url": "https://example.org/reference",
+                  "locator": "合成合同样例，无实地证据",
+                  "coverage": "reference",
+                  "publishedAt": "",
+                  "retrievedAt": ""
+                }
+              ]
+            }
+          }
+        ],
+        "applications": [
+          {
+            "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+            "sourceVersionId": "10000000-0000-4000-8000-000000000001",
+            "sourceContentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "sourceBriefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+            "before": {
+              "baseVersionId": "30000000-0000-4000-8000-000000000002",
+              "baseRevision": 2,
+              "contentHash": "f8ae12a5a3e2cdef198200bff63172a6be1484f62bfe9da75ff23bf54817d75a"
+            },
+            "after": {
+              "baseVersionId": "30000000-0000-4000-8000-000000000002",
+              "baseRevision": 2,
+              "contentHash": "f2ae8c0954e5b493cf0ecd44fa8edc5496ac0a7c2719c580f2482a0772efbc67"
+            },
+            "changes": [
+              {
+                "id": "brief:geography",
+                "kind": "brief",
+                "field": "geography",
+                "questionId": null,
+                "researchQuestionIds": [],
+                "constructIds": []
+              },
+              {
+                "id": "question:demo-experience:researchQuestion",
+                "kind": "question",
+                "field": "researchQuestion",
+                "questionId": "demo-experience",
+                "researchQuestionIds": [
+                  "rq-clarity"
+                ],
+                "constructIds": []
+              },
+              {
+                "id": "question:demo-experience:construct",
+                "kind": "question",
+                "field": "construct",
+                "questionId": "demo-experience",
+                "researchQuestionIds": [
+                  "rq-clarity"
+                ],
+                "constructIds": [
+                  "c-clarity"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "proposalId": "11beae18fff63869f37d3dd15a9aa806a5728872aa39fc31ebbb15ef232dcf90",
+        "after": {
+          "classification": "proposed",
+          "geography": "湖北省 · 武汉市",
+          "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+          "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+          "period": "过去 30 天",
+          "pilotNotes": "",
+          "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+          "questions": [
+            {
+              "analysis": "routing",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": "使用过"
+                },
+                {
+                  "code": "0",
+                  "label": "未使用过"
+                }
+              ],
+              "condition": null,
+              "construct": "",
+              "decisionUse": "只向使用过服务的同学询问体验。",
+              "id": "demo-screen",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "screening",
+              "required": false,
+              "researchQuestion": "",
+              "reverse": false,
+              "source": "",
+              "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+              "type": "single",
+              "variable": "USED"
+            },
+            {
+              "analysis": "description",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "说明清晰度",
+              "decisionUse": "识别流程说明的改进需求。",
+              "id": "demo-experience",
+              "max": 5,
+              "maxLabel": "非常清楚",
+              "min": 1,
+              "minLabel": "完全不清楚",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "说明清晰程度与办理困难如何关联？ 拟复核。",
+              "reverse": false,
+              "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+              "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+              "type": "likert",
+              "variable": "CLARITY"
+            },
+            {
+              "analysis": "coding",
+              "choices": [
+                {
+                  "code": "1",
+                  "label": ""
+                },
+                {
+                  "code": "2",
+                  "label": ""
+                }
+              ],
+              "condition": {
+                "codes": [
+                  "1"
+                ],
+                "questionId": "demo-screen"
+              },
+              "construct": "",
+              "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+              "id": "demo-open",
+              "max": 5,
+              "maxLabel": "",
+              "min": 1,
+              "minLabel": "",
+              "purpose": "research",
+              "required": false,
+              "researchQuestion": "哪些环节存在具体阻碍？",
+              "reverse": false,
+              "source": "",
+              "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+              "type": "text",
+              "variable": "SUGGESTION"
+            }
+          ],
+          "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+          "schema": "questionnaire-design/v1",
+          "title": "校园服务体验 · 教学问卷草稿"
+        },
+        "binding": {
+          "schema": "topic-questionnaire-binding/v1",
+          "classification": "proposed",
+          "sources": [
+            {
+              "version": {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "revision": 1,
+                "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "createdAt": "2026-10-15T08:00:00Z",
+                "createdBy": "20000000-0000-4000-8000-000000000001"
+              },
+              "briefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "brief": {
+                "title": "武汉社区服务研究 🧭",
+                "decisionOwner": "拟联系的服务负责人",
+                "decision": "比较说明展示方式，决定优先试点哪种方案",
+                "population": "拟调查成年使用者",
+                "geography": "湖北省 · 武汉市",
+                "inclusion": "近期使用者",
+                "exclusion": "未成年人",
+                "evidencePlan": "拟开展访谈与观察，尚未执行",
+                "questions": [
+                  {
+                    "id": "rq-clarity",
+                    "text": "说明清晰程度与办理困难如何关联？"
+                  },
+                  {
+                    "id": "rq-access",
+                    "text": "不同渠道使用者的办理经历有什么差异？"
+                  }
+                ],
+                "constructs": [
+                  {
+                    "id": "c-clarity",
+                    "name": "说明清晰度",
+                    "questionIds": [
+                      "rq-clarity"
+                    ]
+                  }
+                ],
+                "differentiators": [],
+                "unknowns": [],
+                "firstWeekPlan": [
+                  "先核对渠道与许可"
+                ],
+                "sources": [
+                  {
+                    "id": "source-reference",
+                    "title": "教学用来源定位",
+                    "url": "https://example.org/reference",
+                    "locator": "合成合同样例，无实地证据",
+                    "coverage": "reference",
+                    "publishedAt": "",
+                    "retrievedAt": ""
+                  }
+                ]
+              }
+            },
+            {
+              "version": {
+                "id": "10000000-0000-4000-8000-000000000002",
+                "revision": 2,
+                "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "createdAt": "2026-10-15T08:00:00Z",
+                "createdBy": "20000000-0000-4000-8000-000000000001"
+              },
+              "briefHash": "595e21c201cc6551b620f56a2743e055da2ae832b1800496e4afc3e8f48b67ce",
+              "brief": {
+                "title": "武汉社区服务研究 🧭",
+                "decisionOwner": "拟联系的服务负责人",
+                "decision": "比较说明展示方式，决定优先试点哪种方案",
+                "population": "拟调查成年使用者",
+                "geography": "湖北省 · 武汉市",
+                "inclusion": "近期使用者",
+                "exclusion": "未成年人",
+                "evidencePlan": "拟开展访谈与观察，尚未执行",
+                "questions": [
+                  {
+                    "id": "rq-clarity",
+                    "text": "说明清晰程度与办理困难如何关联？ 拟复核。"
+                  },
+                  {
+                    "id": "rq-access",
+                    "text": "不同渠道使用者的办理经历有什么差异？"
+                  }
+                ],
+                "constructs": [
+                  {
+                    "id": "c-clarity",
+                    "name": "说明清晰度",
+                    "questionIds": [
+                      "rq-clarity"
+                    ]
+                  }
+                ],
+                "differentiators": [],
+                "unknowns": [],
+                "firstWeekPlan": [
+                  "先核对渠道与许可"
+                ],
+                "sources": [
+                  {
+                    "id": "source-reference",
+                    "title": "教学用来源定位",
+                    "url": "https://example.org/reference",
+                    "locator": "合成合同样例，无实地证据",
+                    "coverage": "reference",
+                    "publishedAt": "",
+                    "retrievedAt": ""
+                  }
+                ]
+              }
+            }
+          ],
+          "applications": [
+            {
+              "proposalId": "35f6929a3b22be06bf02513e8a0ec2d5e511786f962dee4e38402735730fc6c8",
+              "sourceVersionId": "10000000-0000-4000-8000-000000000001",
+              "sourceContentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "sourceBriefHash": "12e75f2d7e21021aed8f74df3ce6246f1ec39e856ebaed76cc9f578ceb91b194",
+              "before": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "f8ae12a5a3e2cdef198200bff63172a6be1484f62bfe9da75ff23bf54817d75a"
+              },
+              "after": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "f2ae8c0954e5b493cf0ecd44fa8edc5496ac0a7c2719c580f2482a0772efbc67"
+              },
+              "changes": [
+                {
+                  "id": "brief:geography",
+                  "kind": "brief",
+                  "field": "geography",
+                  "questionId": null,
+                  "researchQuestionIds": [],
+                  "constructIds": []
+                },
+                {
+                  "id": "question:demo-experience:researchQuestion",
+                  "kind": "question",
+                  "field": "researchQuestion",
+                  "questionId": "demo-experience",
+                  "researchQuestionIds": [
+                    "rq-clarity"
+                  ],
+                  "constructIds": []
+                },
+                {
+                  "id": "question:demo-experience:construct",
+                  "kind": "question",
+                  "field": "construct",
+                  "questionId": "demo-experience",
+                  "researchQuestionIds": [
+                    "rq-clarity"
+                  ],
+                  "constructIds": [
+                    "c-clarity"
+                  ]
+                }
+              ]
+            },
+            {
+              "proposalId": "11beae18fff63869f37d3dd15a9aa806a5728872aa39fc31ebbb15ef232dcf90",
+              "sourceVersionId": "10000000-0000-4000-8000-000000000002",
+              "sourceContentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "sourceBriefHash": "595e21c201cc6551b620f56a2743e055da2ae832b1800496e4afc3e8f48b67ce",
+              "before": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "f2ae8c0954e5b493cf0ecd44fa8edc5496ac0a7c2719c580f2482a0772efbc67"
+              },
+              "after": {
+                "baseVersionId": "30000000-0000-4000-8000-000000000002",
+                "baseRevision": 2,
+                "contentHash": "93ace8e8cd288f979c33a1a6eba2b26da8d1788b58f26648f1ace7ce09cfc580"
+              },
+              "changes": [
+                {
+                  "id": "question:demo-experience:researchQuestion",
+                  "kind": "question",
+                  "field": "researchQuestion",
+                  "questionId": "demo-experience",
+                  "researchQuestionIds": [
+                    "rq-clarity"
+                  ],
+                  "constructIds": []
+                }
+              ]
+            }
+          ]
+        },
+        "bindingHash": "ef02aad420c8836b61144b1dda6725ea55802fe52b0573ddd594809c5f82b384",
+        "mutation": {
+          "kind": "apply",
+          "hashContract": "evix-topic-transfer-json/1",
+          "expectedBindingHash": "8e7474b1c4b6588cbb7ec6904cd172a52713d3f363ebacea5dab0d4dd9097e16",
+          "source": {
+            "versionId": "10000000-0000-4000-8000-000000000002",
+            "revision": 2,
+            "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "briefHash": "595e21c201cc6551b620f56a2743e055da2ae832b1800496e4afc3e8f48b67ce",
+            "expectedDecisionRevision": 3
+          },
+          "target": {
+            "baseVersionId": "30000000-0000-4000-8000-000000000002",
+            "baseRevision": 2,
+            "beforeContentHash": "f2ae8c0954e5b493cf0ecd44fa8edc5496ac0a7c2719c580f2482a0772efbc67"
+          },
+          "beforeDesign": {
+            "classification": "proposed",
+            "geography": "湖北省 · 武汉市",
+            "introduction": "【教学示例，发放前请改写】本调查拟了解校园服务使用体验。参与自愿，可跳过不愿回答的问题或随时退出。预计时长、数据用途、保存期限及咨询渠道待研究团队补充。请勿填写姓名、学号和联系方式。",
+            "objective": "了解使用环节的困难，为服务改进选择优先事项。",
+            "period": "过去 30 天",
+            "pilotNotes": "",
+            "population": "拟调查本校在校学生；具体校区与纳入条件待补充。",
+            "questions": [
+              {
+                "analysis": "routing",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": "使用过"
+                  },
+                  {
+                    "code": "0",
+                    "label": "未使用过"
+                  }
+                ],
+                "condition": null,
+                "construct": "",
+                "decisionUse": "只向使用过服务的同学询问体验。",
+                "id": "demo-screen",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "screening",
+                "required": false,
+                "researchQuestion": "",
+                "reverse": false,
+                "source": "",
+                "text": "过去 30 天，您是否使用过本项目所研究的校园服务？",
+                "type": "single",
+                "variable": "USED"
+              },
+              {
+                "analysis": "description",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "说明清晰度",
+                "decisionUse": "识别流程说明的改进需求。",
+                "id": "demo-experience",
+                "max": 5,
+                "maxLabel": "非常清楚",
+                "min": 1,
+                "minLabel": "完全不清楚",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "说明清晰程度与办理困难如何关联？",
+                "reverse": false,
+                "source": "自编教学题，尚未经认知访谈、预试或效度验证。",
+                "text": "回想过去 30 天最近一次使用，办理步骤对您来说有多清楚？",
+                "type": "likert",
+                "variable": "CLARITY"
+              },
+              {
+                "analysis": "coding",
+                "choices": [
+                  {
+                    "code": "1",
+                    "label": ""
+                  },
+                  {
+                    "code": "2",
+                    "label": ""
+                  }
+                ],
+                "condition": {
+                  "codes": [
+                    "1"
+                  ],
+                  "questionId": "demo-screen"
+                },
+                "construct": "",
+                "decisionUse": "形成待核实的改进线索，不把单条意见当作总体结论。",
+                "id": "demo-open",
+                "max": 5,
+                "maxLabel": "",
+                "min": 1,
+                "minLabel": "",
+                "purpose": "research",
+                "required": false,
+                "researchQuestion": "哪些环节存在具体阻碍？",
+                "reverse": false,
+                "source": "",
+                "text": "若愿意，请描述您最近一次办理时遇到的一个具体困难。",
+                "type": "text",
+                "variable": "SUGGESTION"
+              }
+            ],
+            "recruitment": "尚未确定招募渠道与抽样方案，不声称代表全体学生。",
+            "schema": "questionnaire-design/v1",
+            "title": "校园服务体验 · 教学问卷草稿"
+          },
+          "afterContentHash": "93ace8e8cd288f979c33a1a6eba2b26da8d1788b58f26648f1ace7ce09cfc580",
+          "proposalId": "11beae18fff63869f37d3dd15a9aa806a5728872aa39fc31ebbb15ef232dcf90",
+          "mappings": [
+            {
+              "questionId": "demo-experience",
+              "researchQuestionIds": [
+                "rq-clarity"
+              ],
+              "constructIds": [
+                "c-clarity"
+              ]
+            }
+          ],
+          "selectedChangeIds": [
+            "question:demo-experience:researchQuestion"
+          ]
+        }
+      }
+    }
+  ]
+}
