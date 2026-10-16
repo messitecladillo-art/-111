@@ -41,7 +41,7 @@ function lookupError(code: string | null) {
 }
 
 /** A closed panel performs no lookup. Every external query is edited and explicitly submitted. */
-export default function KnowledgeLookupPanel({ initialQuery = '' }: { initialQuery?: string }) {
+export default function KnowledgeLookupPanel({ initialQuery = '', purpose = 'knowledge', onLookupReady }: { initialQuery?: string; purpose?: 'knowledge'|'topics'; onLookupReady?: (receipt: KnowledgeLookupWire) => void }) {
   const auth = useHostedSession();
   const accountId = auth.session?.authenticated ? auth.session.user?.id ?? null : null;
   const identity = useRef(accountId);
@@ -92,7 +92,7 @@ export default function KnowledgeLookupPanel({ initialQuery = '' }: { initialQue
       if (token !== epoch.current || identity.current !== accountId) return;
       if (result.query !== operation.query || (operation.receiptId && result.id !== operation.receiptId)) throw Error('查证回执与本次检索不一致。');
       const saved: StoredKnowledgeLookup = { ...operation, receiptId: result.id, status: result.status === 'queued' ? 'running' : result.status };
-      request.current = saved; storeLookup(saved, accountId); setPending(saved); setReceipt(result); setNotice('');
+      request.current = saved; storeLookup(saved, accountId); setPending(saved); setReceipt(result); setNotice(''); if (result.status === 'ready') onLookupReady?.(result);
     } catch (error) {
       if (token !== epoch.current || identity.current !== accountId) return;
       const rejected = error instanceof HostedApiError && isKnownLookupRejection(error.status, error.code, Boolean(operation.receiptId));
@@ -132,8 +132,9 @@ export default function KnowledgeLookupPanel({ initialQuery = '' }: { initialQue
   const unresolved = owned && pending && !['ready', 'failed'].includes(pending.status ?? 'running');
   const shownReceipt = owned ? receipt : null;
   return <details className={styles.recognition}>
-    <summary>联网查证与补词</summary>
-    <p className={styles.caption}>内置知识没有覆盖时，查阅原始来源。</p>
+    <summary>{purpose === 'topics' ? '检索最新热点' : '联网查证与补词'}</summary>
+    <p className={styles.caption}>{purpose === 'topics' ? '编辑地区、领域与时间范围，查找新的公开线索。' : '内置知识没有覆盖时，查阅原始来源。'}</p>
+    {purpose==='topics'&&<button type="button" disabled={busy||Boolean(unresolved)} onClick={()=>setQuery(shortSeed(initialQuery))}>使用当前地区与方向</button>}
     <label className={styles.fileInput}>确认检索词<div className={styles.searchBox}><input aria-label="联网检索词" value={owned ? query : ''} maxLength={120} onChange={event => setQuery(event.target.value)} placeholder="输入简短的概念或问题" disabled={busy || Boolean(unresolved)}/></div></label>
     <div className={styles.entryActions}>
       <button type="button" disabled={busy || Boolean(unresolved)} onClick={() => void runLookup()}>{busy ? '提交中…' : '确认检索'}</button>
@@ -147,13 +148,13 @@ export default function KnowledgeLookupPanel({ initialQuery = '' }: { initialQue
       {shownReceipt.results.map((result, index) => <div className={styles.source} key={`${result.url}-${index}`}><a href={result.url} target="_blank" rel="noopener noreferrer">{result.title || new URL(result.url).hostname} ↗</a><p className={styles.sourceSnippet}>{result.snippet}</p>{result.snippet.length>180&&<details className={styles.sourceExcerpt}><summary>展开来源片段</summary><p>{result.snippet}</p></details>}<small>{new URL(result.url).hostname}</small></div>)}
       {shownReceipt.status === 'ready' && shownReceipt.results.length === 0 && <p className={styles.empty}>本次没有找到匹配来源，可调整检索词。</p>}
     </section>}
-    <details className={styles.recognition}>
+    {purpose === 'knowledge' && <details className={styles.recognition}>
       <summary>申请收录一个概念</summary>
       <label className={styles.fileInput}>概念名称<div className={styles.searchBox}><input aria-label="补词名称" value={owned ? term : ''} maxLength={120} onChange={event => setTerm(event.target.value)} disabled={termWorking || termUnknown} placeholder="中文、英文或常用缩写"/></div></label>
       <label className={styles.fileInput}>所属学科<select aria-label="补词学科" value={owned ? domain : ''} onChange={event => setDomain(event.target.value)} disabled={termWorking || termUnknown}><option value="">暂不确定</option>{Object.entries(KNOWLEDGE_DOMAINS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
       <label className={styles.fileInput}>使用场景（选填）<div className={styles.searchBox}><input aria-label="补词使用场景" value={owned ? note : ''} maxLength={500} onChange={event => setNote(event.target.value)} disabled={termWorking || termUnknown} placeholder="在哪个环节遇到这个概念"/></div></label>
       <div className={styles.entryActions}><button type="button" disabled={termWorking} onClick={() => void sendTerm(termUnknown)}>{termWorking ? '提交中…' : termUnknown ? '核对本次申请' : '提交补词申请'}</button></div>
       {owned && termStatus && <p role="status" className={styles.notice}>{termStatus}</p>}
-    </details>
+    </details>}
   </details>;
 }

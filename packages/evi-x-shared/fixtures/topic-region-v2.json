@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "dataClass": "authored_synthetic",
+  "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+  "notes": [
+    "These are authored scope regression vectors, not local field evidence or new event data.",
+    "Legacy means both profile extension fields are absent; schemaVersion:2 and null regionRef explicitly unset scope.",
+    "Constraints are nonblocking when scope is unknown; event inclusion requires affirmative known scope.",
+    "Current versioned references are authoritative over retained legacy display strings; old or unknown references are readable but not executable.",
+    "County names have no invented suffix-stripped aliases; city tags may match actual county nodes in the selected ancestry."
+  ],
+  "cases": [
+    {
+      "id": "legacy-exact-no-city-suffix-alias",
+      "profile": { "region": "湖北", "city": "武汉" },
+      "status": "legacy", "executable": true,
+      "patterns": [
+        { "regionTags": ["湖北"], "cityTags": ["武汉"], "fit": "exact", "constraint": true },
+        { "regionTags": ["湖北省"], "cityTags": ["武汉市"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "武汉", "matches": true }, { "text": "武汉市", "matches": false }],
+      "events": [
+        { "geography": { "level": "city", "region": "湖北", "city": "武汉" }, "included": true },
+        { "geography": { "level": "city", "region": "湖北", "city": "武汉市" }, "included": false }
+      ]
+    },
+    {
+      "id": "legacy-nfkc-and-outer-space-only",
+      "profile": { "region": "　湖北　", "city": "　Ｗｕｈａｎ　" },
+      "status": "legacy", "executable": true,
+      "patterns": [
+        { "regionTags": ["湖北"], "cityTags": ["Wuhan"], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["Wu han"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "Wuhan", "matches": true }], "events": []
+    },
+    {
+      "id": "legacy-empty-does-not-infer-school-location",
+      "profile": { "region": "", "city": "", "school": "武汉某校" },
+      "status": "legacy", "executable": true,
+      "patterns": [{ "regionTags": ["湖北"], "cityTags": ["武汉"], "fit": "unknown", "constraint": true }],
+      "places": [{ "text": "武汉", "matches": false }],
+      "events": [{ "geography": { "level": "city", "region": "湖北", "city": "武汉" }, "included": false }]
+    },
+    {
+      "id": "current-wuhan-child-uses-real-ancestors",
+      "profile": { "region": "山西", "city": "晋城", "schemaVersion": 2, "regionRef": { "code": "420106", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["湖北"], "cityTags": ["武汉"], "fit": "exact", "constraint": true },
+        { "regionTags": ["湖北省"], "cityTags": ["武昌区"], "fit": "exact", "constraint": true },
+        { "regionTags": ["湖北"], "cityTags": ["洪山区"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "武汉市", "matches": true }, { "text": "武昌区", "matches": true }, { "text": "武昌", "matches": false }, { "text": "晋城", "matches": false }],
+      "events": [
+        { "geography": { "level": "city", "region": "湖北", "city": "武汉" }, "included": true },
+        { "geography": { "level": "city", "region": "山西", "city": "武汉" }, "included": false }
+      ]
+    },
+    {
+      "id": "province-selection-has-no-city-scope",
+      "profile": { "region": "湖北", "city": "武汉", "schemaVersion": 2, "regionRef": { "code": "420000", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["湖北"], "cityTags": [], "fit": "exact", "constraint": true },
+        { "regionTags": ["湖北"], "cityTags": ["武汉"], "fit": "unknown", "constraint": true }
+      ],
+      "places": [{ "text": "湖北省", "matches": true }, { "text": "武汉", "matches": false }],
+      "events": [{ "geography": { "level": "city", "region": "湖北", "city": "武汉" }, "included": false }]
+    },
+    {
+      "id": "province-direct-county-no-virtual-prefecture",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "429004", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["湖北"], "cityTags": ["仙桃市"], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["仙桃"], "fit": "mismatch", "constraint": false },
+        { "regionTags": [], "cityTags": ["武汉"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "仙桃市", "matches": true }, { "text": "武汉", "matches": false }],
+      "events": [{ "geography": { "level": "city", "region": "湖北", "city": "仙桃市" }, "included": true }]
+    },
+    {
+      "id": "municipality-county-keeps-city-name",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "110101", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["北京"], "cityTags": ["北京市"], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["东城区"], "fit": "exact", "constraint": true }
+      ],
+      "places": [{ "text": "北京", "matches": true }],
+      "events": [{ "geography": { "level": "city", "region": "北京市", "city": "北京" }, "included": true }]
+    },
+    {
+      "id": "municipality-province-node-is-also-city-scope",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "500000", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [{ "regionTags": ["重庆市"], "cityTags": ["重庆"], "fit": "exact", "constraint": true }],
+      "places": [{ "text": "重庆", "matches": true }], "events": []
+    },
+    {
+      "id": "hong-kong-province-only-is-not-child-city",
+      "profile": { "region": "香港", "city": "香港", "schemaVersion": 2, "regionRef": { "code": "810000", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["香港"], "cityTags": [], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["香港"], "fit": "unknown", "constraint": true }
+      ],
+      "places": [{ "text": "香港", "matches": true }],
+      "events": [{ "geography": { "level": "city", "region": "香港", "city": "香港" }, "included": false }]
+    },
+    {
+      "id": "same-name-county-retains-parent-scope",
+      "profile": { "region": "北京", "city": "朝阳区", "schemaVersion": 2, "regionRef": { "code": "220104", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["吉林"], "cityTags": ["朝阳区"], "fit": "exact", "constraint": true },
+        { "regionTags": ["北京"], "cityTags": ["朝阳区"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "长春", "matches": true }, { "text": "北京", "matches": false }],
+      "events": [
+        { "geography": { "level": "city", "region": "北京", "city": "朝阳区" }, "included": false },
+        { "geography": { "level": "city", "region": "吉林", "city": "朝阳区" }, "included": true }
+      ]
+    },
+    {
+      "id": "legacy-city-tag-for-yangcheng-county-exact",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["山西"], "cityTags": ["阳城县"], "fit": "exact", "constraint": true },
+        { "regionTags": ["山西"], "cityTags": ["阳城"], "fit": "mismatch", "constraint": false },
+        { "regionTags": ["山西"], "cityTags": ["晋城市"], "fit": "exact", "constraint": true }
+      ],
+      "places": [{ "text": "阳城县", "matches": true }, { "text": "阳城", "matches": false }],
+      "events": [
+        { "geography": { "level": "city", "region": "山西", "city": "阳城县" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "山西省", "city": "阳城县" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2024-old" }, "region": "山西", "city": "阳城县" }, "included": false }
+      ]
+    },
+    {
+      "id": "prefecture-does-not-imply-selected-child-county",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "140500", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [{ "regionTags": ["山西"], "cityTags": ["阳城县"], "fit": "mismatch", "constraint": false }],
+      "places": [{ "text": "阳城县", "matches": false }],
+      "events": [{ "geography": { "level": "city", "region": "山西", "city": "阳城县" }, "included": false }]
+    },
+    {
+      "id": "reused-code-current-meaning-no-history-substitution",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "511402", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["四川"], "cityTags": ["东坡区"], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["枳城区"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "东坡区", "matches": true }, { "text": "枳城区", "matches": false }], "events": []
+    },
+    {
+      "id": "explicit-null-does-not-reuse-display-strings",
+      "profile": { "region": "湖北", "city": "武汉", "schemaVersion": 2, "regionRef": null },
+      "status": "unset", "executable": true,
+      "patterns": [
+        { "regionTags": ["湖北"], "cityTags": ["武汉"], "fit": "unknown", "constraint": true },
+        { "regionTags": ["山西"], "cityTags": ["晋城"], "fit": "unknown", "constraint": true },
+        { "regionTags": [], "cityTags": [], "fit": "transferable", "constraint": true }
+      ],
+      "places": [{ "text": "武汉", "matches": false }],
+      "events": [
+        { "geography": { "level": "national", "region": "", "city": "" }, "included": true },
+        { "geography": { "level": "city", "region": "湖北", "city": "武汉" }, "included": false }
+      ]
+    },
+    {
+      "id": "county-ref-municipality-labels-stay-with-the-exact-selected-county",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "110105", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["北京"], "cityTags": ["北京市"], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["朝阳区"], "fit": "mismatch", "constraint": false },
+        { "regionTags": ["北京市"], "cityTags": ["朝阳区"], "fit": "exact", "constraint": true }
+      ],
+      "places": [{ "text": "朝阳区", "matches": true }, { "text": "东城区", "matches": false }],
+      "events": [
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "110105", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "北京", "city": "朝阳区" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "110105", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "北京市", "city": "北京" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "110105", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "北京", "city": "北京市" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "110105", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "北京", "city": "东城区" }, "included": false },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "110105", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "吉林", "city": "北京" }, "included": false },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "220104", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "北京", "city": "朝阳区" }, "included": false },
+        { "geography": { "level": "city", "region": "", "city": "朝阳区" }, "included": false },
+        { "geography": { "level": "city", "region": "北京", "city": "朝阳区" }, "included": true }
+      ]
+    },
+    {
+      "id": "county-ref-prefecture-labels-do-not-authorize-sibling-counties",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [{ "regionTags": ["山西"], "cityTags": ["晋城"], "fit": "exact", "constraint": true }],
+      "places": [{ "text": "晋城市", "matches": true }, { "text": "陵川县", "matches": false }],
+      "events": [
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "山西", "city": "晋城市" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "山西省", "city": "晋城" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "山西", "city": "阳城县" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "山西", "city": "陵川县" }, "included": false },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140524", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "山西", "city": "晋城" }, "included": false },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "140522", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "湖北", "city": "晋城" }, "included": false }
+      ]
+    },
+    {
+      "id": "same-province-duplicate-county-does-not-rescue-a-different-city",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "320302", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["江苏"], "cityTags": ["鼓楼区"], "fit": "mismatch", "constraint": false },
+        { "regionTags": ["江苏"], "cityTags": ["南京", "鼓楼区"], "fit": "mismatch", "constraint": false },
+        { "regionTags": ["江苏"], "cityTags": ["徐州", "鼓楼区"], "fit": "exact", "constraint": true }
+      ],
+      "places": [{ "text": "徐州", "matches": true }],
+      "events": [
+        { "geography": { "level": "city", "region": "江苏", "city": "鼓楼区" }, "included": false },
+        { "geography": { "level": "city", "region": "江苏", "city": "南京" }, "included": false },
+        { "geography": { "level": "city", "region": "江苏", "city": "徐州" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "320302", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "江苏", "city": "鼓楼区" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "320106", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "江苏", "city": "徐州" }, "included": false }
+      ]
+    },
+    {
+      "id": "county-name-positive-requires-unique-source-province-or-global-scope",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "350102", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["福建"], "cityTags": ["鼓楼区"], "fit": "exact", "constraint": true },
+        { "regionTags": [], "cityTags": ["鼓楼区"], "fit": "mismatch", "constraint": false }
+      ],
+      "places": [{ "text": "福州", "matches": true }],
+      "events": [
+        { "geography": { "level": "city", "region": "福建", "city": "鼓楼区" }, "included": true },
+        { "geography": { "level": "city", "region": "", "city": "鼓楼区" }, "included": false },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "350102", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "", "city": "鼓楼区" }, "included": true }
+      ]
+    },
+    {
+      "id": "third-province-same-name-counties-are-not-a-jiangsu-special-case",
+      "profile": { "region": "", "city": "", "schemaVersion": 2, "regionRef": { "code": "130703", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "current", "executable": true,
+      "patterns": [
+        { "regionTags": ["河北"], "cityTags": ["桥西区"], "fit": "mismatch", "constraint": false },
+        { "regionTags": ["河北"], "cityTags": ["石家庄", "桥西区"], "fit": "mismatch", "constraint": false },
+        { "regionTags": ["河北"], "cityTags": ["张家口", "桥西区"], "fit": "exact", "constraint": true }
+      ],
+      "places": [{ "text": "张家口", "matches": true }],
+      "events": [
+        { "geography": { "level": "city", "region": "河北", "city": "桥西区" }, "included": false },
+        { "geography": { "level": "city", "region": "河北", "city": "张家口" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "130703", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "河北", "city": "桥西区" }, "included": true },
+        { "geography": { "level": "county", "schemaVersion": 2, "regionRef": { "code": "130104", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" }, "region": "河北", "city": "桥西区" }, "included": false }
+      ]
+    },
+    {
+      "id": "legacy-v1-exact-county-text-contract-remains-unchanged",
+      "profile": { "region": "江苏", "city": "鼓楼区" },
+      "status": "legacy", "executable": true,
+      "patterns": [{ "regionTags": ["江苏"], "cityTags": ["鼓楼区"], "fit": "exact", "constraint": true }],
+      "places": [{ "text": "鼓楼区", "matches": true }],
+      "events": [{ "geography": { "level": "city", "region": "江苏", "city": "鼓楼区" }, "included": true }]
+    },
+    {
+      "id": "old-catalog-is-readable-but-not-executable",
+      "profile": { "region": "四川", "city": "枳城区", "schemaVersion": 2, "regionRef": { "code": "511402", "catalogVersion": "cn-admin-1988-history" } },
+      "status": "migration_required", "executable": false, "patterns": [], "places": [], "events": []
+    },
+    {
+      "id": "unknown-current-code-is-not-a-current-place",
+      "profile": { "region": "湖北", "city": "武汉", "schemaVersion": 2, "regionRef": { "code": "999999", "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c" } },
+      "status": "migration_required", "executable": false, "patterns": [], "places": [], "events": []
+    }
+  ]
+}

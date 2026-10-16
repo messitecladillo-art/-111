@@ -1,0 +1,760 @@
+{
+  "schemaVersion": 2,
+  "classification": "synthetic_contract_reference",
+  "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+  "notes": [
+    "Authored shape/read and fresh-write parity examples; none represents fieldwork, verified local facts or real respondents.",
+    "readValid permits immutable old/unknown RegionRefs; writeValid requires a current code and catalog or explicit null.",
+    "Top-level version and profile version must agree; v1 reference fixtures remain unchanged."
+  ],
+  "cases": [
+    {
+      "id": "current-county-preserves-stable-research-ids",
+      "readValid": true,
+      "writeValid": true,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "  湖北  ",
+          "city": "武汉",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "420106",
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "  合成武汉研究 🧭  ",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [
+            {
+              "id": "rq-stable",
+              "text": "尚待调查的研究问题"
+            }
+          ],
+          "constructs": [
+            {
+              "id": "construct-stable",
+              "name": "拟议概念",
+              "questionIds": [
+                "rq-stable"
+              ]
+            }
+          ],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "explicit-unset-retains-display-text-without-local-scope",
+      "readValid": true,
+      "writeValid": true,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "湖北",
+          "city": "武汉",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "municipality-county-profile",
+      "readValid": true,
+      "writeValid": true,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "110101",
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "province-direct-county-profile",
+      "readValid": true,
+      "writeValid": true,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "429004",
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "old-version-reference-readable-not-fresh-write",
+      "readValid": true,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "四川",
+          "city": "枳城区",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "511402",
+            "catalogVersion": "cn-admin-1988-history"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "unknown-current-code-readable-not-fresh-write",
+      "readValid": true,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "999999",
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "retired-code-readable-no-silent-successor",
+      "readValid": true,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "长泰县",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "350625",
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "legacy-envelope-cannot-contain-profile-v2",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "v2-envelope-requires-profile-v2",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "v2-profile-cannot-omit-region-ref",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "v2-profile-cannot-omit-profile-version",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "regionRef": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "v2-reference-rejects-unknown-field",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": "420106",
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+            "county": "武昌区"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "v2-profile-rejects-unsupported-version",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 3,
+          "regionRef": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "v2-reference-code-must-be-ascii-string",
+      "readValid": false,
+      "writeValid": false,
+      "document": {
+        "schemaVersion": 2,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null,
+          "schemaVersion": 2,
+          "regionRef": {
+            "code": 420106,
+            "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+          }
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    }
+  ]
+}

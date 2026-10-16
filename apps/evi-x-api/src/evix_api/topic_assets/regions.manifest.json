@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+  "asOf": "2025-12-31",
+  "bytes": 1433772,
+  "sha256": {
+    "regions.catalog.json": "db55266d7e1ca53cc75c6f7b83bfad03a216b950a2700441611660bf7a942595"
+  }
+}

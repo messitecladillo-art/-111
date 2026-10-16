@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "yescallop-areacodes-2025",
+  "repository": "https://github.com/yescallop/areacodes",
+  "commit": "e2c2b2e1fb4ce1fb76e879aa0b80e229adaf950c",
+  "commitDate": "2026-02-01T17:03:25Z",
+  "dataAsOf": "2025-12-31",
+  "retrievedAt": "2026-10-15T09:00:07Z",
+  "license": "CC0-1.0",
+  "officialSource": "https://dmfw.mca.gov.cn/XzqhVersionPublish.html",
+  "verification": "community_compilation_official_full_recheck_pending",
+  "files": [
+    {
+      "upstreamPath": "codes.json",
+      "path": "areacodes-2025.raw.json",
+      "url": "https://raw.githubusercontent.com/yescallop/areacodes/e2c2b2e1fb4ce1fb76e879aa0b80e229adaf950c/codes.json",
+      "sha256": "8c4e8afc5dfc16b77d34cf39b2547d07ab6a46e46b414679d494e50353970edc",
+      "bytes": 2552540
+    },
+    {
+      "upstreamPath": "LICENSE",
+      "path": "areacodes.LICENSE",
+      "url": "https://raw.githubusercontent.com/yescallop/areacodes/e2c2b2e1fb4ce1fb76e879aa0b80e229adaf950c/LICENSE",
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+      "bytes": 7048
+    },
+    {
+      "upstreamPath": "README.md",
+      "path": "areacodes.README.md",
+      "url": "https://raw.githubusercontent.com/yescallop/areacodes/e2c2b2e1fb4ce1fb76e879aa0b80e229adaf950c/README.md",
+      "sha256": "d1cd78d7989dcdf718415f6654ee3eb5c75c48affb9b4cd071b9d7af90e26cbd",
+      "bytes": 2533
+    }
+  ],
+  "limitations": [
+    "2025年末历史目录，不代表2026年现势全量核验。",
+    "上游数据声明来源为国家地名信息库及民政部历史资料；本次官方入口不可达，未逐条复核。",
+    "年份为上游年度记录边界，不是精确生效日期。"
+  ]
+}

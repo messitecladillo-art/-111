@@ -70,6 +70,9 @@ def parse_proposal(raw):
 
 
 class LiveProvider:
+    async def topic(self, config, key, message, selected):
+        return await self.complete(config, key, message, 65536)
+
     async def __call__(self, config, key, brief):
         return await self.complete(config, key, prompt(brief), 32768)
 
@@ -135,6 +138,13 @@ class FixtureProvider:
         return json.dumps({"title": "合成测试问卷 · 待实施", "objective": "合成需求用于测试保存与版本链。", "population": "合成对象，不是实际受访者。",
                            "items": [{"text": f"合成测试题项 {n}：您如何评价拟议服务？", "type": "single", "choices": ["选项甲", "选项乙"],
                                       "researchQuestion": "拟议服务体验如何？", "decisionUse": "拟支持预测试规划。"} for n in range(1, 4)]}, ensure_ascii=False)
+
+    async def topic(self, config, key, message, selected):
+        self.calls += 1
+        return json.dumps({"items": [{"patternId": item["id"], "title": "合成测试提案 · " + item["title"][:130],
+            "researchQuestion": item["question"], "decisionOwner": item["decisionOwner"], "decision": item["decision"],
+            "whyHere": "合成模型验收。地区背景按来源核对，团队渠道需自行确认。", "firstWeekPlan": item["minimumEvidence"][:3],
+            "unknowns": ["尚未联系真实合作方"], "sourceIds": item["sourceIds"][:3]} for item in selected]}, ensure_ascii=False)
 
     async def answer(self, config, key, message, spec):
         self.calls += 1

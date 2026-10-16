@@ -1,0 +1,1000 @@
+{
+  "schemaVersion": 1,
+  "classification": "synthetic_contract_reference",
+  "cases": [
+    {
+      "id": "empty-draft",
+      "valid": true,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "unicode-and-whitespace",
+      "valid": true,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "  武汉研究 🧭 é  ",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [
+            {
+              "id": "rq-1",
+              "text": "  第一行\n第二行  "
+            }
+          ],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "zero-budget-and-days-preserved",
+      "valid": true,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": 0,
+          "budgetYuan": 0,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "project-candidate-full-limits",
+      "valid": true,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": {
+          "title": "题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题",
+          "decisionOwner": "主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主",
+          "decision": "决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决",
+          "population": "人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人",
+          "geography": "地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地",
+          "accessNeeds": [],
+          "resourceNeeds": [],
+          "evidencePlan": "证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证",
+          "differentiators": [
+            "差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差"
+          ],
+          "action": "行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行",
+          "sensitive": false
+        },
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "candidate-too-long",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": {
+          "title": "题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题题",
+          "decisionOwner": "主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主主",
+          "decision": "决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决决",
+          "population": "人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人人",
+          "geography": "地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地地",
+          "accessNeeds": [],
+          "resourceNeeds": [],
+          "evidencePlan": "证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证证",
+          "differentiators": [
+            "差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差"
+          ],
+          "action": "行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行行",
+          "sensitive": false
+        },
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "source-snapshot",
+      "valid": true,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": [
+            {
+              "id": "s1",
+              "title": "已登记公开资料",
+              "url": "https://example.org/source",
+              "locator": "第2段",
+              "coverage": "reference",
+              "publishedAt": "2026-10-01",
+              "retrievedAt": "2026-10-15"
+            }
+          ]
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "array-source-enum",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": [
+            {
+              "id": "s1",
+              "title": "已登记公开资料",
+              "url": "https://example.org/source",
+              "locator": "第2段",
+              "coverage": [
+                "reference"
+              ],
+              "publishedAt": "2026-10-01",
+              "retrievedAt": "2026-10-15"
+            }
+          ]
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "array-verification-enum",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [
+          {
+            "id": "verify-1",
+            "title": "核对渠道",
+            "status": [
+              "planned"
+            ],
+            "note": "",
+            "sourceRefs": [],
+            "recordedAt": null
+          }
+        ],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "unresolved-source-reference",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [
+          {
+            "id": "verify-1",
+            "title": "核对渠道",
+            "status": "planned",
+            "note": "",
+            "sourceRefs": [
+              "missing"
+            ],
+            "recordedAt": null
+          }
+        ],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "duplicate-question-id",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [
+            {
+              "id": "same",
+              "text": "一"
+            },
+            {
+              "id": "same",
+              "text": "二"
+            }
+          ],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "prototype-question-id",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [
+            {
+              "id": "constructor",
+              "text": "一"
+            }
+          ],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "non-string-question",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [
+            {
+              "id": "rq-1",
+              "text": [
+                "研究问题"
+              ]
+            }
+          ],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "array-decision-enum-not-applicable",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": {
+          "kind": [
+            "custom"
+          ],
+          "id": "custom-1",
+          "title": "研究题"
+        },
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "unknown-root-field",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        },
+        "approved": true
+      }
+    },
+    {
+      "id": "source-with-private-path",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": [
+            {
+              "id": "s1",
+              "title": "已登记公开资料",
+              "url": "https://example.org/source",
+              "locator": "第2段",
+              "coverage": "reference",
+              "publishedAt": "2026-10-01",
+              "retrievedAt": "2026-10-15",
+              "path": "private/material.pdf"
+            }
+          ]
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "invalid-calendar-date",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": [
+            {
+              "id": "s1",
+              "title": "已登记公开资料",
+              "url": "https://example.org/source",
+              "locator": "第2段",
+              "coverage": "reference",
+              "publishedAt": "2026-02-30",
+              "retrievedAt": "2026-10-15"
+            }
+          ]
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "unfinished-interest-rejects-save",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [
+            "兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴兴"
+          ],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    },
+    {
+      "id": "unfinished-difference-rejects-save",
+      "valid": false,
+      "document": {
+        "schemaVersion": 1,
+        "profile": {
+          "region": "",
+          "city": "",
+          "school": "",
+          "schoolContext": [],
+          "discipline": "",
+          "interests": [],
+          "domains": [],
+          "days": null,
+          "budgetYuan": null,
+          "access": {},
+          "resources": {},
+          "sensitiveData": "avoid",
+          "referenceDate": "2026-10-15",
+          "competitionWindow": null
+        },
+        "candidate": null,
+        "shortlistIds": [],
+        "selected": null,
+        "brief": {
+          "title": "",
+          "decisionOwner": "",
+          "decision": "",
+          "population": "",
+          "geography": "",
+          "inclusion": "",
+          "exclusion": "",
+          "evidencePlan": "",
+          "questions": [],
+          "constructs": [],
+          "differentiators": [
+            "差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差差"
+          ],
+          "unknowns": [],
+          "firstWeekPlan": [],
+          "sources": []
+        },
+        "verification": [],
+        "provenance": {
+          "catalogVersion": "",
+          "modelVersion": "",
+          "sourceIds": []
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 1,
+  "packSha256": "a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58",
+  "dataClass": "official_source_facts_and_authored_proposals",
+  "sources": [
+    {
+      "id": "miit-2025-clusters",
+      "rawSha256": "697e604f3e067882ed56bfba096324dc5334b95af3fdced017f4acfaad51c7c3",
+      "rawBytes": 196961,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "76b754233fb6e98d6c1c90fdf61cbd83a3dd5be5a941eda5a9ac33fb590ce7e4",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "mct-rural-2022",
+      "rawSha256": "7d1c3bedb3adf97c5ef7dadfa9670697a7ce3c29900b83b4025d446051aec889",
+      "rawBytes": 238155,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "0fbeede207a0dc86906d525de234cea4b981544dda60670813cc512cb0dfa410",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "tongcheng-gig-2024",
+      "rawSha256": "6971d313cdc7a690bebe59b78285a380cefd8d5a7cae66b911cadf893f34cefe",
+      "rawBytes": 62516,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "bde49d64fc2c52755af520b395635055c4037a6ee5a65aff27ac41366e13c4a5",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "wenxi-visit-2025",
+      "rawSha256": "8ed37942a6c956c6dfd0a0bcfc8822496a598456ce740ce41535366760d57b6e",
+      "rawBytes": 16573,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "102f6347378c6b9b89000fcc6896a29a4272f895a24caf38c1fa0293461a0017",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "anxi-report-2024",
+      "rawSha256": "7ce70799f13d01eb5401cea5f56daf095dc8502cb545543de6e283e3afc89e3c",
+      "rawBytes": 181027,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "ed51f06f7f73ee013c9f3a1f845403f6e12c4dc6cb84433efa9ab3020c6964df",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "yimen-pesticide-2024",
+      "rawSha256": "64c2e07326391855a797635493327e7b6652dfe1d55aba3783e9c1d8ed5bd1bd",
+      "rawBytes": 25989,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "2031f81a305080d08ee9cdcd33401655369b2533b87b37ced30b083b03c97d90",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "yiwu-jobs-2025",
+      "rawSha256": "c06213850c45138bf6e5d64dc6266ad782fb148c53be4308291648531b6615a2",
+      "rawBytes": 60327,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "eae473d3d0d85c11d1d94d6846f9ebdf4b93d8fac8d6d74eabaaf4cbda5f41c9",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "pingshan-tourism-2020",
+      "rawSha256": "3178996031cfc8a5299f6c4895f3a741805df812f6044854fa40ddadb1ee75e4",
+      "rawBytes": 22711,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "2209f2ac0d0902ddc8415243ab3a0bc88dcb801f63dfd4427bc5652afafcfe06",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "wushen-tourism",
+      "rawSha256": null,
+      "rawBytes": null,
+      "captureStatus": "failed",
+      "recoveredWithWebText": true,
+      "originalSummarySha256": "5d2b5bcf3ba1400a1c887beb46e60dac5bc35584f649d8e1301ea74084a6790a",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "xinbin-heritage-2025",
+      "rawSha256": "a47e79c66d9c555b4fc37eb24c02d07ea28b08ac042dac88e811fe52bc5169b1",
+      "rawBytes": 63372,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "0d09430820934004c21cb75c1552ebd55f0f79f0460cf88f3e306b2288ffdc99",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "qianguo-lake-2026",
+      "rawSha256": "983f52878316a1af1b236c477e62495a618cb922010c238a7fee1f6b1f9afc01",
+      "rawBytes": 37237,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "b25a5b5e05e480976c76f5d0b28597b3ce06741b2f88f14d790b3e2ca7194ecf",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "mohe-homestay-2023",
+      "rawSha256": "98c800453073d5ed93a67960809172ee4f77df81785c971800f26d843739cefb",
+      "rawBytes": 58117,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "001612b7299f08a406cad4f07280b1264370d7d60d95dd87de0d7cabf0cffdf7",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "longsheng-culture-2022",
+      "rawSha256": "b0e1c05e0a3a667797aefbad4a43fa1a862fb27ae4693c4acaecc3842199513c",
+      "rawBytes": 25466,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "4b32dcd6f8285d4a77857e89601c77386a25e377f6026f89a24c1cbfb5209fc9",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "taijiang-crafts",
+      "rawSha256": "04cea363ddcceeecb9c012ff594142358e43f723162665879b19dec71fceff92",
+      "rawBytes": 22681,
+      "captureStatus": "retrieved",
+      "recoveredWithWebText": false,
+      "originalSummarySha256": "5d4fcb02938fa16557beda595ccca73726c7766a93542ad341fa252db7e90927",
+      "fingerprintScope": "original_http_body_when_available_and_original_summary",
+      "reviewStatus": "pending"
+    }
+  ],
+  "profiles": [
+    {
+      "profileId": "county-421222",
+      "regionCode": "421222",
+      "countyName": "通城县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters",
+        "tongcheng-gig-2024"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-421222-fact-1",
+        "county-421222-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-361027",
+      "regionCode": "361027",
+      "countyName": "金溪县",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters"
+      ],
+      "unreadCandidateSourceId": "jinxi-chain-2025",
+      "factIds": [
+        "county-361027-fact-1"
+      ]
+    },
+    {
+      "profileId": "county-340882",
+      "regionCode": "340882",
+      "countyName": "潜山市",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters",
+        "mct-rural-2022"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-340882-fact-1",
+        "county-340882-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-140823",
+      "regionCode": "140823",
+      "countyName": "闻喜县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters",
+        "wenxi-visit-2025"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-140823-fact-1",
+        "county-140823-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-320623",
+      "regionCode": "320623",
+      "countyName": "如东县",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-320623-fact-1"
+      ]
+    },
+    {
+      "profileId": "county-330326",
+      "regionCode": "330326",
+      "countyName": "平阳县",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters"
+      ],
+      "unreadCandidateSourceId": "pingyang-plan-2025",
+      "factIds": [
+        "county-330326-fact-1"
+      ]
+    },
+    {
+      "profileId": "county-350524",
+      "regionCode": "350524",
+      "countyName": "安溪县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters",
+        "anxi-report-2024"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-350524-fact-1",
+        "county-350524-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-411522",
+      "regionCode": "411522",
+      "countyName": "光山县",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters"
+      ],
+      "unreadCandidateSourceId": "guangshan-digital-2026",
+      "factIds": [
+        "county-411522-fact-1"
+      ]
+    },
+    {
+      "profileId": "county-469023",
+      "regionCode": "469023",
+      "countyName": "澄迈县",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters"
+      ],
+      "unreadCandidateSourceId": "chengmai-report-2025",
+      "factIds": [
+        "county-469023-fact-1"
+      ]
+    },
+    {
+      "profileId": "county-530425",
+      "regionCode": "530425",
+      "countyName": "易门县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters",
+        "yimen-pesticide-2024"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-530425-fact-1",
+        "county-530425-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-650522",
+      "regionCode": "650522",
+      "countyName": "伊吾县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters",
+        "yiwu-jobs-2025"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-650522-fact-1",
+        "county-650522-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-510184",
+      "regionCode": "510184",
+      "countyName": "崇州市",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "miit-2025-clusters"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-510184-fact-1"
+      ]
+    },
+    {
+      "profileId": "county-130131",
+      "regionCode": "130131",
+      "countyName": "平山县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "pingshan-tourism-2020"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-130131-fact-1",
+        "county-130131-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-150626",
+      "regionCode": "150626",
+      "countyName": "乌审旗",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "wushen-tourism"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-150626-fact-1",
+        "county-150626-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-210422",
+      "regionCode": "210422",
+      "countyName": "新宾满族自治县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "xinbin-heritage-2025"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-210422-fact-1",
+        "county-210422-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-220721",
+      "regionCode": "220721",
+      "countyName": "前郭尔罗斯蒙古族自治县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "qianguo-lake-2026"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-220721-fact-1",
+        "county-220721-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-232701",
+      "regionCode": "232701",
+      "countyName": "漠河市",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "mohe-homestay-2023"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-232701-fact-1",
+        "county-232701-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-450328",
+      "regionCode": "450328",
+      "countyName": "龙胜各族自治县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "longsheng-culture-2022"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-450328-fact-1",
+        "county-450328-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-522630",
+      "regionCode": "522630",
+      "countyName": "台江县",
+      "distinctSourceCount": 2,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022",
+        "taijiang-crafts"
+      ],
+      "unreadCandidateSourceId": null,
+      "factIds": [
+        "county-522630-fact-1",
+        "county-522630-fact-2"
+      ]
+    },
+    {
+      "profileId": "county-623022",
+      "regionCode": "623022",
+      "countyName": "卓尼县",
+      "distinctSourceCount": 1,
+      "publicationDecision": "draft_pending_independent_review",
+      "sourceIds": [
+        "mct-rural-2022"
+      ],
+      "unreadCandidateSourceId": "zhuoni-tourism",
+      "factIds": [
+        "county-623022-fact-1"
+      ]
+    }
+  ]
+}

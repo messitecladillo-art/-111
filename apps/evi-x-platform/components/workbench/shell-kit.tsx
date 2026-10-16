@@ -13,7 +13,7 @@ export const NAV_ITEMS: Array<{ id: Section; title: string; description: string;
   { id: "overview", title: "概览", description: "从真实问题出发，把研究一步步做扎实。", icon: "grid", group: "我的工作台" },
   { id: "exam", title: "网赛刷题", description: "按章节练习，重做错题，用模拟自测掌握调查方法。", icon: "book", group: "网赛备考" },
   { id: "cases", title: "获奖案例库", description: "检索真实案例，分清公告核验与材料分析。", icon: "book", group: "研究与证据" },
-  { id: "diagnose", title: "Agent 诊断", description: "梳理准备度，用文献词云与证据画像筛选选题。", icon: "spark", group: "研究与证据" },
+  { id: "diagnose", title: "选题与诊断", description: "结合热点、地区与团队资源筛选选题，检查研究准备度。", icon: "spark", group: "研究与证据" },
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },
   { id: "sampling", title: "抽样设计", description: "多阶段方案、样本量、抽取、估计与加权；方法手册含全部公式与计算器。", icon: "target", group: "研究与证据" },
   { id: "silicon", title: "硅基样本", description: "让 AI 扮演设定人群预答问卷，在真人作答前发现问题。", icon: "persona", group: "研究与证据" },

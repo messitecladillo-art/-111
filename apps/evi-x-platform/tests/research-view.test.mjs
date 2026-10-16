@@ -70,7 +70,7 @@ test('the experimental hosted wrapper retains one editor per kind and the curren
   assert.equal(hostAttributes.has('key'), false);
   assert.ok(openings.some(node => node.attributes.properties.some(attribute => attribute.name?.getText(tree) === 'data-knowledge-context')));
   const tabRegions = openings.flatMap(node => node.attributes.properties.filter(attribute => attribute.name?.getText(tree) === 'hidden').map(attribute => attribute.initializer?.getText(tree)));
-  for (const tab of ['design', 'silicon', 'collection', 'analysis', 'report', 'defense']) assert.ok(tabRegions.includes(`{tab !== '${tab}'}`), tab);
+  for (const tab of ['topic', 'design', 'silicon', 'collection', 'analysis', 'report', 'defense']) assert.ok(tabRegions.includes(`{tab !== '${tab}'}`), tab);
   const shell = fs.readFileSync(new URL('../components/WorkbenchShell.tsx', import.meta.url), 'utf8');
   assert.equal(shell.includes('ResearchViewHost'), false, 'the A1 experiment must not wrap the existing A2 canvas');
 });
