@@ -1,0 +1,2980 @@
+{
+  "schemaVersion": 1,
+  "split": "train",
+  "dataClass": "authored_synthetic",
+  "labelLimitations": [
+    "60 pairs are authored examples, not judge preferences, award outcomes, fieldwork or real user feedback.",
+    "Planning minima are estimates. Unknown channels must remain conditional.",
+    "Independent evaluation gold was neither read nor created by this worker."
+  ],
+  "pairs": [
+    {
+      "id": "train-001",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 17,
+        "budgetYuan": 500,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "observation": "confirmed",
+          "interviews": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p01-campus-food",
+      "rejectedPatternId": "p16-sme-digital",
+      "rationale": "校园餐饮时段、价格和管理方均可核实，足以先研究具体服务；没有企业员工入口时不能转成企业效率研究。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "case-food",
+        "wh-digital"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-002",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "society"
+        ],
+        "days": 17,
+        "budgetYuan": 450,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "community_residents": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p02-campus-reuse",
+      "rejectedPatternId": "p07-county-logistics",
+      "rationale": "闲置转让流程能在校内观察；跨乡镇物流需要额外路线与站点合作，不能因乡村题材显得宏大就优先。",
+      "sourceIds": [
+        "course-design",
+        "course-sampling",
+        "course-fieldwork",
+        "course-collection",
+        "county-history"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-003",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "digital",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "technology"
+        ],
+        "days": 19,
+        "budgetYuan": 600,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "prototype_test": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p03-campus-digital",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "可以做不涉及账号的校园任务测试；生物产业服务需要机构渠道与更长周期。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-004",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "employment"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "employment"
+        ],
+        "days": 21,
+        "budgetYuan": 600,
+        "access": {
+          "jobseekers": "confirmed",
+          "training_partner": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p04-job-matching",
+      "rejectedPatternId": "p15-wuhan-sme-finance",
+      "rationale": "有求职者和就业服务方时，可比较看到岗位到投递的断点；融资服务不能用学生样本替代企业。",
+      "sourceIds": [
+        "course-design",
+        "national-jobs",
+        "case-pattern-ledger",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-005",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "society"
+        ],
+        "days": 21,
+        "budgetYuan": 700,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "merchants": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p05-community-repair",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "本社区居民与维修经营者渠道已确认；苏州入境题不适用于当前城市，也缺相应游客入口。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-community",
+        "suzhou-tourism"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-006",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "society"
+        ],
+        "days": 28,
+        "budgetYuan": 900,
+        "access": {
+          "older_adults": "confirmed",
+          "community_partner": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p06-elder-meals",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "已获得适当同意和社区协助的助餐服务研究具备明确边界；不要把同属健康民生扩写成生物产业调查。",
+      "sourceIds": [
+        "course-sampling",
+        "course-fieldwork",
+        "community-history",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-007",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "county",
+          "rural",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 28,
+        "budgetYuan": 1300,
+        "access": {
+          "community_residents": "confirmed",
+          "logistics_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "field_travel": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p07-county-logistics",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "乡镇站点与居民均可接近，适合核实取件旅程；入境旅游既不匹配地域，也缺语言与样本支持。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "county-history",
+        "suzhou-tourism"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-008",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "rural",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 28,
+        "budgetYuan": 1100,
+        "access": {
+          "farmers": "confirmed",
+          "merchants": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p08-farm-trust",
+      "rejectedPatternId": "p16-sme-digital",
+      "rationale": "合作社与销售者能够提供产品信息证据；没有企业员工入口不能开展数字工具工作过程比较。",
+      "sourceIds": [
+        "course-design",
+        "case-food",
+        "county-history",
+        "course-collection",
+        "wh-digital"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-009",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 21,
+        "budgetYuan": 700,
+        "access": {
+          "community_residents": "confirmed",
+          "merchants": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p09-wuhan-coupons",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "武汉券规则和本地门店可核实，苏州专属入境政策不可迁移为武汉政策。",
+      "sourceIds": [
+        "wh-coupons",
+        "course-design",
+        "course-sampling",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-010",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "sports",
+          "tourism"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "sports"
+        ],
+        "days": 28,
+        "budgetYuan": 1300,
+        "access": {
+          "tourists": "confirmed",
+          "event_organizer": "confirmed",
+          "merchants": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p10-wuhan-sports",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "赛事主办与商户渠道已确认，可在获准范围内研究成年观众旅程；医疗转化服务需要另一套机构入口。",
+      "sourceIds": [
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-fieldwork",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-011",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "tourism"
+        ],
+        "days": 21,
+        "budgetYuan": 900,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed"
+        },
+        "resources": {
+          "observation": "confirmed",
+          "interviews": "confirmed",
+          "field_travel": "confirmed",
+          "questionnaire": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p11-wuhan-night-tour",
+      "rejectedPatternId": "p23-sichuan-service",
+      "rationale": "武汉夜游路线可进入并有安全出行安排；四川服务消费季的地域与运营条件不能自动套用。",
+      "sourceIds": [
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-collection",
+        "sichuan-service",
+        "course-design",
+        "case-food"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-012",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "retail",
+          "digital",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "technology"
+        ],
+        "days": 28,
+        "budgetYuan": 900,
+        "access": {
+          "merchants": "confirmed",
+          "community_residents": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "prototype_test": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p12-wuhan-ai-retail",
+      "rejectedPatternId": "p15-wuhan-sme-finance",
+      "rationale": "有商户、顾客与原型测试条件，研究真实服务任务比缺乏企业融资入口的题目更具体。",
+      "sourceIds": [
+        "wh-digital",
+        "wh-ai-list",
+        "course-design",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-013",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "employment",
+          "industry",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "employment"
+        ],
+        "days": 35,
+        "budgetYuan": 1100,
+        "access": {
+          "firms": "confirmed",
+          "jobseekers": "confirmed",
+          "training_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p13-wuhan-data-jobs",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "企业、求职者、培训方三方均可联系，可以核查任务错位；苏州游客样本与当前地域不匹配。",
+      "sourceIds": [
+        "wh-digital",
+        "wh-innovation",
+        "course-design",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-014",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "biology"
+        ],
+        "days": 42,
+        "budgetYuan": 1800,
+        "access": {
+          "firms": "confirmed",
+          "training_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p14-hubei-biotech-service",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "已确认湖北机构访谈且完成敏感边界审查，允许研究服务流程；不能将此机构渠道替代苏州游客入口。",
+      "sourceIds": [
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork",
+        "suzhou-tourism",
+        "course-collection",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-015",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "finance"
+        ],
+        "days": 35,
+        "budgetYuan": 1300,
+        "access": {
+          "firms": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p15-wuhan-sme-finance",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "企业服务渠道与非涉密政策流程已确认，可研究信息理解；不需要借用异地旅游政策制造新意。",
+      "sourceIds": [
+        "wh-innovation",
+        "course-design",
+        "course-fieldwork",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-016",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "technology"
+        ],
+        "days": 35,
+        "budgetYuan": 1300,
+        "access": {
+          "firms": "confirmed",
+          "employees": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p16-sme-digital",
+      "rejectedPatternId": "p10-wuhan-sports",
+      "rationale": "企业与员工均可访谈，可以区分采用和放弃；武汉观赛题还需要事件主办方与观众许可。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital",
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-017",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "entertainment"
+        ],
+        "days": 21,
+        "budgetYuan": 800,
+        "access": {
+          "tourists": "confirmed",
+          "event_organizer": "confirmed",
+          "merchants": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p17-culture-repeat",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "文化场馆合作支持参与和未参与者比较；苏州入境游客不是现有参与者的替代样本。",
+      "sourceIds": [
+        "case-camping",
+        "case-pattern-ledger",
+        "course-sampling",
+        "suzhou-tourism",
+        "course-collection",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-018",
+      "context": {
+        "region": "江苏",
+        "city": "苏州",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "tourism"
+        ],
+        "days": 28,
+        "budgetYuan": 1300,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed",
+          "community_residents": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "prototype_test": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p18-suzhou-inbound",
+      "rejectedPatternId": "p09-wuhan-coupons",
+      "rationale": "苏州政策与本地游客服务渠道匹配；武汉消费券只在武汉适用。",
+      "sourceIds": [
+        "suzhou-tourism",
+        "course-collection",
+        "wh-coupons",
+        "course-design",
+        "course-sampling"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-019",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "county",
+          "community",
+          "employment"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "employment"
+        ],
+        "days": 28,
+        "budgetYuan": 1000,
+        "access": {
+          "jobseekers": "confirmed",
+          "community_partner": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p19-regional-job-service",
+      "rejectedPatternId": "p15-wuhan-sme-finance",
+      "rationale": "县域就业站和社区求职者可访问；企业融资不能用求职者观点冒充企业决策数据。",
+      "sourceIds": [
+        "national-jobs",
+        "course-sampling",
+        "course-design",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-020",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "community",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "finance"
+        ],
+        "days": 21,
+        "budgetYuan": 600,
+        "access": {
+          "campus_students": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "prototype_test": "confirmed",
+          "questionnaire": "confirmed",
+          "interviews": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p20-financial-literacy",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "经审查的虚构信息理解测试不触碰真实资产，成本较低；机构转化服务缺少受访与周期条件。",
+      "sourceIds": [
+        "national-finance",
+        "course-design",
+        "course-fieldwork",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-021",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "rural",
+          "tourism"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "tourism"
+        ],
+        "days": 28,
+        "budgetYuan": 1300,
+        "access": {
+          "tourists": "confirmed",
+          "farmers": "confirmed",
+          "merchants": "confirmed"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "field_travel": "confirmed",
+          "prototype_test": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p21-rural-tourism",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "乡村线路和经营者可访问，可核实服务兑现；入境游需要另一个人群和地域。",
+      "sourceIds": [
+        "case-camping",
+        "wh-autumn-briefing",
+        "course-collection",
+        "suzhou-tourism",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-022",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "policy"
+        ],
+        "days": 21,
+        "budgetYuan": 600,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p22-policy-uptake",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "可以核验一项本地服务与窗口流程；不因生物热点就绕过机构接入和伦理边界。",
+      "sourceIds": [
+        "course-design",
+        "course-fieldwork",
+        "community-history",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-023",
+      "context": {
+        "region": "四川",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "service",
+          "tourism",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 28,
+        "budgetYuan": 1100,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed",
+          "community_residents": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p23-sichuan-service",
+      "rejectedPatternId": "p09-wuhan-coupons",
+      "rationale": "四川当期活动与合作场景相符；武汉券规则不应替代本地政策。",
+      "sourceIds": [
+        "sichuan-service",
+        "course-design",
+        "case-food",
+        "wh-coupons",
+        "course-sampling"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-024",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "sports"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "sports"
+        ],
+        "days": 21,
+        "budgetYuan": 700,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "observation": "confirmed",
+          "interviews": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p24-wuhan-community-sport",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "武汉社区场地与居民渠道已确认，适合观察时段冲突；苏州专属旅游政策不适用。",
+      "sourceIds": [
+        "wh-community",
+        "course-collection",
+        "course-sampling",
+        "suzhou-tourism",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：已逐项确认当前题所需渠道，替代方向仍有明确缺口。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-025",
+      "context": {
+        "region": "湖北",
+        "city": "宜昌",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "校园餐食选择"
+        ],
+        "domains": [
+          "economy"
+        ],
+        "days": 10,
+        "budgetYuan": 200,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "observation": "confirmed",
+          "interviews": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p01-campus-food",
+      "rejectedPatternId": "p16-sme-digital",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "case-food",
+        "wh-digital"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-026",
+      "context": {
+        "region": "河南",
+        "city": "洛阳",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [
+          "校园闲置物品"
+        ],
+        "domains": [
+          "society"
+        ],
+        "days": 10,
+        "budgetYuan": 150,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p02-campus-reuse",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-sampling",
+        "course-fieldwork",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-027",
+      "context": {
+        "region": "四川",
+        "city": "绵阳",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "digital",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "校园数字服务"
+        ],
+        "domains": [
+          "technology"
+        ],
+        "days": 12,
+        "budgetYuan": 300,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "prototype_test": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p03-campus-digital",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-028",
+      "context": {
+        "region": "甘肃",
+        "city": "天水",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "employment"
+        ],
+        "discipline": "",
+        "interests": [
+          "秋招信息到投递"
+        ],
+        "domains": [
+          "employment"
+        ],
+        "days": 14,
+        "budgetYuan": 300,
+        "access": {
+          "jobseekers": "confirmed",
+          "training_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p04-job-matching",
+      "rejectedPatternId": "p23-sichuan-service",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "national-jobs",
+        "case-pattern-ledger",
+        "sichuan-service",
+        "case-food"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-029",
+      "context": {
+        "region": "河北",
+        "city": "邢台",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "社区小修小补"
+        ],
+        "domains": [
+          "society"
+        ],
+        "days": 14,
+        "budgetYuan": 400,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "merchants": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p05-community-repair",
+      "rejectedPatternId": "p15-wuhan-sme-finance",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-community",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-030",
+      "context": {
+        "region": "广西",
+        "city": "玉林",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "社区助餐"
+        ],
+        "domains": [
+          "society"
+        ],
+        "days": 21,
+        "budgetYuan": 600,
+        "access": {
+          "older_adults": "confirmed",
+          "community_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p06-elder-meals",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-sampling",
+        "course-fieldwork",
+        "community-history",
+        "suzhou-tourism",
+        "course-collection",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-031",
+      "context": {
+        "region": "湖北",
+        "city": "宜昌",
+        "school": "",
+        "schoolContext": [
+          "county",
+          "rural",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "县乡快递最后一段"
+        ],
+        "domains": [
+          "economy"
+        ],
+        "days": 21,
+        "budgetYuan": 1000,
+        "access": {
+          "community_residents": "confirmed",
+          "logistics_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "field_travel": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p07-county-logistics",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "county-history",
+        "suzhou-tourism"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-032",
+      "context": {
+        "region": "河南",
+        "city": "洛阳",
+        "school": "",
+        "schoolContext": [
+          "rural",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [
+          "地方农产品"
+        ],
+        "domains": [
+          "economy"
+        ],
+        "days": 21,
+        "budgetYuan": 800,
+        "access": {
+          "farmers": "confirmed",
+          "merchants": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p08-farm-trust",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "case-food",
+        "county-history",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-033",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉消费券"
+        ],
+        "domains": [
+          "economy"
+        ],
+        "days": 14,
+        "budgetYuan": 400,
+        "access": {
+          "community_residents": "confirmed",
+          "merchants": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p09-wuhan-coupons",
+      "rejectedPatternId": "p10-wuhan-sports",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-coupons",
+        "course-design",
+        "course-sampling",
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-034",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "sports",
+          "tourism"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉赛事"
+        ],
+        "domains": [
+          "sports"
+        ],
+        "days": 21,
+        "budgetYuan": 1000,
+        "access": {
+          "tourists": "confirmed",
+          "event_organizer": "confirmed",
+          "merchants": "confirmed"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed",
+          "prototype_test": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p10-wuhan-sports",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺prototype_test条件。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-fieldwork",
+        "suzhou-tourism",
+        "course-collection",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-035",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉夜游"
+        ],
+        "domains": [
+          "tourism"
+        ],
+        "days": 14,
+        "budgetYuan": 600,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed",
+          "community_residents": "unavailable"
+        },
+        "resources": {
+          "observation": "confirmed",
+          "interviews": "confirmed",
+          "field_travel": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p11-wuhan-night-tour",
+      "rejectedPatternId": "p09-wuhan-coupons",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺community_residents入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-collection",
+        "wh-coupons",
+        "course-design",
+        "course-sampling"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-036",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "retail",
+          "digital",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉智能消费服务"
+        ],
+        "domains": [
+          "technology"
+        ],
+        "days": 21,
+        "budgetYuan": 600,
+        "access": {
+          "merchants": "confirmed",
+          "community_residents": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "prototype_test": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p12-wuhan-ai-retail",
+      "rejectedPatternId": "p15-wuhan-sme-finance",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-digital",
+        "wh-ai-list",
+        "course-design",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-037",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "employment",
+          "industry",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉数据岗位"
+        ],
+        "domains": [
+          "employment"
+        ],
+        "days": 28,
+        "budgetYuan": 800,
+        "access": {
+          "firms": "confirmed",
+          "jobseekers": "confirmed",
+          "training_partner": "confirmed"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p13-wuhan-data-jobs",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向的探索周期超过当前可用时间。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-digital",
+        "wh-innovation",
+        "course-design",
+        "hb-device-service",
+        "hb-biotech",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-038",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "湖北成果转化"
+        ],
+        "domains": [
+          "biology"
+        ],
+        "days": 35,
+        "budgetYuan": 1500,
+        "access": {
+          "firms": "confirmed",
+          "training_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p14-hubei-biotech-service",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork",
+        "suzhou-tourism",
+        "course-collection",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-039",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉科创企业"
+        ],
+        "domains": [
+          "finance"
+        ],
+        "days": 28,
+        "budgetYuan": 1000,
+        "access": {
+          "firms": "confirmed",
+          "training_partner": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p15-wuhan-sme-finance",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺training_partner入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-innovation",
+        "course-design",
+        "course-fieldwork",
+        "hb-device-service",
+        "hb-biotech"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-040",
+      "context": {
+        "region": "甘肃",
+        "city": "天水",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [
+          "小企业数字化"
+        ],
+        "domains": [
+          "technology"
+        ],
+        "days": 28,
+        "budgetYuan": 1000,
+        "access": {
+          "firms": "confirmed",
+          "employees": "confirmed",
+          "community_residents": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p16-sme-digital",
+      "rejectedPatternId": "p09-wuhan-coupons",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺community_residents入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital",
+        "wh-coupons",
+        "course-sampling"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-041",
+      "context": {
+        "region": "河北",
+        "city": "邢台",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "文化活动"
+        ],
+        "domains": [
+          "entertainment"
+        ],
+        "days": 14,
+        "budgetYuan": 500,
+        "access": {
+          "tourists": "confirmed",
+          "event_organizer": "confirmed",
+          "merchants": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p17-culture-repeat",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺merchants入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "case-camping",
+        "case-pattern-ledger",
+        "course-sampling",
+        "suzhou-tourism",
+        "course-collection",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-042",
+      "context": {
+        "region": "江苏",
+        "city": "苏州",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "苏州入境体验"
+        ],
+        "domains": [
+          "tourism"
+        ],
+        "days": 21,
+        "budgetYuan": 1000,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "prototype_test": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p18-suzhou-inbound",
+      "rejectedPatternId": "p16-sme-digital",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "suzhou-tourism",
+        "course-collection",
+        "course-design",
+        "wh-digital"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-043",
+      "context": {
+        "region": "湖北",
+        "city": "宜昌",
+        "school": "",
+        "schoolContext": [
+          "county",
+          "community",
+          "employment"
+        ],
+        "discipline": "",
+        "interests": [
+          "县域就业站"
+        ],
+        "domains": [
+          "employment"
+        ],
+        "days": 21,
+        "budgetYuan": 700,
+        "access": {
+          "jobseekers": "confirmed",
+          "community_partner": "confirmed",
+          "community_residents": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p19-regional-job-service",
+      "rejectedPatternId": "p07-county-logistics",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺community_residents入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "national-jobs",
+        "course-sampling",
+        "course-design",
+        "course-collection",
+        "county-history"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-044",
+      "context": {
+        "region": "河南",
+        "city": "洛阳",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "community",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [
+          "金融营销信息"
+        ],
+        "domains": [
+          "finance"
+        ],
+        "days": 14,
+        "budgetYuan": 300,
+        "access": {
+          "campus_students": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "prototype_test": "confirmed",
+          "questionnaire": "confirmed",
+          "interviews": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p20-financial-literacy",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "national-finance",
+        "course-design",
+        "course-fieldwork",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-045",
+      "context": {
+        "region": "四川",
+        "city": "绵阳",
+        "school": "",
+        "schoolContext": [
+          "rural",
+          "tourism"
+        ],
+        "discipline": "",
+        "interests": [
+          "乡村短途游"
+        ],
+        "domains": [
+          "tourism"
+        ],
+        "days": 21,
+        "budgetYuan": 1000,
+        "access": {
+          "tourists": "confirmed",
+          "farmers": "confirmed",
+          "merchants": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "field_travel": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p21-rural-tourism",
+      "rejectedPatternId": "p15-wuhan-sme-finance",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "case-camping",
+        "wh-autumn-briefing",
+        "course-collection",
+        "wh-innovation",
+        "course-design",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-046",
+      "context": {
+        "region": "甘肃",
+        "city": "天水",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [
+          "一项本地服务政策"
+        ],
+        "domains": [
+          "policy"
+        ],
+        "days": 14,
+        "budgetYuan": 300,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p22-policy-uptake",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "course-design",
+        "course-fieldwork",
+        "community-history",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-047",
+      "context": {
+        "region": "四川",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "service",
+          "tourism",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [
+          "四川服务消费"
+        ],
+        "domains": [
+          "economy"
+        ],
+        "days": 21,
+        "budgetYuan": 800,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p23-sichuan-service",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺firms入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "sichuan-service",
+        "course-design",
+        "case-food",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-048",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "sports"
+        ],
+        "discipline": "",
+        "interests": [
+          "武汉社区运动空间"
+        ],
+        "domains": [
+          "sports"
+        ],
+        "days": 14,
+        "budgetYuan": 400,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "tourists": "unavailable"
+        },
+        "resources": {
+          "observation": "confirmed",
+          "interviews": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p24-wuhan-community-sport",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "按当前作者估算，优先限定在可接近的对象和服务决策内；替代方向尚缺tourists入口。这是前期调查取舍，不能据此保证项目质量或奖项。",
+      "sourceIds": [
+        "wh-community",
+        "course-collection",
+        "course-sampling",
+        "suzhou-tourism",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成情境：时间与预算仅够已限定的前期探索；院校名称空白，不作为能力代理。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-049",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "retail"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 21,
+        "budgetYuan": 800,
+        "access": {
+          "community_residents": "confirmed",
+          "merchants": "confirmed",
+          "tourists": "confirmed"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed",
+          "prototype_test": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p09-wuhan-coupons",
+      "rejectedPatternId": "p18-suzhou-inbound",
+      "rationale": "两种方向都有部分渠道，但本地是武汉；不可把苏州政策热度变成武汉当地机会。",
+      "sourceIds": [
+        "wh-coupons",
+        "course-design",
+        "course-sampling",
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：同类消费热点，错地域降低优先级。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-050",
+      "context": {
+        "region": "江苏",
+        "city": "苏州",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "tourism"
+        ],
+        "days": 28,
+        "budgetYuan": 1500,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed",
+          "community_residents": "confirmed"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "prototype_test": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p18-suzhou-inbound",
+      "rejectedPatternId": "p09-wuhan-coupons",
+      "rationale": "将城市切换为苏州后，苏州入境服务更合适；学校名称保持空白，判断变化来自地域。",
+      "sourceIds": [
+        "suzhou-tourism",
+        "course-collection",
+        "wh-coupons",
+        "course-design",
+        "course-sampling"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：地域反转，防止固定偏爱武汉。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-051",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "sports"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "sports"
+        ],
+        "days": 21,
+        "budgetYuan": 700,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "tourists": "unavailable",
+          "event_organizer": "unavailable"
+        },
+        "resources": {
+          "observation": "confirmed",
+          "interviews": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p24-wuhan-community-sport",
+      "rejectedPatternId": "p10-wuhan-sports",
+      "rationale": "武网正在公告窗口内也不能替代观众与主办方许可；已有社区场地更易形成真实证据。",
+      "sourceIds": [
+        "wh-community",
+        "course-collection",
+        "course-sampling",
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-fieldwork",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：当前热点存在，但样本不可进入。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-052",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "tourism",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "entertainment"
+        ],
+        "days": 21,
+        "budgetYuan": 900,
+        "access": {
+          "tourists": "confirmed",
+          "event_organizer": "confirmed",
+          "merchants": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2027-02-15",
+        "competitionWindow": {
+          "start": "2027-02-15",
+          "end": "2027-06-30"
+        }
+      },
+      "preferredPatternId": "p17-culture-repeat",
+      "rejectedPatternId": "p09-wuhan-coupons",
+      "rationale": "2026年券活动已超过公告终点，不能在2027年继续按当前发券开展现场研究；已另确认的场馆常态服务可以探索。",
+      "sourceIds": [
+        "case-camping",
+        "case-pattern-ledger",
+        "course-sampling",
+        "wh-coupons",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：过期政策不提供当前优先级。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-053",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "employment"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "employment"
+        ],
+        "days": 21,
+        "budgetYuan": 700,
+        "access": {
+          "jobseekers": "confirmed",
+          "training_partner": "confirmed",
+          "firms": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "questionnaire": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p04-job-matching",
+      "rejectedPatternId": "p13-wuhan-data-jobs",
+      "rationale": "全国秋招提供问题背景，但特定数据产业题缺企业端；先做已获准的求职服务断点更可验证。",
+      "sourceIds": [
+        "course-design",
+        "national-jobs",
+        "case-pattern-ledger",
+        "wh-digital",
+        "wh-innovation"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：同一就业热点下比较实际渠道。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-054",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "employment",
+          "industry",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "employment"
+        ],
+        "days": 35,
+        "budgetYuan": 1300,
+        "access": {
+          "firms": "confirmed",
+          "jobseekers": "confirmed",
+          "training_partner": "confirmed",
+          "community_partner": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p13-wuhan-data-jobs",
+      "rejectedPatternId": "p19-regional-job-service",
+      "rationale": "企业、培训方、求职者已确认，可以做任务供需对照；县域就业站缺社区合作，不宜因范围更广而优先。",
+      "sourceIds": [
+        "wh-digital",
+        "wh-innovation",
+        "course-design",
+        "national-jobs",
+        "course-sampling"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：企业渠道补齐后选择随之改变。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-055",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "society"
+        ],
+        "days": 14,
+        "budgetYuan": 400,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "merchants": "confirmed",
+          "older_adults": "possible"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "questionnaire": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p05-community-repair",
+      "rejectedPatternId": "p06-elder-meals",
+      "rationale": "助餐涉及额外适当同意与进入安排且周期估算更长；当前已有维修渠道和两周预算，先做边界清楚的题。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-community",
+        "course-sampling",
+        "course-fieldwork",
+        "community-history"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：可能接触不等于已获准接触。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-056",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "community",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "society"
+        ],
+        "days": 28,
+        "budgetYuan": 1200,
+        "access": {
+          "older_adults": "confirmed",
+          "community_partner": "confirmed",
+          "merchants": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "approved",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p06-elder-meals",
+      "rejectedPatternId": "p05-community-repair",
+      "rationale": "已获助餐合作和适当同意后可研究服务进入；维修商户不可接触，不能用居民猜测替代供给端证据。",
+      "sourceIds": [
+        "course-sampling",
+        "course-fieldwork",
+        "community-history",
+        "course-design",
+        "course-collection",
+        "wh-community"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：完成审查和专属渠道后重新取舍。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-057",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "digital",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "technology"
+        ],
+        "days": 14,
+        "budgetYuan": 400,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "firms": "unavailable",
+          "employees": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "prototype_test": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p03-campus-digital",
+      "rejectedPatternId": "p16-sme-digital",
+      "rationale": "同属数字技术，校园任务可直接测试；缺企业与员工入口时不能因AI新闻把范围扩到产业效率。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：热点不替代可验证任务。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-058",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "industry",
+          "digital"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "technology"
+        ],
+        "days": 35,
+        "budgetYuan": 1500,
+        "access": {
+          "firms": "confirmed",
+          "employees": "confirmed",
+          "campus_ops": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p16-sme-digital",
+      "rejectedPatternId": "p03-campus-digital",
+      "rationale": "企业管理者和员工已确认而校园管理方未开放，优先真实可进入的企业流程；不依据学校层次决策。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：资源反转，优先级也应反转。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-059",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "rural",
+          "tourism"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "tourism"
+        ],
+        "days": 28,
+        "budgetYuan": 1400,
+        "access": {
+          "tourists": "confirmed",
+          "farmers": "confirmed",
+          "merchants": "confirmed",
+          "event_organizer": "unavailable"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "field_travel": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p21-rural-tourism",
+      "rejectedPatternId": "p10-wuhan-sports",
+      "rationale": "均有武汉秋季背景，但乡村经营者和线路可进入，赛事主办方不可进入；按证据可得性选。",
+      "sourceIds": [
+        "case-camping",
+        "wh-autumn-briefing",
+        "course-collection",
+        "course-fieldwork",
+        "course-design"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：同城多热点，优先合作明确者。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    },
+    {
+      "id": "train-060",
+      "context": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [
+          "campus",
+          "service"
+        ],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "economy"
+        ],
+        "days": 10,
+        "budgetYuan": 200,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed",
+          "firms": "possible",
+          "training_partner": "possible"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "observation": "confirmed",
+          "interviews": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-15",
+        "competitionWindow": {
+          "start": "2026-10-15",
+          "end": "2026-11-30"
+        }
+      },
+      "preferredPatternId": "p01-campus-food",
+      "rejectedPatternId": "p14-hubei-biotech-service",
+      "rationale": "生物方向只有可能认识机构，未确认且时间预算不足；已确认餐饮服务可先形成小范围证据。",
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "case-food",
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "contentClass": "authored_synthetic",
+      "scenarioDescription": "合成：大热点与低资源约束冲突。",
+      "labelBasis": "作者根据已核查方法与来源边界编写；不是实际评委选择、真实用户结果或获奖标签"
+    }
+  ]
+}

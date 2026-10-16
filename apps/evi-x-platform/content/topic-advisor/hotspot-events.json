@@ -1,0 +1,806 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-15",
+  "events": [
+    {
+      "id": "e01-wh-coupons",
+      "title": "武汉假日零售消费券投放",
+      "domain": "economy",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-24",
+      "validFrom": "2026-09-24",
+      "validUntil": "2026-12-31",
+      "summary": "商务局公布分批投放与武汉核销条件。",
+      "researchHypotheses": [
+        "待验证：领券到核销是否存在规则理解和数字操作障碍？"
+      ],
+      "patternIds": [
+        "p09-wuhan-coupons",
+        "p22-policy-uptake"
+      ],
+      "sourceIds": [
+        "wh-coupons"
+      ],
+      "status": "verified",
+      "eventDate": "2026-09-24",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "商务局公布分批投放与武汉核销条件。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "资金核销完毕可提前结束；这是公告窗口，不是实时余额。"
+      ]
+    },
+    {
+      "id": "e02-wh-community",
+      "title": "武汉便民生活服务月启动仪式",
+      "domain": "society",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-22",
+      "validFrom": "2026-09-24",
+      "validUntil": "2026-09-24",
+      "summary": "官方日历明确9月24日启动仪式。",
+      "researchHypotheses": [
+        "待验证：常态维修与公共活动空间能否适配不同作息居民？"
+      ],
+      "patternIds": [
+        "p05-community-repair",
+        "p24-wuhan-community-sport"
+      ],
+      "sourceIds": [
+        "wh-community"
+      ],
+      "status": "historical",
+      "eventDate": "2026-09-24",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "官方日历明确9月24日启动仪式。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "仅启动仪式日期明确，不能推定整个服务月结束日。",
+        "后续常态服务需重新核查。"
+      ]
+    },
+    {
+      "id": "e03-wh-digital",
+      "title": "武汉数智经济规划发布",
+      "domain": "technology",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-17",
+      "validFrom": "2026-09-17",
+      "validUntil": "2030-12-31",
+      "summary": "市政府发布十五五数智经济规划。",
+      "researchHypotheses": [
+        "待验证：数字服务实际任务与用户支持需求是否匹配？"
+      ],
+      "patternIds": [
+        "p03-campus-digital",
+        "p12-wuhan-ai-retail",
+        "p13-wuhan-data-jobs",
+        "p16-sme-digital"
+      ],
+      "sourceIds": [
+        "wh-digital"
+      ],
+      "status": "verified",
+      "eventDate": "2026-09-11",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "市政府发布十五五数智经济规划。",
+      "validityBasis": "规划目标期到2030；超过发布一年仍须刷新",
+      "limitations": [
+        "规划目标不是建成状态；不保证数据、企业或校园入口。"
+      ]
+    },
+    {
+      "id": "e04-wh-innovation",
+      "title": "武汉科创与产业融合系列措施施行",
+      "domain": "policy",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-08",
+      "validFrom": "2026-10-08",
+      "validUntil": "2028-10-07",
+      "summary": "六类措施进入公告施行期。",
+      "researchHypotheses": [
+        "待验证：转化服务与企业的实际咨询需求之间是否有信息缺口？"
+      ],
+      "patternIds": [
+        "p13-wuhan-data-jobs",
+        "p14-hubei-biotech-service",
+        "p15-wuhan-sme-finance",
+        "p22-policy-uptake"
+      ],
+      "sourceIds": [
+        "wh-innovation"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-08",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "六类措施进入公告施行期。",
+      "validityBasis": "正文2026-10-08施行、有效期2年；按周年日前一天归一化",
+      "limitations": [
+        "不据此认定研究团队有补贴资格或机构数据权限。"
+      ]
+    },
+    {
+      "id": "e05-wh-ai-publication",
+      "title": "武汉AI消费应用拟发布成果公示",
+      "domain": "technology",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-21",
+      "validFrom": "2026-09-21",
+      "validUntil": "2026-09-28",
+      "summary": "经信局和商务局开展拟发布成果公示。",
+      "researchHypotheses": [
+        "待验证：实际使用者在哪些任务中仍需人工支持？"
+      ],
+      "patternIds": [
+        "p12-wuhan-ai-retail"
+      ],
+      "sourceIds": [
+        "wh-ai-list"
+      ],
+      "status": "historical",
+      "eventDate": "2026-09-21",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "经信局和商务局开展拟发布成果公示。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "公示期已结束；未读附件，未确认最终名单或实际效果。"
+      ]
+    },
+    {
+      "id": "e06-wh-tennis",
+      "title": "武汉网球公开赛公布赛程",
+      "domain": "sports",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-10-10",
+      "validUntil": "2026-10-18",
+      "summary": "体育部门答复公布武网拟举办日期。",
+      "researchHypotheses": [
+        "待验证：本地与外地观众的停留和服务衔接需求是否不同？"
+      ],
+      "patternIds": [
+        "p10-wuhan-sports"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-10",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "体育部门答复公布武网拟举办日期。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "赛程来自发布会；需复核变更及入场招募许可。",
+        "赛事临近结束，不能假设有足够现场调查时间。"
+      ]
+    },
+    {
+      "id": "e07-wh-opera",
+      "title": "中国京剧艺术节武汉活动安排",
+      "domain": "entertainment",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-10-15",
+      "validUntil": "2026-11-05",
+      "summary": "部门披露京剧展演与配套活动安排。",
+      "researchHypotheses": [
+        "待验证：首次观众是否被信息理解或到场服务阻断复访？"
+      ],
+      "patternIds": [
+        "p17-culture-repeat",
+        "p11-wuhan-night-tour"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-15",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "部门披露京剧展演与配套活动安排。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "现场活动和可进入性仍须向合作方复核。"
+      ]
+    },
+    {
+      "id": "e08-wh-music",
+      "title": "琴台音乐节活动安排",
+      "domain": "entertainment",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-10-16",
+      "validUntil": "2026-11-13",
+      "summary": "发布会公布琴台音乐节拟举办窗口。",
+      "researchHypotheses": [
+        "待验证：音乐活动与周边服务怎样衔接才符合真实时间预算？"
+      ],
+      "patternIds": [
+        "p17-culture-repeat",
+        "p11-wuhan-night-tour"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-16",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "发布会公布琴台音乐节拟举办窗口。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "现场活动和可进入性仍须向合作方复核。"
+      ]
+    },
+    {
+      "id": "e09-wh-acrobatics",
+      "title": "武汉国际杂技艺术节活动安排",
+      "domain": "entertainment",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-10-23",
+      "validUntil": "2026-10-26",
+      "summary": "发布会公布杂技艺术节拟举办日期。",
+      "researchHypotheses": [
+        "待验证：不同观演经历者的内容理解与服务需求是否不同？"
+      ],
+      "patternIds": [
+        "p17-culture-repeat"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-23",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "发布会公布杂技艺术节拟举办日期。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "现场活动和可进入性仍须向合作方复核。"
+      ]
+    },
+    {
+      "id": "e10-wh-esports",
+      "title": "穿越火线世界总决赛武汉赛程",
+      "domain": "sports",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-11-24",
+      "validUntil": "2026-12-06",
+      "summary": "体育部门披露电竞总决赛拟在汉举办。",
+      "researchHypotheses": [
+        "待验证：成年观众在赛事、住宿和游览间如何安排时间？"
+      ],
+      "patternIds": [
+        "p10-wuhan-sports",
+        "p17-culture-repeat"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "verified",
+      "eventDate": "2026-11-24",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "体育部门披露电竞总决赛拟在汉举办。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "这是提前公布的计划，非赛事已完成。",
+        "只研究成年群体，需核实场馆准入。"
+      ]
+    },
+    {
+      "id": "e11-wh-harvest",
+      "title": "武汉农民丰收节主场活动安排",
+      "domain": "economy",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-09-24",
+      "validUntil": "2026-09-24",
+      "summary": "农业部门公告丰收节武汉主场计划。",
+      "researchHypotheses": [
+        "待验证：活动后经营者与消费者对产品信息仍有哪些缺口？"
+      ],
+      "patternIds": [
+        "p08-farm-trust",
+        "p21-rural-tourism"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "historical",
+      "eventDate": "2026-09-24",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "农业部门公告丰收节武汉主场计划。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "公告不证明现场执行；已过单日窗口，仅可核查后回访。"
+      ]
+    },
+    {
+      "id": "e12-wh-rural-routes",
+      "title": "丰穗武汉秋季乡村线路安排",
+      "domain": "tourism",
+      "geography": {
+        "level": "city",
+        "region": "湖北",
+        "city": "武汉"
+      },
+      "publishedAt": "2026-09-18",
+      "validFrom": "2026-09-18",
+      "validUntil": "2026-11-30",
+      "summary": "秋季消费季披露乡村休闲线路。",
+      "researchHypotheses": [
+        "待验证：游客期待与经营者非节假日服务能力是否一致？"
+      ],
+      "patternIds": [
+        "p21-rural-tourism",
+        "p08-farm-trust"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing"
+      ],
+      "status": "verified",
+      "eventDate": "2026-09-18",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "秋季消费季披露乡村休闲线路。",
+      "validityBasis": "正文消费季为9—11月；保守从发布日期到11月底",
+      "limitations": [
+        "具体线路开放日期和经营者合作条件须另核验。"
+      ]
+    },
+    {
+      "id": "e13-hb-biotech",
+      "title": "湖北生命健康创新赛事阶段安排",
+      "domain": "biology",
+      "geography": {
+        "level": "province",
+        "region": "湖北",
+        "city": ""
+      },
+      "publishedAt": "2026-09-24",
+      "validFrom": "2026-10-15",
+      "validUntil": "2026-11-30",
+      "summary": "药监局通知披露10—11月评审安排。",
+      "researchHypotheses": [
+        "待验证：研发团队寻找咨询和转化服务时存在哪些信息缺口？"
+      ],
+      "patternIds": [
+        "p14-hubei-biotech-service"
+      ],
+      "sourceIds": [
+        "hb-biotech"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-15",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "药监局通知披露10—11月评审安排。",
+      "validityBasis": "赛程到11月底；这里是生态研究背景，不是报名开放期",
+      "limitations": [
+        "报名10月15日24时结束，且不接受个人直接报名。",
+        "不是正大杯规则，不承诺参赛或受访资格。"
+      ]
+    },
+    {
+      "id": "e14-hb-device",
+      "title": "湖北器械咨询系统上线（历史观察）",
+      "domain": "biology",
+      "geography": {
+        "level": "province",
+        "region": "湖北",
+        "city": ""
+      },
+      "publishedAt": "2026-06-18",
+      "validFrom": "2026-06-16",
+      "validUntil": "2026-07-18",
+      "summary": "药监局报道器械登记咨询系统上线。",
+      "researchHypotheses": [
+        "待验证：机构用户能否准确找到适合项目阶段的咨询入口？"
+      ],
+      "patternIds": [
+        "p14-hubei-biotech-service"
+      ],
+      "sourceIds": [
+        "hb-device-service"
+      ],
+      "status": "historical",
+      "eventDate": "2026-06-16",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "药监局报道器械登记咨询系统上线。",
+      "validityBasis": "作者设30天新闻新鲜期；不是系统停用日",
+      "limitations": [
+        "当前使用状态未重新进入系统核查。",
+        "有效期仅为资讯刷新策略，不是服务法定期限。"
+      ]
+    },
+    {
+      "id": "e15-national-economy",
+      "title": "国家统计局8月消费结构答复",
+      "domain": "economy",
+      "geography": {
+        "level": "national",
+        "region": "",
+        "city": ""
+      },
+      "publishedAt": "2026-09-15",
+      "validFrom": "2026-09-15",
+      "validUntil": "2026-10-15",
+      "summary": "统计局答复涉及服务与消费方式变化。",
+      "researchHypotheses": [
+        "待验证：本地服务场景是否存在全国总量未展示的进入障碍？"
+      ],
+      "patternIds": [
+        "p01-campus-food",
+        "p08-farm-trust",
+        "p17-culture-repeat",
+        "p21-rural-tourism"
+      ],
+      "sourceIds": [
+        "national-economy"
+      ],
+      "status": "verified",
+      "eventDate": "2026-09-15",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "统计局答复涉及服务与消费方式变化。",
+      "validityBasis": "作者设30天刷新窗口，不是统计结论有效期限",
+      "limitations": [
+        "全国统计不是本地需求或因果证据。",
+        "参考期之后应刷新下一期发布。"
+      ]
+    },
+    {
+      "id": "e16-national-job-month",
+      "title": "全国金秋招聘月安排",
+      "domain": "employment",
+      "geography": {
+        "level": "national",
+        "region": "",
+        "city": ""
+      },
+      "publishedAt": "2026-01-21",
+      "validFrom": "2026-10-01",
+      "validUntil": "2026-10-31",
+      "summary": "国家部门安排10月招聘服务活动。",
+      "researchHypotheses": [
+        "待验证：岗位信息到咨询和投递之间有哪些服务断点？"
+      ],
+      "patternIds": [
+        "p04-job-matching",
+        "p19-regional-job-service"
+      ],
+      "sourceIds": [
+        "national-jobs"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-01",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "国家部门安排10月招聘服务活动。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "仅全国部署；当地场次和可进入渠道尚待确认。"
+      ]
+    },
+    {
+      "id": "e17-national-autumn-jobs",
+      "title": "高校毕业生秋季联合招聘安排",
+      "domain": "employment",
+      "geography": {
+        "level": "national",
+        "region": "",
+        "city": ""
+      },
+      "publishedAt": "2026-01-21",
+      "validFrom": "2026-10-01",
+      "validUntil": "2026-11-30",
+      "summary": "国家通知安排10—11月毕业生秋招活动。",
+      "researchHypotheses": [
+        "待验证：不同求职阶段群体需要何种岗位解释与投递支持？"
+      ],
+      "patternIds": [
+        "p04-job-matching",
+        "p13-wuhan-data-jobs",
+        "p19-regional-job-service"
+      ],
+      "sourceIds": [
+        "national-jobs"
+      ],
+      "status": "verified",
+      "eventDate": "2026-10-01",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "国家通知安排10—11月毕业生秋招活动。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "不能从全国安排推断任何学校已合作。"
+      ]
+    },
+    {
+      "id": "e18-national-finance",
+      "title": "金融网络营销管理办法施行",
+      "domain": "finance",
+      "geography": {
+        "level": "national",
+        "region": "",
+        "city": ""
+      },
+      "publishedAt": "2026-04-27",
+      "validFrom": "2026-09-30",
+      "validUntil": "2027-04-27",
+      "summary": "八部门办法明确9月30日起施行。",
+      "researchHypotheses": [
+        "待验证：成年消费者能否读懂公开材料中的费用和风险？"
+      ],
+      "patternIds": [
+        "p20-financial-literacy"
+      ],
+      "sourceIds": [
+        "national-finance"
+      ],
+      "status": "verified",
+      "eventDate": "2026-09-30",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "八部门办法明确9月30日起施行。",
+      "validityBasis": "施行日期来自原文；一年复核期限由作者设定，不是法规失效日",
+      "limitations": [
+        "仅供信息理解研究，不是个案法律判断或投资建议。"
+      ]
+    },
+    {
+      "id": "e19-county-history",
+      "title": "县域商业2023—2025行动（历史）",
+      "domain": "economy",
+      "geography": {
+        "level": "national",
+        "region": "",
+        "city": ""
+      },
+      "publishedAt": "2023-07-27",
+      "validFrom": "2023-07-27",
+      "validUntil": "2025-12-31",
+      "summary": "历史行动提出物流与农产品流通方向。",
+      "researchHypotheses": [
+        "待验证：在新一轮核查后，本地县乡取件与销售信息缺口是否仍存在？"
+      ],
+      "patternIds": [
+        "p07-county-logistics",
+        "p08-farm-trust"
+      ],
+      "sourceIds": [
+        "county-history"
+      ],
+      "status": "historical",
+      "eventDate": "2023-07-27",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "历史行动提出物流与农产品流通方向。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "原行动期已经结束，禁止当作2026政策窗口。"
+      ]
+    },
+    {
+      "id": "e20-community-history",
+      "title": "便民生活圈2023—2025行动（历史）",
+      "domain": "society",
+      "geography": {
+        "level": "national",
+        "region": "",
+        "city": ""
+      },
+      "publishedAt": "2023-07-12",
+      "validFrom": "2023-07-12",
+      "validUntil": "2025-12-31",
+      "summary": "历史行动强调按社区居民需求配置服务。",
+      "researchHypotheses": [
+        "待验证：新样本中哪些生活需求仍未被当前网点覆盖？"
+      ],
+      "patternIds": [
+        "p05-community-repair",
+        "p06-elder-meals",
+        "p22-policy-uptake"
+      ],
+      "sourceIds": [
+        "community-history"
+      ],
+      "status": "historical",
+      "eventDate": "2023-07-12",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "历史行动强调按社区居民需求配置服务。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "不推定2026地方项目、补贴或执行状态。"
+      ]
+    },
+    {
+      "id": "e21-suzhou-inbound",
+      "title": "苏州入境旅游措施施行",
+      "domain": "tourism",
+      "geography": {
+        "level": "city",
+        "region": "江苏",
+        "city": "苏州"
+      },
+      "publishedAt": "2026-08-06",
+      "validFrom": "2026-09-10",
+      "validUntil": "2027-09-09",
+      "summary": "市政府公布入境服务支持措施及期限。",
+      "researchHypotheses": [
+        "待验证：游客能否顺利完成导览、咨询与支付说明理解？"
+      ],
+      "patternIds": [
+        "p18-suzhou-inbound"
+      ],
+      "sourceIds": [
+        "suzhou-tourism"
+      ],
+      "status": "verified",
+      "eventDate": "2026-09-10",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "市政府公布入境服务支持措施及期限。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "只限苏州；语言与游客入口必须另行确认。"
+      ]
+    },
+    {
+      "id": "e22-sichuan-service",
+      "title": "四川乐享天府服务季（发布日期待核）",
+      "domain": "economy",
+      "geography": {
+        "level": "province",
+        "region": "四川",
+        "city": ""
+      },
+      "publishedAt": "",
+      "validFrom": "2026-09-29",
+      "validUntil": "2026-12-31",
+      "summary": "官方活动页明确服务季活动窗口。",
+      "researchHypotheses": [
+        "待验证：跨服务组合是否符合消费者真实时间预算？"
+      ],
+      "patternIds": [
+        "p23-sichuan-service"
+      ],
+      "sourceIds": [
+        "sichuan-service"
+      ],
+      "status": "pending_verification",
+      "eventDate": "2026-09-29",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "官方活动页明确服务季活动窗口。",
+      "validityBasis": "活动期已全文核验；页面没有单列发布日期，暂不入已核验热点",
+      "limitations": [
+        "不得用活动日期冒充发布日期。",
+        "发布元数据缺失，需补核。"
+      ]
+    },
+    {
+      "id": "e23-yangcheng-subsidy",
+      "title": "阳城县家居消费活动（已结束）",
+      "domain": "economy",
+      "geography": {
+        "level": "city",
+        "region": "山西",
+        "city": "阳城县"
+      },
+      "publishedAt": "2026-09-20",
+      "validFrom": "2026-09-19",
+      "validUntil": "2026-10-10",
+      "summary": "县政府报道家居消费活动周期。",
+      "researchHypotheses": [
+        "待验证：回访中领券与核销理解是否影响参与？"
+      ],
+      "patternIds": [
+        "p22-policy-uptake",
+        "p08-farm-trust"
+      ],
+      "sourceIds": [
+        "yangcheng-subsidy"
+      ],
+      "status": "historical",
+      "eventDate": "2026-09-19",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": true,
+      "observedEvent": "县政府报道家居消费活动周期。",
+      "validityBasis": "source_explicit_window",
+      "limitations": [
+        "已过活动期；不能推荐当前领券。",
+        "市级字段此处存县名，仅作精确地域定位。"
+      ]
+    },
+    {
+      "id": "e24-haizhu-draft",
+      "title": "海珠AI规划意见征集线索（待核）",
+      "domain": "technology",
+      "geography": {
+        "level": "city",
+        "region": "广东",
+        "city": "广州"
+      },
+      "publishedAt": "2026-09-30",
+      "validFrom": "2026-09-30",
+      "validUntil": "2026-10-30",
+      "summary": "仅检索到官方意见征集页面线索。",
+      "researchHypotheses": [
+        "待验证：经原文核验后，企业对AI服务有哪些具体需求？"
+      ],
+      "patternIds": [
+        "p16-sme-digital"
+      ],
+      "sourceIds": [
+        "haizhu-draft"
+      ],
+      "status": "pending_verification",
+      "eventDate": "2026-09-30",
+      "verifiedAt": "2026-10-15",
+      "referenceOnly": false,
+      "observedEvent": "仅检索到官方意见征集页面线索。",
+      "validityBasis": "日期来自搜索索引，打开动态正文失败，不能计作已核验",
+      "limitations": [
+        "不得把草案当生效政策。",
+        "只有搜索线索，需原文复核。"
+      ]
+    }
+  ]
+}

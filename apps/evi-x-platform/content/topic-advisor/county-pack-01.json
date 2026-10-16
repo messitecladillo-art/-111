@@ -1,0 +1,2317 @@
+{
+  "schemaVersion": 1,
+  "id": "county-pack-01",
+  "contentVersion": "2026-10-15.1",
+  "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+  "sources": [
+    {
+      "id": "miit-2025-clusters",
+      "title": "2025年度（第四批）中小企业特色产业集群名单",
+      "url": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "publishedAt": null,
+      "retrievedAt": "2026-10-15",
+      "authority": "official_ministry_listing",
+      "locator": "附件1；对应集群序号及物理页码见facts与本包说明",
+      "supportedClaims": [
+        "2025年度第四批名单列有通城县云母电子材料产业集群；定位为第66项、物理第4页。",
+        "2025年度第四批名单列有金溪县香料加工产业集群；定位为第50项、物理第3页。",
+        "2025年度第四批名单列有潜山市制刷产业集群；定位为第42项、物理第3页。",
+        "2025年度第四批名单列有闻喜县镁基新材料及精深加工产业集群；定位为第15项、物理第1页。",
+        "2025年度第四批名单列有如东县海上风电装备产业集群；定位为第29项、物理第2页。",
+        "2025年度第四批名单列有平阳县印刷包装成套装备产业集群；定位为第34项、物理第2页。",
+        "2025年度第四批名单列有安溪县藤铁工艺产业集群；定位为第47项、物理第3页。",
+        "2025年度第四批名单列有光山县羽绒制品产业集群；定位为第62项、物理第4页。",
+        "2025年度第四批名单列有澄迈县深海油气勘探生产服务产业集群；定位为第82项、物理第5页。",
+        "2025年度第四批名单列有易门县有色及稀贵金属资源回收利用产业集群；定位为第92项、物理第5页。",
+        "2025年度第四批名单列有伊吾县富油煤热解产业集群；定位为第94项、物理第5页。",
+        "2025年度第四批名单列有崇州市板式家具产业集群；定位为第87项、物理第5页。"
+      ]
+    },
+    {
+      "id": "mct-rural-2022",
+      "title": "全国乡村旅游重点村数据服务",
+      "url": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "publishedAt": null,
+      "retrievedAt": "2026-10-15",
+      "authority": "official_ministry_data",
+      "locator": "页面数据截止日期2022-12-07；对应省份下的具体村名",
+      "supportedClaims": [
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有潜山市天柱山镇茶庄村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有平山县岗南镇李家庄村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有乌审旗无定河镇巴图湾村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有新宾满族自治县永陵镇赫图阿拉村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有前郭尔罗斯蒙古族自治县查干湖渔场查干湖屯。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有漠河市北极镇北红村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有龙胜各族自治县龙脊镇大寨村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有台江县老屯乡长滩村。",
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有卓尼县木耳镇博峪村。"
+      ]
+    },
+    {
+      "id": "tongcheng-gig-2024",
+      "title": "通城：“零工驿站”拓宽就业路",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "publishedAt": "2024-05-10",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_provincial_department_county_authored",
+      "locator": "正文介绍挂牌驿站、服务窗口和求职登记的段落",
+      "supportedClaims": [
+        "2024年的部门报道介绍通城零工驿站及服务窗口，服务包含招聘信息发布、求职登记和休息补给。"
+      ]
+    },
+    {
+      "id": "wenxi-visit-2025",
+      "title": "市工信局调研闻喜工业产业发展情况",
+      "url": "https://gxj.yuncheng.gov.cn/doc/2025/07/01/535999.shtml",
+      "publishedAt": "2025-07-01",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_city_department",
+      "locator": "全文调研对象、镁精深加工、特钢及技能竞赛段落",
+      "supportedClaims": [
+        "2025年7月的市工信局报道涉及闻喜镁精深加工与特钢材料企业，并记录对职工职业技能竞赛的观摩。"
+      ]
+    },
+    {
+      "id": "anxi-report-2024",
+      "title": "2024年安溪县人民政府工作报告",
+      "url": "https://www.fjax.gov.cn/zwgk/zfxxgkzl/zfxxgkml/gzbg/202401/t20240112_2993505.htm",
+      "publishedAt": "2024-01-12",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_county_report_metadata_conflict",
+      "locator": "工作安排中藤铁工艺园、设计节、行业标准和市场拓展段；meta来源字段待复核",
+      "supportedClaims": [
+        "2024年政府工作报告提出藤铁工艺园、设计节、行业标准及市场拓展等工作安排；这些安排不等于已经完成。"
+      ]
+    },
+    {
+      "id": "yimen-pesticide-2024",
+      "title": "易门县农业农村局组织开展农药包装废弃物回收处理工作",
+      "url": "https://www.ym.gov.cn/ymxzfxxgk/ymxnyjzhxxny/20241129/1570962.html",
+      "publishedAt": "2024-11-29",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_county_department",
+      "locator": "正文启动年份、农业面源污染与回收处理工作段",
+      "supportedClaims": [
+        "县农业农村局2024年的信息介绍2023年启动农药包装废弃物回收处理工作，涉及农业面源污染防治。"
+      ]
+    },
+    {
+      "id": "yiwu-jobs-2025",
+      "title": "伊吾县人力资源和社会保障局2025年度工作报告",
+      "url": "https://www.xjyiwu.gov.cn/xjyiwu/c120572/202604/c845e22a877a472aac10a1c02ef7130f.shtml",
+      "publishedAt": "2026-04-01",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_county_department",
+      "locator": "一、坚持就业优先；职业技能培训及就业支持措施段",
+      "supportedClaims": [
+        "县人社局2025年度工作报告记录职业技能培训、就业支持及面向企业和劳动者的服务措施。"
+      ]
+    },
+    {
+      "id": "pingshan-tourism-2020",
+      "title": "传承红色基因 打造一流乡村旅游度假区——河北省石家庄市李家庄",
+      "url": "https://www.ndrc.gov.cn/xwdt/ztzl/qgxclydxal/stzyytx/202004/t20200423_1226489.html",
+      "publishedAt": "2020-04-23",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_national_department_case",
+      "locator": "案例介绍的红色资源、农业科普及旅游组织段",
+      "supportedClaims": [
+        "2020年的国家发改委案例介绍李家庄围绕红色资源与现代农业科普等内容组织乡村旅游。"
+      ]
+    },
+    {
+      "id": "wushen-tourism",
+      "title": "乌审旗旅游概况",
+      "url": "https://wsq.gov.cn/qqgk/ld/ly/202403/t20240313_1762497.html",
+      "publishedAt": "2026-03-12",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_county_department",
+      "locator": "页面发布日期；四、巴图湾红色文化小镇简介，正文第1—3段",
+      "supportedClaims": [
+        "旗文旅部门2026年的旅游概况将巴图湾村与红色文化小镇对应，并介绍多媒体、场景复原等展陈方式。"
+      ]
+    },
+    {
+      "id": "xinbin-heritage-2025",
+      "title": "赫图阿拉城（4A）",
+      "url": "https://www.ln.gov.cn/web/sqgk/whly/ajjq/4ajq/2025101516253252042/index.shtml",
+      "publishedAt": "2025-10-11",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_province_tourism_information",
+      "locator": "景区介绍中位置、建筑遗迹及旗袍博物馆段；不以URL日期代替发布日期",
+      "supportedClaims": [
+        "省级旅游介绍将赫图阿拉城的位置、建筑遗迹和旗袍博物馆列为文化展示资源。"
+      ]
+    },
+    {
+      "id": "qianguo-lake-2026",
+      "title": "精准施策护生态 履职尽责守湖清 前郭县分局全面推进查干湖巡查与水质监测工作",
+      "url": "https://sthjt.jl.gov.cn/ywdt/ssdt/dfdt/202602/t20260206_3553353.html",
+      "publishedAt": "2026-02-09",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_provincial_environment_department",
+      "locator": "巡查范围、监测和计划采购无人机的段落",
+      "supportedClaims": [
+        "2026年的生态环境部门报道介绍查干湖周边村屯、旅游及餐饮住宿点的巡查监测，并提及计划采用无人机。"
+      ]
+    },
+    {
+      "id": "mohe-homestay-2023",
+      "title": "山村巨变入画中、生态宜居美名扬——漠河市北极镇北红村龙江民居省级试点村",
+      "url": "https://nynct.hlj.gov.cn/nynct/xczxxx/202310/c00_31673936.shtml",
+      "publishedAt": null,
+      "retrievedAt": "2026-10-15",
+      "authority": "official_provincial_agriculture_department",
+      "locator": "正文村庄介绍、家庭宾馆及生活环境段；正文2023-10-10与meta2023-10-18日期冲突",
+      "supportedClaims": [
+        "省农业农村厅2023年的介绍提到北红村家庭宾馆、特色民居和旅游经营；具体经营数量不作为当前状态使用。"
+      ]
+    },
+    {
+      "id": "longsheng-culture-2022",
+      "title": "中国广西大寨村和重庆荆竹村入选联合国世界旅游组织“最佳旅游乡村”",
+      "url": "https://www.mct.gov.cn/whzx/whyw/202212/t20221220_938183.htm",
+      "publishedAt": "2022-12-20",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_ministry_article",
+      "locator": "大寨村段；农耕梯田、红瑶文化与旅游体验的介绍",
+      "supportedClaims": [
+        "文旅部2022年的介绍描述大寨村以农耕梯田、红瑶文化和传统技艺组织乡村旅游体验。"
+      ]
+    },
+    {
+      "id": "taijiang-crafts",
+      "title": "初心 筑梦乡村振兴",
+      "url": "https://www.qdnrd.gov.cn/xsrd/6345.jhtml",
+      "publishedAt": "2024-12-30",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_prefecture_people_congress",
+      "locator": "发展旅游、兴乡村奔小康段；刺绣、蜡染及线上线下销售培训",
+      "supportedClaims": [
+        "州人大网站2024年的报道介绍长滩村刺绣、蜡染及线上线下销售和技能培训安排。"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "county-421222",
+      "regionRef": {
+        "code": "421222",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "通城县",
+      "tags": [
+        {
+          "label": "云母电子材料",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "公共就业服务",
+          "sourceIds": [
+            "tongcheng-gig-2024"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-421222-fact-1",
+          "text": "2025年度第四批名单列有通城县云母电子材料产业集群；定位为第66项、物理第4页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-421222-fact-2",
+          "text": "2024年的部门报道介绍通城零工驿站及服务窗口，服务包含招聘信息发布、求职登记和休息补给。",
+          "sourceIds": [
+            "tongcheng-gig-2024"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2024-05-10"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-421222-direction-1",
+          "title": "产业岗位信息如何被本地青年理解",
+          "question": "岗位描述、技能要求与生活条件信息如何影响青年进一步咨询的选择？",
+          "decisionOwner": "拟合作的招聘服务方",
+          "decision": "优化岗位信息展示及咨询渠道",
+          "population": "自愿参加的本地成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "岗位材料核验、信息理解任务与实际咨询意愿分开记录"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-421222-direction-2",
+          "title": "零工驿站的使用与未使用人群比较",
+          "question": "使用者和未使用者在知晓渠道、到达便利与服务组合需求上有何差异？",
+          "decisionOwner": "当地公共就业服务方",
+          "decision": "调整宣传、服务时间与基础设施配置",
+          "population": "已使用或可能使用驿站的成年零工与求职者",
+          "requiredAccess": [
+            "jobseekers",
+            "employees"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实当前服务点，再按使用经历分组招募并记录到访经历"
+          ],
+          "sourceIds": [
+            "tongcheng-gig-2024"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-421222-direction-3",
+          "title": "产业职工培训安排与课程需求",
+          "question": "不同岗位职工希望怎样安排培训时间、形式与技能内容？",
+          "decisionOwner": "获准接触的培训组织方",
+          "decision": "形成可执行的课程和时间安排",
+          "population": "经许可接触的产业从业者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "岗位分层、已有培训安排及参与条件，不收企业保密工艺"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-361027",
+      "regionRef": {
+        "code": "361027",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "金溪县",
+      "tags": [
+        {
+          "label": "香料加工",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-361027-fact-1",
+          "text": "2025年度第四批名单列有金溪县香料加工产业集群；定位为第50项、物理第3页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-361027-direction-1",
+          "title": "香型产品的标签理解与选择",
+          "question": "产地、香型与成分说明如何影响受访者对指定香型产品的理解和试用选择？",
+          "decisionOwner": "拟合作的产品或零售服务方",
+          "decision": "选择更清楚的标签及试用说明",
+          "population": "明确产品类别后的成年消费者",
+          "requiredAccess": [
+            "community_residents"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用真实合规标签材料；区分理解程度、偏好和购买行为"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-361027-direction-2",
+          "title": "香料相关岗位的职业认知",
+          "question": "本地求职者了解哪些岗位，又希望通过什么渠道认识岗位要求？",
+          "decisionOwner": "拟合作的招聘服务方",
+          "decision": "改进岗位说明和职业体验安排",
+          "population": "对当地产业岗位感兴趣的成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核验实际岗位类别，再记录信息来源和咨询行为"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-361027-direction-3",
+          "title": "小批量采购服务中的信息需求",
+          "question": "采购者在样品、规格说明、交期和沟通环节如何取舍？",
+          "decisionOwner": "获准接触的供应与采购服务方",
+          "decision": "安排样品说明与客户沟通流程",
+          "population": "经许可联系的采购经办人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "取得采购者渠道，仅采非保密的服务体验与实际流程"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充第二条不同事实的官方来源；已发现的“聚焦·科技创新丨促进创新源泉充分涌流”正文读取失败，尚未采纳其内容。"
+      ]
+    },
+    {
+      "id": "county-340882",
+      "regionRef": {
+        "code": "340882",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "潜山市",
+      "tags": [
+        {
+          "label": "制刷",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-340882-fact-1",
+          "text": "2025年度第四批名单列有潜山市制刷产业集群；定位为第42项、物理第3页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-340882-fact-2",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有潜山市天柱山镇茶庄村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-340882-direction-1",
+          "title": "制刷产品采购的信息与售后选择",
+          "question": "不同用途的采购者需要怎样的规格、寿命说明与售后支持？",
+          "decisionOwner": "获准接触的制刷企业或经销方",
+          "decision": "改进产品信息和售后服务组合",
+          "population": "已确认接触渠道的采购者或经销者",
+          "requiredAccess": [
+            "firms",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "限定产品用途，核验真实产品材料并收集采购经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-340882-direction-2",
+          "title": "本地青年对制刷岗位的认知",
+          "question": "青年如何理解生产、设计、销售等岗位，哪些条件影响继续了解意愿？",
+          "decisionOwner": "拟合作的招聘和培训方",
+          "decision": "设计岗位介绍和培训入口",
+          "population": "自愿参与的成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当地开放岗位，将岗位认知与求职行动分开"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-340882-direction-3",
+          "title": "茶庄村旅游信息与服务路径",
+          "question": "首次和再次到访者在交通、住宿与活动信息上有何不同需求？",
+          "decisionOwner": "拟合作的当地旅游服务方",
+          "decision": "调整行前说明与服务衔接",
+          "population": "在获准场所接触的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实当前开放与交通条件，再按真实到访经历招募"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-140823",
+      "regionRef": {
+        "code": "140823",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "闻喜县",
+      "tags": [
+        {
+          "label": "镁基新材料及精深加工",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "产业技能",
+          "sourceIds": [
+            "wenxi-visit-2025"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-140823-fact-1",
+          "text": "2025年度第四批名单列有闻喜县镁基新材料及精深加工产业集群；定位为第15项、物理第1页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-140823-fact-2",
+          "text": "2025年7月的市工信局报道涉及闻喜镁精深加工与特钢材料企业，并记录对职工职业技能竞赛的观摩。",
+          "sourceIds": [
+            "wenxi-visit-2025"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2025-07-01"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-140823-direction-1",
+          "title": "材料产业岗位的技能信息匹配",
+          "question": "不同岗位从业者如何理解技能要求，与培训内容有什么对应关系？",
+          "decisionOwner": "拟合作的企业培训方",
+          "decision": "优化岗位技能说明及培训课程",
+          "population": "经许可接触的材料产业职工",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "岗位类别、培训材料与职工实际经历相互核对"
+          ],
+          "sourceIds": [
+            "wenxi-visit-2025"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-140823-direction-2",
+          "title": "青年选择本地产业岗位的条件",
+          "question": "薪酬说明、成长路径、通勤和生活条件分别如何进入青年择业考虑？",
+          "decisionOwner": "拟合作的招聘服务方",
+          "decision": "完善招聘信息与咨询服务",
+          "population": "成年本地求职者及返乡求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实真实岗位，收集实际比较过的工作信息"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters",
+            "wenxi-visit-2025"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-140823-direction-3",
+          "title": "材料企业客户沟通与服务体验",
+          "question": "采购经办人在规格解释、质量证明和售后沟通中最需要什么支持？",
+          "decisionOwner": "获准接触的材料供应服务方",
+          "decision": "改进客户说明与售后流程",
+          "population": "具备许可渠道的采购经办人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "仅使用允许公开的产品资料与非保密采购经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-320623",
+      "regionRef": {
+        "code": "320623",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "如东县",
+      "tags": [
+        {
+          "label": "海上风电装备",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-320623-fact-1",
+          "text": "2025年度第四批名单列有如东县海上风电装备产业集群；定位为第29项、物理第2页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-320623-direction-1",
+          "title": "风电产业相关岗位的就业认知",
+          "question": "求职者对装备制造、运维及相关服务岗位的理解和顾虑有哪些差异？",
+          "decisionOwner": "拟合作的招聘服务方",
+          "decision": "改进岗位信息与咨询安排",
+          "population": "对相关岗位感兴趣的成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先确认实际开放岗位与资格，不把产业规模当岗位可得性"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-320623-direction-2",
+          "title": "风电装备服务中的协作信息需求",
+          "question": "经许可的经办人员如何评价设备说明、交付和售后沟通？",
+          "decisionOwner": "获准接触的装备服务方",
+          "decision": "改进服务信息与协作流程",
+          "population": "获得许可的供应或采购服务人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "访谈不进入海上作业现场，不收保密工程参数"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-320623-direction-3",
+          "title": "产业职工生活服务与通勤选择",
+          "question": "不同工作地点的职工如何安排通勤、就餐与日常服务？",
+          "decisionOwner": "拟合作的园区生活服务方",
+          "decision": "确定生活服务的时间和布局优先级",
+          "population": "经许可接触的当地产业职工",
+          "requiredAccess": [
+            "employees"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "记录实际工作生活地点、频次与服务使用经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充产业认定名单之外的县域就业、服务或统计官方来源。"
+      ]
+    },
+    {
+      "id": "county-330326",
+      "regionRef": {
+        "code": "330326",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "平阳县",
+      "tags": [
+        {
+          "label": "印刷包装成套装备",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-330326-fact-1",
+          "text": "2025年度第四批名单列有平阳县印刷包装成套装备产业集群；定位为第34项、物理第2页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-330326-direction-1",
+          "title": "包装装备采购说明与理解",
+          "question": "不同采购经验的人如何理解性能、适配范围和维护成本信息？",
+          "decisionOwner": "获准接触的装备供应服务方",
+          "decision": "完善采购说明与咨询流程",
+          "population": "已有渠道的采购或生产管理人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "以真实公开规格为材料，避免使用企业保密成本"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-330326-direction-2",
+          "title": "装备售后服务的渠道组合",
+          "question": "远程指导、上门服务和培训手册如何满足不同用户情境？",
+          "decisionOwner": "拟合作的售后服务组织方",
+          "decision": "安排售后渠道与培训材料",
+          "population": "经许可接触的设备使用或维护人员",
+          "requiredAccess": [
+            "employees",
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "收集具体使用情境，并区分服务需要与实际故障"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-330326-direction-3",
+          "title": "青年对装备产业职业发展的理解",
+          "question": "哪些岗位及学习路径信息会影响青年了解本地装备产业的意愿？",
+          "decisionOwner": "拟合作的招聘和培训服务方",
+          "decision": "改进职业信息与培训入口",
+          "population": "成年求职者及可接触的在校成年学生",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实岗位和课程入口，再比较信息理解与咨询行为"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充第二条不同事实的官方来源；已发现的“平阳县工业经济提升发展三年行动计划（2025—2027年）”正文读取失败，尚未采纳其内容。"
+      ]
+    },
+    {
+      "id": "county-350524",
+      "regionRef": {
+        "code": "350524",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "安溪县",
+      "tags": [
+        {
+          "label": "藤铁工艺",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "家居设计",
+          "sourceIds": [
+            "anxi-report-2024"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-350524-fact-1",
+          "text": "2025年度第四批名单列有安溪县藤铁工艺产业集群；定位为第47项、物理第3页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-350524-fact-2",
+          "text": "2024年政府工作报告提出藤铁工艺园、设计节、行业标准及市场拓展等工作安排；这些安排不等于已经完成。",
+          "sourceIds": [
+            "anxi-report-2024"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2024-01-12"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-350524-direction-1",
+          "title": "藤铁家居产品的场景与风格偏好",
+          "question": "居住空间、使用用途与设计信息如何影响受访者对产品的比较？",
+          "decisionOwner": "拟合作的家居产品设计方",
+          "decision": "选择产品呈现和试用场景",
+          "population": "明确使用场景的成年家居消费者",
+          "requiredAccess": [
+            "community_residents"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用授权产品样例并记录实际居住与选购经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-350524-direction-2",
+          "title": "工艺产品线上线下展示的取舍",
+          "question": "消费者在实体陈列、短视频和产品详情中需要什么信息？",
+          "decisionOwner": "拟合作的商户或品牌服务方",
+          "decision": "安排展示内容及到店咨询路径",
+          "population": "可接触的成年购买者与零售商户",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "同一产品材料比较，区分观看、咨询与购买"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters",
+            "anxi-report-2024"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-350524-direction-3",
+          "title": "工艺学习与岗位成长需求",
+          "question": "从业者和潜在学习者对设计、制作与销售技能有何需求差异？",
+          "decisionOwner": "拟合作的工艺培训组织方",
+          "decision": "规划培训内容与学习形式",
+          "population": "经许可接触的从业者及成年学习者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实可用培训入口、岗位任务及既往学习经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters",
+            "anxi-report-2024"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "复核政府报告页面元信息：来源字段写石狮，标题、正文与URL指向安溪；暂仅引用明确标识的计划内容。"
+      ]
+    },
+    {
+      "id": "county-411522",
+      "regionRef": {
+        "code": "411522",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "光山县",
+      "tags": [
+        {
+          "label": "羽绒制品",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-411522-fact-1",
+          "text": "2025年度第四批名单列有光山县羽绒制品产业集群；定位为第62项、物理第4页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-411522-direction-1",
+          "title": "羽绒产品质量信息的理解",
+          "question": "充绒量、蓬松度、面料与保养说明怎样影响受访者的产品比较？",
+          "decisionOwner": "拟合作的产品或零售方",
+          "decision": "改进质量信息与选购指引",
+          "population": "有相关选购经历的成年消费者",
+          "requiredAccess": [
+            "community_residents"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核验真实标签与标准术语，不把主观感知当检测结果"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-411522-direction-2",
+          "title": "定制与成衣服务的选择条件",
+          "question": "尺码、交付时间、试穿及售后安排如何影响定制或成衣选择？",
+          "decisionOwner": "拟合作的制衣或零售服务方",
+          "decision": "确定服务组合与预约方式",
+          "population": "可接触的成年消费者与商户",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "记录实际购买或定制经历，检验交付承诺的可实现性"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-411522-direction-3",
+          "title": "羽绒相关岗位的培训与成长",
+          "question": "不同岗位从业者希望怎样获取生产、销售或服务技能？",
+          "decisionOwner": "获准接触的培训或企业服务方",
+          "decision": "制定分岗位培训安排",
+          "population": "经许可接触的服装产业从业者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实岗位类别、已有课程和职工可参与时间"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充第二条不同事实的官方来源；已发现的“光山县：40年羽绒制品产业迎来“数智蝶变””正文读取失败，尚未采纳其内容。"
+      ]
+    },
+    {
+      "id": "county-469023",
+      "regionRef": {
+        "code": "469023",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "澄迈县",
+      "tags": [
+        {
+          "label": "深海油气勘探生产服务",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-469023-fact-1",
+          "text": "2025年度第四批名单列有澄迈县深海油气勘探生产服务产业集群；定位为第82项、物理第5页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-469023-direction-1",
+          "title": "油服相关岗位的职业信息需求",
+          "question": "成年求职者如何了解资格要求、岗位内容与职业成长路径？",
+          "decisionOwner": "拟合作的招聘或培训服务方",
+          "decision": "安排准确的岗位介绍与培训咨询",
+          "population": "对相关岗位感兴趣的成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实岗位与资格，避免把产业认定当招聘机会"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-469023-direction-2",
+          "title": "产业职工的生活服务选择",
+          "question": "工作安排、居住地点和通勤方式如何影响日常服务使用？",
+          "decisionOwner": "拟合作的园区生活服务方",
+          "decision": "优化服务时间与配套信息",
+          "population": "获得接触许可的产业从业者",
+          "requiredAccess": [
+            "employees"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "只记录非敏感生活经历，不进入受限作业区域"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-469023-direction-3",
+          "title": "技术服务采购中的信息沟通",
+          "question": "客户在服务范围、交付验收与培训说明中需要哪些信息？",
+          "decisionOwner": "获准接触的技术服务组织方",
+          "decision": "改进公开服务说明与协作流程",
+          "population": "具备明确许可渠道的业务经办人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "确认可公开范围，仅使用允许引用的服务案例"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充第二条不同事实的官方来源；已发现的“2025年澄迈县政府工作报告”正文读取失败，尚未采纳其内容。"
+      ]
+    },
+    {
+      "id": "county-530425",
+      "regionRef": {
+        "code": "530425",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "易门县",
+      "tags": [
+        {
+          "label": "有色及稀贵金属资源回收利用",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "农业回收",
+          "sourceIds": [
+            "yimen-pesticide-2024"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-530425-fact-1",
+          "text": "2025年度第四批名单列有易门县有色及稀贵金属资源回收利用产业集群；定位为第92项、物理第5页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-530425-fact-2",
+          "text": "县农业农村局2024年的信息介绍2023年启动农药包装废弃物回收处理工作，涉及农业面源污染防治。",
+          "sourceIds": [
+            "yimen-pesticide-2024"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2024-11-29"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-530425-direction-1",
+          "title": "居民废旧物品交投的便利性",
+          "question": "居民如何比较回收点距离、可交物品、价格说明和预约方式？",
+          "decisionOwner": "拟合作的生活回收服务方",
+          "decision": "调整交投说明与服务渠道",
+          "population": "有废旧物品处理经历的成年居民",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实合规回收渠道，再记录真实交投经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-530425-direction-2",
+          "title": "农药包装回收信息与参与条件",
+          "question": "农业经营者如何理解回收要求，运输、存放及交投便利性如何影响参与？",
+          "decisionOwner": "拟合作的农业回收服务方",
+          "decision": "优化回收告知与交投安排",
+          "population": "经许可联系的成年农业经营者",
+          "requiredAccess": [
+            "farmers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当前回收规则和点位，不进行危险物品操作"
+          ],
+          "sourceIds": [
+            "yimen-pesticide-2024"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-530425-direction-3",
+          "title": "资源回收企业的协作服务需求",
+          "question": "经许可的业务人员在合规材料、交付与检测说明方面需要什么支持？",
+          "decisionOwner": "获准接触的回收服务组织方",
+          "decision": "改进非保密协作信息与服务流程",
+          "population": "拥有明确许可渠道的业务经办人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "明确可引用材料范围，不采商业秘密或未经许可的流向数据"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-650522",
+      "regionRef": {
+        "code": "650522",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "伊吾县",
+      "tags": [
+        {
+          "label": "富油煤热解",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "就业培训",
+          "sourceIds": [
+            "yiwu-jobs-2025"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-650522-fact-1",
+          "text": "2025年度第四批名单列有伊吾县富油煤热解产业集群；定位为第94项、物理第5页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-650522-fact-2",
+          "text": "县人社局2025年度工作报告记录职业技能培训、就业支持及面向企业和劳动者的服务措施。",
+          "sourceIds": [
+            "yiwu-jobs-2025"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2025-12-31"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-650522-direction-1",
+          "title": "本地与外来求职者的岗位信息需求",
+          "question": "两类求职者在工作内容、资格、住宿与咨询渠道上需要什么不同信息？",
+          "decisionOwner": "拟合作的公共招聘服务方",
+          "decision": "完善岗位展示与咨询分流",
+          "population": "自愿参加的本地及外来成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核验实际岗位并记录真实求职经历，保护个人联系信息"
+          ],
+          "sourceIds": [
+            "yiwu-jobs-2025"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-650522-direction-2",
+          "title": "职业技能培训的知晓与参与",
+          "question": "不同工作经历者如何获知培训机会，哪些安排影响实际参加？",
+          "decisionOwner": "拟合作的培训服务方",
+          "decision": "优化培训宣传、时间与课程安排",
+          "population": "已参加或具备参加条件的成年劳动者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当前可参加的培训，不把历史补贴当现行资格"
+          ],
+          "sourceIds": [
+            "yiwu-jobs-2025"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-650522-direction-3",
+          "title": "产业职工的日常生活服务",
+          "question": "轮班、居住与交通条件如何进入职工日常服务选择？",
+          "decisionOwner": "拟合作的生活服务组织方",
+          "decision": "确定生活服务配置与开放时间",
+          "population": "获得接触许可的当地产业职工",
+          "requiredAccess": [
+            "employees"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "采集真实生活与服务经历，不进入矿区或受限生产现场"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-510184",
+      "regionRef": {
+        "code": "510184",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "崇州市",
+      "tags": [
+        {
+          "label": "板式家具",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-510184-fact-1",
+          "text": "2025年度第四批名单列有崇州市板式家具产业集群；定位为第87项、物理第5页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-510184-direction-1",
+          "title": "板式家具信息的理解与选购",
+          "question": "材质、尺寸、环保及安装说明如何进入消费者的比较过程？",
+          "decisionOwner": "拟合作的家具产品或零售方",
+          "decision": "优化产品信息与选购指引",
+          "population": "有明确家居使用场景的成年消费者",
+          "requiredAccess": [
+            "community_residents"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用真实合规标签，区分材料理解、偏好与实际购买"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-510184-direction-2",
+          "title": "家具交付安装服务的取舍",
+          "question": "交期、预约、安装和售后保障如何影响用户选择与满意经历？",
+          "decisionOwner": "拟合作的家具交付服务方",
+          "decision": "设计可兑现的交付服务组合",
+          "population": "可接触的近期购买者及服务商户",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核对实际订单经历与允许公开的服务承诺"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-510184-direction-3",
+          "title": "家具产业职工的技能与培训需求",
+          "question": "生产、安装、销售岗位的技能学习需求及可参与时间有何差异？",
+          "decisionOwner": "拟合作的培训组织方",
+          "decision": "形成分岗位课程与实践安排",
+          "population": "经许可接触的家具相关从业者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实岗位任务与现有培训，不推断企业已同意合作"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充产业认定之外的县域消费、就业或统计官方来源；异地采购公告不能代表本地需求。"
+      ]
+    },
+    {
+      "id": "county-130131",
+      "regionRef": {
+        "code": "130131",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "平山县",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "红色与农业体验",
+          "sourceIds": [
+            "pingshan-tourism-2020"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-130131-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有平山县岗南镇李家庄村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-130131-fact-2",
+          "text": "2020年的国家发改委案例介绍李家庄围绕红色资源与现代农业科普等内容组织乡村旅游。",
+          "sourceIds": [
+            "pingshan-tourism-2020"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2020-04-23"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-130131-direction-1",
+          "title": "行前信息与村内游线的衔接",
+          "question": "游客出发前和到村后分别需要哪些交通、停留与活动信息？",
+          "decisionOwner": "拟合作的村落旅游服务方",
+          "decision": "改进行前说明及村内导览",
+          "population": "在获准场所接触的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当前开放安排，按真实行程而非宣传预期记录"
+          ],
+          "sourceIds": [
+            "mct-rural-2022",
+            "pingshan-tourism-2020"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-130131-direction-2",
+          "title": "红色与农业科普体验的内容选择",
+          "question": "成年游客对展陈理解、农业体验和休憩服务有何不同期待？",
+          "decisionOwner": "拟合作的文化旅游活动方",
+          "decision": "安排体验内容与讲解层次",
+          "population": "自愿参与的成年游客及活动组织者",
+          "requiredAccess": [
+            "tourists",
+            "event_organizer"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "以已开放的内容为材料，记录理解与参与体验"
+          ],
+          "sourceIds": [
+            "pingshan-tourism-2020"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-130131-direction-3",
+          "title": "村民经营参与与公共空间需求",
+          "question": "村民和商户如何看待旅游服务机会及日常生活空间安排？",
+          "decisionOwner": "拟合作的社区与旅游服务方",
+          "decision": "确定经营支持及公共空间改进优先级",
+          "population": "获准联系的成年村民与经营者",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "分别记录经营参与、生活使用与具体建议，不预设旅游带来净收益"
+          ],
+          "sourceIds": [
+            "mct-rural-2022",
+            "pingshan-tourism-2020"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-150626",
+      "regionRef": {
+        "code": "150626",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "乌审旗",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "红色文化展示",
+          "sourceIds": [
+            "wushen-tourism"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-150626-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有乌审旗无定河镇巴图湾村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-150626-fact-2",
+          "text": "旗文旅部门2026年的旅游概况将巴图湾村与红色文化小镇对应，并介绍多媒体、场景复原等展陈方式。",
+          "sourceIds": [
+            "wushen-tourism"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2026-03-12"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-150626-direction-1",
+          "title": "巴图湾游客的信息与游线选择",
+          "question": "首次和再次到访者如何组合交通、展馆、休憩与游览时间？",
+          "decisionOwner": "拟合作的旅游服务组织方",
+          "decision": "优化导览及游线说明",
+          "population": "实际到访的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当前展馆开放和交通，不据历史介绍推断接待能力"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-150626-direction-2",
+          "title": "不同展陈方式的理解与参与",
+          "question": "文字、图像和多媒体材料在成年游客理解中各起什么作用？",
+          "decisionOwner": "拟合作的文化展示服务方",
+          "decision": "调整讲解内容与展陈辅助材料",
+          "population": "自愿参加材料理解任务的成年游客",
+          "requiredAccess": [
+            "tourists",
+            "event_organizer"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用获准材料，以理解任务和自报感受分别记录"
+          ],
+          "sourceIds": [
+            "wushen-tourism"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-150626-direction-3",
+          "title": "旅游服务与村民日常生活的协调",
+          "question": "村民、商户和游客对公共空间、服务时间与活动安排有何不同需求？",
+          "decisionOwner": "拟合作的村落服务方",
+          "decision": "协商服务时间与公共设施配置",
+          "population": "获准接触的成年村民、商户及游客",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "分群收集具体使用场景，不用单一群体代表全村意见"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-210422",
+      "regionRef": {
+        "code": "210422",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "新宾满族自治县",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "满族文化展示",
+          "sourceIds": [
+            "xinbin-heritage-2025"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-210422-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有新宾满族自治县永陵镇赫图阿拉村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-210422-fact-2",
+          "text": "省级旅游介绍将赫图阿拉城的位置、建筑遗迹和旗袍博物馆列为文化展示资源。",
+          "sourceIds": [
+            "xinbin-heritage-2025"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2025-10-11"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-210422-direction-1",
+          "title": "文化景区的导览与理解",
+          "question": "成年游客在哪些游览节点需要背景、方向和讲解支持？",
+          "decisionOwner": "拟合作的景区导览服务方",
+          "decision": "调整导览层次和讲解入口",
+          "population": "实际到访的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实开放路线，开展获准的材料理解或路径任务"
+          ],
+          "sourceIds": [
+            "xinbin-heritage-2025"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-210422-direction-2",
+          "title": "文化主题产品的信息与场景偏好",
+          "question": "游客对文化含义、产地、制作方式和使用场景如何取舍？",
+          "decisionOwner": "拟合作的文化产品经营方",
+          "decision": "选择产品说明和展示方式",
+          "population": "可接触的成年游客及商户",
+          "requiredAccess": [
+            "tourists",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用授权产品素材，区分文化理解与购买经历"
+          ],
+          "sourceIds": [
+            "xinbin-heritage-2025"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-210422-direction-3",
+          "title": "村民参与旅游服务的条件",
+          "question": "不同经营经历的村民希望通过哪些方式参与服务或学习技能？",
+          "decisionOwner": "拟合作的村落与培训服务方",
+          "decision": "安排参与渠道和服务培训",
+          "population": "获准接触的成年村民",
+          "requiredAccess": [
+            "community_residents",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先了解现有参与安排和许可，再提出可执行建议"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-220721",
+      "regionRef": {
+        "code": "220721",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "前郭尔罗斯蒙古族自治县",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "湖区生态服务",
+          "sourceIds": [
+            "qianguo-lake-2026"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-220721-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有前郭尔罗斯蒙古族自治县查干湖渔场查干湖屯。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-220721-fact-2",
+          "text": "2026年的生态环境部门报道介绍查干湖周边村屯、旅游及餐饮住宿点的巡查监测，并提及计划采用无人机。",
+          "sourceIds": [
+            "qianguo-lake-2026"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2026-02-09"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-220721-direction-1",
+          "title": "湖区旅游信息的季节与场景差异",
+          "question": "不同到访季节与出行方式的游客需要怎样的信息及服务？",
+          "decisionOwner": "拟合作的湖区旅游服务方",
+          "decision": "调整行前指引和分季服务内容",
+          "population": "实际到访的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "按真实到访时间分组，核实当前开放与季节条件"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-220721-direction-2",
+          "title": "游客对生态提示的理解与行动",
+          "question": "哪些生态保护信息容易被理解，游客在具体行为情境中如何选择？",
+          "decisionOwner": "拟合作的生态与旅游服务方",
+          "decision": "改进生态提示和参与方式",
+          "population": "自愿参加理解任务的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "以现行公开提示为材料，不将意愿直接解释为环保行为"
+          ],
+          "sourceIds": [
+            "qianguo-lake-2026"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-220721-direction-3",
+          "title": "餐饮住宿服务中的绿色选择",
+          "question": "游客与经营者如何理解节水、减废及服务便利性之间的取舍？",
+          "decisionOwner": "拟合作的餐饮住宿服务方",
+          "decision": "选择可实施的服务说明与改进事项",
+          "population": "有真实服务经历的成年游客和商户",
+          "requiredAccess": [
+            "tourists",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "分别记录服务措施、使用经历与成本条件，不推断污染程度"
+          ],
+          "sourceIds": [
+            "qianguo-lake-2026"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-232701",
+      "regionRef": {
+        "code": "232701",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "漠河市",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "民宿与民居",
+          "sourceIds": [
+            "mohe-homestay-2023"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-232701-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有漠河市北极镇北红村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-232701-fact-2",
+          "text": "省农业农村厅2023年的介绍提到北红村家庭宾馆、特色民居和旅游经营；具体经营数量不作为当前状态使用。",
+          "sourceIds": [
+            "mohe-homestay-2023"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-232701-direction-1",
+          "title": "民宿预订信息与实际体验",
+          "question": "游客在预订时怎样理解价格、设施、交通和服务说明？",
+          "decisionOwner": "拟合作的民宿经营服务方",
+          "decision": "完善预订信息与到店沟通",
+          "population": "实际入住或完成预订的成年游客",
+          "requiredAccess": [
+            "tourists",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当期房型与服务，按实际订单经历记录"
+          ],
+          "sourceIds": [
+            "mohe-homestay-2023"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-232701-direction-2",
+          "title": "不同季节出行的准备与安全信息",
+          "question": "成年游客在衣着、交通和住宿准备中需要哪些信息支持？",
+          "decisionOwner": "拟合作的旅游服务组织方",
+          "decision": "优化行前准备与公开安全告知",
+          "population": "有真实到访经历的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "引用当前主管部门公开提示，不开展危险或低温实验"
+          ],
+          "sourceIds": [
+            "mct-rural-2022",
+            "mohe-homestay-2023"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-232701-direction-3",
+          "title": "旅游经营与村民生活服务",
+          "question": "经营参与程度不同的村民对公共服务和经营支持有何不同需要？",
+          "decisionOwner": "拟合作的村落服务方",
+          "decision": "确定生活与经营服务支持事项",
+          "population": "获准接触的成年居民与经营者",
+          "requiredAccess": [
+            "community_residents",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当期经营与生活安排，避免以历史宣传替代居民意见"
+          ],
+          "sourceIds": [
+            "mct-rural-2022",
+            "mohe-homestay-2023"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "核对来源发布日期：正文标2023-10-10，meta标2023-10-18；publishedAt保持null。"
+      ]
+    },
+    {
+      "id": "county-450328",
+      "regionRef": {
+        "code": "450328",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "龙胜各族自治县",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "梯田与红瑶文化",
+          "sourceIds": [
+            "longsheng-culture-2022"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-450328-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有龙胜各族自治县龙脊镇大寨村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-450328-fact-2",
+          "text": "文旅部2022年的介绍描述大寨村以农耕梯田、红瑶文化和传统技艺组织乡村旅游体验。",
+          "sourceIds": [
+            "longsheng-culture-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-20"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-450328-direction-1",
+          "title": "梯田游线信息与停留选择",
+          "question": "不同出行经验的游客如何理解路线、观景、休息和时间安排？",
+          "decisionOwner": "拟合作的当地旅游服务方",
+          "decision": "改进导览与行程说明",
+          "population": "实际到访的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实开放路线与交通，不引导进入未经许可的农田"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-450328-direction-2",
+          "title": "文化体验的理解与参与意愿",
+          "question": "游客如何理解不同文化体验内容，其参与选择受哪些信息影响？",
+          "decisionOwner": "拟合作的文化体验组织方",
+          "decision": "调整体验说明与活动组合",
+          "population": "自愿参与的成年游客",
+          "requiredAccess": [
+            "tourists",
+            "event_organizer"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用经授权的文化材料，尊重传承人与社区表达"
+          ],
+          "sourceIds": [
+            "longsheng-culture-2022"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-450328-direction-3",
+          "title": "居民对旅游与耕作空间的需求",
+          "question": "不同经营和耕作经历的居民如何看待公共空间、服务与参与安排？",
+          "decisionOwner": "拟合作的村落服务方",
+          "decision": "形成需要进一步协商的空间和服务事项",
+          "population": "获准接触的成年居民与农业经营者",
+          "requiredAccess": [
+            "community_residents",
+            "farmers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "分别记录耕作、经营和生活经历，不预设收益分配结论"
+          ],
+          "sourceIds": [
+            "longsheng-culture-2022"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-522630",
+      "regionRef": {
+        "code": "522630",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "台江县",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        },
+        {
+          "label": "苗绣与培训",
+          "sourceIds": [
+            "taijiang-crafts"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-522630-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有台江县老屯乡长滩村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        },
+        {
+          "id": "county-522630-fact-2",
+          "text": "州人大网站2024年的报道介绍长滩村刺绣、蜡染及线上线下销售和技能培训安排。",
+          "sourceIds": [
+            "taijiang-crafts"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2024-12-30"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-522630-direction-1",
+          "title": "苗绣文创的信息与使用场景",
+          "question": "游客如何理解纹样含义、制作方式和日常使用场景？",
+          "decisionOwner": "拟合作的工艺产品经营方",
+          "decision": "改进产品说明和展示方式",
+          "population": "可接触的成年游客与商户",
+          "requiredAccess": [
+            "tourists",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "使用获准纹样与产品材料，区分理解、偏好和购买"
+          ],
+          "sourceIds": [
+            "taijiang-crafts"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-522630-direction-2",
+          "title": "工艺学习与技能培训的参与条件",
+          "question": "不同经验的成年学习者需要哪些课程、时间与销售支持？",
+          "decisionOwner": "拟合作的培训或工艺服务方",
+          "decision": "设计分层课程与参与安排",
+          "population": "经许可接触的成年工艺从业者和学习者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实已有培训及真实参与经历，不承诺培训收入"
+          ],
+          "sourceIds": [
+            "taijiang-crafts"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-522630-direction-3",
+          "title": "乡村体验活动的内容与服务组合",
+          "question": "成年游客如何组合工艺体验、游览、休憩和购买活动？",
+          "decisionOwner": "拟合作的乡村旅游活动方",
+          "decision": "调整活动预约、讲解和服务组合",
+          "population": "实际到访的成年游客",
+          "requiredAccess": [
+            "tourists",
+            "event_organizer"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "核实当前活动及接待许可，再记录真实选择与体验"
+          ],
+          "sourceIds": [
+            "mct-rural-2022",
+            "taijiang-crafts"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-623022",
+      "regionRef": {
+        "code": "623022",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "卓尼县",
+      "tags": [
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-623022-fact-1",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有卓尼县木耳镇博峪村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-623022-direction-1",
+          "title": "博峪村旅游信息的可达性",
+          "question": "游客从哪里获取到达、住宿、活动和返程信息，哪些信息需要进一步核实？",
+          "decisionOwner": "拟合作的村落旅游服务方",
+          "decision": "完善行前与现场信息衔接",
+          "population": "实际到访的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实当前开放、路线和服务点，记录真实信息获取过程"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-623022-direction-2",
+          "title": "村落住宿与服务组合选择",
+          "question": "成年游客如何比较住宿、餐饮、停留和活动服务？",
+          "decisionOwner": "拟合作的住宿餐饮服务方",
+          "decision": "形成服务说明与预约组合",
+          "population": "有实际消费经历的成年游客及商户",
+          "requiredAccess": [
+            "tourists",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "以当期真实可用服务为材料，不使用历史接待量估算需求"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-623022-direction-3",
+          "title": "村民对旅游参与和生活服务的需求",
+          "question": "不同参与经历的村民希望怎样参与服务，又需要哪些生活配套？",
+          "decisionOwner": "拟合作的村落服务组织方",
+          "decision": "提出参与支持与公共服务改进事项",
+          "population": "获准接触的成年村民",
+          "requiredAccess": [
+            "community_residents"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先确认社区进入许可，分别记录参与意愿和实际经历"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "补充第二条不同事实的官方来源；已发现的“卓尼县：以拳拳之力共同绘就乡村振兴时代画卷”正文读取失败，尚未采纳其内容。"
+      ]
+    }
+  ]
+}
