@@ -40,10 +40,10 @@
 |---|---|---|
 | question-value | 决策用途、知识增量、探索与验证分工 | planned；只读指引，未实现自动研究价值审查或预注册 |
 | sample-denominator | 分支资格、有效样本、重叠原因、比例分母 | implemented；现有口径能力，未自动去重、插补或加权 |
-| descriptive-profile | 频数、数值分布、分组描述 | implemented；分组描述不执行 t 检验/ANOVA |
+| descriptive-profile | 频数、数值分布、分组比较 | implemented；Welch t / Welch 方差分析、秩检验对照、效应量与 Holm 两两比较，检验以随机抽样为前提 |
 | scale-consistency | α、修正题总相关、删项诊断 | implemented；内部一致性，不是效度或单维性验证 |
-| categorical-association | 交叉频数、行比例、期望频数、χ²、Cramér V | implemented；未校正 χ²，不提供 p 值 |
-| paired-association | Pearson 与有效配对平均秩 Spearman | implemented；没有 p 值和置信区间，不推因果 |
+| categorical-association | 交叉频数、行比例、期望频数、χ²、Cramér V | implemented；未校正 χ² 与 p 值，2×2 稀疏表以 Fisher 精确检验为准 |
+| paired-association | Pearson 与有效配对平均秩 Spearman | implemented；双侧 p，Pearson 附 Fisher z 区间，不推因果 |
 | segment-stability | 聚类距离、候选 K、多初始值、稳定性、行动画像 | planned；无已接通 K-means 引擎 |
 | prediction-validation | 分割、训练内预处理、基线、测试集与校准 | planned；OLS/Logistic/训练与泛化评估未接入 |
 | text-coding | 编码本、否定/转折语境、人工标注与领域验证 | planned；模型、标注与验证流程未接入 |

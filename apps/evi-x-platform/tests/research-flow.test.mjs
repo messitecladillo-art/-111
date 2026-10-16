@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {legacySource} from './helpers/legacy-source.mjs';
 import {parseEvidence,evidenceSection,appendEvidence,frequencyEvidence,reliabilityEvidence} from '../lib/research-flow.ts';
-import {createEditorContent} from '../lib/editor-model.ts';
+import {createEditorContent,EDITOR_LIMITS} from '../lib/editor-model.ts';
 import {parseSurveyCsv,analyzeReliability,DEMO_SURVEY_CSV} from '../lib/survey-analysis.ts';
 import {runRecipe} from '../lib/analysis-recipes.ts';
 const base=()=>({version:1,sourceHash:'a'.repeat(64),classification:'simulated',question:'样本结构如何？',variables:['渠道'],missingCodes:[],total:12,n:12,calculation:{method:'frequency',counts:[6,6],column:0}});
@@ -33,7 +33,7 @@ test('alpha summary formula matches existing engine; preserves negative values a
 test('proposal appends once and preserves every report/PPT field; rejects capacity without mutation',()=>{
   const original=createEditorContent(),before=JSON.stringify(original),proposal=evidenceSection(base(),'unique');
   const next=appendEvidence(original,proposal);assert.equal(JSON.stringify(original),before);assert.deepEqual(next.slides,original.slides);assert.deepEqual(next.report.slice(0,-1),original.report);assert.throws(()=>appendEvidence(next,proposal));
-  const full={...original,report:Array.from({length:40},(_,i)=>({...original.report[0],id:`s${i}`}))};assert.throws(()=>appendEvidence(full,proposal));
+  const full={...original,report:Array.from({length:EDITOR_LIMITS.sections},(_,i)=>({...original.report[0],id:`s${i}`}))};assert.throws(()=>appendEvidence(full,proposal));
 });
 test('privacy and UI approval boundaries remain explicit; no implicit result adoption in editor',async()=>{
   const flow=await readFile(new URL('../components/analysis/ResearchFlow.tsx',import.meta.url),'utf8');

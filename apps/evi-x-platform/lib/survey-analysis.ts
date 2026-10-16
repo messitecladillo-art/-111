@@ -1,7 +1,7 @@
 /** Deterministic, browser-safe survey analysis. No I/O, storage, automatic cleaning or inference. */
 export const SURVEY_LIMITS = { bytes: 2_000_000, rows: 5000, columns: 80, cells: 200000, cellLength: 2000, scaleItems: 30 } as const;
 export type Delimiter = "," | "\t" | ";";
-export type SurveyTable = { headers: string[]; rows: string[][]; skippedBlankLines: number; delimiter: Delimiter };
+export type SurveyTable = { headers: string[]; rows: string[][]; skippedBlankLines: number; delimiter: Delimiter; columnLabels?: Record<string,string> };
 export type NumericSummary = { n: number; mean: number; sd: number | null; min: number; q1: number; median: number; q3: number; max: number };
 export type ColumnSummary = { index: number; name: string; missing: number; numeric: number; nonNumeric: number; distinct: number; likelyIdentifier: boolean; stats: NumericSummary | null };
 export type SurveyProfile = { rows: number; columns: ColumnSummary[]; missingCells: number; totalCells: number; duplicateRows: number };
@@ -99,7 +99,9 @@ export function profileSurvey(table: SurveyTable, missingCodes: string[] = []): 
   const columns = table.headers.map((name, index) => {
     let missing = 0, nonNumeric = 0; const values: number[] = [], distinct = new Set<string>();
     table.rows.forEach(row => { const value = row[index]; if (isMissing(value, missingCodes)) { missing++; return; } distinct.add(value.trim()); const number = finiteNumber(value); if (number === null) nonNumeric++; else values.push(number); });
-    const likelyIdentifier = /(?:姓名|手机|电话|邮箱|身份证|学号|住址|地址|编号|(^|[_\s])id($|[_\s])|email|phone|name)/i.test(name);
+    const displayLabel = table.columnLabels && Object.hasOwn(table.columnLabels,name) ? table.columnLabels[name] : name;
+    const identifierPattern = /(?:姓名|手机|电话|邮箱|身份证|学号|住址|地址|编号|(^|[_\s])id($|[_\s])|email|phone|name)/i;
+    const likelyIdentifier = identifierPattern.test(name) || identifierPattern.test(displayLabel);
     return { index, name, missing, numeric: values.length, nonNumeric, distinct: distinct.size, likelyIdentifier, stats: likelyIdentifier ? null : describeNumbers(values) };
   });
   return { rows: table.rows.length, columns, missingCells: columns.reduce((n, c) => n + c.missing, 0), totalCells: table.rows.length * table.headers.length, duplicateRows };

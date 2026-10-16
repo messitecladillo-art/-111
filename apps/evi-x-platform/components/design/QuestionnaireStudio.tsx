@@ -4,6 +4,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ANALYSIS_PLANS, DESIGN_LIMITS, QUESTION_TYPES, designDictionary, exampleQuestionnaire, newQuestion, newQuestionnaire, nextVariable, parseBoundDraft, parseQuestionnaire, questionDirectory, questionIsMapped, questionnaireIssues, questionnaireText, routeDependencies, visibleQuestionIds, type DesignQuestion, type Questionnaire, type QuestionType, type QuestionFilter } from "@/lib/questionnaire";
 import styles from "./QuestionnaireStudio.module.css";
 import QuestionBlocks from "./QuestionBlocks";
+import QuestionnairePlatformExport from "./QuestionnairePlatformExport";
+import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
+import { appendMaterialQuestionGroup } from "@/lib/research-materials";
 import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
 import DiagnosisBriefProposal from './DiagnosisBriefProposal';
 import type { DiagnosisBriefSource } from '@/lib/diagnosis-actions';
@@ -297,6 +300,7 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
           <button type="button" disabled={reading} onClick={()=>input.current?.click()}>{reading?"正在读取…":"恢复备份"}</button>
           <hr/><button type="button" onClick={()=>exportFile('text')}>导出问卷草稿</button><button type="button" onClick={()=>exportFile('dictionary')}>导出变量字典</button>
         </div></details>
+        <QuestionnairePlatformExport design={design} revision={previewRevision} blocked={reading||hasPendingNumbers||!!confirmation}/>
         <button type="button" className={styles.primary} onClick={()=>exportFile('backup')}>下载备份</button>
         {onAnalyze&&<button type="button" className={styles.analysisLink} disabled={reading||hasPendingNumbers} onClick={sendToAnalysis}>送到数据分析 →</button>}
       </div>
@@ -331,6 +335,13 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
     <div className={styles.workspaceBar}><div className={styles.viewTabs} ref={viewMotion} role="group" aria-label="问卷工作区视图"><span className={styles.motionMarker} data-motion-marker aria-hidden="true" hidden/><button type="button" data-motion-id="edit" aria-pressed={view==='edit'} onClick={()=>{setView('edit');setMobilePane('edit');}}>题目编辑</button><button type="button" data-motion-id="assemble" aria-pressed={view==='assemble'} onClick={()=>setView('assemble')}>模块拼装</button><button type="button" data-motion-id="review" aria-pressed={view==='review'} onClick={()=>showReview()}>映射与检查</button></div>
       <div className={styles.summary} aria-label="设计检查概况"><button type="button" onClick={()=>{clearFilters();setView('edit');setMobilePane('edit');}} ><b>{design.questions.length}</b><span>题</span><span className="sr-only">，上限 80 题</span></button><button type="button" onClick={()=>{setQuery('');setFilter('unmapped');setView('edit');setMobilePane('edit');}} ><b>{mapped}/{design.questions.length}</b><span>已映射</span><span className="sr-only">，查看未映射题目</span></button><button type="button" data-tone={blockers.length?'risk':undefined} onClick={()=>showReview('blocker')}><b>{blockers.length}</b><span>结构问题</span></button><button type="button" onClick={()=>showReview('review')}><b>{issues.length-blockers.length}</b><span>待复核</span></button></div>
     </div>
+    <ResearchMaterialLibrary context="questionnaire" appendDisabled={reading||hasPendingNumbers||!!confirmation} onAppendGroup={id=>{
+      if(reading||hasPendingNumbers||confirmation){setError('请先完成读取或数值输入，再追加题组。');return false;}
+      try{const next=appendMaterialQuestionGroup(design,id,()=>crypto.randomUUID());const first=next.questions[design.questions.length];
+        if(!commit(next,`已追加 ${next.questions.length-design.questions.length} 道题，可整批撤销。`))return false;
+        clearFilters();if(first)selectQuestion(first.id);return true;
+      }catch(e){setError(e instanceof Error?e.message:'题组未加入，请检查设计。');return false;}
+    }}/>
     <div hidden={view!=='assemble'}><QuestionBlocks design={design} onAppend={next=>{const first=next.questions[design.questions.length];commit(next,`已追加 ${next.questions.length-design.questions.length} 道自编草稿题；研究用途、选项与显示条件需继续核对。`);clearFilters();if(first)selectQuestion(first.id);}}/></div>
     {view==='assemble'?null:view==='edit'?<><div className={styles.mobileTabs} role="group" aria-label="小屏工作区"><button type="button" aria-pressed={mobilePane==='edit'} onClick={()=>setMobilePane('edit')}>编辑题目</button><button type="button" aria-pressed={mobilePane==='preview'} onClick={()=>setMobilePane('preview')}>查看预览</button></div><div className={styles.workspace} data-mobile-pane={mobilePane}>
       <nav className={styles.outline} aria-label="问卷题目目录"><h3><span>题目目录 <small>{directory.length} / {design.questions.length}</small></span><button type="button" aria-label="添加题目" disabled={design.questions.length>=80} onClick={()=>{clearFilters();add();}}>＋</button></h3><details className={styles.directoryFilters}><summary>查找与筛选{query||filter!=='all'?' · 已启用':''}</summary><label className={styles.searchLabel}>查找题目<input type="search" value={query} maxLength={160} onChange={e=>setQuery(e.target.value)} placeholder="搜索题干、变量或构念"/></label><label className={styles.filterLabel}>筛选题目<select value={filter} onChange={e=>setFilter(e.target.value as QuestionFilter)}><option value="all">全部题目</option><option value="blocker">有结构问题</option><option value="unmapped">研究用途未映射</option><option value="conditional">有显示条件</option><option value="pending">有未应用数值</option></select></label></details><div className={styles.questionList} ref={directoryMotion}><span className={styles.motionMarker} data-motion-marker aria-hidden="true" hidden/>{directory.map(({question:q,number,blockers:count,pending})=><button type="button" key={q.id} data-motion-id={q.id} aria-current={q.id===active?.id?'true':undefined} onClick={()=>{setActiveId(q.id);setError('');}}><span>{String(number).padStart(2,'0')} · {q.variable || '未编码'}{pending?<em>数值待应用</em>:count>0?<em>{count} 项结构问题</em>:null}</span><strong>{q.text || '填写题干'}</strong><small>{QUESTION_TYPES[q.type]}{q.condition?' · 条件显示':''}</small></button>)}</div>{!directory.length&&<p className={styles.noResults}>没有匹配的题目，请调整搜索或筛选。</p>}{(query||filter!=='all')&&<button type="button" className={styles.clearFilter} onClick={clearFilters}>清除搜索与筛选</button>}</nav>

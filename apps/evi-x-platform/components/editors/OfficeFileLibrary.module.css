@@ -102,5 +102,5 @@
 
 .fileList { position:relative; }
 .fileList li.motionMarker { position:absolute; top:0; left:0; width:3px; height:0; padding:0; border:0; margin:0; background:var(--wb-gold,#b39757); pointer-events:none; }
-.fileButton { transition:background-color 180ms ease,border-color 180ms ease; }
+.fileButton { transition:background-color var(--motion-fast) var(--ease-arrive),border-color var(--motion-fast) var(--ease-arrive); }
 @media(prefers-reduced-motion:reduce) { .library * { animation:none!important; transition:none!important; } }

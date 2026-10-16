@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "release": "2026-10-15.4",
+  "packs": [
+    {
+      "path": "core-60.json",
+      "sha256": "511839b3316f855cdfa6aff4f81988e2f3ff785e0b21fe470834a248117843b8"
+    },
+    {
+      "path": "pack-01-stats-research.json",
+      "sha256": "fcaf9be1b279bfa59a74c7bed2006e0ec1af26ebc5079ce07e8e7bad9ca43ffa"
+    },
+    {
+      "path": "pack-02-social-spatial.json",
+      "sha256": "0120abb51d0bb93b75b346cbde5eea72e885ad58a91382bd20579e42a2edf430"
+    },
+    {
+      "path": "pack-03-computing-data.json",
+      "sha256": "7980e32ece323d5d1dc46d70756eb5454a19892c80d6e7350dcc5aa8bab0496c"
+    }
+  ]
+}

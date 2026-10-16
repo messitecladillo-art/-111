@@ -1,6 +1,7 @@
 import type { EditorContent, ReportSection, Slide } from './editor-model.ts';
+import {findingSignature,verifyResearchQuality} from './research-quality.ts';
 
-export type ReportSlideLink = { version: 1; sectionId: string; sectionHash: string; slideHash: string };
+export type ReportSlideLink = { version: 1|2; sectionId: string; sectionHash: string; slideHash: string };
 export const STORY_JOBS = { problem: '界定问题', design: '说明调查', finding: '呈现发现', action: '提出行动', limitation: '说明边界' } as const;
 export const STORY_CLASSES = { user_provided: '用户材料，尚待核验', proposed: '拟议方案，尚未执行', simulated: '教学模拟，非真实调研', inferred: '推断解释，需注明依据' } as const;
 export type StoryCard = { id: string; sectionId: string; job: keyof typeof STORY_JOBS; classification: keyof typeof STORY_CLASSES; title: string; excerpt: string; limitation: string; implication: string; locator: string; seconds: number };
@@ -10,8 +11,8 @@ export const LINK_LABELS: Record<LinkState,string> = { unlinked: '未建立报�
 export function parseReportSlideLink(value: unknown): ReportSlideLink {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw Error('报告关联结构无效。');
   const x=value as Record<string,unknown>;
-  if (Object.keys(x).some(k=>!['version','sectionId','sectionHash','slideHash'].includes(k)) || x.version!==1 || typeof x.sectionId!=='string' || !x.sectionId.trim() || x.sectionId.length>80 || /[\u0000-\u001f\u007f]/u.test(x.sectionId) || typeof x.sectionHash!=='string' || !/^[a-f0-9]{64}$/.test(x.sectionHash) || typeof x.slideHash!=='string' || !/^[a-f0-9]{64}$/.test(x.slideHash)) throw Error('报告关联版本或指纹无效。');
-  return {version:1,sectionId:x.sectionId,sectionHash:x.sectionHash,slideHash:x.slideHash};
+  if (Object.keys(x).some(k=>!['version','sectionId','sectionHash','slideHash'].includes(k)) || ![1,2].includes(x.version as number) || typeof x.sectionId!=='string' || !x.sectionId.trim() || x.sectionId.length>80 || /[\u0000-\u001f\u007f\p{Surrogate}]/u.test(x.sectionId) || typeof x.sectionHash!=='string' || !/^[a-f0-9]{64}$/.test(x.sectionHash) || typeof x.slideHash!=='string' || !/^[a-f0-9]{64}$/.test(x.slideHash)) throw Error('报告关联版本或指纹无效。');
+  return {version:x.version as 1|2,sectionId:x.sectionId,sectionHash:x.sectionHash,slideHash:x.slideHash};
 }
 async function fingerprint(value: unknown): Promise<string> {
   const bytes=new TextEncoder().encode(JSON.stringify(value));
@@ -19,12 +20,24 @@ async function fingerprint(value: unknown): Promise<string> {
 }
 const sectionValue=(s:ReportSection)=>({id:s.id,title:s.title,body:s.body,source:s.source});
 const slideValue=(s:Slide)=>({title:s.title,body:s.body,aside:s.aside,notes:s.notes,layout:s.layout});
+const richSectionValue=(s:ReportSection,c:EditorContent)=>({
+  ...sectionValue(s),blocks:s.blocks??[],findingIds:s.findingIds??[],findingSnapshots:(s.findingIds??[]).map(id=>[id,s.findingSnapshots?.[id]??null]),
+  results:[...new Set((s.blocks??[]).filter(b=>['chart','table'].includes(b.kind)).map(b=>b.evidenceId))].map(id=>c.quality?.results.find(r=>r.id===id)??null),
+  findings:(s.findingIds??[]).map(id=>{const f=c.quality?.findings.find(f=>f.id===id);return f?[id,findingSignature(f),f.status,f.evidenceIds.map(e=>[e,f.confirmedHashes[e]??null,c.quality?.results.find(r=>r.id===e)?.resultHash??null])]:[id,null];}),
+});
+const richSlideValue=(s:Slide)=>({...slideValue(s),objects:s.objects??null});
+/** Frozen linkage records editing provenance, not approval of a scientific claim. */
+export async function bindReportSlide(content:EditorContent,slide:Slide,sectionId:string):Promise<Slide>{
+  const c=structuredClone(content),s=structuredClone(slide),section=c.report.find(r=>r.id===sectionId);
+  if(!section)throw Error('关联章节不存在。');
+  return {...s,reportLink:{version:c.version===2?2:1,sectionId,sectionHash:await fingerprint(c.version===2?richSectionValue(section,c):sectionValue(section)),slideHash:await fingerprint(c.version===2?richSlideValue(s):slideValue(s))}};
+}
 export async function reportLinkState(content: EditorContent, slide: Slide): Promise<LinkState> {
   if (!slide.reportLink) return 'unlinked';
   const link=parseReportSlideLink(slide.reportLink),section=content.report.find(s=>s.id===link.sectionId);
   if(!section)return 'missing_source';
-  if(await fingerprint(sectionValue(section))!==link.sectionHash)return 'report_changed';
-  if(await fingerprint(slideValue(slide))!==link.slideHash)return 'slide_changed';
+  if(await fingerprint(link.version===2?richSectionValue(section,content):sectionValue(section))!==link.sectionHash)return 'report_changed';
+  if(await fingerprint(link.version===2?richSlideValue(slide):slideValue(slide))!==link.slideHash)return 'slide_changed';
   return 'current';
 }
 export type ReportLinkWarning = {page:number;state:Exclude<LinkState,'current'|'unlinked'>|'check_failed'};
@@ -71,4 +84,38 @@ export async function buildStoryboard(content:EditorContent,cards:StoryCard[],mo
     built.push(slide);
   }
   return mode==='append'?[...content.slides.map(s=>structuredClone(s)),...built]:built;
+}
+
+export type FigureCoverage={sectionId:string;blockId:string;title:string;state:'unused'|'current'|'review';pages:number[]};
+/** A matching source ID alone is insufficient: type, input and numeric column must match. */
+export async function reportFigureCoverage(content:EditorContent):Promise<FigureCoverage[]>{
+  const c=structuredClone(content),out:FigureCoverage[]=[];
+  for(const section of c.report)for(const block of section.blocks??[]){
+    if(!['chart','table'].includes(block.kind))continue;
+    const pages:number[]=[],states:boolean[]=[];
+    for(const [i,slide] of c.slides.entries()){
+      if(slide.reportLink?.version!==2||slide.reportLink.sectionId!==section.id)continue;
+      const refs=(slide.objects??[]).filter(o=>o.sourceBlockId===block.id);
+      if(!refs.length)continue;
+      pages.push(i+1);
+      states.push(refs.every(o=>o.opacity>0&&o.kind===block.kind&&o.evidenceId===block.evidenceId&&(o.kind!=='chart'||o.valueColumn===block.valueColumn))&&await reportLinkState(c,slide)==='current');
+    }
+    out.push({sectionId:section.id,blockId:block.id,title:block.text||section.title,state:!pages.length?'unused':states.every(Boolean)?'current':'review',pages});
+  }
+  return out;
+}
+export async function buildReportBlockSlide(content:EditorContent,sectionId:string,blockId:string,excerpt?:string):Promise<Slide>{
+  const c=structuredClone(content),section=c.report.find(s=>s.id===sectionId),block=section?.blocks?.find(b=>b.id===blockId);
+  if(c.version!==2||!section||!block||!['chart','table'].includes(block.kind))throw Error('请选择报告中的图表或表格。');
+  if(c.slides.length>=40)throw Error('已有40页，请先整理页面。');
+  const body=excerpt??section.body;
+  if(!body.trim()||body.length>600||!section.body.includes(body))throw Error('请从本章选择一段要讲述的原文，最多600字。');
+  if(c.quality)await verifyResearchQuality(c.quality);
+  const {composeQualitySlide}=await import('./quality-layouts.ts');
+  const slide=composeQualitySlide({id:crypto.randomUUID(),title:block.text||section.title,body,aside:'',notes:section.source,layout:block.kind==='table'?'comparison':'chart'},block.kind==='table'?'comparison':'chart',c.quality!,block.evidenceId);
+  slide.objects=slide.objects?.map(o=>o.kind===block.kind?{...o,valueColumn:block.valueColumn,sourceBlockId:block.id}:o);
+  const bound=await bindReportSlide(c,slide,section.id);
+  const {buildPptx}=await import('./editor-export.ts');
+  await buildPptx({...c,report:[section],slides:[bound]});
+  return bound;
 }

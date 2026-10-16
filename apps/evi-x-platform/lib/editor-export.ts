@@ -1,3 +1,4 @@
+import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, type SvgPreviewRenderer } from "./quality-export.ts";
 import { ACCENTS, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 
@@ -8,7 +9,9 @@ export function downloadBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 export function fileName(title: string) { return title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 80) || "未命名研究"; }
-export async function buildDocx(content: EditorContent, inputOptions: ReportFormatOptions = content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS): Promise<Blob> {
+export async function buildDocx(content: EditorContent, inputOptions: ReportFormatOptions = content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS, renderSvg?:SvgPreviewRenderer): Promise<Blob> {
+  assertFindingReferences(content);
+  await validateQuality(content);
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
   if(!report.length)throw Error(options.part==='appendix'?'请先添加独立的“附录”章节，再单独导出附录。':'报告正文至少需要一个章节。');
@@ -31,27 +34,29 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const page={size:{width:11906,height:16838},margin:{top:1440,bottom:1440,left:1803,right:1803,header:720,footer:720,gutter:0}};
   const sections:ConstructorParameters<typeof Document>[0]['sections'][number][]=[];
   const footer=()=>new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,indent:{firstLine:0,firstLineChars:0},spacing:{before:0,after:0,line:240},children:[new TextRun({...bodyRun,children:[PageNumber.CURRENT]})]})]});
-  function addSection(children:(InstanceType<typeof Paragraph>|InstanceType<typeof TableOfContents>)[],kind:'cover'|'preliminary'|'body',restart?:number){
+  function addSection(children:ConstructorParameters<typeof Document>[0]["sections"][number]["children"],kind:'cover'|'preliminary'|'body',restart?:number){
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
   const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
   if(options.includeCover)addSection([title(),...(content.subtitle?[new Paragraph({alignment:AlignmentType.CENTER,indent:{firstLine:0,firstLineChars:0},children:[new TextRun({...bodyRun,text:content.subtitle})]})]:[])],'cover');
   let bodyStarted=false,tocInserted=false,preliminaryStarted=false;
   function toc(){if(options.includeToc&&!tocInserted){addSection([new Paragraph({style:'ReportSpecialHeading',text:'目录'}),new TableOfContents('目录',{hyperlink:true,headingStyleRange:'1-3'})],'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;tocInserted=true;}}
-  report.forEach(section=>{
+  for(const section of report){
     const part=reportPart(section.title),preliminary=part==='abstract'&&!bodyStarted;
     if(!preliminary)toc();
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
-    const children=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
-    section.body.split('\n').forEach(line=>{
+    const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
+    // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
+    if(section.body)section.body.split('\n').forEach(line=>{
       const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
       children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:[new TextRun({text:line})]}));
     });
+    if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg));
     if(section.source)children.push(new Paragraph({style:'ReportReference',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
     if(preliminary){addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;}
     else if(part==='body'&&bodyStarted){const index=sections.length-1;sections[index]={...sections[index],children:[...sections[index].children,...children]};}
     else {addSection(children,'body',bodyStarted?undefined:1);bodyStarted=true;}
-  });
+  }
   if(!bodyStarted)toc();
   const doc=new Document({creator:'',lastModifiedBy:'',title:'',description:'',features:{updateFields:true},styles:{default:{document:{run:bodyRun,paragraph:bodyParagraph}},paragraphStyles:styles},sections});
   // Word's half-line spacing is a line-relative measure, not an approximation in points.
@@ -65,6 +70,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   return new Blob([await archive.generateAsync({type:'arraybuffer',compression:'DEFLATE'})],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
 export async function buildPptx(content: EditorContent): Promise<Blob> {
+  assertFindingReferences(content);
+  await validateQuality(content);
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
@@ -76,6 +83,11 @@ export async function buildPptx(content: EditorContent): Promise<Blob> {
   for (const [index, item] of content.slides.entries()) {
     const slide = pptx.addSlide();
     slide.background = { color: "FFFFFF" };
+    if(item.objects!==undefined){
+      const sources=addQualityObjects(slide,pptx,item.objects,content);
+      if(item.notes||sources)slide.addNotes([item.notes,sources].filter(Boolean).join("\n\n"));
+      continue;
+    }
     slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.15, h: 7.5, line: { transparency: 100 }, fill: { color: accent } });
     const cover = item.layout === "cover";
     const two = item.layout === "two-column";

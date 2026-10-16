@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import JSZip from 'jszip';
-import { createEditorContent, parseEditorContent, reportToSlides } from '../lib/editor-model.ts';
+import { createEditorContent, EDITOR_LIMITS, parseEditorContent, reportToSlides } from '../lib/editor-model.ts';
+import { QUALITY_LIMITS } from '../lib/research-quality.ts';
 import { buildDocx, buildPptx } from '../lib/editor-export.ts';
 
 test('editor template validates and strict boundaries reject malformed drafts', () => {
@@ -28,10 +29,10 @@ test('compact backups round-trip near capacity and 40 chapters never silently tr
 });
 test('UTF-8 capacity and every nested field remain strict and round-trip safely', () => {
   const content=createEditorContent();
-  content.report=Array.from({length:20},(_,i)=>({id:`cn-${i}`,title:'中文章节',body:'汉'.repeat(12000),source:''}));
-  assert.ok(JSON.stringify(content).length<500000,'fixture stays below a character-only limit');
-  assert.ok(Buffer.byteLength(JSON.stringify(content),'utf8')>500000,'fixture exceeds the actual byte limit');
-  assert.throws(()=>parseEditorContent(content),/500 KB/);
+  content.report=Array.from({length:60},(_,i)=>({id:`cn-${i}`,title:'中文章节',body:'汉'.repeat(12000),source:''}));
+  assert.ok(JSON.stringify(content).length<2_000_000,'fixture stays below a character-only limit');
+  assert.ok(Buffer.byteLength(JSON.stringify(content),'utf8')>2_000_000,'fixture exceeds the actual byte limit');
+  assert.throws(()=>parseEditorContent(content),/2 MB/);
   const initial=createEditorContent();
   for(const invalid of [
     {...initial,report:[{...initial.report[0],source:'x'.repeat(1501)}]},
@@ -84,4 +85,16 @@ test('PowerPoint export contains editable slide text, 16:9 canvas and speaker no
   assert.match(xml,/证据旁注/); assert.match(xml,/研究对象与边界/); assert.doesNotMatch(xml,/EVI-X|证见/);
   assert.match(await zip.file('ppt/notesSlides/notesSlide2.xml').async('string'),/中文讲稿验收/);
   assert.match(await zip.file('ppt/presentation.xml').async('string'),/cx="12192000" cy="6858000"/);
+});
+test('full-report capacity: 100 sections, 120 results, and a finding may cite every result', () => {
+  const content=createEditorContent();
+  content.version=2;
+  const result=i=>({id:`r${i}`,title:'结果',sourceName:'问卷',sourceUrl:'',sourceHash:'a'.repeat(64),resultHash:'b'.repeat(64),classification:'user_provided',method:'frequency',n:10,total:10,headers:['类别','频数'],rows:[['甲',10]],metrics:[],warnings:[]});
+  const results=Array.from({length:QUALITY_LIMITS.results},(_,i)=>result(i));
+  const ids=results.map(r=>r.id);
+  content.quality={version:1,results,findings:[{id:'f',title:'发现',question:'',evidenceIds:ids,interpretation:'',alternatives:'',scope:'',action:'',status:'confirmed',confirmedHashes:Object.fromEntries(ids.map(id=>[id,'b'.repeat(64)]))}]};
+  content.report=Array.from({length:EDITOR_LIMITS.sections},(_,i)=>({id:`s${i}`,title:'节',body:'',source:''}));
+  assert.equal(parseEditorContent(content).quality.findings[0].evidenceIds.length,120);
+  assert.throws(()=>parseEditorContent({...content,report:[...content.report,{id:'extra',title:'',body:'',source:''}]}));
+  assert.throws(()=>parseEditorContent({...content,quality:{...content.quality,results:[...results,result('extra')]}}));
 });

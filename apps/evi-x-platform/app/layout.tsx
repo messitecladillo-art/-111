@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HostedSessionProvider } from '@/components/hosted/HostedSession';
+import KnowledgeProvider from '@/components/knowledge/KnowledgeProvider';
 import "./globals.css";
 import "./workbench.css";
 import './hosted.css';
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
-      <body><HostedSessionProvider>{children}</HostedSessionProvider></body>
+      <body><HostedSessionProvider><KnowledgeProvider>{children}</KnowledgeProvider></HostedSessionProvider></body>
     </html>
   );
 }

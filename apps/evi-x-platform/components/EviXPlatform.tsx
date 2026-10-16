@@ -19,14 +19,19 @@ import { COMPETITION_UPDATE } from "@/data/competition-update";
 import LifecycleWarRoom from "@/components/LifecycleWarRoom";
 import EvidenceFlight from "@/components/EvidenceFlight";
 import ChoiceGroup from "@/components/ChoiceGroup";
-import WorkbenchShell, { useWorkbenchTheme } from "@/components/WorkbenchShell";
+import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme } from "@/components/WorkbenchShell";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio'));
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
+const NetExamStudio = dynamic(() => import('@/components/exam/NetExamStudio'), { ssr: false, loading: () => <p role="status">正在载入网赛题库…</p> });
+const SamplingWorkbench = dynamic(() => import('@/components/sampling/SamplingWorkbench'), { ssr: false, loading: () => <p role="status">正在载入抽样设计…</p> });
+const SubmissionPreflight = dynamic(() => import('@/components/preflight/SubmissionPreflight'), { ssr: false, loading: () => <p role="status">正在载入提交前体检…</p> });
 const DefenseStudio = dynamic(() => import('@/components/defense/DefenseStudio'));
 const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
+// React Flow and the canvas engine load only when the canvas is first opened.
+const ResearchCanvas = dynamic(() => import('@/components/canvas/ResearchCanvas'), { ssr: false, loading: () => <p className="wb-canvas-loading" role="status">正在载入研究画布…</p> });
 const TopicLab = dynamic(() => import('@/components/topic-lab/TopicLab'), { ssr: false, loading: () => <p className="topic-lab-loading" role="status">正在载入词云与选题…</p> });
 import HostedServices from '@/components/hosted/HostedServices';
 import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
@@ -36,6 +41,7 @@ import ResearchPipeline from '@/components/overview/ResearchPipeline';
 import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-actions';
 import type { DesignSnapshot, DesignTransfer } from '@/lib/questionnaire-mapping';
 import type { DatasetHandoff } from '@/components/silicon/ResultsBoard';
+import type { DatasetValue } from '@/lib/canvas/execute';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -1020,8 +1026,15 @@ function ruleTypeLabel(value: string) {
   } as Record<string, string>)[value] ?? "其他规则";
 }
 
+function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design: DesignSnapshot | null }) {
+  const nav = useWorkbenchNav();
+  return <ResearchCanvas workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
+}
+
 export default function EviXPlatform() {
+  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
+  const [workspaceDataset,setWorkspaceDataset]=useState<DatasetValue|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
   const [datasetTransfer,setDatasetTransfer]=useState<DatasetHandoff|null>(null);
   const [briefSource,setBriefSource]=useState<DiagnosisBriefSource|null>(null);
@@ -1060,10 +1073,14 @@ export default function EviXPlatform() {
       <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>梳理当前证据缺口，生成下一步行动清单。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>
 
       </>,
+      exam: <NetExamStudio />,
+      preflight: <SubmissionPreflight />,
+      sampling: <SamplingWorkbench dataset={workspaceDataset} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly />,
+      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)}/>,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer}/>,
+      analysis: <SurveyLab onResultSnapshot={result=>{setResultProposal(result);window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
+      canvas: <CanvasPanel dataset={workspaceDataset} design={designSnapshot} />,
       silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={setBriefSource} />,

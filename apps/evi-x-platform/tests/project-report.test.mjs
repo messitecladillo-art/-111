@@ -40,7 +40,9 @@ test('confirmed evidence appends without modifying report or slides and duplicat
   const section=evidenceSection({version:1,sourceHash:'a'.repeat(64),classification:'simulated',question:'测试类别比例',variables:['Q1'],missingCodes:[],total:10,n:8,calculation:{method:'frequency',counts:[3,5],column:0}},'test-proposal');
   const next=appendEvidenceSection(content,section);
   assert.deepEqual(content,before);assert.deepEqual(next.slides,before.slides);
-  assert.deepEqual(next.report.slice(0,-1),before.report);assert.deepEqual(next.report.at(-1),section);
+  const at=next.report.findIndex(s=>s.id===section.id);
+  assert.deepEqual(next.report.filter(s=>s.id!==section.id),before.report);assert.deepEqual(next.report[at],section);
+  assert.equal(next.report[at+1].title,'参考文献','evidence lands before the references and appendices');
   assert.match(section.body,/模拟/);assert.match(section.source,/aaaaaaaa/);
   assert.throws(()=>appendEvidenceSection(next,section),/已加入/);
   assert.ok(next.report.some(s=>s.title==='参考文献'));assert.ok(next.report.some(s=>s.title.startsWith('附录')));

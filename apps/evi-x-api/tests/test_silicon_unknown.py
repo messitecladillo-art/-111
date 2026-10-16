@@ -1,6 +1,4 @@
 """Unknown provider receipts must remain distinguishable from known failures."""
-from uuid import uuid4
-
 import pytest
 
 from evix_api.provider import ProviderFailure
@@ -29,6 +27,7 @@ def test_mixed_silicon_receipts_prioritize_unknown_and_idempotency_never_replays
     assert response.status_code == 202, response.text
     receipt = wait(client, path + "/" + response.json()["id"])
     assert receipt["status"] == ("outcome_unknown" if unknown else "ready")
+    assert receipt["errorCode"] == ("unreconciled_calls" if unknown else "rate_limited")
     assert any(item["status"] == "ok" for item in receipt["responses"])
     error = next(item for item in receipt["responses"] if item["status"] != "ok")
     assert error["status"] == ("outcome_unknown" if unknown else "failed")
@@ -58,3 +57,4 @@ def test_all_failed_or_uncertain_silicon_units_keep_correct_run_status(entered, 
     assert receipt["status"] == ("outcome_unknown" if unknown else "failed")
     assert receipt["responses"][0]["status"] == ("outcome_unknown" if unknown else "failed")
     assert receipt["responses"][0]["answers"] == []
+    assert receipt["errorCode"] == ("unreconciled_calls" if unknown else "authentication_failed")

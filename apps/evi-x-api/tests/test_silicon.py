@@ -9,7 +9,7 @@ from sqlalchemy import text, update
 from evix_api import silicon
 from evix_api.contracts import ApiError
 from evix_api.models import SiliconRun, now
-from evix_api.provider import FixtureProvider
+from evix_api.provider import FixtureProvider, ProviderFailure
 from .test_contracts import blank
 
 PARITY = json.loads((Path(__file__).parent / "fixtures" / "silicon-parity.json").read_text(encoding="utf-8"))
@@ -231,3 +231,56 @@ def test_silicon_cancel_single_active_run_and_restart_expiry(entered, pg_engine,
         connection.execute(text("SELECT set_config('evix.user_id',:id,true)"), {"id": sa["user"]["id"]})
         connection.execute(update(SiliconRun).where(SiliconRun.id == view["id"]).values(status="running", updated_at=now() - timedelta(seconds=settings.silicon_stale_seconds + 5)))
     assert a.get(f'{path}/{view["id"]}').json()["status"] == "outcome_unknown"
+
+
+@pytest.mark.postgres
+def test_silicon_unknown_call_outcomes_never_read_as_success(entered, pg_engine, settings):
+    """A timeout may still have been processed and billed: the unit keeps outcome_unknown and the run cannot read as ready."""
+    app, open_client, provider = entered
+    original = provider.answer
+    seen = []
+
+    async def flaky(config, key, message, spec):
+        seen.append(1)
+        if len(seen) % 3 == 0:  # every third unit times out after the request was sent
+            provider.calls += 1
+            raise ProviderFailure("provider_timeout", unknown=True)
+        return await original(config, key, message, spec)
+    provider.answer = flaky
+    a, _ = open_client()
+    p = project(a)
+    service = a.post("/api/services", json=service_input()).json()
+    path = f'/api/projects/{p["id"]}/silicon-runs'
+    data = payload(services=[{"serviceId": service["id"], "serviceRevision": 1}])
+    view = a.post(path, json=data).json()
+    done = wait(a, f'{path}/{view["id"]}')
+    statuses = sorted(r["status"] for r in done["responses"])
+    assert statuses.count("outcome_unknown") == 2 and statuses.count("ok") == 4
+    assert done["status"] == "outcome_unknown" and done["errorCode"] == "unreconciled_calls"
+    unknown = next(r for r in done["responses"] if r["status"] == "outcome_unknown")
+    assert unknown["answers"] == [] and unknown["error"] == "provider_timeout"
+    calls = provider.calls
+    # Replaying the same request returns the same run; nothing is re-sent to the supplier.
+    assert a.post(path, json=data).json()["id"] == view["id"] and provider.calls == calls
+
+
+@pytest.mark.postgres
+def test_silicon_known_failures_keep_partial_success(entered, pg_engine, settings):
+    app, open_client, provider = entered
+    original = provider.answer
+    seen = []
+
+    async def rejecting(config, key, message, spec):
+        seen.append(1)
+        if len(seen) == 1:
+            provider.calls += 1
+            raise ProviderFailure("rate_limited")
+        return await original(config, key, message, spec)
+    provider.answer = rejecting
+    a, _ = open_client()
+    p = project(a)
+    service = a.post("/api/services", json=service_input()).json()
+    path = f'/api/projects/{p["id"]}/silicon-runs'
+    done = wait(a, f'{path}/{a.post(path, json=payload(services=[{"serviceId": service["id"], "serviceRevision": 1}])).json()["id"]}')
+    assert done["status"] == "ready" and done["errorCode"] == "rate_limited"
+    assert sorted(r["status"] for r in done["responses"]).count("failed") == 1

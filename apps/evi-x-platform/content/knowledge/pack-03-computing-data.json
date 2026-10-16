@@ -1,0 +1,5304 @@
+{
+  "schemaVersion": 1,
+  "version": "2026.10.15-b03",
+  "entries": [
+    {
+      "id": "data-type",
+      "version": 1,
+      "name": "数据类型",
+      "englishName": "Data type",
+      "aliases": [
+        "类型",
+        "dtype"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "数据类型规定一个值如何存储、允许什么操作以及怎样解释。数值、文字、布尔和日期的技术类型与变量的研究含义是两层信息，导入时都要保存。",
+      "uses": [
+        "检查身份证号、题号和金额在导入后是否仍具有原来的含义。"
+      ],
+      "examples": [
+        "示例：编号“0017”是文字标识；变成整数17会丢掉前导零。"
+      ],
+      "relatedIds": [
+        "integer",
+        "string",
+        "nullable-type",
+        "data-validation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-types",
+          "title": "Python：内置类型",
+          "url": "https://docs.python.org/3/builtins/stdtypes.html",
+          "locator": "Numeric Types / Boolean Type / Text Sequence Type",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-schema-type",
+          "title": "JSON Schema：类型",
+          "url": "https://json-schema.org/understanding-json-schema/reference/type",
+          "locator": "Type-specific Keywords / type 的字符串或数组值",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "categorical-encoding",
+          "distinction": "类别的业务含义不会因为存成整数而变成可连续计算的量。"
+        },
+        {
+          "entryId": "nullable-type",
+          "distinction": "类型描述正常值的种类；可空类型另外声明允许没有值。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "全部转成数字更方便吗？",
+          "answer": "先看字段语义。编号与类别编码通常不能直接求平均，强制转换还可能损坏原值。"
+        },
+        {
+          "question": "类型转换应记录什么？",
+          "answer": "原类型、目标类型、规则、失败单元格以及转换版本，便于复算与撤销。"
+        }
+      ]
+    },
+    {
+      "id": "integer",
+      "version": 1,
+      "name": "整数类型",
+      "englishName": "Integer",
+      "aliases": [
+        "int",
+        "整型"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "整数类型表示没有小数部分的整数。不同语言和存储格式可能采用固定宽度或可增长精度；固定宽度存在可表示范围，不能假定所有系统都像 Python int。",
+      "uses": [
+        "保存计数，同时核对跨语言的大整数范围。"
+      ],
+      "examples": [
+        "示例：9,007,199,254,740,993 作为某些浮点数接口的数值传递会失真，标识符可按字符串交换。"
+      ],
+      "relatedIds": [
+        "data-type",
+        "floating-point",
+        "string"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-types",
+          "title": "Python：内置类型",
+          "url": "https://docs.python.org/3/builtins/stdtypes.html",
+          "locator": "Numeric Types / Boolean Type / Text Sequence Type",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-float",
+          "title": "Python：浮点误差",
+          "url": "https://docs.python.org/3.14/tutorial/floatingpoint.html",
+          "locator": "15.1 Representation Error / math.isclose",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "floating-point",
+      "version": 1,
+      "name": "浮点数与舍入误差",
+      "englishName": "Floating point",
+      "aliases": [
+        "float",
+        "浮点精度",
+        "binary64"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "浮点数用有限有效位与指数近似表示实数。常见二进制格式不能精确表示多数十进制小数；显示的小数位数与内部精度也不相同。误差需要在算法和比较规则中处理。",
+      "uses": [
+        "区分计算精度、图表显示精度与判定容差。"
+      ],
+      "examples": [
+        "示例：常见 binary64 中 0.1+0.2 不严格等于0.3；最终百分比可统一显示两位小数，计算保留原精度。"
+      ],
+      "relatedIds": [
+        "decimal-precision",
+        "numerical-stability",
+        "data-type"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-float",
+          "title": "Python：浮点误差",
+          "url": "https://docs.python.org/3.14/tutorial/floatingpoint.html",
+          "locator": "15.1 Representation Error / math.isclose",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-numerical",
+          "title": "Goldberg：浮点运算分析",
+          "url": "https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html",
+          "locator": "Rounding Error / Cancellation / Exactly Rounded Operations",
+          "scope": "作者1991文章的Oracle文档再版；引用技术概念，示例为原创"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "decimal-precision",
+          "distinction": "十进制算术可精确表示0.1，但除法等运算仍受设定精度和舍入规则限制。"
+        },
+        {
+          "entryId": "numerical-stability",
+          "distinction": "浮点是表示方式，稳定性评价算法怎样传播或放大误差。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "结果只差最后一位，是公式错了吗？",
+          "answer": "先核对输入、运算顺序、类型和容差；细小舍入差异与改变样本口径是不同问题。"
+        },
+        {
+          "question": "直接四舍五入全部输入能解决吗？",
+          "answer": "不能普遍解决，反而会丢信息。应选择合适类型、稳定算法及显示策略。"
+        }
+      ]
+    },
+    {
+      "id": "boolean",
+      "version": 1,
+      "name": "布尔类型",
+      "englishName": "Boolean",
+      "aliases": [
+        "bool",
+        "真值"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "布尔类型表示真与假两种逻辑值。空缺或未知应另作表示；字符串“false”在某些语言中并不会自动等价于布尔假。",
+      "uses": [
+        "核对多选拆列的选中标记和筛选条件。"
+      ],
+      "examples": [
+        "示例：某选项未选为false；该题未展示则为null，两种状态不能合并。"
+      ],
+      "relatedIds": [
+        "nullable-type",
+        "data-type",
+        "missing-value"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-types",
+          "title": "Python：内置类型",
+          "url": "https://docs.python.org/3/builtins/stdtypes.html",
+          "locator": "Numeric Types / Boolean Type / Text Sequence Type",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-schema-type",
+          "title": "JSON Schema：类型",
+          "url": "https://json-schema.org/understanding-json-schema/reference/type",
+          "locator": "Type-specific Keywords / type 的字符串或数组值",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "string",
+      "version": 1,
+      "name": "字符串",
+      "englishName": "String",
+      "aliases": [
+        "str",
+        "文本类型"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "字符串是文字符号的序列；在 Unicode 系统里还需区分码点、编码单元和用户看到的字符。字符串“12”与数值12可以显示相似，却具有不同操作含义。",
+      "uses": [
+        "保留编号、开放题和带单位的原始回答。"
+      ],
+      "examples": [
+        "示例：题号“Q12”保持为字符串，不能因为包含12就转成数值。"
+      ],
+      "relatedIds": [
+        "unicode-codepoint",
+        "utf8",
+        "data-type"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-types",
+          "title": "Python：内置类型",
+          "url": "https://docs.python.org/3/builtins/stdtypes.html",
+          "locator": "Numeric Types / Boolean Type / Text Sequence Type",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-bom",
+          "title": "Unicode：UTF 与 BOM",
+          "url": "https://www.unicode.org/faq/utf_bom.html",
+          "locator": "Byte Order Mark FAQ / UTF Encoding Forms",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "categorical-encoding",
+      "version": 1,
+      "name": "类别特征编码",
+      "englishName": "Categorical encoding",
+      "aliases": [
+        "分类编码",
+        "类别变量编码"
+      ],
+      "domain": "ml",
+      "depth": "deep",
+      "definition": "类别编码把类别名称映射成模型或计算程序可使用的表示，如整数标签或独热向量。编码选择会改变算法看到的结构，映射表、未知类别和缺失处理必须明确。",
+      "uses": [
+        "在模型分析前检查类别顺序是否被人为引入。"
+      ],
+      "examples": [
+        "示例：把“公交、步行、地铁”记成1、2、3只是标签，不能据此断言地铁是公交的三倍。"
+      ],
+      "relatedIds": [
+        "one-hot-encoding",
+        "ordinal-encoding",
+        "feature",
+        "data-leakage"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-encoding",
+          "title": "scikit-learn：类别特征编码",
+          "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+          "locator": "Encoding categorical features / OrdinalEncoder / OneHotEncoder",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "ordinal-encoding",
+          "distinction": "整数编码可能被算法解读为顺序或距离；只有类别确有顺序时才有相应含义。"
+        },
+        {
+          "entryId": "one-hot-encoding",
+          "distinction": "独热展开改变列数，不能把一列类别与多列指示值当成相同数据结构。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "编码可以在全部数据上拟合吗？",
+          "answer": "预测评估中应遵循训练/测试分离，保存训练时映射；未知类别采用事先确定的规则。"
+        },
+        {
+          "question": "多选题能直接做独热编码吗？",
+          "answer": "单类别一行与可同时选择多个类别不同。多选应保留各选项指示及未答、分支外状态。"
+        }
+      ]
+    },
+    {
+      "id": "one-hot-encoding",
+      "version": 1,
+      "name": "独热编码",
+      "englishName": "One-hot encoding",
+      "aliases": [
+        "one hot",
+        "哑变量编码"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "独热编码将一个类别字段展开成若干0/1指示列。保留全部类别或删除基准类别会改变参数解释；未知类别全零还可能与被删基准混淆。",
+      "uses": [
+        "将无序类别送入不能原生处理类别的模型。"
+      ],
+      "examples": [
+        "示例：三种渠道展开三列；选择地铁的记录为(0,0,1)，列顺序按已保存映射解释。"
+      ],
+      "relatedIds": [
+        "categorical-encoding",
+        "ordinal-encoding"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-encoding",
+          "title": "scikit-learn：类别特征编码",
+          "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+          "locator": "Encoding categorical features / OrdinalEncoder / OneHotEncoder",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "ordinal-encoding",
+      "version": 1,
+      "name": "类别整数编码",
+      "englishName": "Ordinal encoding",
+      "aliases": [
+        "OrdinalEncoder",
+        "序号编码"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "类别整数编码给每个类别一个整数码。程序名称中的 ordinal 并不保证原类别具有自然顺序；用于模型时应检查算法是否会把编码差值当成距离。",
+      "uses": [
+        "识别平台编码与真正有序等级的区别。"
+      ],
+      "examples": [
+        "示例：“一般、满意、很满意”可声明顺序；“武汉、上海、成都”的1、2、3只是城市标签。"
+      ],
+      "relatedIds": [
+        "categorical-encoding",
+        "one-hot-encoding"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-encoding",
+          "title": "scikit-learn：类别特征编码",
+          "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+          "locator": "Encoding categorical features / OrdinalEncoder / OneHotEncoder",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "unicode-normalization",
+      "version": 1,
+      "name": "Unicode 规范化",
+      "englishName": "Unicode normalization",
+      "aliases": [
+        "NFC",
+        "NFD",
+        "NFKC",
+        "NFKD"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "Unicode 规范化把特定等价字符序列转换为规定形式。NFC/NFD处理规范等价，NFKC/NFKD还处理兼容等价；后者可能合并有意保留的书写差别，不能无条件覆盖原文。",
+      "uses": [
+        "提高术语搜索匹配，同时保存原文以保护题干与名称。"
+      ],
+      "examples": [
+        "示例：预组字符é与e加组合重音看起来相同；规范化后可用统一检索键比对。"
+      ],
+      "relatedIds": [
+        "unicode-codepoint",
+        "utf8",
+        "string"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-unicode",
+          "title": "Unicode UAX #15",
+          "url": "https://www.unicode.org/reports/tr15/",
+          "locator": "Introduction / Canonical and Compatibility Equivalence / Normalization Forms",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "utf8",
+          "distinction": "UTF-8 把字符编码成字节，不自动消除不同等价字符序列。"
+        },
+        {
+          "entryId": "categorical-encoding",
+          "distinction": "文字规范化改变文本表示；类别编码把类别映射成模型字段，两者目的不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "NFKC 可直接用于所有原始数据吗？",
+          "answer": "应先确认含义是否需要保留。编号、公式、专名等应保存原值，并把规范化作为可追踪的派生键。"
+        },
+        {
+          "question": "规范化后连接两个字符串仍是规范形式吗？",
+          "answer": "不一定。规范化字符串的连接可能需要再次规范化。"
+        }
+      ]
+    },
+    {
+      "id": "unicode-codepoint",
+      "version": 1,
+      "name": "Unicode 码点",
+      "englishName": "Unicode code point",
+      "aliases": [
+        "code point",
+        "U+"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "Unicode 码点是字符编码空间中的一个编号，如U+4E2D。一个用户感知字符可能由多个码点组成；码点个数、字节数与编辑器字符长度不是同一指标。",
+      "uses": [
+        "解释文本长度限制、截断和搜索高亮位置。"
+      ],
+      "examples": [
+        "示例：“中”在UTF-8中占3字节；家庭表情可能包含多个码点，不能按字节简单截断。"
+      ],
+      "relatedIds": [
+        "utf8",
+        "string",
+        "unicode-normalization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-bom",
+          "title": "Unicode：UTF 与 BOM",
+          "url": "https://www.unicode.org/faq/utf_bom.html",
+          "locator": "Byte Order Mark FAQ / UTF Encoding Forms",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "byte-order-mark",
+      "version": 1,
+      "name": "字节顺序标记",
+      "englishName": "Byte order mark",
+      "aliases": [
+        "BOM",
+        "U+FEFF"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "BOM是文本流开头的U+FEFF编码标记。在UTF-16/32中可提示字节顺序；UTF-8本身没有大小端差别，BOM仅可能作为编码签名，具体格式可能允许或禁止它。",
+      "uses": [
+        "处理CSV首列表头前隐藏的标记。"
+      ],
+      "examples": [
+        "示例：表头实际是“BOM+Q1”，去除流开头的标记后才能与Q1匹配；正文中的字符不能照样随意删。"
+      ],
+      "relatedIds": [
+        "utf8",
+        "csv",
+        "file-signature"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-bom",
+          "title": "Unicode：UTF 与 BOM",
+          "url": "https://www.unicode.org/faq/utf_bom.html",
+          "locator": "Byte Order Mark FAQ / UTF Encoding Forms",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "delimiter",
+      "version": 1,
+      "name": "字段分隔符",
+      "englishName": "Delimiter",
+      "aliases": [
+        "分隔符",
+        "分隔字符"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "字段分隔符在表格文本中区分字段边界，如逗号、制表符或分号。带引号字段可以包含同样字符，因此可靠解析需要同时知道引号、转义和换行规则。",
+      "uses": [
+        "识别问卷导出文件的实际文本方言。"
+      ],
+      "examples": [
+        "示例：回答“便宜,方便”在正确引号内仍是一格；按逗号直接切开会错列。"
+      ],
+      "relatedIds": [
+        "csv",
+        "tsv",
+        "serialization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-csv-dialect",
+          "title": "Python：表格文本方言",
+          "url": "https://docs.python.org/3.14/library/csv.html",
+          "locator": "Dialects and Formatting Parameters / excel_tab / reader",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "decimal-precision",
+      "version": 1,
+      "name": "十进制精度与舍入",
+      "englishName": "Decimal precision",
+      "aliases": [
+        "Decimal",
+        "十进制算术"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "十进制数值运算使用十进制有效位和明确的精度、舍入方式。它适合金额等十进制输入，但有限精度仍不能精确表示所有结果，如1/3。",
+      "uses": [
+        "统一金额计算和正式图表小数位。"
+      ],
+      "examples": [
+        "示例：字符串“0.10”和“0.20”构建十进制数可得精确0.30；先从二进制浮点构建可能带入此前误差。"
+      ],
+      "relatedIds": [
+        "floating-point",
+        "data-type"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-decimal",
+          "title": "Python：Decimal",
+          "url": "https://docs.python.org/3.14/library/decimal.html",
+          "locator": "Introduction / Context objects",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "serialization",
+      "version": 1,
+      "name": "序列化",
+      "englishName": "Serialization",
+      "aliases": [
+        "反序列化",
+        "对象序列化"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "序列化将内存中的数据结构转换为可保存或传输的表示，反序列化将其恢复。格式是否支持类型、引用和版本会影响往返完整性；对象序列化不等于安全数据交换。",
+      "uses": [
+        "保存方案时核对稳定ID、参数类型和历史版本兼容。"
+      ],
+      "examples": [
+        "示例：JSON能保存节点配置；NaN、日期和循环引用要有明确约定，不能期待自动还原。"
+      ],
+      "relatedIds": [
+        "json",
+        "json-schema",
+        "schema-evolution"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-pickle",
+          "title": "Python：序列化",
+          "url": "https://docs.python.org/3.14/library/pickle.html",
+          "locator": "Python object serialization / Relationship to other modules / 安全警告",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-schema-type",
+          "title": "JSON Schema：类型",
+          "url": "https://json-schema.org/understanding-json-schema/reference/type",
+          "locator": "Type-specific Keywords / type 的字符串或数组值",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "json",
+          "distinction": "JSON是具体数据格式，序列化是更广的转换过程。"
+        },
+        {
+          "entryId": "encryption",
+          "distinction": "序列化改变表示，不保护内容保密；加密需要另设密钥与算法。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "能加载任何别人给的对象文件吗？",
+          "answer": "不能。某些反序列化格式可执行代码，应仅处理受信任内容或采用受限的数据格式。"
+        },
+        {
+          "question": "保存成功是否证明以后能恢复？",
+          "answer": "还需往返测试，覆盖版本、缺失字段、中文与数值边界。"
+        }
+      ]
+    },
+    {
+      "id": "json-schema",
+      "version": 1,
+      "name": "JSON Schema 数据约束",
+      "englishName": "JSON Schema",
+      "aliases": [
+        "JSON结构校验",
+        "schema"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "JSON Schema用声明式规则描述JSON数据允许的类型、字段、范围等。通过结构校验表示满足所写规则，不证明数据来源真实、研究设计合理或跨字段业务要求完整。",
+      "uses": [
+        "检查导入分析方案的必填参数和可兼容版本。"
+      ],
+      "examples": [
+        "示例：schema要求版本为整数并存在nodes数组；一个空流程仍可能结构合法却无法执行。"
+      ],
+      "relatedIds": [
+        "json",
+        "data-validation",
+        "schema-evolution"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-schema-type",
+          "title": "JSON Schema：类型",
+          "url": "https://json-schema.org/understanding-json-schema/reference/type",
+          "locator": "Type-specific Keywords / type 的字符串或数组值",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-schema-object",
+          "title": "JSON Schema：对象约束",
+          "url": "https://json-schema.org/understanding-json-schema/reference/object",
+          "locator": "Properties / Required Properties / Additional Properties",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "data-validation",
+          "distinction": "Schema承担可声明的结构条件，业务校验还需检查节点关联、权限和版本等。"
+        },
+        {
+          "entryId": "serialization",
+          "distinction": "序列化负责产生表示；schema评判该表示是否满足约束。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "声明properties就表示字段必须存在吗？",
+          "answer": "通常还要用required明确要求；允许附加字段也应按版本策略决定。"
+        },
+        {
+          "question": "null与字段不存在一样吗？",
+          "answer": "不一样。缺少键、键值为null与空字符串是不同实例状态。"
+        }
+      ]
+    },
+    {
+      "id": "xml",
+      "version": 1,
+      "name": "XML 标记格式",
+      "englishName": "Extensible Markup Language",
+      "aliases": [
+        "可扩展标记语言"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "XML通过成对标记、属性与嵌套结构表示数据，要求文档结构良好。命名空间区分同名标记；外部实体和引用是否被处理属于解析器安全与配置问题。",
+      "uses": [
+        "理解Word/PPT/XLSX文件内部部件和关系。"
+      ],
+      "examples": [
+        "示例：PPT中的文字可能存于多个XML运行段，简单全文替换未必保留样式或完整字符。"
+      ],
+      "relatedIds": [
+        "xlsx",
+        "serialization",
+        "data-validation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-xml",
+          "title": "W3C：XML 1.0",
+          "url": "https://www.w3.org/TR/xml/",
+          "locator": "1 Introduction / 2 Documents / Well-Formed XML Documents",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "xlsx",
+      "version": 1,
+      "name": "XLSX 工作簿结构",
+      "englishName": "SpreadsheetML workbook",
+      "aliases": [
+        "Excel文件",
+        "Open XML 工作簿"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "XLSX是包含工作簿、工作表、单元格、共享字符串等部件及关系的ZIP包。单元格可能保存文字、数字、日期表示、公式及缓存结果；可见格式与真实值需要分别读取。",
+      "uses": [
+        "导入平台回收表时选择工作表、数据区域并核查公式缓存。"
+      ],
+      "examples": [
+        "示例：显示“0012”的单元格若原值为12加格式，导出CSV可能失去前导零；编号应按语义恢复。"
+      ],
+      "relatedIds": [
+        "zip-archive",
+        "xml",
+        "data-type",
+        "data-validation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-xlsx",
+          "title": "Microsoft：SpreadsheetML 结构",
+          "url": "https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/structure-of-a-spreadsheetml-document",
+          "locator": "Important Spreadsheet Parts / Generated SpreadsheetML",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "csv",
+          "distinction": "CSV主要保存文本表格，通常不保留工作表、样式、公式或值类型。"
+        },
+        {
+          "entryId": "serialization",
+          "distinction": "XLSX是特定包结构；通用序列化不会自动理解其公式、单元格和关系。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "导入器需要计算公式吗？",
+          "answer": "读取缓存值与执行公式是两项能力。缺少缓存时应定位问题，不能悄悄把空值当零。"
+        },
+        {
+          "question": "扩展名xlsx足以证明文件有效吗？",
+          "answer": "还应核查包结构、部件和容量限制；改名不能转换格式。"
+        }
+      ]
+    },
+    {
+      "id": "tsv",
+      "version": 1,
+      "name": "TSV 表格文本",
+      "englishName": "Tab-separated values",
+      "aliases": [
+        "制表符分隔文件"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "TSV用制表符分隔字段，通常用换行区分记录。转义、引号、编码和字段内换行约定仍可能不同，不能把扩展名当作完整解析规则。",
+      "uses": [
+        "导入复制自表格或平台的文本数据。"
+      ],
+      "examples": [
+        "示例：开放回答中若包含制表符，需按导出方言解析，不能简单以每行固定分割代替。"
+      ],
+      "relatedIds": [
+        "delimiter",
+        "csv",
+        "utf8"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-csv-dialect",
+          "title": "Python：表格文本方言",
+          "url": "https://docs.python.org/3.14/library/csv.html",
+          "locator": "Dialects and Formatting Parameters / excel_tab / reader",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "parquet",
+      "version": 1,
+      "name": "Parquet 列式文件",
+      "englishName": "Apache Parquet",
+      "aliases": [
+        "列式存储格式"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "Parquet是面向分析的列式文件格式，保存列类型与结构信息，并支持编码和压缩。列式布局可减少只读部分字段的开销，实际效果取决于文件组织、查询和读取实现。",
+      "uses": [
+        "规划较大回收数据的版本存储与重复分析。"
+      ],
+      "examples": [
+        "示例：只分析年龄和渠道时，读取这两列可能比逐行加载全部字段更省资源。"
+      ],
+      "relatedIds": [
+        "arrow",
+        "compression",
+        "schema-evolution"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-parquet",
+          "title": "Apache Parquet：概览",
+          "url": "https://parquet.apache.org/docs/overview/",
+          "locator": "Overview / parquet-format specification",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "arrow",
+          "distinction": "Parquet侧重文件持久化；Arrow侧重内存列式布局和交换，两者可以配合。"
+        },
+        {
+          "entryId": "xlsx",
+          "distinction": "XLSX是电子表格文档，Parquet不保存同等工作簿编辑体验。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "压缩后就没有缺失和类型问题吗？",
+          "answer": "不会。压缩与编码保存表示；变量定义、缺失语义和映射仍要验证。"
+        },
+        {
+          "question": "证见当前已支持Parquet导入吗？",
+          "answer": "本词条介绍格式，不宣布新接口。以当前导入器明确列出的格式为准。"
+        }
+      ]
+    },
+    {
+      "id": "arrow",
+      "version": 1,
+      "name": "Arrow 列式内存格式",
+      "englishName": "Apache Arrow",
+      "aliases": [
+        "Arrow IPC",
+        "列式内存布局"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "Arrow定义带类型的列式内存布局及交换机制，常用有效性位图表达空值。兼容实现之间可减少数据转换，但零拷贝需要布局、生命周期和使用场景满足条件。",
+      "uses": [
+        "理解分析引擎交换大表时的内存与空值表示。"
+      ],
+      "examples": [
+        "示例：整数列加有效性位图能区分有效0和缺失，不必拿0作为统一空值。"
+      ],
+      "relatedIds": [
+        "parquet",
+        "nullable-type",
+        "streaming"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-arrow",
+          "title": "Apache Arrow：列式布局",
+          "url": "https://arrow.apache.org/docs/format/Columnar.html",
+          "locator": "Format / Null bitmaps / Serialization and Interprocess Communication",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "svg",
+      "version": 1,
+      "name": "SVG 矢量图",
+      "englishName": "Scalable Vector Graphics",
+      "aliases": [
+        "可缩放矢量图"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "SVG用XML结构描述二维图形、文字、路径等，也允许嵌入栅格图像。扩展名为SVG不保证图中全部内容都是矢量；外链、脚本和滤镜也需按用途检查。",
+      "uses": [
+        "检验报告/PPT图形放大清晰度和全矢量要求。"
+      ],
+      "examples": [
+        "示例：柱形、坐标轴与标签是路径和文字；若整张PNG藏在image元素里，它仍是位图。"
+      ],
+      "relatedIds": [
+        "xml",
+        "pdf",
+        "data-validation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-svg",
+          "title": "W3C：SVG 2",
+          "url": "https://www.w3.org/TR/SVG2/intro.html",
+          "locator": "1 Introduction / SVG 概念与向量、图像能力",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "pdf",
+          "distinction": "PDF可封装文字、矢量和位图，格式本身不保证全矢量；SVG也同样需要内容检查。"
+        },
+        {
+          "entryId": "xlsx",
+          "distinction": "SVG呈现图形而不替代结构化原数据或统计计算记录。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "文字转路径后还能改字吗？",
+          "answer": "通常保留缩放清晰度但失去文字编辑语义。需同时保存可编辑来源和字体策略。"
+        },
+        {
+          "question": "导出后如何证明矢量仍在？",
+          "answer": "检查对象类型与嵌入内容，并在目标Office/PDF中验证；仅看缩略图不足。"
+        }
+      ]
+    },
+    {
+      "id": "pdf",
+      "version": 1,
+      "name": "PDF 页面文档",
+      "englishName": "Portable Document Format",
+      "aliases": [
+        "便携式文档格式"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "PDF保存最终页面表示，可以包含文字、矢量、位图、注释、附件与元数据。可复制文字不等于所有内容均可提取；扫描页可能需要OCR，正式矢量输出仍需对象检查。",
+      "uses": [
+        "识别案例全文可读性、匿名残留和导出质量。"
+      ],
+      "examples": [
+        "示例：同一页标题可提取为文字，表格却是截图；OCR识别文字也不会恢复原生表格。"
+      ],
+      "relatedIds": [
+        "svg",
+        "file-signature",
+        "provenance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-pdf",
+          "title": "IETF RFC 8118：PDF",
+          "url": "https://www.rfc-editor.org/info/rfc8118/",
+          "locator": "1 Introduction / 7 Security Considerations / 8 IANA Considerations",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "compression",
+      "version": 1,
+      "name": "无损数据压缩",
+      "englishName": "Lossless compression",
+      "aliases": [
+        "无损压缩"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "无损压缩用更短的编码保存数据并可恢复原字节。压缩率依赖重复结构；解压后的大小可能远超上传大小，处理文件时要限制展开体积与资源。",
+      "uses": [
+        "估计上传限制与导入时内存需求。"
+      ],
+      "examples": [
+        "示例：10MiB的压缩包可展开成数百MiB，不能仅凭上传大小判断安全容量。"
+      ],
+      "relatedIds": [
+        "zip-archive",
+        "gzip",
+        "parquet"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-zip",
+          "title": "Python：ZIP 文件",
+          "url": "https://docs.python.org/3.14/library/zipfile.html",
+          "locator": "ZIP archive format / decompression pitfalls / extraction",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-gzip",
+          "title": "Python：gzip",
+          "url": "https://docs.python.org/3.14/library/gzip.html",
+          "locator": "Support for gzip files / GzipFile",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "gzip",
+      "version": 1,
+      "name": "gzip 压缩流",
+      "englishName": "gzip",
+      "aliases": [
+        "gz文件"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "gzip用规定头部、压缩数据和校验等信息封装压缩流，常见扩展名为.gz。它不是带目录的多文件归档格式；多个文件通常先归档再压缩。",
+      "uses": [
+        "区分压缩CSV与电子表格文件。"
+      ],
+      "examples": [
+        "示例：responses.csv.gz解压后是CSV；解压并不会自动获得XLSX的工作表结构。"
+      ],
+      "relatedIds": [
+        "compression",
+        "zip-archive",
+        "csv"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-gzip",
+          "title": "Python：gzip",
+          "url": "https://docs.python.org/3.14/library/gzip.html",
+          "locator": "Support for gzip files / GzipFile",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "zip-archive",
+      "version": 1,
+      "name": "ZIP 归档",
+      "englishName": "ZIP archive",
+      "aliases": [
+        "zip包",
+        "压缩包"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "ZIP把一个或多个文件及目录条目放进归档，可对各条目采用不同压缩方式。读取应同时核查路径、展开大小、条目数量和格式；归档不是加密保证。",
+      "uses": [
+        "理解Office包结构和导入资源限制。"
+      ],
+      "examples": [
+        "示例：XLSX本身是ZIP包；条目名与关系可定位工作表，不能只读取第一段字节当表格。"
+      ],
+      "relatedIds": [
+        "xlsx",
+        "compression",
+        "encryption"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-zip",
+          "title": "Python：ZIP 文件",
+          "url": "https://docs.python.org/3.14/library/zipfile.html",
+          "locator": "ZIP archive format / decompression pitfalls / extraction",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "file-signature",
+      "version": 1,
+      "name": "文件格式签名",
+      "englishName": "File signature",
+      "aliases": [
+        "魔数",
+        "magic bytes"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "格式签名是文件中规定的字节标记，用于辅助识别类型，例如PDF头部。签名、扩展名和声明类型都可能不完整或被伪造，还需按格式解析结构。",
+      "uses": [
+        "识别改名文件和明显损坏上传。"
+      ],
+      "examples": [
+        "示例：PDF常以%PDF-开头；即使存在这个头部，也不能据此断言页面和交叉引用完整。"
+      ],
+      "relatedIds": [
+        "content-type",
+        "pdf",
+        "zip-archive"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-pdf",
+          "title": "IETF RFC 8118：PDF",
+          "url": "https://www.rfc-editor.org/info/rfc8118/",
+          "locator": "1 Introduction / 7 Security Considerations / 8 IANA Considerations",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-zip",
+          "title": "Python：ZIP 文件",
+          "url": "https://docs.python.org/3.14/library/zipfile.html",
+          "locator": "ZIP archive format / decompression pitfalls / extraction",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "content-type",
+      "version": 1,
+      "name": "媒体类型声明",
+      "englishName": "Content-Type",
+      "aliases": [
+        "MIME类型",
+        "媒体类型"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "Content-Type说明消息内容的媒体类型及可能的参数，如application/json。它是发送者声明，不自动证明实际字节符合格式；接收者还要校验内容。",
+      "uses": [
+        "解释上传格式检查与接口返回解析。"
+      ],
+      "examples": [
+        "示例：服务返回text/html错误页，前端不能因为请求预期JSON就直接把它当分析结果。"
+      ],
+      "relatedIds": [
+        "http",
+        "file-signature",
+        "json"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-http",
+          "title": "IETF RFC 9110：HTTP 语义",
+          "url": "https://httpwg.org/specs/rfc9110.html",
+          "locator": "3 Terminology / 8.3 Content-Type / 9 Methods / 13 Conditional Requests / 15 Status Codes",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "nullable-type",
+      "version": 1,
+      "name": "可空类型",
+      "englishName": "Nullable type",
+      "aliases": [
+        "nullable",
+        "null类型"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "可空类型在一种正常值类型之外，明确允许空缺标记。没有键、null、空字符串与0通常具有不同语义，互转规则应由数据合同定义。",
+      "uses": [
+        "保留有效0、未回答与分支外状态。"
+      ],
+      "examples": [
+        "示例：消费金额0是有效观察；null表示无值；题目未展示还需额外范围标记。"
+      ],
+      "relatedIds": [
+        "data-type",
+        "missing-value",
+        "json-schema"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-schema-type",
+          "title": "JSON Schema：类型",
+          "url": "https://json-schema.org/understanding-json-schema/reference/type",
+          "locator": "Type-specific Keywords / type 的字符串或数组值",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "data-validation",
+      "version": 1,
+      "name": "数据结构与语义校验",
+      "englishName": "Data validation",
+      "aliases": [
+        "校验",
+        "验证规则"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "数据校验检查输入是否满足类型、格式、范围和业务语义规则。通过检查证明满足已定义条件，不证明答卷来自真实调查，也不替代来源与研究质量审核。",
+      "uses": [
+        "让导入错误定位到具体字段与规则，同时保留原值。"
+      ],
+      "examples": [
+        "示例：年龄填“十八”可给出转换候选；超范围值应等待确认，不能直接编成18。"
+      ],
+      "relatedIds": [
+        "json-schema",
+        "data-type",
+        "provenance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-validation",
+          "title": "OWASP：输入校验",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html",
+          "locator": "Goals of Input Validation / Syntactic and Semantic Validation / Allowlist",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-schema-object",
+          "title": "JSON Schema：对象约束",
+          "url": "https://json-schema.org/understanding-json-schema/reference/object",
+          "locator": "Properties / Required Properties / Additional Properties",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "json-schema",
+          "distinction": "Schema是结构校验工具之一，语义关联和版本权限可能需要额外规则。"
+        },
+        {
+          "entryId": "sha256",
+          "distinction": "哈希检验字节一致；字段合法性由数据校验检查，两者都不验证实证真实性。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "发现错误时直接删除这一行吗？",
+          "answer": "按事先确定的规则保留原数据、问题位置和处理决定，区分排除、修正与待核查。"
+        },
+        {
+          "question": "客户端校验够了吗？",
+          "answer": "服务端接受的数据仍需重新校验。界面提示不能承担权限或持久状态的最终检查。"
+        }
+      ]
+    },
+    {
+      "id": "schema-evolution",
+      "version": 1,
+      "name": "数据结构演进",
+      "englishName": "Schema evolution",
+      "aliases": [
+        "schema迁移",
+        "结构版本"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "结构演进是在保留历史可读性的前提下改变字段、类型和约束。兼容性取决于读写双方的版本和转换规则；新增字段也可能影响必填检查或默认语义。",
+      "uses": [
+        "升级分析方案与数据映射时避免旧版本静默改变含义。"
+      ],
+      "examples": [
+        "示例：v2新增分支范围标记，旧v1文件按原语义读取，新解释需明确迁移和确认。"
+      ],
+      "relatedIds": [
+        "serialization",
+        "json-schema",
+        "relational-database"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-alter",
+          "title": "PostgreSQL：结构变更",
+          "url": "https://www.postgresql.org/docs/current/ddl-alter.html",
+          "locator": "Modifying Tables / Adding, removing and changing columns",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-schema-object",
+          "title": "JSON Schema：对象约束",
+          "url": "https://json-schema.org/understanding-json-schema/reference/object",
+          "locator": "Properties / Required Properties / Additional Properties",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "relational-database",
+      "version": 1,
+      "name": "关系型数据库",
+      "englishName": "Relational database",
+      "aliases": [
+        "RDBMS",
+        "关系模型"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "关系型数据库以有类型列的表组织记录，并通过键、约束和查询表达关系。SQL表的行没有天然顺序；表中同时存在的数据不自动构成一致研究版本。",
+      "uses": [
+        "保存项目、成果版本与授权关联，而不是用文件名代替关系。"
+      ],
+      "examples": [
+        "示例：项目表按project_id关联报告版本；按版本号排序要显式指定，不能依赖插入顺序。"
+      ],
+      "relatedIds": [
+        "sql",
+        "primary-key",
+        "foreign-key",
+        "transaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-pg-concept",
+          "title": "PostgreSQL：关系模型",
+          "url": "https://www.postgresql.org/docs/current/tutorial-concepts.html",
+          "locator": "2.2 Concepts",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "parquet",
+          "distinction": "Parquet是数据文件格式，关系数据库提供查询、约束和事务等管理能力。"
+        },
+        {
+          "entryId": "data-validation",
+          "distinction": "数据库约束可执行部分校验，但研究口径与来源还需应用层合同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "一个Excel文件就是关系数据库吗？",
+          "answer": "电子表格可表示表，但键、并发事务、权限和一致性能力不能因此等同。"
+        },
+        {
+          "question": "为什么不要只存最新结果？",
+          "answer": "历史结果需绑定当时输入和参数，方便复核与回退；覆盖会破坏版本链。"
+        }
+      ]
+    },
+    {
+      "id": "sql",
+      "version": 1,
+      "name": "SQL 查询语言",
+      "englishName": "Structured Query Language",
+      "aliases": [
+        "结构化查询语言"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "SQL是定义和操作关系数据的语言，包含查询、更新及结构管理等语句。一次查询可形成派生结果，语句的筛选、连接和分组共同决定统计口径。",
+      "uses": [
+        "阅读数据提取脚本，核对有效样本为何改变。"
+      ],
+      "examples": [
+        "示例：WHERE排除未完成答卷后再GROUP BY渠道，得到的是该范围内的计数，不是全部原表人数。"
+      ],
+      "relatedIds": [
+        "relational-database",
+        "join",
+        "aggregation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-sql",
+          "title": "PostgreSQL：SQL 教程",
+          "url": "https://www.postgresql.org/docs/current/tutorial-select.html",
+          "locator": "2.5 Querying a Table / SELECT / WHERE / ORDER BY",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-join",
+          "title": "PostgreSQL：表表达式",
+          "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html",
+          "locator": "Joined Tables / GROUP BY and HAVING",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "primary-key",
+      "version": 1,
+      "name": "主键",
+      "englishName": "Primary key",
+      "aliases": [
+        "PK",
+        "记录主键"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "主键是一张表中用于唯一识别记录的一列或列组合，通常要求唯一且非空。它是技术身份，不等于公开展示编号，也不证明记录真实或属于同一调查单位。",
+      "uses": [
+        "给答卷、题目、成果版本建立稳定身份。"
+      ],
+      "examples": [
+        "示例：复制题目时创建新主键；题干相同不能沿用原题ID。"
+      ],
+      "relatedIds": [
+        "relational-database",
+        "unique-constraint",
+        "foreign-key"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-constraints",
+          "title": "PostgreSQL：约束",
+          "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+          "locator": "Check / Not-Null / Unique / Primary Keys / Foreign Keys",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "foreign-key",
+      "version": 1,
+      "name": "外键",
+      "englishName": "Foreign key",
+      "aliases": [
+        "FK",
+        "参照完整性"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "外键约束要求引用值对应到被引用表的有效键，维护参照完整性。级联删除与限制删除是不同策略；有外键不等于已完成团队权限检查。",
+      "uses": [
+        "保证图表引用的分析结果版本确实存在。"
+      ],
+      "examples": [
+        "示例：chart.result_id指向实际结果行；删除结果时若仍有成果引用，需要保留或明确处理。"
+      ],
+      "relatedIds": [
+        "primary-key",
+        "relational-database",
+        "authorization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-constraints",
+          "title": "PostgreSQL：约束",
+          "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+          "locator": "Check / Not-Null / Unique / Primary Keys / Foreign Keys",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "unique-constraint",
+      "version": 1,
+      "name": "唯一约束",
+      "englishName": "Unique constraint",
+      "aliases": [
+        "UNIQUE",
+        "唯一性约束"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "唯一约束限制指定列组合出现重复值。对空值的处理由数据库与约束设置决定；它常用于技术去重，但不能把内容相似当作同一个实体。",
+      "uses": [
+        "防止同一幂等请求发布两份结果。"
+      ],
+      "examples": [
+        "示例：(project_id,request_id)唯一可以区分不同项目的同名请求标识。"
+      ],
+      "relatedIds": [
+        "primary-key",
+        "idempotency",
+        "null-sql"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-constraints",
+          "title": "PostgreSQL：约束",
+          "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+          "locator": "Check / Not-Null / Unique / Primary Keys / Foreign Keys",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "check-constraint",
+      "version": 1,
+      "name": "检查约束",
+      "englishName": "Check constraint",
+      "aliases": [
+        "CHECK",
+        "字段约束"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "检查约束要求写入行满足所定义的布尔条件。SQL中的未知值可能使单独CHECK不能阻止空值；跨行或复杂业务要求也不宜随意当作行级检查。",
+      "uses": [
+        "给持久字段设置明确范围与非空规则。"
+      ],
+      "examples": [
+        "示例：CHECK(n>=0)配合NOT NULL才能同时禁止负数与未填写样本量。"
+      ],
+      "relatedIds": [
+        "data-validation",
+        "null-sql",
+        "unique-constraint"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-constraints",
+          "title": "PostgreSQL：约束",
+          "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+          "locator": "Check / Not-Null / Unique / Primary Keys / Foreign Keys",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "null-sql",
+      "version": 1,
+      "name": "SQL 空值与三值逻辑",
+      "englishName": "SQL NULL",
+      "aliases": [
+        "NULL",
+        "IS NULL"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "SQL NULL表示未知或缺少值，相关比较可能得到unknown而非true或false。筛选只保留条件为true的行；判断空值通常用IS NULL，而非等于NULL。",
+      "uses": [
+        "解释数据库筛选后有效样本的变化。"
+      ],
+      "examples": [
+        "示例：WHERE age>18不会纳入age为NULL的记录；这不是程序把缺失判成0。"
+      ],
+      "relatedIds": [
+        "nullable-type",
+        "sql",
+        "missing-value"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-constraints",
+          "title": "PostgreSQL：约束",
+          "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+          "locator": "Check / Not-Null / Unique / Primary Keys / Foreign Keys",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-join",
+          "title": "PostgreSQL：表表达式",
+          "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html",
+          "locator": "Joined Tables / GROUP BY and HAVING",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "join",
+      "version": 1,
+      "name": "表连接与行数变化",
+      "englishName": "Table join",
+      "aliases": [
+        "JOIN",
+        "关联表",
+        "表合并"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "表连接按条件把不同表中的行组合起来。内连接与外连接对未匹配行处理不同；键不唯一时一行可匹配多行，造成结果行数扩张。",
+      "uses": [
+        "合并答卷、题目和渠道信息前检查匹配基数。"
+      ],
+      "examples": [
+        "示例：同一答卷ID在标签表出现3次，连接后会生成3行；直接COUNT(*)可能把一个人计3次。"
+      ],
+      "relatedIds": [
+        "primary-key",
+        "foreign-key",
+        "aggregation",
+        "sql"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-join",
+          "title": "PostgreSQL：表表达式",
+          "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html",
+          "locator": "Joined Tables / GROUP BY and HAVING",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "aggregation",
+          "distinction": "连接改变行组合；聚合汇总这些行。先连接再统计必须核对观察单位。"
+        },
+        {
+          "entryId": "unique-constraint",
+          "distinction": "唯一约束可约束预期的一对一或多对一键，不能替代连接条件审核。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "左连接一定不丢行，也不增行吗？",
+          "answer": "保留左侧未匹配行，但右侧多重匹配会增行。左连接后再用右表条件筛选也可能排除空匹配行。"
+        },
+        {
+          "question": "怎样检查合并是否正确？",
+          "answer": "记录合并前后行数、唯一ID数、未匹配率和键重复情况，查看具体异常记录。"
+        }
+      ]
+    },
+    {
+      "id": "aggregation",
+      "version": 1,
+      "name": "分组聚合",
+      "englishName": "Aggregation",
+      "aliases": [
+        "GROUP BY",
+        "汇总计算"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "分组聚合按指定键把多行汇总成计数、和、均值等。输出粒度改变；COUNT(*)、非空值计数和去重实体计数可以有不同分母。",
+      "uses": [
+        "让平台数据汇总与报告的人数、次数口径一致。"
+      ],
+      "examples": [
+        "示例：多选拆列后每个选项的选择次数可相加，但总和不是去重应答者人数。"
+      ],
+      "relatedIds": [
+        "join",
+        "window-function",
+        "sql"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-join",
+          "title": "PostgreSQL：表表达式",
+          "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html",
+          "locator": "Joined Tables / GROUP BY and HAVING",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "window-function",
+      "version": 1,
+      "name": "窗口函数",
+      "englishName": "Window function",
+      "aliases": [
+        "OVER",
+        "窗口计算"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "窗口函数对当前行相关的一组行计算排名、累计或组内指标，同时保留原行。分区、排序和窗口范围会影响结果；它与把组折叠成一行的聚合不同。",
+      "uses": [
+        "计算组内序号、累计回收量与重复记录候选。"
+      ],
+      "examples": [
+        "示例：按respondent_id分区并按提交时间排序，可编号重复提交；最终保留哪条仍需质控规则。"
+      ],
+      "relatedIds": [
+        "aggregation",
+        "sql",
+        "pagination"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-window",
+          "title": "PostgreSQL：窗口函数",
+          "url": "https://www.postgresql.org/docs/current/tutorial-window.html",
+          "locator": "3.5 Window Functions",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "database-index",
+      "version": 1,
+      "name": "数据库索引",
+      "englishName": "Database index",
+      "aliases": [
+        "索引",
+        "B-tree索引"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "索引是帮助数据库定位行的数据结构。它可减少合适查询的读取开销，但需要存储和更新维护；小表或低选择性条件未必因索引更快。",
+      "uses": [
+        "理解为何项目历史、事件续传和团队查询需要合理键。"
+      ],
+      "examples": [
+        "示例：对(project_id,event_seq)建立索引有助于查询某项目后续事件；效果仍需查看实际计划。"
+      ],
+      "relatedIds": [
+        "query-plan",
+        "relational-database",
+        "primary-key"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-index",
+          "title": "PostgreSQL：索引",
+          "url": "https://www.postgresql.org/docs/current/indexes-intro.html",
+          "locator": "11.1 Introduction / 维护成本",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-explain",
+          "title": "PostgreSQL：EXPLAIN",
+          "url": "https://www.postgresql.org/docs/current/using-explain.html",
+          "locator": "EXPLAIN Basics / EXPLAIN ANALYZE / 估计成本不是毫秒",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "primary-key",
+          "distinction": "主键规定身份和约束；索引是访问结构。实现可能用索引支持主键，但概念不相同。"
+        },
+        {
+          "entryId": "cache",
+          "distinction": "索引帮助找原数据，缓存复用此前结果，失效与一致性问题也不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "给每列加索引最好吗？",
+          "answer": "会增加写入成本和空间。按实际查询、过滤与排序模式设计，并用计划和测量核验。"
+        },
+        {
+          "question": "有索引却顺序扫描，是失效吗？",
+          "answer": "不一定。规划器可能判断读较大比例数据时顺序扫描更便宜。"
+        }
+      ]
+    },
+    {
+      "id": "query-plan",
+      "version": 1,
+      "name": "查询执行计划",
+      "englishName": "Query plan",
+      "aliases": [
+        "EXPLAIN",
+        "执行计划"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "查询计划描述数据库实际选择的扫描、连接、排序和聚合步骤。估计行数与成本来自统计和成本模型，EXPLAIN ANALYZE才执行并报告测量数据；成本值不是直接毫秒。",
+      "uses": [
+        "定位大数据导入后的查询瓶颈与行数异常。"
+      ],
+      "examples": [
+        "示例：预计100行实际返回10万行，可能提示选择性估计或关联基数存在问题。"
+      ],
+      "relatedIds": [
+        "database-index",
+        "join",
+        "time-complexity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-explain",
+          "title": "PostgreSQL：EXPLAIN",
+          "url": "https://www.postgresql.org/docs/current/using-explain.html",
+          "locator": "EXPLAIN Basics / EXPLAIN ANALYZE / 估计成本不是毫秒",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "transaction-isolation",
+      "version": 1,
+      "name": "事务隔离级别",
+      "englishName": "Transaction isolation",
+      "aliases": [
+        "可串行化",
+        "可重复读",
+        "读已提交"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "隔离级别规定并发事务之间允许看到哪些状态和哪些异常。可串行化要求成功事务效果等价于某个串行顺序，但实现仍可能中止冲突事务；需要应用正确处理失败。",
+      "uses": [
+        "核对并发保存、额度预留和版本发布的一致性。"
+      ],
+      "examples": [
+        "示例：两人同时读取v3并写入不同修改，单靠读已提交并不能保证第二人不会覆盖第一人。"
+      ],
+      "relatedIds": [
+        "transaction",
+        "mvcc",
+        "optimistic-concurrency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-isolation",
+          "title": "PostgreSQL：隔离级别",
+          "url": "https://www.postgresql.org/docs/current/transaction-iso.html",
+          "locator": "Table 13.1 / Read Committed / Repeatable Read / Serializable",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "transaction",
+          "distinction": "事务定义操作原子提交等边界；隔离专门处理多个事务相互影响。"
+        },
+        {
+          "entryId": "optimistic-concurrency",
+          "distinction": "版本比较是应用级冲突控制；不能自动覆盖所有跨行约束或代替适当隔离。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "可重复读等于可串行化吗？",
+          "answer": "不等于。各数据库具体保证可能不同，PostgreSQL可重复读仍可能出现序列化异常。"
+        },
+        {
+          "question": "冲突后能自动重跑全部操作吗？",
+          "answer": "纯数据库操作可按设计重试；已可能发生的外部收费或发布操作须先核对，不能一起盲目重发。"
+        }
+      ]
+    },
+    {
+      "id": "mvcc",
+      "version": 1,
+      "name": "多版本并发控制",
+      "englishName": "Multiversion concurrency control",
+      "aliases": [
+        "MVCC",
+        "数据快照"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "MVCC保存行的多个版本，使事务按规则读取一致快照，减少读写直接阻塞。它仍需要并发更新、版本清理和隔离规则，不表示所有操作都完全无锁。",
+      "uses": [
+        "理解为何一个运行可使用固定输入而编辑区继续产生新草稿。"
+      ],
+      "examples": [
+        "示例：分析开始绑定数据v2；之后回收形成v3，不能静默把正在计算的输入改成v3。"
+      ],
+      "relatedIds": [
+        "transaction-isolation",
+        "optimistic-concurrency",
+        "transaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-mvcc",
+          "title": "PostgreSQL：MVCC",
+          "url": "https://www.postgresql.org/docs/current/mvcc-intro.html",
+          "locator": "13.1 Introduction / 数据快照",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-isolation",
+          "title": "PostgreSQL：隔离级别",
+          "url": "https://www.postgresql.org/docs/current/transaction-iso.html",
+          "locator": "Table 13.1 / Read Committed / Repeatable Read / Serializable",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "optimistic-concurrency",
+      "version": 1,
+      "name": "乐观并发与版本冲突",
+      "englishName": "Optimistic concurrency control",
+      "aliases": [
+        "OCC",
+        "预期版本"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "乐观并发先允许读取和编辑，在提交时原子比较预期版本或条件。条件不匹配就拒绝旧写入或要求合并；单独在前端比较版本不能提供此保证。",
+      "uses": [
+        "保护问卷、报告和图表设置不被晚到保存覆盖。"
+      ],
+      "examples": [
+        "示例：用户基于v8编辑，服务器已到v9；带expect_version=8的更新应返回冲突并保留本地稿。"
+      ],
+      "relatedIds": [
+        "transaction-isolation",
+        "mvcc",
+        "idempotency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-version",
+          "title": "SQLAlchemy：版本计数",
+          "url": "https://docs.sqlalchemy.org/en/20/orm/versioning.html",
+          "locator": "Simple Version Counting / UPDATE with expected version / StaleDataError",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-http",
+          "title": "IETF RFC 9110：HTTP 语义",
+          "url": "https://httpwg.org/specs/rfc9110.html",
+          "locator": "3 Terminology / 8.3 Content-Type / 9 Methods / 13 Conditional Requests / 15 Status Codes",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "idempotency",
+          "distinction": "幂等处理重复同一操作；乐观并发处理基于过期状态的新操作。两者可共同使用。"
+        },
+        {
+          "entryId": "pessimistic-lock",
+          "distinction": "悲观锁先阻止冲突访问；乐观并发通常在提交时发现冲突。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "先查询版本，再无条件更新可以吗？",
+          "answer": "查询与更新之间仍可被别的事务修改。比较条件必须与更新放在原子操作里。"
+        },
+        {
+          "question": "冲突可以默认覆盖云端吗？",
+          "answer": "应保留双方版本并给出合并或选择，不能静默丢弃另一人的修改。"
+        }
+      ]
+    },
+    {
+      "id": "pessimistic-lock",
+      "version": 1,
+      "name": "悲观锁",
+      "englishName": "Pessimistic locking",
+      "aliases": [
+        "行锁",
+        "FOR UPDATE"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "悲观锁在访问或修改前获取锁，使冲突操作等待或失败。锁的粒度、兼容模式和事务长度决定阻塞情况；不宜把长时间模型调用放在持锁事务中。",
+      "uses": [
+        "解释排队与资源争用，规划短事务。"
+      ],
+      "examples": [
+        "示例：工作进程先锁定一条待办并登记租约，再提交事务后执行计算，不持续锁表等待模型。"
+      ],
+      "relatedIds": [
+        "optimistic-concurrency",
+        "deadlock",
+        "lease"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-locks",
+          "title": "PostgreSQL：显式锁",
+          "url": "https://www.postgresql.org/docs/current/explicit-locking.html",
+          "locator": "Row-Level Locks / Deadlocks",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "deadlock",
+      "version": 1,
+      "name": "数据库死锁",
+      "englishName": "Deadlock",
+      "aliases": [
+        "死锁等待"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "死锁是一组操作彼此等待对方持有的资源，形成等待环而不能继续。数据库可检测并中止其中事务；一致的加锁顺序和较短事务有助于减少发生。",
+      "uses": [
+        "解释偶发并发保存失败与事务重试。"
+      ],
+      "examples": [
+        "示例：甲先锁项目A再等B，乙先锁B再等A，可能形成死锁。"
+      ],
+      "relatedIds": [
+        "pessimistic-lock",
+        "transaction",
+        "retry-backoff"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-locks",
+          "title": "PostgreSQL：显式锁",
+          "url": "https://www.postgresql.org/docs/current/explicit-locking.html",
+          "locator": "Row-Level Locks / Deadlocks",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "upsert",
+      "version": 1,
+      "name": "冲突时插入或更新",
+      "englishName": "Upsert",
+      "aliases": [
+        "ON CONFLICT",
+        "插入更新"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "Upsert在明确唯一冲突目标下执行插入或替代更新。具体语义由数据库语句决定；它不自动保证数据版本合理、外部操作幂等或所有合并规则正确。",
+      "uses": [
+        "保存去重事件与版本化状态时明确覆盖规则。"
+      ],
+      "examples": [
+        "示例：同一request_id已存在就返回旧回执，而不是用新载荷任意覆盖已完成记录。"
+      ],
+      "relatedIds": [
+        "unique-constraint",
+        "idempotency",
+        "optimistic-concurrency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-insert",
+          "title": "PostgreSQL：INSERT",
+          "url": "https://www.postgresql.org/docs/current/sql-insert.html",
+          "locator": "ON CONFLICT Clause / conflict target",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "write-ahead-log",
+      "version": 1,
+      "name": "预写日志",
+      "englishName": "Write-ahead log",
+      "aliases": [
+        "WAL",
+        "写前日志"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "预写日志先持久记录恢复所需变更，再按规则写入数据页，使崩溃恢复可重建已提交状态。它与面向研究操作的审计日志不同，也不能单独代替完整备份策略。",
+      "uses": [
+        "理解持久保存回执和数据库重启恢复。"
+      ],
+      "examples": [
+        "示例：确认提交前数据库需满足其持久性配置；内存变量写成成功不等于事务已落盘。"
+      ],
+      "relatedIds": [
+        "transaction",
+        "backup-recovery",
+        "event-log"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-wal",
+          "title": "PostgreSQL：预写日志",
+          "url": "https://www.postgresql.org/docs/current/wal-intro.html",
+          "locator": "28.3 Write-Ahead Logging",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "backup-recovery",
+      "version": 1,
+      "name": "备份、恢复与验证",
+      "englishName": "Backup and recovery",
+      "aliases": [
+        "备份恢复",
+        "PITR",
+        "恢复演练"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "备份保存可恢复的数据库或文件副本，恢复将其重建到可用状态。有效策略同时定义恢复点、可接受丢失量和恢复时间，并通过实际恢复检查关系、文件及版本一致性。",
+      "uses": [
+        "保证团队成果可从故障中恢复，而不只拥有备份文件。"
+      ],
+      "examples": [
+        "示例：恢复数据库后核对报告引用的文件哈希；数据库新、文件旧的混合状态仍不能交付。"
+      ],
+      "relatedIds": [
+        "write-ahead-log",
+        "sha256",
+        "provenance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-backup",
+          "title": "PostgreSQL：备份恢复",
+          "url": "https://www.postgresql.org/docs/current/backup.html",
+          "locator": "Chapter 25 / SQL Dump / File System / Continuous Archiving",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-wal",
+          "title": "PostgreSQL：预写日志",
+          "url": "https://www.postgresql.org/docs/current/wal-intro.html",
+          "locator": "28.3 Write-Ahead Logging",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "checkpoint",
+          "distinction": "检查点帮助从中间状态继续，备份用于恢复损坏或丢失的完整资产，作用范围不同。"
+        },
+        {
+          "entryId": "sha256",
+          "distinction": "哈希能比较字节，但不能证明备份具备全部依赖或能成功恢复。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "备份任务显示成功就够了吗？",
+          "answer": "还要定期在隔离环境恢复，检查约束、版本、文件和必要权限。"
+        },
+        {
+          "question": "不断复制数据库目录安全吗？",
+          "answer": "须使用支持一致快照的方式；随意复制正在变化的目录可能得到不一致副本。"
+        }
+      ]
+    },
+    {
+      "id": "event-log",
+      "version": 1,
+      "name": "追加式事件记录",
+      "englishName": "Append-only event log",
+      "aliases": [
+        "事件流",
+        "事件日志"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "追加式事件记录按定义的范围保存发生过的变化与顺序，用于审计或重放。全局顺序、分区顺序和事务顺序须明确；能重放不表示可任意再次执行外部副作用。",
+      "uses": [
+        "恢复任务显示并核对谁确认了哪个成果版本。"
+      ],
+      "examples": [
+        "示例：事件序号31记录v4提案获批准；重新打开只重放状态，不再次调用收费模型。"
+      ],
+      "relatedIds": [
+        "write-ahead-log",
+        "checkpoint",
+        "outbox"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-kafka",
+          "title": "Apache Kafka：交付语义",
+          "url": "https://kafka.apache.org/41/design/design/",
+          "locator": "Persistence / Consumer Position / Message Delivery Semantics / Using Transactions",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-prov",
+          "title": "W3C：PROV",
+          "url": "https://www.w3.org/TR/prov-overview/",
+          "locator": "PROV family / entities, activities, agents / derivation",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "outbox",
+      "version": 1,
+      "name": "事务发件箱模式",
+      "englishName": "Transactional outbox",
+      "aliases": [
+        "事务outbox",
+        "发件箱表"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "Outbox把业务变更与待发送事件写入同一个数据库事务，再由独立过程发送。它解决一次写入跨数据库与消息系统的双写断点；发送仍可能重复，接收端要处理去重。",
+      "uses": [
+        "让成果发布与通知待办不会一项成功另一项丢失。"
+      ],
+      "examples": [
+        "示例：报告v6提交时同事务写入“版本已保存”事件；发送进程重启后继续处理未确认事件。"
+      ],
+      "relatedIds": [
+        "transaction",
+        "event-log",
+        "at-least-once",
+        "idempotency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-outbox",
+          "title": "AWS：事务 Outbox",
+          "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html",
+          "locator": "Intent / Issues and considerations / duplicate handling",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "exactly-once",
+          "distinction": "Outbox不单独保证端到端恰好一次，事件重复发送仍可能发生。"
+        },
+        {
+          "entryId": "task-queue",
+          "distinction": "队列负责交付待办；Outbox规定业务写入与交付意图如何原子登记。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "发送成功后还会重复吗？",
+          "answer": "回执记录前崩溃可能导致再次发送，应使用稳定事件ID及幂等消费者。"
+        },
+        {
+          "question": "外部模型调用也能放进同一事务吗？",
+          "answer": "外部供应商通常不参与本地数据库事务；需要单独的调用记录、未知状态和对账。"
+        }
+      ]
+    },
+    {
+      "id": "lease",
+      "version": 1,
+      "name": "任务租约",
+      "englishName": "Task lease",
+      "aliases": [
+        "租约",
+        "lease expiry"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "任务租约是有期限的任务占用记录，使持有者在期限内承担处理职责；续租与过期策略决定恢复。仅有到期时间不确保旧进程停止，写回还需核对当前尝试和占用资格。",
+      "uses": [
+        "防止进程退出后待办永远卡住，同时阻止旧结果覆盖新尝试。"
+      ],
+      "examples": [
+        "示例：A租约到期后B接管；A晚到的结果须按attempt_id拒绝覆盖B的有效回执。"
+      ],
+      "relatedIds": [
+        "task-queue",
+        "optimistic-concurrency",
+        "timeout"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-lease",
+          "title": "AWS SQS：可见性超时",
+          "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html",
+          "locator": "Visibility timeout / processing / visibility management；作为有限任务占用的实例",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "task-queue",
+      "version": 1,
+      "name": "持久任务队列",
+      "englishName": "Persistent task queue",
+      "aliases": [
+        "后台队列",
+        "任务排队"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "持久任务队列保存待处理工作并让执行器领取、确认或重新安排。可靠性依赖持久记录、完成回执和恢复机制，而不是界面进度条或进程内协程的存在。",
+      "uses": [
+        "理解关闭网页后运行是否仍可继续。"
+      ],
+      "examples": [
+        "示例：导出任务保存到数据库并被执行器领取；网页只读取状态，刷新不重新创建同一任务。"
+      ],
+      "relatedIds": [
+        "lease",
+        "at-least-once",
+        "outbox"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-sqs-once",
+          "title": "AWS SQS：至少一次",
+          "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues-at-least-once-delivery.html",
+          "locator": "At-least-once delivery / 重复副本与幂等应用",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-lease",
+          "title": "AWS SQS：可见性超时",
+          "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html",
+          "locator": "Visibility timeout / processing / visibility management；作为有限任务占用的实例",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-outbox",
+          "title": "AWS：事务 Outbox",
+          "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html",
+          "locator": "Intent / Issues and considerations / duplicate handling",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "at-least-once",
+      "version": 1,
+      "name": "至少一次交付",
+      "englishName": "At-least-once delivery",
+      "aliases": [
+        "至少一次",
+        "重复消息"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "至少一次交付会持续处理未确认消息，在系统条件满足时避免因一次失败丢失工作，但同一消息可能到达多次。业务消费者应假设重复并使用稳定操作身份。",
+      "uses": [
+        "解释任务重启后的重复事件和去重要求。"
+      ],
+      "examples": [
+        "示例：执行结果已提交、消息确认前进程崩溃，重投消息应读取已有结果而不是再发布一份。"
+      ],
+      "relatedIds": [
+        "idempotency",
+        "exactly-once",
+        "task-queue"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-sqs-once",
+          "title": "AWS SQS：至少一次",
+          "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues-at-least-once-delivery.html",
+          "locator": "At-least-once delivery / 重复副本与幂等应用",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "exactly-once",
+      "version": 1,
+      "name": "恰好一次语义的边界",
+      "englishName": "Exactly-once semantics",
+      "aliases": [
+        "恰好一次",
+        "exactly once"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "恰好一次通常指在指定事务与系统边界内，每项处理只有一份可见效果；不能据此断言物理执行从不重复。跨数据库、文件和供应商的端到端保证需要各目标协作。",
+      "uses": [
+        "评估任务恢复是否会重复发布、计费或修改版本。"
+      ],
+      "examples": [
+        "示例：数据库中的结果可按run_id去重；超时模型请求是否已收费仍要按供应商回执核对。"
+      ],
+      "relatedIds": [
+        "at-least-once",
+        "idempotency",
+        "outbox",
+        "transaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-kafka",
+          "title": "Apache Kafka：交付语义",
+          "url": "https://kafka.apache.org/41/design/design/",
+          "locator": "Persistence / Consumer Position / Message Delivery Semantics / Using Transactions",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-outbox",
+          "title": "AWS：事务 Outbox",
+          "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html",
+          "locator": "Intent / Issues and considerations / duplicate handling",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "idempotency",
+          "distinction": "幂等操作允许重复而保持同样效果；恰好一次描述所界定的整体处理效果。"
+        },
+        {
+          "entryId": "lease",
+          "distinction": "租约分配处理资格，但网络延迟可能留下旧执行者，不单独提供恰好一次。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "用了事务就不会重复收费吗？",
+          "answer": "供应商收费通常在本地事务之外。没有供应商幂等或对账证据，未知请求不能自动重发。"
+        },
+        {
+          "question": "验收应声明什么范围？",
+          "answer": "声明输入身份、事务边界、结果目标、失败恢复和外部副作用，并实际测试重复交付与重启。"
+        }
+      ]
+    },
+    {
+      "id": "checkpoint",
+      "version": 1,
+      "name": "任务检查点",
+      "englishName": "Execution checkpoint",
+      "aliases": [
+        "恢复点",
+        "任务断点"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "检查点保存足以恢复的一段执行状态及输入身份，使任务从已确认进度继续。恢复必须区分可重复纯计算、已保存结果与不可随意重复的外部调用。",
+      "uses": [
+        "避免报告生成中断后重跑全部步骤。"
+      ],
+      "examples": [
+        "示例：已保存图表SVG的步骤可直接载入；模型调用仍未知的步骤先待对账。"
+      ],
+      "relatedIds": [
+        "event-log",
+        "task-queue",
+        "provenance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-kafka",
+          "title": "Apache Kafka：交付语义",
+          "url": "https://kafka.apache.org/41/design/design/",
+          "locator": "Persistence / Consumer Position / Message Delivery Semantics / Using Transactions",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-wal",
+          "title": "PostgreSQL：预写日志",
+          "url": "https://www.postgresql.org/docs/current/wal-intro.html",
+          "locator": "28.3 Write-Ahead Logging",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "retry-backoff",
+      "version": 1,
+      "name": "重试退避与抖动",
+      "englishName": "Retry backoff and jitter",
+      "aliases": [
+        "指数退避",
+        "backoff",
+        "jitter"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "退避让后续重试隔更久，抖动再随机分散请求时刻，减少同步重试放大故障。重试资格、上限、总期限和幂等条件应先定义，不能把所有错误都当成可重试。",
+      "uses": [
+        "解释网络故障后的等待与避免重复收费。"
+      ],
+      "examples": [
+        "示例：429按回执延迟重试；可能已处理的收费请求超时则先登记unknown，不盲目重发。"
+      ],
+      "relatedIds": [
+        "timeout",
+        "idempotency",
+        "exactly-once"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-retry",
+          "title": "AWS：超时与退避",
+          "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+          "locator": "Timeouts / Retries and backoff / Jitter",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "timeout",
+      "version": 1,
+      "name": "超时与结果未知",
+      "englishName": "Timeout",
+      "aliases": [
+        "deadline",
+        "请求超时"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "超时表示某一等待超过设定期限，不证明对方没有执行。连接、响应和整体任务期限是不同边界；超时后的业务状态需根据能观察到的回执决定。",
+      "uses": [
+        "准确理解模型、上传和导出失败提示。"
+      ],
+      "examples": [
+        "示例：客户端60秒没收到模型结果，而供应商可能在70秒完成；费用与结果应待核对。"
+      ],
+      "relatedIds": [
+        "cancellation",
+        "retry-backoff",
+        "exactly-once"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-retry",
+          "title": "AWS：超时与退避",
+          "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+          "locator": "Timeouts / Retries and backoff / Jitter",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-asyncio",
+          "title": "Python：协程任务",
+          "url": "https://docs.python.org/3.14/library/asyncio-task.html",
+          "locator": "Task Cancellation / Timeouts / Shielding From Cancellation",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "cancellation",
+      "version": 1,
+      "name": "协作式取消",
+      "englishName": "Cancellation",
+      "aliases": [
+        "任务取消",
+        "取消请求"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "取消是请求正在执行的工作停止或不再采用其结果。很多任务只能在检查点协作响应；中断本地等待不保证外部服务停止，也不自动撤销已提交副作用。",
+      "uses": [
+        "避免取消后晚到结果进入新项目版本。"
+      ],
+      "examples": [
+        "示例：用户取消生图后客户端忽略晚到稿，后台仍保留调用回执以核对结果和费用。"
+      ],
+      "relatedIds": [
+        "timeout",
+        "checkpoint",
+        "lease"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-asyncio",
+          "title": "Python：协程任务",
+          "url": "https://docs.python.org/3.14/library/asyncio-task.html",
+          "locator": "Task Cancellation / Timeouts / Shielding From Cancellation",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-retry",
+          "title": "AWS：超时与退避",
+          "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+          "locator": "Timeouts / Retries and backoff / Jitter",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "http",
+      "version": 1,
+      "name": "HTTP 请求与回执",
+      "englishName": "Hypertext Transfer Protocol",
+      "aliases": [
+        "超文本传输协议",
+        "HTTP语义"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "HTTP是应用层请求—响应协议，定义方法、目标资源、头字段和状态码等语义。连接或消息成功不自动等于业务完成，持久保存、任务接受与文件生成应有各自回执。",
+      "uses": [
+        "正确理解保存、导入与异步运行的状态。"
+      ],
+      "examples": [
+        "示例：202表示任务已接受，但结果仍未完成；前端应继续查询真实任务状态。"
+      ],
+      "relatedIds": [
+        "api",
+        "status-code",
+        "content-type",
+        "idempotency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-http",
+          "title": "IETF RFC 9110：HTTP 语义",
+          "url": "https://httpwg.org/specs/rfc9110.html",
+          "locator": "3 Terminology / 8.3 Content-Type / 9 Methods / 13 Conditional Requests / 15 Status Codes",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "api",
+          "distinction": "API是接口合同；HTTP是实现接口时可采用的通信协议。"
+        },
+        {
+          "entryId": "tls",
+          "distinction": "HTTP描述应用语义，TLS保护传输通道，职责不同。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "收到200就可显示报告已导出吗？",
+          "answer": "需按该接口合同核对返回结果。200可能只是查询成功，实际文件仍需生成和验证。"
+        },
+        {
+          "question": "请求超时能再点一次吗？",
+          "answer": "读取通常可重试；修改或收费调用需稳定请求身份与回执，先判断是否已执行。"
+        }
+      ]
+    },
+    {
+      "id": "status-code",
+      "version": 1,
+      "name": "HTTP 状态码",
+      "englishName": "HTTP status code",
+      "aliases": [
+        "200",
+        "202",
+        "409",
+        "429",
+        "5xx"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "HTTP状态码概括响应类别和部分处理结果，如成功、冲突、限流或服务端错误。具体恢复方式还要读取结构化错误和业务状态；5xx不能证明外部操作没有发生。",
+      "uses": [
+        "定位登录、保存冲突和调用限额问题。"
+      ],
+      "examples": [
+        "示例：409提示版本冲突，保留本地稿再合并；429按限流约定等待，不能把两者都当“网络慢”。"
+      ],
+      "relatedIds": [
+        "http",
+        "optimistic-concurrency",
+        "retry-backoff"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-http",
+          "title": "IETF RFC 9110：HTTP 语义",
+          "url": "https://httpwg.org/specs/rfc9110.html",
+          "locator": "3 Terminology / 8.3 Content-Type / 9 Methods / 13 Conditional Requests / 15 Status Codes",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "rest",
+      "version": 1,
+      "name": "REST 架构约束",
+      "englishName": "Representational State Transfer",
+      "aliases": [
+        "RESTful",
+        "表述性状态转移"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "REST是围绕资源表示、统一接口、无状态交互、缓存和分层等约束形成的架构风格。使用HTTP与JSON并不自动满足全部REST约束；无状态也不是服务器不能存业务数据。",
+      "uses": [
+        "区分接口命名习惯与实际数据、版本和权限合同。"
+      ],
+      "examples": [
+        "示例：项目资源可有GET读取与条件更新；用户会话和版本规则仍需明确实现。"
+      ],
+      "relatedIds": [
+        "http",
+        "api",
+        "cache"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-rest",
+          "title": "Fielding：REST 原始论述",
+          "url": "https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm",
+          "locator": "5.1.2—5.1.6 / Uniform Interface",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "pagination",
+      "version": 1,
+      "name": "分页与稳定顺序",
+      "englishName": "Pagination",
+      "aliases": [
+        "分页游标",
+        "cursor pagination",
+        "LIMIT OFFSET"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "分页把较大结果集分段返回。偏移分页和游标分页使用不同定位方式；应定义稳定排序和版本范围，数据同时变化时还需避免重复或漏读。",
+      "uses": [
+        "浏览历史版本与恢复任务事件。"
+      ],
+      "examples": [
+        "示例：按event_seq读取“序号50之后”的事件，比随意跳过前50行更能表达续传位置。"
+      ],
+      "relatedIds": [
+        "event-log",
+        "sql",
+        "primary-key"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-pagination",
+          "title": "PostgreSQL：分页顺序",
+          "url": "https://www.postgresql.org/docs/current/queries-limit.html",
+          "locator": "7.6 LIMIT and OFFSET / predictable order",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "sse",
+      "version": 1,
+      "name": "服务端发送事件",
+      "englishName": "Server-sent events",
+      "aliases": [
+        "SSE",
+        "EventSource"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "SSE通过HTTP流向浏览器发送服务端事件，支持事件类型和标识。自动重连能恢复连接，但应用仍需按事件ID续传、去重并检查权限。",
+      "uses": [
+        "接收任务状态而无需反复整页刷新。"
+      ],
+      "examples": [
+        "示例：连接断开后携带Last-Event-ID继续读取；同一完成事件再次到达只更新一次状态。"
+      ],
+      "relatedIds": [
+        "http",
+        "event-log",
+        "idempotency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-sse",
+          "title": "WHATWG：服务端事件",
+          "url": "https://html.spec.whatwg.org/multipage/server-sent-events.html",
+          "locator": "Server-sent events / EventSource / Last-Event-ID",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "websocket",
+      "version": 1,
+      "name": "WebSocket 双向连接",
+      "englishName": "WebSocket",
+      "aliases": [
+        "WS",
+        "WSS"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "WebSocket在握手后提供双向消息通信与帧结构。它提供通道，不自动定义项目权限、消息版本或断线重放；安全传输通常使用WSS。",
+      "uses": [
+        "理解协作编辑和实时任务面板的通信方式。"
+      ],
+      "examples": [
+        "示例：拖动画布时发送位置消息，接收者仍需核对项目、节点ID和版本。"
+      ],
+      "relatedIds": [
+        "sse",
+        "http",
+        "tls"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-websocket",
+          "title": "IETF RFC 6455：WebSocket",
+          "url": "https://www.rfc-editor.org/rfc/rfc6455.txt",
+          "locator": "1 Introduction / Opening Handshake / Data Framing",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "cors",
+      "version": 1,
+      "name": "跨源资源共享",
+      "englishName": "Cross-Origin Resource Sharing",
+      "aliases": [
+        "CORS",
+        "跨域许可"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "CORS是浏览器读取跨源HTTP响应的许可机制，通过响应头及必要的预检协商。它不是身份认证，也不能阻止所有跨源请求或非浏览器客户端访问。",
+      "uses": [
+        "解释前后端分域时的浏览器报错。"
+      ],
+      "examples": [
+        "示例：接口可在命令行成功而浏览器被CORS拦截；开放CORS也不能让任意人获得私有项目权限。"
+      ],
+      "relatedIds": [
+        "http",
+        "authorization",
+        "csrf"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-cors",
+          "title": "WHATWG：Fetch CORS",
+          "url": "https://fetch.spec.whatwg.org/",
+          "locator": "3.3 CORS protocol / credentials / preflight",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "tls",
+      "version": 1,
+      "name": "TLS 安全传输",
+      "englishName": "Transport Layer Security",
+      "aliases": [
+        "TLS1.3",
+        "HTTPS通道"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "TLS通过握手、密钥建立和记录保护提供通道的认证、保密和完整性。验证对端身份是安全使用的前提；它不保护终端中已解密数据，也不代替保存加密与访问控制。",
+      "uses": [
+        "理解个人Key和答卷传输链中的保护范围。"
+      ],
+      "examples": [
+        "示例：HTTPS保护上传途中数据，服务器拿到明文后仍需权限、保存策略和日志控制。"
+      ],
+      "relatedIds": [
+        "http",
+        "encryption",
+        "authentication"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-tls",
+          "title": "IETF RFC 8446：TLS 1.3",
+          "url": "https://www.rfc-editor.org/rfc/rfc8446.txt",
+          "locator": "1 Introduction / 2 Protocol Overview / 8 0-RTT and Anti-Replay",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "encryption",
+          "distinction": "TLS组合多种机制保护通道；通用加密也可能只保护某个文件，范围不同。"
+        },
+        {
+          "entryId": "authorization",
+          "distinction": "认证通信端点不表示登录用户获准访问每个项目。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "关闭证书校验能解决连接问题吗？",
+          "answer": "会削弱对端身份验证，不应作为正常修复；需核对证书、域名和信任配置。"
+        },
+        {
+          "question": "TLS1.3意味着请求从不重放吗？",
+          "answer": "不是所有模式都如此，0-RTT有单独重放边界；业务操作仍需幂等和回执设计。"
+        }
+      ]
+    },
+    {
+      "id": "authentication",
+      "version": 1,
+      "name": "身份认证",
+      "englishName": "Authentication",
+      "aliases": [
+        "认证",
+        "AuthN"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "身份认证验证某个用户、进程或设备的身份声明。邮箱验证码通常证明当前可控制该邮箱，不直接证明学校、团队归属或任何操作权限。",
+      "uses": [
+        "理解登录与团队邀请为何是不同步骤。"
+      ],
+      "examples": [
+        "示例：登录成功的账号仍需获得项目成员资格，才可读取该团队问卷。"
+      ],
+      "relatedIds": [
+        "authorization",
+        "tls",
+        "secret-management"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-authn",
+          "title": "NIST：身份认证",
+          "url": "https://csrc.nist.gov/glossary/term/authentication",
+          "locator": "Definitions / 验证用户、进程或设备身份",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "authorization",
+      "version": 1,
+      "name": "授权与访问控制",
+      "englishName": "Authorization",
+      "aliases": [
+        "权限",
+        "AuthZ",
+        "访问控制"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "授权依据主体、资源和操作判断是否允许访问。项目级读写、下载与复核可能采用不同条件；界面隐藏按钮不能代替服务端在每次请求时检查权限。",
+      "uses": [
+        "理解viewer、reviewer和editor的不同边界。"
+      ],
+      "examples": [
+        "示例：某老师可读团队A报告，却不能修改问卷；直接换成团队B的资源ID也应被拒绝。"
+      ],
+      "relatedIds": [
+        "authentication",
+        "least-privilege",
+        "foreign-key"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-authz",
+          "title": "NIST：授权",
+          "url": "https://csrc.nist.gov/glossary/term/authorization",
+          "locator": "Definitions / 访问资源的权限与审批",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-owasp-auth",
+          "title": "OWASP：授权检查",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+          "locator": "Introduction / Least Privileges / Deny by Default / Every Request",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "authentication",
+          "distinction": "认证回答主体身份是否被验证；授权回答这项操作是否允许。"
+        },
+        {
+          "entryId": "cors",
+          "distinction": "CORS控制浏览器跨源读响应，不是项目权限机制。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "拿到文件链接就能永久访问吗？",
+          "answer": "应按资源权限和链接期限校验，撤权后的缓存、签名链接与历史访问也要按策略处理。"
+        },
+        {
+          "question": "角色名称足以证明独立复核吗？",
+          "answer": "还须核对复核人与负责人不同、目标版本准确及决定记录；名称本身不构成审批证据。"
+        }
+      ]
+    },
+    {
+      "id": "encryption",
+      "version": 1,
+      "name": "加密与密钥边界",
+      "englishName": "Encryption",
+      "aliases": [
+        "密文",
+        "明文加密"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "加密在密钥与算法规则下把明文转换为密文，并由相应解密机制恢复。保密性依赖密钥管理和正确使用；只有加密不一定验证数据是否被修改。",
+      "uses": [
+        "区分个人Key保存、传输保护与文件共享权限。"
+      ],
+      "examples": [
+        "示例：保存的API Key在界面中不回显原文；授权服务可解密用于调用，仍需限制权限并避免日志输出。"
+      ],
+      "relatedIds": [
+        "aead",
+        "secret-management",
+        "sha256"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-encrypt",
+          "title": "NIST：加密",
+          "url": "https://csrc.nist.gov/glossary/term/encryption",
+          "locator": "Definitions / plaintext to ciphertext",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-aead",
+          "title": "PyCA cryptography：AEAD",
+          "url": "https://cryptography.io/en/latest/hazmat/primitives/aead/",
+          "locator": "Authenticated encryption / AESGCM / nonce / associated_data / InvalidTag",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "sha256",
+          "distinction": "哈希通常用于指纹比较，不能用来恢复原API Key；加密则设计为可在授权下解密。"
+        },
+        {
+          "entryId": "password-hashing",
+          "distinction": "密码验证常保存专用慢哈希，而需要调用供应商的API Key通常必须可授权恢复。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "把Key写成Base64算加密吗？",
+          "answer": "Base64是表示编码，知道格式即可解回原字节，不提供密钥保密。"
+        },
+        {
+          "question": "加密后是否可以公开数据包？",
+          "answer": "还需评估密钥、访问路径、元数据和共享目的；加密不代替数据最小化。"
+        }
+      ]
+    },
+    {
+      "id": "aead",
+      "version": 1,
+      "name": "认证加密与关联数据",
+      "englishName": "Authenticated Encryption with Associated Data",
+      "aliases": [
+        "AEAD",
+        "AES-GCM"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "AEAD同时保护密文机密性和内容完整性，并可认证不加密的关联数据。调用必须遵守算法的nonce要求；AES-GCM等在同一密钥下重复nonce会严重破坏安全。",
+      "uses": [
+        "理解加密凭据为何要绑定账号、服务ID和版本。"
+      ],
+      "examples": [
+        "示例：账号ID作为关联数据：密文被移到另一账号时应验证失败，而不是解出同一Key。"
+      ],
+      "relatedIds": [
+        "encryption",
+        "secret-management",
+        "authorization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-aead",
+          "title": "PyCA cryptography：AEAD",
+          "url": "https://cryptography.io/en/latest/hazmat/primitives/aead/",
+          "locator": "Authenticated encryption / AESGCM / nonce / associated_data / InvalidTag",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "password-hashing",
+      "version": 1,
+      "name": "密码慢哈希与盐",
+      "englishName": "Password hashing",
+      "aliases": [
+        "Argon2id",
+        "salt",
+        "密码盐"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "密码保存通常采用专用计算成本较高的哈希方案，并为每条密码使用独立盐。它与快速文件指纹不同；盐可公开，密码与额外服务端秘密仍须保护。",
+      "uses": [
+        "辨别账号密码保存与个人API Key加密的区别。"
+      ],
+      "examples": [
+        "示例：两人设相同密码，独立盐可使保存值不同；并不表示可以显示或解回密码。"
+      ],
+      "relatedIds": [
+        "sha256",
+        "encryption",
+        "secret-management"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-password",
+          "title": "OWASP：密码保存",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+          "locator": "Hashing vs Encryption / Salting / Argon2id",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "secret-management",
+      "version": 1,
+      "name": "密钥生命周期管理",
+      "englishName": "Secrets management",
+      "aliases": [
+        "密钥保管",
+        "凭据轮换"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "密钥管理包括创建、保存、授权使用、轮换、撤销和审计。避免泄露不只是加密一行字段，还需要处理日志、缓存、备份、访问者和失效后的使用。",
+      "uses": [
+        "管理个人模型Key与运营检索Key。"
+      ],
+      "examples": [
+        "示例：撤销Key后停止新调用，已有未知调用保留回执核对；历史日志不应包含Key正文。"
+      ],
+      "relatedIds": [
+        "encryption",
+        "least-privilege",
+        "authorization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-secret",
+          "title": "OWASP：密钥管理",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+          "locator": "Secret Lifecycle / Rotation / Access control / Logging",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "least-privilege",
+      "version": 1,
+      "name": "最小权限原则",
+      "englishName": "Least privilege",
+      "aliases": [
+        "最小授权",
+        "least privileges"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "最小权限要求主体仅获得完成当前职责所需的资源与操作权。按项目、用途和期限划分权限比给所有登录用户统一全权更能表达实际需求。",
+      "uses": [
+        "配置教师只读、审阅与团队编辑。"
+      ],
+      "examples": [
+        "示例：复核人可阅读指定报告版本并留决定，无需读取全部原始答卷或修改作者内容。"
+      ],
+      "relatedIds": [
+        "authorization",
+        "authentication"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-owasp-auth",
+          "title": "OWASP：授权检查",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+          "locator": "Introduction / Least Privileges / Deny by Default / Every Request",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "sql-injection",
+      "version": 1,
+      "name": "SQL 注入",
+      "englishName": "SQL injection",
+      "aliases": [
+        "SQLi",
+        "查询注入"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "SQL注入发生在不可信输入被解释成查询指令时，可能改变原查询行为。参数绑定用于区分数据与代码；表名等结构部分还需按允许集合选择。",
+      "uses": [
+        "理解搜索文本和筛选参数为何不能直接拼成SQL。"
+      ],
+      "examples": [
+        "示例：搜索词含引号时应作为参数值处理，而不是与查询字符串连接。"
+      ],
+      "relatedIds": [
+        "sql",
+        "data-validation",
+        "least-privilege"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-sqli",
+          "title": "OWASP：SQL 注入",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+          "locator": "What Is SQL Injection / Parameterized Queries / Allow-list",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "cross-site-scripting",
+      "version": 1,
+      "name": "跨站脚本注入",
+      "englishName": "Cross-site scripting",
+      "aliases": [
+        "XSS",
+        "脚本注入"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "XSS让不可信内容以网页可执行代码的方式运行。输出应按所处HTML、属性或脚本上下文处理；需要富文本时采用受限净化，不能只做一次通用替换。",
+      "uses": [
+        "安全展示题干、外部网页片段和OCR文字。"
+      ],
+      "examples": [
+        "示例：受访者回答中出现HTML标签应显示为文本，不让它成为页面脚本。"
+      ],
+      "relatedIds": [
+        "data-validation",
+        "svg",
+        "json"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-xss",
+          "title": "OWASP：跨站脚本",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+          "locator": "Output Encoding / HTML Sanitization / Safe Sinks",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "csrf",
+      "version": 1,
+      "name": "跨站请求伪造",
+      "englishName": "Cross-site request forgery",
+      "aliases": [
+        "CSRF",
+        "XSRF"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "CSRF诱使已登录浏览器向目标站发送不期望的状态修改请求，利用可能自动附带的凭据。防护需结合请求令牌、来源校验和Cookie策略，单靠CORS不充分。",
+      "uses": [
+        "理解云端保存、删除与邀请接口的请求保护。"
+      ],
+      "examples": [
+        "示例：用户登录时访问外部页面，该页面不能借自动Cookie替用户删除项目。"
+      ],
+      "relatedIds": [
+        "cors",
+        "authentication",
+        "http"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-csrf",
+          "title": "OWASP：请求伪造",
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+          "locator": "Introduction / Token-Based Mitigation / SameSite Cookie",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "pseudonymization",
+      "version": 1,
+      "name": "假名化",
+      "englishName": "Pseudonymization",
+      "aliases": [
+        "代号化",
+        "伪名化"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "假名化用代号替换直接身份标识，通常仍可借映射或附加信息重新关联。它有利于记录链接和降低直接暴露，但不能与不可识别的匿名结果混为一谈。",
+      "uses": [
+        "把追访联系信息与分析表分开保存。"
+      ],
+      "examples": [
+        "示例：姓名改成P017，联系表仍保存P017与手机号对应；分析表因此不是自动匿名。"
+      ],
+      "relatedIds": [
+        "anonymization",
+        "encryption",
+        "provenance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-deid",
+          "title": "NISTIR 8053：去标识化",
+          "url": "https://nvlpubs.nist.gov/nistpubs/ir/2015/NIST.IR.8053.pdf",
+          "locator": "正文1.4.1、3.2 Pseudonymization、3.3 Linkage attacks",
+          "scope": "技术术语与重识别问题；2015美国政策背景不作为中国法律结论"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "anonymization",
+      "version": 1,
+      "name": "匿名化与重识别风险",
+      "englishName": "Anonymization",
+      "aliases": [
+        "匿名数据",
+        "重识别"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "技术上匿名化旨在使记录在声明的使用环境和可获得辅助信息下难以关联具体个人。只去掉姓名不够；稀有组合、开放文本和关联数据会留下重识别路径，风险随共享环境变化。",
+      "uses": [
+        "决定原始答卷和附录中可公开到哪一层。"
+      ],
+      "examples": [
+        "示例：“某县唯一某专业的42岁讲师”即使无姓名，也可能被公开资料对应到个人。"
+      ],
+      "relatedIds": [
+        "pseudonymization",
+        "differential-privacy",
+        "authorization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-deid",
+          "title": "NISTIR 8053：去标识化",
+          "url": "https://nvlpubs.nist.gov/nistpubs/ir/2015/NIST.IR.8053.pdf",
+          "locator": "正文1.4.1、3.2 Pseudonymization、3.3 Linkage attacks",
+          "scope": "技术术语与重识别问题；2015美国政策背景不作为中国法律结论"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "pseudonymization",
+          "distinction": "假名化保留链接或可逆映射；不能据此宣布匿名。"
+        },
+        {
+          "entryId": "encryption",
+          "distinction": "加密保护访问，持有密钥者仍能读出身份，不等于消除识别性。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "参赛匿名格式与答卷匿名化一样吗？",
+          "answer": "不同。前者涉及作品中作者、学校等身份呈现，后者涉及研究参与者数据，分别按适用要求核查。"
+        },
+        {
+          "question": "删除姓名后能直接分享全部表吗？",
+          "answer": "还需核对准标识、文本、罕见群体和可链接信息，结合共享范围评估风险。"
+        }
+      ]
+    },
+    {
+      "id": "differential-privacy",
+      "version": 1,
+      "name": "差分隐私",
+      "englishName": "Differential privacy",
+      "aliases": [
+        "DP",
+        "epsilon隐私",
+        "隐私预算"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "差分隐私限制加入或改变一个保护单位的数据对随机机制输出分布的影响。保证依赖相邻数据定义、隐私参数与实现；不是随意加噪声，也不使所有关于个人的推断都消失。",
+      "uses": [
+        "了解公开汇总时隐私保护与精度之间的技术取舍。"
+      ],
+      "examples": [
+        "示例：若每人只贡献一条答卷，可在明确计数敏感度和预算后发布加噪计数；本例不表示已实现该功能。"
+      ],
+      "relatedIds": [
+        "anonymization",
+        "pseudonymization",
+        "algorithm"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-dp",
+          "title": "NIST SP 800-226：差分隐私",
+          "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-226.pdf",
+          "locator": "2.1.1 Pure epsilon differential privacy / 2.2 budget / 2.4 privacy unit",
+          "scope": "2025技术定义与风险；不表示证见已实现差分隐私，也不替代本地法律核查"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "anonymization",
+          "distinction": "匿名化评估记录识别风险；差分隐私是对随机输出分布的数学约束，保护对象与形式不同。"
+        },
+        {
+          "entryId": "encryption",
+          "distinction": "加密控制谁能看内容，差分隐私限制已发布统计的增量泄露，不能互换。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "epsilon越小就什么风险都没有吗？",
+          "answer": "一般代表更强的该机制隐私保证，但仍依赖保护单位、组合预算、可信环境和正确实现。"
+        },
+        {
+          "question": "重复发布同一查询会怎样？",
+          "answer": "每次新随机发布通常消耗组合预算；复用同一已发布输出与重新生成噪声应区分。"
+        }
+      ],
+      "formula": {
+        "tex": "\\Pr[M(D)\\in S]\\le e^{\\varepsilon}\\Pr[M(D')\\in S]",
+        "symbols": [
+          {
+            "symbol": "M",
+            "meaning": "随机机制"
+          },
+          {
+            "symbol": "D,D'",
+            "meaning": "按事先声明的保护单位相邻的数据集"
+          },
+          {
+            "symbol": "S",
+            "meaning": "任意可测输出集合"
+          },
+          {
+            "symbol": "\\varepsilon",
+            "meaning": "非负纯差分隐私参数"
+          }
+        ],
+        "conditions": [
+          "式子是纯epsilon差分隐私，要求对所有相邻有序数据集对和所有可测输出集合成立。",
+          "近似(epsilon,delta)差分隐私另有加性delta项，不能用该式冒充。",
+          "需明确一人能贡献多少记录、信任模型及多次发布的组合预算。"
+        ]
+      }
+    },
+    {
+      "id": "algorithm",
+      "version": 1,
+      "name": "算法",
+      "englishName": "Algorithm",
+      "aliases": [
+        "计算步骤",
+        "algorithmic procedure"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "算法是为得到目标结果而组织的可计算步骤。输入、输出、适用条件和终止或停止准则需要说明；叫作算法不表示结果一定正确或适合当前研究。",
+      "uses": [
+        "区分模型公式、计算实现与具体业务任务。"
+      ],
+      "examples": [
+        "示例：重复记录规则先按稳定ID分组，再按确认的时间规则保留记录，可写成可复算的步骤。"
+      ],
+      "relatedIds": [
+        "time-complexity",
+        "data-validation",
+        "reproducibility"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-algorithm",
+          "title": "NIST DADS：算法",
+          "url": "https://xlinux.nist.gov/dads/HTML/algorithm.html",
+          "locator": "Definition",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "time-complexity",
+      "version": 1,
+      "name": "时间复杂度",
+      "englishName": "Time complexity",
+      "aliases": [
+        "运行复杂度",
+        "计算复杂度"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "时间复杂度描述在明确计算模型下，操作量怎样随输入规模增长。应区分最坏、平均与摊还情况；它帮助比较增长趋势，不直接给出某台电脑的实际秒数。",
+      "uses": [
+        "判断复杂图表、搜索和数据合并能否扩到更大规模。"
+      ],
+      "examples": [
+        "示例：逐一比较n条记录的所有无序对需n(n−1)/2次比较；n加倍时工作量接近四倍。"
+      ],
+      "relatedIds": [
+        "big-o",
+        "algorithm",
+        "query-plan"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-complexity",
+          "title": "NIST DADS：复杂度",
+          "url": "https://xlinux.nist.gov/dads/HTML/complexity.html",
+          "locator": "Definition / resources as a function of problem size",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-big-o",
+          "title": "NIST DADS：大 O",
+          "url": "https://xlinux.nist.gov/dads/HTML/bigOnotation.html",
+          "locator": "Formal Definition / Note / computation model",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "big-o",
+          "distinction": "大O是表达渐近上界的记号，时间复杂度是被描述的资源函数及其分析。"
+        },
+        {
+          "entryId": "space-complexity",
+          "distinction": "时间计操作，空间计同时需要的内存；优化一个可能增加另一个。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "O(n)一定比O(n log n)快吗？",
+          "answer": "在足够大规模下看增长趋势；具体规模的常数、IO和实现可改变实测顺序。"
+        },
+        {
+          "question": "怎样报告压力测试？",
+          "answer": "同时注明数据规模、节点/连线数、硬件、测量分位数与操作场景，不能只写复杂度。"
+        }
+      ],
+      "formula": {
+        "tex": "C(n)=\\frac{n(n-1)}{2}=\\Theta(n^2)",
+        "symbols": [
+          {
+            "symbol": "n",
+            "meaning": "待两两比较的记录数"
+          },
+          {
+            "symbol": "C(n)",
+            "meaning": "无序记录对比较次数"
+          },
+          {
+            "symbol": "\\Theta",
+            "meaning": "渐近同阶记号"
+          }
+        ],
+        "conditions": [
+          "每对不同记录恰好比较一次，单次比较按常数成本计。",
+          "这是具体枚举算法的操作计数，不是所有去重算法都必须二次复杂度。"
+        ]
+      }
+    },
+    {
+      "id": "space-complexity",
+      "version": 1,
+      "name": "空间复杂度",
+      "englishName": "Space complexity",
+      "aliases": [
+        "内存复杂度",
+        "辅助空间"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "空间复杂度描述算法所需存储随输入规模的增长，可区分输入存储与额外辅助空间。峰值内存还受对象开销、拷贝、缓存和运行时影响。",
+      "uses": [
+        "评估本地XLSX/OCR和复杂画布的容量。"
+      ],
+      "examples": [
+        "示例：10万行数据同时保存原表、规范表和多份副本，峰值可能远高于单文件大小。"
+      ],
+      "relatedIds": [
+        "time-complexity",
+        "streaming",
+        "worker-thread"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-complexity",
+          "title": "NIST DADS：复杂度",
+          "url": "https://xlinux.nist.gov/dads/HTML/complexity.html",
+          "locator": "Definition / resources as a function of problem size",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        },
+        {
+          "id": "pack03-big-o",
+          "title": "NIST DADS：大 O",
+          "url": "https://xlinux.nist.gov/dads/HTML/bigOnotation.html",
+          "locator": "Formal Definition / Note / computation model",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "big-o",
+      "version": 1,
+      "name": "大 O 渐近上界",
+      "englishName": "Big-O notation",
+      "aliases": [
+        "O记号",
+        "渐近上界"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "对足够大的输入规模，若资源函数不超过某个常数倍的参考函数，就可用大O记号给出上界。O并不自动表示紧确阶，也不是运行时间的绝对值。",
+      "uses": [
+        "阅读算法成本描述和性能说明。"
+      ],
+      "examples": [
+        "示例：线性函数可以写O(n²)但不紧；要比较算法时通常还应给出更有信息的界。"
+      ],
+      "relatedIds": [
+        "time-complexity",
+        "space-complexity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-big-o",
+          "title": "NIST DADS：大 O",
+          "url": "https://xlinux.nist.gov/dads/HTML/bigOnotation.html",
+          "locator": "Formal Definition / Note / computation model",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "hash-table",
+      "version": 1,
+      "name": "哈希表",
+      "englishName": "Hash table",
+      "aliases": [
+        "散列表",
+        "hash map"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "哈希表用哈希函数把键定位到存储位置，并处理不同键落在同一位置的碰撞。适当负载和实现下查找可很快，但不能无条件宣称最坏情况常数时间。",
+      "uses": [
+        "快速按答卷ID建立映射，避免全表反复扫描。"
+      ],
+      "examples": [
+        "示例：同一ID再出现时查询已有记录；比较哈希位置仍需核对键，而不是把碰撞当相同ID。"
+      ],
+      "relatedIds": [
+        "primary-key",
+        "time-complexity",
+        "sha256"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-hash",
+          "title": "NIST DADS：哈希表",
+          "url": "https://xlinux.nist.gov/dads/HTML/hashtab.html",
+          "locator": "Definition / collision / complexity conditions",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "binary-search",
+      "version": 1,
+      "name": "二分搜索",
+      "englishName": "Binary search",
+      "aliases": [
+        "二分查找"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "二分搜索在有序序列中逐次缩小搜索区间，比较次数随规模按对数增长。前提是排序和比较规则一致；随机访问开销也会影响实际成本。",
+      "uses": [
+        "定位已排序事件序号或阈值区间。"
+      ],
+      "examples": [
+        "示例：事件序号有序时可查找第一条大于50的记录；未排序列表不能直接套二分。"
+      ],
+      "relatedIds": [
+        "sorting",
+        "time-complexity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-binary",
+          "title": "NIST DADS：二分搜索",
+          "url": "https://xlinux.nist.gov/dads/HTML/binarySearch.html",
+          "locator": "Definition / sorted array / Note",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "sorting",
+      "version": 1,
+      "name": "稳定排序与比较规则",
+      "englishName": "Stable sorting",
+      "aliases": [
+        "排序稳定性",
+        "排序键"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "排序按确定的比较键排列记录。稳定排序保留等键记录原相对顺序；明确次级键、空值顺序与文本比较方式，才能让结果在重开时可解释。",
+      "uses": [
+        "排序题目目录、数据表和历史事件。"
+      ],
+      "examples": [
+        "示例：同一提交时间的答卷再按稳定ID排序，避免分页和显示在刷新后漂移。"
+      ],
+      "relatedIds": [
+        "pagination",
+        "binary-search",
+        "data-type"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-sorting",
+          "title": "Python：排序",
+          "url": "https://docs.python.org/3.14/howto/sorting.html",
+          "locator": "Key Functions / Sort Stability / Ascending and Descending",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "graph",
+      "version": 1,
+      "name": "图结构",
+      "englishName": "Graph",
+      "aliases": [
+        "顶点与边",
+        "graph structure"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "图用节点和边表示对象及关系，可以有向、无向、带权或允许重边。关系含义必须由研究或业务合同说明，连线本身不证明因果或执行先后。",
+      "uses": [
+        "理解研究画布与关联知识网。"
+      ],
+      "examples": [
+        "示例：“材料支持概念”的说明边与“结果输入计算”的数据边含义不同，不能一律参与调度。"
+      ],
+      "relatedIds": [
+        "algorithm",
+        "topological-sort",
+        "breadth-first-search"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-graph",
+          "title": "NetworkX：图对象",
+          "url": "https://networkx.org/documentation/stable/reference/classes/graph.html",
+          "locator": "Graph / nodes / edges / self loops / directed counterparts",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "breadth-first-search",
+      "version": 1,
+      "name": "广度优先遍历",
+      "englishName": "Breadth-first search",
+      "aliases": [
+        "BFS",
+        "层次遍历"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "广度优先遍历按离起点的边数逐层访问可达节点。在无权图中可用于求最少边数路径；带权成本、时长或距离不相等时不能直接解释为最短成本。",
+      "uses": [
+        "查找画布依赖的近邻或知识前置层级。"
+      ],
+      "examples": [
+        "示例：从“信度”向关联边外扩一层展示相关概念，二层展示关联的关联。"
+      ],
+      "relatedIds": [
+        "graph",
+        "depth-first-search"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-traversal",
+          "title": "NetworkX：图遍历",
+          "url": "https://networkx.org/documentation/stable/reference/algorithms/traversal.html",
+          "locator": "Depth First Search / Breadth First Search",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "depth-first-search",
+      "version": 1,
+      "name": "深度优先遍历",
+      "englishName": "Depth-first search",
+      "aliases": [
+        "DFS",
+        "深度遍历"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "深度优先遍历沿当前分支继续访问，再回溯探索其他分支。它可用于可达性与结构检查；访问顺序取决于邻接顺序，不天然代表重要性。",
+      "uses": [
+        "理解循环检查和依赖结构遍历。"
+      ],
+      "examples": [
+        "示例：沿问卷→数据→分析的分支检查，再回溯到并行图表节点；不是按节点创建时间跑。"
+      ],
+      "relatedIds": [
+        "graph",
+        "breadth-first-search",
+        "topological-sort"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-traversal",
+          "title": "NetworkX：图遍历",
+          "url": "https://networkx.org/documentation/stable/reference/algorithms/traversal.html",
+          "locator": "Depth First Search / Breadth First Search",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "topological-sort",
+      "version": 1,
+      "name": "拓扑排序",
+      "englishName": "Topological sorting",
+      "aliases": [
+        "拓扑序",
+        "依赖排序"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "拓扑排序为有向无环图给出一种节点顺序，使每条边的源节点出现在目标之前。合法顺序可能不唯一；它只处理已声明依赖，不自动判断节点配置有效或适合并行。",
+      "uses": [
+        "运行前检查依赖循环和可执行前置。"
+      ],
+      "examples": [
+        "示例：A→C、B→C时A、B可有不同先后；C须等待其有效必要输入，但该顺序不决定研究阶段。"
+      ],
+      "relatedIds": [
+        "algorithm",
+        "graph",
+        "task-queue"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-toposort",
+          "title": "NetworkX：拓扑排序",
+          "url": "https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.dag.topological_sort.html",
+          "locator": "Description / Exceptions / DAG prerequisite",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "sorting",
+          "distinction": "一般排序按比较键，拓扑排序按依赖约束；节点位置或创建时间不能代替依赖。"
+        },
+        {
+          "entryId": "breadth-first-search",
+          "distinction": "遍历可达节点不等于生成满足所有前置边的合法拓扑序。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "出现循环能随便删一条线跑吗？",
+          "answer": "应定位循环并由用户修改真实依赖，不能自动删除有意义的关系。"
+        },
+        {
+          "question": "拓扑排序后就必须串行吗？",
+          "answer": "不必。可根据已满足的前置条件选择并行节点，并受资源与权限限制。"
+        }
+      ]
+    },
+    {
+      "id": "cache",
+      "version": 1,
+      "name": "缓存与失效",
+      "englishName": "Cache",
+      "aliases": [
+        "memoization",
+        "LRU缓存"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "缓存复用此前保存的值以减少重复获取或计算。缓存键要覆盖决定结果的输入、版本和权限；过期值或错误复用可能比重新计算更危险。",
+      "uses": [
+        "理解为何旧图表、账号切换和新数据需要清理或重建缓存。"
+      ],
+      "examples": [
+        "示例：同一方法但数据从v2改v3，缓存键也应改变；不能返回v2结果显示“最新”。"
+      ],
+      "relatedIds": [
+        "provenance",
+        "idempotency",
+        "authorization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-cache",
+          "title": "Python：函数缓存",
+          "url": "https://docs.python.org/3.14/library/functools.html",
+          "locator": "lru_cache / cache / arguments / cache invalidation considerations",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "worker-thread",
+      "version": 1,
+      "name": "Web Worker 后台脚本",
+      "englishName": "Web worker",
+      "aliases": [
+        "Worker",
+        "后台脚本"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "Web Worker允许浏览器在独立于界面脚本的执行环境运行工作，通过消息交换结果。它不会自动提供云端持久运行，数量与内存成本也应受控。",
+      "uses": [
+        "理解本地解析大表、搜索与OCR为何不应堵住输入。"
+      ],
+      "examples": [
+        "示例：解析XLSX放入一个Worker，主页面仍可编辑；关闭页面通常不能依赖该Worker继续工作。"
+      ],
+      "relatedIds": [
+        "task-queue",
+        "cancellation",
+        "space-complexity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-worker",
+          "title": "WHATWG：Web Worker",
+          "url": "https://html.spec.whatwg.org/multipage/workers.html",
+          "locator": "10.1 Introduction / dedicated workers / communication",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "streaming",
+      "version": 1,
+      "name": "流式处理与背压",
+      "englishName": "Streaming and backpressure",
+      "aliases": [
+        "分块处理",
+        "背压"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "流式处理逐块读取或生成数据，而不是先把全部内容加载后处理。背压把下游消耗能力反馈给上游；若后续仍累积全部结果，峰值内存未必降低。",
+      "uses": [
+        "处理大文件、任务日志与导出输出。"
+      ],
+      "examples": [
+        "示例：每次读取一批答卷并累积计数，可节省原表拷贝；全文排序仍可能需要额外外部存储。"
+      ],
+      "relatedIds": [
+        "space-complexity",
+        "sse",
+        "arrow"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-stream",
+          "title": "WHATWG：Streams",
+          "url": "https://streams.spec.whatwg.org/",
+          "locator": "Readable streams / Writable streams / backpressure",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "vectorization",
+      "version": 1,
+      "name": "数组向量化运算",
+      "englishName": "Array vectorization",
+      "aliases": [
+        "向量化",
+        "批量数组运算"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "向量化用数组运算表达批量计算，使循环可交由底层实现处理。它不等于自动并行；广播生成的大型中间数组可能使内存增加。",
+      "uses": [
+        "检查统计实现的速度与临时数组容量。"
+      ],
+      "examples": [
+        "示例：两个长度10万的数组逐项相减只需线性输出；构造全部两两差值会变成巨大二维数组。"
+      ],
+      "relatedIds": [
+        "vector",
+        "matrix",
+        "space-complexity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-numpy",
+          "title": "NumPy：广播",
+          "url": "https://numpy.org/doc/stable/user/basics.broadcasting.html",
+          "locator": "Broadcasting / array operations / memory caveats",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "numerical-stability",
+      "version": 1,
+      "name": "数值稳定性",
+      "englishName": "Numerical stability",
+      "aliases": [
+        "舍入误差传播",
+        "数值误差"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "数值稳定性讨论算法怎样控制输入或舍入误差对结果的影响。问题本身的敏感程度与算法稳定程度应分开；显示小数位更少并不能修复不稳定计算。",
+      "uses": [
+        "比较复算结果并选择可靠的求和、差值和矩阵算法。"
+      ],
+      "examples": [
+        "示例：常见浮点下(10¹⁶+1)−10¹⁶可能得0，数学值为1；中间舍入丢掉的信息无法靠末尾格式补回。"
+      ],
+      "relatedIds": [
+        "floating-point",
+        "decimal-precision",
+        "reproducibility"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-numerical",
+          "title": "Goldberg：浮点运算分析",
+          "url": "https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html",
+          "locator": "Rounding Error / Cancellation / Exactly Rounded Operations",
+          "scope": "作者1991文章的Oracle文档再版；引用技术概念，示例为原创"
+        },
+        {
+          "id": "pack03-float",
+          "title": "Python：浮点误差",
+          "url": "https://docs.python.org/3.14/tutorial/floatingpoint.html",
+          "locator": "15.1 Representation Error / math.isclose",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "floating-point",
+          "distinction": "浮点描述有限表示，稳定性描述使用该表示的算法怎样产生误差。"
+        },
+        {
+          "entryId": "time-complexity",
+          "distinction": "更快的算法不自动更准确，需要同时核查精度、条件与资源。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "两个实现结果不同，如何判定？",
+          "answer": "先对齐输入、缺失与参数，再分析绝对/相对误差、参考结果和计算条件，不能只凭位数更多判好坏。"
+        },
+        {
+          "question": "接近零的结果可只看相对误差吗？",
+          "answer": "不宜。分母很小时相对误差难解释，应同时采用适当绝对容差。"
+        }
+      ],
+      "formula": {
+        "tex": "e_{\\mathrm{abs}}=|\\hat x-x|,\\qquad e_{\\mathrm{rel}}=\\frac{|\\hat x-x|}{|x|}",
+        "symbols": [
+          {
+            "symbol": "x",
+            "meaning": "参考真实值或可信高精度值"
+          },
+          {
+            "symbol": "\\hat x",
+            "meaning": "计算值"
+          },
+          {
+            "symbol": "e_{\\mathrm{abs}}",
+            "meaning": "绝对误差",
+            "unit": "与x相同"
+          },
+          {
+            "symbol": "e_{\\mathrm{rel}}",
+            "meaning": "相对误差",
+            "unit": "无量纲"
+          }
+        ],
+        "conditions": [
+          "相对误差式要求x不为0；接近0时还需绝对误差标准。",
+          "这是误差度量，不单独定义或证明算法稳定性。",
+          "参考值本身必须说明取得方式和可信程度。"
+        ]
+      }
+    },
+    {
+      "id": "reproducibility",
+      "version": 1,
+      "name": "计算复现",
+      "englishName": "Computational reproducibility",
+      "aliases": [
+        "可复现性",
+        "复算",
+        "results reproduced"
+      ],
+      "domain": "computing",
+      "depth": "deep",
+      "definition": "计算复现要求他人根据可获得的数据、代码、参数与环境重新得到研究关键结果。不同学科对重复、复现与独立复制的术语约定可能不同，报告应说明实际做过的验证范围。",
+      "uses": [
+        "把图表数值追溯到输入版本、计算版本与可运行记录。"
+      ],
+      "examples": [
+        "示例：老师用同一数据快照和锁定代码复算频数，再核对报告中的人数和分母。"
+      ],
+      "relatedIds": [
+        "environment-lock",
+        "provenance",
+        "sha256",
+        "numerical-stability"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-repro",
+          "title": "ACM SIGIR：成果复现",
+          "url": "https://sigir.org/general-information/acm-sigir-artifact-badging/",
+          "locator": "Results Reproduced v1.1 / artifacts / independent team",
+          "scope": "SIGIR采用的ACM复现约定；不同学科术语用法可能不同"
+        },
+        {
+          "id": "pack03-pip",
+          "title": "PyPA：可重复安装",
+          "url": "https://pip.pypa.io/en/stable/topics/repeatable-installs/",
+          "locator": "Pinning versions / Hash-checking / Installation bundles",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [
+        {
+          "entryId": "sha256",
+          "distinction": "哈希验证输入字节一致，不证明程序正确或结果可重新产生。"
+        },
+        {
+          "entryId": "environment-lock",
+          "distinction": "锁定依赖帮助复现，但仍需完整数据、参数、操作和结果对照。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "自己重新运行一次算独立复现吗？",
+          "answer": "属于重复运行自查。声称独立复现应有另一人或团队的输入与回执记录。"
+        },
+        {
+          "question": "必须每一位完全相同吗？",
+          "answer": "确定性计数可精确相同；浮点或并行计算需事先声明容差与关键结论标准，不能事后随意放宽。"
+        }
+      ]
+    },
+    {
+      "id": "provenance",
+      "version": 1,
+      "name": "数据与成果溯源",
+      "englishName": "Provenance",
+      "aliases": [
+        "来源链",
+        "血缘",
+        "data lineage"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "溯源记录数据或成果由哪些实体、活动和责任主体形成，包括来源、转换与派生关系。它使版本变化可检查，但记录本身仍需要真实回执与证据支持。",
+      "uses": [
+        "连接答卷快照、清洗规则、统计结果、报告图表与批准记录。"
+      ],
+      "examples": [
+        "示例：图3引用result-v4，后者由data-v2和清洗方案v3生成；新增答卷不会让图3自动变为最新。"
+      ],
+      "relatedIds": [
+        "sha256",
+        "event-log",
+        "reproducibility"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-prov",
+          "title": "W3C：PROV",
+          "url": "https://www.w3.org/TR/prov-overview/",
+          "locator": "PROV family / entities, activities, agents / derivation",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "environment-lock",
+      "version": 1,
+      "name": "依赖锁定与执行环境",
+      "englishName": "Environment locking",
+      "aliases": [
+        "lockfile",
+        "依赖锁",
+        "可重复安装"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "依赖锁定记录软件包的确定版本及必要哈希，使安装更可重复。完整环境还包括运行时、操作系统和系统依赖；锁文件存在不证明可在任意机器精确复现。",
+      "uses": [
+        "保存分析与导出环境，区分升级后的结果差异。"
+      ],
+      "examples": [
+        "示例：同一脚本使用不同字体或图表库版本，文字布局可能变化；除了锁库还需记录字体与渲染器。"
+      ],
+      "relatedIds": [
+        "reproducibility",
+        "sha256",
+        "schema-evolution"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "pack03-pip",
+          "title": "PyPA：可重复安装",
+          "url": "https://pip.pypa.io/en/stable/topics/repeatable-installs/",
+          "locator": "Pinning versions / Hash-checking / Installation bundles",
+          "scope": "主定义与技术条件；例子为原创教学说明，不表示产品实现"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_api",
+        "checkedAt": "2026-10-14T16:52:12Z"
+      },
+      "updatedAt": "2026-10-15",
+      "confusions": [],
+      "questions": []
+    }
+  ]
+}

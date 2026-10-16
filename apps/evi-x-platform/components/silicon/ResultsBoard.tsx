@@ -38,7 +38,7 @@ export default function ResultsBoard({ design, run, stale, expectations, setExpe
   const findings = useMemo(() => pretestFindings(design, run), [design, run]);
   const usable = expectations.filter(e => [e.a, e.b].every(r => r.kind === 'attribute' ? run.attributes.some(a => a.key === r.key) : design.questions.some(q => q.id === r.id)));
   const report = useMemo(() => fidelityReport(design, run, usable), [design, run, usable]);
-  const ok = run.responses.filter(r => r.status === 'ok').length, failed = run.responses.length - ok;
+  const ok = run.responses.filter(r => r.status === 'ok').length, unknown = run.responses.filter(r => r.status === 'outcome_unknown').length, failed = run.responses.length - ok - unknown;
   const minutes = estimateMinutes(design);
   const counts = { blocker: findings.filter(f => f.level === 'blocker').length, warning: findings.filter(f => f.level === 'warning').length };
   const tabsRef = useKeyedListMotion<HTMLDivElement>({ ids: ['findings', 'fidelity', 'answers', 'export'], activeId: tab, markerAxis: 'horizontal' });
@@ -47,7 +47,7 @@ export default function ResultsBoard({ design, run, stale, expectations, setExpe
   return <div className={styles.results}>
     {stale && <p className={styles.warnNote} role="status"><b>结果对应旧版本</b>问卷或画像在本次运行后已修改。下方结果仍按运行时的版本计算，请重新运行后再据此修改问卷。</p>}
     <div ref={statsRef} className={styles.statRow}>
-      <article><span>模拟回答</span><strong>{ok}</strong><small>{run.personas.length} 位 × {run.settings.scenarios.length} 个情境 × {run.settings.models.length} 个引擎{failed ? ` · ${failed} 份失败` : ''}</small></article>
+      <article><span>模拟回答</span><strong>{ok}</strong><small>{run.personas.length} 位 × {run.settings.scenarios.length} 个情境 × {run.settings.models.length} 个引擎{failed ? ` · ${failed} 份失败` : ''}{unknown ? ` · ${unknown} 份结果未知` : ''}</small></article>
       <article><span>阻断问题</span><strong>{counts.blocker}</strong><small>发放前必须修正</small></article>
       <article><span>需修改</span><strong>{counts.warning}</strong><small>建议逐条核对</small></article>
       <article><span>估计作答时长</span><strong>{minutes.low}–{minutes.high} 分钟</strong><small>按字数与题型估算，非实测</small></article>

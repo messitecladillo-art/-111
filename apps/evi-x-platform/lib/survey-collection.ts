@@ -11,8 +11,10 @@ export type SurveyDraft = Record<string, string | string[]>;
 export type SurveyAnswers = Record<string, string | number | string[] | null>;
 export type SurveySubmission = { idempotencyKey: string; answers: SurveyAnswers };
 export type CollectionOrigin = { kind: 'collection'; projectId: string; releaseId: string; versionId: string; questionnaireRevision: number; classification: 'actual' | 'synthetic'; snapshotHash: string; generatedAt: string; design: Questionnaire };
+/** Rows kept after registered quality rules; classification is inherited from the parent data. */
+export type QualityOrigin = { kind: 'quality'; parentName: string; parentHash: string; simulated: boolean; silicon: boolean; removed: number; ledgerHash: string; rules: string[]; missingCodes: string[]; collection?: CollectionOrigin };
 /** Omitted origin is supported only for the existing silicon lab handoff. */
-export type DatasetTransfer = { id: string; name: string; csv: string; origin?: CollectionOrigin | { kind: 'silicon' } };
+export type DatasetTransfer = { id: string; name: string; csv: string; origin?: CollectionOrigin | QualityOrigin | { kind: 'silicon' } };
 const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 function object(value: unknown, keys: string[], optional: string[] = []): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw Error('调查回执格式无效。');
@@ -99,9 +101,22 @@ export function collectionAnalysisCsv(dataset: SurveyDataset): string {
 export function collectionTransfer(dataset: SurveyDataset, id: string): DatasetTransfer {
   return { id, name: `${dataset.release.title} · 回收 v${dataset.release.questionnaireRevision}`, csv: collectionAnalysisCsv(dataset), origin: { kind: 'collection', projectId: dataset.release.projectId, releaseId: dataset.release.id, versionId: dataset.release.versionId, questionnaireRevision: dataset.release.questionnaireRevision, classification: dataset.release.classification, snapshotHash: dataset.sha256, generatedAt: dataset.generatedAt, design: dataset.design } };
 }
-export function transferClassification(transfer: DatasetTransfer): { simulated: boolean; silicon: boolean } { return transfer.origin?.kind === 'collection' ? { simulated: transfer.origin.classification === 'synthetic', silicon: false } : { simulated: true, silicon: true }; }
+export function transferClassification(transfer: DatasetTransfer): { simulated: boolean; silicon: boolean } { return transfer.origin?.kind === 'collection' ? { simulated: transfer.origin.classification === 'synthetic', silicon: false } : transfer.origin?.kind === 'quality' ? { simulated: transfer.origin.simulated, silicon: transfer.origin.silicon } : { simulated: true, silicon: true }; }
 export function collectionEvidenceSource(source: string, origin: CollectionOrigin): string {
   return `${source}\n回收项目：${origin.projectId}\n发布记录：${origin.releaseId}\n问卷版本：v${origin.questionnaireRevision} · ${origin.versionId}\n回收快照 SHA-256：${origin.snapshotHash}\n快照读取时间：${origin.generatedAt}\n来源分类：${origin.classification === 'synthetic' ? '合成验收' : '问卷回收'}`;
+}
+
+/** Compact QC step for downstream tools whose scope text is length-limited (the research canvas). */
+export function qualityLineageStep(quality: QualityOrigin): string {
+  const labels = quality.rules.map(rule => rule.split('：')[0]).join('、');
+  return `质控：自「${quality.parentName}」剔除 ${quality.removed} 行（${labels}），剔除台账 SHA-256 ${quality.ledgerHash.slice(0, 16)}…`;
+}
+
+/** Quality-control lineage for any paragraph computed on QC-kept rows, hosted or local. */
+export function qualityEvidenceSection(section: ReportSection, quality: QualityOrigin): ReportSection {
+  const lines = section.body.split('\n').filter(line => !line.startsWith('质控来源：'));
+  lines.push(`质控来源：自「${quality.parentName}」剔除 ${quality.removed} 行；规则：${quality.rules.join('；')}；剔除台账 SHA-256 ${quality.ledgerHash}。`);
+  return { ...section, body: lines.join('\n'), source: `${section.source}\n质控前数据 SHA-256：${quality.parentHash}\n剔除台账 SHA-256：${quality.ledgerHash}` };
 }
 
 /** Hosted collection provenance replaces the local-file wording, without changing numerical results. */

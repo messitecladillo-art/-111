@@ -2,12 +2,13 @@ import { parseQuestionnaire, questionnaireIssues, rejectDuplicateMembers, type Q
 import { finiteNumber, type SurveyTable } from './survey-analysis.ts';
 import type { AnalysisMethod } from './analysis-recipes.ts';
 import type { ResearchLink } from './research-link.ts';
+import type {ImportMetadata} from './survey-import-metadata.ts';
 import { assessEligibility, type RowEligibilityAssessment } from './row-eligibility.ts';
 import { routingEvidence, type RoutingChoice, type RoutingEvidence } from './routing-evidence.ts';
 
 export const MAPPING_VERSION = 'questionnaire-mapping/v1';
 export const PARSER_VERSION = 'survey-csv/v1';
-export type DatasetIdentity = { sourceHash: string; interpretationHash: string; parser: typeof PARSER_VERSION; encoding: string; delimiter: string; headers: string[]; rows: number };
+export type DatasetIdentity = { sourceHash: string; interpretationHash: string; parser: string; encoding: string; delimiter: string; headers: string[]; rows: number; importMetadata?:ImportMetadata };
 export type Assignment = { questionId: string; column: string; representation: 'code' | 'label' };
 export type Mapping = { design: Questionnaire; assignments: Assignment[]; confirmed: string | null; sourceSignature: string | null };
 export type DesignSnapshot = { design: Questionnaire; pending: boolean };
@@ -139,7 +140,7 @@ export function restoreMapping(raw:string,dataset:DatasetIdentity):Mapping {
   let value:unknown;try{value=JSON.parse(raw.replace(/^\uFEFF/,''));}catch{throw Error('映射 JSON 无法解析。');}rejectDuplicateMembers(raw);
   const x=exactObject(value,['schema','design','dataset','assignments'],'映射备份');
   if(x.schema!==MAPPING_VERSION)throw Error('映射备份版本不支持。');
-  exactObject(x.dataset,['sourceHash','interpretationHash','parser','encoding','delimiter','headers','rows'],'数据身份');
+  exactObject(x.dataset,['sourceHash','interpretationHash','parser','encoding','delimiter','headers','rows',...(dataset.importMetadata?['importMetadata']:[])],'数据身份');
   if(canonical(x.dataset)!==canonical(dataset))throw Error('数据文件或解析设置不一致；请先选择原数据及原编码/分隔符。现有对应未被替换。');
   const design=parseQuestionnaire(JSON.stringify(x.design));
   if(!Array.isArray(x.assignments)||x.assignments.length>80)throw Error('映射数量无效。');

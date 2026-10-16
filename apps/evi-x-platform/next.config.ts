@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   transpilePackages: ["@evix/shared"],
+  async headers() {
+    return [{ source: "/knowledge-assets/:path*", headers: [
+      { key: "Content-Security-Policy", value: "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+    ] }];
+  },
   webpack(config, { isServer, webpack }) {
     // PptxGenJS conditionally imports Node-only I/O in its browser-capable ESM
     // export. Its package already marks these modules false for browsers;

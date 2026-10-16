@@ -24,9 +24,9 @@ export function parseRunView(v: unknown): RunView {
     if (!Number.isInteger(v.done) || !Number.isInteger(v.total) || !Array.isArray(v.services) || !isText(v.createdAt, 40)) throw Error();
     const services = v.services.map(s => { if (!record(s) || !isText(s.serviceId, 36) || !isText(s.name, 240)) throw Error(); return { serviceId: s.serviceId, name: s.name }; });
     const responses = v.responses === undefined ? undefined : (Array.isArray(v.responses) ? v.responses : (() => { throw Error(); })()).map((r): SiliconResponse => {
-      if (!record(r) || !isText(r.personaId, 80) || !isText(r.scenarioId, 40) || !isText(r.model, 240) || !['ok', 'failed', 'outcome_unknown'].includes(r.status as string) || !Array.isArray(r.answers)) throw Error();
+      if (!record(r) || !isText(r.personaId, 80) || !isText(r.scenarioId, 40) || !isText(r.model, 240) || (r.status !== 'ok' && r.status !== 'failed' && r.status !== 'outcome_unknown') || !Array.isArray(r.answers)) throw Error();
       if (r.status !== 'ok' && r.answers.length) throw Error();
-      return { personaId: r.personaId, scenarioId: r.scenarioId, model: r.model, status: r.status as SiliconResponse['status'], answers: r.answers.map(answer), ...(isText(r.error, 64) ? { error: r.error } : {}) };
+      return { personaId: r.personaId, scenarioId: r.scenarioId, model: r.model, status: r.status, answers: r.answers.map(answer), ...(isText(r.error, 64) ? { error: r.error } : {}) };
     });
     if (v.status === 'ready' && responses?.some(r => r.status === 'outcome_unknown')) throw Error();
     return { id: v.id, status: v.status as Status, done: v.done as number, total: v.total as number, services, responses, createdAt: v.createdAt, ...(isText(v.errorCode, 64) ? { errorCode: v.errorCode } : {}) };
@@ -42,6 +42,7 @@ const ERRORS: Record<string, string> = {
   provider_failure: '模型调用结果待对账，请查询本次运行记录。',
   provider_unavailable: '模型调用结果待对账，请查询本次运行记录。',
   interrupted_run: '运行在服务重启时中断，结果状态未知；已作答的部分保留在运行记录中。',
+  unreconciled_calls: '部分调用超时或服务端出错，供应商可能已处理并计费；这些画像的结果未知，未自动重发。其余画像的回答可用。',
   cancelled_by_user: '已停止：尚未发出的调用不会再发出。',
 };
 const sleep = (ms: number, signal: AbortSignal) => new Promise<void>(resolve => { const t = setTimeout(resolve, ms); signal.addEventListener('abort', () => { clearTimeout(t); resolve(); }, { once: true }); });

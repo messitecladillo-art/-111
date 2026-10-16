@@ -8,7 +8,7 @@
 .guide > summary:focus-visible,.directory > button:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
 .workspace { display: grid; grid-template-columns: 230px minmax(0,1fr); border-top: 1px solid var(--line); }
 .directory { position: relative; padding: 14px 0; border-right: 1px solid var(--line); align-self: start; }
-.directory > button { position: relative; width: 100%; border: 0; border-radius: 0; text-align: left; display: flex; align-items: center; gap: 10px; padding: 13px 20px; cursor: pointer; color: var(--muted); background: transparent; transition: color 180ms,background-color 180ms; }
+.directory > button { position: relative; width: 100%; border: 0; border-radius: 0; text-align: left; display: flex; align-items: center; gap: 10px; padding: 13px 20px; cursor: pointer; color: var(--muted); background: transparent; transition: color var(--motion-fast) var(--ease-arrive),background-color var(--motion-fast) var(--ease-arrive); }
 .directory > button > span { font-size: 10px; font-variant-numeric: tabular-nums; opacity: .6; }
 .directory > button strong { font-size: 12px; font-weight: 500; }
 .directory > button:hover,.directory > button[aria-pressed=true] { color: var(--text); background: var(--gold-dim); }

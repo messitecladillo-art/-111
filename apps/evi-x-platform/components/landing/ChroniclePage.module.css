@@ -7,7 +7,7 @@
   --sans:"Noto Sans SC","Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
   --gutter:clamp(22px,7vw,128px);
-  --ease:cubic-bezier(.16,.8,.12,1);
+  --ease:var(--ease-arrive);
   --foil:linear-gradient(172deg,#fff6dc 0%,#ffe08f 26%,#f4b942 50%,#c8902f 74%,#8a5f1f 100%);
   position:relative;isolation:isolate;min-height:100vh;background:var(--ink);color:var(--ivory);font-family:var(--sans);
   color-scheme:dark;-webkit-font-smoothing:antialiased;overflow-x:clip;

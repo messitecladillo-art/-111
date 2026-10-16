@@ -30,6 +30,7 @@ export default function HostedProject({ projectId }: { projectId: string }) {
   return <LoginRequired><ProjectEditor key={`${identityEpoch}:${projectId}`} projectId={projectId}/></LoginRequired>;
 }
 function ProjectEditor({ projectId }: { projectId: string }) {
+  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
   const auth = useHostedSession();
   const cacheKey=`project:${projectId}`;
   // The tab-local draft is read once at mount; state (not a ref) so initializers may use it during render.
@@ -202,7 +203,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   }
   if (loading) return <p className="hosted-loading" role="status">正在恢复项目与问卷版本…</p>;
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
-  return <>
+  return <div data-knowledge-context="active" data-knowledge-module={tab === 'report' ? 'editor' : tab} data-knowledge-tags={tab === 'analysis' ? 'inference' : tab === 'design' ? 'scale' : tab === 'report' ? 'report' : undefined}>
     <div className="hosted-project-heading"><div><Link href="/projects">← 我的项目</Link><h2>{project.title}</h2><span className="hosted-small">{ROLE_LABELS[role]} · 问卷 {revision ? `v${revision}` : '尚未保存'}</span></div><div className="hosted-actions"><button onClick={() => snapshot && downloadQuestionnaire(snapshot.design)} disabled={!snapshot}>下载当前设计</button><button className="hosted-primary" onClick={() => void save()} disabled={!writable || !snapshot || snapshot.pending || saving || reading || conflict || saveUncertain || !dirty}>{saving ? '正在保存…' : '保存新版本'}</button></div></div>
     <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="collection" aria-pressed={tab === 'collection'} onClick={() => { setCollectionOpened(true); setTab('collection'); }}>发布与回收</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>数据分析</button><button data-motion-id="report" aria-pressed={tab === 'report'} onClick={() => { setReportOpened(true); setTab('report'); }}>报告与 PPT</button><button data-motion-id="defense" aria-pressed={tab === 'defense'} onClick={() => { setDefenseOpened(true); setTab('defense'); }}>路演与答辩</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
     {error && <p className="hosted-alert" role="alert">{error}</p>}{notice && <p className="hosted-notice" role="status">{notice}</p>}
@@ -219,11 +220,11 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     </div>
     {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { setDatasetTransfer(handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
     {collectionOpened && <div hidden={tab !== 'collection'}><SurveyCollection projectId={projectId} savedRevision={revision} canPublish={!dirty && !saving && !saveUncertain && !conflict} writable={writable} onAnalyze={value => { setDatasetTransfer(value); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
-    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
-    {reportOpened && <div hidden={tab !== 'report'}><HostedReport projectId={projectId} title={project.title} writable={writable} proposal={reportProposal} onProposalConsumed={consumeReportProposal}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab onResultSnapshot={writable?result=>{setResultProposal(result);setReportOpened(true);setTab("report");}:undefined} designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
+    {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)} projectId={projectId} title={project.title} writable={writable} proposal={reportProposal} onProposalConsumed={consumeReportProposal}/></div>}
     {defenseOpened && <div hidden={tab !== 'defense'}><HostedDefense projectId={projectId} onOpenReport={() => { setReportOpened(true); setTab('report'); }}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
-  </>;
+  </div>;
 }
 function ReadonlyQuestionnaire({design}:{design:Questionnaire}){
   return <section className="hosted-card"><div className="hosted-section-title"><h3>{design.title}</h3><button onClick={()=>downloadQuestionnaire(design)}>下载所查看的版本</button></div><p>{design.objective}</p><p className="hosted-small">调查对象：{design.population||'待填写'} · 拟议设计</p><p>{design.introduction}</p><ol>{design.questions.map(q=><li key={q.id}><h4>{q.text||'题干待填写'}</h4><p className="hosted-small">{q.variable} · {q.type}{q.required?' · 拟必答':''}</p>{q.choices.length>0&&<ul>{q.choices.map((c,index)=><li key={index}>{c.code} · {c.label||'选项待填写'}</li>)}</ul>}{q.type==='likert'&&<p>{q.min}（{q.minLabel}）至 {q.max}（{q.maxLabel}）</p>}<details><summary>研究映射与依据</summary><p>{q.researchQuestion||'研究问题待填写'}</p><p>{q.decisionUse||'决策用途待填写'}</p><p>{q.source||'来源待填写'}</p>{q.condition&&<p>显示条件：{q.condition.questionId} = {q.condition.codes.join(' / ')}</p>}</details></li>)}</ol><p className="hosted-small">{design.pilotNotes}</p></section>;
