@@ -3,6 +3,10 @@ import { rejectDuplicateMembers } from '../../lib/questionnaire.ts';
 import type { TopicDraft, TopicProfile } from '../../lib/topic-advisor/types.ts';
 
 export const MAX_TOPIC_BACKUP_BYTES = 128 * 1024;
+/** Envelope follows the explicit geography version; historical profiles remain readable. */
+export function topicDraftFor(profile: unknown, candidate: unknown = null): TopicDraft {
+  return parseTopicDraft({ schemaVersion: object(profile) && profile.schemaVersion === 2 ? 2 : 1, profile, candidate });
+}
 export type TopicBackup = {
   kind: 'evix-topic-advisor'; schemaVersion: 1; ownerId: string; exportedAt: string;
   contentVersion: string; modelVersion: string; draft: TopicDraft;

@@ -1,0 +1,540 @@
+{
+  "schemaVersion": 1,
+  "packId": "topic-calibration-v1",
+  "scenarioSha256": "f089144d968d78cbfc54ea9ab1cbcdf185a29c6166a0e18477c01faeefcb47e5",
+  "status": "reviewed",
+  "labelClass": "ai_editorial_calibration",
+  "adjudicator": "root-coordinator",
+  "reviewerIds": [
+    "reviewer-a",
+    "reviewer-b"
+  ],
+  "cases": [
+    {
+      "scenarioId": "cal01-campus-access",
+      "expectations": [
+        {
+          "kind": "feasibility",
+          "patternId": "p01-campus-food",
+          "status": "ready",
+          "rationale": "两项必要校园渠道和问卷、观察、访谈均已声明 confirmed；35天、720元分别超过作者的10天和200元规划阈值，地域不固定且为非敏感方向。餐食兴趣进一步支持方向匹配；ready 仅指声明条件初步齐备。 第二评审：校园学生和管理方均声明已确认，问卷、观察、访谈具备；35天及720元高于该框架10天和200元的规划下限，且无固定地域或敏感限制冲突。因此仅就声明的必要条件可列为ready。具体授权、招募覆盖和成本仍须真实研究时核实。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p01-campus-food",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#course-design",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access",
+            "course-design",
+            "course-collection"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "feasibility",
+          "patternId": "p10-wuhan-sports",
+          "status": "blocked",
+          "rationale": "720元低于该框架1000元作者规划估算；游客、赛事组织方和商户入口亦未声明。地处武汉及当前赛事背景不能覆盖明确预算不足。 第二评审：武汉地点并不提供游客、主办方或商户入口；这些渠道均未声明。更直接的冲突是720元低于该框架1000元的既定规划下限。即使当地存在已登记赛事，也不能用热点替代渠道与预算。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p10-wuhan-sports",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access",
+            "course-design",
+            "wh-autumn-briefing"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "pairwise",
+          "preferredPatternId": "p01-campus-food",
+          "rejectedPatternId": "p10-wuhan-sports",
+          "rationale": "本背景已有餐食调查必要入口和资源，而赛事方向有明确预算冲突及未核验入口；优选只表达可启动条件与兴趣匹配，不比较两类研究的固有社会价值或获奖潜力。 第二评审：校园餐食匹配已落实的两类渠道、可执行的方法和餐食兴趣；赛事方向缺必要入口且明确超预算。在保持问题框架不变的比较中，前者优先，理由是执行可行性和问题匹配，而不是预言成果质量。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access/task",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p01-campus-food",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p10-wuhan-sports",
+            "skill/zhengda-cup-champion/references/workflow.md#3-topic-and-decision-framing",
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access",
+            "course-design"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "school_invariant",
+          "rationale": "仅把 school 改为另一所合成学校，不改变用户声明的渠道、资源、时空、兴趣与预算；公开语义明确学校名称不进入特征，也不证明人脉或招募能力。 第二评审：只把合成学校名称改为另一合成名称，不改变任何声明渠道、资源、时间、预算或地区；没有证据支持由校名推断隐含人脉或能力，因此推荐条件与排序依据应保持一致。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access/task/counterfactualSchool",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p04-job-matching/scopeLimits",
+            "evals/topic-advisor/scenarios-v1.json#cal01-campus-access",
+            "course-design"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal02-unknown-input",
+      "expectations": [
+        {
+          "kind": "feasibility",
+          "patternId": "p01-campus-food",
+          "status": "conditional",
+          "rationale": "非敏感通用校园框架没有已声明的不可达条件，但必要入口、资源、时间和预算均未知；不能将缺失等同 unavailable、0 或 confirmed。可继续条件式探索。 第二评审：校园渠道、方法资源、可用时间和预算都未确定；没有证据证明它们不可得，也没有证据证明已满足。该无固定地域的一般校园框架可作为条件探索项，不能标ready或仅因未知而阻断。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal02-unknown-input/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p01-campus-food",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal02-unknown-input",
+            "course-design"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "no_ready",
+          "rationale": "全部目录方向均需要至少一个未确认渠道或资源，并且时间、预算未知；只有武汉地点不能证明任何方向必要条件已齐备。敏感或地域冲突方向另行阻断，未知本身不要求 offered items 为空。 第二评审：所有渠道和资源键都缺失，时间与预算未知，没有任何框架的必要条件可全部认定已满足。武汉地点只能约束地域，不能补出访问权限。因此可以提出待核验探索方向，但不能给出ready。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal02-unknown-input/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#patterns",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal02-unknown-input",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json",
+            "course-design",
+            "course-collection"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal03-unavailable-channel",
+      "expectations": [
+        {
+          "kind": "feasibility",
+          "patternId": "p01-campus-food",
+          "status": "blocked",
+          "rationale": "campus_ops 为框架必要渠道且被明确声明 unavailable；学生入口和其他资源已确认也不能替代管理决策方入口，时间预算充分不能覆盖该冲突。 第二评审：管理方是该校园餐食框架明确列出的必要渠道，且决策用途依赖其可执行范围；profile明确标为unavailable。学生入口和足够时间预算不能解除这一冲突。如要做纯学生体验描述，需要另行改写决策范围与研究设计。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal03-unavailable-channel/profile/access",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p01-campus-food/accessNeeds",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p01-campus-food/rejectWhen",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal03-unavailable-channel",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p01-campus-food",
+            "course-design"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal04-zero-days",
+      "expectations": [
+        {
+          "kind": "no_ready",
+          "rationale": "24个目录框架的 minimumDays 全部为正；0天不是未知，因此没有任何目录框架具备启动条件。 第二评审：可用天数是明确的0，所有目录框架都需要正的探索和执行时间；已确认的社区、赛事渠道与方法资源不产生可用时间。体育领域的两个框架也都不能启动。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal04-zero-days/profile/days",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#patterns",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal04-zero-days",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json",
+            "course-design",
+            "course-collection"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "abstain",
+          "rationale": "全部目录方向均与显式0天冲突；即使只看所选 sports 领域，两项体育框架也都无法启动。按本次澄清的 abstain 定义，offered items 应为空。 第二评审：在0天的硬约束下，没有目录方向可开始新调查；应为空的可启动方向列表，并明确建议先重新确认时程，不能仍提供有正工期的可执行选题。该判断不否定阅读已有资料等不属于新调查启动的活动。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal04-zero-days/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#patterns",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "coordinator-vocabulary-clarification#abstain",
+            "evals/topic-advisor/scenarios-v1.json#cal04-zero-days",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p10-wuhan-sports",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p24-wuhan-community-sport",
+            "course-design"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal05-unknown-budget",
+      "expectations": [
+        {
+          "kind": "feasibility",
+          "patternId": "p09-wuhan-coupons",
+          "status": "conditional",
+          "rationale": "必要居民与商户入口、三项资源、武汉地域及35天均符合声明条件，但 budgetYuan=null 不能证明达到作者400元的规划估算，也不等于0元或明确不足，故待核验。 第二评审：武汉地域、居民与商户入口以及问卷/访谈/观察资源已声明，35天超过14天规划下限；预算为null，无法核实400元规划成本。未知预算既不是0也不是已满足，故保持conditional；活动余额与门店范围还需当期核查。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal05-unknown-budget/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p09-wuhan-coupons",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal05-unknown-budget",
+            "wh-coupons",
+            "course-design"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal06-city-conflict",
+      "expectations": [
+        {
+          "kind": "feasibility",
+          "patternId": "p18-suzhou-inbound",
+          "status": "blocked",
+          "rationale": "显式320100为南京市；框架固定苏州决策方、苏州成年入境游客与江苏/苏州地域标签。同省不等于同市，渠道与1800元、45天不能消除固定地域冲突；field_travel 不可用亦不支持改赴苏州。 第二评审：该框架的决策者、总体、地理标签和政策背景明确限定苏州；profile选择南京320100，游客和商户入口并没有声明属于苏州，且实地出行不可得。同属江苏不能把南京条件当作苏州条件。问题结构可以另行迁移重写，但原框架被地域冲突阻断。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal06-city-conflict/profile",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json#320100",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p18-suzhou-inbound",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#suzhou-tourism",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal06-city-conflict",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json#320500",
+            "suzhou-tourism"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal07-explicit-county",
+      "expectations": [
+        {
+          "kind": "event",
+          "eventId": "e01-wh-coupons",
+          "status": "absent",
+          "rationale": "regionRef=120102在当前目录中为天津市河东区、上级120000天津市。v2使用显式地区引用，残留湖北/武汉文字不能建立武汉当地资格，武汉市消费券事件应缺席。 第二评审：当前地区目录中的120102是天津市河东区，上级是120000；v2明确地区引用决定执行地理，残留湖北/武汉文字不能使武汉市消费券变成天津当地线索。应不出现在该地区事件结果中。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal07-explicit-county/profile/regionRef",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json#120102",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json#120000",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#e01-wh-coupons",
+            "docs/topic-advisor-model.md#事件的时间与地域",
+            "evals/topic-advisor/scenarios-v1.json#cal07-explicit-county",
+            "wh-coupons"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "event",
+          "eventId": "e24-haizhu-draft",
+          "status": "absent",
+          "rationale": "天津河东区与广州海珠区没有上下级关系，该广州地方事件不应进入所选地区的线索。其 pending_verification、仅 reference 覆盖也不能转为当前事件，但本场景首先由地域不适用决定 absent。 第二评审：该草案线索登记为广东广州，天津河东区与其没有地域包含关系。未核验状态也不能变成跨地可用背景；这里首先按地域排除，不能仅因为名称类似或残留城市文字显示它。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal07-explicit-county/profile/regionRef",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json#120102",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#e24-haizhu-draft",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#haizhu-draft",
+            "docs/topic-advisor-model.md#事件的时间与地域",
+            "evals/topic-advisor/scenarios-v1.json#cal07-explicit-county",
+            "haizhu-draft"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal08-stale-region",
+      "expectations": [
+        {
+          "kind": "profile_rejected",
+          "rationale": "给出的目录版本 cn-admin-2024-calibration-history 不等于当前 cn-admin-2025-e2c2b2e1fb4c。公开契约允许旧引用历史查看，但新的推荐、确认与简报应用必须先明确迁移；不可静默把同一代码视为已确认当前地区。 第二评审：地区引用版本cn-admin-2024-calibration-history不是当前目录cn-admin-2025-e2c2b2e1fb4c。旧引用可以保留供历史查看，但新推荐执行应先明确迁移和确认，不能静默改用当前目录或残留武汉文字。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal08-stale-region/profile/regionRef",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json#catalogVersion",
+            "docs/topic-advisor-model.md#导入保存与模型深化",
+            "evals/topic-advisor/scenarios-v1.json#cal08-stale-region",
+            "apps/evi-x-platform/content/topic-advisor/regions.catalog.json",
+            "docs/topic-advisor-model.md#导入、保存与模型深化"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal09-before-publication",
+      "expectations": [
+        {
+          "kind": "no_current_events",
+          "rationale": "参考日为2025-01-01。登记的近期事件发布日期及核验日都晚于参考日；2023年历史计划即使当年仍有行动期，也已被明确标为 historical/referenceOnly，且不能用2026年核验反向认证2025年当前线索。因此没有可作为当前热点的登记事件。 第二评审：参考日2025-01-01早于已登记近期事件的2026年发布日期和核验日，不能带入后来才获得的信息。两项2023年行动在目录中明确为historical/referenceOnly，且该输入上不存在不晚于参考日的登记核验，不能包装成当前热点。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal09-before-publication/profile/referenceDate",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#events",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#e19-county-history",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#e20-community-history",
+            "docs/topic-advisor-model.md#事件的时间与地域",
+            "evals/topic-advisor/scenarios-v1.json#cal09-before-publication",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json",
+            "county-history",
+            "community-history"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal10-sensitive-avoid",
+      "expectations": [
+        {
+          "kind": "feasibility",
+          "patternId": "p14-hubei-biotech-service",
+          "status": "blocked",
+          "rationale": "框架 sensitive=true，用户 sensitiveData=avoid；即使机构渠道、资源、50天和2200元均满足声明条件，伦理偏好仍构成独立硬约束。研究服务而非疗效的 scopeLimits 不能擅自改写该框架敏感标记或用户选择。 第二评审：机构和培训合作方、访谈及公开资料已声明，50天与2200元也覆盖35天和1500元估算；但目录把该框架标为sensitive，profile明确选择avoid。不能以资源充分覆盖用户的敏感研究限制，也不能擅自把目录的敏感标记改为安全。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal10-sensitive-avoid/profile",
+            "apps/evi-x-platform/content/topic-advisor/catalog.json#p14-hubei-biotech-service",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#hb-biotech",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#course-fieldwork",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "evals/topic-advisor/scenarios-v1.json#cal10-sensitive-avoid",
+            "course-fieldwork",
+            "hb-biotech",
+            "hb-device-service"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal11-free-topic",
+      "expectations": [
+        {
+          "kind": "candidate_status",
+          "status": "conditional",
+          "rationale": "自拟题已具备明确决策、成年总体、拟议证据计划、差异点、行动及用户声明的所需渠道/资源；29天为正且不敏感。但题目自身尚未估算工期和成本，决策方联系、同意及试点成本仍是拟议状态。0元不自动等于不可行，也不能据目录 p02 的150元估算阻断一个不同的自由题。 第二评审：自拟题目明确了成年学生总体、开放时段决策、访谈与观察及对照使用者/未使用者的计划，声明渠道资源也相配；但真实合作方仍为拟联系，工期和费用没有独立估算，0元是否足够需验证。0预算不自动证明不可行，也不能直接宣告所有条件ready。 proposed两周试点尚不是已执行证据。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal11-free-topic/profile",
+            "evals/topic-advisor/scenarios-v1.json#cal11-free-topic/task/candidate",
+            "apps/evi-x-platform/lib/topic-advisor/types.ts#TopicCandidate",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "docs/topic-advisor-model.md#首次冻结的实现证据2026-10-15",
+            "skill/zhengda-cup-champion/references/workflow.md#3-topic-and-decision-framing",
+            "evals/topic-advisor/scenarios-v1.json#cal11-free-topic",
+            "course-design",
+            "course-collection",
+            "course-fieldwork"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "candidate_unscored",
+          "rationale": "自由候选题不属于固定目录训练比较项；可以做结构、资源和证据成熟度诊断，但不能赋予可与目录排序器相比的模型质量分或获奖概率。 第二评审：该自由题目没有与目录框架相同的预先固定特征质量标签和训练比较依据；可以核查结构、伦理与待核验条件，不能赋予与目录排序可比较的训练质量分，更不能用其推断获奖潜力。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal11-free-topic/task/candidate",
+            "docs/topic-advisor-model.md#特征与硬检查",
+            "apps/evi-x-platform/lib/topic-advisor/types.ts#CandidateEvaluation",
+            "evals/topic-advisor/scenarios-v1.json#cal11-free-topic",
+            "apps/evi-x-platform/lib/topic-advisor/types.ts"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    },
+    {
+      "scenarioId": "cal12-expired-unreviewed",
+      "expectations": [
+        {
+          "kind": "event",
+          "eventId": "e02-wh-community",
+          "status": "historical",
+          "rationale": "该武汉启动活动登记为 historical/referenceOnly，明确日期仅2026-09-24；参考日10月16日已过，且启动日在给定比赛窗口之前。不得由服务月名称补造持续到当前的结束日。 第二评审：原来源只明确9月24日启动仪式，事件有效窗口也是当日，目录标为historical/referenceOnly。10月16日不能由服务月名称推定活动仍在进行，可作为历史探索背景并另核后续服务。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal12-expired-unreviewed/profile",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#e02-wh-community",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#wh-community",
+            "docs/topic-advisor-model.md#事件的时间与地域",
+            "evals/topic-advisor/scenarios-v1.json#cal12-expired-unreviewed",
+            "wh-community"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        },
+        {
+          "kind": "event",
+          "eventId": "e19-county-history",
+          "status": "historical",
+          "rationale": "全国历史计划被明确登记 historical/referenceOnly，行动期截至2025-12-31，无法充当2026-10-16及本比赛窗口的当前事件。它可提供历史背景，不证明2026项目或资金。 第二评审：县域商业行动原定2023—2025，目录明确historical/referenceOnly，不能当作2026—2027比赛窗口内仍有效的行动或当前资金机会；全国历史背景可保留，但不增加当前事件匹配。",
+          "sourceRefs": [
+            "evals/topic-advisor/scenarios-v1.json#cal12-expired-unreviewed/profile",
+            "apps/evi-x-platform/content/topic-advisor/hotspot-events.json#e19-county-history",
+            "apps/evi-x-platform/content/topic-advisor/sources.json#county-history",
+            "docs/topic-advisor-model.md#事件的时间与地域",
+            "evals/topic-advisor/scenarios-v1.json#cal12-expired-unreviewed",
+            "county-history"
+          ],
+          "confidence": "high",
+          "reviewerIds": [
+            "reviewer-a",
+            "reviewer-b"
+          ]
+        }
+      ],
+      "acceptableTop3Ids": null,
+      "reviewerIds": [
+        "reviewer-a",
+        "reviewer-b"
+      ],
+      "status": "reviewed",
+      "adjudication": "两位独立AI评审在查看排序实现与输出前一致认可上述断言；只纳入共同确认的范围。原始意见及未覆盖项完整保留，不作为人类专家金标或盲测。"
+    }
+  ]
+}

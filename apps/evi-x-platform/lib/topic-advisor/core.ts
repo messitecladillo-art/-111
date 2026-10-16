@@ -1,32 +1,18 @@
 import { ACCESS_OPTIONS, RESOURCE_OPTIONS, FEATURE_NAMES } from './types.ts';
 import type { AccessStatus, TopicProfile, TopicPattern, TopicEvents, TopicSources, EventLead, FeatureVector, TopicBundle, TopicRecommendation, PotentialDimension, TopicRecommendations, TopicCandidate, CandidateEvaluation } from './types.ts';
-import { parseTopicProfile, parseTopicCandidate, profileFingerprint, TopicInputError } from './parse.ts';
+import { parseExecutableTopicProfile, parseTopicCandidate, profileFingerprint, TopicInputError } from './parse.ts';
+import { patternGeographyFit, profileMatchesGeography, eventRegionIncludesProfile } from './geography.ts';
 
-/** Width/space normalization only: 武汉 and 武汉市 are deliberately not silently equated. */
-const geographicKey = (s: string) => s.normalize('NFKC').trim();
 const ratio = (n: number, d: number, unknown = 0) => d ? n / d : unknown;
 const count = (needs: string[], statuses: Record<string, AccessStatus>, state: AccessStatus) => needs.filter(id => statuses[id] === state).length;
 const label = (id: string, options: { id: string; label: string }[]) => options.find(o => o.id === id)?.label ?? id;
 
-function geographyMatch(pattern: TopicPattern, profile: TopicProfile): 'exact' | 'transferable' | 'unknown' | 'mismatch' {
-  if (!pattern.regionTags.length && !pattern.cityTags.length) return 'transferable';
-  let unknown = false;
-  for (const [tags, value] of [[pattern.regionTags, profile.region], [pattern.cityTags, profile.city]] as const) {
-    if (!tags.length) continue;
-    if (!value) { unknown = true; continue; }
-    if (!tags.some(t => geographicKey(t) === geographicKey(value))) return 'mismatch';
-  }
-  return unknown ? 'unknown' : 'exact';
-}
 export function eventLeadsForProfile(profileInput: TopicProfile, events: TopicEvents, sources: TopicSources, patternId?: string): EventLead[] {
-  const profile = parseTopicProfile(profileInput), sourceMap = new Map(sources.sources.map(s => [s.id, s]));
+  const profile = parseExecutableTopicProfile(profileInput), sourceMap = new Map(sources.sources.map(s => [s.id, s]));
   return events.events.filter(event => {
     if (profile.domains.length && !profile.domains.includes(event.domain)) return false;
     if (patternId && !event.patternIds.includes(patternId)) return false;
-    const g = event.geography;
-    if (g.level === 'national') return true;
-    if (g.level === 'province') return !!profile.region && geographicKey(profile.region) === geographicKey(g.region);
-    return !!profile.city && geographicKey(profile.city) === geographicKey(g.city) && (!g.region || !!profile.region && geographicKey(profile.region) === geographicKey(g.region));
+    return eventRegionIncludesProfile(profile, event.geography);
   }).map(event => {
     const ref = profile.referenceDate, window = profile.competitionWindow;
     const age = ref ? (Date.parse(ref) - Date.parse(event.publishedAt)) / 86400000 : NaN;
@@ -45,7 +31,7 @@ export function eventLeadsForProfile(profileInput: TopicProfile, events: TopicEv
 
 /** All features are explicit profile statements or authored content structure, never school prestige. */
 export function extractTopicFeatures(pattern: TopicPattern, profileInput: TopicProfile, events: TopicEvents, sources: TopicSources): FeatureVector {
-  const profile = parseTopicProfile(profileInput), geo = geographyMatch(pattern, profile);
+  const profile = parseExecutableTopicProfile(profileInput), geo = patternGeographyFit(pattern, profile);
   const interestText = `${pattern.title} ${pattern.domain} ${pattern.question}`.normalize('NFKC').toLowerCase();
   const current = eventLeadsForProfile(profile, events, sources, pattern.id).filter(e => e.temporalStatus === 'current');
   const fit = (available: number | null, required: number | null) => available === null || required === null ? .5 : required === 0 ? 1 : Math.min(1, available / required);
@@ -69,8 +55,8 @@ export function scoreTopicFeatures(features: FeatureVector, weights: number[]): 
 }
 
 export function assessTopicPattern(pattern: TopicPattern, profileInput: TopicProfile, bundle: TopicBundle): TopicRecommendation {
-  const profile = parseTopicProfile(profileInput), blockers: string[] = [], unknowns: string[] = [], matchReasons: string[] = [];
-  const geography = geographyMatch(pattern, profile), leads = eventLeadsForProfile(profile, bundle.events, bundle.sources, pattern.id);
+  const profile = parseExecutableTopicProfile(profileInput), blockers: string[] = [], unknowns: string[] = [], matchReasons: string[] = [];
+  const geography = patternGeographyFit(pattern, profile), leads = eventLeadsForProfile(profile, bundle.events, bundle.sources, pattern.id);
   if (geography === 'mismatch') blockers.push('模式限定地域与填写地域不一致，不能直接移植当地事实。');
   else if (geography === 'unknown') unknowns.push('模式限定了地域，请补全对应省份或城市。');
   else if (geography === 'exact') matchReasons.push('填写地域与模式限定地域精确匹配。');
@@ -126,26 +112,26 @@ export function assessTopicPattern(pattern: TopicPattern, profileInput: TopicPro
 }
 
 export function recommendTopics(profileInput: TopicProfile, bundle: TopicBundle, limit = 6): TopicRecommendations {
-  const profile = parseTopicProfile(profileInput);
+  const profile = parseExecutableTopicProfile(profileInput);
   if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new TopicInputError('推荐数量应为 1—50');
   const patterns = bundle.catalog.patterns.filter(p => !profile.domains.length || profile.domains.includes(p.domain));
   const assessments = patterns.map(p => assessTopicPattern(p, profile, bundle));
   const compare = (a: TopicRecommendation, b: TopicRecommendation) => ({ ready: 0, conditional: 1, blocked: 2 }[a.feasibility] - { ready: 0, conditional: 1, blocked: 2 }[b.feasibility]) || b.rankScore - a.rankScore || a.patternId.localeCompare(b.patternId);
   return { profileKey: profileFingerprint(profile), contentVersion: bundle.catalog.contentVersion, modelVersion: bundle.model.modelVersion,
     items: assessments.filter(r => r.feasibility !== 'blocked').sort(compare).slice(0, limit), excluded: assessments.filter(r => r.feasibility === 'blocked').sort(compare),
-    warnings: ['排序由人工编写的合成偏好对训练，只表达当前输入下的比较顺序，不是获奖概率或真实效果预测。', '八维分值为拟议研究设计的诊断刻度，不能替代实际调查、专家评审或当届规则核查。', ...(!profile.referenceDate ? ['未填写参考日期，事件线索不会被认定为当前有效。'] : []), ...(!Object.keys(profile.access).length ? ['样本渠道均未知，以下方向都需要先验证可达性。'] : []), ...(profile.city && !profile.region ? ['只填写了城市：带有省份约束的地方线索需补全省份后精确匹配。'] : [])] };
+    warnings: ['排序由人工编写的合成偏好对训练，只表达当前输入下的比较顺序，不是获奖概率或真实效果预测。', '八维分值为拟议研究设计的诊断刻度，不能替代实际调查、专家评审或当届规则核查。', ...(!profile.referenceDate ? ['未填写参考日期，事件线索不会被认定为当前有效。'] : []), ...(!Object.keys(profile.access).length ? ['样本渠道均未知，以下方向都需要先验证可达性。'] : []), ...(profile.schemaVersion!==2&&profile.city && !profile.region ? ['只填写了城市：带有省份约束的地方线索需补全省份后精确匹配。'] : [])] };
 }
 
 const grams = (s: string): Set<string> => { const chars = [...s.normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '')]; return new Set(chars.slice(0, -1).map((c, i) => c + chars[i + 1])); };
 export function evaluateCandidate(candidateInput: TopicCandidate, profileInput: TopicProfile, bundle: TopicBundle): CandidateEvaluation {
-  const candidate = parseTopicCandidate(candidateInput), profile = parseTopicProfile(profileInput), tokens = grams(`${candidate.title} ${candidate.decision} ${candidate.population}`);
+  const candidate = parseTopicCandidate(candidateInput), profile = parseExecutableTopicProfile(profileInput), tokens = grams(`${candidate.title} ${candidate.decision} ${candidate.population}`);
   const matches = bundle.catalog.patterns.map(p => { const other = grams(`${p.title} ${p.question} ${p.population}`); const sharedTerms = [...tokens].filter(t => other.has(t)); return { p, sharedTerms, similarity: sharedTerms.length / Math.max(1, tokens.size + other.size - sharedTerms.length) }; }).filter(m => m.sharedTerms.length >= 2).sort((a, b) => b.similarity - a.similarity || a.p.id.localeCompare(b.p.id)).slice(0, 3);
   const sourceIds = [...new Set(matches.flatMap(m => m.p.sourceIds))];
   const pattern: TopicPattern = { id: 'user-candidate', title: candidate.title, domain: matches[0]?.p.domain ?? profile.domains[0] ?? 'society', regionTags: [], cityTags: [], settingTags: [], accessNeeds: candidate.accessNeeds, resourceNeeds: candidate.resourceNeeds, decisionOwner: candidate.decisionOwner, decision: candidate.decision, question: candidate.title, population: candidate.population, minimumEvidence: candidate.evidencePlan ? [candidate.evidencePlan] : [], methods: [], differentiators: candidate.differentiators, scopeLimits: ['用户候选题内容均为输入陈述；相似模式和来源不自动证明该题的事实或可行性。'], rejectWhen: [], sourceIds, minimumDays: null, minimumBudgetYuan: null, sensitive: candidate.sensitive };
   const result = assessTopicPattern(pattern, profile, bundle);
   for (const [value, message] of [[candidate.title, '尚未填写候选题目。'], [candidate.decisionOwner, '尚未填写实际决策者。'], [candidate.decision, '尚未说明研究将改变哪项决策。'], [candidate.population, '尚未定义目标人群与抽样单位。'], [candidate.geography, '尚未限定研究地域。'], [candidate.evidencePlan, '尚未描述证据收集计划。'], [candidate.action, '尚未定义可执行行动。']] as const) if (!value) result.unknowns.push(message);
   if (!candidate.resourceNeeds.length) result.unknowns.push('尚未声明所需研究资源，不能视为无需资源。');
-  if (candidate.geography && ![profile.city, profile.region].some(v => v && geographicKey(v) === geographicKey(candidate.geography))) result.unknowns.push('候选题的地域范围尚未与背景精确对应，请补充该范围的渠道和抽样依据。');
+  if (candidate.geography && !profileMatchesGeography(profile, candidate.geography)) result.unknowns.push('候选题的地域范围尚未与背景精确对应，请补充该范围的渠道和抽样依据。');
   if (!candidate.differentiators.length) result.unknowns.push('尚未说明实质差异化。');
   if (profile.days === 0) result.blockers.push('可用时间为 0 天，无法安排新的研究工作；需要补充可执行的时间计划。');
   result.unknowns.push('候选题尚未完成工期与费用估算，填写的时间或预算不能直接证明执行可行性。');

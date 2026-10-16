@@ -171,14 +171,75 @@ def patch_worker(monkeypatch, script):
     return processes
 
 
+def observe_actual_cleanup(monkeypatch):
+    kill, wait = asyncio.subprocess.Process.kill, asyncio.subprocess.Process.wait
+    killed, reaped = [], []
+
+    def observed_kill(process):
+        killed.append(process.pid)
+        return kill(process)
+
+    async def observed_wait(process):
+        code = await wait(process)
+        reaped.append((process.pid, code))
+        return code
+
+    monkeypatch.setattr(asyncio.subprocess.Process, "kill", observed_kill)
+    monkeypatch.setattr(asyncio.subprocess.Process, "wait", observed_wait)
+    return killed, reaped
+
+
 @pytest.mark.asyncio
 async def test_timeout_kills_reaps_and_cleans_actual_child(tmp_path, monkeypatch):
     processes = patch_worker(monkeypatch, "import time; time.sleep(60)")
+    killed, reaped = observe_actual_cleanup(monkeypatch)
+    # Filesystem preparation is not the behavior under test. Expire only the
+    # decoder's business clock after a real interpreter process exists.
+    anchor = time.monotonic()
+    monkeypatch.setattr(sav, "time", SimpleNamespace(
+        time=time.time, sleep=time.sleep,
+        monotonic=lambda: anchor + 2 if processes else anchor,
+    ))
     with pytest.raises(sav.SurveyImportError) as caught:
-        await sav.parse_sav_bytes(b"synthetic", timeout_seconds=0.05,
-                                 temp_root=tmp_path / "scratch")
+        await asyncio.wait_for(sav.parse_sav_bytes(
+            b"synthetic", timeout_seconds=1, temp_root=tmp_path / "scratch",
+        ), 5)
     assert caught.value.code == "sav_timeout"
     assert len(processes) == 1 and processes[0].returncode is not None
+    pid, code = processes[0].pid, processes[0].returncode
+    assert killed == [pid] and (pid, code) in reaped
+    assert not sav._pid_alive(pid)
+    assert_no_jobs(tmp_path / "scratch")
+
+
+@pytest.mark.asyncio
+async def test_pre_spawn_budget_exhaustion_cleans_without_starting_child(tmp_path, monkeypatch):
+    anchor, clock, phases, spawn_calls, statuses = time.monotonic(), [], [], [], []
+    clock.append(anchor)
+    monkeypatch.setattr(sav, "time", SimpleNamespace(
+        time=time.time, sleep=time.sleep, monotonic=lambda: clock[0],
+    ))
+    write_lease = sav._write_lease
+
+    def expire_after_preparation(job, lease):
+        write_lease(job, lease)
+        phases.append(lease["phase"])
+        clock[0] = anchor + 2
+
+    def unexpected_spawn(*args, **kwargs):
+        spawn_calls.append(True)
+        raise AssertionError("an expired preparation budget must not spawn a child")
+
+    monkeypatch.setattr(sav, "_write_lease", expire_after_preparation)
+    monkeypatch.setattr(sav.asyncio, "create_subprocess_exec", unexpected_spawn)
+    with pytest.raises(sav.SurveyImportError) as caught:
+        await asyncio.wait_for(sav.parse_sav_bytes(
+            b"synthetic", timeout_seconds=1, temp_root=tmp_path / "scratch",
+            on_event=statuses.append,
+        ), 5)
+    assert caught.value.code == "sav_timeout"
+    assert phases == ["prepared"] and spawn_calls == []
+    assert [record["status"] for record in statuses] == ["failed_cleaned"]
     assert_no_jobs(tmp_path / "scratch")
 
 
@@ -591,24 +652,55 @@ async def test_actual_orphan_worker_registers_and_exits_before_reading_sav(tmp_p
 async def test_spawn_delay_consumes_the_same_deadline_as_decoding(tmp_path, monkeypatch):
     spawn = asyncio.create_subprocess_exec
     processes = []
+    killed, reaped = observe_actual_cleanup(monkeypatch)
+    child_created, release_spawn, cleanup_entered = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    finish = sav._finish_job
+    anchor = time.monotonic()
+    # Keep preparation outside the scheduling measurement. The real event-loop
+    # timeout must fire while spawning is held, before cleanup can release it.
+    monkeypatch.setattr(sav, "time", SimpleNamespace(
+        time=time.time, sleep=time.sleep, monotonic=lambda: anchor,
+    ))
 
     async def delayed_spawn(*args, **kwargs):
         process = await spawn(sav._process_executable(), "-I", "-B", "-c",
                               "import time; time.sleep(60)", *args[-2:], **kwargs)
         processes.append(process)
-        await asyncio.sleep(0.1)
+        child_created.set()
+        await asyncio.wait_for(release_spawn.wait(), 4)
         return process
 
+    async def release_during_cleanup(*args):
+        cleanup_entered.set()
+        release_spawn.set()
+        await finish(*args)
+
     monkeypatch.setattr(sav.asyncio, "create_subprocess_exec", delayed_spawn)
+    monkeypatch.setattr(sav, "_finish_job", release_during_cleanup)
     statuses = []
-    with pytest.raises(sav.SurveyImportError) as caught:
-        await sav.parse_sav_bytes(b"synthetic", timeout_seconds=0.05,
-                                 temp_root=tmp_path / "scratch", on_event=statuses.append)
-    assert caught.value.code == "sav_timeout"
-    # Timeout occurs while spawning; no fresh parse budget or 'started' receipt.
-    assert [record["status"] for record in statuses] == ["failed_cleaned"]
-    assert len(processes) == 1 and processes[0].returncode is not None
-    assert_no_jobs(tmp_path / "scratch")
+    try:
+        with pytest.raises(sav.SurveyImportError) as caught:
+            await asyncio.wait_for(sav.parse_sav_bytes(
+                b"synthetic", timeout_seconds=1, temp_root=tmp_path / "scratch",
+                on_event=statuses.append,
+            ), 5)
+        assert caught.value.code == "sav_timeout"
+        assert child_created.is_set() and cleanup_entered.is_set()
+        # Only cleanup releases spawning: timeout cannot emit a started receipt
+        # or grant a fresh decoding budget, regardless of scheduler speed.
+        assert [record["status"] for record in statuses] == ["failed_cleaned"]
+        assert len(processes) == 1 and processes[0].returncode is not None
+        pid, code = processes[0].pid, processes[0].returncode
+        assert killed == [pid] and (pid, code) in reaped
+        assert not sav._pid_alive(pid)
+        assert_no_jobs(tmp_path / "scratch")
+    finally:
+        # A failed synchronization assertion must not leak this test's child.
+        release_spawn.set()
+        for process in processes:
+            if process.returncode is None:
+                process.kill()
+            await process.wait()
 
 
 @pytest.mark.asyncio

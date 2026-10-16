@@ -43,7 +43,7 @@
     "db:generate": "drizzle-kit generate",
     "test:legacy:http": "node tests/run-tests.mjs",
     "test:unit": "node scripts/run-unit-tests.mjs",
-    "topic:check": "node --experimental-strip-types scripts/train-topic-advisor.mjs --check && node scripts/sync-topic-advisor.mjs",
+    "topic:check": "node --experimental-strip-types scripts/train-topic-advisor.mjs --check && node scripts/sync-topic-advisor.mjs && node scripts/sync-topic-regions.mjs && node scripts/sync-topic-region-api.mjs && node scripts/sync-topic-source-versions.mjs && node --experimental-strip-types scripts/publish-topic-counties.mjs",
     "topic:train": "node --experimental-strip-types scripts/train-topic-advisor.mjs",
     "test:topics": "node --experimental-strip-types --test tests/topic-*.test.mjs"
   },

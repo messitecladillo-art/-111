@@ -10,9 +10,20 @@ import * as editor from '../lib/editor-model.ts';
 import * as reports from '../lib/project-report.ts';
 import * as collection from '../lib/survey-collection.ts';
 import * as research from '../lib/research-flow.ts';
+import * as mapping from '../lib/questionnaire-mapping.ts';
+import * as topicApi from '../lib/topic-questionnaire-api.ts';
+
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
+// Keep the component boundary lightweight while executing the production permission guard.
+const studioSource = fs.readFileSync(new URL('../components/editors/EditingStudio.tsx', import.meta.url), 'utf8');
+const studioAst = ts.createSourceFile('EditingStudio.tsx', studioSource, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
+const guardDeclaration = studioAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'createReportPermissionGuard');
+assert.ok(guardDeclaration, 'EditingStudio must export its production permission guard');
+const guardModule = { exports: {} };
+vm.runInNewContext(ts.transpileModule(guardDeclaration.getText(studioAst), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, guardModule);
+const editingStudioBoundary = { default: 'EditingStudio', createReportPermissionGuard: guardModule.exports.createReportPermissionGuard };
 const projectId = 'a51fd4b9-7672-491b-9251-dea7809cfc8a';
 const requestId = '49e8b234-6365-4916-a6d4-fc4e7930af34';
 const timestamp = '2026-10-11T00:00:00Z';
@@ -35,7 +46,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, ...mocks };
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, window: { confirm: () => true }, location: { reload() {} }, ...globals };
+  const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, queueMicrotask, window: { confirm: () => true }, location: { reload() {} }, ...globals };
   vm.runInNewContext(compiled + (internalExport ? `\nexports.__tested = ${internalExport};` : ''), box);
   const component = internalExport ? box.exports.__tested : box.exports.default;
   return {
@@ -48,22 +59,34 @@ function nodes(node) { if (!node || typeof node !== 'object') return []; if (Arr
 function button(screen, text) { const found = nodes(screen.tree).find(n => n.type === 'button' && n.props.children === text); assert.ok(found, `Missing button: ${text}`); return found; }
 class HostedApiError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
 
-function questionnaireScreen({ invalidCurrent = false, denied = false } = {}) {
+function questionnaireScreen({ invalidCurrent = false, denied = false, tab } = {}) {
   const oldDesign = shared.newQuestionnaire(), submitted = { ...oldDesign, title: '已提交问卷' };
   const local = { ...submitted, title: '等待回执时的新编辑' };
   const head = { id: projectId, projectId, revision: 1, design: oldDesign, updatedAt: timestamp };
   const latest = { ...head, revision: 2, design: submitted };
   const pending = { design: submitted, expectedRevision: 1, idempotencyKey: requestId };
   let cache, resolveSave, calls = [], reads = 0;
-  const auth = { session: { user: { id: projectId }, mode: 'local_test' }, getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
-  const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
+  const auth = { session: { user: { id: projectId }, mode: 'local_test' }, identityEpoch:1,isCurrentAccount:()=>true,getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false, tab }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
+  const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if(url.endsWith('/topic-binding')){return{versionId:projectId,binding:null,bindingHash:null,designTransferHash:'a'.repeat(64)};} if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
   const screen = mount('../components/hosted/HostedProject.tsx', {
     'next/link': { default: 'a' }, 'next/dynamic': { default: () => 'DynamicComponent' }, '@evix/shared': shared, '@/lib/questionnaire-library': library,
+    '@/lib/questionnaire-mapping':mapping,'@/components/topic-advisor/TopicQuestionnaireProposal':{default:'TopicQuestionnaireProposal'},'@/lib/topic-questionnaire-api':{...topicApi,verifyTopicBindingReceipt:async raw=>raw},
     './api-client': api, './HostedFrame': { LoginRequired: 'LoginRequired' }, './HostedSession': { useHostedSession: () => auth }, './HostedMembers': { default: 'HostedMembers' },
     './silicon-runner': { serviceNames: () => new Map(), createSiliconRunner: () => null }, '@/components/motion/useWorkspaceMotion': { useContentReveal: () => null, useKeyedListMotion: () => null },
   }, { projectId }, 'ProjectEditor');
   return { screen, pending, latest, local, get cache() { return cache; }, get calls() { return calls; }, get reads() { return reads; }, resolve: () => resolveSave() };
 }
+
+test('each cached lazy project tab remounts its content instead of restoring an empty panel', async () => {
+  for (const tab of ['topic', 'silicon', 'collection', 'analysis', 'report', 'defense']) {
+    const s = questionnaireScreen({ tab }); await s.screen.settle();
+    assert.equal(s.cache.tab, tab);
+    const activePanels = nodes(s.screen.tree).filter(node => node.type === 'div' && node.props.hidden === false && nodes(node.props.children).some(child => child.type === 'DynamicComponent'));
+    assert.equal(activePanels.length, 1, `cached ${tab} must have a mounted active editor`);
+    assert.equal(s.cache.snapshot.design.title, s.local.title, 'restoring a tab keeps the questionnaire draft');
+    s.screen.unmount();
+  }
+});
 
 test('questionnaire recovers the exact pending save despite a newer head and invalid current edit', async () => {
   const s = questionnaireScreen({ invalidCurrent: true }); await s.screen.settle();
@@ -101,7 +124,7 @@ test('report pending retry resolves a newer head and preserves edits made before
   let cache, resolveSave, body;
   const auth = { session: { user: { id: projectId } }, getDraft: () => ({ content: submitted, head: old, pending, conflict: false }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, request) => { body = request; return new Promise(resolve => { resolveSave = resolve; }); } };
   const screen = mount('../components/hosted/HostedReport.tsx', {
-    '../editors/EditingStudio': { default: 'EditingStudio' }, '@/lib/editor-model': editor, '@/lib/project-report': reports,
+    '../editors/EditingStudio': editingStudioBoundary, '@/lib/editor-model': editor, '@/lib/project-report': reports,
     './api-client': { hostedRequest: async url => url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: latest }, errorMessage: e => e.message, HostedApiError }, './HostedSession': { useHostedSession: () => auth },
   }, { projectId, title: content.title, writable: true, proposal: null, onProposalConsumed() {} });
   await screen.settle(); assert.equal(button(screen, '载入最新版本').props.disabled, true); assert.equal(button(screen, '核对并重试原保存').props.disabled, false);
@@ -118,7 +141,7 @@ test('report format save receipt clears dirty status but later edits remain unsa
   let finishSave,request,cache,unsaved;
   const auth={session:{user:{id:projectId}},getDraft:()=>undefined,cacheDraft:(_key,value)=>{cache=value;},setUnsaved:(_key,value)=>{unsaved=value;},mutate:(_path,body)=>{request=body;return new Promise(resolve=>{finishSave=()=>{const saved=editor.parseEditorContent(body.content);if(saved.reportFormat)saved.reportFormat.options=Object.fromEntries(Object.entries(saved.reportFormat.options).reverse());head={...head,revision:head.revision+1,content:saved};resolve(head);};});}};
   const screen=mount('../components/hosted/HostedReport.tsx',{
-    '../editors/EditingStudio':{default:'EditingStudio'},'@/lib/editor-model':editor,'@/lib/project-report':reports,
+    '../editors/EditingStudio':editingStudioBoundary,'@/lib/editor-model':editor,'@/lib/project-report':reports,
     './api-client':{hostedRequest:async url=>url.endsWith('/versions')?{versions:[],nextBeforeRevision:null}:{report:head},errorMessage:e=>e.message,HostedApiError},'./HostedSession':{useHostedSession:()=>auth},
   },{projectId,title:initial.title,writable:true,proposal:null,onProposalConsumed(){}});
   const binding=()=>nodes(screen.tree).find(n=>n.props?.projectBinding).props.projectBinding;
