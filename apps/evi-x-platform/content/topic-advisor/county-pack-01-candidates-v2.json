@@ -1,0 +1,391 @@
+{
+  "schemaVersion": 1,
+  "id": "county-pack-01-candidates",
+  "contentVersion": "2026-10-15.2",
+  "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+  "sources": [
+    {
+      "id": "miit-2025-clusters",
+      "title": "2025年度（第四批）中小企业特色产业集群名单",
+      "url": "https://www.miit.gov.cn/cms_files/filemanager/1226211233/attach/202510/b38d359736bc48408f7977561e84bd02.pdf",
+      "publishedAt": null,
+      "retrievedAt": "2026-10-15",
+      "authority": "official_ministry_listing",
+      "locator": "附件1；对应集群序号及物理页码见facts与本包说明",
+      "supportedClaims": [
+        "2025年度第四批名单列有通城县云母电子材料产业集群；定位为第66项、物理第4页。",
+        "2025年度第四批名单列有潜山市制刷产业集群；定位为第42项、物理第3页。",
+        "2025年度第四批名单列有如东县海上风电装备产业集群；定位为第29项、物理第2页。"
+      ]
+    },
+    {
+      "id": "mct-rural-2022",
+      "title": "全国乡村旅游重点村数据服务",
+      "url": "https://sjfw.mct.gov.cn/site/dataservice/rural",
+      "publishedAt": null,
+      "retrievedAt": "2026-10-15",
+      "authority": "official_ministry_data",
+      "locator": "页面数据截止日期2022-12-07；对应省份下的具体村名",
+      "supportedClaims": [
+        "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有潜山市天柱山镇茶庄村。"
+      ]
+    },
+    {
+      "id": "tongcheng-gig-2024",
+      "title": "通城：“零工驿站”拓宽就业路",
+      "url": "https://rst.hubei.gov.cn/bmdt/dtyw/gzdt/202405/t20240510_5186532.shtml",
+      "publishedAt": "2024-05-10",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_provincial_department_county_authored",
+      "locator": "正文介绍挂牌驿站、服务窗口和求职登记的段落",
+      "supportedClaims": [
+        "2024年的部门报道介绍通城零工驿站及服务窗口，服务包含招聘信息发布、求职登记和休息补给。"
+      ]
+    },
+    {
+      "id": "rudong-hr-2025-summary",
+      "title": "2025年工作总结和2026年工作计划",
+      "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+      "publishedAt": "2026-01-05",
+      "retrievedAt": "2026-10-15",
+      "authority": "official_county_department_annual_self_report",
+      "locator": "第一部分第（一）项（2025年就业工作）；页面来源与发布时间栏",
+      "supportedClaims": [
+        "如东县人社局2026年1月5日发布的年度总结自报：2025年新增家门口就业服务站，并开展招聘及职业技能培训。"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "county-421222",
+      "regionRef": {
+        "code": "421222",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "通城县",
+      "tags": [
+        {
+          "label": "云母电子材料",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "公共就业服务",
+          "sourceIds": [
+            "tongcheng-gig-2024"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-421222-fact-1",
+          "text": "2025年度第四批名单列有通城县云母电子材料产业集群；定位为第66项、物理第4页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-421222-fact-2",
+          "text": "2024年的部门报道介绍通城零工驿站及服务窗口，服务包含招聘信息发布、求职登记和休息补给。",
+          "sourceIds": [
+            "tongcheng-gig-2024"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2024-05-10"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-421222-direction-1",
+          "title": "通城县成年求职者对产业岗位信息的理解与咨询意愿",
+          "question": "现居通城县或当前在当地工作的成年求职者如何理解岗位描述、技能要求与生活条件信息，提出哪些进一步咨询意愿？",
+          "decisionOwner": "拟合作的招聘服务方",
+          "decision": "优化岗位信息展示及咨询渠道",
+          "population": "研究时年满18周岁、现居通城县或当前在通城县工作、有求职意向且自愿参与者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "按年满18周岁、本地居住或工作及求职意向的同一规则筛选；先核对可用招募渠道。",
+            "取得接触、岗位材料使用与引用许可；核实材料的当期来源及岗位资格。",
+            "分开记录岗位信息理解任务、进一步咨询意愿与已发生的咨询行为；不将意愿当行动或据横截面差异声称因果效果。"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-421222-direction-2",
+          "title": "零工驿站的使用与未使用人群比较",
+          "question": "使用者和未使用者在知晓渠道、到达便利与服务组合需求上有何差异？",
+          "decisionOwner": "当地公共就业服务方",
+          "decision": "调整宣传、服务时间与基础设施配置",
+          "population": "已使用或可能使用驿站的成年零工与求职者",
+          "requiredAccess": [
+            "jobseekers",
+            "employees"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实当前服务点，再按使用经历分组招募并记录到访经历"
+          ],
+          "sourceIds": [
+            "tongcheng-gig-2024"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-421222-direction-3",
+          "title": "产业职工培训安排与课程需求",
+          "question": "不同岗位职工希望怎样安排培训时间、形式与技能内容？",
+          "decisionOwner": "获准接触的培训组织方",
+          "decision": "形成可执行的课程和时间安排",
+          "population": "经许可接触的产业从业者",
+          "requiredAccess": [
+            "employees",
+            "training_partner"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "岗位分层、已有培训安排及参与条件，不收企业保密工艺"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-340882",
+      "regionRef": {
+        "code": "340882",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "潜山市",
+      "tags": [
+        {
+          "label": "制刷",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "乡村旅游",
+          "sourceIds": [
+            "mct-rural-2022"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-340882-fact-1",
+          "text": "2025年度第四批名单列有潜山市制刷产业集群；定位为第42项、物理第3页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-340882-fact-2",
+          "text": "数据截止2022年12月7日的文旅部乡村旅游重点村页面列有潜山市天柱山镇茶庄村。",
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": "2022-12-07"
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-340882-direction-1",
+          "title": "制刷产品采购的信息与售后选择",
+          "question": "不同用途的采购者需要怎样的规格、寿命说明与售后支持？",
+          "decisionOwner": "获准接触的制刷企业或经销方",
+          "decision": "改进产品信息和售后服务组合",
+          "population": "已确认接触渠道的采购者或经销者",
+          "requiredAccess": [
+            "firms",
+            "merchants"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "限定产品用途，核验真实产品材料并收集采购经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-340882-direction-2",
+          "title": "潜山市成年求职者对制刷岗位的认知",
+          "question": "现居潜山市或当前在当地工作的成年求职者如何理解核实后的制刷岗位说明，提出哪些进一步了解意愿与条件？",
+          "decisionOwner": "拟合作的招聘和培训方",
+          "decision": "设计岗位介绍和培训入口",
+          "population": "研究时年满18周岁、现居潜山市或当前在潜山市工作、有求职意向且自愿参与者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "按年满18周岁、本地居住或工作及求职意向的同一规则筛选；先核对可用招募渠道。",
+            "取得接触、岗位材料使用与引用许可。",
+            "先核实当地当期实际开放岗位与资格，再使用获准材料；将岗位认知、继续了解意愿与已发生的求职行动分开记录。"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-340882-direction-3",
+          "title": "茶庄村旅游信息与服务路径",
+          "question": "首次和再次到访者在交通、住宿与活动信息上有何不同需求？",
+          "decisionOwner": "拟合作的当地旅游服务方",
+          "decision": "调整行前说明与服务衔接",
+          "population": "在获准场所接触的成年游客",
+          "requiredAccess": [
+            "tourists"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先核实当前开放与交通条件，再按真实到访经历招募"
+          ],
+          "sourceIds": [
+            "mct-rural-2022"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。"
+      ]
+    },
+    {
+      "id": "county-320623",
+      "regionRef": {
+        "code": "320623",
+        "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+      },
+      "displayName": "如东县",
+      "tags": [
+        {
+          "label": "海上风电装备",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ]
+        },
+        {
+          "label": "公共就业服务",
+          "sourceIds": [
+            "rudong-hr-2025-summary"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "county-320623-fact-1",
+          "text": "2025年度第四批名单列有如东县海上风电装备产业集群；定位为第29项、物理第2页。",
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        },
+        {
+          "id": "county-320623-fact-2",
+          "text": "如东县人社局2026年1月5日发布的年度总结自报：2025年新增家门口就业服务站，并开展招聘及职业技能培训。",
+          "sourceIds": [
+            "rudong-hr-2025-summary"
+          ],
+          "temporalKind": "historical_reference",
+          "asOfDate": null
+        }
+      ],
+      "directions": [
+        {
+          "id": "county-320623-direction-1",
+          "title": "风电产业相关岗位的就业认知",
+          "question": "求职者对装备制造、运维及相关服务岗位的理解和顾虑有哪些差异？",
+          "decisionOwner": "拟合作的招聘服务方",
+          "decision": "改进岗位信息与咨询安排",
+          "population": "对相关岗位感兴趣的成年求职者",
+          "requiredAccess": [
+            "jobseekers"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "先确认实际开放岗位与资格，不把产业规模当岗位可得性"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-320623-direction-2",
+          "title": "风电装备服务中的协作信息需求",
+          "question": "经许可的经办人员如何评价设备说明、交付和售后沟通？",
+          "decisionOwner": "获准接触的装备服务方",
+          "decision": "改进服务信息与协作流程",
+          "population": "获得许可的供应或采购服务人员",
+          "requiredAccess": [
+            "firms"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "访谈不进入海上作业现场，不收保密工程参数"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        },
+        {
+          "id": "county-320623-direction-3",
+          "title": "产业职工生活服务与通勤选择",
+          "question": "不同工作地点的职工如何安排通勤、就餐与日常服务？",
+          "decisionOwner": "拟合作的园区生活服务方",
+          "decision": "确定生活服务的时间和布局优先级",
+          "population": "经许可接触的当地产业职工",
+          "requiredAccess": [
+            "employees"
+          ],
+          "minimumEvidence": [
+            "明确研究范围、目标人群与招募渠道。",
+            "取得接触、材料使用与引用许可。",
+            "记录实际工作生活地点、频次与服务使用经历"
+          ],
+          "sourceIds": [
+            "miit-2025-clusters"
+          ],
+          "classification": "proposed"
+        }
+      ],
+      "status": "draft",
+      "gaps": [
+        "完成独立内容复核后再发布。",
+        "补充当前招募渠道、团队资源和接触许可验证。",
+        "县级年度自报仅支持2025年历史活动；核实当前服务点开放、岗位有效性、招募入口和接触许可，不将2026年计划作为已完成成果。"
+      ]
+    }
+  ]
+}

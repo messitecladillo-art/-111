@@ -1,0 +1,640 @@
+{
+  "schemaVersion": 1,
+  "packId": "topic-calibration-v1",
+  "dataClass": "authored_synthetic",
+  "purpose": "public_calibration",
+  "targetIndependentScenarios": 90,
+  "labelPolicy": "two_independent_ai_reviews_then_coordinator_adjudication; not human expert gold",
+  "scenarios": [
+    {
+      "id": "cal01-campus-access",
+      "familyId": "cal01-campus-access",
+      "stratum": "ordinary",
+      "title": "武汉团队已落实校内渠道",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "campus-service"
+        ],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [
+          "campus"
+        ],
+        "discipline": "",
+        "interests": [
+          "餐食"
+        ],
+        "domains": [],
+        "days": 35,
+        "budgetYuan": 720,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "unavailable",
+          "field_travel": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "recommendations",
+        "comparePatternIds": [
+          "p01-campus-food",
+          "p10-wuhan-sports"
+        ],
+        "counterfactualSchool": "另一所合成学校"
+      },
+      "designRationale": "检验已声明资源如何影响选择；不把学校名称当作招募能力。"
+    },
+    {
+      "id": "cal02-unknown-input",
+      "familyId": "cal02-unknown-input",
+      "stratum": "unknown",
+      "title": "仅有武汉地点，其余条件未知",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": null,
+        "budgetYuan": null,
+        "access": {},
+        "resources": {},
+        "sensitiveData": "avoid",
+        "referenceDate": "",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "recommendations"
+      },
+      "designRationale": "缺失输入应保留未知，地点不证明资源落实。"
+    },
+    {
+      "id": "cal03-unavailable-channel",
+      "familyId": "cal03-unavailable-channel",
+      "stratum": "resource_counterexample",
+      "title": "校园管理方明确不可接触",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "campus-service"
+        ],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 35,
+        "budgetYuan": 720,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "unavailable"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "unavailable",
+          "field_travel": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "pattern",
+        "patternId": "p01-campus-food"
+      },
+      "designRationale": "必要渠道的明确不可达不能由高匹配分抵消。"
+    },
+    {
+      "id": "cal04-zero-days",
+      "familyId": "cal04-zero-days",
+      "stratum": "resource_counterexample",
+      "title": "体育方向但没有可执行时间",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "sport-service"
+        ],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [
+          "sports"
+        ],
+        "days": 0,
+        "budgetYuan": 720,
+        "access": {
+          "community_residents": "confirmed",
+          "community_partner": "confirmed",
+          "tourists": "confirmed",
+          "event_organizer": "confirmed",
+          "merchants": "confirmed"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "unavailable",
+          "field_travel": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "recommendations"
+      },
+      "designRationale": "显式零天与未知时间不同；不能继续建议启动新调查。"
+    },
+    {
+      "id": "cal05-unknown-budget",
+      "familyId": "cal05-unknown-budget",
+      "stratum": "unknown",
+      "title": "消费券方向的预算尚未确定",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "retail-policy"
+        ],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 35,
+        "budgetYuan": null,
+        "access": {
+          "community_residents": "confirmed",
+          "merchants": "confirmed"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "unavailable",
+          "field_travel": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "pattern",
+        "patternId": "p09-wuhan-coupons"
+      },
+      "designRationale": "招募条件存在但预算缺失，不能宣布条件已齐备。"
+    },
+    {
+      "id": "cal06-city-conflict",
+      "familyId": "cal06-city-conflict",
+      "stratum": "geography_time",
+      "title": "南京团队不能沿用苏州地方事实",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "jiangsu-nanjing",
+        "sourceFamilies": [
+          "suzhou-inbound"
+        ],
+        "eventFamilies": [
+          "suzhou-2026"
+        ]
+      },
+      "profile": {
+        "region": "江苏",
+        "city": "南京",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 45,
+        "budgetYuan": 1800,
+        "access": {
+          "tourists": "confirmed",
+          "merchants": "confirmed"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "confirmed",
+          "field_travel": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "320100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "pattern",
+        "patternId": "p18-suzhou-inbound"
+      },
+      "designRationale": "同省不同市需分开；可迁移的问题框架不等于可迁移的当地事实。"
+    },
+    {
+      "id": "cal07-explicit-county",
+      "familyId": "cal07-explicit-county",
+      "stratum": "geography_time",
+      "title": "天津河东区代码与残留武汉文字并存",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "tianjin-hedong",
+        "sourceFamilies": [],
+        "eventFamilies": [
+          "wuhan-coupons-2026",
+          "guangzhou-draft-2026"
+        ]
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 42,
+        "budgetYuan": 1200,
+        "access": {},
+        "resources": {},
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "120102",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "events",
+        "eventIds": [
+          "e01-wh-coupons",
+          "e24-haizhu-draft"
+        ]
+      },
+      "designRationale": "选择的地区引用是执行依据，残留文字和同名县区不授予其他城市事件。"
+    },
+    {
+      "id": "cal08-stale-region",
+      "familyId": "cal08-stale-region",
+      "stratum": "geography_time",
+      "title": "旧地区目录需要明确迁移",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 35,
+        "budgetYuan": 720,
+        "access": {},
+        "resources": {},
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2024-calibration-history"
+        }
+      },
+      "task": {
+        "kind": "profile"
+      },
+      "designRationale": "旧引用允许历史查看，但新推荐前须明确迁移。"
+    },
+    {
+      "id": "cal09-before-publication",
+      "familyId": "cal09-before-publication",
+      "stratum": "geography_time",
+      "title": "参考日早于已登记近期事件",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [],
+        "eventFamilies": [
+          "pre-publication-cutoff"
+        ]
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 35,
+        "budgetYuan": 720,
+        "access": {},
+        "resources": {},
+        "sensitiveData": "avoid",
+        "referenceDate": "2025-01-01",
+        "competitionWindow": null,
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "events"
+      },
+      "designRationale": "不能把后发信息带回较早参考日；历史材料也不能包装成当前热点。"
+    },
+    {
+      "id": "cal10-sensitive-avoid",
+      "familyId": "cal10-sensitive-avoid",
+      "stratum": "sensitive",
+      "title": "有行业渠道但选择避开敏感研究",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "biotech-service"
+        ],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 50,
+        "budgetYuan": 2200,
+        "access": {
+          "firms": "confirmed",
+          "training_partner": "confirmed"
+        },
+        "resources": {
+          "interviews": "confirmed",
+          "public_data": "confirmed"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "pattern",
+        "patternId": "p14-hubei-biotech-service"
+      },
+      "designRationale": "资源充分不能替代伦理选择和敏感研究限制。"
+    },
+    {
+      "id": "cal11-free-topic",
+      "familyId": "cal11-free-topic",
+      "stratum": "free_topic",
+      "title": "自拟校园旧物回收试点",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "campus-reuse"
+        ],
+        "eventFamilies": []
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 29,
+        "budgetYuan": 0,
+        "access": {
+          "campus_students": "confirmed",
+          "campus_ops": "confirmed"
+        },
+        "resources": {
+          "questionnaire": "confirmed",
+          "interviews": "confirmed",
+          "observation": "confirmed",
+          "public_data": "confirmed",
+          "prototype_test": "unavailable",
+          "field_travel": "unavailable"
+        },
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "candidate",
+        "candidate": {
+          "title": "旧物回收点的开放时段是否覆盖晚课学生",
+          "decisionOwner": "拟联系的校园后勤部门",
+          "decision": "在现有点位中选择一次晚间开放试点",
+          "population": "选定校区成年学生",
+          "geography": "武汉",
+          "accessNeeds": [
+            "campus_students",
+            "campus_ops"
+          ],
+          "resourceNeeds": [
+            "interviews",
+            "observation",
+            "questionnaire"
+          ],
+          "evidencePlan": "拟记录各时段使用情况并邀请使用与未使用者访谈，先确认同意。",
+          "differentiators": [
+            "同时比较使用者和未使用者",
+            "考察开放时间与课程时段的错位"
+          ],
+          "action": "在确认需求和成本后提出两周试点及记录指标",
+          "sensitive": false
+        }
+      },
+      "designRationale": "自拟题目可做结构诊断，但零预算需核实，不能拥有训练质量分。"
+    },
+    {
+      "id": "cal12-expired-unreviewed",
+      "familyId": "cal12-expired-unreviewed",
+      "stratum": "geography_time",
+      "title": "过期活动和未核验草案",
+      "classification": "authored_synthetic",
+      "split": "calibration",
+      "grouping": {
+        "regionFamily": "hubei-wuhan",
+        "sourceFamilies": [
+          "community-event"
+        ],
+        "eventFamilies": [
+          "expired-2026",
+          "historical-2023"
+        ]
+      },
+      "profile": {
+        "region": "湖北",
+        "city": "武汉",
+        "school": "合成测试学校",
+        "schoolContext": [],
+        "discipline": "",
+        "interests": [],
+        "domains": [],
+        "days": 35,
+        "budgetYuan": 720,
+        "access": {},
+        "resources": {},
+        "sensitiveData": "avoid",
+        "referenceDate": "2026-10-16",
+        "competitionWindow": {
+          "start": "2026-10-01",
+          "end": "2027-05-31"
+        },
+        "schemaVersion": 2,
+        "regionRef": {
+          "code": "420100",
+          "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c"
+        }
+      },
+      "task": {
+        "kind": "events",
+        "eventIds": [
+          "e02-wh-community",
+          "e19-county-history"
+        ]
+      },
+      "designRationale": "复核窗口已过或历史资料不当作当前活动；不判断真实市场效果。"
+    }
+  ]
+}

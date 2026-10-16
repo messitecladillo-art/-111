@@ -1,0 +1,1014 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": "agent-collab/v1",
+  "runId": "20261015-topic-closure",
+  "nonce": "P3-SOURCES-1125",
+  "sender": "/root/region_picker",
+  "receiver": "/root",
+  "issuedAt": "2026-10-15T11:25:00Z",
+  "networkWorkCompletedAt": "2026-10-15T11:29:16Z",
+  "expiresAt": "2026-10-15T12:30:00Z",
+  "classification": "public_primary_source_metadata_and_original_summaries",
+  "reviewStatus": "pending_independent_content_review",
+  "publicationState": "not_published",
+  "input": {
+    "packPath": "apps/evi-x-platform/content/topic-advisor/county-pack-01.json",
+    "packSha256": "a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58",
+    "packVersion": "2026-10-15.1",
+    "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+    "localGuidance": "docs/topic-county-pack-01.md"
+  },
+  "capabilitiesUsed": [
+    "declared_local_source_read",
+    "public_web_search",
+    "public_web_open",
+    "write_one_new_supplement_json"
+  ],
+  "boundaries": {
+    "existingFilesChanged": false,
+    "fullDocumentsStored": false,
+    "paidToolsUsed": false,
+    "operatorKeysUsed": false,
+    "authenticationUsed": false,
+    "tlsBypassUsed": false,
+    "sourceInstructionsFollowed": false
+  },
+  "budget": {
+    "maximumIndividualOperations": 24,
+    "consumedIndividualOperations": 24,
+    "searchQueries": 13,
+    "urlOpenOperations": 11,
+    "fetchOperations": 0,
+    "toolRpcBatches": 7,
+    "remainingIndividualOperations": 0,
+    "countingRule": "Root clarified: count each search query/URL open/fetch; batch RPC overhead reported separately, not added twice.",
+    "stoppedReason": "individual_operation_budget_exhausted"
+  },
+  "coverage": {
+    "targetCounties": 7,
+    "countiesWithAdditionalPrimaryBodyRead": 3,
+    "countiesWithoutNewBodyRead": 4,
+    "actualPrimaryBodySources": 3,
+    "approvedPublishedCountyChanges": 0,
+    "unresolvedCountyNames": [
+      "金溪县",
+      "平阳县",
+      "澄迈县",
+      "卓尼县"
+    ],
+    "statement": "3条为实际读到的第一方部门材料，仍待独立复核；4县未补齐，现有县域包/发布覆盖未改变。"
+  },
+  "counties": [
+    {
+      "countyName": "金溪县",
+      "countyCode": "361027",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "open_gap_after_targeted_fallback",
+      "newActualBodySourceCount": 0,
+      "sources": [],
+      "unreadCandidates": [
+        {
+          "url": "https://www.jinxi.gov.cn/art/2026/1/8/art_10571_4412865.html",
+          "discoveryTitle": "金溪县医保局2025年工作总结及2026年工作谋划",
+          "publisherCandidate": "金溪县人民政府网站/医保局（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": "2026-01-08",
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-12"
+          ],
+          "nextGap": "403；未绕过，待正常公开渠道恢复。"
+        },
+        {
+          "url": "https://www.jxfz.gov.cn/art/2024/7/9/art_15523_4193970.html",
+          "discoveryTitle": "搜索结果中的金溪政务公开服务材料，正文标题未核验",
+          "publisherCandidate": "抚州市人民政府网站（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": "2024-07-09",
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-21"
+          ],
+          "nextGap": "备用官方正文也为403；标题和县级原始供稿归属仍待确认。"
+        }
+      ],
+      "nextGap": "需取得县级或市级原始部门正文的正常可读版本；核对作者、发布日期及服务对象后再纳入。不得用搜索中的医保或政务公开摘要补事实。",
+      "publicationState": "not_published"
+    },
+    {
+      "countyName": "如东县",
+      "countyCode": "320623",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "additional_primary_body_read_pending_review",
+      "newActualBodySourceCount": 1,
+      "sources": [
+        {
+          "id": "rudong-hr-2025-summary",
+          "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+          "title": "2025年工作总结和2026年工作计划",
+          "publisher": "如东县人民政府网站·如东县人社局",
+          "attributedOrigin": "如东县人社局",
+          "publicationDate": "2026-01-05",
+          "dateBasis": "页面来源与发布时间栏明确为2026-01-05 15:21；正文第一部分回顾2025年度。",
+          "actualReadStatus": "body_read",
+          "readMethod": "web_open_rendered_text",
+          "retrievedAt": "2026-10-15",
+          "readScope": "一、2025年人社局工作成果：（一）就业、（三）人才；二、2026年计划仅作边界识别。",
+          "originalSummary": "县人社局总结其2025年就业站点、招聘、技能培训和见习工作；下一年度安排另列计划。",
+          "shortQuote": null,
+          "supportedClaims": [
+            {
+              "claim": "部门总结记载2025年新增家门口就业服务站，并开展招聘及职业技能培训。",
+              "locator": "第一部分第（一）项"
+            },
+            {
+              "claim": "部门总结记载新增就业见习基地、开发岗位及人员上岗见习。",
+              "locator": "第一部分第（三）项"
+            }
+          ],
+          "limitations": [
+            "属于部门年度自报，不是独立效果评估。",
+            "不能推断2026年10月站点仍正常开放、岗位仍有效或团队已有渠道。",
+            "不支持风电企业的招聘缺口或市场需求结论。"
+          ],
+          "temporalKind": "historical_reference",
+          "currentOperationalStatusVerified": false,
+          "rawBodyStored": false,
+          "rawBodySha256": null,
+          "reviewStatus": "pending_independent_content_review",
+          "reportingPeriod": {
+            "start": "2025-01-01",
+            "end": "2025-12-31",
+            "basis": "年度总结标题/章节，不将计划计入成果"
+          },
+          "sourceFamily": "rudong-hr-department-2025-annual-self-report",
+          "primaryBasis": "同一县人社部门在县政府站点发布本部门年度工作总结",
+          "requestIds": [
+            "req-02",
+            "req-13"
+          ],
+          "disagreements": []
+        }
+      ],
+      "unreadCandidates": [],
+      "nextGap": "对2025年度部门自报事项进行独立内容复核；团队仍须核实现阶段服务站、招募入口与接触许可。2026计划不可写成已完成。",
+      "publicationState": "not_published"
+    },
+    {
+      "countyName": "平阳县",
+      "countyCode": "330326",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "open_gap_after_targeted_fallback",
+      "newActualBodySourceCount": 0,
+      "sources": [],
+      "unreadCandidates": [
+        {
+          "url": "https://www.zjpy.gov.cn/art/2024/4/9/art_1257250_59105985.html",
+          "discoveryTitle": "2023年平阳县国民经济和社会发展统计公报",
+          "publisherCandidate": "平阳县人民政府网站/统计局（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": "2024-04-09",
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-14"
+          ],
+          "nextGap": "正文读取超时；不可把2023资料标成2024或当前。"
+        },
+        {
+          "url": "https://wzrd.wenzhou.gov.cn/art/2025/2/17/art_1387508_58928988.html",
+          "discoveryTitle": "冯金考副主任赴平阳开展新春“走企业强服务解难题”活动",
+          "publisherCandidate": "温州市人大网站（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": "2025-02-17",
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-22"
+          ],
+          "nextGap": "备用页缓存缺失；搜索所见走访不代表企业痛点已经实证。"
+        }
+      ],
+      "nextGap": "2023统计公报正文超时、人大调研备用页缓存缺失；需正常读取原文核对县域、年份和作者，暂不纳入任何统计值或企业问题结论。",
+      "publicationState": "not_published"
+    },
+    {
+      "countyName": "光山县",
+      "countyCode": "411522",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "additional_primary_body_read_pending_review",
+      "newActualBodySourceCount": 1,
+      "sources": [
+        {
+          "id": "guangshan-youth-training-2025",
+          "url": "https://www.hnxydj.gov.cn/rencaigongzuo/2025-04-16/8979.html",
+          "title": "光山县举办2025年优秀青年人才专题培训班",
+          "publisher": "中共信阳市委组织部·信阳党员教育网",
+          "attributedOrigin": "光山县委组织部",
+          "publicationDate": "2025-04-16",
+          "dateBasis": "页面明确日期2025-04-16 11:28:37，本文来源为光山县委组织部；正文4月10至11日结合标题确定为2025年。",
+          "actualReadStatus": "body_read",
+          "readMethod": "web_open_rendered_text",
+          "retrievedAt": "2026-10-15",
+          "readScope": "标题/本文来源；首段活动时间；专题授课段与交流段。",
+          "originalSummary": "县委组织部门报道一场优秀青年人才培训，内容涉及人工智能、电商及就业创业政策。",
+          "shortQuote": null,
+          "supportedClaims": [
+            {
+              "claim": "该部门报道光山县在2025年4月10至11日举办优秀青年人才培训。",
+              "locator": "正文首段"
+            },
+            {
+              "claim": "课程报道包含人工智能、电商及县人社部门的就业创业政策解读。",
+              "locator": "专题授课段"
+            }
+          ],
+          "limitations": [
+            "这是特定参训对象的单次历史活动。",
+            "不证明目前开放报名、持续开课或培训有效。",
+            "不证明羽绒行业当前技能需求或学生可接触企业。"
+          ],
+          "temporalKind": "historical_reference",
+          "currentOperationalStatusVerified": false,
+          "rawBodyStored": false,
+          "rawBodySha256": null,
+          "reviewStatus": "pending_independent_content_review",
+          "eventPeriod": {
+            "start": "2025-04-10",
+            "end": "2025-04-11",
+            "basis": "标题年份与正文月日"
+          },
+          "sourceFamily": "guangshan-organization-department-2025-training-report",
+          "primaryBasis": "页面明确本文来源为光山县委组织部，市级组织部门网站发布该供稿；只计该原始供稿一次",
+          "requestIds": [
+            "req-04",
+            "req-15"
+          ],
+          "disagreements": []
+        }
+      ],
+      "unreadCandidates": [],
+      "nextGap": "仅补充一场历史培训的原始部门报道；还需独立复核，且培训对象、当前报名资格、样本与授权均须另核。",
+      "publicationState": "not_published"
+    },
+    {
+      "countyName": "澄迈县",
+      "countyCode": "469023",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "open_gap_after_targeted_fallback",
+      "newActualBodySourceCount": 0,
+      "sources": [],
+      "unreadCandidates": [
+        {
+          "url": "https://www.hainan.gov.cn/hainan/xgwjtv/202502/6f09aeb6e899441caa9b66167b498b66.shtml",
+          "discoveryTitle": "2025年澄迈县政府工作报告",
+          "publisherCandidate": "海南省人民政府网站/澄迈县人民政府（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": "2025-01-29",
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-16"
+          ],
+          "nextGap": "再次读取未成功；报告日期、网页日期与URL月份不得互相替代。"
+        },
+        {
+          "url": "https://stats.hainan.gov.cn/tjj/tjgb/fzgb/2023_87039/202503/t20250313_3832017.html",
+          "discoveryTitle": "2024年海南省国民经济和社会发展统计公报",
+          "publisherCandidate": "海南省统计局、国家统计局海南调查总队（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": "2025-03-13",
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-23"
+          ],
+          "nextGap": "备用正文超时；即使恢复，只能提取明确指向澄迈的段落，不能把全省就业等数据下放到县。"
+        }
+      ],
+      "nextGap": "县工作报告与省统计备用正文均超时；报告、统计公报的搜索片段均不支持新增事实。需取得正常公开原文，严格区分县级事实与省级总量。",
+      "publicationState": "not_published"
+    },
+    {
+      "countyName": "崇州市",
+      "countyCode": "510184",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "additional_primary_body_read_pending_review",
+      "newActualBodySourceCount": 1,
+      "sources": [
+        {
+          "id": "chongzhou-social-work-2025-practice",
+          "url": "https://www.zyshgzb.gov.cn/n1/2025/0219/c460063-40421554.html",
+          "title": "以心暖“新”缔造“新”生活（工作实践）",
+          "publisher": "中共中央社会工作部网站；页面来源标注中国社会工作报",
+          "attributedOrigin": "四川省崇州市委社会工作部",
+          "publicationDate": "2025-02-19",
+          "dateBasis": "页面日期为2025年02月19日10:07；文末明确供稿单位为四川省崇州市委社会工作部。",
+          "actualReadStatus": "body_read",
+          "readMethod": "web_open_rendered_text",
+          "retrievedAt": "2026-10-15",
+          "readScope": "深化新服务：建强暖新阵地、实施暖新计划、开展暖新服务；文末供稿归属。",
+          "originalSummary": "崇州市社会工作部门自述其新就业群体驿站、骑手出入及社区服务安排。",
+          "shortQuote": null,
+          "supportedClaims": [
+            {
+              "claim": "供稿部门报告在部分社区及公共区域建设面向新就业群体的服务驿站。",
+              "locator": "深化新服务—建强暖新阵地"
+            },
+            {
+              "claim": "供稿部门报告配置骑手停车、导向和身份核验等服务场景。",
+              "locator": "深化新服务—实施暖新计划"
+            }
+          ],
+          "limitations": [
+            "是部门工作实践自报，不能替代使用者评价或因果效果证据。",
+            "不能推断2026年10月服务状态、普遍覆盖或团队已获访问许可。",
+            "不支持板式家具产业的具体需求结论。"
+          ],
+          "temporalKind": "historical_reference",
+          "currentOperationalStatusVerified": false,
+          "rawBodyStored": false,
+          "rawBodySha256": null,
+          "reviewStatus": "pending_independent_content_review",
+          "eventPeriod": {
+            "start": null,
+            "end": "2025-02-19",
+            "basis": "报道中的既有工作；具体起止时间未明"
+          },
+          "sourceFamily": "chongzhou-social-work-department-first-party-practice-2025-02",
+          "primaryBasis": "文末第一方供稿署名已实际读到；网站来源栏亦保留原刊，不把刊物及转载网站算作独立验证",
+          "republicationChain": [
+            "四川省崇州市委社会工作部供稿",
+            "中国社会工作报",
+            "中共中央社会工作部网站"
+          ],
+          "independentSourceCountForThisChain": 1,
+          "requestIds": [
+            "req-07",
+            "req-17"
+          ],
+          "disagreements": [
+            "页面有报刊转载来源，但正文同时有县级市部门第一方供稿署名；按一条原始供稿处理，待独立审核确认。"
+          ]
+        }
+      ],
+      "unreadCandidates": [],
+      "nextGap": "需独立内容复核，并核实现阶段驿站、骑手服务与社区许可；不能据此验证家具产业需求，也不能把转载链视为多个独立来源。",
+      "publicationState": "not_published"
+    },
+    {
+      "countyName": "卓尼县",
+      "countyCode": "623022",
+      "catalogVersion": "cn-admin-2025-e2c2b2e1fb4c",
+      "existingCountedOriginalSourceIds": [
+        "miit-2025-clusters"
+      ],
+      "status": "open_gap_after_targeted_fallback",
+      "newActualBodySourceCount": 0,
+      "sources": [],
+      "unreadCandidates": [
+        {
+          "url": "https://www.zhuoni.gov.cn/info/1275/44751.htm",
+          "discoveryTitle": "卓尼县政府工作报告（2025年度）",
+          "publisherCandidate": "卓尼县人民政府网站（未读核验）",
+          "publicationDate": null,
+          "dateBasis": "正文未成功读取；搜索结果、URL日期均未升级为已核验发布日期。",
+          "searchSuggestedDate": null,
+          "actualReadStatus": "discovery_only_body_unread",
+          "supportedClaims": [],
+          "originalSummary": null,
+          "failureRequestIds": [
+            "req-18",
+            "req-24"
+          ],
+          "nextGap": "直接URL与已有搜索结果引用的缓存读取均超时；没有修改代理或绕过限制。"
+        }
+      ],
+      "nextGap": "县政府2025年度报告正文两次路线均超时；不得从搜索全文式结果直接摘录为可检索县域事实。需取得正常公开可读版本并核对网页日期和报告年度。",
+      "publicationState": "not_published"
+    }
+  ],
+  "deferredDateIssues": [
+    {
+      "countyName": "安溪县",
+      "countyCode": "350524",
+      "status": "not_attempted_budget_exhausted",
+      "existingIssue": "原包政府报告页面meta来源字段待复核；本补充未解决。"
+    },
+    {
+      "countyName": "漠河市",
+      "countyCode": "232701",
+      "status": "not_attempted_budget_exhausted",
+      "existingIssue": "原包正文2023-10-10与meta2023-10-18冲突，publishedAt仍应为空；本补充未解决。"
+    }
+  ],
+  "requestLedger": {
+    "toolRpcBatches": [
+      {
+        "id": "rpc-01",
+        "kind": "search_query",
+        "operationIds": [
+          "req-01",
+          "req-02",
+          "req-03",
+          "req-04"
+        ]
+      },
+      {
+        "id": "rpc-02",
+        "kind": "search_query",
+        "operationIds": [
+          "req-05",
+          "req-06",
+          "req-07",
+          "req-08"
+        ]
+      },
+      {
+        "id": "rpc-03",
+        "kind": "search_query",
+        "operationIds": [
+          "req-09",
+          "req-10"
+        ]
+      },
+      {
+        "id": "rpc-04",
+        "kind": "search_query",
+        "operationIds": [
+          "req-11"
+        ]
+      },
+      {
+        "id": "rpc-05",
+        "kind": "open",
+        "operationIds": [
+          "req-12",
+          "req-13",
+          "req-14",
+          "req-15",
+          "req-16",
+          "req-17",
+          "req-18"
+        ]
+      },
+      {
+        "id": "rpc-06",
+        "kind": "search_query",
+        "operationIds": [
+          "req-19",
+          "req-20"
+        ]
+      },
+      {
+        "id": "rpc-07",
+        "kind": "open",
+        "operationIds": [
+          "req-21",
+          "req-22",
+          "req-23",
+          "req-24"
+        ]
+      }
+    ],
+    "individualOperations": [
+      {
+        "id": "req-01",
+        "rpc": "rpc-01",
+        "operation": "search_query",
+        "county": "金溪县",
+        "query": "金溪县 2024 国民经济 社会发展 统计公报 就业",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "no_selected_county_primary_result",
+        "selectedCandidateUrls": [],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-02",
+        "rpc": "rpc-01",
+        "operation": "search_query",
+        "county": "如东县",
+        "query": "如东县 2025 就业 人社 公共服务 零工",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "discovery_only",
+        "selectedCandidateUrls": [
+          "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-03",
+        "rpc": "rpc-01",
+        "operation": "search_query",
+        "county": "平阳县",
+        "query": "平阳县 2024 国民经济 社会发展 统计公报 就业",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "found_2023_report_not_2024;discovery_only",
+        "selectedCandidateUrls": [
+          "https://www.zjpy.gov.cn/art/2024/4/9/art_1257250_59105985.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-04",
+        "rpc": "rpc-01",
+        "operation": "search_query",
+        "county": "光山县",
+        "query": "光山县 2025 就业 人社 公共服务 培训",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "discovery_only",
+        "selectedCandidateUrls": [
+          "https://www.hnxydj.gov.cn/rencaigongzuo/2025-04-16/8979.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-05",
+        "rpc": "rpc-02",
+        "operation": "search_query",
+        "county": "金溪县",
+        "query": "\"金溪县\" \"就业\" \"2025\"",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "discovery_only",
+        "selectedCandidateUrls": [
+          "https://www.jinxi.gov.cn/art/2026/1/8/art_10571_4412865.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-06",
+        "rpc": "rpc-02",
+        "operation": "search_query",
+        "county": "澄迈县",
+        "query": "\"澄迈县\" \"2024年\" \"统计公报\"",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "no_selected_county_primary_result",
+        "selectedCandidateUrls": [],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-07",
+        "rpc": "rpc-02",
+        "operation": "search_query",
+        "county": "崇州市",
+        "query": "\"崇州市\" \"就业\" \"2025\"",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "original_agency_author_confirmed_only_after_req17",
+        "selectedCandidateUrls": [
+          "https://www.zyshgzb.gov.cn/n1/2025/0219/c460063-40421554.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-08",
+        "rpc": "rpc-02",
+        "operation": "search_query",
+        "county": "卓尼县",
+        "query": "\"卓尼县\" \"2025\" \"政府工作报告\"",
+        "domains": [
+          "gov.cn"
+        ],
+        "status": "completed",
+        "result": "discovery_only",
+        "selectedCandidateUrls": [
+          "https://www.zhuoni.gov.cn/info/1275/44751.htm"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-09",
+        "rpc": "rpc-03",
+        "operation": "search_query",
+        "county": "澄迈县",
+        "query": "澄迈县 2024 年 国民经济 社会发展 统计公报",
+        "domains": [
+          "hainan.gov.cn",
+          "chengmai.gov.cn"
+        ],
+        "status": "completed",
+        "result": "discovery_only",
+        "selectedCandidateUrls": [
+          "https://www.hainan.gov.cn/hainan/xgwjtv/202502/6f09aeb6e899441caa9b66167b498b66.shtml",
+          "https://stats.hainan.gov.cn/tjj/tjgb/fzgb/2023_87039/202503/t20250313_3832017.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-10",
+        "rpc": "rpc-03",
+        "operation": "search_query",
+        "county": "崇州市",
+        "query": "崇州市 2024 国民经济 社会发展 统计公报",
+        "domains": [
+          "chengdu.gov.cn",
+          "chongzhou.gov.cn"
+        ],
+        "status": "completed",
+        "result": "no_selected_county_primary_result",
+        "selectedCandidateUrls": [],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-11",
+        "rpc": "rpc-04",
+        "operation": "search_query",
+        "county": "崇州市",
+        "query": "\"崇州\" \"就业\" \"2025\" \"来源\" site:sc.gov.cn",
+        "domains": [
+          "sc.gov.cn"
+        ],
+        "status": "completed",
+        "result": "empty_search_results",
+        "selectedCandidateUrls": [],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-12",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "金溪县",
+        "url": "https://www.jinxi.gov.cn/art/2026/1/8/art_10571_4412865.html",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "forbidden",
+          "toolReportedStatusCode": 403,
+          "httpResponseCaptured": false
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-13",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "如东县",
+        "url": "https://www.rudong.gov.cn/rsj/jhzj/content/1b6a8b2b-6446-4cff-afcb-3a632b914175.html",
+        "requestAddressForm": "public_url",
+        "status": "body_read",
+        "locator": "页面标题、来源/发布时间；一、2025年人社局工作成果；二、2026年人社局工作计划（只识别为计划）",
+        "error": null,
+        "bodyRead": true,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-14",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "平阳县",
+        "url": "https://www.zjpy.gov.cn/art/2024/4/9/art_1257250_59105985.html",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "timeout",
+          "toolReportedStatusCode": 400,
+          "httpResponseCaptured": false,
+          "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-15",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "光山县",
+        "url": "https://www.hnxydj.gov.cn/rencaigongzuo/2025-04-16/8979.html",
+        "requestAddressForm": "public_url",
+        "status": "body_read",
+        "locator": "页面标题/本文来源/日期；培训时间、专题授课、实践拓展、分享交流四段",
+        "error": null,
+        "bodyRead": true,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-16",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "澄迈县",
+        "url": "https://www.hainan.gov.cn/hainan/xgwjtv/202502/6f09aeb6e899441caa9b66167b498b66.shtml",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "timeout",
+          "toolReportedStatusCode": 400,
+          "httpResponseCaptured": false,
+          "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-17",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "崇州市",
+        "url": "https://www.zyshgzb.gov.cn/n1/2025/0219/c460063-40421554.html",
+        "requestAddressForm": "public_url",
+        "status": "body_read",
+        "locator": "页面日期/来源；深化新服务下的建强阵地、实施计划、开展服务；文末供稿单位",
+        "error": null,
+        "bodyRead": true,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-18",
+        "rpc": "rpc-05",
+        "operation": "open",
+        "county": "卓尼县",
+        "url": "https://www.zhuoni.gov.cn/info/1275/44751.htm",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "timeout",
+          "toolReportedStatusCode": 400,
+          "httpResponseCaptured": false,
+          "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-19",
+        "rpc": "rpc-06",
+        "operation": "search_query",
+        "county": "金溪县",
+        "query": "金溪县 就业 服务 2025",
+        "domains": [
+          "jiangxi.gov.cn",
+          "jxfz.gov.cn"
+        ],
+        "status": "completed",
+        "result": "targeted_alternative_primary_candidate",
+        "selectedCandidateUrls": [
+          "https://www.jxfz.gov.cn/art/2024/7/9/art_15523_4193970.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-20",
+        "rpc": "rpc-06",
+        "operation": "search_query",
+        "county": "平阳县",
+        "query": "平阳县 就业 服务 2025",
+        "domains": [
+          "zj.gov.cn",
+          "wenzhou.gov.cn"
+        ],
+        "status": "completed",
+        "result": "targeted_alternative_primary_candidate",
+        "selectedCandidateUrls": [
+          "https://wzrd.wenzhou.gov.cn/art/2025/2/17/art_1387508_58928988.html"
+        ],
+        "bodyRead": false,
+        "supportsClaims": false
+      },
+      {
+        "id": "req-21",
+        "rpc": "rpc-07",
+        "operation": "open",
+        "county": "金溪县",
+        "url": "https://www.jxfz.gov.cn/art/2024/7/9/art_15523_4193970.html",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "forbidden",
+          "toolReportedStatusCode": 403,
+          "httpResponseCaptured": false
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-22",
+        "rpc": "rpc-07",
+        "operation": "open",
+        "county": "平阳县",
+        "url": "https://wzrd.wenzhou.gov.cn/art/2025/2/17/art_1387508_58928988.html",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "cache_miss",
+          "toolReportedStatusCode": null,
+          "httpResponseCaptured": false
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-23",
+        "rpc": "rpc-07",
+        "operation": "open",
+        "county": "澄迈县",
+        "url": "https://stats.hainan.gov.cn/tjj/tjgb/fzgb/2023_87039/202503/t20250313_3832017.html",
+        "requestAddressForm": "public_url",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "timeout",
+          "toolReportedStatusCode": 400,
+          "httpResponseCaptured": false,
+          "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      },
+      {
+        "id": "req-24",
+        "rpc": "rpc-07",
+        "operation": "open",
+        "county": "卓尼县",
+        "url": "https://www.zhuoni.gov.cn/info/1275/44751.htm",
+        "requestAddressForm": "existing_search_result_reference_for_same_primary_page",
+        "status": "body_not_read",
+        "locator": null,
+        "error": {
+          "kind": "timeout",
+          "toolReportedStatusCode": 400,
+          "httpResponseCaptured": false,
+          "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+        },
+        "bodyRead": false,
+        "rawBodyStored": false,
+        "rawBodySha256": null
+      }
+    ]
+  },
+  "failureSummary": [
+    {
+      "requestId": "req-12",
+      "county": "金溪县",
+      "url": "https://www.jinxi.gov.cn/art/2026/1/8/art_10571_4412865.html",
+      "failure": {
+        "kind": "forbidden",
+        "toolReportedStatusCode": 403,
+        "httpResponseCaptured": false
+      }
+    },
+    {
+      "requestId": "req-14",
+      "county": "平阳县",
+      "url": "https://www.zjpy.gov.cn/art/2024/4/9/art_1257250_59105985.html",
+      "failure": {
+        "kind": "timeout",
+        "toolReportedStatusCode": 400,
+        "httpResponseCaptured": false,
+        "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+      }
+    },
+    {
+      "requestId": "req-16",
+      "county": "澄迈县",
+      "url": "https://www.hainan.gov.cn/hainan/xgwjtv/202502/6f09aeb6e899441caa9b66167b498b66.shtml",
+      "failure": {
+        "kind": "timeout",
+        "toolReportedStatusCode": 400,
+        "httpResponseCaptured": false,
+        "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+      }
+    },
+    {
+      "requestId": "req-18",
+      "county": "卓尼县",
+      "url": "https://www.zhuoni.gov.cn/info/1275/44751.htm",
+      "failure": {
+        "kind": "timeout",
+        "toolReportedStatusCode": 400,
+        "httpResponseCaptured": false,
+        "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+      }
+    },
+    {
+      "requestId": "req-21",
+      "county": "金溪县",
+      "url": "https://www.jxfz.gov.cn/art/2024/7/9/art_15523_4193970.html",
+      "failure": {
+        "kind": "forbidden",
+        "toolReportedStatusCode": 403,
+        "httpResponseCaptured": false
+      }
+    },
+    {
+      "requestId": "req-22",
+      "county": "平阳县",
+      "url": "https://wzrd.wenzhou.gov.cn/art/2025/2/17/art_1387508_58928988.html",
+      "failure": {
+        "kind": "cache_miss",
+        "toolReportedStatusCode": null,
+        "httpResponseCaptured": false
+      }
+    },
+    {
+      "requestId": "req-23",
+      "county": "澄迈县",
+      "url": "https://stats.hainan.gov.cn/tjj/tjgb/fzgb/2023_87039/202503/t20250313_3832017.html",
+      "failure": {
+        "kind": "timeout",
+        "toolReportedStatusCode": 400,
+        "httpResponseCaptured": false,
+        "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+      }
+    },
+    {
+      "requestId": "req-24",
+      "county": "卓尼县",
+      "url": "https://www.zhuoni.gov.cn/info/1275/44751.htm",
+      "failure": {
+        "kind": "timeout",
+        "toolReportedStatusCode": 400,
+        "httpResponseCaptured": false,
+        "statusMeaning": "web tool reports timeout; not proof of origin HTTP400"
+      }
+    }
+  ],
+  "rightsAndEvidence": {
+    "shortQuotesStored": 0,
+    "summaryPolicy": "仅原创概括、定位及支持边界；没有复制网页全文。",
+    "rawBodyFingerprintAvailable": false,
+    "rawBodyFingerprintExplanation": "web工具提供可读文本或错误；没有取得原始HTTP响应字节，不冒充原始网页SHA。",
+    "searchResultPolicy": "搜索结果仅作发现线索；未成功open正文的来源supportedClaims恒为空。",
+    "scopePolicy": "全部已读支持仅作历史背景或部门当时自报，不推断当前需求、当前招聘、服务效果或团队资源。"
+  },
+  "nextAction": "由另一角色复核三条第一方材料、时空范围及转载链，再另行授权修改builder/内容包；四个失败缺口和两项日期歧义保持未解决。"
+}

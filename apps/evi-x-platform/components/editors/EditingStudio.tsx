@@ -23,8 +23,19 @@ import {appendQualityResult} from '@/lib/quality-layouts';
 import {makeSlideObject,type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
 
-export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; onSnapshot: (content: EditorContent) => void; onSave: () => void };
+export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; readOnly?: boolean; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean };
+
+/** A committed permission transition revokes every previously captured write capability. */
+export function createReportPermissionGuard(readOnly: boolean) {
+  let denied = readOnly, epoch = 0;
+  return {
+    get readOnly() { return denied; },
+    get epoch() { return epoch; },
+    update(nextReadOnly: boolean) { if (denied !== nextReadOnly) { denied = nextReadOnly; epoch++; } },
+    allows(ticket: number) { return !denied && ticket === epoch; },
+  };
+}
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -74,11 +85,19 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
 export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
+  const readOnly = projectBinding?.readOnly === true;
+  const permission = useRef(createReportPermissionGuard(readOnly));
+  const [permissionVersion, setPermissionVersion] = useState({ readOnly, epoch: 0 });
+  // Adjust the render ticket without reading a ref; publish revocation only on commit.
+  const permissionEpoch = permissionVersion.epoch + Number(permissionVersion.readOnly !== readOnly);
+  if (permissionVersion.readOnly !== readOnly) setPermissionVersion({ readOnly, epoch: permissionEpoch });
+  useLayoutEffect(() => { permission.current.update(readOnly); }, [readOnly]);
+  const canMutate = useCallback(() => !readOnly && permission.current.allows(permissionEpoch), [readOnly, permissionEpoch]);
   const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
   const reportSettings = content.reportFormat ?? DEFAULT_REPORT_SETTINGS;
   const reportFormat = reportSettings.options;
   const onSnapshot = projectBinding?.onSnapshot;
-  useLayoutEffect(()=>{onSnapshot?.(content);},[content,onSnapshot]);
+  useLayoutEffect(()=>{if(canMutate())onSnapshot?.(content);},[content,onSnapshot,canMutate]);
   const [mode, setMode] = useState<"report" | "slides" | "latex">("report");
   const [qualityOpen,setQualityOpen]=useState(false);
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
@@ -142,7 +161,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const acknowledgeSaved = useCallback((snapshot: string) => { saved.current = snapshot; setSavedSnapshot(snapshot); }, []);
 
   const adopt = useCallback((draft: Draft) => {
-    if (!alive.current || identityTransition.current) return;
+    if (!alive.current || identityTransition.current || permission.current.readOnly) return;
     setStoryboardOpen(false);
     setStoryboardGeneration(value=>value+1);
     resetVersions();
@@ -213,6 +232,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }, [projectBound]);
 
   const save = useCallback(async (copy = false, forVersion = false): Promise<Draft | null> => {
+    if(!canMutate())return null;
     if(localOnly){if(projectBinding){projectBinding.onSave();return null;}setMessage('当前为本地编辑。请下载 JSON 备份保存进度；可继续导出 Word 和 PPTX。');return null;}
     if (identityTransition.current || busy.current || (versionOperation.current && !forVersion)) return null;
     busy.current = true; setPhase("saving"); setMessage("");
@@ -222,9 +242,9 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       if (forVersion && record.current && saved.current === snapshot) return { ...record.current, content: data };
       if (!connected || copy) {
         await ensureEditorSession();
-        if (!alive.current || identityTransition.current) return null;
+        if (!alive.current || identityTransition.current || !canMutate()) return null;
         const library = await request<{ drafts: DraftSummary[]; scope: string }>("/api/drafts");
-        if (!alive.current || identityTransition.current) return null;
+        if (!alive.current || identityTransition.current || !canMutate()) return null;
         if (scope.current && scope.current !== library.scope && !copy) throw Object.assign(new Error("登录身份已改变，请先备份或明确另存副本。"), { code: "editor_scope_changed" });
         scope.current = library.scope; setDrafts(library.drafts);
         setConnected(true);
@@ -236,7 +256,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       const result = await request<{ draft: Draft }>(active ? `/api/drafts/${id}` : "/api/drafts", {
         method: active ? "PUT" : "POST", headers: { "x-editor-scope": scope.current }, body: JSON.stringify(active ? { revision: active.revision, content: data } : { id, content: data }),
       });
-      if (!alive.current || identityTransition.current) return null;
+      if (!alive.current || identityTransition.current || !canMutate()) return null;
       // Compare server content too: an idempotent POST retry may return an older snapshot.
       setRecord(result.draft); pendingId.current = null; acknowledgeSaved(JSON.stringify(result.draft.content));
       setDrafts(list => [result.draft, ...list.filter(d => d.id !== result.draft.id)]);
@@ -244,13 +264,13 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       blocked.current = false; setPhase(snapshot === JSON.stringify(current.current) && saved.current === snapshot ? "saved" : "ready");
       return result.draft;
     } catch (e) {
-      if (!alive.current || identityTransition.current) return null;
+      if (!alive.current || identityTransition.current || !canMutate()) return null;
       blocked.current = true;
       setPhase(["draft_conflict", "editor_scope_changed"].includes((e as { code?: string }).code || "") ? "conflict" : "error");
       setMessage(e instanceof Error ? e.message : "保存失败，内容仍在当前页面。请重试或导出备份。");
       return null;
     } finally { busy.current = false; }
-  }, [connected, resetVersions, setRecord, acknowledgeSaved,localOnly,projectBinding]);
+  }, [connected, resetVersions, setRecord, acknowledgeSaved,localOnly,projectBinding,canMutate]);
 
   useEffect(() => {
     if (!dirty || blocked.current || busy.current || versionOperation.current || phase === "loading" || !connected) return;
@@ -259,7 +279,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   }, [content, dirty, phase, connected, save, versionBusy]);
 
   function edit(next: EditorContent) {
-    if (versionOperation.current) return false;
+    if (!canMutate() || versionOperation.current) return false;
     const recoverable = next.title.trim() ? next : { ...next, title: "未命名研究" };
     if (new TextEncoder().encode(JSON.stringify(recoverable)).length > EDITOR_LIMITS.bytes) {
       setMessage(`此作品已接近 ${EDITOR_SIZE_LABEL} 上限，本次输入未加入。请先导出备份，并将内容拆分为另一作品。`); return false;
@@ -271,16 +291,17 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     return true;
   }
   useImperativeHandle(controllerRef,()=>({appendResult(result:ResultSnapshot){
-    if(identityTransition.current||busy.current||versionOperation.current||phase==='loading')return false;
+    if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||phase==='loading')return false;
     try{const next=appendQualityResult(current.current,result);if(next!==current.current&&!edit(next))return false;setQualityOpen(true);return true;}catch(error){setMessage((error as Error).message);return false;}
   },appendSection(proposal:ReportSection){
+    if(!canMutate())return false;
     try { const next=appendEvidenceSection(current.current,proposal); if(!edit(next))return false; setSectionId(proposal.id);setMode('report');setMessage('已添加统计章节，可撤销。保存后生成云端新版本。');return true; }
     catch(error){setMessage(error instanceof Error?error.message:'未添加提案。');return false;}
   }}));
   useEffect(()=>{
-    if(!resultProposal||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
+    if(!canMutate()||!resultProposal||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
     const timer=window.setTimeout(()=>{
-    if(!alive.current||identityTransition.current)return;
+    if(!alive.current||identityTransition.current||!canMutate())return;
     const currentContent=current.current;
     if(busy.current||versionOperation.current)return;
     try{current.current=appendQualityResult(currentContent,resultProposal);}
@@ -289,20 +310,22 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(current.current);if(!blocked.current)setPhase('ready');setQualityOpen(true);onResultHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
-  },[resultProposal,onResultHandled,phase,identityFrozen]);
+  },[resultProposal,onResultHandled,phase,identityFrozen,canMutate]);
   function undo() {
+    if(!canMutate())return;
     const previous = past[past.length - 1]; if (!previous) return;
     setPast(past.slice(0, -1)); setFuture([current.current, ...future]); current.current = previous; setContent(previous);
   }
   function redo() {
+    if(!canMutate())return;
     if (!future[0]) return;
     setPast([...past, current.current]); current.current = future[0]; setContent(future[0]); setFuture(future.slice(1));
   }
-  function canReplace() { return !identityTransition.current && !busy.current && !versionOperation.current && (!dirty || window.confirm("当前有尚未保存的修改。确定放弃这些修改并切换？建议先保存或导出备份。")); }
+  function canReplace() { return canMutate() && !identityTransition.current && !busy.current && !versionOperation.current && (!dirty || window.confirm("当前有尚未保存的修改。确定放弃这些修改并切换？建议先保存或导出备份。")); }
   async function openDraft(id: string) {
     if (!id || !canReplace()) return;
     busy.current = true; setPhase("loading");
-    try { const result = await request<{ draft: Draft }>(`/api/drafts/${id}`, { headers: { "x-editor-scope": scope.current } }); adopt(result.draft); }
+    try { const result = await request<{ draft: Draft }>(`/api/drafts/${id}`, { headers: { "x-editor-scope": scope.current } }); if(canMutate())adopt(result.draft); }
     catch (e) { if (!alive.current || identityTransition.current) return; setPhase("error"); blocked.current = true; setMessage(e instanceof Error ? e.message : "读取失败。"); }
     finally { busy.current = false; }
   }
@@ -376,6 +399,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     else { const item = { ...slide, id: crypto.randomUUID(), title: `${slide.title.slice(0, 145)} 副本` }; if (edit({ ...content, slides: after(content.slides, slide.id, item) })) setSlideId(item.id); }
   }
   function removeItem() {
+    if(!canMutate())return;
     if (mode === "report") { if (content.report.length < 2) return; const index = content.report.findIndex(s => s.id === section.id); const remaining = content.report.filter(s => s.id !== section.id); edit({ ...content, report: remaining }); setSectionId(remaining[Math.min(index, remaining.length - 1)].id); }
     else { if (content.slides.length < 2) return; const index = content.slides.findIndex(s => s.id === slide.id); const remaining = content.slides.filter(s => s.id !== slide.id); edit({ ...content, slides: remaining }); setSlideId(remaining[Math.min(index, remaining.length - 1)].id); }
     setMessage("已移除，可点“撤销”恢复。");
@@ -404,7 +428,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     try {
       if (file.size > EDITOR_LIMITS.bytes) throw new Error(`备份超过 ${EDITOR_SIZE_LABEL}。`);
       const raw: unknown = JSON.parse(await file.text());
-      if (!alive.current || identityTransition.current) return;
+      if (!alive.current || identityTransition.current || !canMutate()) return;
       if (raw && typeof raw === "object" && "title" in raw && typeof raw.title === "string" && !raw.title.trim()) raw.title = "未命名研究";
       const next = parseEditorContent(raw);
       setStoryboardOpen(false);
@@ -433,26 +457,26 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   useEffect(() => { if (libraryOpen) void loadVersions(); }, [libraryOpen, activeDraftId, loadVersions]);
 
   async function createVersion() {
-    if (busy.current || versionOperation.current || blocked.current) return;
+    if (!canMutate() || busy.current || versionOperation.current || blocked.current) return;
     let label: string;
     try { label = parseVersionLabel(versionLabel); } catch (e) { setMessage((e as Error).message); return; }
     const requested = JSON.stringify(current.current);
     versionOperation.current = true; setVersionBusy(true);
     try {
       const persisted = await save(false, true);
-      if (!persisted || identityTransition.current) return;
+      if (!persisted || identityTransition.current || !canMutate()) return;
       if (JSON.stringify(persisted.content) !== requested) throw new Error("上次重试返回了先前保存的内容。当前文字仍保留，请先点立即保存，再保存命名版本。");
       const previous = pendingVersion.current;
       const attempt = previous && previous.draftId === persisted.id && previous.label === label && previous.revision === persisted.revision ? previous : { id: crypto.randomUUID(), draftId: persisted.id, label, revision: persisted.revision };
       pendingVersion.current = attempt;
       const result = await request<{ version: DraftVersionSummary }>(`/api/drafts/${persisted.id}/versions`, { method: "POST", headers: { "x-editor-scope": scope.current }, body: JSON.stringify({ id: attempt.id, label, revision: persisted.revision }) });
-      if (!alive.current || identityTransition.current) return;
+      if (!alive.current || identityTransition.current || !canMutate()) return;
       pendingVersion.current = null;
       versionEpoch.current += 1; setVersionLoading(false);
       setVersions(list => [result.version, ...list.filter(v => v.id !== result.version.id)]);
       setVersionLabel(""); setMessage(`已保存命名版本“${result.version.label}”。恢复时会创建副本，不覆盖原稿。`);
     } catch (e) {
-      if (!alive.current || identityTransition.current) return;
+      if (!alive.current || identityTransition.current || !canMutate()) return;
       if (["draft_conflict", "editor_scope_changed"].includes((e as { code?: string }).code || "")) { blocked.current = true; setPhase("conflict"); }
       setMessage(e instanceof Error ? e.message : "命名版本保存失败，原稿与当前内容未改变。");
     } finally {
@@ -465,7 +489,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     busy.current = true; setPhase("loading");
     try {
       const result = await request<{ version: DraftVersion }>(`/api/drafts/${version.draftId}/versions/${version.id}`, { headers: { "x-editor-scope": scope.current } });
-      if (!alive.current || identityTransition.current) return;
+      if (!alive.current || identityTransition.current || !canMutate()) return;
       const next = parseEditorContent(result.version.content);
       resetVersions(); setRecord(null); pendingId.current = null; acknowledgeSaved(""); blocked.current = false;
       setStoryboardOpen(false);setStoryboardGeneration(value=>value+1);
@@ -515,7 +539,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const selectedId = mode === "report" ? section.id : slide.id;
   const selectedIndex = items.findIndex(s => s.id === selectedId);
   const statusText = versionBusy ? "正在保存命名版本…" : phase === "loading" ? "正在读取草稿…" : phase === "saving" ? "正在保存…" : phase === "conflict" ? "版本冲突 · 已暂停保存" : phase === "error" ? "未保存 · 请重试" : dirty ? "有修改 · 即将保存" : activeDraftId ? `已保存 ${saveTime}` : "模板 · 编辑后自动保存";
-  const locked = identityFrozen || phase === "loading" || phase === "saving" || versionBusy;
+  const locked = readOnly || identityFrozen || phase === "loading" || phase === "saving" || versionBusy;
   const visibleItems = items.map((item, index) => ({ item, index })).filter(({ item }) => item.title.toLocaleLowerCase().includes(outlineQuery.trim().toLocaleLowerCase()));
   const presentationSlide = content.slides[presentIndex] || content.slides[0];
 
@@ -530,14 +554,14 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         <button type="button" aria-pressed={!fileLibraryOpen} onClick={() => setFileLibraryOpen(false)}>文本草稿</button>
         {!localOnly&&<button type="button" aria-pressed={fileLibraryOpen} onClick={() => setFileLibraryOpen(true)}>Office 原文件</button>}
       </div>
-      {localOnly&&<div className={styles.backupActions}><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
+      {localOnly&&<div className={styles.backupActions}><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" disabled={readOnly} onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
     </div>
     {!localOnly&&<EditorRecovery onBeforeRestore={beforeRestore}/>}
     {identityFrozen && <div className={styles.notice} role="alert"><span>身份切换保护已开启：当前页不再读写服务器作品。请先导出未保存内容，再手动刷新；页面不会自动丢弃正文。</span><button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载当前正文备份</button></div>}
     {!localOnly&&fileLibraryOpen&&<div><OfficeFileLibrary/></div>}
     <div hidden={fileLibraryOpen}>
     <div className={styles.documentBar}>
-      <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
+      <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} readOnly={readOnly} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
       <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
     </div>
     <div className={styles.libraryPanel} id="editor-library" hidden={localOnly||!libraryOpen}>
@@ -559,19 +583,19 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     {message && <div className={styles.notice} role={phase === "error" || phase === "conflict" ? "alert" : "status"}><span>{message}</span>{phase === "conflict" && <button type="button" disabled={locked} onClick={() => void save(true)}>保留当前内容为副本</button>}<button type="button" aria-label="关闭提示" onClick={() => setMessage("")}>×</button></div>}
     <div className={styles.toolbar}>
       <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX 工作台</button></div>
-      <div className={styles.history}><button type="button" onClick={undo} disabled={!past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={!future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
+      <div className={styles.history}><button type="button" onClick={undo} disabled={readOnly || !past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={readOnly || !future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       <button type="button" aria-pressed={qualityOpen} onClick={()=>setQualityOpen(value=>!value)}>发现与矢量编排</button>
       {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
     </div>
     <ResearchMaterialLibrary context="report"/>
     <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
-    {mode!=='slides'&&<ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/> }
+    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
-    <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding?.onSave} disabled={locked}/></div>
+    <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>
     <div hidden={mode==='latex'||qualityOpen}>
     <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
-      if(identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
+      if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
         const next=parseEditorContent({...current.current,slides});
         const firstNew=slides.find(s=>!current.current.slides.some(old=>old.id===s.id));
@@ -586,9 +610,9 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / {itemLimit}</span></div>
         <input className={styles.outlineSearch} aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={e => setOutlineQuery(e.target.value)}/>
         <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => { const report = mode === "report", written = report && sectionWritten(item as ReportSection); return <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} data-kind={report ? outlineKind(item.title) : undefined} data-written={report ? String(written) : undefined} title={report ? item.title || "未命名" : undefined} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => report ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}>{report ? <span className={styles.statusDot} aria-hidden="true"/> : <span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>}<span className={styles.itemTitle}>{item.title || "未命名"}</span>{report && <span className={styles.srOnly}>{written ? "（已撰写）" : "（待撰写）"}</span>}</span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>; })}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
-        <button type="button" className={styles.addItem} disabled={items.length >= itemLimit || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
+        <button type="button" className={styles.addItem} disabled={readOnly || items.length >= itemLimit || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
       </aside>
-      <fieldset className={styles.fields} disabled={phase === "loading" || versionBusy}>
+      <fieldset className={styles.fields} disabled={readOnly || phase === "loading" || versionBusy}>
         <legend>{mode === "report" ? "章节编辑" : "页面编辑"}</legend>
         <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label="向上移动">↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label="向下移动">↓</button><button type="button" disabled={items.length >= itemLimit} onClick={duplicateItem}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem}>移除</button></div>
         {mode === "report" ? <>
