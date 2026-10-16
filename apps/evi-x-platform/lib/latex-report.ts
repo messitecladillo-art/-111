@@ -1,3 +1,5 @@
+import {assertFindingReferences, assertTableRows, evidenceLabel, valueText} from './quality-export.ts';
+import { chartData, resultFor, verifyResearchQuality, type ReportBlock } from './research-quality.ts';
 import type { EditorContent, LatexReport } from './editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS, parseReportFormatOptions, parseReportFormatSettings, reportPart, type ReportFormatOptions } from './report-format.ts';
 
@@ -27,7 +29,8 @@ export function latexReportKey(content: EditorContent): string {
   const settings = parseReportFormatSettings(content.reportFormat ?? DEFAULT_REPORT_SETTINGS);
   const options = settings.options;
   return JSON.stringify({ title: content.title, subtitle: content.subtitle,
-    report: content.report.map(section => ({ id: section.id, title: section.title, body: section.body, source: section.source })),
+    report: content.report.map(section => ({ id: section.id, title: section.title, body: section.body, source: section.source, ...(section.blocks?.length ? { blocks: section.blocks } : {}), ...(section.findingIds ? { findingIds: section.findingIds } : {}), ...(section.findingSnapshots ? { findingSnapshots: section.findingSnapshots } : {}) })),
+    ...(content.report.some(s=>s.blocks?.length||s.findingIds?.length) ? { quality: content.quality } : {}),
     reportFormat: { edition: settings.edition, group: settings.group, region: settings.region, track: settings.track, stage: settings.stage, profileId: settings.profileId,
       options: { part: options.part, includeCover: options.includeCover, includeToc: options.includeToc, firstLineChars: options.firstLineChars, numberPages: options.numberPages } },
   });
@@ -37,16 +40,41 @@ export async function latexSha256(value: string): Promise<string> {
 }
 export function latexReportHash(content: EditorContent): Promise<string> { return latexSha256(latexReportKey(content)); }
 
+function latexBlocks(blocks: ReportBlock[], content: EditorContent): string {
+  return blocks.map(block=>{
+    if(block.kind==='formula'){
+      const commands=[...block.text.matchAll(/\\([A-Za-z]+)/g)].map(m=>m[1]);
+      if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text'].includes(cmd)))throw Error('公式块包含非数学命令，请使用 LaTeX 工作台检查。');
+      return `\\[\n${block.text}\n\\]`;
+    }
+    if(block.kind!=='chart'&&block.kind!=='table')return `${escapeLatexParagraphText(block.text)}\\par`;
+    const r=resultFor(content.quality,block.evidenceId);
+    const source=escapeLatexParagraphText(evidenceLabel(r));
+    if(block.kind==='table'){
+      assertTableRows(r);
+      if(r.headers.length>10||r.rows.length>25)throw Error('表格超过 10 列或 25 行，请分拆后导出 LaTeX。');
+      const cells=(row:(string|number|null)[])=>row.map(v=>escapeLatexText(valueText(v))).join(' & ')+String.raw` \\`;
+      return ['\\begin{table}[htbp]','\\centering',`\\caption{${escapeLatexText(block.text||r.title)}}`,`\\begin{tabular}{${'c'.repeat(r.headers.length)}}`,'\\toprule[1.5bp]',cells(r.headers),'\\midrule[0.75bp]',...r.rows.map(cells),'\\bottomrule[1.5bp]','\\end{tabular}','\\end{table}',`${source}\\par`].join('\n');
+    }
+    const data=chartData(r,block.valueColumn);
+    if(data.labels.length>16||data.values.some(v=>Math.abs(v)>1e12))throw Error('图表类别或数值范围过大，请分拆或转换计量单位。');
+    const ticks=data.labels.map((_,i)=>i).join(','), labels=data.labels.map(x=>`{${escapeLatexText(x)}}`).join(',');
+    return ['\\begin{figure}[htbp]','\\centering',`\\definecolor{ResearchAccent}{HTML}{${content.accent==='teal'?'0F766E':content.accent==='burgundy'?'8A3449':'234E80'}}`,'\\begin{tikzpicture}',`\\begin{axis}[width=13cm,height=8cm,ybar,bar width=12pt,xtick={${ticks}},xticklabels={${labels}},x tick label style={rotate=35,anchor=east},ylabel={${escapeLatexText(r.headers[block.valueColumn])}},enlarge x limits=0.12,nodes near coords,point meta=explicit symbolic]`,`\\addplot[fill=ResearchAccent,draw=ResearchAccent] coordinates {${data.values.map((v,i)=>`(${i},${v}) [${valueText(v)}]`).join(' ')}};`,'\\end{axis}','\\end{tikzpicture}',`\\caption{${escapeLatexText(block.text||r.title)}}`,'\\end{figure}',`${source}\\par`].join('\n');
+  }).join('\n\n');
+}
+
 export function generateLatexBody(content: EditorContent): string {
+  assertFindingReferences(content);
   const part = (content.reportFormat ?? DEFAULT_REPORT_SETTINGS).options.part;
   const sections = content.report.filter(section => (reportPart(section.title) === 'appendix') === (part === 'appendix'));
   if (!sections.length) throw Error(part === 'appendix' ? '请先添加独立附录章节。' : '报告正文至少需要一个章节。');
   const paragraphs = (text: string) => text.split(/\r\n|\r|\n/).map(line => `${escapeLatexParagraphText(line)}\\par`).join('\n');
-  const body = sections.map(section => `\\section{${escapeLatexText(section.title || '未命名章节')}}\n${paragraphs(section.body)}${section.source ? `\n\\textbf{来源 / 说明：} ${paragraphs(section.source)}` : ''}`).join('\n\n') + '\n';
+  const body = sections.map(section => `\\section{${escapeLatexText(section.title || '未命名章节')}}\n${paragraphs(section.body)}${section.blocks?.length ? `\n${latexBlocks(section.blocks,content)}` : ''}${section.source ? `\n\\textbf{来源 / 说明：} ${paragraphs(section.source)}` : ''}`).join('\n\n') + '\n';
   if (body.length > LATEX_LIMITS.body) throw Error('生成正文超过 120,000 字符，请先拆分报告。');
   return body;
 }
 export async function createLatexReport(content: EditorContent): Promise<LatexReport> {
+  if(content.quality)await verifyResearchQuality(content.quality);
   const body = generateLatexBody(content), reportHash = await latexReportHash(content);
   return { version: 1, body, reportHash };
 }
@@ -79,6 +107,7 @@ export function buildLatexSource(input: LatexCompileInput): string {
     '\\setcounter{secnumdepth}{-1}', `\\pagestyle{${o.numberPages ? 'plain' : 'empty'}}`, '\\begin{document}',
     '\\fontsize{12bp}{14.4bp}\\selectfont',
   ];
+  if(input.body.includes('\\begin{tikzpicture}'))lines.splice(3,0,'\\usepackage{pgfplots}','\\pgfplotsset{compat=1.18}');
   if (o.includeCover) lines.push('\\begin{titlepage}', '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
   if (o.includeToc) lines.push('\\pagenumbering{Roman}', '\\tableofcontents', '\\clearpage', '\\pagenumbering{arabic}');
   lines.push('% BODY START', input.body.replace(/\r\n?/g, '\n'), '% BODY END', '\\end{document}', '');

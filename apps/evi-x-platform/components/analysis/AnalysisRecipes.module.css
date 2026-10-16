@@ -68,7 +68,7 @@
 .taskList small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 12px; font-weight: 400; color: var(--wb-muted); line-height: 1.6; margin-top: 3px; overflow-wrap: anywhere; }
 .taskList em { display: block; font-style: normal; font-size: 11px; color: var(--wb-muted); margin-top: 6px; }
 .taskList em[data-current=true] { color: var(--wb-accent); }
-.taskList > button,.entryModes > button { transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
+.taskList > button,.entryModes > button { transition: background-color var(--motion-fast) var(--ease-arrive), border-color var(--motion-fast) var(--ease-arrive), color var(--motion-fast) var(--ease-arrive); }
 .taskList > button[aria-pressed=true] .taskNumber { color: var(--wb-gold-text); }
 .canvas { min-width: 0; }
 .card { border: 1px solid var(--wb-line); border-radius: 10px; overflow: hidden; background: var(--wb-solid); }

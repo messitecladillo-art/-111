@@ -17,8 +17,8 @@ test('UTF16 body and whole document limits both apply without truncation', async
   const original = createEditorContent(), latex = await createLatexReport(original);
   assert.equal(parseEditorContent({ ...original, latex: { ...latex, body: '😀'.repeat(60000) } }).latex.body.length, 120000);
   assert.throws(() => parseEditorContent({ ...original, latex: { ...latex, body: '😀'.repeat(60000) + 'a' } }));
-  const report = Array.from({ length: 20 }, (_, i) => ({ id: String(i), title: '章节', source: '', body: '中'.repeat(11000) }));
-  assert.throws(() => parseEditorContent({ ...original, report, latex }), /500 KB/);
+  const report = Array.from({ length: 70 }, (_, i) => ({ id: String(i), title: '章节', source: '', body: '中'.repeat(11000) }));
+  assert.throws(() => parseEditorContent({ ...original, report, latex }), /2 MB/);
   assert.throws(() => generateLatexBody({ ...original, report }), /120,000/);
 });
 

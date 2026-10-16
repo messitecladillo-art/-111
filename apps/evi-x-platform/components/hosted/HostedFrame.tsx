@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { usePathname } from 'next/navigation';
 import { useRef, useState, type ReactNode } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
@@ -23,6 +24,7 @@ export function AccountStatus() {
 export default function HostedFrame({ title, subtitle, children, variant = 'app', density }: { title: string; subtitle: string; children: ReactNode; variant?: 'app' | 'auth'; density?: 'compact' }) {
   const pathname = usePathname(), theme = useThemePreference(), [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLButtonElement>(null);
+  const { openSearch } = useKnowledge();
   if (variant === 'auth') return <ThemeProvider value={theme}><div className="workbench hosted-app hosted-auth" data-theme={theme}>
     <a className="hosted-skip" href="#hosted-content">跳到主要内容</a>
     <header className="hosted-auth-bar"><Link className="wb-brand" href="/"><BrandMark size={32}/><span><strong>证见 EVI-X</strong><small>正大杯研究工作台</small></span></Link><div className="wb-top-actions"><Link className="hosted-ghost-link" href="/workspace">先看看研究工具</Link><ThemeToggle theme={theme}/></div></header>
@@ -30,11 +32,11 @@ export default function HostedFrame({ title, subtitle, children, variant = 'app'
     <WorkbenchFooter/>
   </div></ThemeProvider>;
   const active: Section = pathname.startsWith('/services') ? 'services' : 'workspace';
-  return <ThemeProvider value={theme}><div className="workbench hosted-app" data-theme={theme} data-section={active} data-density={density}>
+  return <ThemeProvider value={theme}><div className="workbench hosted-app" data-theme={theme} data-section={active} data-page={pathname === '/knowledge' ? 'knowledge' : undefined} data-density={density}>
     <a className="hosted-skip" href="#hosted-content">跳到主要内容</a>
-    <WorkbenchSidebar active={active} inWorkspace={false} open={open} setOpen={setOpen} menuRef={menuRef}/>
+    <WorkbenchSidebar active={pathname === '/knowledge' ? 'knowledge' : active} inWorkspace={false} open={open} setOpen={setOpen} menuRef={menuRef} onSearch={openSearch}/>
     <div className="workbench-main">
-      <PageHeading group={active === 'services' ? '服务与设置' : '项目管理'} title={title} description={subtitle} actions={<><AccountStatus/><ThemeToggle theme={theme}/></>}/>
+      <PageHeading group={pathname === '/knowledge' ? '知识与方法' : active === 'services' ? '服务与设置' : '项目管理'} title={title} description={subtitle} actions={<><button className="wb-search-toggle" onPointerDown={event => event.preventDefault()} onClick={openSearch}>全局搜索 <kbd>Ctrl K</kbd></button><AccountStatus/><ThemeToggle theme={theme}/></>}/>
       <div className="workbench-content"><main id="hosted-content" className="hosted-main" tabIndex={-1}>{children}</main></div>
       <WorkbenchFooter/>
     </div>

@@ -4,6 +4,7 @@ import type { ECharts, EChartsCoreOption } from 'echarts/core';
 import { buildChartOption, buildTableSVG } from '@/lib/chart-options';
 import { chartFont, formatChartNumber, THREE_LINE_TABLE_RULES } from '@/lib/chart-theme';
 import type { ChartKind, ChartSnapshot, ChartStyle, ChartThemeId } from '@/lib/chart-types';
+import { drawChartIn } from '@/lib/workspace-motion';
 import styles from './ChartPreview.module.css';
 
 async function loadEngine() {
@@ -35,7 +36,9 @@ async function png(svg: string, width: number, height: number): Promise<Blob> {
 const ChartPreview = forwardRef<ChartPreviewHandle, Props>(function ChartPreview({ snapshot, kind, style, theme }, ref) {
   const host = useRef<HTMLDivElement>(null), live = useRef<{ key: string; chart: ECharts } | null>(null);
   const requestKey = JSON.stringify([snapshot.binding, kind, style, theme]);
-  const current = useRef(requestKey), mounted = useRef(false);
+  const current = useRef(requestKey), mounted = useRef(false), drawn = useRef<string | null>(null);
+  // Draw in only when the data or chart type changes; format edits redraw in place.
+  const drawKey = JSON.stringify([snapshot.binding, kind]);
   const generation = useRef(0);
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null), [ready, setReady] = useState('');
   // A commit invalidates exports before pending encoder/import microtasks resume.
@@ -60,9 +63,10 @@ const ChartPreview = forwardRef<ChartPreviewHandle, Props>(function ChartPreview
       const svg = host.current.querySelector('svg');
       if (svg) svg.setAttribute('viewBox', `0 0 ${style.width} ${style.height}`);
       live.current = { key: requestKey, chart: instance }; setReady(requestKey);
+      if (drawn.current !== drawKey) { drawn.current = drawKey; drawChartIn(host.current, kind); }
     }).catch(error => { if (!cancelled) setFailure({ key: requestKey, message: (error as Error).message || '图表绘制失败，请重试。' }); });
     return () => { cancelled = true; observer?.disconnect(); if (live.current?.chart === instance) live.current = null; instance?.dispose(); };
-  }, [snapshot, kind, style, theme, requestKey]);
+  }, [snapshot, kind, style, theme, requestKey, drawKey]);
 
   useImperativeHandle(ref, () => ({
     async exportImage(format) {

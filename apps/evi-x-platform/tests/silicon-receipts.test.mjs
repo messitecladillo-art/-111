@@ -12,7 +12,9 @@ test('unknown silicon receipts remain distinguishable from known failure and can
   const value = receipt([response('ok'), response('outcome_unknown')]);
   assert.equal(parseRunView(value).responses[1].status, 'outcome_unknown');
   assert.throws(() => parseRunView({ ...value, status: 'ready' }), e => e.code === 'invalid_server_receipt');
-  assert.throws(() => parseRunView(receipt([{ ...response('outcome_unknown'), answers: [{ questionId: 'q', shown: true, refused: false, unclear: '', value: 1 }] }])), e => e.code === 'invalid_server_receipt');
+  for (const status of ['failed', 'outcome_unknown']) {
+    assert.throws(() => parseRunView(receipt([{ ...response(status), answers: [{ questionId: 'q', shown: true, refused: false, unclear: '', value: 1 }] }])), e => e.code === 'invalid_server_receipt');
+  }
   assert.equal(parseRunView({ ...receipt([response('failed')]), status: 'failed' }).status, 'failed');
 });
 

@@ -43,6 +43,25 @@ class Settings(BaseSettings):
     latex_concurrency: int = 2
     latex_hourly_compiles: int = 30
 
+    # SAV stays private and disposable; limits apply before native decoding.
+    sav_temp_dir: Path = Path(".local/sav-imports")
+    sav_upload_seconds: int = 20
+    sav_parse_seconds: int = 15
+    sav_cleanup_seconds: int = 60
+    sav_hourly_imports: int = 12
+    sav_global_hourly_imports: int = 120
+
+    preflight_temp_dir: Path = Path(".local/submission-preflight")
+    preflight_upload_seconds: int = 30
+    preflight_parse_seconds: int = 35
+    preflight_cleanup_seconds: int = 60
+    preflight_hourly_imports: int = 12
+    preflight_global_hourly_imports: int = 120
+
+    # Third-party practice bank: kept outside the public source tree and served
+    # only to signed-in invited members when an operator configures a path.
+    net_exam_bank_path: Path | None = None
+
     @model_validator(mode="after")
     def valid(self):
         if not self.database_url.startswith("postgresql+psycopg://"):
@@ -82,10 +101,25 @@ class Settings(BaseSettings):
         if not (1 <= self.silicon_max_calls <= 1000 and 1 <= self.silicon_concurrency <= 8 and 1 <= self.silicon_hourly_runs <= 60
                 and 5 <= self.silicon_call_seconds <= 120 and 120 <= self.silicon_stale_seconds <= 7200):
             raise ValueError("Invalid silicon run bounds")
+        if (not self.sav_temp_dir.parts or ".." in self.sav_temp_dir.parts
+                or not (1 <= self.sav_upload_seconds <= 60 and 1 <= self.sav_parse_seconds <= 60
+                        and 30 <= self.sav_cleanup_seconds <= 3600
+                        and 1 <= self.sav_hourly_imports <= 60
+                        and self.sav_hourly_imports <= self.sav_global_hourly_imports <= 1000)):
+            raise ValueError("Invalid private SAV conversion bounds")
+        if (not self.preflight_temp_dir.parts or ".." in self.preflight_temp_dir.parts
+                or not (1 <= self.preflight_upload_seconds <= 60
+                        and 1 <= self.preflight_parse_seconds <= 35
+                        and 30 <= self.preflight_cleanup_seconds <= 3600
+                        and 1 <= self.preflight_hourly_imports <= 60
+                        and self.preflight_hourly_imports <= self.preflight_global_hourly_imports <= 1000)):
+            raise ValueError("Invalid private submission preflight bounds")
         if self.latex_compiler and (not Path(self.latex_compiler).is_absolute() or Path(self.latex_compiler).name.lower() not in ("xelatex", "xelatex.exe")):
             raise ValueError("LaTeX requires an absolute xelatex executable path")
         if not (1 <= self.latex_timeout_seconds <= 45 and 1 <= self.latex_concurrency <= 2 and 1 <= self.latex_hourly_compiles <= 60):
             raise ValueError("Invalid LaTeX compile bounds")
+        if self.net_exam_bank_path is not None and not self.net_exam_bank_path.parts:
+            raise ValueError("Invalid practice bank path")
         for base in self.compatible_bases:
             validate_base("compatible", base, {"compatible": tuple(self.compatible_bases)})
         return self

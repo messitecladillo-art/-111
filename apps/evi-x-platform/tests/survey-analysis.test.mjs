@@ -110,7 +110,9 @@ test('CSV and reliability calculator keep raw data local; explicit aggregate per
   const source=await readFile(new URL('../components/analysis/SurveyLab.tsx',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\bfetch\s*\(|sendBeacon|localStorage|sessionStorage|indexedDB|dangerouslySetInnerHTML/);
   assert.match(source,/schema: "survey-analysis\/v2"/); assert.match(source,/reliability: currentResult \?/);
-  assert.match(source,/scope:'raw_file_cell_check'/); assert.match(source,/numericColumnRecords/);
+  // Raw versus platform-derived export scope is verified by executing the
+  // real download action in platform-export-scope.test.mjs.
+  assert.match(source,/numericColumnRecords/);
   assert.doesNotMatch(source,/rows: dataset\.table\.rows|rows: table\.rows/);
   assert.match(source,/教学模拟数据/);
 });

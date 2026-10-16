@@ -45,6 +45,36 @@ test('flag-off returns the original children without hooks or a DOM host', () =>
   for (const value of [undefined,'false','1']) { box.process.env.NEXT_PUBLIC_EVIX_RESEARCH_CANVAS = value; assert.equal(box.exports.default({identityKey:'u:p',projectTitle:'项目',activeSection:'design',onOpenEditor(){},children}),children); }
 });
 
+test('the experimental hosted wrapper retains one editor per kind and the current project context', () => {
+  const require = createRequire(import.meta.url), ts = require('typescript');
+  const source = fs.readFileSync(new URL('../components/hosted/HostedProject.tsx', import.meta.url), 'utf8');
+  const tree = ts.createSourceFile('HostedProject.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  assert.deepEqual(tree.parseDiagnostics, []);
+  const openings = [];
+  const visit = node => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) openings.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  const named = name => openings.filter(node => node.tagName.getText(tree) === name);
+  assert.equal(named('ResearchViewHost').length, 1);
+  assert.equal(named('QuestionnaireStudio').length, 1);
+  assert.equal(named('HostedReport').length, 1);
+  for (const name of ['QuestionnaireStudio', 'HostedReport']) {
+    assert.equal(named(name)[0].attributes.properties.some(attribute => attribute.name?.getText(tree) === 'key'), false, `${name} must not be re-keyed on a view change`);
+  }
+  const host = named('ResearchViewHost')[0];
+  const hostAttributes = new Map(host.attributes.properties.map(attribute => [attribute.name?.getText(tree), attribute.initializer?.getText(tree)]));
+  assert.equal(hostAttributes.get('identityKey'), '{`${auth.identityEpoch}:${projectId}`}');
+  assert.equal(hostAttributes.get('activeSection'), '{tab}');
+  assert.equal(hostAttributes.has('key'), false);
+  assert.ok(openings.some(node => node.attributes.properties.some(attribute => attribute.name?.getText(tree) === 'data-knowledge-context')));
+  const tabRegions = openings.flatMap(node => node.attributes.properties.filter(attribute => attribute.name?.getText(tree) === 'hidden').map(attribute => attribute.initializer?.getText(tree)));
+  for (const tab of ['design', 'silicon', 'collection', 'analysis', 'report', 'defense']) assert.ok(tabRegions.includes(`{tab !== '${tab}'}`), tab);
+  const shell = fs.readFileSync(new URL('../components/WorkbenchShell.tsx', import.meta.url), 'utf8');
+  assert.equal(shell.includes('ResearchViewHost'), false, 'the A1 experiment must not wrap the existing A2 canvas');
+});
+
 test('twenty switches preserve the same textarea, caret, direction and nested/page scroll', () => {
   const f = fixture(); f.input.focus(); f.input.setSelectionRange(2,5,'backward'); f.input.scrollTop = 71; f.host.scrollTop = 124; f.page.scrollTop = 456; f.controller.remember(f.input);
   f.editorButton.focus(); f.controller.remember(f.editorButton);

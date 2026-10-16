@@ -1,14 +1,15 @@
 import asyncio
+import time
 from datetime import timedelta, timezone
 import hmac
 import secrets
 import re
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from sqlalchemy import create_engine, select, func, text as sql_text, update
+from sqlalchemy import create_engine, select, func, text as sql_text, update, event
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy.exc import SQLAlchemyError
 from .settings import Settings, BASES, normalize_email, validate_base
@@ -17,12 +18,16 @@ from .models import User, Challenge, RateEvent, Session, Team, Member, Project, 
 from .security import keyed, random_token, code_verifier, config_view, encrypt, decrypt
 from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_proposal
 from . import silicon, surveys
+from .knowledge import register_knowledge
 from .reports import register_reports
 from .latex import register_latex
 from .mail import FixtureMail, ResendMail, MailFailure
+from .survey_import_routes import TemporarySavImports
+from .submission_preflight_routes import TemporarySubmissionPreflights
+from .net_exam import NetExamBank
 
 
-SCHEMA_REVISION = "0004_project_reports"
+SCHEMA_REVISION = "0005_knowledge"
 
 
 def iso(value):
@@ -61,14 +66,18 @@ def silicon_view(run, full=False):
     return result
 
 
-def create_app(settings: Settings | None = None, mail=None, provider=None, engine=None):
+def create_app(settings: Settings | None = None, mail=None, provider=None, engine=None, knowledge_config=None):
     settings = settings or Settings()
     if settings.mode == "production" and (mail is not None or provider is not None or engine is not None):
         raise ValueError("Production rejects injected fixtures")
     owns_engine = engine is None
-    engine = engine or create_engine(settings.database_url, pool_pre_ping=True, pool_size=5, max_overflow=5, echo=False)
+    engine = engine or create_engine(settings.database_url, pool_pre_ping=True, pool_size=5, max_overflow=5,
+                                     pool_timeout=3, connect_args={"connect_timeout": 3}, echo=False)
     mailer = mail or (FixtureMail(settings.mailbox_dir) if settings.mail_mode == "fixture" else ResendMail(settings))
     generator = provider or (FixtureProvider() if settings.provider_mode == "fixture" else LiveProvider())
+    sav_imports = TemporarySavImports(settings)
+    preflights = TemporarySubmissionPreflights(settings)
+
     @asynccontextmanager
     async def lifespan(application):
         if settings.mode == "production":
@@ -78,7 +87,18 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                 revision = connection.execute(sql_text("SELECT version_num FROM alembic_version")).scalar_one()
                 if privileged or owner or revision != SCHEMA_REVISION:
                     raise RuntimeError("API requires current migrations and an unprivileged non-owner database role")
-        yield
+        await sav_imports.sweep()
+        await preflights.sweep()
+        maintenance = asyncio.create_task(sav_imports.maintenance())
+        preflight_maintenance = asyncio.create_task(preflights.maintenance())
+        try:
+            yield
+        finally:
+            maintenance.cancel()
+            preflight_maintenance.cancel()
+            await asyncio.gather(maintenance, preflight_maintenance, return_exceptions=True)
+            await sav_imports.close()
+            await preflights.close()
         loop = asyncio.get_running_loop()
         tasks = [task for task in application.state.silicon_tasks if task.get_loop() is loop]
         for task in tasks:
@@ -89,6 +109,8 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     app = FastAPI(title="EVI-X API", lifespan=lifespan, docs_url=None if settings.mode == "production" else "/docs", redoc_url=None, openapi_url=None if settings.mode == "production" else "/openapi.json")
     app.state.settings, app.state.engine, app.state.provider = settings, engine, generator
     app.state.silicon_tasks = set()
+    app.state.sav_imports = sav_imports
+    app.state.preflights = preflights
 
     @app.middleware("http")
     async def security_headers(request, call_next):
@@ -217,6 +239,110 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
             raise ApiError(422, "invalid_key", "密钥格式无效。")
         return {"label": label, "provider": data["provider"], "base_url": data["baseUrl"], "model": model,
                 "max_output_tokens": integer(data["maxOutputTokens"], 128, 4096), "capabilities": caps}
+
+    @contextmanager
+    def sav_db_session():
+        # This callback runs in a bounded route-owned thread. Connection-pool
+        # acquisition still uses the existing engine's pool bound; never detach
+        # a callback whose transaction may still be active after HTTP cancel.
+        deadline = time.monotonic() + 2.5
+        with engine.connect() as connection:
+            def bound_statement(_connection, cursor, _statement, _parameters, _context, _many):
+                remaining_ms = int((deadline - time.monotonic()) * 1000)
+                if remaining_ms <= 0:
+                    raise ApiError(503, "sav_auth_timeout", "SAV 转换授权等待超时，请稍后重试。")
+                # Values are locally derived integers, never request text. Set
+                # each statement against one absolute transaction deadline.
+                cursor.execute(f"SET LOCAL statement_timeout = {remaining_ms}")
+                cursor.execute(f"SET LOCAL lock_timeout = {min(1000, remaining_ms)}")
+            event.listen(connection, "before_cursor_execute", bound_statement)
+            try:
+                with DBSession(bind=connection, expire_on_commit=False) as session:
+                    yield session
+            finally:
+                event.remove(connection, "before_cursor_execute", bound_statement)
+
+    def sav_authorize(request, charge=False):
+        with sav_db_session() as session:
+            user, _ = session_user(request, session)
+            user_id = user.id
+            if charge:
+                # One transaction serializes admission across API processes.
+                # This lock and connection are released before upload/parse I/O.
+                session.execute(sql_text("SELECT pg_advisory_xact_lock(4489371009)"))
+                scope = keyed(settings, "sav-import-rate/v1", user_id)
+                cutoff = now() - timedelta(hours=1)
+                personal = session.scalar(select(func.count()).select_from(RateEvent).where(
+                    RateEvent.scope == scope, RateEvent.created_at > cutoff))
+                total = session.scalar(select(func.count()).select_from(RateEvent).where(
+                    RateEvent.scope == "sav-import-global", RateEvent.created_at > cutoff))
+                if personal >= settings.sav_hourly_imports or total >= settings.sav_global_hourly_imports:
+                    raise ApiError(429, "sav_rate_limit", "SAV 转换次数较多，请稍后重试。")
+                session.add_all([RateEvent(scope=scope), RateEvent(scope="sav-import-global")])
+                session.commit()
+            return user_id
+
+    def sav_reauthorize(request, expected_user_id):
+        with sav_db_session() as session:
+            user, _ = session_user(request, session)
+            if user.id != expected_user_id:
+                raise ApiError(401, "session_required", "请先登录。")
+
+    @app.post("/api/imports/sav")
+    async def import_sav(request: Request):
+        return await sav_imports.convert(request, sav_authorize, sav_reauthorize)
+
+    @contextmanager
+    def preflight_db_session():
+        deadline = time.monotonic() + 2.5
+        with engine.connect() as connection:
+            def bounded(_connection, cursor, _statement, _parameters, _context, _many):
+                remaining = int((deadline - time.monotonic()) * 1000)
+                if remaining <= 0:
+                    raise ApiError(503, "preflight_auth_timeout", "文件检查授权等待超时，请稍后重试。")
+                cursor.execute(f"SET LOCAL statement_timeout = {remaining}")
+                cursor.execute(f"SET LOCAL lock_timeout = {min(1000, remaining)}")
+            event.listen(connection, "before_cursor_execute", bounded)
+            try:
+                with DBSession(bind=connection, expire_on_commit=False) as session:
+                    yield session
+            finally:
+                event.remove(connection, "before_cursor_execute", bounded)
+
+    def preflight_authorize(request, charge=False):
+        with preflight_db_session() as session:
+            user, _ = session_user(request, session)
+            user_id = user.id
+            if charge:
+                session.execute(sql_text("SELECT pg_advisory_xact_lock(4489371010)"))
+                scope = keyed(settings, "submission-preflight-rate/v1", user_id)
+                cutoff = now() - timedelta(hours=1)
+                personal = session.scalar(select(func.count()).select_from(RateEvent).where(
+                    RateEvent.scope == scope, RateEvent.created_at > cutoff))
+                total = session.scalar(select(func.count()).select_from(RateEvent).where(
+                    RateEvent.scope == "submission-preflight-global", RateEvent.created_at > cutoff))
+                if personal >= settings.preflight_hourly_imports or total >= settings.preflight_global_hourly_imports:
+                    raise ApiError(429, "preflight_rate_limit", "文件检查次数较多，请稍后重试。")
+                session.add_all([RateEvent(scope=scope), RateEvent(scope="submission-preflight-global")])
+                session.commit()
+            return user_id
+
+    def preflight_reauthorize(request, expected_user_id):
+        with preflight_db_session() as session:
+            user, _ = session_user(request, session)
+            if user.id != expected_user_id:
+                raise ApiError(401, "session_required", "请先登录。")
+
+    @app.post("/api/submission/preflight")
+    async def submission_preflight(request: Request):
+        return await preflights.convert(request, preflight_authorize, preflight_reauthorize)
+
+    exam_bank = NetExamBank(settings.net_exam_bank_path)
+
+    @app.get("/api/net-exam/bank")
+    def net_exam_bank(user=Depends(auth)):
+        # The security middleware marks every API response no-store.
+        return Response(exam_bank.body(), media_type="application/json")
 
     @app.get("/api/health")
     def health(session=Depends(db)):
@@ -643,6 +769,8 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                     answers[question["id"]] = silicon.make_answer(question, shown, value, unclear)
                 response["answers"] = [answers[q["id"]] for q in design["questions"]]
         except ProviderFailure as error:
+            # A timeout or 5xx may still have been processed (and billed) by the supplier: keep that
+            # uncertainty instead of reporting a plain failure.
             response.update(status="outcome_unknown" if error.unknown else "failed", answers=[], error=error.code)
         except ApiError:
             response.update(status="failed", answers=[], error="invalid_response")
@@ -682,8 +810,12 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
                     if row is not None and row.status == "running":
                         failed = sum(r["status"] == "failed" for r in row.responses)
                         unknown = sum(r["status"] == "outcome_unknown" for r in row.responses)
-                        row.status = "outcome_unknown" if unknown else "failed" if row.responses and failed == len(row.responses) else "ready"
-                        row.error_code = next((r["error"] for r in row.responses if r["status"] in ("failed", "outcome_unknown")), None) if failed or unknown else None
+                        # A run with unreconciled calls never reads as a success, even when other units answered.
+                        if row.responses and failed == len(row.responses):
+                            row.status = "failed"
+                        else:
+                            row.status = "outcome_unknown" if unknown else "ready"
+                        row.error_code = "unreconciled_calls" if unknown else next((r["error"] for r in row.responses if r["status"] == "failed"), None) if failed else None
                         row.done, row.finished_at, row.updated_at = row.total, now(), now()
                         session.commit()
             await asyncio.to_thread(finish)
@@ -788,6 +920,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
         return silicon_view(row, full=True)
 
     surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
+    register_knowledge(app, settings, db, session_user, owned_project, lock_user, operation, config=knowledge_config)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)
     return app

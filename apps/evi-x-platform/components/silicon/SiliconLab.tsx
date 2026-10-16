@@ -345,7 +345,7 @@ function PersonaInspector({ persona, attributes, run, runDesign, response, share
       <button type="button" className={styles.linkButton} onClick={onReset}>恢复默认外观与背景</button>
     </div>
     {run && runDesign && <div ref={answerRef} className={styles.inspectorBody} hidden={tab !== 'answers'} tabIndex={0} role="region" aria-label={`${persona.code} 的作答记录`}>
-      {!response ? <p className={styles.hint}>这位受访者没有参加当前情境 / 模型的运行。</p> : response.status === 'outcome_unknown' ? <p className={styles.errorNote}>本次调用待对账：{response.error || '尚未收到结果回执'}</p> : response.status === 'failed' ? <p className={styles.errorNote}>本次调用失败：{response.error || '未返回原因'}</p> :
+      {!response ? <p className={styles.hint}>这位受访者没有参加当前情境 / 模型的运行。</p> : response.status === 'failed' ? <p className={styles.errorNote}>本次调用失败：{response.error || '未返回原因'}</p> : response.status === 'outcome_unknown' ? <p className={styles.errorNote}>调用结果未知（{response.error || '未返回原因'}）：供应商可能已处理并计费，未自动重发。</p> :
         <ol className={styles.transcript}>{runDesign.questions.map(q => {
           const a = response.answers.find(x => x.questionId === q.id);
           const text = renderQuestionText(runDesign, q, scenario, answers);

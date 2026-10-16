@@ -1,0 +1,1284 @@
+{
+  "protocol": "agent-collab/v1",
+  "nonce": "review-pack02-20261015",
+  "sender": "/root/knowledge_core",
+  "receiver": "/root",
+  "baseRevision": "630a919",
+  "classification": "original educational explanations; public primary sources; no private project data",
+  "producer": "/root/knowledge_api",
+  "reviewer": "/root/knowledge_core",
+  "reviewedAt": "2026-10-14T16:58:01.089Z",
+  "initialProducerSha256": "22b8e19278f19f0c8b68c91f9927d8d17a7879f5944bca3e6ee3c769be664798",
+  "inputSha256": "7c0f10ceeba87f834d564cff966b6a4af1ce3d52c8a6764917c5d1983a8e0323",
+  "outputSha256": "0120abb51d0bb93b75b346cbde5eea72e885ad58a91382bd20579e42a2edf430",
+  "decision": "approved",
+  "entryCount": 100,
+  "deepCount": 28,
+  "briefCount": 72,
+  "checkedEntryIds": [
+    "price-elasticity-demand",
+    "income-elasticity-demand",
+    "cross-price-elasticity",
+    "willingness-to-pay",
+    "willingness-to-accept",
+    "consumer-surplus",
+    "marginal-utility",
+    "diminishing-marginal-utility",
+    "marginal-cost",
+    "sunk-cost",
+    "externality",
+    "public-good",
+    "common-pool-resource",
+    "information-asymmetry",
+    "adverse-selection",
+    "moral-hazard",
+    "transaction-cost",
+    "bounded-rationality",
+    "loss-aversion",
+    "reference-dependence",
+    "framing-effect",
+    "present-bias",
+    "nudge",
+    "default-effect",
+    "choice-overload",
+    "value-proposition",
+    "perceived-value",
+    "customer-satisfaction",
+    "customer-loyalty",
+    "net-promoter-score",
+    "customer-journey",
+    "touchpoint",
+    "service-quality",
+    "perceived-risk",
+    "switching-cost",
+    "network-effects",
+    "word-of-mouth",
+    "brand-equity",
+    "positioning",
+    "target-market",
+    "stakeholder-analysis",
+    "logic-model",
+    "theory-of-change",
+    "key-performance-indicator",
+    "input-output-outcome",
+    "cost-benefit-analysis",
+    "cost-effectiveness-analysis",
+    "social-capital",
+    "social-norms",
+    "collective-action",
+    "spatial-weights",
+    "spatial-lag",
+    "spatial-nonstationarity",
+    "spatial-heterogeneity",
+    "local-morans-i",
+    "getis-ord-gi-star",
+    "spatial-join",
+    "buffer-analysis",
+    "spatial-kernel-density",
+    "nearest-neighbor-index",
+    "geocoding",
+    "georeferencing",
+    "projection-distortion",
+    "geographic-coordinate-system",
+    "projected-coordinate-system",
+    "geodesic-distance",
+    "spatial-boundary-effect",
+    "network-distance",
+    "accessibility",
+    "catchment-area",
+    "location-allocation",
+    "choropleth-map",
+    "proportional-symbol-map",
+    "spatial-resolution",
+    "raster-data",
+    "vector-geodata",
+    "topology-geographic",
+    "spatial-interpolation",
+    "kriging",
+    "spatial-mismatch",
+    "ontology",
+    "logical-empiricism",
+    "interpretivism",
+    "scientific-realism",
+    "pragmatism",
+    "argument-validity",
+    "argument-soundness",
+    "explanatory-mechanism",
+    "necessary-condition",
+    "sufficient-condition",
+    "counterexample",
+    "counterfactual-reasoning",
+    "underdetermination",
+    "theory-ladenness",
+    "circular-reasoning",
+    "straw-man",
+    "appeal-to-authority",
+    "burden-of-proof",
+    "value-judgment",
+    "methodological-individualism"
+  ],
+  "formulaCount": 6,
+  "sourceUrlCount": 76,
+  "sourceEvidence": [
+    {
+      "id": "mit-demand",
+      "title": "MIT 14.01 2023 Lecture Summaries",
+      "url": "https://ocw.mit.edu/courses/14-01-principles-of-microeconomics-fall-2023/mit14_01_f23_full.pdf",
+      "locator": "2.1 Demand；PDF 第 6–8 页",
+      "scope": "需求弹性、收入变化与替代效应；不用于将问卷意向解释为已识别的需求曲线。",
+      "entryIds": [
+        "price-elasticity-demand",
+        "income-elasticity-demand",
+        "willingness-to-pay",
+        "consumer-surplus"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "mit-cross-price",
+      "title": "MIT: Deriving Demand Curves",
+      "url": "https://ocw.mit.edu/courses/14-01sc-principles-of-microeconomics-fall-2011/pages/unit-2-consumer-theory/deriving-demand-curves/",
+      "locator": "Concept Quiz, Question 1 的解答；cross-price elasticity",
+      "scope": "课程定义，使用独立的原创例子；未复制课程试题。",
+      "entryIds": [
+        "cross-price-elasticity"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "green-book",
+      "title": "HM Treasury: The Green Book 2026",
+      "url": "https://www.gov.uk/government/publications/the-green-book--2/the-green-book-2026",
+      "locator": "Appraising options → Sunk costs；cost-benefit and cost-effectiveness",
+      "scope": "仅借鉴评价概念；英国公共项目的法定程序、折现参数不适用于赛事项目。",
+      "entryIds": [
+        "willingness-to-pay",
+        "sunk-cost",
+        "cost-benefit-analysis",
+        "cost-effectiveness-analysis"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "imf-environment-valuation",
+      "title": "IMF: The Economist’s Approach to Sustainable Development",
+      "url": "https://www.elibrary.imf.org/view/journals/022/0030/004/article-A006-en.xml",
+      "locator": "Environmental valuation：willingness to pay and willingness to accept compensation",
+      "scope": "已读取原出版方公开检索片段；直连为 403，未声称已读全文。",
+      "entryIds": [
+        "willingness-to-accept"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "kahneman",
+      "title": "Daniel Kahneman: Maps of Bounded Rationality",
+      "url": "https://www.nobelprize.org/uploads/2018/06/kahnemann-lecture.pdf",
+      "locator": "Reference dependence、loss aversion 与 framing 段落",
+      "scope": "只支持行为机制解释；不把特定实验损失厌恶参数视作所有人固定值。",
+      "entryIds": [
+        "willingness-to-accept",
+        "loss-aversion",
+        "reference-dependence",
+        "framing-effect"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "mit-utility",
+      "title": "MIT Preferences and Utility",
+      "url": "https://ocw.mit.edu/courses/14-01sc-principles-of-microeconomics-fall-2011/pages/unit-2-consumer-theory/preferences-and-utility/",
+      "locator": "Preferences and Utility 单元及边际效用说明",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "marginal-utility",
+        "diminishing-marginal-utility"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "imf-supply",
+      "title": "IMF Back to Basics: Supply and Demand",
+      "url": "https://www.imf.org/en/publications/fandd/issues/series/back-to-basics/supply-and-demand",
+      "locator": "What determines supply and demand；marginal cost and utility",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "marginal-cost"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "imf-externality",
+      "title": "IMF Back to Basics: Externalities",
+      "url": "https://www.imf.org/en/publications/fandd/issues/series/back-to-basics/externalities",
+      "locator": "Externalities；positive and negative effects；private and social costs",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "externality"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "imf-public",
+      "title": "IMF Back to Basics: What Are Global Public Goods?",
+      "url": "https://www.imf.org/en/Publications/fandd/issues/2021/12/global-public-goods-chin-basics",
+      "locator": "Public goods；nonrivalry and nonexcludability",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "public-good",
+        "collective-action"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "ostrom",
+      "title": "Elinor Ostrom: Nobel interview transcript, 2009",
+      "url": "https://www.nobelprize.org/prizes/economic-sciences/2009/ostrom/164465-ostrom-williamson-interview-transcript/",
+      "locator": "作者关于公共池资源与共同治理的访谈",
+      "scope": "作者本人说明；用于公共池资源与合作问题，不提供通用治理成功保证。",
+      "entryIds": [
+        "common-pool-resource",
+        "collective-action"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "asymmetry",
+      "title": "Nobel Prize 2001: Markets with Asymmetric Information",
+      "url": "https://www.nobelprize.org/prizes/economic-sciences/2001/press-release/",
+      "locator": "Information asymmetry；Akerlof、Spence、Stiglitz 的贡献",
+      "scope": "已读取主站公开内容的检索缓存；直连曾返回 403。",
+      "entryIds": [
+        "information-asymmetry",
+        "adverse-selection"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "myerson",
+      "title": "Roger Myerson: Biographical",
+      "url": "https://www.nobelprize.org/prizes/economic-sciences/2007/myerson/biographical/",
+      "locator": "作者关于 hidden actions、moral hazard 与 adverse selection 的段落",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "moral-hazard"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "coase",
+      "title": "Ronald Coase: The Institutional Structure of Production",
+      "url": "https://www.nobelprize.org/prizes/economic-sciences/1991/coase/lecture/",
+      "locator": "Transaction costs；information、negotiation、contracts、enforcement",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "transaction-cost"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "simon",
+      "title": "Herbert Simon: Rational Decision-Making in Business Organizations",
+      "url": "https://www.nobelprize.org/uploads/2018/06/simon-lecture.pdf",
+      "locator": "Bounded rationality 与组织决策段落",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "bounded-rationality"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "present-bias",
+      "title": "David Laibson: Golden Eggs and Hyperbolic Discounting",
+      "url": "https://scholar.harvard.edu/files/laibson/files/golden_eggs_and_hyperbolic_discounting.pdf",
+      "locator": "Abstract and Introduction；dynamic inconsistency and commitment",
+      "scope": "作者机构公开原稿；跨期偏好机制，不迁移文中宏观实证结论。",
+      "entryIds": [
+        "present-bias"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "thaler",
+      "title": "Richard Thaler: From Cashews to Nudges",
+      "url": "https://www.nobelprize.org/uploads/2018/01/thaler-lecture.pdf",
+      "locator": "Nudges、choice architecture、default pension plans；印刷页 510",
+      "scope": "已读取诺奖主站 PDF 的公开检索片段；直连一度失败，未声称通读全文。",
+      "entryIds": [
+        "nudge",
+        "default-effect"
+      ],
+      "reviewScope": "primary publisher/author search-cache passage; direct load failed; no full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "choice-overload",
+      "title": "Iyengar and Lepper: When Choice Is Demotivating",
+      "url": "https://business.columbia.edu/faculty/research/when-choice-demotivating-can-one-desire-too-much-good-thing",
+      "locator": "作者机构公开 Abstract；2000",
+      "scope": "作者机构摘要；研究结果有情境条件，不声称选项越多必定越差。",
+      "entryIds": [
+        "choice-overload"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "value-proposition",
+      "title": "Strategyzer: The Value Proposition Canvas",
+      "url": "https://www.strategyzer.com/library/the-value-proposition-canvas",
+      "locator": "Customer jobs、pains、gains 与价值主张匹配",
+      "scope": "框架提出者的说明；不复用其画布图形或将商业框架视为因果模型。",
+      "entryIds": [
+        "value-proposition",
+        "positioning"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "perceived-value",
+      "title": "Teas and Agarwal: Extrinsic Product Cues, Quality, Sacrifice, and Value",
+      "url": "https://journals.sagepub.com/doi/10.1177/0092070300282008",
+      "locator": "Abstract；Journal of the Academy of Marketing Science 28(2), 2000",
+      "scope": "原论文公开摘要；仅支持感知质量、付出与价值的概念关系，不复制付费全文。",
+      "entryIds": [
+        "perceived-value"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "satisfaction",
+      "title": "Oliver: A Cognitive Model of Satisfaction Decisions",
+      "url": "https://journals.sagepub.com/doi/10.1177/002224378001700405",
+      "locator": "Abstract；Journal of Marketing Research 17(4), 1980",
+      "scope": "原论文公开摘要；期望与不确认是解释框架，不假设所有满意度都服从同一公式。",
+      "entryIds": [
+        "customer-satisfaction"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "loyalty",
+      "title": "Singh and Sirdeshmukh: Agency and Trust Mechanisms",
+      "url": "https://journals.sagepub.com/doi/10.1177/0092070300281014",
+      "locator": "Abstract；Journal of the Academy of Marketing Science 28(1), 2000",
+      "scope": "原论文公开摘要；区分单次满意度与持续交换关系。",
+      "entryIds": [
+        "customer-loyalty"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "nps",
+      "title": "Bain: Measuring Your Net Promoter Score",
+      "url": "https://www.netpromotersystem.com/about/measuring-your-net-promoter-score/",
+      "locator": "Promoters 9–10；Passives 7–8；Detractors 0–6；NPS calculation",
+      "scope": "指标提出方的计分规范；不采纳网页营销效果承诺。",
+      "entryIds": [
+        "net-promoter-score"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "journey",
+      "title": "Lemon and Verhoef: Understanding Customer Experience Throughout the Customer Journey",
+      "url": "https://pure.rug.nl/ws/files/81733365/Understanding_Customer_Experience_Throughout_the_Customer_Journey.pdf",
+      "locator": "Customer Journey and Touch Points；正文页 76–78；Figure 1",
+      "scope": "作者机构版本；旅程与触点分类，不复制文章图表。",
+      "entryIds": [
+        "customer-journey",
+        "touchpoint"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "service-quality",
+      "title": "Bojanic and Rosen: Measuring Service Quality in Restaurants",
+      "url": "https://scholarsmine.mst.edu/bio_inftec_facwork/566/",
+      "locator": "作者机构公开 Abstract；Journal of Hospitality & Tourism Research 18(1), 1994",
+      "scope": "原论文公开摘要；服务质量的情境应用，不冒充已验证通用量表。",
+      "entryIds": [
+        "service-quality"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "risk",
+      "title": "Online customer behavior: perceptions of risks incurred through online purchases",
+      "url": "https://www.nature.com/articles/s41599-020-0389-4",
+      "locator": "Perceived risk；风险维度与研究设计段落",
+      "scope": "原研究论文；概念说明不迁移其样本结果。",
+      "entryIds": [
+        "perceived-risk"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "network-costs",
+      "title": "Farrell and Klemperer: Coordination and Lock-In",
+      "url": "https://www.nuff.ox.ac.uk/economics/papers/2006/w7/Farrell_KlempererWP.pdf",
+      "locator": "Abstract；2 Switching Costs；3 Network Effects",
+      "scope": "作者机构工作论文；区分个人迁移成本与他人使用带来的价值。",
+      "entryIds": [
+        "switching-cost",
+        "network-effects"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "word-mouth",
+      "title": "Barreto: The Word-of-Mouth Phenomenon in the Social Media Era",
+      "url": "https://journals.sagepub.com/doi/abs/10.2501/IJMR-2014-043",
+      "locator": "Abstract；International Journal of Market Research 56(5), 2014",
+      "scope": "原作者综述公开摘要；概念用于渠道辨析，未读取付费全文。",
+      "entryIds": [
+        "word-of-mouth"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "brand-equity",
+      "title": "Keller: Customer-Based Brand Equity",
+      "url": "https://journals.sagepub.com/doi/10.1177/002224299305700101",
+      "locator": "Abstract；Journal of Marketing 57(1), 1993",
+      "scope": "原论文公开摘要；消费者层面的品牌知识作用，不等同财务品牌估值。",
+      "entryIds": [
+        "brand-equity"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": true,
+      "passageChecked": true
+    },
+    {
+      "id": "ama-strategy",
+      "title": "AMA Marketing Competency Model",
+      "url": "https://www.ama.org/ama-marketing-competency-model/",
+      "locator": "Strategy & Planning；Positioning & Targeting",
+      "scope": "专业协会框架，只支持策略术语与实践位置。",
+      "entryIds": [
+        "positioning",
+        "target-market"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "ama-segments",
+      "title": "AMA: Better Segmentation for Better Insights",
+      "url": "https://www.ama.org/marketing-news/better-segmentation-for-better-insights/",
+      "locator": "Segmentation Overview 与优先细分群体",
+      "scope": "作者在专业协会发布的实践说明；仅支持细分到目标市场的联系。",
+      "entryIds": [
+        "target-market"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "stakeholders",
+      "title": "Government Analysis Function: Stakeholder Mapping",
+      "url": "https://analysisfunction.civilservice.gov.uk/policy-store/stakeholder-mapping/",
+      "locator": "How to map stakeholders；Assessing power and interest",
+      "scope": "公共部门实践方法；矩阵分数是调查判断，不是客观固定属性。",
+      "entryIds": [
+        "stakeholder-analysis"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "logic",
+      "title": "CDC: Step 2 Describe the Program",
+      "url": "https://www.cdc.gov/evaluation/php/evaluation-framework-action-guide/step-2-describe-the-program.html",
+      "locator": "Logic models；inputs、activities、outputs、outcomes",
+      "scope": "方案逻辑与结果链；逻辑图本身不证明干预因果效果。",
+      "entryIds": [
+        "logic-model",
+        "theory-of-change",
+        "input-output-outcome"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "cdc-framework",
+      "title": "CDC Program Evaluation Framework, 2024",
+      "url": "https://www.cdc.gov/mmwr/volumes/73/rr/rr7306a1.htm",
+      "locator": "Describe the Program；logic model assumptions and contextual factors",
+      "scope": "用于评价框架和可检验的路径，不代替实证因果识别。",
+      "entryIds": [
+        "theory-of-change"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "kpi",
+      "title": "GOV.UK Service Manual: Using performance data to improve your service",
+      "url": "https://www.gov.uk/service-manual/measuring-success/using-data-to-improve-your-service-an-introduction",
+      "locator": "Metrics and measurements；Choosing KPIs",
+      "scope": "一般服务绩效测量；不把英国公共服务四项指标作为本项目固定要求。",
+      "entryIds": [
+        "key-performance-indicator"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "oecd-efficiency",
+      "title": "OECD: Applying Evaluation Criteria Thoughtfully",
+      "url": "https://www.oecd.org/en/publications/applying-evaluation-criteria-thoughtfully_543e84ed-en/full-report/understanding-the-six-criteria-definitions-elements-for-analysis-and-key-challenges_2843ff7d.html",
+      "locator": "Efficiency；effectiveness；results chain",
+      "scope": "评价概念，不把不同目标、不同比较期的成本效果比直接并列。",
+      "entryIds": [
+        "cost-effectiveness-analysis"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "social-capital",
+      "title": "OECD: Four Interpretations of Social Capital",
+      "url": "https://www.oecd.org/en/publications/four-interpretations-of-social-capital_5jzbcx010wmt-en.html",
+      "locator": "Abstract；relationships、support、civic engagement、trust",
+      "scope": "概念有多种解释，调查应明确采用的维度。",
+      "entryIds": [
+        "social-capital"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "social-norms",
+      "title": "Stanford Encyclopedia of Philosophy: Social Norms",
+      "url": "https://plato.stanford.edu/entries/social-norms/",
+      "locator": "3–5；Empirical and normative expectations",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "social-norms"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "weights",
+      "title": "Luc Anselin: Spatial Weights, GeoDa Workbook",
+      "url": "https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html",
+      "locator": "Spatial weights basic concepts；Queen and Rook contiguity",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "spatial-weights"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "spatial-lag",
+      "title": "PySAL: W to Graph Migration Guide",
+      "url": "https://pysal.org/libpysal/stable/user-guide/graph/w_g_migration.html",
+      "locator": "Spatial Lag；weighted sum and row-standardized weighted average",
+      "scope": "软件作者文档，数值空间滞后；不将平均值自动解释成空间回归因果效应。",
+      "entryIds": [
+        "spatial-lag"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "gwr",
+      "title": "Esri: Geographically Weighted Regression",
+      "url": "https://pro.arcgis.com/en/pro-app/3.3/tool-reference/spatial-statistics/geographicallyweightedregression.htm",
+      "locator": "Summary；spatially varying relationships",
+      "scope": "概念依据；证见目前没有登记 GWR 执行器。",
+      "entryIds": [
+        "spatial-nonstationarity",
+        "spatial-heterogeneity"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "gwmodel",
+      "title": "Lu et al.: The GWmodel R package: Further Topics for Exploring Spatial Heterogeneity using Geographically Weighted Models",
+      "url": "https://arxiv.org/abs/1312.2753",
+      "locator": "作者原稿 Abstract；局部统计与非平稳性",
+      "scope": "原作者公开摘要；区分整体空间差异与关系随位置变化。",
+      "entryIds": [
+        "spatial-heterogeneity"
+      ],
+      "reviewScope": "primary public abstract only; original explanation, no paid full-text claim",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "local-moran",
+      "title": "Esri: How Cluster and Outlier Analysis Works",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-cluster-and-outlier-analysis-anselin-local-m.html",
+      "locator": "Local Moran I；HH/LL/HL/LH；permutation and FDR",
+      "scope": "特定实现的公式与显著性选项；权重、方差分母和检验方式须记录。",
+      "entryIds": [
+        "local-morans-i"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "gi-star",
+      "title": "Esri: How Hot Spot Analysis Getis-Ord Gi* Works",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-hot-spot-analysis-getis-ord-gi-spatial-stati.html",
+      "locator": "Gi* statistic；spatial weights；FDR correction",
+      "scope": "局部统计热点检验；不等于核密度高值图。",
+      "entryIds": [
+        "getis-ord-gi-star"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "spatial-join",
+      "title": "Esri: Spatial Join",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/analysis/spatial-join.html",
+      "locator": "Join operation；Match option；Join_Count",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "spatial-join"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "buffer",
+      "title": "Esri: Buffer",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/analysis/buffer.html",
+      "locator": "Distance；Planar and Geodesic methods",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "buffer-analysis"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "kde",
+      "title": "Esri: How Kernel Density Works",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-analyst/how-kernel-density-works.html",
+      "locator": "Point features；Search radius；Population field；Barriers",
+      "scope": "该工具输出计数或加权强度；概率密度的归一化需另外明确。",
+      "entryIds": [
+        "spatial-kernel-density"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "edge-correction",
+      "title": "spatstat: K-function and Edge Corrections",
+      "url": "https://search.r-project.org/CRAN/refmans/spatstat.explore/html/Kest.html",
+      "locator": "Details；unobserved neighbours and border/translation/isotropic corrections",
+      "scope": "软件作者对点过程边缘校正的说明；不将某种校正自动推广到所有空间分析。",
+      "entryIds": [
+        "spatial-kernel-density",
+        "spatial-boundary-effect"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "nearest",
+      "title": "Esri: How Average Nearest Neighbor Works",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-average-nearest-neighbor-distance-spatial-st.html",
+      "locator": "Average nearest neighbor ratio；Study area and independence",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "nearest-neighbor-index"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "geocode",
+      "title": "Esri: Locator geocode Method",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/arcpy/geocoding/locator-class.html",
+      "locator": "geocode(searchText, ...)：candidate points and score",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "geocoding"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "georeference",
+      "title": "Esri: Overview of Georeferencing",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/help/data/imagery/overview-of-georeferencing.html",
+      "locator": "Control points；transformations；RMS error",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "georeferencing"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "projection",
+      "title": "Esri: Choose the Right Projection",
+      "url": "https://learn.arcgis.com/en/projects/choose-the-right-projection/",
+      "locator": "Conformal、equal-area、equidistant 与任务选择",
+      "scope": "只借鉴投影几何性质；涉及中国底图的来源和地图合规需另行确认。",
+      "entryIds": [
+        "projection-distortion"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "coordinates",
+      "title": "ArcGIS: Coordinate Systems",
+      "url": "https://developers.arcgis.com/geoanalytics-fabric/core-concepts/coordinate-systems/",
+      "locator": "Geographic and projected coordinates；planar and geodesic measurements",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "geographic-coordinate-system",
+        "projected-coordinate-system",
+        "geodesic-distance"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "service-area",
+      "title": "Esri: Service Area Analysis Layer",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/help/analysis/networks/service-area-analysis-layer.html",
+      "locator": "Polygons and Lines；Travel Settings；Cutoffs",
+      "scope": "网络服务范围；出发方向、交通模式和时刻会改变范围。",
+      "entryIds": [
+        "network-distance",
+        "catchment-area"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "accessibility",
+      "title": "FHWA: Freight Performance Measure Primer, Chapter 4",
+      "url": "https://ops.fhwa.dot.gov/publications/fhwahop16089/chp4.htm",
+      "locator": "Accessibility；contour/cumulative opportunities and gravity measures",
+      "scope": "可达性测量概念；本条展示阈值累计机会形式，不声称它唯一或最优。",
+      "entryIds": [
+        "accessibility"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "location-allocation",
+      "title": "Esri: Location-Allocation Analysis Layer",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/help/analysis/networks/location-allocation-analysis-layer.html",
+      "locator": "Facilities；Demand Points；Problem Type",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "location-allocation"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "choropleth",
+      "title": "Esri: Normalization for Choropleth Maps",
+      "url": "https://www.esri.com/arcgis-blog/products/arcgis-online/mapping/normalization-for-choropleth-maps",
+      "locator": "Choropleth maps versus graduated/proportional symbols",
+      "scope": "作者制图指南；原始总量与归一化率采用不同表达。",
+      "entryIds": [
+        "choropleth-map"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "proportional-symbols",
+      "title": "Esri: Proportional Symbols",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/help/mapping/layer-properties/proportional-symbology.html",
+      "locator": "Relative Size；unclassed symbols；appearance compensation",
+      "scope": "制图参数的概念说明；保持量值和符号面积的映射清楚。",
+      "entryIds": [
+        "proportional-symbol-map"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "qgis-raster",
+      "title": "QGIS 3.40: Raster Data",
+      "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/raster_data.html",
+      "locator": "6.1–6.5；cells、bands、Spatial Resolution",
+      "scope": "版本固定的概念文档；该版已结束维护，未推荐它作为当前安装版本。",
+      "entryIds": [
+        "spatial-resolution",
+        "raster-data"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "qgis-vector",
+      "title": "QGIS 3.40: Vector Data",
+      "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/vector_data.html",
+      "locator": "Points、Polylines、Polygons 与属性",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "vector-geodata"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "qgis-topology",
+      "title": "QGIS 3.40: Topology",
+      "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/topology.html",
+      "locator": "7.1–7.3；adjacency、connectivity、topology rules",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "topology-geographic"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "kriging",
+      "title": "Esri: How Kriging Works",
+      "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-analyst/how-kriging-works.html",
+      "locator": "Kriging formula；Variography；prediction and variance",
+      "scope": "空间随机场插值；普通克里金的均值、协方差条件和模型不确定性需说明。",
+      "entryIds": [
+        "spatial-interpolation",
+        "kriging"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "spatial-mismatch",
+      "title": "Michael Stoll: Job Sprawl and Spatial Mismatch",
+      "url": "https://www.brookings.edu/articles/job-sprawl-and-the-spatial-mismatch-between-blacks-and-jobs/",
+      "locator": "作者原创研究摘要；位置、就业与通达障碍",
+      "scope": "仅借鉴空间错配概念；美国研究结果不迁移到中国调查对象。",
+      "entryIds": [
+        "spatial-mismatch"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "ontology",
+      "title": "Stanford Encyclopedia of Philosophy: Logic and Ontology",
+      "url": "https://plato.stanford.edu/entries/logic-ontology/",
+      "locator": "3 Ontology；objects、properties、relations",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "ontology"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "empiricism",
+      "title": "Stanford Encyclopedia of Philosophy: Logical Empiricism",
+      "url": "https://plato.stanford.edu/entries/logical-empiricism/",
+      "locator": "Logical empiricism and verification；历史流派内部差异",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "logical-empiricism"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "method-individualism",
+      "title": "Stanford Encyclopedia of Philosophy: Methodological Individualism",
+      "url": "https://plato.stanford.edu/entries/methodological-individualism/",
+      "locator": "1–2；individual actions、Weber and interpretation",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "interpretivism",
+        "methodological-individualism"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "realism",
+      "title": "Stanford Encyclopedia of Philosophy: Scientific Realism",
+      "url": "https://plato.stanford.edu/entries/scientific-realism/",
+      "locator": "1.1–1.2；Epistemic attitude and the three dimensions of realist commitment",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "scientific-realism"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "pragmatism",
+      "title": "Stanford Encyclopedia of Philosophy: Pragmatism",
+      "url": "https://plato.stanford.edu/entries/pragmatism/",
+      "locator": "The Pragmatic Maxim；practical consequences",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "pragmatism"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "logical-consequence",
+      "title": "Stanford Encyclopedia of Philosophy: Logical Consequence",
+      "url": "https://plato.stanford.edu/entries/logical-consequence/",
+      "locator": "Truth preservation；validity and form",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "argument-validity",
+        "counterexample"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "informal-logic",
+      "title": "Stanford Encyclopedia of Philosophy: Informal Logic",
+      "url": "https://plato.stanford.edu/entries/logic-informal/",
+      "locator": "4.1 AV Criteria；sound argument = valid argument with true premises",
+      "scope": "演绎论证健全性的定义；与证明系统的健全性分别理解。",
+      "entryIds": [
+        "argument-soundness"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "mechanisms",
+      "title": "Stanford Encyclopedia of Philosophy: Mechanisms in Science",
+      "url": "https://plato.stanford.edu/entries/science-mechanisms/",
+      "locator": "Entities、activities、organization；how-possibly and how-actually",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "explanatory-mechanism"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "conditions",
+      "title": "Stanford Encyclopedia of Philosophy: Necessary and Sufficient Conditions",
+      "url": "https://plato.stanford.edu/entries/necessary-sufficient/",
+      "locator": "Standard theory；material implication and converse",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "necessary-condition",
+        "sufficient-condition",
+        "counterexample"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "counterfactuals",
+      "title": "Stanford Encyclopedia of Philosophy: Counterfactuals",
+      "url": "https://plato.stanford.edu/entries/counterfactuals/",
+      "locator": "Counterfactual conditionals；possible situations and causal reasoning",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "counterfactual-reasoning"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "underdetermination",
+      "title": "Stanford Encyclopedia of Philosophy: Scientific Underdetermination",
+      "url": "https://plato.stanford.edu/entries/scientific-underdetermination/",
+      "locator": "Evidence and competing explanations",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "underdetermination"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "theory-observation",
+      "title": "Stanford Encyclopedia of Philosophy: Theory and Observation in Science",
+      "url": "https://plato.stanford.edu/entries/science-theory-observation/",
+      "locator": "Theory-ladenness and observation",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "theory-ladenness"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "fallacies",
+      "title": "Stanford Encyclopedia of Philosophy: Fallacies",
+      "url": "https://plato.stanford.edu/entries/fallacies/",
+      "locator": "Begging the question；straw man；appeal to authority；burden of proof",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "circular-reasoning",
+        "straw-man",
+        "appeal-to-authority",
+        "burden-of-proof"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    },
+    {
+      "id": "value-theory",
+      "title": "Stanford Encyclopedia of Philosophy: Value Theory",
+      "url": "https://plato.stanford.edu/entries/value-theory/",
+      "locator": "1 Basic Questions；good、better、good for",
+      "scope": "概念依据；本条用途与教学例子为原创解释。",
+      "entryIds": [
+        "value-judgment"
+      ],
+      "reviewScope": "primary relevant HTML/PDF section read; not a full-document read",
+      "directLoadFailed": false,
+      "passageChecked": true
+    }
+  ],
+  "semanticFindingsClosed": [
+    {
+      "id": "green-book-locator",
+      "finding": "2026 HTML has Sunk costs heading; obsolete6.32 removed",
+      "owner": "/root/knowledge_api"
+    },
+    {
+      "id": "mit-welfare-text",
+      "finding": "video landing replaced by actual MIT2023PDF4.1.2,page17 supporting marginalWTP and surplus",
+      "owner": "/root/knowledge_api"
+    },
+    {
+      "id": "gwmodel-author",
+      "finding": "arXiv1312.2753 authors Lu/Harris/Charlton/Brunsdon; Gollini attribution removed",
+      "owner": "/root/knowledge_api"
+    },
+    {
+      "id": "activity-output-example",
+      "finding": "organizing training is activity; completed training count and guidance count are output; lost-way proportion is outcome",
+      "owner": "/root/knowledge_api"
+    },
+    {
+      "id": "soundness-source",
+      "finding": "argument soundness now direct SEPInformalLogic4.1 rather than proof-system soundness discussion",
+      "owner": "/root/knowledge_api"
+    },
+    {
+      "id": "realism-locator",
+      "finding": "three commitments located1.2; locator now1.1–1.2",
+      "owner": "/root/knowledge_api"
+    }
+  ],
+  "supplementaryPrimaryChecks": [
+    {
+      "url": "https://www.epa.gov/sites/default/files/2017-09/documents/ee-0228c-07.pdf",
+      "locator": "7.2.1 Welfare Measures",
+      "scope": "WTP maximum and WTA minimum; not necessarily equal. Concept only; no US regulatory parameters imported."
+    },
+    {
+      "url": "https://geostatisticslessons.com/lessons/krigingweights",
+      "locator": "Negative Weights",
+      "scope": "Original author lesson supports negative kriging weights under positive-definite covariance."
+    },
+    {
+      "url": "https://laibson.scholars.harvard.edu/sites/g/files/omnuum5971/files/laibson/files/golden_eggs_and_hyperbolic_discounting.pdf",
+      "locator": "Abstract and introduction",
+      "scope": "Actual author-hosted alternate read; dynamic inconsistency and commitment; no empirical result transfer."
+    }
+  ],
+  "checks": [
+    {
+      "name": "global schema, refs and uniqueIDs",
+      "total": 460,
+      "exit": 0
+    },
+    {
+      "name": "strictKaTeX trustfalse",
+      "total": 6,
+      "exit": 0
+    },
+    {
+      "name": "independent numeric/formula checks",
+      "total": 7,
+      "exit": 0
+    },
+    {
+      "name": "unchanged200querygold",
+      "total": 200,
+      "matched": 200,
+      "scope": "Transient test-only reviewed copies across460; does not approve unrelated draft packs",
+      "exit": 0
+    },
+    {
+      "name": "actual core search/context tests",
+      "total": 15,
+      "pass": 15,
+      "fail": 0,
+      "skip": 0,
+      "exit": 0,
+      "p95Ms": 7.51,
+      "engine": "Node24.15.0",
+      "scope": "Node test, not browser benchmark"
+    }
+  ],
+  "independentNumericChecks": {
+    "priceElasticity": {
+      "demand": "250-15P",
+      "atP": 10,
+      "atQ": 100,
+      "elasticity": -1.5
+    },
+    "consumerSurplus": 30,
+    "nps": 10,
+    "spatialLag": 15,
+    "proportionalCircleRadiusRatio": 2,
+    "cumulativeOpportunityAt15": 7,
+    "ordinaryKriging": {
+      "jointCovariance": [
+        [
+          1,
+          0.8,
+          0.9
+        ],
+        [
+          0.8,
+          1,
+          0.5
+        ],
+        [
+          0.9,
+          0.5,
+          1
+        ]
+      ],
+      "determinant": 0.020000000000000018,
+      "weights": [
+        1.5,
+        -0.5
+      ],
+      "sum": 1,
+      "predictionErrorVariance": 0.09999999999999964
+    }
+  },
+  "initialCheckFailure": {
+    "scope": "review command arithmetic assertion only",
+    "exit": 1,
+    "reason": "strict equality used for binary floating-point and an incorrectly typed elasticity fixture; corrected independent sample and tolerance before accepted checks",
+    "productFailure": false
+  },
+  "unresolvedCriticalFindings": [],
+  "limitations": [
+    "Only these100entries receive semantic approval; other packs remain under their own independent review.",
+    "Public abstract/cache passages support concept explanations, not full-paper methods or result replication.",
+    "Definitions and teaching examples are original short factual explanations; no textbook/article full text or figures imported.",
+    "No hard competition rule newly bound, no model/GIS executor claimed, no CLI stage or Gate changed.",
+    "UI, OCR, provider billing, browser acceptance, Git and release publication are coordinator scope."
+  ],
+  "nextAction": "Coordinator may include exact reviewed content hash in release manifest and PR; child stops after handoff."
+}

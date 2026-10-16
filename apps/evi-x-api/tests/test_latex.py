@@ -142,7 +142,7 @@ def test_schema_keeps_unfinished_latex_and_legacy_without_adding_fields():
         with pytest.raises(ApiError): report_content({**old, "latex": bad})
     large = copy.deepcopy(updated)
     large["latex"]["body"] = "中" * 120000
-    large["report"] = [{"id": str(i), "title": "", "source": "", "body": "中" * 12000} for i in range(5)]
+    large["report"] = [{"id": str(i), "title": "", "source": "", "body": "中" * 12000} for i in range(50)]
     with pytest.raises(ApiError) as error: report_content(large)
     assert error.value.status == 413
 
