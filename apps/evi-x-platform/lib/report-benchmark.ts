@@ -1,16 +1,14 @@
-/**
- * A deterministic health check of a report against the blueprint. It inspects structure and how evidence
- * is presented, never whether the research itself is right. Full-credit lines sit at roughly sixty per cent
- * of the statistics of a well-reviewed competition report: about 33 thousand characters of body prose,
- * 39 figures, 23 tables, 23 display formulas, and data in 57 % of its paragraphs.
+/** Checks observable report evidence completeness, not award quality or methodological correctness.
+ * Counts are descriptive. Adding methods, words, figures or formulas never earns credit by itself.
  */
 import type { EditorContent, ReportSection } from './editor-model.ts';
+import { findingNeedsReview } from './research-quality.ts';
 import { reportHeadingLevel, reportPart, type ReportPart } from './report-format.ts';
 import { BLUEPRINT_MODULE_LABELS, blueprintNode, matchBlueprintNode, stripHeadingNumber, type BlueprintModule, type BlueprintNode } from './report-blueprint.ts';
 
 export const BENCHMARK_DIMENSIONS = {
-  structure: '结构完整', design: '方案严谨', data: '数据质量', analysis: '分析深度',
-  figures: '图表规范', actions: '结论可执行', compliance: '合规披露',
+  structure: '结构记录', design: '设计记录', data: '数据记录', analysis: '分析记录',
+  figures: '图表引用', actions: '发现与行动', compliance: '来源与披露',
 } as const;
 export type BenchmarkDimension = keyof typeof BENCHMARK_DIMENSIONS;
 export type BenchmarkFix = { label: string; insert?: string; module?: BlueprintModule; findings?: true };
@@ -21,10 +19,8 @@ export type BenchmarkResult = {
   dimensions: { id: BenchmarkDimension; label: string; score: number; passed: number; total: number }[];
   checks: BenchmarkCheck[];
 };
-export const BENCHMARK_TARGETS = {
-  abstract: [800, 2000], keywords: [3, 8], bodyChars: 25000, figures: 25, tables: 15, formulas: 12,
-  references: 10, citations: 5, numericShare: 0.4, paragraphMedian: [60, 180], referenceShare: 0.6, methods: 4, findings: 3,
-} as const;
+/** Writing hints only. They are never score thresholds or competition requirements. */
+export const BENCHMARK_TARGETS = { abstract: [800, 2000], keywords: [3, 8], paragraphMedian: [60, 180] } as const;
 
 const HINT = /写作提示】/;
 /** Lines the author actually wrote: guidance blocks (a hint marker through the next blank line) are skipped. */
@@ -66,8 +62,6 @@ const METHODS: readonly (readonly [string, RegExp, 'test' | 'model'])[] = [
   ['机器学习', /决策树|随机森林|XGBoost|神经网络|支持向量机/, 'model'],
   ['联合分析', /联合分析|conjoint/i, 'model'],
 ];
-/** Registered analysis results name their method; map it onto the same vocabulary. */
-const RESULT_METHODS: Record<string, string> = { crosstab: '卡方检验', groups: '组间差异检验', pearson: '相关分析', spearman: '相关分析' };
 
 const insert = (id: string): BenchmarkFix => ({ label: `插入「${blueprintNode(id).title}」`, insert: id });
 const go = (module: BlueprintModule): BenchmarkFix => ({ label: `去${BLUEPRINT_MODULE_LABELS[module]}`, module });
@@ -117,21 +111,15 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const keywordLine = abstract?.lines.find(l => /^关键词[:：]/.test(l));
   const abstractChars = abstract ? abstract.lines.filter(l => l !== keywordLine).join('').length : 0;
   const [abstractMin, abstractMax] = BENCHMARK_TARGETS.abstract;
-  add('abstract', 'structure', '摘要篇幅', !abstract ? 0 : abstractChars < abstractMin ? abstractChars / abstractMin : abstractChars > abstractMax ? 0.7 : 1,
-    !abstract ? '没有摘要章节。' : `摘要约 ${thousands(abstractChars)} 字，建议 ${abstractMin}–${abstractMax} 字。`, fixIfMissing('abstract'));
+  add('abstract', 'structure', '摘要已撰写', !abstract ? null : abstractChars ? 1 : 0,
+    !abstract ? '没有摘要章节。' : `摘要约 ${thousands(abstractChars)} 字；${abstractMin}–${abstractMax} 字仅作写作参考，按适用要求和内容调整。`, fixIfMissing('abstract'));
   const keywords = keywordLine ? keywordLine.replace(/^关键词[:：]\s*/, '').split(/[、，,；;\s]+/).filter(Boolean) : [];
   const [kwMin, kwMax] = BENCHMARK_TARGETS.keywords;
-  add('keywords', 'structure', '关键词', !keywords.length ? 0 : keywords.length < kwMin || keywords.length > kwMax ? 0.5 : 1,
+  add('keywords', 'structure', '关键词', keywordLine ? (keywords.length ? 1 : 0) : null,
     keywordLine ? `关键词 ${keywords.length} 个，建议 ${kwMin}–${kwMax} 个。` : '摘要末尾缺少以“关键词：”开头的一行。', fixIfMissing('abstract'));
-  const core = ['intro', 'design', 'data', 'conclusion'];
-  const missingCore = core.filter(id => !has(id));
-  const analysisChapters = ['secondary', 'sample', 'drivers', 'diagnosis', 'plan'].filter(has);
-  add('chapters', 'structure', '主体章节齐全', (core.length - missingCore.length + Math.min(2, analysisChapters.length) / 2) / (core.length + 1),
-    [missingCore.length ? `缺少：${missingCore.map(id => blueprintNode(id).title).join('、')}。` : '研究简介、调查方案、数据检验、结论建议齐全。',
-      `分析类章节 ${analysisChapters.length} 个，至少 2 个。`].join(''),
-    [...missingCore.map(insert), ...(analysisChapters.length < 2 ? ['sample', 'drivers', 'diagnosis'].filter(id => !has(id)).slice(0, 2 - analysisChapters.length).map(insert) : [])]);
   const bodyChars = prose.join('').length;
-  add('length', 'structure', '正文篇幅', bodyChars / BENCHMARK_TARGETS.bodyChars, `正文论述约 ${thousands(bodyChars)} 字，满分线 ${thousands(BENCHMARK_TARGETS.bodyChars)} 字。`);
+  add('chapters', 'structure', '章节组织参考', null, `正文 ${body.length} 个章节或小节；章节结构由研究问题和用户选择决定。`);
+  add('length', 'structure', '正文篇幅', null, `正文论述约 ${thousands(bodyChars)} 字；字数不计入证据完整度。`);
   // Chapter headings may stand alone; every other section needs written text or an evidence block.
   const writable = sections.filter(s => !(s.part === 'body' && reportHeadingLevel(s.section.title) === 1));
   const hinted = new Set(content.report.filter(s => HINT.test(s.body) || (s.blocks ?? []).some(b => HINT.test(b.text))).map(s => s.id));
@@ -139,8 +127,8 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   add('unwritten', 'structure', '各节均已撰写', unwritten.length ? Math.max(0, 1 - unwritten.length / Math.max(1, writable.length)) * 0.9 : 1,
     unwritten.length ? `${unwritten.length} 节尚未撰写${hinted.size ? `（其中 ${hinted.size} 节仍是写作提示）` : ''}，首个是「${unwritten[0].title || '未命名章节'}」。` : '各节都已有正文。');
   const referenceEntries = sections.filter(s => s.part === 'references').flatMap(s => s.lines);
-  add('references', 'structure', '参考文献数量', referenceEntries.length / BENCHMARK_TARGETS.references,
-    `参考文献 ${referenceEntries.length} 条，满分线 ${BENCHMARK_TARGETS.references} 条。`, fixIfMissing('references'));
+  add('references', 'structure', '参考文献数量', null,
+    `参考文献 ${referenceEntries.length} 条；按实际引用登记，数量不计分。`, fixIfMissing('references'));
   const appendices = sections.filter(s => s.part === 'appendix');
   /** An appendix earns credit only once it has content; an empty heading earns a little. */
   const appendixCheck = (id: string, dimension: BenchmarkDimension, label: string, pattern: RegExp, missing: string, extra: BenchmarkFix[] = [], nodes = [id]) => {
@@ -153,81 +141,88 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
 
   // 方案严谨
   const written = (id: string) => nodeLines(id).join('').length;
-  const purposeOk = written('design.purpose') >= 40 || prose.some(l => /调查目的/.test(l));
-  const populationOk = written('design.population') >= 40 || prose.some(l => /调查对象|目标总体|调查总体/.test(l));
-  add('objectives', 'design', '调查目的与对象', ((purposeOk ? 1 : 0) + (populationOk ? 1 : 0)) / 2,
+  const purposeOk = written('design.purpose') > 0 || prose.some(l => /调查目的/.test(l));
+  const populationOk = written('design.population') > 0 || prose.some(l => /调查对象|目标总体|调查总体/.test(l));
+  add('objectives', 'design', '调查目的与对象说明', purposeOk || populationOk || has('design.purpose') || has('design.population') ? ((purposeOk ? 1 : 0) + (populationOk ? 1 : 0)) / 2 : null,
     purposeOk && populationOk ? '调查目的与对象均已说明。' : `${purposeOk ? '' : '调查目的'}${!purposeOk && !populationOk ? '、' : ''}${populationOk ? '' : '调查对象'}尚未写明。`,
     fixIfMissing(...(purposeOk ? [] : ['design.purpose']), ...(populationOk ? [] : ['design.population'])));
   const sampling = sections.filter(s => s.node?.id === 'design.sampling');
   const samplingChars = sampling.flatMap(s => s.lines).join('').length;
   const samplingTable = sampling.some(s => (s.section.blocks ?? []).some(b => b.kind === 'table') || s.lines.some(l => isCaption(l) && l.startsWith('表')))
     || captions('表').some(l => /抽样|入样|样本分配/.test(l));
-  add('sampling', 'design', '抽样设计与抽样框表', (samplingChars >= 200 ? 0.5 : samplingChars > 0 ? 0.25 : 0) + (samplingTable ? 0.5 : 0),
+  add('sampling', 'design', '抽样设计文字记录', sampling.length ? (samplingChars > 0 ? 1 : 0) : null,
     `${sampling.length ? `抽样设计约 ${thousands(samplingChars)} 字` : '没有抽样设计小节'}；${samplingTable ? '有' : '缺少'}抽样框或入样单位表。`,
     [...fixIfMissing('design.sampling'), go('sampling')]);
   const samplingFormula = sampling.some(s => (s.section.blocks ?? []).some(b => b.kind === 'formula'))
     || blocks.some(b => b.kind === 'formula' && /n_\{?0\}?|\\frac\{[^}]*[zZ]/.test(b.text)) || /n_\{?0\}?\s*=/.test(latex);
   const sampleSizeMentioned = prose.some(l => /样本量/.test(l) && /公式|计算|置信|误差/.test(l));
-  add('sampleSize', 'design', '样本量公式', samplingFormula ? 1 : sampleSizeMentioned ? 0.5 : 0,
-    samplingFormula ? '样本量公式已排版。' : sampleSizeMentioned ? '文中说明了样本量，但没有排版公式。' : '没有样本量公式与参数取值。', [go('sampling')]);
+  add('sampleSize', 'design', '样本量说明记录', samplingFormula || sampleSizeMentioned ? 1 : null,
+    samplingFormula ? '样本量公式已排版，参数与设计需另行核验。' : sampleSizeMentioned ? '文中有样本量说明；是否需公式依研究设计决定。' : '未识别到样本量说明；对公开历史数据不强加调查样本量公式。', [go('sampling')]);
   const validCount = /有效(?:问卷|样本|回收)[^。；\n]{0,30}?[0-9０-９]+/u.test(proseText);
   const validRate = /有效(?:回收)?率[^。；\n]{0,20}?[0-9０-９]+(?:\.[0-9]+)?\s*[%％]/u.test(proseText);
-  add('validRate', 'design', '回收量与有效率', ((validCount ? 1 : 0) + (validRate ? 1 : 0)) / 2,
+  add('validRate', 'design', '回收量与有效率文字记录', validCount || validRate ? ((validCount ? 1 : 0) + (validRate ? 1 : 0)) / 2 : null,
     validCount && validRate ? '有效样本量与有效回收率均已报告。' : `${validCount ? '' : '有效样本量'}${!validCount && !validRate ? '、' : ''}${validRate ? '' : '有效回收率（百分比）'}尚未报告。`,
     [...fixIfMissing('data.cleaning'), go('analysis')]);
   const pilot = /(预调查|预调研|预测试)[^。\n]{0,60}?[0-9０-９]+/u.test(proseText) ? 1 : /预调查|预调研|预测试/.test(proseText) ? 0.5 : 0;
-  add('pilot', 'design', '预调查', pilot, pilot === 1 ? '预调查及其样本量已说明。' : pilot ? '提到了预调查，但没有样本量或检验结果。' : '没有预调查的说明。', fixIfMissing('data.pilot'));
+  add('pilot', 'design', '预调查文字记录', pilot || has('data.pilot') ? pilot : null, pilot === 1 ? '预调查及其样本量已说明。' : pilot ? '提到了预调查，但没有样本量或检验结果。' : '没有预调查的说明。', fixIfMissing('data.pilot'));
   const qcChars = written('design.qc');
-  add('qualityControl', 'design', '质量控制措施', qcChars >= 150 ? 1 : qcChars > 0 || /质量控制/.test(proseText) ? 0.5 : 0,
-    qcChars >= 150 ? '质量控制措施已分环节说明。' : '质量控制措施偏少，建议按设计、实施、录入、清洗分环节写。', fixIfMissing('design.qc'));
+  add('qualityControl', 'design', '质量控制文字记录', has('design.qc') ? (qcChars > 0 ? 1 : 0) : null,
+    qcChars > 0 ? '已有质量控制文字；执行过程与处理日志需核对。' : '质量控制小节尚未撰写。', fixIfMissing('design.qc'));
 
   // 数据质量
   const CLEANING = [/注意力|甄别题|陷阱题|测谎/, /作答时长|答题时长|用时过短|作答时间/, /逻辑矛盾|前后矛盾|逻辑检验|逻辑校验/, /规律作答|直线作答|连续相同|同一选项/, /缺失值|缺失处理/];
   const rules = CLEANING.filter(re => re.test(proseText)).length;
-  add('cleaning', 'data', '清洗与剔除规则', rules >= 2 ? 1 : rules ? 0.5 : 0, `写明了 ${rules} 类剔除或处理规则，至少 2 类。`, [...fixIfMissing('data.cleaning'), go('analysis')]);
-  const reportedNumber = (head: string) => new RegExp(`(?:${head})[^。\\n]{0,80}?[0-9]\\.[0-9]+`, 'iu');
-  const reliable = reportedNumber('Cronbach|克隆巴赫|α\\s*系数|信度').test(proseText) || usedResults.some(r => /信度|α/.test(r.title)) || captions('表').some(l => /信度/.test(l));
-  add('reliability', 'data', '信度检验', reliable ? 1 : /信度/.test(proseText) ? 0.5 : 0, reliable ? '已报告信度系数。' : '没有报告 Cronbach α 等信度系数。', [...fixIfMissing('data.testing'), go('analysis')]);
-  const valid = reportedNumber('KMO|Bartlett|巴特利特|结构效度|效度').test(proseText) || usedResults.some(r => /效度|KMO/.test(r.title)) || captions('表').some(l => /效度|KMO/.test(l));
-  add('validity', 'data', '效度检验', valid ? 1 : /效度/.test(proseText) ? 0.5 : 0, valid ? '已报告效度检验结果。' : '没有报告 KMO 值、Bartlett 球形检验等效度证据。', [...fixIfMissing('data.testing'), go('analysis')]);
-  add('traceable', 'data', '图表可溯源', figures + tables ? share(evidenceBlocks.length, figures + tables) / 0.5 : null,
-    `${evidenceBlocks.length} / ${figures + tables} 个图表来自已登记的分析结果，至少一半。`, [go('analysis')]);
+  add('cleaning', 'data', '处理规则文字概览', null, `文字涉及 ${rules} 类处理规则；规则种类不计分，执行与否以实际处理记录核验。`, [...fixIfMissing('data.cleaning'), go('analysis')]);
+  const alphaResults = usedResults.filter(r => r.method === 'alpha');
+  const reliable = alphaResults.filter(r => r.receipt?.calculation?.scale && r.metrics.some(m => /α/.test(m.label) && m.value !== null));
+  add('reliability', 'data', '信度计算记录', alphaResults.length ? share(reliable.length, alphaResults.length) : null,
+    `${reliable.length} / ${alphaResults.length} 个已使用信度结果保留题项与计分设置；文字出现“信度”不作为已计算证明。`, [go('analysis')]);
+  add('validity', 'data', '效度证据', null, '效度须结合测量设计与实际检验审阅；标题或 KMO、Bartlett 等方法名不作为执行证明。');
+  const linked = evidenceBlocks.filter(b => usedResults.some(r => r.id === b.evidenceId));
+  add('traceable', 'data', '图表结果引用', evidenceBlocks.length ? share(linked.length,evidenceBlocks.length) : null,
+    `${linked.length} / ${evidenceBlocks.length} 个结构化图表块引用已登记结果；手写图表需另行核验来源。`, [go('analysis')]);
+  const receipts = usedResults.filter(r => r.receipt?.calculation);
+  add('denominators', 'data', '分母与计算参数', usedResults.length ? share(receipts.length,usedResults.length) : null,
+    `${receipts.length} / ${usedResults.length} 个已使用结果保留变量、缺失设置、筛选、应答范围与有效计算口径。`, [go('analysis')]);
 
-  // 分析深度
-  const used = new Set(METHODS.filter(([, re]) => re.test(methodText)).map(([name]) => name));
-  for (const r of usedResults) if (RESULT_METHODS[r.method]) used.add(RESULT_METHODS[r.method]);
-  const kindOf = (name: string) => METHODS.find(([n]) => n === name)?.[2] ?? 'test';
-  const tests = [...used].filter(name => kindOf(name) === 'test'), models = [...used].filter(name => kindOf(name) === 'model');
-  add('tests', 'analysis', '推断检验', tests.length ? 1 : 0, tests.length ? `使用了${tests.join('、')}。` : '没有差异检验或相关分析。', [go('analysis')]);
-  add('models', 'analysis', '模型分析', models.length ? 1 : 0, models.length ? `使用了${models.join('、')}。` : '没有回归、聚类、IPA、AHP 等模型。', [go('analysis')]);
-  add('formulas', 'analysis', '公式排版', formulas / BENCHMARK_TARGETS.formulas, `${formulas} 个独立公式，满分线 ${BENCHMARK_TARGETS.formulas} 个；每个模型都应写出公式。`);
-  const diagnosed = /诊断|残差|共线|VIF|轮廓系数|一致性检验|一致性比率|拟合优度|伪\s*R|R\s*[²2]|似然比|Hosmer|稳健性|适用条件|前提假设|正态性|方差齐性/i.test(proseText);
-  add('diagnostics', 'analysis', '模型检验与适用条件', diagnosed ? 1 : 0, diagnosed ? '说明了模型检验或适用条件。' : '没有说明模型诊断、拟合优度或检验的适用条件。');
+  // A method's name is descriptive metadata. Only registered structured results can show execution.
+  const mentioned = METHODS.filter(([,re]) => re.test(methodText)).map(([name]) => name);
+  const inferential = usedResults.filter(r => ['groups','crosstab','pearson','spearman'].includes(r.method));
+  // A legitimate degenerate sample can have no defined test. Preserve and review that
+  // receipt instead of incentivising fabricated p-values just to satisfy the checker.
+  const withInference = inferential.filter(r => r.receipt && (r.receipt.inference || r.receipt.interpretation && r.warnings.length));
+  add('tests', 'analysis', '推断结果与适用范围', inferential.length ? share(withInference.length,inferential.length) : null,
+    `${withInference.length} / ${inferential.length} 个已使用推断结果保留检验回执或未定义时的样本、解释与提醒。`, [go('analysis')]);
+  add('models', 'analysis', '方法文字提及', null, mentioned.length ? `文字提及${mentioned.join('、')}；方法名不证明运行，也不产生质量加分。` : '未识别到方法名；按研究需要选择方法，无须补齐模型种类。');
+  add('formulas', 'analysis', '公式排版记录', null, `已排版 ${formulas} 个独立公式；是否需要公式由方法和读者需要决定。`);
+  const diagnosed = inferential.filter(r => r.receipt?.interpretation && r.warnings.length && (!r.receipt.inference || r.receipt.inference.notes.length));
+  add('diagnostics', 'analysis', '计算前提与限制记录', inferential.length ? share(diagnosed.length,inferential.length) : null,
+    `${diagnosed.length} / ${inferential.length} 个已使用推断结果保留计算提醒与适用限制；记录存在不代表前提已满足。`);
   const numeric = paragraphs.filter(l => /[0-9０-９]/.test(l)).length;
-  add('numeric', 'analysis', '论述有数据支撑', paragraphs.length >= 10 ? share(numeric, paragraphs.length) / BENCHMARK_TARGETS.numericShare : null,
-    `${Math.round(share(numeric, paragraphs.length) * 100)}% 的段落含具体数据，满分线 ${BENCHMARK_TARGETS.numericShare * 100}%。`);
-  add('methods', 'analysis', '多方法互证', used.size / BENCHMARK_TARGETS.methods, `用到 ${used.size} 种方法，满分线 ${BENCHMARK_TARGETS.methods} 种。`, [go('analysis')]);
+  add('numeric', 'analysis', '数据陈述概览', null, `${Math.round(share(numeric,paragraphs.length)*100)}% 的段落含数字；数字密度不计分。`);
+  add('methods', 'analysis', '方法可复算记录', usedResults.length ? share(receipts.length,usedResults.length) : null,
+    `${receipts.length} / ${usedResults.length} 个已使用结果保留计算配置；方法数量不计分。`, [go('analysis')]);
 
   // 图表规范
-  add('figureCount', 'figures', '图的数量', figures / BENCHMARK_TARGETS.figures, `正文 ${figures} 幅图，满分线 ${BENCHMARK_TARGETS.figures} 幅。`, [go('analysis')]);
-  add('tableCount', 'figures', '表的数量', tables / BENCHMARK_TARGETS.tables, `正文 ${tables} 张表，满分线 ${BENCHMARK_TARGETS.tables} 张。`, [go('analysis')]);
+  add('figureCount', 'figures', '图的数量', null, `正文识别到 ${figures} 幅图；数量不计分，按证据表达需要使用。`);
+  add('tableCount', 'figures', '表的数量', null, `正文识别到 ${tables} 张表；数量不计分，避免重复同一证据。`);
   const titled = evidenceBlocks.filter(b => b.text.trim()).length;
   add('captions', 'figures', '图表有标题', evidenceBlocks.length ? share(titled, evidenceBlocks.length) : null, `${titled} / ${evidenceBlocks.length} 个图表块填写了标题。`);
   const references = count(FIGURE_REFERENCE, proseText) + count(FIGURE_TOKEN, proseText);
-  add('figureReferences', 'figures', '正文引用图表', figures + tables ? references / (BENCHMARK_TARGETS.referenceShare * (figures + tables)) : null,
+  add('figureReferences', 'figures', '正文引用图表', figures + tables ? (references ? 1 : 0) : null,
     `正文引用图表 ${references} 次，图表共 ${figures + tables} 个；每个图表都应在正文中被引用并解读。`);
   const lengths = paragraphs.map(l => l.length).sort((a, b) => a - b);
   const median = lengths.length ? (lengths[(lengths.length - 1) >> 1] + lengths[lengths.length >> 1]) / 2 : 0;
   const [low, high] = BENCHMARK_TARGETS.paragraphMedian;
-  add('paragraphs', 'figures', '段落长度适中', lengths.length >= 10 ? (median < low ? median / low : median > high ? high / median : 1) : null,
+  add('paragraphs', 'figures', '段落长度参考', null,
     `段落长度中位数 ${Math.round(median)} 字，建议 ${low}–${high} 字。`);
 
   // 结论可执行
   const findings = content.quality?.findings ?? [];
-  const confirmed = findings.filter(f => f.status === 'confirmed');
-  add('findings', 'actions', '已确认的研究发现', confirmed.length / BENCHMARK_TARGETS.findings, `已确认 ${confirmed.length} 条发现，至少 ${BENCHMARK_TARGETS.findings} 条。`, [FINDINGS_FIX]);
+  const confirmed = findings.filter(f => content.quality && !findingNeedsReview(f,content.quality));
+  add('findings', 'actions', '已确认的研究发现', findings.length ? share(confirmed.length,findings.length) : usedResults.length ? 0 : null, `${confirmed.length} / ${findings.length} 条发现已确认；不要求固定条数。`, [FINDINGS_FIX]);
   const actionable = confirmed.filter(f => f.action.trim()).length;
-  add('findingActions', 'actions', '发现写明行动意义', actionable / BENCHMARK_TARGETS.findings, `${actionable} 条已确认发现写明了行动意义，至少 ${BENCHMARK_TARGETS.findings} 条。`, [FINDINGS_FIX]);
+  add('findingActions', 'actions', '发现写明行动意义', confirmed.length ? share(actionable,confirmed.length) : null, `${actionable} / ${confirmed.length} 条已确认发现写明行动意义。`, [FINDINGS_FIX]);
   const recommendation = sections.filter(s => ['conclusion.suggestions', 'plan.measures', 'plan'].includes(s.node?.id ?? '') || /建议|措施|策略|对策/.test(stripHeadingNumber(s.section.title)))
     .flatMap(s => s.lines).join('\n');
   const actor = /负责|牵头|执行主体|主办方|运营方|部门|学校|高校|政府|企业|平台|社区|协会|委员会|团队/.test(recommendation);
@@ -243,10 +238,10 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   // 合规披露
   appendixCheck('aiDisclosure', 'compliance', 'AI 工具使用说明', /人工智能|AI|大模型|生成式/i, '附录中没有 AI 工具使用说明。', [], ['appendix.ai']);
   const formatted = referenceEntries.filter(l => GBT_TYPE.test(l)).length;
-  add('referenceFormat', 'compliance', '文献著录格式', referenceEntries.length ? share(formatted, referenceEntries.length) / 0.8 : null,
+  add('referenceFormat', 'compliance', '文献著录格式', referenceEntries.length ? share(formatted, referenceEntries.length) : null,
     `${formatted} / ${referenceEntries.length} 条文献带有 GB/T 7714 文献类型标识，如 [J]、[M]、[EB/OL]。`);
   const cited = count(CITATION, proseText);
-  add('citations', 'compliance', '正文标注引用', cited / BENCHMARK_TARGETS.citations, `正文有 ${cited} 处文献序号标注，满分线 ${BENCHMARK_TARGETS.citations} 处。`);
+  add('citations', 'compliance', '正文标注引用', referenceEntries.length ? (cited ? 1 : 0) : null, `正文有 ${cited} 处文献序号标注；出现引用不代表来源内容已核验，数量不计分。`);
   const simulated = usedResults.filter(r => r.classification === 'simulated');
   const declared = /模拟/.test(content.subtitle + content.title) || body.every(s => !(s.section.blocks ?? []).some(b => simulated.some(r => r.id === b.evidenceId)) || /【教学模拟数据/.test(s.section.body + s.section.source));
   add('simulated', 'compliance', '模拟数据已声明', simulated.length ? (declared ? 1 : 0) : null,
@@ -255,7 +250,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
 
   const dimensions = (Object.keys(BENCHMARK_DIMENSIONS) as BenchmarkDimension[]).map(id => {
     const own = checks.filter(c => c.dimension === id && c.status !== 'na');
-    return { id, label: BENCHMARK_DIMENSIONS[id], score: own.length ? own.reduce((sum, c) => sum + c.score, 0) / own.length : 1, passed: own.filter(c => c.status === 'pass').length, total: own.length };
+    return { id, label: BENCHMARK_DIMENSIONS[id], score: own.length ? own.reduce((sum, c) => sum + c.score, 0) / own.length : 0, passed: own.filter(c => c.status === 'pass').length, total: own.length };
   });
-  return { score: Math.round(dimensions.reduce((sum, d) => sum + d.score, 0) / dimensions.length * 100), dimensions, checks };
+  return { score: Math.round(dimensions.filter(d=>d.total).reduce((sum,d)=>sum+d.score,0) / Math.max(1,dimensions.filter(d=>d.total).length)*100), dimensions, checks };
 }
