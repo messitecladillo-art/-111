@@ -1,5 +1,5 @@
 import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, type SvgPreviewRenderer } from "./quality-export.ts";
-import { ACCENTS, type EditorContent } from "./editor-model.ts";
+import { ACCENTS, parseEditorContent, type EditorContent } from "./editor-model.ts";
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
@@ -11,6 +11,7 @@ export function downloadBlob(blob: Blob, name: string) {
 export function fileName(title: string) { return title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 80) || "未命名研究"; }
 export async function buildDocx(content: EditorContent, inputOptions: ReportFormatOptions = content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS, renderSvg?:SvgPreviewRenderer): Promise<Blob> {
   assertFindingReferences(content);
+  content=parseEditorContent(content);
   await validateQuality(content);
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
@@ -69,8 +70,9 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   }));
   return new Blob([await archive.generateAsync({type:'arraybuffer',compression:'DEFLATE'})],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
-export async function buildPptx(content: EditorContent): Promise<Blob> {
+export async function buildPptx(content: EditorContent, renderSvg?:SvgPreviewRenderer): Promise<Blob> {
   assertFindingReferences(content);
+  content=parseEditorContent(content);
   await validateQuality(content);
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
@@ -84,7 +86,7 @@ export async function buildPptx(content: EditorContent): Promise<Blob> {
     const slide = pptx.addSlide();
     slide.background = { color: "FFFFFF" };
     if(item.objects!==undefined){
-      const sources=addQualityObjects(slide,pptx,item.objects,content);
+      const sources=await addQualityObjects(slide,pptx,item.objects,content,renderSvg);
       if(item.notes||sources)slide.addNotes([item.notes,sources].filter(Boolean).join("\n\n"));
       continue;
     }

@@ -1,10 +1,12 @@
 import {assertFindingReferences, assertTableRows, evidenceLabel, valueText} from './quality-export.ts';
 import { chartData, resultFor, verifyResearchQuality, type ReportBlock } from './research-quality.ts';
-import type { EditorContent, LatexReport } from './editor-model.ts';
+import {parseEditorContent,type EditorContent,type LatexReport} from './editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS, parseReportFormatOptions, parseReportFormatSettings, reportPart, type ReportFormatOptions } from './report-format.ts';
+import {figureTexPreamble} from './report-figure-tex.ts';
+import {figureFor,type ReportFigure,type ProjectVisualStyle} from './report-figure.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
-export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions };
+export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle };
 export type LatexDiagnostic = { severity: 'error' | 'warning'; line: number | null; message: string };
 export type LatexCompileReceipt = { status: 'compiled' | 'error' | 'unavailable'; source: string; sourceHash: string; pdfBase64: string | null; diagnostics: LatexDiagnostic[]; engine: 'xelatex' | null };
 
@@ -29,6 +31,7 @@ export function latexReportKey(content: EditorContent): string {
   const settings = parseReportFormatSettings(content.reportFormat ?? DEFAULT_REPORT_SETTINGS);
   const options = settings.options;
   return JSON.stringify({ title: content.title, subtitle: content.subtitle,
+    ...(content.figures?.length?{figures:content.figures,visualStyle:content.visualStyle}:{}),
     report: content.report.map(section => ({ id: section.id, title: section.title, body: section.body, source: section.source, ...(section.blocks?.length ? { blocks: section.blocks } : {}), ...(section.findingIds ? { findingIds: section.findingIds } : {}), ...(section.findingSnapshots ? { findingSnapshots: section.findingSnapshots } : {}) })),
     ...(content.report.some(s=>s.blocks?.length||s.findingIds?.length) ? { quality: content.quality } : {}),
     reportFormat: { edition: settings.edition, group: settings.group, region: settings.region, track: settings.track, stage: settings.stage, profileId: settings.profileId,
@@ -50,6 +53,7 @@ function latexBlocks(blocks: ReportBlock[], content: EditorContent): string {
     if(block.kind!=='chart'&&block.kind!=='table')return `${escapeLatexParagraphText(block.text)}\\par`;
     const r=resultFor(content.quality,block.evidenceId);
     const source=escapeLatexParagraphText(evidenceLabel(r));
+    if(block.figureId){const figure=figureFor(content,block.figureId,block.evidenceId),index=content.figures!.findIndex(f=>f.id===figure.id),table=figure.kind==='table';return [`\\begin{${table?'table':'figure'}}[htbp]`,'\\centering',...(table?[`\\caption{${escapeLatexText(block.text||figure.title)}}`]:[]),`\\ResearchFigure{${index}}`,...(!table?[`\\caption{${escapeLatexText(block.text||figure.title)}}`]:[]),`\\end{${table?'table':'figure'}}`,`${source}\\par`].join('\n');}
     if(block.kind==='table'){
       assertTableRows(r);
       if(r.headers.length>10||r.rows.length>25)throw Error('表格超过 10 列或 25 行，请分拆后导出 LaTeX。');
@@ -74,22 +78,34 @@ export function generateLatexBody(content: EditorContent): string {
   return body;
 }
 export async function createLatexReport(content: EditorContent): Promise<LatexReport> {
+  assertFindingReferences(content);content=parseEditorContent(content);
   if(content.quality)await verifyResearchQuality(content.quality);
   const body = generateLatexBody(content), reportHash = await latexReportHash(content);
   return { version: 1, body, reportHash };
 }
+/** The same literal controls/comments as the bounded backend language, not a global regex. */
+export function latexFigureReferences(body:string):{index:number;start:number;end:number}[]{
+ const refs:{index:number;start:number;end:number}[]=[];let i=0;
+ while(i<body.length){if(body[i]==='%'){while(i<body.length&&body[i]!=='\n'&&body[i]!=='\r')i++;continue;}if(body[i]!=='\\'){i++;continue;}const match=body.slice(i+1).match(/^[A-Za-z]+/);if(!match){i+=2;continue;}i+=1+match[0].length;if(match[0]!=='ResearchFigure')continue;const arg=body.slice(i).match(/^([\s]*)\{(0|[1-9][0-9]{0,2})\}/);if(!arg)continue;const start=i+arg[1].length+1;refs.push({index:Number(arg[2]),start,end:start+arg[2].length});i+=arg[0].length;}
+ return refs;
+}
 export function latexCompileInput(content: EditorContent): LatexCompileInput {
   const options = parseReportFormatOptions((content.reportFormat ?? DEFAULT_REPORT_SETTINGS).options);
-  return { title: content.title, subtitle: content.subtitle, body: content.latex?.body ?? '', options };
+  const original=content.latex?.body??'',refs=latexFigureReferences(original),used=[...new Set(refs.map(r=>r.index))].sort((a,b)=>a-b);
+  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options};
+  let offset=0,body='';for(const ref of refs){body+=original.slice(offset,ref.start)+used.indexOf(ref.index);offset=ref.end;}body+=original.slice(offset);
+  return { title: content.title, subtitle: content.subtitle, body, options,...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}) };
 }
 export function latexCompileKey(input: LatexCompileInput): string {
   const o = input.options;
   return JSON.stringify({ title: input.title, subtitle: input.subtitle, body: input.body,
+    ...(input.figures?.length?{figures:input.figures}:{}),...(input.visualStyle?{visualStyle:input.visualStyle}:{}),
     options: { part: o.part, includeCover: o.includeCover, includeToc: o.includeToc, firstLineChars: o.firstLineChars, numberPages: o.numberPages } });
 }
 
 /** Byte-identical counterpart of evix_api.latex.build_source; checked against its fixtures. */
 export function buildLatexSource(input: LatexCompileInput): string {
+  if(latexFigureReferences(input.body).some(r=>r.index>=(input.figures?.length??0)))throw Error('图形引用不在本次图形版本中，请重新选择。');
   const o = parseReportFormatOptions(input.options);
   const metadata = (text: string) => escapeLatexText(text.replace(/[\r\n]/g, ' '));
   const lines = [
@@ -108,11 +124,14 @@ export function buildLatexSource(input: LatexCompileInput): string {
     '\\fontsize{12bp}{14.4bp}\\selectfont',
   ];
   if(input.body.includes('\\begin{tikzpicture}'))lines.splice(3,0,'\\usepackage{pgfplots}','\\pgfplotsset{compat=1.18}');
+  if(input.figures?.length){if(!input.visualStyle)throw Error('图形缺少配色版本。');lines.splice(3,0,'\\usepackage{tikz}');lines.splice(lines.indexOf('\\begin{document}'),0,...figureTexPreamble(input.figures,input.visualStyle));}
   if (o.includeCover) lines.push('\\begin{titlepage}', '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
   if (o.includeToc) lines.push('\\pagenumbering{Roman}', '\\tableofcontents', '\\clearpage', '\\pagenumbering{arabic}');
   lines.push('% BODY START', input.body.replace(/\r\n?/g, '\n'), '% BODY END', '\\end{document}', '');
-  return lines.join('\n');
+  const source=lines.join('\n');if(new TextEncoder().encode(source).length>2_000_000)throw Error('排版源码超过 2 MB，请拆分图形或文档。');return source;
 }
+export function previewLatexSource(input:LatexCompileInput):{source:string;error:string}{try{return {source:buildLatexSource(input),error:''};}catch(error){return {source:'',error:error instanceof Error?error.message:'源码暂不能生成，请调整图形或文档。'};}}
+export async function approvedLatexSource(input:LatexCompileInput):Promise<{source:string;inputKey:string}>{const snapshot=structuredClone(input);return {source:buildLatexSource(snapshot),inputKey:latexCompileKey(snapshot)};}
 
 export type LatexCompileTicket = { generation: number; projectId: string; inputKey: string };
 /** A response is useful only for its original project and exact input, even after cancel/retry. */

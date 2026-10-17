@@ -17,6 +17,8 @@ import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-rec
 import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
+import {appendRegisteredResult} from '@/lib/result-registration';
+import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
 import QualityStudio,{QualitySlidePreview,QualityGraphic} from './QualityStudio';
 import {appendQualityResult} from '@/lib/quality-layouts';
@@ -82,7 +84,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;onResultHandled?:()=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -304,13 +306,13 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if(!alive.current||identityTransition.current||!canMutate())return;
     const currentContent=current.current;
     if(busy.current||versionOperation.current)return;
-    try{current.current=appendQualityResult(currentContent,resultProposal);}
+    try{current.current=appendRegisteredResult(currentContent,{result:resultProposal,figures:resultFigures,visualStyle:resultVisualStyle});}
     catch(error){setMessage((error as Error).message);onResultHandled?.();return;}
     if(current.current===currentContent){onResultHandled?.();return;}
     setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(current.current);if(!blocked.current)setPhase('ready');setQualityOpen(true);onResultHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
-  },[resultProposal,onResultHandled,phase,identityFrozen,canMutate]);
+  },[resultProposal,resultFigures,resultVisualStyle,onResultHandled,phase,identityFrozen,canMutate]);
   function undo() {
     if(!canMutate())return;
     const previous = past[past.length - 1]; if (!previous) return;
@@ -638,7 +640,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       <div className={styles.previewPane}>
         <div className={styles.previewHeading}><strong>实时预览</strong><span>{mode === "report" ? "正文连续预览 · 导出为 A4" : "16:9 · 原生文字可编辑"}</span></div>
         <div className={styles.previewScroll} ref={previewRef} tabIndex={0} role="region" aria-label="实时预览（可滚动）">
-          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => { const kind = outlineKind(s.title), empty = kind !== "chapter" && !sectionWritten(s) && !/写作提示】/.test(s.body); return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === "blank" ? <p key={i} className={styles.blank} aria-hidden="true"/> : line.kind === "keywords" ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p> : <p key={i} className={line.kind === "hintStart" ? styles.hintStart : line.kind === "hint" ? styles.hintLine : undefined}>{line.text}</p>)}{s.blocks?.map(block=><div key={block.id}><p>{block.text}</p>{["chart","table"].includes(block.kind)&&<QualityGraphic surface="report" quality={content.quality} object={makeSlideObject(block.kind as "chart"|"table",{evidenceId:block.evidenceId,valueColumn:block.valueColumn})}/>}</div>)}{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>; })}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality}/>}
+          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => { const kind = outlineKind(s.title), empty = kind !== "chapter" && !sectionWritten(s) && !/写作提示】/.test(s.body); return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === "blank" ? <p key={i} className={styles.blank} aria-hidden="true"/> : line.kind === "keywords" ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p> : <p key={i} className={line.kind === "hintStart" ? styles.hintStart : line.kind === "hint" ? styles.hintLine : undefined}>{line.text}</p>)}{s.blocks?.map(block=><div key={block.id}><p>{block.text}</p>{["chart","table"].includes(block.kind)&&<QualityGraphic surface="report" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle} object={makeSlideObject(block.kind as "chart"|"table",{evidenceId:block.evidenceId,valueColumn:block.valueColumn,...(block.figureId?{figureId:block.figureId}:{})})}/>}</div>)}{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>; })}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/>}
         </div>
         <div className={styles.previewFoot}><span>{mode === "report" ? `${content.report.reduce((n, s) => n + s.body.length, 0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span><span>预览为版式参考 · 导出后复核分页与字体</span></div>
       </div>
@@ -647,14 +649,14 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }
       if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); setPresentIndex(i => Math.max(0,i-1)); }
-    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
+    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
     </div>
     </div>
   </section>;
 }
 
-function SlidePreview({ slide, accent, index, label,quality }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string;quality?:EditorContent['quality'] }) {
+function SlidePreview({ slide, accent, index, label,quality,figures,visualStyle }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string;quality?:EditorContent['quality'];figures?:ReportFigure[];visualStyle?:ProjectVisualStyle }) {
   const reveal = useContentReveal<HTMLDivElement>({ token: slide.id });
-  if(slide.objects)return <QualitySlidePreview slide={slide} quality={quality} label={label}/>;
+  if(slide.objects)return <QualitySlidePreview slide={slide} quality={quality} figures={figures} visualStyle={visualStyle} label={label}/>;
   return <div ref={reveal} className={styles.slideCanvas} data-layout={slide.layout} style={{ "--slide-accent": `#${ACCENTS[accent]}` } as React.CSSProperties} aria-label={label}><h2>{slide.title}</h2><div className={styles.slideBody}><p>{slide.body}</p>{slide.layout === "two-column" && <aside>{slide.aside}</aside>}</div><span className={styles.slideNumber}>{String(index + 1).padStart(2,"0")}</span></div>;
 }

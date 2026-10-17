@@ -1036,7 +1036,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
 }
 
 export default function EviXPlatform() {
-  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
+  const [resultProposal,setResultProposal]=useState<import("@/lib/result-registration").ResultRegistration|null>(null);
   const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
   const [workspaceDataset,setWorkspaceDataset]=useState<DatasetValue|null>(null);
   const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
@@ -1081,9 +1081,9 @@ export default function EviXPlatform() {
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={workspaceDataset} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)}/>,
+      editor: <EditingStudio localOnly resultProposal={resultProposal?.result} resultFigures={resultProposal?.figures} resultVisualStyle={resultProposal?.visualStyle} onResultHandled={()=>setResultProposal(null)}/>,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab onResultSnapshot={result=>{setResultProposal(result);window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
+      analysis: <SurveyLab onResultSnapshot={(result,figures,visualStyle)=>{setResultProposal({result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
       canvas: <CanvasPanel dataset={workspaceDataset} design={designSnapshot} />,
       silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,

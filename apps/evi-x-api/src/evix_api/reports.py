@@ -1,3 +1,4 @@
+from .report_visuals import validate_report_visuals
 """Project-owned immutable structured report versions, independent of native Office files."""
 import re
 import math
@@ -173,7 +174,7 @@ def quality_content(value):
 
 
 def report_block(value):
-    b = object_fields(value, ("id", "kind", "text", "evidenceId", "valueColumn"))
+    b = object_fields(value, ("id", "kind", "text", "evidenceId", "valueColumn"), ("figureId",))
     if b["kind"] not in ("paragraph", "chart", "table", "formula", "citation", "callout"):
         raise ApiError()
     quality_text(b["id"], 80, True); quality_text(b["text"], 12000); quality_text(b["evidenceId"], 80)
@@ -181,7 +182,7 @@ def report_block(value):
 
 
 def slide_object(value):
-    o = object_fields(value, ("id", "kind", "x", "y", "width", "height", "rotation", "opacity", "locked", "groupId", "text", "fontSize", "color", "align", "evidenceId", "valueColumn", "chartType", "assetId", "shape"), ("bold", "sourceBlockId"))
+    o = object_fields(value, ("id", "kind", "x", "y", "width", "height", "rotation", "opacity", "locked", "groupId", "text", "fontSize", "color", "align", "evidenceId", "valueColumn", "chartType", "assetId", "shape"), ("bold", "sourceBlockId", "figureId"))
     if "bold" in o and type(o["bold"]) is not bool:
         raise ApiError()
     if "sourceBlockId" in o:
@@ -201,8 +202,8 @@ def slide_object(value):
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality"))
-    if type(x["version"]) is not int or x["version"] not in (1, 2) or x["accent"] not in ("teal", "blue", "burgundy"):
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "visualStyle", "figures"))
+    if type(x["version"]) is not int or x["version"] not in (1, 2, 3) or x["accent"] not in ("teal", "blue", "burgundy"):
         raise ApiError()
     if x["version"] == 1 and "quality" in x:
         raise ApiError()
@@ -223,7 +224,7 @@ def report_content(value):
         ids = set()
         for item in x[key]:
             required = ("id", "title", "body", "source") if key == "report" else ("id", "title", "body", "aside", "notes", "layout")
-            object_fields(item, required, (("blocks", "findingIds", "findingSnapshots") if x["version"] == 2 else ()) if key == "report" else (("reportLink", "objects") if x["version"] == 2 else ("reportLink",)))
+            object_fields(item, required, (("blocks", "findingIds", "findingSnapshots") if x["version"] != 1 else ()) if key == "report" else (("reportLink", "objects") if x["version"] != 1 else ("reportLink",)))
             nonblank(item["id"], 80)
             if item["id"] in ids:
                 raise ApiError()
@@ -252,11 +253,11 @@ def report_content(value):
             else:
                 text(item["aside"], 1800)
                 text(item["notes"], 6000)
-                if item["layout"] not in (("cover", "content", "two-column") + (QUALITY_LAYOUTS if x["version"] == 2 else ())):
+                if item["layout"] not in (("cover", "content", "two-column") + (QUALITY_LAYOUTS if x["version"] != 1 else ())):
                     raise ApiError()
                 if "reportLink" in item:
                     link = object_fields(item["reportLink"], ("version", "sectionId", "sectionHash", "slideHash"))
-                    if type(link["version"]) is not int or link["version"] not in ((1, 2) if x["version"] == 2 else (1,)):
+                    if type(link["version"]) is not int or link["version"] not in ((1, 2) if x["version"] != 1 else (1,)):
                         raise ApiError()
                     composition_reference(link["sectionId"], single_line=True)
                     for field in ("sectionHash", "slideHash"):
@@ -270,6 +271,7 @@ def report_content(value):
                     if piece["kind"] in ("chart", "table") and piece["evidenceId"] not in result_ids:
                         raise ApiError()
                 unique_quality(pieces)
+    validate_report_visuals(x)
     if len(canonical(x).encode("utf-8")) > MAX_CONTENT_BYTES:
         raise ApiError(413, "payload_too_large", "草稿超过 2 MB，请拆分作品。")
     return x

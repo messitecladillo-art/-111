@@ -24,13 +24,14 @@ const richSectionValue=(s:ReportSection,c:EditorContent)=>({
   ...sectionValue(s),blocks:s.blocks??[],findingIds:s.findingIds??[],findingSnapshots:(s.findingIds??[]).map(id=>[id,s.findingSnapshots?.[id]??null]),
   results:[...new Set((s.blocks??[]).filter(b=>['chart','table'].includes(b.kind)).map(b=>b.evidenceId))].map(id=>c.quality?.results.find(r=>r.id===id)??null),
   findings:(s.findingIds??[]).map(id=>{const f=c.quality?.findings.find(f=>f.id===id);return f?[id,findingSignature(f),f.status,f.evidenceIds.map(e=>[e,f.confirmedHashes[e]??null,c.quality?.results.find(r=>r.id===e)?.resultHash??null])]:[id,null];}),
+  ...((s.blocks??[]).some(b=>b.figureId)?{figures:(s.blocks??[]).filter(b=>b.figureId).map(b=>c.figures?.find(f=>f.id===b.figureId)??null),visualStyle:c.visualStyle??null}:{}),
 });
 const richSlideValue=(s:Slide)=>({...slideValue(s),objects:s.objects??null});
 /** Frozen linkage records editing provenance, not approval of a scientific claim. */
 export async function bindReportSlide(content:EditorContent,slide:Slide,sectionId:string):Promise<Slide>{
   const c=structuredClone(content),s=structuredClone(slide),section=c.report.find(r=>r.id===sectionId);
   if(!section)throw Error('关联章节不存在。');
-  return {...s,reportLink:{version:c.version===2?2:1,sectionId,sectionHash:await fingerprint(c.version===2?richSectionValue(section,c):sectionValue(section)),slideHash:await fingerprint(c.version===2?richSlideValue(s):slideValue(s))}};
+  return {...s,reportLink:{version:c.version===1?1:2,sectionId,sectionHash:await fingerprint(c.version!==1?richSectionValue(section,c):sectionValue(section)),slideHash:await fingerprint(c.version!==1?richSlideValue(s):slideValue(s))}};
 }
 export async function reportLinkState(content: EditorContent, slide: Slide): Promise<LinkState> {
   if (!slide.reportLink) return 'unlinked';
@@ -98,7 +99,7 @@ export async function reportFigureCoverage(content:EditorContent):Promise<Figure
       const refs=(slide.objects??[]).filter(o=>o.sourceBlockId===block.id);
       if(!refs.length)continue;
       pages.push(i+1);
-      states.push(refs.every(o=>o.opacity>0&&o.kind===block.kind&&o.evidenceId===block.evidenceId&&(o.kind!=='chart'||o.valueColumn===block.valueColumn))&&await reportLinkState(c,slide)==='current');
+      states.push(refs.every(o=>o.opacity>0&&o.kind===block.kind&&o.evidenceId===block.evidenceId&&o.figureId===block.figureId&&(o.kind!=='chart'||o.valueColumn===block.valueColumn))&&await reportLinkState(c,slide)==='current');
     }
     out.push({sectionId:section.id,blockId:block.id,title:block.text||section.title,state:!pages.length?'unused':states.every(Boolean)?'current':'review',pages});
   }
@@ -106,14 +107,14 @@ export async function reportFigureCoverage(content:EditorContent):Promise<Figure
 }
 export async function buildReportBlockSlide(content:EditorContent,sectionId:string,blockId:string,excerpt?:string):Promise<Slide>{
   const c=structuredClone(content),section=c.report.find(s=>s.id===sectionId),block=section?.blocks?.find(b=>b.id===blockId);
-  if(c.version!==2||!section||!block||!['chart','table'].includes(block.kind))throw Error('请选择报告中的图表或表格。');
+  if(c.version===1||!section||!block||!['chart','table'].includes(block.kind))throw Error('请选择报告中的图表或表格。');
   if(c.slides.length>=40)throw Error('已有40页，请先整理页面。');
   const body=excerpt??section.body;
   if(!body.trim()||body.length>600||!section.body.includes(body))throw Error('请从本章选择一段要讲述的原文，最多600字。');
   if(c.quality)await verifyResearchQuality(c.quality);
   const {composeQualitySlide}=await import('./quality-layouts.ts');
-  const slide=composeQualitySlide({id:crypto.randomUUID(),title:block.text||section.title,body,aside:'',notes:section.source,layout:block.kind==='table'?'comparison':'chart'},block.kind==='table'?'comparison':'chart',c.quality!,block.evidenceId);
-  slide.objects=slide.objects?.map(o=>o.kind===block.kind?{...o,valueColumn:block.valueColumn,sourceBlockId:block.id}:o);
+  const slide=composeQualitySlide({id:crypto.randomUUID(),title:block.text||section.title,body,aside:'',notes:section.source,layout:block.kind==='table'?'comparison':'chart'},block.kind==='table'?'comparison':'chart',c.quality!,block.evidenceId,undefined,c.visualStyle);
+  slide.objects=slide.objects?.map(o=>o.kind===block.kind?{...o,valueColumn:block.valueColumn,sourceBlockId:block.id,...(block.figureId?{figureId:block.figureId}:{})}:o);
   const bound=await bindReportSlide(c,slide,section.id);
   const {buildPptx}=await import('./editor-export.ts');
   await buildPptx({...c,report:[section],slides:[bound]});
