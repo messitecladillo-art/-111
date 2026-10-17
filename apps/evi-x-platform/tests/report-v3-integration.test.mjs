@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
-import {createEditorContent,applyReportFrame} from '../lib/editor-model.ts';
+import {createEditorContent,applyReportFrame,parseEditorContent} from '../lib/editor-model.ts';
 import {createReportFrame,approveReportFrame} from '../lib/report-frame.ts';
 import {latexCompileInput,previewLatexSource,approvedLatexSource,latexFigureReferences} from '../lib/latex-report.ts';
-import {bindReportSlide,reportLinkState} from '../lib/report-storyboard.ts';
+import {bindReportSlide,bindReportSlideSources,reportLinkState} from '../lib/report-storyboard.ts';
 import {buildDocx} from '../lib/editor-export.ts';
 import {figureFromResult} from '../lib/report-figure.ts';
 const style={schema:'ProjectVisualStyle/v1',paletteId:'blue',version:1};
@@ -26,4 +26,7 @@ test('formal TeX download rejects drafts, tampering and mutations after hashing 
 });
 test('cover-only frames use explicit empty headers on every following section',async()=>{
  const c=applyReportFrame(createEditorContent(),await approveReportFrame({...createReportFrame(style),appliesTo:['cover']},'automated-test-actor'));const zip=await JSZip.loadAsync(await (await buildDocx(c)).arrayBuffer()),xml=await zip.file('word/document.xml').async('string'),refs=[...xml.matchAll(/<w:headerReference[^>]*r:id="([^"]+)"/g)].map(m=>m[1]);assert.equal(refs[0],'rIdReportFrame');assert.ok(refs.length>1);assert.ok(refs.slice(1).every(r=>r==='rIdReportFrameEmpty'));
+});
+test('multi-source pages detect either source, selected block or page changes',async()=>{
+ const c=createEditorContent();c.version=3;c.visualStyle=style;const refs=c.report.slice(0,2).map(s=>({sectionId:s.id,blockIds:[]}));c.slides[0]=await bindReportSlideSources(c,c.slides[0],refs);assert.deepEqual(parseEditorContent(c),c);assert.equal(await reportLinkState(c,c.slides[0]),'current');const changed=structuredClone(c);changed.report[1].body+='新解释';assert.equal(await reportLinkState(changed,changed.slides[0]),'report_changed');const slideChanged=structuredClone(c);slideChanged.slides[0].body+='调整';assert.equal(await reportLinkState(slideChanged,slideChanged.slides[0]),'slide_changed');
 });
