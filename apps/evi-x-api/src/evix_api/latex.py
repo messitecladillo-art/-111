@@ -1,3 +1,4 @@
+from .report_frame_template import checked_frame, frame_tex_preamble
 from .report_figure_template import figure_tex_preamble
 """Bounded project-scoped XeLaTeX export of a closed, body-only TeX subset."""
 import asyncio
@@ -61,8 +62,9 @@ def normalize_body(content):
     return content.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def build_source(title, subtitle, content, settings, figures=None, visual_style=None):
+def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
     """Keep byte-identical with the frontend generator; source is always returned by API."""
+    frame = checked_frame(frame, visual_style)
     lines = [
         r"\documentclass[UTF8,a4paper,zihao=-4]{ctexart}",
         r"\usepackage[top=25.4mm,bottom=25.4mm,left=31.8mm,right=31.8mm]{geometry}",
@@ -85,10 +87,18 @@ def build_source(title, subtitle, content, settings, figures=None, visual_style=
     if figures:
         lines[3:3] = [r"\usepackage{tikz}"]
         lines[-2:-2] = figure_tex_preamble(figures, visual_style)
+    if frame and frame['layout'] != 'none':
+        lines[-2:-2] = frame_tex_preamble(frame)
+        if 'cover' in frame['appliesTo']:
+            lines.append(r"\ReportFrameActivetrue")
     if settings["includeCover"]:
         lines += [r"\begin{titlepage}", r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
+    if frame and frame['layout'] != 'none':
+        lines.append(r"\ReportFrameActivefalse")
     if settings["includeToc"]:
         lines += [r"\pagenumbering{Roman}", r"\tableofcontents", r"\clearpage", r"\pagenumbering{arabic}"]
+    if frame and frame['layout'] != 'none' and ('appendix' if settings['part'] == 'appendix' else 'body') in frame['appliesTo']:
+        lines.append(r"\ReportFrameActivetrue")
     lines += ["% BODY START", normalize_body(content), "% BODY END", r"\end{document}", ""]
     source = "\n".join(lines)
     if len(source.encode('utf-8')) > 2_000_000:
@@ -397,8 +407,8 @@ class LatexCompiler:
         self.settings = settings
         self.slots = threading.BoundedSemaphore(settings.latex_concurrency)
 
-    def compile(self, title, subtitle, content, settings, figures=None, visual_style=None):
-        source = build_source(title, subtitle, content, settings, figures, visual_style)
+    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
+        source = build_source(title, subtitle, content, settings, frame, figures, visual_style)
         result = {"status": "error", "source": source, "sourceHash": hashlib.sha256(source.encode("utf-8")).hexdigest(), "pdfBase64": None, "diagnostics": [], "engine": None}
         try: validate_body(content, len(figures or []))
         except UnsafeBody as error:
@@ -444,11 +454,14 @@ def register_latex(app, *, settings, auth, db, owned_project):
     @app.post("/api/projects/{project_id}/report/latex/compile")
     async def compile_report(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
         owned_project(session, user, project_id)
-        data = await body(request, ("title", "subtitle", "body", "options"), ("figures", "visualStyle"), limit=2_500_000)
+        data = await body(request, ("title", "subtitle", "body", "options"), ("frame", "figures", "visualStyle"), limit=2_500_000)
         text(data["title"], 120, 1); text(data["subtitle"], 240); text(data["body"], MAX_BODY)
         if not data["title"].strip(): raise ApiError()
         format_options = options(data["options"])
         figures, visual_style = data.get("figures"), data.get("visualStyle")
+        if data.get("frame") and visual_style is None:
+            raise ApiError()
+        frame = checked_frame(data.get("frame"), visual_style)
         if figures is not None:
             if not isinstance(figures, list) or not figures or len(figures) > 120 or visual_style is None:
                 raise ApiError()
@@ -457,14 +470,17 @@ def register_latex(app, *, settings, auth, db, owned_project):
             except (ValueError, TypeError, KeyError, OverflowError):
                 raise ApiError() from None
         elif visual_style is not None:
-            raise ApiError()
+            from .report_visuals import _visual_style
+            if frame is None:
+                raise ApiError()
+            _visual_style(visual_style)
         session.execute(select(User).where(User.id == user.id).with_for_update()).scalar_one()
         scope = "latex:" + user.id
         if session.scalar(select(func.count()).select_from(RateEvent).where(RateEvent.scope == scope, RateEvent.created_at > now() - timedelta(hours=1))) >= settings.latex_hourly_compiles:
             raise ApiError(429, "latex_rate_limit", "本小时编译次数已达上限，请稍后重试。")
         session.add(RateEvent(scope=scope)); session.commit()
-        if figures:
-            result = await asyncio.to_thread(compiler.compile, data["title"], data["subtitle"], data["body"], format_options, figures, visual_style)
+        if frame or figures:
+            result = await asyncio.to_thread(compiler.compile, data["title"], data["subtitle"], data["body"], format_options, frame, figures, visual_style)
         else:
             result = await asyncio.to_thread(compiler.compile, data["title"], data["subtitle"], data["body"], format_options)
         # A revoked membership must not receive a completed private artifact.

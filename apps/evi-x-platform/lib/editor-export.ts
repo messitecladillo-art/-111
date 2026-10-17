@@ -1,5 +1,6 @@
 import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, type SvgPreviewRenderer } from "./quality-export.ts";
 import { ACCENTS, parseEditorContent, type EditorContent } from "./editor-model.ts";
+import {addFrameToWord} from './report-frame-export.ts';
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
@@ -34,8 +35,10 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   ];
   const page={size:{width:11906,height:16838},margin:{top:1440,bottom:1440,left:1803,right:1803,header:720,footer:720,gutter:0}};
   const sections:ConstructorParameters<typeof Document>[0]['sections'][number][]=[];
+  const sectionKinds:('cover'|'body'|'appendix'|'preliminary')[]=[];
   const footer=()=>new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,indent:{firstLine:0,firstLineChars:0},spacing:{before:0,after:0,line:240},children:[new TextRun({...bodyRun,children:[PageNumber.CURRENT]})]})]});
   function addSection(children:ConstructorParameters<typeof Document>[0]["sections"][number]["children"],kind:'cover'|'preliminary'|'body',restart?:number){
+    sectionKinds.push(kind==='body'&&options.part==='appendix'?'appendix':kind);
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
   const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
@@ -63,6 +66,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   // Word's half-line spacing is a line-relative measure, not an approximation in points.
   // docx exposes twips but not beforeLines, so set this exact OOXML attribute after packing.
   const archive=await JSZip.loadAsync(await Packer.toArrayBuffer(doc));
+  if(content.reportFrame)await addFrameToWord(archive,content.reportFrame,sectionKinds);
   const styleXml=await archive.file('word/styles.xml')!.async('string');
   archive.file('word/styles.xml',styleXml.replace(/<w:style\b[\s\S]*?<\/w:style>/g,block=>{
     if(!/w:styleId="(?:Normal|ReportReference|ReportSpecialHeading|ReportCaption|Heading[1-5])"/.test(block))return block;

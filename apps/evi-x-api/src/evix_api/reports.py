@@ -202,7 +202,7 @@ def slide_object(value):
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "visualStyle", "figures"))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "visualStyle", "figures", "reportFrame"))
     if type(x["version"]) is not int or x["version"] not in (1, 2, 3) or x["accent"] not in ("teal", "blue", "burgundy"):
         raise ApiError()
     if x["version"] == 1 and "quality" in x:
