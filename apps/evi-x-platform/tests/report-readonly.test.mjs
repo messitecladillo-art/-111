@@ -5,6 +5,8 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as model from '../lib/editor-model.ts';
 import * as format from '../lib/report-format.ts';
+import {blankStoryCard,buildStoryboard} from '../lib/report-storyboard.ts';
+import {QUALITY_LAYOUT_LABELS} from '../lib/quality-layouts.ts';
 
 const editorSource = readFileSync(new URL('../components/editors/EditingStudio.tsx', import.meta.url), 'utf8');
 const hostedSource = readFileSync(new URL('../components/hosted/HostedReport.tsx', import.meta.url), 'utf8');
@@ -42,7 +44,7 @@ function harness(source = editorSource, overrides = {}) {
     './ReportStoryboard': { ...defaultModule('ReportStoryboard'), ReportLinkNotice: 'ReportLinkNotice' },
     './QualityStudio': { ...defaultModule('QualityStudio'), QualitySlidePreview: 'QualitySlidePreview', QualityGraphic: 'QualityGraphic' },
     '@/lib/research-quality': { makeSlideObject() {} },
-    '@/lib/quality-layouts': { appendQualityResult: (content, result) => ({ ...content, subtitle: result.id }) },
+    '@/lib/quality-layouts': { QUALITY_LAYOUT_LABELS, appendQualityResult: (content, result) => ({ ...content, subtitle: result.id }) },
     '@/lib/project-report': {
       appendEvidenceSection: (content, section) => ({ ...content, report: [...content.report, section] }),
       reportContentsEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b), newProjectReport: () => model.createEditorContent(),
@@ -76,6 +78,38 @@ test('permission tickets are revoked by downgrade and stay revoked after restora
   guard.update(true); assert.equal(guard.allows(ticket), false);
   guard.update(false); assert.equal(guard.allows(ticket), false);
   assert.equal(guard.allows(guard.epoch), true);
+});
+
+test('composed story apply upgrades v2 only with a current base and live permission ticket', async () => {
+  const initial = model.createEditorContent(); initial.version = 2;
+  const card = {...blankStoryCard(initial.report[0].id),title:'组合回归',excerpt:initial.report[0].body.slice(0,20),limitation:'仅作软件回归。',implication:'继续核对。',locator:'QA',sources:initial.report.slice(0,2).map(s=>({sectionId:s.id,blockIds:[]}))};
+  const slides = await buildStoryboard(initial,[card],'replace'), h = harness();
+  const props = h.editorProps(false,{projectBinding:{initialContent:initial,status:'ready',readOnly:false,onSnapshot(){},onSave(){}}});
+  h.render(props); const apply = h.find(node=>node.type==='ReportStoryboard').props.onApply, base=JSON.stringify(initial);
+  assert.equal(apply(slides,base+' ',3),false);
+  assert.equal(apply(slides,base,3),true);h.render();assert.equal(h.content().version,3);assert.deepEqual(h.content().slides,slides);assert.deepEqual(h.content().report,initial.report);
+  h.find(node=>node.type==='button'&&node.props.onClick?.name==='undo').props.onClick();h.render();assert.deepEqual(h.content(),initial);
+  const stale=h.find(node=>node.type==='ReportStoryboard').props.onApply;
+  h.render({...props,projectBinding:{...props.projectBinding,readOnly:true}});h.render(props);
+  assert.equal(stale(slides,base,3),false);h.render();assert.deepEqual(h.content(),initial);
+});
+
+test('composed comparison page shows its actual layout and opens object editing', () => {
+  const content=JSON.parse(readFileSync(new URL('./fixtures/report-storyboard/source-owner.json',import.meta.url),'utf8')).content;
+  const h=harness();h.render(h.editorProps(false,{projectBinding:{initialContent:content,status:'ready',readOnly:false,onSnapshot(){},onSave(){}}}));
+  h.find(node=>node.type==='button'&&node.props.children==='PPT 幻灯片').props.onClick();h.render();
+  const select=h.find(node=>node.type==='select'&&node.props['aria-label']==='页面版式');
+  assert.equal(select.props.value,'comparison');assert.equal(select.props.disabled,true);
+  assert.equal(select.props.children.type,'option');assert.equal(select.props.children.props.value,'comparison');assert.equal(select.props.children.props.children,'并列比较');
+  h.find(node=>node.type==='button'&&node.props.children==='打开对象编排').props.onClick();h.render();
+  assert.equal(h.find(node=>node.type==='button'&&node.props.children==='发现与矢量编排').props['aria-pressed'],true);
+});
+
+test('legacy text slides retain the three editable layout choices',()=>{
+  const h=harness();h.render(h.editorProps(false));h.find(node=>node.type==='button'&&node.props.children==='PPT 幻灯片').props.onClick();h.render();
+  const select=h.find(node=>node.type==='select'&&node.props['aria-label']==='页面版式');
+  assert.equal(select.props.disabled,false);assert.deepEqual(Array.from(select.props.children.props.children,x=>x.props.value),['cover','content','two-column']);
+  select.props.onChange({target:{value:'content'}});h.render();assert.equal(h.content().slides[0].layout,'content');
 });
 
 test('read-only rendering and actual edit, quality, storyboard, undo and imperative callbacks preserve content', () => {

@@ -22,7 +22,7 @@ import {appendRegisteredResult} from '@/lib/result-registration';
 import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
 import QualityStudio,{QualitySlidePreview,QualityGraphic} from './QualityStudio';
-import {appendQualityResult} from '@/lib/quality-layouts';
+import {appendQualityResult,QUALITY_LAYOUT_LABELS} from '@/lib/quality-layouts';
 import {makeSlideObject,type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
 
@@ -598,10 +598,10 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>
     <div hidden={mode==='latex'||qualityOpen}>
-    <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
+    <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base,contentVersion)=>{
       if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
-        const next=parseEditorContent({...current.current,slides});
+        const next=parseEditorContent({...current.current,...(contentVersion===3?{version:3}:{}),slides});
         const firstNew=slides.find(s=>!current.current.slides.some(old=>old.id===s.id));
         if(!edit(next))return false;
         setMode('slides');setSlideId(firstNew?.id||slides[0].id);setStoryboardOpen(false);
@@ -630,7 +630,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         </> : <>
           <ReportLinkNotice content={content} slide={slide}/>
           <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>打开报告分镜</button>
-          <div className={styles.designSettings}><label>版式<select value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></select></label>
+          <div className={styles.designSettings}><label>版式<select aria-label="页面版式" disabled={!!slide.objects} value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}>{slide.objects?<option value={slide.layout}>{QUALITY_LAYOUT_LABELS[slide.layout as keyof typeof QUALITY_LAYOUT_LABELS]??"自由对象布局"}</option>:<><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></>}</select></label>{slide.objects&&<button type="button" onClick={()=>setQualityOpen(true)}>打开对象编排</button>}
           <label>强调色<select value={content.accent} onChange={e => edit({ ...content, accent: e.target.value as EditorContent["accent"] })}><option value="teal">深青</option><option value="blue">学术蓝</option><option value="burgundy">酒红</option></select></label></div>
           <label>页面标题<input maxLength={150} value={slide.title} onChange={e => patchSlide({ title: e.target.value })}/></label>
           <label>页面正文<textarea rows={8} maxLength={1800} value={slide.body} onChange={e => patchSlide({ body: e.target.value })}/></label>
