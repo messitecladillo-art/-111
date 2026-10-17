@@ -17,30 +17,31 @@ test('old guidance blocks are skipped, and captions are told apart from sentence
   assert.ok(!isCaption('图3呈现了各群体的分布，城区居民占比更高。'));
 });
 
-test('the generic template scores low and its structural gaps point to blueprint sections', () => {
+test('guidance is not completed writing, and the blueprint is optional', () => {
   const report = benchmarkReport(createEditorContent());
-  assert.ok(report.score < 35, String(report.score));
+  assert.ok(report.score < 50, String(report.score));
   assert.deepEqual(report.dimensions.map(d => d.label), Object.values(BENCHMARK_DIMENSIONS));
   for (const c of report.checks) {
     assert.ok(c.score >= 0 && c.score <= 1, c.id);
     assert.ok(c.detail.length > 4, c.id);
     if (c.status === 'pass' || c.status === 'na') assert.deepEqual(c.fixes, [], c.id);
   }
-  assert.ok(check(report, 'chapters').fixes.some(f => f.insert === 'intro'));
+  assert.equal(check(report, 'chapters').status, 'na');
   assert.equal(check(report, 'abstract').status, 'fail', 'the old abstract hint is not counted as writing');
   assert.ok(report.checks.length >= 35);
 });
 
 test('the blueprint skeleton is structurally complete but does not earn credit for its own guidance', () => {
   const skeleton = benchmarkReport(newProjectReport('骨架'));
-  assert.equal(check(skeleton, 'chapters').status, 'pass');
+  assert.equal(check(skeleton, 'chapters').status, 'na');
   assert.equal(check(skeleton, 'unwritten').status, 'fail');
   assert.match(check(skeleton, 'unwritten').detail, /32 节尚未撰写/);
   for (const id of ['questionnaire', 'aiDisclosure', 'reproducible']) {
     assert.equal(check(skeleton, id).status, 'partial', id);
     assert.match(check(skeleton, id).detail, /尚未填写/);
   }
-  for (const id of ['abstract', 'references', 'sampling', 'tests', 'models']) assert.equal(check(skeleton, id).status, 'fail', id);
+  for (const id of ['abstract', 'sampling']) assert.equal(check(skeleton, id).status, 'fail', id);
+  for (const id of ['references', 'tests', 'models']) assert.equal(check(skeleton, id).status, 'na', id);
   assert.ok(skeleton.score < 15, `headings alone earn little: ${skeleton.score}`);
 });
 
@@ -72,13 +73,36 @@ test('a report that shows its evidence passes the checks built for it', () => {
     section('ap1', '附录1 调查问卷', '卷首语与全部题目。'), section('ap2', '附录2 数据与处理说明', '变量编码表。'), section('ap3', '附录3 人工智能工具使用说明', '使用某大模型润色第四章文字，人工核验全部数字。'),
   ];
   const report = benchmarkReport(content);
-  for (const id of ['abstract', 'keywords', 'chapters', 'objectives', 'sampling', 'sampleSize', 'validRate', 'pilot', 'qualityControl', 'cleaning', 'reliability', 'validity',
-    'tests', 'models', 'diagnostics', 'findings', 'findingActions', 'executable', 'limitations', 'causal', 'questionnaire', 'aiDisclosure', 'referenceFormat', 'reproducible', 'captions', 'unwritten']) {
+  for (const id of ['abstract', 'keywords', 'objectives', 'sampling', 'sampleSize', 'validRate', 'pilot', 'qualityControl',
+    'findings', 'findingActions', 'executable', 'limitations', 'causal', 'questionnaire', 'aiDisclosure', 'referenceFormat', 'reproducible', 'captions', 'unwritten', 'traceable']) {
     assert.equal(check(report, id).status, 'pass', `${id}: ${check(report, id).detail}`);
   }
+  for (const id of ['chapters','cleaning','reliability','validity','models','formulas','figureCount','tableCount']) assert.equal(check(report,id).status,'na',id);
+  for (const id of ['tests','denominators','methods','diagnostics']) assert.equal(check(report,id).status,'fail',`${id}: legacy summary alone has no execution receipt`);
   assert.equal(check(report, 'simulated').status, 'na', 'the simulated result is registered but not used');
   assert.match(check(report, 'figureReferences').detail, /引用图表 2 次/);
   assert.ok(report.score > benchmarkReport(newProjectReport('骨架')).score);
+});
+
+test('adding methods, figures, tables or formulas cannot improve completeness by itself',()=>{
+  const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1')],findings:[]}};
+  content.report=[section('s','分析','当前样本的结构如下，见图1。',{blocks:[{id:'c',kind:'chart',text:'图1 分布',evidenceId:'r1',valueColumn:1}]})];
+  const before=benchmarkReport(content);
+  content.report[0].body+='\n参考方法包括回归、聚类、IPA、结构方程、Pearson 和方差分析。';
+  for(let i=0;i<20;i++)content.report[0].blocks.push({id:'more'+i,kind:i%2?'table':'chart',text:'重复展示',evidenceId:'r1',valueColumn:1},{id:'formula'+i,kind:'formula',text:'x=y',evidenceId:'',valueColumn:0});
+  const after=benchmarkReport(content);
+  assert.equal(after.score,before.score);
+  for(const id of ['models','formulas','figureCount','tableCount','length','numeric'])assert.equal(check(after,id).status,'na',id);
+  assert.match(check(after,'models').detail,/方法名不证明运行/);
+});
+
+test('a method name or alpha title is never evidence of execution, and stale findings need review',()=>{
+  const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1',{method:'frequency',title:'KMO 信度 α 回归'})],findings:[finding('f1','行动')]}};
+  content.quality.findings[0].confirmedHashes.r1='c'.repeat(64);
+  content.report=[section('s','回归与信度','这里介绍一种可选方法。',{blocks:[{id:'c',kind:'chart',text:'结果',evidenceId:'r1',valueColumn:1}]})];
+  const report=benchmarkReport(content);
+  assert.equal(check(report,'reliability').status,'na');assert.equal(check(report,'models').status,'na');
+  assert.equal(check(report,'methods').status,'fail');assert.equal(check(report,'findings').status,'fail');
 });
 
 test('correlation written as causation and undeclared simulated data are both flagged', () => {

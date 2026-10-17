@@ -7,6 +7,7 @@ from sqlalchemy import String, Integer, DateTime, ForeignKey, UniqueConstraint, 
 from sqlalchemy.orm import Mapped, mapped_column
 from .models import Base, now, new_id
 from .contracts import ApiError, body, object_fields, text, integer, uuid_string, fingerprint, canonical
+from .result_receipts import result_receipt
 
 
 class ReportVersion(Base):
@@ -110,7 +111,7 @@ def quality_content(value):
         raise ApiError()
     results = quality_list(x["results"], MAX_RESULTS)
     for result in results:
-        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"))
+        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"), ("receipt",))
         for key, maximum in (("id", 80), ("title", 150), ("sourceName", 240), ("method", 80)):
             quality_text(r[key], maximum, True)
         quality_text(r["sourceUrl"], 512)
@@ -144,6 +145,8 @@ def quality_content(value):
                 bounded_number(m["value"], -1e100, 1e100)
         for warning in quality_list(r["warnings"], 30):
             quality_text(warning, 1000)
+        if "receipt" in r:
+            result_receipt(r["receipt"], r)
     unique_quality(results)
     result_ids = {r["id"] for r in results}
     findings = quality_list(x["findings"], 40)
