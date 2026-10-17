@@ -3,9 +3,10 @@ import { Fragment, createContext, useCallback, useContext, useEffect, useRef, us
 import { usePathname, useRouter } from 'next/navigation';
 import { parseSession, type Session } from '@evix/shared';
 import { errorMessage, hostedRequest } from './api-client';
+import { clearAnonymousCanvasIdentity } from '@/lib/canvas/scope';
 
 type MutationReadOptions = { maxBytes?: number; timeoutMs?: number; signal?: AbortSignal };
-type HostedContext = { session: Session | null; loading: boolean; error: string; identityEpoch: number; refresh: () => Promise<Session>; accept: (session: Session) => void; announce: () => void; logout: () => Promise<void>; isCurrentAccount:(ownerId:string,capturedEpoch:number)=>boolean; setUnsaved: (key: string, dirty: boolean) => void; getDraft:(key:string)=>unknown; cacheDraft:(key:string,value:unknown,changed:boolean,ownerId:string)=>void; navigate: (path: string) => boolean; mutate: (path: string, body?: unknown, method?: string, options?: MutationReadOptions) => Promise<unknown> };
+type HostedContext = { session: Session | null; loading: boolean; error: string; identityEpoch: number; refresh: () => Promise<Session>; accept: (session: Session) => void; announce: () => void; logout: () => Promise<void>; isCurrentAccount:(ownerId:string,capturedEpoch:number)=>boolean; isCurrentIdentity:(ownerId:string|null,capturedEpoch:number)=>boolean; setUnsaved: (key: string, dirty: boolean) => void; getDraft:(key:string)=>unknown; cacheDraft:(key:string,value:unknown,changed:boolean,ownerId:string)=>void; navigate: (path: string) => boolean; mutate: (path: string, body?: unknown, method?: string, options?: MutationReadOptions) => Promise<unknown> };
 export function clearPreviousKnowledgeCache(previous: string | null, next: string | null, storage: Pick<Storage, 'removeItem'>) {
   if (!previous || previous === next) return;
   for (const prefix of ['evix.knowledge.sync.v1:', 'evix.knowledge.lookup.v1:', 'evix.knowledge.term-request.v1:', 'evix.topic.proposal.v1:']) storage.removeItem(prefix + encodeURIComponent(previous));
@@ -25,6 +26,7 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
       // Invalidate old callbacks synchronously, before any keyed child cleanup.
       identityGeneration.current++;
       try { clearPreviousKnowledgeCache(previous, next, sessionStorage); } catch { /* Optional account-scoped recovery cache. */ }
+      try { clearAnonymousCanvasIdentity(sessionStorage); } catch { /* Anonymous drafts become unreachable after an identity change. */ }
       setEpoch(identityGeneration.current); dirty.current.clear(); draftCache.current.clear();
     }
     sessionRef.current = value; setSession(value); setError(''); setLoading(false);
@@ -69,6 +71,11 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
   const setUnsaved = useCallback((key: string, changed: boolean) => { if (changed) dirty.current.add(key); else dirty.current.delete(key); }, []);
   const getDraft=useCallback((key:string)=>draftCache.current.get(key)?.value,[]);
   const isCurrentAccount=useCallback((ownerId:string,capturedEpoch:number)=>sessionRef.current?.user?.id===ownerId&&identityGeneration.current===capturedEpoch,[]);
+  const isCurrentIdentity=useCallback((ownerId:string|null,capturedEpoch:number)=>{
+    const current=sessionRef.current;
+    if(!current||identityGeneration.current!==capturedEpoch)return false;
+    return current.authenticated?ownerId!==null&&current.user?.id===ownerId:ownerId===null;
+  },[]);
   const cacheDraft=useCallback((key:string,value:unknown,changed:boolean,ownerId:string)=>{if(sessionRef.current?.user?.id===ownerId)draftCache.current.set(key,{value,changed});},[]);
   const navigate = useCallback((path: string) => { if (dirty.current.size && !window.confirm('有未保存的修改，是否离开？本标签页会保留草稿，再次进入项目可恢复。')) return false; router.push(path); return true; }, [router]);
   const mutate = useCallback(async (path: string, body?: unknown, method = 'POST', options: MutationReadOptions = {}) => {
@@ -83,5 +90,5 @@ export function HostedSessionProvider({ children }: { children: ReactNode }) {
     if ((dirty.current.size||Array.from(draftCache.current.values()).some(d=>d.changed)) && !window.confirm('退出将清除本标签页未保存的草稿。请先保存或下载备份，确认退出？')) return;
     await mutate('/api/auth/logout'); accept({ authenticated: false, mode: sessionRef.current?.mode || 'production' }); channel.current?.postMessage('changed'); router.push('/login');
   }, [accept, mutate, router]);
-  return <Context.Provider value={{ session, loading, error, identityEpoch, refresh, accept, announce, logout, isCurrentAccount, setUnsaved, getDraft,cacheDraft,navigate, mutate }}><Fragment key={identityEpoch}>{children}</Fragment></Context.Provider>;
+  return <Context.Provider value={{ session, loading, error, identityEpoch, refresh, accept, announce, logout, isCurrentAccount, isCurrentIdentity, setUnsaved, getDraft,cacheDraft,navigate, mutate }}><Fragment key={identityEpoch}>{children}</Fragment></Context.Provider>;
 }
