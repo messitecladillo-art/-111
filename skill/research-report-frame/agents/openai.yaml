@@ -1,0 +1,4 @@
+interface:
+  display_name: "报告主题页框"
+  short_description: "按研究主题与统一配色制作矢量页框，并验证版心、分页与真实文档输出"
+  default_prompt: "使用 $research-report-frame，根据研究主题、项目配色和实际版心制作页框概念稿、矢量候选及疏中密排版样张。"

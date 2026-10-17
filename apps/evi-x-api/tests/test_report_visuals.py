@@ -31,6 +31,7 @@ import {parseSurveyCsv} from './lib/survey-analysis.ts';
 import {buildChartSnapshot} from './lib/chart-data.ts';
 import {CHART_THEMES} from './lib/chart-theme.ts';
 import {figureFromResult,figureFromSnapshot} from './lib/report-figure.ts';
+import {createReportFrame,approveReportFrame} from './lib/report-frame.ts';
 const visual={schema:'ProjectVisualStyle/v1',paletteId:'blue',version:1};
 async function compute(csv,method,x=0,y=null){const table=parseSurveyCsv(csv),node={...createPlanNode(method,'test'),x,y},value=runPlanNode(table,node,[]);return {result:await snapshotRecipe(value,{title:'软件合成图形😀',sourceName:'合成参考',sourceHash:'a'.repeat(64),sourceUrl:'',classification:'simulated'},method+'-'+csv.length),snapshot:buildChartSnapshot(table,node,value,[],{dataHash:'a'.repeat(64),signature:'test',computedAt:'2026-10-17T00:00:00Z'})};}
 const frequency=await compute('类别\n甲\n乙\n甲\n丙\n甲\n乙','frequency');
@@ -44,7 +45,8 @@ for(const kind of ['bar','horizontal_bar','grouped_bar','percent_stacked','heatm
 }
 figures.push(figureFromSnapshot(constant.snapshot,'histogram',{id:'constant',resultId:constant.result.id,resultHash:constant.result.resultHash,title:'常量分布'}));
 const c={...createEditorContent(),version:3,visualStyle:visual,quality:{version:1,results:[frequency.result,cross.result,numeric.result,constant.result],findings:[]},figures,report:[{id:'section',title:'合成参考',body:'软件验收',source:'',blocks:figures.map(f=>({id:'block-'+f.id,kind:f.kind==='table'?'table':'chart',text:f.title,evidenceId:f.resultId,valueColumn:1,figureId:f.id}))}],slides:[{id:'slide',title:'合成图形',body:'',aside:'',notes:'',layout:'chart',objects:figures.map(f=>makeSlideObject(f.kind==='table'?'table':'chart',{id:'object-'+f.id,figureId:f.id,evidenceId:f.resultId,x:5,y:10,width:90,height:80,fontSize:16}))}]} ;
-process.stdout.write(JSON.stringify({plain:parseEditorContent(c),palettes:CHART_THEMES.map(p=>({id:p.id,colors:p.colors}))}));
+const frame=createReportFrame(visual),framed={...c,reportFrame:frame},approved={...c,reportFrame:await approveReportFrame(frame,'软件测试复核')};
+process.stdout.write(JSON.stringify({plain:parseEditorContent(c),draft:parseEditorContent(framed),approved:parseEditorContent(approved),palettes:CHART_THEMES.map(p=>({id:p.id,colors:p.colors}))}));
 """)
 
 
@@ -66,7 +68,7 @@ def test_legacy_documents_are_unchanged_and_cannot_smuggle_visual_fields(fixture
         value = legacy_content(); value['version'] = version
         before = copy.deepcopy(value)
         assert validate_report_visuals(value) is value and value == before
-        for key, new in [('visualStyle', fixtures['plain']['visualStyle']), ('figures', [])]:
+        for key, new in [('visualStyle', fixtures['plain']['visualStyle']), ('figures', []), ('reportFrame', None)]:
             with pytest.raises(ApiError):
                 validate_report_visuals({**value, key: new})
         for key, field in [('report', 'blocks'), ('slides', 'objects')]:
@@ -164,6 +166,47 @@ def test_result_hash_n_and_object_references_are_exact(fixtures):
     value['visualStyle']['paletteId'] = 'forest'; value['visualStyle']['version'] = 2
     validate_report_visuals(value)
     assert [r['resultHash'] for r in value['quality']['results']] == hashes
+
+
+def test_real_frame_geometry_and_approval_hash_bind_current_palette(fixtures):
+    for key in ('draft', 'approved'):
+        value = copy.deepcopy(fixtures[key]); before = copy.deepcopy(value)
+        assert validate_report_visuals(value) == before and value == before
+    stale = copy.deepcopy(fixtures['draft']); stale['visualStyle'].update(paletteId='forest', version=2)
+    hashes = [r['resultHash'] for r in stale['quality']['results']]
+    assert validate_report_visuals(stale) == stale, 'draft stays available for visual review'
+    assert [r['resultHash'] for r in stale['quality']['results']] == hashes
+    for change in [
+        lambda c: c['visualStyle'].update(paletteId='forest'),
+        lambda c: c['visualStyle'].update(version=2),
+        lambda c: c['reportFrame'].update(density=.8),
+        lambda c: c['reportFrame'].update(guardMm=2.9),
+        lambda c: c['reportFrame']['paper'].update(widthMm=211),
+        lambda c: c['reportFrame']['marginsMm'].update(left=30),
+        lambda c: c['reportFrame'].update(protectedAreas=[{'id':'block-corner','kind':'other','xMm':0,'yMm':0,'widthMm':40,'heightMm':40}]),
+        lambda c: c['reportFrame']['review'].update(at='2026-02-30T00:00:00Z'),
+        lambda c: c['reportFrame']['review'].update(definitionSha256='b'*64),
+        lambda c: c['reportFrame'].update(svg='<svg/>'),
+    ]:
+        value = copy.deepcopy(fixtures['approved']); change(value)
+        with pytest.raises(ApiError):
+            validate_report_visuals(value)
+    for key in ('reportFrame', 'visualStyle'):
+        value = copy.deepcopy(fixtures['plain']); value[key] = None
+        with pytest.raises(ApiError):
+            validate_report_visuals(value)
+
+
+def test_draft_registry_palette_triplets_include_short_palettes(fixtures):
+    for palette_id, colors in VISUAL_PALETTES.items():
+        value = copy.deepcopy(fixtures['draft'])
+        value['visualStyle']['paletteId'] = palette_id
+        value['reportFrame']['palette'].update(id=palette_id, primary=colors[0], secondary=colors[2 % len(colors)], accent=colors[4 % len(colors)])
+        assert validate_report_visuals(value) == value
+    for invalid in ('#112233', 'url(https://example.test/asset)', None):
+        value = copy.deepcopy(fixtures['draft']); value['reportFrame']['palette']['primary'] = invalid
+        with pytest.raises(ApiError):
+            validate_report_visuals(value)
 
 
 def test_null_visual_style_is_not_an_absent_style(fixtures):

@@ -1,4 +1,4 @@
-"""Portable aggregate figures for EditorContent/v3.
+"""Portable aggregate figures and controlled page frames for EditorContent/v3.
 
 The contract checks references and bounded values, not the truth of client statistics.
 No user SVG, executable templates, respondent arrays or arbitrary colour registries enter it.
@@ -136,12 +136,32 @@ def _figure(value):
     return f
 
 
+def _frame(value, style):
+    # The backend copy is generated from the canonical Skill by the integration build.
+    from .report_frame_geometry import build_frame, FrameError
+    try:
+        build_frame(value)
+        if value['paper'] != {'widthMm': 210, 'heightMm': 297} or value['marginsMm'] != {'top': 25.4, 'right': 31.8, 'bottom': 25.4, 'left': 31.8}:
+            raise ApiError()
+        palette = value['palette']
+        if palette['id'] not in VISUAL_PALETTES:
+            raise ApiError()
+        colors = VISUAL_PALETTES[palette['id']]
+        expected = {'primary': colors[0], 'secondary': colors[2 % len(colors)], 'accent': colors[4 % len(colors)]}
+        if any(palette[key].upper() != color for key, color in expected.items()):
+            raise ApiError()
+        if value['status'] == 'approved' and (style is None or palette['id'] != style['paletteId'] or palette['version'] != style['version']):
+            raise ApiError(422, 'frame_palette_stale', '页框配色版本已变化，请预览并重新应用。')
+    except (FrameError, ValueError, TypeError, KeyError, OverflowError, UnicodeError):
+        raise ApiError() from None
+
+
 def validate_report_visuals(content):
     """Validate v3 additions without rewriting content, hashes or statistical confirmation."""
     if not isinstance(content, dict) or type(content.get('version')) is not int or content['version'] not in (1, 2, 3):
         raise ApiError()
     version = content['version']
-    visual_keys = ('visualStyle', 'figures')
+    visual_keys = ('visualStyle', 'figures', 'reportFrame')
     if version != 3 and any(key in content for key in visual_keys):
         raise ApiError()
     style = _visual_style(content['visualStyle']) if 'visualStyle' in content else None
@@ -173,4 +193,6 @@ def validate_report_visuals(content):
                 figure = by_figure.get(figure_id)
                 if version != 3 or piece.get('kind') not in ('chart', 'table') or not figure or figure['resultId'] != piece.get('evidenceId') or (piece['kind'] == 'table') != (figure['kind'] == 'table'):
                     raise ApiError()
+    if 'reportFrame' in content:
+        _frame(content['reportFrame'], style)
     return content

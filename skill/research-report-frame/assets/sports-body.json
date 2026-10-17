@@ -1,0 +1,25 @@
+{
+  "schema": "ReportFrameStyle/v1",
+  "id": "wuhan-sports-track",
+  "version": 1,
+  "title": "城市赛事·跑道页框",
+  "status": "vector_draft",
+  "theme": "sports-track",
+  "variant": "body",
+  "layout": "corners",
+  "paper": { "widthMm": 210, "heightMm": 297 },
+  "marginsMm": { "top": 25.4, "right": 31.8, "bottom": 25.4, "left": 31.8 },
+  "guardMm": 3,
+  "trimGuardMm": 3,
+  "protectedAreas": [
+    { "id": "page-number", "kind": "page_number", "xMm": 84, "yMm": 280, "widthMm": 42, "heightMm": 10 }
+  ],
+  "palette": { "id": "forest", "version": 1, "primary": "#38604A", "secondary": "#709365", "accent": "#B8C6A0" },
+  "lineWidthPt": 0.85,
+  "cornerSizeMm": 12,
+  "density": 0.4,
+  "strength": 0.6,
+  "appliesTo": [ "body", "appendix" ],
+  "sourceConcept": null,
+  "review": null
+}

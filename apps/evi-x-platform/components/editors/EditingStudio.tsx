@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
-import { ACCENTS, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { ACCENTS, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
 import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
@@ -17,6 +17,7 @@ import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-rec
 import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
+import ReportFramePanel from './ReportFramePanel';
 import {appendRegisteredResult} from '@/lib/result-registration';
 import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
@@ -592,6 +593,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <ResearchMaterialLibrary context="report"/>
     <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
+    {mode!=='slides'&&<ReportFramePanel key={(content.reportFrame?.id??'none')+':'+(content.reportFrame?.review?.definitionSha256??'draft')} frame={content.reportFrame} visualStyle={content.visualStyle??{schema:'ProjectVisualStyle/v1',paletteId:content.accent==='burgundy'?'plum':content.accent,version:1}} reviewer={hostedSession.session?.user?.id??'local-user'} disabled={locked} onApply={frame=>{if(!canMutate())return;edit(applyReportFrame(current.current,frame));}} onPalette={visualStyle=>{if(!canMutate())return;const next={...current.current,version:3 as const,visualStyle};if(next.reportFrame)next.reportFrame={...next.reportFrame,status:'vector_draft',review:null};edit(parseEditorContent(next));}}/>}
     {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>
