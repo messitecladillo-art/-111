@@ -18,6 +18,8 @@ import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
 import ReportFramePanel from './ReportFramePanel';
+import EvidenceAppendicesPanel from './EvidenceAppendicesPanel';
+import {appendEvidenceAppendixSections} from '@/lib/evidence-appendices';
 import {appendRegisteredResult} from '@/lib/result-registration';
 import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
@@ -85,7 +87,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;onResultHandled?:()=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;onResultHandled?:()=>void;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -594,6 +596,12 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
     {mode!=='slides'&&<ReportFramePanel key={(content.reportFrame?.id??'none')+':'+(content.reportFrame?.review?.definitionSha256??'draft')} frame={content.reportFrame} visualStyle={content.visualStyle??{schema:'ProjectVisualStyle/v1',paletteId:content.accent==='burgundy'?'plum':content.accent,version:1}} reviewer={hostedSession.session?.user?.id??'local-user'} disabled={locked} onApply={frame=>{if(!canMutate())return;edit(applyReportFrame(current.current,frame));}} onPalette={visualStyle=>{if(!canMutate())return;const next={...current.current,version:3 as const,visualStyle};if(next.reportFrame)next.reportFrame={...next.reportFrame,status:'vector_draft',review:null};edit(parseEditorContent(next));}}/>}
+    {mode==='report'&&<EvidenceAppendicesPanel content={content} projectId={projectBinding?.projectId} aiLedger={aiUsageLedger} onRefreshAi={onRefreshAi} aiLoading={aiLoading} disabled={locked} onApply={(sections,base)=>{
+      if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
+      const next=appendEvidenceAppendixSections(current.current,sections);
+      if(!edit(next))return false;
+      setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
+    }}/>}
     {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>
