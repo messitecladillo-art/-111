@@ -6,6 +6,7 @@ import {createRequire} from 'node:module';
 import * as topic from '../lib/topic-advisor/index.ts';
 import {parseTopicBundle} from '../lib/topic-advisor/parse.ts';
 import {readTopicBackup,topicDraftFor,MAX_TOPIC_BACKUP_BYTES} from '../components/topic-advisor/draft.ts';
+import {parseTopicAgentTurn,runLocalTopicAgent} from '../lib/topic-agent/index.ts';
 
 const ts=createRequire(import.meta.url)('typescript');
 const compiled=ts.transpileModule(fs.readFileSync(new URL('../components/topic-advisor/TopicAdvisor.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
@@ -28,6 +29,8 @@ function make({pinnedComparisonId='',shortlistIds=[],managed=true,initialProfile
   const jsx=(type,props,key)=>({type,props,key});
   const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/hosted/HostedSession':{useHostedSession:()=>({session:{user:{id:'account-a'}},identityEpoch:1,getDraft:key=>drafts.get(key),cacheDraft:(key,value)=>drafts.set(key,value),setUnsaved(){},isCurrentAccount:(id,epoch)=>id===auth.session.user.id&&epoch===auth.identityEpoch})},'@/components/workbench/shell-kit':{useWorkbenchTheme:()=> 'light'},'@/lib/topic-advisor':wrapped,'@/lib/topic-advisor/client-bundle':{TOPIC_BUNDLE:bundle},'./TopicAdvisor.module.css':{default:{}},'./RegionPicker':{default:'RegionPicker'},'./draft':{readTopicBackup,topicDraftFor:(...args)=>topicDraftFor(...args.map(plain)),MAX_TOPIC_BACKUP_BYTES}};
   imports['./PublishedCountyEvidence']={default:'PublishedCountyEvidence'};
+  imports['./TopicAgent']={default:'TopicAgent'};
+  imports['@/lib/topic-agent']={parseTopicAgentTurn:(value)=>parseTopicAgentTurn(plain(value))};
   // Stable auth callbacks mirror the real context and prevent false rerender loops.
   const auth=imports['@/components/hosted/HostedSession'].useHostedSession();imports['@/components/hosted/HostedSession'].useHostedSession=()=>auth;
   const box={exports:{},require:name=>{assert.ok(name in imports,name);return imports[name];},JSON,Date,Intl,console,crypto,structuredClone,queueMicrotask,document:{getElementById:()=>null}};vm.runInNewContext(compiled,box);
@@ -80,4 +83,39 @@ test('opening an old-region backup preserves handwritten fields and requires exp
 });
 test('Wuhan exploration is an explicit city choice with all school and channels still unknown',async()=>{
   const s=make();await s.settle();button(s,'从武汉开始探索 →').props.onClick();await s.settle();const next=s.changes.at(-1).profile;assert.deepEqual(next.regionRef,{code:'420100',catalogVersion:topic.TOPIC_REGION_CATALOG.catalogVersion});assert.equal(next.schemaVersion,2);assert.equal(next.school,'');assert.deepEqual(next.access,{});assert.deepEqual(next.resources,{});s.unmount();
+});
+
+test('agent adoption is evaluated against the exact profile and carries sources, question and proposed plan to the existing project callback',async()=>{
+  const s=make();await s.settle();const adopted=[];s.update({onChooseCandidate:(...values)=>adopted.push(plain(values))});await s.settle();
+  const agent=()=>nodes(s.tree).find(node=>node.type==='TopicAgent');const selected=recommendations[0];
+  const refinement={patternId:selected.patternId,title:selected.title,researchQuestion:'具体人群在什么环节停止使用服务？',decisionOwner:selected.decisionOwner,decision:selected.decision,whyHere:'结合登记资料与当前可触达条件形成的拟议方向。',firstWeekPlan:['核对现有资料','联系样本渠道'],unknowns:['当地需求尚待核实'],sourceIds:selected.sourceIds};
+  agent().props.onChoose(refinement,profile);assert.equal(adopted.length,1);const[candidate,evaluation,provenance]=adopted[0];
+  assert.equal(candidate.title,refinement.title);assert.equal(evaluation.question,refinement.researchQuestion);assert.deepEqual(evaluation.sourceIds,selected.sourceIds);assert.deepEqual(evaluation.firstWeekPlan,refinement.firstWeekPlan);assert.deepEqual(provenance.item,refinement);assert.equal(topic.profileFingerprint(provenance.profile),topic.profileFingerprint(profile));
+  s.picker().props.onChange(countyRef);await s.settle();agent().props.onChoose(refinement,profile);assert.equal(adopted.length,1);s.unmount();
+});
+
+test('agent condition changes require an explicit callback and readonly projects refuse both condition and candidate adoption',async()=>{
+  const s=make();await s.settle();const agent=()=>nodes(s.tree).find(node=>node.type==='TopicAgent');const next={...profile,budgetYuan:500,days:14};
+  assert.equal(s.changes.at(-1).profile.budgetYuan,null);agent().props.onProfileChange(next);await s.settle();assert.equal(s.changes.at(-1).profile.budgetYuan,500);
+  s.update({readOnly:true});await s.settle();const before=s.changes.length;agent().props.onProfileChange({...next,budgetYuan:900});await s.settle();assert.equal(s.changes.length,before);s.unmount();
+});
+
+test('the advisor forwards explicit project scope separately from its draft-cache namespace',async()=>{
+  const s=make({cacheNamespace:'project-cache'});await s.settle();const agent=()=>nodes(s.tree).find(node=>node.type==='TopicAgent');assert.equal(agent().props.projectId,null);
+  const projectId='11111111-1111-4111-8111-111111111111';s.update({projectId});await s.settle();assert.equal(agent().props.projectId,projectId);assert.equal(agent().props.cacheNamespace,'project-cache');assert.equal(s.adoptions.length,0);s.unmount();
+});
+
+
+test('adopting an Agent item forwards only the exact receipt sources, preserving external excerpts',async()=>{
+  const s=make();await s.settle();const adopted=[];s.update({onChooseCandidate:(...values)=>adopted.push(plain(values))});await s.settle();
+  const turn=await runLocalTopicAgent({profile,message:'推荐武汉可调查的方向',intent:'recommend'});
+  const item=turn.assistant.items[0], external={id:'lookup-test-0',title:'公开线索合成测试',url:'https://example.test/line',coverage:'search_excerpt',snippet:'测试片段'};
+  item.sourceIds=[external.id];turn.sources.push(external);
+  const choose=nodes(s.tree).find(node=>node.type==='TopicAgent').props.onChoose;
+  choose(item,profile,turn);await s.settle();
+  assert.equal(adopted.length,1);assert.deepEqual(adopted[0][2].sources,[external]);
+  assert.deepEqual(adopted[0][1].sourceIds,[external.id]);
+  choose({...item,sourceIds:['missing']},profile,turn);await s.settle();assert.equal(adopted.length,1);
+  choose(item,profile,{...turn,projectId:'another-project'});await s.settle();assert.equal(adopted.length,1);
+  s.unmount();
 });

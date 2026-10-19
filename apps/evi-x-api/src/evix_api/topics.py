@@ -9,6 +9,7 @@ import hashlib
 import math
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
 
 from fastapi import Depends, Request
 from sqlalchemy import select, func, text as sql_text
@@ -18,6 +19,7 @@ from .models import Operation, RateEvent, now
 from .provider import ProviderFailure
 from .security import keyed, config_view, decrypt
 from .knowledge_models import KnowledgeLookup
+from .knowledge import lookup_query, safe_result_url
 from .topic_regions import (
     assert_profile_region_executable, event_region_includes_profile, matches_profile_geography,
     profile_input_v2, region_catalog_binding, region_resolution,
@@ -132,6 +134,51 @@ def selected_blockers(profile, selected):
     return blocked
 
 
+def lookup_sources(lookup):
+    """Project a completed owned lookup into bounded, explicitly unverified leads.
+
+    Ownership is checked by the route. Validate persisted values again here:
+    malformed ready receipts must not become an uncertain provider dispatch or
+    an invalid paid result merely because a title is empty or a date is absent.
+    """
+    try:
+        if lookup.status != "ready" or getattr(lookup, "error_code", None) is not None:
+            raise ValueError()
+        lookup_id = uuid_string(lookup.id)
+        query = lookup_query(lookup.query)
+        finished = lookup.finished_at
+        if not isinstance(finished, datetime) or finished.tzinfo is None or finished.utcoffset() is None:
+            raise ValueError()
+        stamp = iso(finished)
+        if not isinstance(lookup.results, list) or len(lookup.results) > 5:
+            raise ValueError()
+        sources = []
+        for index, result in enumerate(lookup.results):
+            result = object_fields(result, ("title", "url", "snippet"))
+            text(result["title"], 480)
+            text(result["url"], 2048, 1)
+            text(result["snippet"], 4000)
+            url = safe_result_url(result["url"])
+            if url is None:
+                raise ValueError()
+            title = result["title"].strip() or f"检索片段 · {urlsplit(url).hostname}"
+            # The project source snapshot permits 300 UTF-16 units. Never clip
+            # URLs or snippets: a different URL or evidence fragment is not the
+            # original lead. A short title is only a display projection.
+            title = title.encode("utf-16-le")[:600].decode("utf-16-le", errors="ignore")
+            limits = ["搜索片段，尚未核对原文与事件日期", "检索结果不证明当地适用性、调查许可或研究结论"]
+            if not result["snippet"].strip():
+                limits.append("该结果没有可用片段，只保留链接线索")
+            sources.append({"id": f"lookup-{lookup_id}-{index}", "title": title, "url": url,
+                            "snippet": result["snippet"], "coverage": "search_excerpt", "retrievedAt": stamp,
+                            "authority": "search_provider_excerpt",
+                            "locator": f"检索词：{query}；检索回执：{lookup_id}；检索完成：{stamp}",
+                            "limitations": limits})
+        return sources
+    except (ApiError, AttributeError, TypeError, ValueError, OverflowError, UnicodeError):
+        raise ApiError(404, "lookup_unavailable", "这份检索回执尚不可用于选题。") from None
+
+
 def build_prompt(profile, selected, corpus, goal, lookup=None):
     assert_profile_region_executable(profile)
     candidate_ids = {item["id"] for item in selected}
@@ -144,8 +191,7 @@ def build_prompt(profile, selected, corpus, goal, lookup=None):
     source_ids.update(source for event in relevant_events for source in event["sourceIds"])
     sources = [source_map[source] for source in sorted(source_ids) if source in source_map]
     if lookup:
-        sources.extend({"id": f"lookup-{lookup.id}-{index}", "title": result["title"], "url": result["url"], "snippet": result["snippet"],
-            "coverage": "search_excerpt", "retrievedAt": lookup.finished_at.isoformat(), "limitations": ["搜索片段，尚未核对原文与事件日期"]} for index, result in enumerate(lookup.results))
+        sources.extend(lookup_sources(lookup))
     examples = nearest_examples(profile, corpus["train"]["pairs"], candidate_ids)
     material = {"teamClaims": profile, "candidates": selected, "events": relevant_events, "sources": sources, "goal": goal,
         "authoredTeachingExamples": [{"rationale": row["rationale"], "context": row["context"], "preferredPatternId": row["preferredPatternId"], "rejectedPatternId": row["rejectedPatternId"]} for row in examples]}

@@ -70,6 +70,9 @@ def parse_proposal(raw):
 
 
 class LiveProvider:
+    async def topic_agent(self, config, key, message, selected):
+        return await self.complete(config, key, message, 65536)
+
     async def topic(self, config, key, message, selected):
         return await self.complete(config, key, message, 65536)
 
@@ -145,6 +148,15 @@ class FixtureProvider:
             "researchQuestion": item["question"], "decisionOwner": item["decisionOwner"], "decision": item["decision"],
             "whyHere": "合成模型验收。地区背景按来源核对，团队渠道需自行确认。", "firstWeekPlan": item["minimumEvidence"][:3],
             "unknowns": ["尚未联系真实合作方"], "sourceIds": item["sourceIds"][:3]} for item in selected]}, ensure_ascii=False)
+
+    async def topic_agent(self, config, key, message, selected):
+        self.calls += 1
+        return json.dumps({"text": "合成测试 Agent 回执：仅验证会话与提案链，不代表真实模型建议。",
+            "questions": ["合成测试：调查入口是否已经确认？"],
+            "items": [{"patternId": item["id"], "title": "合成测试提案 · " + item["title"][:130],
+                "researchQuestion": item["question"], "decisionOwner": item["decisionOwner"], "decision": item["decision"],
+                "whyHere": "合成验收。地区和调查条件仍需核查。", "firstWeekPlan": item["minimumEvidence"][:3],
+                "unknowns": ["尚未联系真实合作方"], "sourceIds": item["sourceIds"][:3]} for item in selected]}, ensure_ascii=False)
 
     async def answer(self, config, key, message, spec):
         self.calls += 1
