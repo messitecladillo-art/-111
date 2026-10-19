@@ -17,7 +17,7 @@
 
 ## 生成与检查
 
-在 `apps/evi-x-platform` 执行：
+在 `apps/frontend` 执行：
 
 ```powershell
 node scripts/sync-topic-regions.mjs --write

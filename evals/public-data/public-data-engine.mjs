@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
-import { parseSurveyCsv } from '../../apps/evi-x-platform/lib/survey-analysis.ts';
-import { runRecipe } from '../../apps/evi-x-platform/lib/analysis-recipes.ts';
+import { parseSurveyCsv } from '../../apps/frontend/lib/survey-analysis.ts';
+import { runRecipe } from '../../apps/frontend/lib/analysis-recipes.ts';
 
 const { values } = parseArgs({ options: { csv: { type: 'string' } }, strict: true });
 if (!values.csv) throw new Error('Usage: node --experimental-strip-types public-data-engine.mjs --csv <bank.csv>');

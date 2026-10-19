@@ -36,7 +36,7 @@ accountBoundRecoveryStorage 最初只比较当前账户 ID。若 A→B→A 在�
 
 ## 实际命令与退出码
 
-工作目录为 apps/evi-x-platform：
+工作目录为 apps/frontend：
 
 - node --experimental-strip-types --test tests/knowledge-publication.test.mjs tests/knowledge-account.test.mjs tests/knowledge-project-references.test.mjs：20/20，通过，exit 0；receipt a0b988。
 - npm run knowledge:check：60 concepts / 60 exact versions，check模式，无生成写入，exit 0；receipt a8290b。

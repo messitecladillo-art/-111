@@ -1,6 +1,6 @@
 # P0 本批验收记录
 
-2026-10-07。本批在原 `apps/evi-x-platform` 上交付 P0-A 至 P0-D，以及官方来源报告排版和前端技能审查后的局部优化。运行方式见 [本地启动](p0-running.md)，后续能力位置见 [迁移表](p0-migration-matrix.md)。
+2026-10-07。本批在原 `apps/frontend` 上交付 P0-A 至 P0-D，以及官方来源报告排版和前端技能审查后的局部优化。运行方式见 [本地启动](p0-running.md)，后续能力位置见 [迁移表](p0-migration-matrix.md)。
 
 ## 已实现与验证
 

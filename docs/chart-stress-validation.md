@@ -42,7 +42,7 @@ Node 使用实际模块化绘图引擎，对现有 30 种图形和结果表的 9
 
 ## 复现与记录
 
-在 `apps/evi-x-platform` 运行：
+在 `apps/frontend` 运行：
 
 ```powershell
 npm run test:charts:stress

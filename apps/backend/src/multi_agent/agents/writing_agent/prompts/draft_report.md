@@ -1,0 +1,1 @@
+依据提纲和有证据的材料撰写结构化草稿，输出系统提示词指定的完整 WritingOutput JSON。不得改动统计值。缺少材料时 status=needs_input 并填写 unresolved_questions；没有导出工具成功返回的产物引用时 export_artifact_ref 必须为空。

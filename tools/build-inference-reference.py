@@ -1,7 +1,7 @@
 """Generate SciPy/statsmodels reference values for lib/inference.ts.
 
 Run: uv run --no-project --with scipy==1.16.2 --with statsmodels==0.14.5 --with numpy python tools/build-inference-reference.py
-Writes apps/evi-x-platform/tests/fixtures/inference-reference.json. Inputs are synthetic.
+Writes apps/frontend/tests/fixtures/inference-reference.json. Inputs are synthetic.
 """
 import json
 from pathlib import Path
@@ -97,6 +97,6 @@ out = {
     "chiSquare": chi_cases, "fisher": fisher, "wilson": wilson, "critical": critical, "tails": tails,
     "holm": {"input": holm_in, "output": holm_out},
 }
-target = Path(__file__).resolve().parents[1] / "apps/evi-x-platform/tests/fixtures/inference-reference.json"
+target = Path(__file__).resolve().parents[1] / "apps/frontend/tests/fixtures/inference-reference.json"
 target.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 print("wrote", target)

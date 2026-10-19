@@ -12,8 +12,8 @@
 | `evals/topic-advisor/reviews-v1.json` | 两份独立 AI 评审、来源、理由、范围与身份说明 |
 | `evals/topic-advisor/labels-v1.json` | 协调者冻结的共同断言，绑定精确场景指纹和两位评审 |
 | `evals/topic-advisor/manifest-v1.json` | 场景、标签、评审、全部运行依赖、排序器与训练输入的 SHA-256 |
-| `apps/evi-x-platform/scripts/topic-evaluation.mjs` | 输入验证、隔离检查、两基线、统计口径和特征审计 |
-| `apps/evi-x-platform/scripts/evaluate-topic-advisor.mjs` | 固定输入的离线命令，不接受任意数据路径 |
+| `apps/frontend/scripts/topic-evaluation.mjs` | 输入验证、隔离检查、两基线、统计口径和特征审计 |
+| `apps/frontend/scripts/evaluate-topic-advisor.mjs` | 固定输入的离线命令，不接受任意数据路径 |
 
 外部原文在本批不重新抓取。有关事件的断言只检查冻结目录的地域、日期、阅读覆盖和状态语义，不据此确认真实市场需求、实际活动执行或新的地方事实。既有县域公共投影继续为空，本批不批准内容发布，不推进赛事 CLI 阶段或 Gate。
 
@@ -71,7 +71,7 @@
 
 ## 本地复算
 
-在 `apps/evi-x-platform` 中运行，使用仓库已有 Node 版本，不需要模型 Key、数据库或网络：
+在 `apps/frontend` 中运行，使用仓库已有 Node 版本，不需要模型 Key、数据库或网络：
 
 ```powershell
 node --experimental-strip-types scripts/evaluate-topic-advisor.mjs --verify

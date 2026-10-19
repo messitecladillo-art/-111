@@ -4,7 +4,10 @@ $evixPackage = Join-Path $evixRoot '.local\pgsql'
 if (-not (Test-Path -LiteralPath (Join-Path $evixPackage 'bin\initdb.exe'))) { throw 'Run scripts/setup-local-postgres.py first, or use deploy/compose.dev.yaml.' }
 # EDB initdb uses the Windows ANSI code page for paths. Use an ASCII-only,
 # project-specific temporary runtime for synthetic local tests.
-$evixRootHash = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($evixRoot))).Substring(0,12).ToLowerInvariant()
+$evixHasher = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $evixRootHash = [BitConverter]::ToString($evixHasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($evixRoot))).Replace('-', '').Substring(0,12).ToLowerInvariant()
+} finally { $evixHasher.Dispose() }
 $evixTempBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\')
 $evixRuntime = [System.IO.Path]::GetFullPath((Join-Path $evixTempBase ('evix-p0-pg-' + $evixRootHash)))
 if (-not $evixRuntime.StartsWith($evixTempBase + '\', [System.StringComparison]::OrdinalIgnoreCase) -or $evixRuntime -match '[^\x00-\x7F]') { throw 'Expected an ASCII project-specific temporary directory' }
@@ -13,7 +16,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $evixRuntime 'pgsql\bin\initdb.exe')
 $evixPg = Join-Path $evixRuntime 'pgsql\bin'
 $evixData = Join-Path $evixRuntime 'data'
 [System.IO.File]::WriteAllText((Join-Path $evixRoot '.local\postgres-runtime.json'), (@{runtime=$evixRuntime;data=$evixData;classification='synthetic-local-only'} | ConvertTo-Json), [System.Text.UTF8Encoding]::new($false))
-Set-Location $evixRuntime
+Push-Location $evixRuntime
+try {
 if (-not (Test-Path -LiteralPath (Join-Path $evixData 'PG_VERSION'))) {
     $evixPasswordFile = Join-Path $evixRuntime 'pg-init-password'
     [System.IO.File]::WriteAllText($evixPasswordFile, 'local-p0-owner-only', [System.Text.UTF8Encoding]::new($false))
@@ -38,3 +42,4 @@ if (-not $evixExists) {
 }
 Remove-Item Env:PGPASSWORD
 Write-Output 'Project-local PostgreSQL ready on 127.0.0.1:55432'
+} finally { Pop-Location }

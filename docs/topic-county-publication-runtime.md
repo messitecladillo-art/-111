@@ -15,7 +15,7 @@
 登记修改之后显式生成公共投影：
 
 ```powershell
-cd apps/evi-x-platform
+cd apps/frontend
 node --experimental-strip-types scripts/publish-topic-counties.mjs --write
 node --experimental-strip-types scripts/publish-topic-counties.mjs
 ```

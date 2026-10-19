@@ -1,0 +1,443 @@
+{
+ "note": "Shared by tests/test_silicon.py and apps/frontend/tests/silicon.test.mjs: both normalizers must agree.",
+ "cases": [
+  {
+   "question": {
+    "id": "s",
+    "variable": "S",
+    "type": "single",
+    "choices": [
+     {
+      "code": "1",
+      "label": "选项1"
+     },
+     {
+      "code": "2",
+      "label": "选项2"
+     },
+     {
+      "code": "9",
+      "label": "选项9"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": "2",
+   "value": "2",
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "s",
+    "variable": "S",
+    "type": "single",
+    "choices": [
+     {
+      "code": "1",
+      "label": "选项1"
+     },
+     {
+      "code": "2",
+      "label": "选项2"
+     },
+     {
+      "code": "9",
+      "label": "选项9"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": 2,
+   "value": "2",
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "s",
+    "variable": "S",
+    "type": "single",
+    "choices": [
+     {
+      "code": "1",
+      "label": "选项1"
+     },
+     {
+      "code": "2",
+      "label": "选项2"
+     },
+     {
+      "code": "9",
+      "label": "选项9"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": "4",
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "s",
+    "variable": "S",
+    "type": "single",
+    "choices": [
+     {
+      "code": "1",
+      "label": "选项1"
+     },
+     {
+      "code": "2",
+      "label": "选项2"
+     },
+     {
+      "code": "9",
+      "label": "选项9"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": null,
+   "value": null,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "s",
+    "variable": "S",
+    "type": "single",
+    "choices": [
+     {
+      "code": "1",
+      "label": "选项1"
+     },
+     {
+      "code": "2",
+      "label": "选项2"
+     },
+     {
+      "code": "9",
+      "label": "选项9"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": "",
+   "value": null,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "m",
+    "variable": "M",
+    "type": "multi",
+    "choices": [
+     {
+      "code": "a",
+      "label": "选项a"
+     },
+     {
+      "code": "b",
+      "label": "选项b"
+     },
+     {
+      "code": "c",
+      "label": "选项c"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": [
+    "a",
+    "c"
+   ],
+   "value": [
+    "a",
+    "c"
+   ],
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "m",
+    "variable": "M",
+    "type": "multi",
+    "choices": [
+     {
+      "code": "a",
+      "label": "选项a"
+     },
+     {
+      "code": "b",
+      "label": "选项b"
+     },
+     {
+      "code": "c",
+      "label": "选项c"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": "b",
+   "value": [
+    "b"
+   ],
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "m",
+    "variable": "M",
+    "type": "multi",
+    "choices": [
+     {
+      "code": "a",
+      "label": "选项a"
+     },
+     {
+      "code": "b",
+      "label": "选项b"
+     },
+     {
+      "code": "c",
+      "label": "选项c"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": [
+    "a",
+    "z"
+   ],
+   "value": [
+    "a"
+   ],
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "m",
+    "variable": "M",
+    "type": "multi",
+    "choices": [
+     {
+      "code": "a",
+      "label": "选项a"
+     },
+     {
+      "code": "b",
+      "label": "选项b"
+     },
+     {
+      "code": "c",
+      "label": "选项c"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": [
+    "z"
+   ],
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "m",
+    "variable": "M",
+    "type": "multi",
+    "choices": [
+     {
+      "code": "a",
+      "label": "选项a"
+     },
+     {
+      "code": "b",
+      "label": "选项b"
+     },
+     {
+      "code": "c",
+      "label": "选项c"
+     }
+    ],
+    "min": null,
+    "max": null
+   },
+   "raw": [
+    "c",
+    "a",
+    "a"
+   ],
+   "value": [
+    "a",
+    "c"
+   ],
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "l",
+    "variable": "L",
+    "type": "likert",
+    "choices": [],
+    "min": 1,
+    "max": 5
+   },
+   "raw": 4,
+   "value": 4,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "l",
+    "variable": "L",
+    "type": "likert",
+    "choices": [],
+    "min": 1,
+    "max": 5
+   },
+   "raw": "3",
+   "value": 3,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "l",
+    "variable": "L",
+    "type": "likert",
+    "choices": [],
+    "min": 1,
+    "max": 5
+   },
+   "raw": 2.5,
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "l",
+    "variable": "L",
+    "type": "likert",
+    "choices": [],
+    "min": 1,
+    "max": 5
+   },
+   "raw": 6,
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "l",
+    "variable": "L",
+    "type": "likert",
+    "choices": [],
+    "min": 1,
+    "max": 5
+   },
+   "raw": 4.0,
+   "value": 4,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "l",
+    "variable": "L",
+    "type": "likert",
+    "choices": [],
+    "min": 1,
+    "max": 5
+   },
+   "raw": "x",
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "n",
+    "variable": "N",
+    "type": "number",
+    "choices": [],
+    "min": 0,
+    "max": 100
+   },
+   "raw": 42,
+   "value": 42,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "n",
+    "variable": "N",
+    "type": "number",
+    "choices": [],
+    "min": 0,
+    "max": 100
+   },
+   "raw": "17.5",
+   "value": 17.5,
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "n",
+    "variable": "N",
+    "type": "number",
+    "choices": [],
+    "min": 0,
+    "max": 100
+   },
+   "raw": 101,
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "n",
+    "variable": "N",
+    "type": "number",
+    "choices": [],
+    "min": 0,
+    "max": 100
+   },
+   "raw": -1,
+   "value": null,
+   "valid": false
+  },
+  {
+   "question": {
+    "id": "t",
+    "variable": "T",
+    "type": "text",
+    "choices": [],
+    "min": null,
+    "max": null
+   },
+   "raw": "很好",
+   "value": "很好",
+   "valid": true
+  },
+  {
+   "question": {
+    "id": "t",
+    "variable": "T",
+    "type": "text",
+    "choices": [],
+    "min": null,
+    "max": null
+   },
+   "raw": "长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长",
+   "value": "长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长",
+   "valid": true
+  }
+ ]
+}

@@ -39,7 +39,7 @@ node media/promo-film/render.mjs --workers 4
 
 - **模式**：`public_promo`。片尾完整显示非官方声明：“证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。”不使用赛事或任何第三方标识。
 - **内容分类**：
-  - 界面画面为 `simulated`，即证见工作台的真实截图（`apps/evi-x-platform/public/landing/app-*.webp`），使用教学示例问卷与模拟数据，画面中标注「真实界面 · 示例数据」。
+  - 界面画面为 `simulated`，即证见工作台的真实截图（`apps/frontend/public/landing/app-*.webp`），使用教学示例问卷与模拟数据，画面中标注「真实界面 · 示例数据」。
   - 粒子、光环、轨道与印章为 `conceptual`（概念性视觉），不代表任何样本量、比例或趋势。
 - **品牌素材**：标志使用 `skill/zhengda-cup-champion/assets/brand/logo/mark.svg`。獬见使用生产锚点 `evi-x-character-anchor-v2`（`usage_modes` 含 `public_promo`），片尾注明「AI 辅助生成、经人工验收的原创概念角色」。
 - **不使用的素材**：用户提供的第十六届报告页面未获作者授权确认，不进入本片。

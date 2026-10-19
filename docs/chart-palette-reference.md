@@ -12,7 +12,7 @@
 
 ## 可用方案
 
-数据定义位于 `apps/evi-x-platform/lib/chart-palette-reserve.ts`，导出 `RESEARCH_PALETTES`。
+数据定义位于 `apps/frontend/lib/chart-palette-reserve.ts`，导出 `RESEARCH_PALETTES`。
 
 | 稳定 ID | 名称 | 原文图片 | 颜色 | 类型及用途建议 |
 |---|---|---|---|---|

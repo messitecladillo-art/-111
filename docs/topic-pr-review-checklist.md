@@ -27,7 +27,7 @@ PR #33 是直接基于默认分支的独立 SAV 超时测试修复，不依赖�
 - 县域发布：[运行期发布说明](topic-county-publication-runtime.md) 说明默认校验、显式生成投影、撤回与无效包隔离。构建不会自动批准任何真实县域内容。
 - 公开校准：[评测说明](topic-advisor-evaluation.md) 明确 12 情境、20 断言、两份 AI 审阅及零质量分母。公开校准不能改称封闭盲测，也不作为新生产训练材料。
 
-在 `apps/evi-x-platform` 执行以下只读检查；默认无模型或检索调用：
+在 `apps/frontend` 执行以下只读检查；默认无模型或检索调用：
 
 ```powershell
 node --experimental-strip-types scripts/evaluate-topic-advisor.mjs --verify
