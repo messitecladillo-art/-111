@@ -50,6 +50,8 @@ apps/frontend/lib/topic-advisor/geography.ts text eol=lf
 apps/frontend/lib/topic-advisor/regions.ts text eol=lf
 apps/frontend/lib/topic-advisor/training.ts text eol=lf
 apps/frontend/lib/questionnaire.ts text eol=lf
+# The shared copy is tested byte-for-byte against the canonical parser above.
+packages/evi-x-shared/src/questionnaire.ts text eol=lf
 apps/frontend/scripts/train-topic-advisor.mjs text eol=lf
 apps/frontend/scripts/topic-evaluation.mjs text eol=lf
 apps/frontend/scripts/evaluate-topic-advisor.mjs text eol=lf
