@@ -20,6 +20,7 @@ from .provider import LiveProvider, FixtureProvider, ProviderFailure, parse_prop
 from . import silicon, surveys
 from .knowledge import register_knowledge
 from .topics import register_topics
+from .topic_agent import register_topic_agent
 from .topic_projects import register_topic_projects
 from .topic_questionnaire import questionnaire_save_body, prepare_binding_save, persist_binding, topic_binding_receipt
 from .reports import register_reports
@@ -939,6 +940,7 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     surveys.install_routes(app, settings=settings, db=db, auth=auth, origin=origin, owned_project=owned_project, operation=operation)
     register_knowledge(app, settings, db, session_user, owned_project, lock_user, operation, config=knowledge_config)
     register_topics(app, settings, db, session_user, lock_user, operation, owned_service, generator)
+    register_topic_agent(app, settings, db, session_user, lock_user, operation, owned_service, generator, owned_project=owned_project)
     register_topic_projects(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)

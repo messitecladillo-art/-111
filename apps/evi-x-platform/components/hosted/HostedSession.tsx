@@ -6,9 +6,14 @@ import { errorMessage, hostedRequest } from './api-client';
 
 type MutationReadOptions = { maxBytes?: number; timeoutMs?: number; signal?: AbortSignal };
 type HostedContext = { session: Session | null; loading: boolean; error: string; identityEpoch: number; refresh: () => Promise<Session>; accept: (session: Session) => void; announce: () => void; logout: () => Promise<void>; isCurrentAccount:(ownerId:string,capturedEpoch:number)=>boolean; setUnsaved: (key: string, dirty: boolean) => void; getDraft:(key:string)=>unknown; cacheDraft:(key:string,value:unknown,changed:boolean,ownerId:string)=>void; navigate: (path: string) => boolean; mutate: (path: string, body?: unknown, method?: string, options?: MutationReadOptions) => Promise<unknown> };
-export function clearPreviousKnowledgeCache(previous: string | null, next: string | null, storage: Pick<Storage, 'removeItem'>) {
+export function clearPreviousKnowledgeCache(previous: string | null, next: string | null, storage: Pick<Storage, 'removeItem'> & Partial<Pick<Storage, 'length' | 'key'>>) {
   if (!previous || previous === next) return;
   for (const prefix of ['evix.knowledge.sync.v1:', 'evix.knowledge.lookup.v1:', 'evix.knowledge.term-request.v1:', 'evix.topic.proposal.v1:']) storage.removeItem(prefix + encodeURIComponent(previous));
+  // Pending Agent calls may outlive the topic page. Clear all project namespaces
+  // at the account boundary, even when the originating editor is unmounted.
+  const prefix = `evix.topic.agent.pending.v1:${encodeURIComponent(previous)}:`, keys: string[] = [];
+  if (typeof storage.key === 'function') for (let index = 0; index < (storage.length ?? 0); index++) { const key = storage.key(index); if (key?.startsWith(prefix)) keys.push(key); }
+  keys.forEach(key => storage.removeItem(key));
 }
 const Context = createContext<HostedContext | null>(null);
 export function useHostedSession(): HostedContext { const value = useContext(Context); if (!value) throw Error('缺少账号上下文。'); return value; }

@@ -9,14 +9,18 @@ import { readTopicBackup, topicDraftFor, MAX_TOPIC_BACKUP_BYTES } from './draft'
 import RegionPicker from './RegionPicker';
 import PublishedCountyEvidence from './PublishedCountyEvidence';
 import type { TopicWorkspace } from '@/lib/topic-project';
+import type { TopicRefinement } from '@/lib/topic-proposal';
+import TopicAgent from './TopicAgent';
+import { parseTopicAgentTurn, type AgentSource, type TopicAgentTurn } from '@/lib/topic-agent';
 
 type Run = { profile: TopicProfile; result: ReturnType<typeof recommendTopics>; createdAt: string };
 type CandidateRun = { profile: TopicProfile; candidate: TopicCandidate; result: CandidateEvaluation };
-type Tab = 'recommend' | 'signals' | 'candidate';
+type Tab = 'agent' | 'recommend' | 'signals' | 'candidate';
 type DetailTab = 'decision' | 'evidence' | 'plan';
 export type TopicHandoff = { title: string; decisionOwner: string; population: string; geography: string; problem: string; evidenceStatus: string };
-export type TopicAdvisorProps = { embedded?: boolean; pinnedComparisonId?: string; initialWorkspace?: TopicWorkspace; workspaceRevision?: number; cacheNamespace?: string; readOnly?: boolean; onWorkspaceChange?: (workspace: TopicWorkspace) => void; onChooseRecommendation?: (item: TopicRecommendation, profile: TopicProfile) => void; onChooseCandidate?: (candidate: TopicCandidate, evaluation: CandidateEvaluation) => void; onUseTopic?: (topic: TopicHandoff) => void; renderEnhancement?: (context: { profile: TopicProfile; recommendation: TopicRecommendation | null; stale: boolean }) => ReactNode };
-const TABS: { id: Tab; label: string }[] = [{ id: 'recommend', label: '推荐方向' }, { id: 'signals', label: '热点与命题' }, { id: 'candidate', label: '评估我的题目' }];
+export type TopicAgentAdoption = { item: TopicRefinement; profile: TopicProfile; sources: AgentSource[] };
+export type TopicAdvisorProps = { projectId?: string | null; embedded?: boolean; pinnedComparisonId?: string; initialWorkspace?: TopicWorkspace; workspaceRevision?: number; cacheNamespace?: string; readOnly?: boolean; onWorkspaceChange?: (workspace: TopicWorkspace) => void; onChooseRecommendation?: (item: TopicRecommendation, profile: TopicProfile) => void; onChooseCandidate?: (candidate: TopicCandidate, evaluation: CandidateEvaluation, agent?: TopicAgentAdoption) => void; onUseTopic?: (topic: TopicHandoff) => void; renderEnhancement?: (context: { profile: TopicProfile; recommendation: TopicRecommendation | null; stale: boolean }) => ReactNode };
+const TABS: { id: Tab; label: string }[] = [{ id: 'agent', label: '选题对话' }, { id: 'recommend', label: '推荐方向' }, { id: 'signals', label: '热点与命题' }, { id: 'candidate', label: '评估我的题目' }];
 const DETAILS: { id: DetailTab; label: string }[] = [{ id: 'decision', label: '问题与可行性' }, { id: 'evidence', label: '来源与边界' }, { id: 'plan', label: '第一周怎么做' }];
 const FEASIBILITY = { ready: '可优先验证', conditional: '补条件后再推进', blocked: '先解决执行障碍' };
 const STATUS = { supported: '有依据', proposed: '待验证建议', unknown: '尚未确认', blocked: '存在障碍' };
@@ -33,7 +37,7 @@ function tabKey<T extends string>(event: KeyboardEvent<HTMLButtonElement>, curre
   const at = tabs.findIndex(item => item.id === current), next = event.key === 'ArrowRight' ? (at + 1) % tabs.length : event.key === 'ArrowLeft' ? (at + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
   if (next < 0) return; event.preventDefault(); select(tabs[next].id); document.getElementById(`${prefix}-${tabs[next].id}`)?.focus();
 }
-export default function TopicAdvisor({ onUseTopic, renderEnhancement, embedded = false, pinnedComparisonId = '', initialWorkspace, workspaceRevision = 0, cacheNamespace = 'global', readOnly = false, onWorkspaceChange, onChooseRecommendation, onChooseCandidate }: TopicAdvisorProps = {}) {
+export default function TopicAdvisor({ projectId = null, onUseTopic, renderEnhancement, embedded = false, pinnedComparisonId = '', initialWorkspace, workspaceRevision = 0, cacheNamespace = 'global', readOnly = false, onWorkspaceChange, onChooseRecommendation, onChooseCandidate }: TopicAdvisorProps = {}) {
   const theme = useWorkbenchTheme(), auth = useHostedSession();
   const { getDraft, cacheDraft, setUnsaved, isCurrentAccount, identityEpoch } = auth;
   const ownerId = auth.session?.user?.id ?? '', cacheKey = `topic-advisor:v1:${encodeURIComponent(ownerId)}${cacheNamespace === 'global' ? '' : `:${encodeURIComponent(cacheNamespace)}`}`;
@@ -43,7 +47,7 @@ export default function TopicAdvisor({ onUseTopic, renderEnhancement, embedded =
   const [interestText, setInterestText] = useState(initialWorkspace?.profile.interests.join('、') ?? ''), [differenceText, setDifferenceText] = useState(initialWorkspace?.candidate?.differentiators.join('、') ?? '');
   const [run, setRun] = useState<Run | null>(null), [candidateRun, setCandidateRun] = useState<CandidateRun | null>(null);
   const [selectedId, setSelectedId] = useState(initialWorkspace?.selectedId ?? ''), [compareIds, setCompareIds] = useState<string[]>(() => [...(initialWorkspace?.shortlistIds ?? [])]);
-  const [tab, setTab] = useState<Tab>('recommend'), [detailTab, setDetailTab] = useState<DetailTab>('decision');
+  const [tab, setTab] = useState<Tab>('agent'), [detailTab, setDetailTab] = useState<DetailTab>('decision');
   const [lens, setLens] = useState<'all' | 'national' | 'local'>('all');
   const [notice, setNotice] = useState(''), [error, setError] = useState(''), [dirty, setDirty] = useState(false), [restored, setRestored] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null), editEpoch = useRef(0), importEpoch = useRef(0), active = useRef(true), loadedOwner = useRef('');
@@ -136,6 +140,30 @@ export default function TopicAdvisor({ onUseTopic, renderEnhancement, embedded =
     } catch (failure) { if (active.current && request === importEpoch.current && isCurrentAccount(ownerId, identityEpoch)) setError(message(failure)); }
   }
   function applyRecommendation(item: TopicRecommendation, frozen: TopicProfile) { if (readOnly || stale || item.feasibility === 'blocked') return; if(onChooseRecommendation){onChooseRecommendation(item,frozen);return;} onUseTopic?.({ title: item.title, decisionOwner: item.decisionOwner, population: item.population, geography: geographyLabel(frozen), problem: `${item.question}\n拟支持的决策：${item.decision}`, evidenceStatus: `选题顾问建议，尚未开展实地调查。${item.unknowns.join('；')}` }); }
+  function applyAgent(item: TopicRefinement, frozen: TopicProfile, receipt?: TopicAgentTurn) {
+    if (readOnly || !active.current || profileKey !== safeFingerprint(frozen) || ownerId && !isCurrentAccount(ownerId, identityEpoch)) return;
+    let sources: AgentSource[];
+    try {
+      if (receipt) {
+        const turn = parseTopicAgentTurn(receipt);
+        if (turn.status !== 'ready' || (turn.projectId ?? null) !== projectId || safeFingerprint(turn.profile) !== profileKey || !turn.assistant?.items.some(row => JSON.stringify(row) === JSON.stringify(item))) return;
+        sources = clone(turn.sources.filter(source => item.sourceIds.includes(source.id)));
+      } else sources = clone(TOPIC_BUNDLE.sources.sources.filter(source => item.sourceIds.includes(source.id)));
+      if (item.sourceIds.some(id => !sources.some(source => source.id === id))) throw Error('这份提案的引用未完整返回，请先核对来源。');
+    } catch (failure) { setError(message(failure)); return; }
+    const pattern = TOPIC_BUNDLE.catalog.patterns.find(row => row.id === item.patternId);
+    if (!pattern) return;
+    const proposed: TopicCandidate = { ...clone(EMPTY_TOPIC_CANDIDATE), title: item.title.slice(0, 200), decisionOwner: item.decisionOwner.slice(0, 160), decision: item.decision.slice(0, 240), population: pattern.population.slice(0, 160), geography: geographyLabel(frozen).slice(0, 100), accessNeeds: [...pattern.accessNeeds], resourceNeeds: [...pattern.resourceNeeds], evidencePlan: pattern.minimumEvidence.join('\n').slice(0, 1200), differentiators: pattern.differentiators.slice(0, 8), action: item.decision.slice(0, 300), sensitive: pattern.sensitive };
+    const evaluated = evaluateCandidate(proposed, frozen, TOPIC_BUNDLE);
+    if (evaluated.feasibility === 'blocked') { setError('这份提案仍有执行障碍，请先补充可触达条件。'); return; }
+    const evaluation: CandidateEvaluation = { ...evaluated, patternId: item.patternId, question: item.researchQuestion, firstWeekPlan: [...item.firstWeekPlan], unknowns: [...new Set([...evaluated.unknowns, ...item.unknowns])].slice(0, 20), sourceIds: [...item.sourceIds] };
+    if (onChooseCandidate) { onChooseCandidate(proposed, evaluation, { item: clone(item), profile: clone(frozen), sources }); return; }
+    onUseTopic?.({ title: proposed.title, decisionOwner: proposed.decisionOwner, population: proposed.population, geography: proposed.geography, problem: `${item.researchQuestion}\n拟支持的决策：${item.decision}`, evidenceStatus: `选题顾问提案，尚未开展实地调查。${item.unknowns.join('；')}` });
+  }
+  function applyAgentProfile(next: TopicProfile) {
+    if (readOnly || !active.current || ownerId && !isCurrentAccount(ownerId, identityEpoch)) return;
+    const validated = topicDraftFor(next).profile; changed(); setProfile(clone(validated)); setInterestText(validated.interests.join('、')); setNotice('已更新调研条件，下一轮将按这些条件重新核对。');
+  }
   function wuhan(start = false) { if(readOnly)return; changed(); const input: TopicProfile = { ...freshProfile(), schemaVersion: 2, regionRef: { code: '420100', catalogVersion: TOPIC_REGION_CATALOG.catalogVersion }, region: '湖北省', city: '武汉市' }; setProfile(input); setInterestText(''); if (start) recommend(input); }
   const signals = run ? eventLeadsForProfile(run.profile, TOPIC_BUNDLE.events, TOPIC_BUNDLE.sources) : [];
   const visibleSignals = signals.filter(signal => lens === 'all' || (lens === 'national' ? signal.geography.level === 'national' : signal.geography.level !== 'national'));
@@ -156,6 +184,7 @@ export default function TopicAdvisor({ onUseTopic, renderEnhancement, embedded =
     </fieldset><div className={styles.workspace}>
       <div className={styles.workspaceTop}><span className={styles.step}>02</span><div className={styles.tabs} role="tablist" aria-label="选题工作方式">{TABS.map(item => <button type="button" role="tab" key={item.id} id={`ta-tab-${item.id}`} aria-selected={tab === item.id} aria-controls={`ta-panel-${item.id}`} tabIndex={tab === item.id ? 0 : -1} onClick={() => setTab(item.id)} onKeyDown={event => tabKey(event, item.id, TABS, setTab, 'ta-tab')}>{item.label}</button>)}</div></div>
       {stale && <div className={styles.stale} role="status"><strong>调研条件已改变</strong><span>下方仍依据上一次条件。重新推荐后，才能带入诊断。</span><button type="button" disabled={migrationRequired} onClick={() => recommend()}>更新建议</button></div>}
+      <div role="tabpanel" id="ta-panel-agent" aria-labelledby="ta-tab-agent" hidden={tab !== 'agent'}><TopicAgent profile={profile} projectId={projectId} cacheNamespace={cacheNamespace} readOnly={readOnly} onChoose={onUseTopic || onChooseCandidate ? applyAgent : undefined} onProfileChange={applyAgentProfile} /></div>
       <div role="tabpanel" id="ta-panel-recommend" aria-labelledby="ta-tab-recommend" hidden={tab !== 'recommend'}>
         {!run ? <div className={styles.empty}><span className={styles.emptyMark} aria-hidden="true">Q <i>→</i> D <i>→</i> I <i>→</i> A</span><h4>先找一个能验证的问题。</h4><p>选择地区、写下兴趣，再确认样本和资源。我们会给出题目方向、证据缺口与第一周的验证路径。</p><div className={styles.emptySteps}><p><b>看见变化</b><span>全国政策与本地事件，找到真实的决策压力。</span></p><p><b>找到入口</b><span>把问题放进你能接触的社区、企业或校园。</span></p><p><b>缩小题目</b><span>明确为谁调查、支持什么决定、先补哪条证据。</span></p></div><button type="button" className={styles.secondary} onClick={() => wuhan(true)}>从武汉开始探索 <span aria-hidden="true">→</span></button><p className={styles.hint}>仅填写湖北、武汉，其余条件保留未知。</p></div> : <>
           <div className={styles.resultHeading}><div><h4>{run.result.items.length} 个值得进一步验证的方向</h4><p>{geographyLabel(run.profile) || '地区尚未限定'} · 依据 {run.profile.referenceDate || '未指定日期'} 的条件</p></div><span className={styles.smallTag}>可比较 3 个方向</span></div>

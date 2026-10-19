@@ -19,7 +19,7 @@ const entryRef={id:'p-value',version:1},ref={id:rid,entryId:'p-value',entryVersi
 const wire=(revision=0,references=[])=>({revision,references});
 const keys=()=>{let n=0;return()=>`dddddddd-dddd-dddd-dddd-${String(++n).padStart(12,'0')}`;};
 const error=(status,code)=>Object.assign(new Error(code),{status,code});
-const storage=()=>{const values=new Map();return{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key),values};};
+const storage=()=>{const values=new Map();return{get length(){return values.size;},key:index=>[...values.keys()][index]??null,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key),values};};
 
 test('project references bind exact numeric versions, duplicate additions do not dispatch, and deletion has its own receipt',async()=>{
   const calls=[];let server=wire();let pending;
@@ -56,4 +56,14 @@ test('logout/switch clears only the previous account keys; old cleanup cannot re
   clearPreviousKnowledgeCache(owner,owner,actual);assert.equal(actual.getItem(knowledgeAccountCacheKey(owner)),original);
   const next='eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';for(const prefix of ['evix.knowledge.lookup.v1:','evix.knowledge.term-request.v1:'])actual.setItem(prefix+owner,'previous');actual.setItem('unrelated','keep');actual.setItem('evix.knowledge.lookup.v1:'+next,'next');
   current=next;clearPreviousKnowledgeCache(owner,next,actual);c.dispose();assert.equal(actual.getItem(knowledgeAccountCacheKey(owner)),null);assert.equal(actual.getItem('evix.knowledge.lookup.v1:'+owner),null);assert.equal(actual.getItem('evix.knowledge.term-request.v1:'+owner),null);assert.equal(actual.getItem('unrelated'),'keep');assert.equal(actual.getItem('evix.knowledge.lookup.v1:'+next),'next');
+});
+
+test('account switch outside the topic page removes pending Agent calls across project namespaces only for the previous owner',()=>{
+  const actual=storage(),prefix=`evix.topic.agent.pending.v1:${owner}:`,next='eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  for(const name of ['standalone','project-one','project-two'])actual.setItem(prefix+name,'pending');
+  actual.setItem(`evix.topic.agent.pending.v1:${next}:project-one`,'next');actual.setItem('unrelated','keep');
+  clearPreviousKnowledgeCache(owner,owner,actual);assert.equal(actual.getItem(prefix+'standalone'),'pending');
+  clearPreviousKnowledgeCache(owner,next,actual);
+  for(const name of ['standalone','project-one','project-two'])assert.equal(actual.getItem(prefix+name),null);
+  assert.equal(actual.getItem(`evix.topic.agent.pending.v1:${next}:project-one`),'next');assert.equal(actual.getItem('unrelated'),'keep');
 });

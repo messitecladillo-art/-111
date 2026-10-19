@@ -100,12 +100,14 @@ def timestamp(value):
 
 
 def source_input(value):
-    s = object_fields(value, ("id", "title", "url", "locator", "coverage", "publishedAt", "retrievedAt"))
+    s = object_fields(value, ("id", "title", "url", "locator", "coverage", "publishedAt", "retrievedAt"), ("snippet",))
     identifier(s["id"])
     value_text(s["title"], 300, True)
-    value_text(s["url"], 2000)
+    value_text(s["url"], 2048)
     value_text(s["locator"], 1000)
-    if s["coverage"] not in ("fulltext", "listing_only", "reference"):
+    if "snippet" in s:
+        value_text(s["snippet"], 4000)
+    if s["coverage"] not in ("fulltext", "listing_only", "reference", "search_excerpt"):
         raise ApiError()
     for key in ("publishedAt", "retrievedAt"):
         day(s[key], empty=True)

@@ -2,8 +2,9 @@ import { parseTopicProfile, stableStringify } from './topic-advisor/parse.ts';
 import { EMPTY_TOPIC_PROFILE, ACCESS_OPTIONS, RESOURCE_OPTIONS, type TopicProfile, type TopicCandidate, type TopicRecommendation, type TopicBundle } from './topic-advisor/types.ts';
 import { parseProfileRegionFields, assertProfileRegionExecutable, profileRegionStatus } from './topic-advisor/geography.ts';
 import { regionPath } from './topic-advisor/regions.ts';
+import type { AgentSource } from './topic-agent/index.ts';
 
-export type TopicSourceSnapshot = { id: string; title: string; url: string; locator: string; coverage: 'fulltext' | 'listing_only' | 'reference'; publishedAt: string; retrievedAt: string };
+export type TopicSourceSnapshot = { id: string; title: string; url: string; locator: string; coverage: 'fulltext' | 'listing_only' | 'reference' | 'search_excerpt'; publishedAt: string; retrievedAt: string; snippet?: string };
 export type TopicResearchBrief = { title: string; decisionOwner: string; decision: string; population: string; geography: string; inclusion: string; exclusion: string; evidencePlan: string; questions: { id: string; text: string }[]; constructs: { id: string; name: string; questionIds: string[] }[]; differentiators: string[]; unknowns: string[]; firstWeekPlan: string[]; sources: TopicSourceSnapshot[] };
 export type TopicVerification = { id: string; title: string; status: 'planned' | 'in_progress' | 'supported' | 'not_supported' | 'inconclusive'; note: string; sourceRefs: string[]; recordedAt: string | null };
 export type TopicSelection = { kind: 'pattern' | 'custom'; id: string; title: string };
@@ -16,10 +17,10 @@ export type TopicSaveRequest = { expectedRevision: number; idempotencyKey: strin
 export type TopicDecisionRequest = { expectedRevision: number; expectedDecisionRevision: number; idempotencyKey: string; versionId: string; contentHash: string; action: 'confirm' | 'revoke' };
 export type TopicWorkspace = { profile: TopicProfile; candidate: TopicCandidate | null; shortlistIds: string[]; selectedId: string };
 const fail = (message: string): never => { throw Error(`选题文档：${message}`); };
-function object(value: unknown, keys: string[]): Record<string, unknown> {
+function object(value: unknown, keys: string[], optional: string[] = []): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fail('对象格式无效');
   const proto = Object.getPrototypeOf(value); if (proto !== Object.prototype && proto !== null) fail('对象格式无效');
-  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) { if (!keys.includes(key) || descriptor.get || descriptor.set) fail(`字段 ${key} 无效`); }
+  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) { if ((!keys.includes(key) && !optional.includes(key)) || descriptor.get || descriptor.set) fail(`字段 ${key} 无效`); }
   for (const key of keys) if (!Object.hasOwn(value, key)) fail(`缺少字段 ${key}`);
   return value as Record<string, unknown>;
 }
@@ -32,7 +33,7 @@ function integer(value: unknown, min: number): number { if (typeof value !== 'nu
 function hash(value: unknown): string { const result = text(value, 64); if (!/^[a-f0-9]{64}$/.test(result)) fail('内容指纹无效'); return result; }
 function date(value: unknown, optional = true): string { const result = text(value, 10); if (!result && optional) return ''; if (!/^\d{4}-\d{2}-\d{2}$/.test(result) || !Number.isFinite(Date.parse(result)) || new Date(result).toISOString().slice(0, 10) !== result) fail('日期无效'); return result; }
 function timestamp(value: unknown): string { const result=text(value,40);date(result.slice(0,10),false);if(!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(result)||!Number.isFinite(Date.parse(result)))fail('时间无效');return result; }
-function source(value: unknown): TopicSourceSnapshot { const v=object(value,['id','title','url','locator','coverage','publishedAt','retrievedAt']); const url=text(v.url,2000); if(url){if(/[\s<>]/u.test(url))fail('来源链接无效');let u:URL;try{u=new URL(url);}catch{return fail('来源链接无效');}if(!['https:','http:'].includes(u.protocol)||u.username||u.password)fail('来源链接无效');}if(typeof v.coverage!=='string'||!['fulltext','listing_only','reference'].includes(v.coverage))fail('来源类型无效');return{id:id(v.id),title:(()=>{const title=text(v.title,300);if(!title.trim())fail('来源名称不能为空');return title;})(),url,locator:text(v.locator,1000),coverage:v.coverage as TopicSourceSnapshot['coverage'],publishedAt:date(v.publishedAt),retrievedAt:date(v.retrievedAt)}; }
+function source(value: unknown): TopicSourceSnapshot { const v=object(value,['id','title','url','locator','coverage','publishedAt','retrievedAt'],['snippet']); const url=text(v.url,2048); if(url){if(/[\s<>]/u.test(url))fail('来源链接无效');let u:URL;try{u=new URL(url);}catch{return fail('来源链接无效');}if(!['https:','http:'].includes(u.protocol)||u.username||u.password)fail('来源链接无效');}if(typeof v.coverage!=='string'||!['fulltext','listing_only','reference','search_excerpt'].includes(v.coverage))fail('来源类型无效');return{id:id(v.id),title:(()=>{const title=text(v.title,300);if(!title.trim())fail('来源名称不能为空');return title;})(),url,locator:text(v.locator,1000),coverage:v.coverage as TopicSourceSnapshot['coverage'],publishedAt:date(v.publishedAt),retrievedAt:date(v.retrievedAt),...(v.snippet!==undefined?{snippet:text(v.snippet,4000)}:{})}; }
 
 function projectProfile(value:unknown):TopicProfile {const fields=parseProfileRegionFields(value);const v=object(value,['region','city','school','schoolContext','discipline','interests','domains','days','budgetYuan','access','resources','sensitiveData','referenceDate','competitionWindow',...(fields.schemaVersion===2?['schemaVersion','regionRef']:[])]);for(const [key,max] of [['region',80],['city',80],['school',120],['discipline',100]] as const)text(v[key],max);if(!Array.isArray(v.schoolContext)||v.schoolContext.length>12||!Array.isArray(v.domains)||v.domains.length>10)fail('研究条件列表过长');parseTopicProfile({...v,days:v.days===0?1:v.days});return structuredClone(value) as TopicProfile;}
 function projectCandidate(value:unknown):TopicCandidate {const c=object(value,['title','decisionOwner','decision','population','geography','accessNeeds','resourceNeeds','evidencePlan','differentiators','action','sensitive']);for(const [key,max] of [['title',200],['decisionOwner',160],['decision',600],['population',300],['geography',160],['evidencePlan',1200],['action',600]] as const)text(c[key],max);const access=strings(c.accessNeeds,30,100),resources=strings(c.resourceNeeds,30,100);if(access.some(v=>!ACCESS_OPTIONS.some(o=>o.id===v))||resources.some(v=>!RESOURCE_OPTIONS.some(o=>o.id===v)))fail('样本渠道或资源无效');strings(c.differentiators,8,300);if(typeof c.sensitive!=='boolean')fail('敏感研究设置无效');return structuredClone(value) as TopicCandidate;}
@@ -97,3 +98,27 @@ export function adoptTopicRecommendation(document:TopicProjectDocument,item:Topi
   return{...document,schemaVersion:profile.schemaVersion===2?2:1,shortlistIds:[item.patternId,...document.shortlistIds.filter(id=>id!==item.patternId)].slice(0,3),profile:structuredClone(profile),selected:{kind:'pattern',id:item.patternId,title:item.title},brief:{...emptyTopicBrief(),title:item.title,decisionOwner:item.decisionOwner,decision:item.decision,population:item.population,geography:adoptedGeography(profile),questions:[{id:oldQuestion??`rq-${crypto.randomUUID()}`,text:item.question}],evidencePlan:pattern?.minimumEvidence.join('\n')??'',differentiators:pattern?.differentiators??[],unknowns:item.unknowns.slice(0,20),firstWeekPlan:item.firstWeekPlan.slice(0,12),sources},verification:item.firstWeekPlan.slice(0,12).map(title=>({id:`verify-${crypto.randomUUID()}`,title,status:'planned',note:'',sourceRefs:[],recordedAt:null})),provenance:{catalogVersion:bundle.catalog.contentVersion,modelVersion:bundle.model.modelVersion,sourceIds}};
 }
 export function adoptTopicCandidate(document:TopicProjectDocument,candidate:TopicCandidate,evaluation:TopicRecommendation,bundle:TopicBundle):TopicProjectDocument {const next=adoptTopicRecommendation(document,evaluation,document.profile,bundle);const same=document.selected?.kind==='custom';return{...next,shortlistIds:[...document.shortlistIds],candidate:structuredClone(candidate),selected:{kind:'custom',id:same?document.selected!.id:`custom-${crypto.randomUUID()}`,title:candidate.title},brief:{...next.brief,title:candidate.title,decisionOwner:candidate.decisionOwner,decision:candidate.decision,population:candidate.population,geography:candidate.geography,evidencePlan:candidate.evidencePlan,differentiators:[...candidate.differentiators],questions:[{id:same?(document.brief.questions[0]?.id??`rq-${crypto.randomUUID()}`):`rq-${crypto.randomUUID()}`,text:candidate.decision}]}};}
+
+/** Resolve only the citations of the adopted item against its exact Agent receipt. */
+export function withTopicAgentEvidence(document: TopicProjectDocument, sourceIds: string[], evidence: readonly AgentSource[]): TopicProjectDocument {
+  const cited = strings(sourceIds, 20, 160);
+  if (!cited.length || !Array.isArray(evidence) || evidence.length > 100) return fail('提案的来源记录不完整');
+  const available = new Map<string, AgentSource>();
+  for (const item of evidence) {
+    if (!item || typeof item.id !== 'string' || available.has(item.id)) return fail('提案的来源记录重复或无效');
+    available.set(item.id, item);
+  }
+  const clip = (value: string, max: number) => { const cut = value.slice(0, max); return /[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut; };
+  const sourceDate = (value?: string) => {
+    if (!value) return '';
+    if (!/^\d{4}-\d{2}-\d{2}(?:$|T)/.test(value)) return fail('来源日期无效');
+    return date(value.slice(0, 10));
+  };
+  const sources = cited.map(sourceId => {
+    const item = available.get(sourceId);
+    if (!item) return fail(`提案引用的来源 ${sourceId} 不存在`);
+    const metadata = [item.locator, item.retrievedAt?.includes('T') ? `检索时间：${item.retrievedAt}` : '', ...(item.limitations ?? [])].filter(Boolean).join('\n');
+    return source({ id: item.id, title: clip(item.title, 300), url: item.url ?? '', locator: clip(metadata, 1000), coverage: item.coverage ?? 'reference', publishedAt: sourceDate(item.publishedAt), retrievedAt: sourceDate(item.retrievedAt), ...(item.snippet !== undefined ? { snippet: item.snippet } : {}) });
+  });
+  return parseTopicProjectDocument({ ...document, brief: { ...document.brief, sources }, provenance: { ...document.provenance, sourceIds: sources.map(item => item.id) } });
+}
