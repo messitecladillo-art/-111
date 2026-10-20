@@ -14,11 +14,16 @@ export const PRODUCTION_FILES = Object.freeze([
   'apps/frontend/lib/topic-advisor/training.ts', 'apps/frontend/scripts/train-topic-advisor.mjs',
   ...['catalog', 'sources', 'hotspot-events', 'ranker', 'train', 'regions.catalog'].map(n => `apps/frontend/content/topic-advisor/${n}.json`),
 ]);
+const ARCHIVED_MANIFEST = 'evals/topic-advisor/manifest-v1.json';
 export const EVALUATION_FILES = Object.freeze([
   'evals/topic-advisor/scenarios-v1.json', 'evals/topic-advisor/labels-v1.json', 'evals/topic-advisor/reviews-v1.json',
   'evals/topic-advisor/reviewer-bindings-v1.json', '.gitattributes',
   'apps/frontend/scripts/topic-evaluation.mjs', 'apps/frontend/scripts/evaluate-topic-advisor.mjs',
+  ARCHIVED_MANIFEST,
 ]);
+// Only packaging/verifier bytes changed. Labels, reviews, training and scoring code retain the v1 hashes.
+const MIGRATION_CHANGED_FILES = Object.freeze(['.gitattributes', 'apps/frontend/scripts/topic-evaluation.mjs']);
+const archivedPath = relative => relative.replace(/^apps\/frontend\//u, 'apps/evi-x-platform/');
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/u;
 const SHA = /^[0-9a-f]{64}$/u;
 const SPLITS = ['calibration', 'development', 'final'];
@@ -237,8 +242,8 @@ export function parseLabels(raw, pack, bundle, reviews, bindings, frozenAt) {
 }
 
 export function verifyManifest(root, manifest) {
-  object(manifest, ['schemaVersion', 'packId', 'baseRevision', 'evaluationClass', 'frozenAt', 'sealedAt', 'files'], 'manifest');
-  if (manifest.schemaVersion !== 1 || manifest.evaluationClass !== 'public_calibration') fail('manifest class/version');
+  object(manifest, ['schemaVersion', 'packId', 'baseRevision', 'evaluationClass', 'frozenAt', 'sealedAt', 'files', 'migration'], 'manifest');
+  if (manifest.schemaVersion !== 2 || manifest.evaluationClass !== 'public_calibration') fail('manifest class/version');
   if (!/^[a-f0-9]{40}$/u.test(manifest.baseRevision)) fail('manifest base revision');
   identifier(manifest.packId, 'manifest pack'); dateTime(manifest.frozenAt, 'frozen time');
   dateTime(manifest.sealedAt, 'artifact seal time');
@@ -259,12 +264,35 @@ export function verifyManifest(root, manifest) {
     if (!lstatSync(file).isFile() || lstatSync(file).size > 4 * 1024 * 1024) fail('input size/type');
     if (sha256(readFileSync(file)) !== manifest.files[relative]) fail(`frozen file hash drift: ${relative}`);
   }
-  return { verifiedFiles: expected.length, manifestSha256: sha256(Buffer.from(stableStringify(manifest))) };
+  // The original receipt remains an exact-byte input; a path migration cannot reapprove or relabel it.
+  const source = strictJson(readFileSync(path.join(canonicalRoot, ARCHIVED_MANIFEST), 'utf8'));
+  object(source, ['schemaVersion', 'packId', 'baseRevision', 'evaluationClass', 'frozenAt', 'sealedAt', 'files'], 'archived manifest');
+  if (source.schemaVersion !== 1) fail('archived manifest version');
+  for (const field of ['packId', 'baseRevision', 'evaluationClass', 'frozenAt']) {
+    if (source[field] !== manifest[field]) fail(`migration changed original ${field}`);
+  }
+  dateTime(source.sealedAt, 'archived artifact seal time');
+  if (Date.parse(source.sealedAt) < Date.parse(source.frozenAt) || Date.parse(manifest.sealedAt) < Date.parse(source.sealedAt)) fail('migration seal predates archived seal');
+  const mapped = expected.filter(relative => relative !== ARCHIVED_MANIFEST);
+  object(source.files, mapped.map(archivedPath), 'archived manifest files');
+  if (Object.keys(source.files).length !== mapped.length || mapped.some(relative => !Object.hasOwn(source.files, archivedPath(relative)))) fail('archived manifest omits required implementation or input');
+  for (const relative of mapped) hash(source.files[archivedPath(relative)], `archived file ${relative}`);
+  const migration = object(manifest.migration, ['kind', 'sourceManifestSha256', 'repositoryRevision', 'changedFiles'], 'migration');
+  if (migration.kind !== 'repository-layout-v1' || !/^[a-f0-9]{40}$/u.test(migration.repositoryRevision)) fail('migration kind/revision');
+  hash(migration.sourceManifestSha256, 'source manifest hash');
+  if (migration.sourceManifestSha256 !== manifest.files[ARCHIVED_MANIFEST]) fail('migration source manifest hash mismatch');
+  const changed = list(migration.changedFiles, 'migration changed files');
+  const actualChanges = mapped.filter(relative => source.files[archivedPath(relative)] !== manifest.files[relative]);
+  if (stableStringify(changed) !== stableStringify(MIGRATION_CHANGED_FILES) || stableStringify(actualChanges) !== stableStringify(MIGRATION_CHANGED_FILES)) fail('migration must preserve all original data, reviews and production hashes');
+  return {
+    verifiedFiles: expected.length, manifestSha256: sha256(Buffer.from(stableStringify(manifest))),
+    migration: { ...migration, sourceSealedAt: source.sealedAt, sealedAt: manifest.sealedAt },
+  };
 }
 
 export function loadFrozenEvaluation(root) {
   const read = relative => strictJson(readFileSync(path.join(root, relative), 'utf8'));
-  const manifest = read('evals/topic-advisor/manifest-v1.json');
+  const manifest = read('evals/topic-advisor/manifest-v2.json');
   const identity = verifyManifest(root, manifest);
   const c = 'apps/frontend/content/topic-advisor/';
   const bundle = parseTopicBundle({ catalog: read(`${c}catalog.json`), sources: read(`${c}sources.json`), events: read(`${c}hotspot-events.json`), model: read(`${c}ranker.json`) });

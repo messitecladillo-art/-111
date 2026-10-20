@@ -67,6 +67,9 @@ class LangGraphRunner:
         self.graph = graph.compile()
 
     def advance(self, state: WorkflowState) -> WorkflowState:
+        # An approved final gate has no next role; let the engine complete it.
+        if self.engine.next_role(state) is None:
+            return self.engine.advance(state)
         return WorkflowState.from_dict(self.graph.invoke(state.to_dict()))
 
     def approve(self, state: WorkflowState, *, approved: bool, feedback: str = "") -> WorkflowState:

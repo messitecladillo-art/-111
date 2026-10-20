@@ -21,8 +21,8 @@ class TopicProjectService:
         return session.execute(query.order_by(TopicProjectDecision.revision.desc()).limit(1)).scalar_one_or_none()
 
     def decision_view(self, *, session, project_id, version, historical=False):
-        last = self.latest_decision(session=session, project_id=project_id, version_id=self.version.id if historical and self.version else None)
-        if last and self.version and (last.version_id == self.version.id):
+        last = self.latest_decision(session=session, project_id=project_id, version_id=version.id if historical and version else None)
+        if last and version and (last.version_id == version.id):
             return {'revision': last.revision, 'status': 'confirmed' if last.action == 'confirm' else 'revoked', 'versionId': last.version_id, 'contentHash': last.content_hash}
         return {'revision': last.revision if last else 0, 'status': 'draft', 'versionId': None, 'contentHash': None}
 

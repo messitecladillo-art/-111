@@ -9,7 +9,7 @@ from evix_api.uploads.submission import TemporarySubmissionPreflights
 
 from types import SimpleNamespace
 
-SCHEMA_REVISION = "0008_agent_tasks"
+SCHEMA_REVISION = "0009_agent_task_collaboration"
 
 def create_runtime(settings=None, mail=None, provider=None, engine=None):
     settings = settings or Settings()

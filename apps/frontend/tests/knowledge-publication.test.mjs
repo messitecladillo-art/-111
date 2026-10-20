@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { assembleKnowledgePublication, currentKnowledgeEntries, exactKnowledgeEntry } from '../lib/knowledge/publication.ts';
 const core=JSON.parse(await readFile(new URL('../content/knowledge/core-60.json',import.meta.url)));
 test('new versions leave the exact older definition readable; same-version mutation is rejected',()=>{
@@ -25,4 +28,23 @@ test('separate releases preserve older endpoints and reject a rehashed same-vers
   assert.equal(currentKnowledgeEntries(second).length,60);
   assert.throws(()=>assembleKnowledgePublication('third',[{schemaVersion:1,version:'rehash',entries:[{...changed,version:1}]}],second),/Published version changed/);
   assert.throws(()=>assembleKnowledgePublication('bad',[],{...first,entries:[...first.entries,first.entries[0]]}),/Duplicate archived/);
+});
+
+test('publication CLI checks the relocated research-agent catalogue from another cwd without writing',async()=>{
+  const outputs=[
+    new URL('../content/knowledge/published.json',import.meta.url),
+    new URL('../../backend/src/multi_agent/agents/research_agent/knowledge-catalog.json',import.meta.url),
+  ];
+  const before=await Promise.all(outputs.map(file=>readFile(file)));
+  const script=fileURLToPath(new URL('../scripts/publish-knowledge.mjs',import.meta.url));
+  const result=spawnSync(process.execPath,['--experimental-strip-types',script],{cwd:tmpdir(),encoding:'utf8',windowsHide:true});
+  assert.equal(result.status,0,result.stderr);
+  const receipt=JSON.parse(result.stdout);
+  assert.equal(receipt.status,'pass');
+  assert.equal(receipt.mode,'check');
+  const apiEntries=JSON.parse(before[1]).entries;
+  assert.ok(apiEntries.length>0);
+  assert.equal(receipt.concepts,new Set(apiEntries.map(entry=>entry.id)).size);
+  assert.equal(receipt.exactVersions,apiEntries.length);
+  assert.deepEqual(await Promise.all(outputs.map(file=>readFile(file))),before);
 });

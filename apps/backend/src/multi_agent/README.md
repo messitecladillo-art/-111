@@ -88,8 +88,25 @@ result = agent.run(ResearchInput(
 `task.context["upstream_outputs"]` 获取；Data 只接收显式输入的数据文件引用，
 不会把生成的研究计划/报告当原始调查数据。
 
-现有 `0008_agent_tasks` 继续保存外层任务状态，不需要新迁移。
+`0008_agent_tasks` 建立的表继续保存外层任务状态。部署当前版本前运行
+`uv run alembic upgrade head`，应用 `0009_agent_task_collaboration`：
+同队 owner/editor 可推进任务，创建者、项目归属、任务类型等身份字段保持不变。
+迁移不重写已有任务内容，API 启动时校验数据库版本。
 内部逐步检查点尚未持久化到数据库，不能宣称进程中断后能恢复到任意内部步骤。
+
+## 修改入口与回归
+
+| 要修改的行为 | 修改入口 | 应运行的回归 |
+| --- | --- | --- |
+| 哪些研究成果需要用户确认 | `workflow/orchestrator.py` 的 `_APPROVAL_AFTER_REVIEW`，按实际被审角色定义 | `test_multi_agent_workflow.py`，覆盖单任务和完整研究、拒绝返修、次数上限 |
+| 批准后的继续执行 | `workflow/langgraph_runner.py` | 同上，覆盖 JSON 恢复、最终完成、已执行步骤不重复 |
+| 团队任务读写、撤权、并发版本 | `application/services/agent_tasks.py` 与数据库迁移 | `test_agent_tasks_postgres.py`，必须使用真实 PostgreSQL 和普通应用角色 |
+| 选题确认与历史版本 | `application/services/topic_projects.py` | `test_topic_projects_postgres.py`，覆盖新草稿、历史确认与撤销 |
+
+研究设计和问卷在 Reviewer 通过后暂停，用户批准才继续；用户要求修改会返回对应
+研究/问卷角色，再次审阅和确认。该流程不推进赛事 CLI 的阶段或 Gate。
+历史上已被旧逻辑错误标为 `completed` 的问卷任务不会被迁移自动重开；
+需要重新确认时新建任务，保留原记录。
 
 ## 真实性边界与未完成项
 

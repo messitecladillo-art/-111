@@ -22,10 +22,11 @@ catch(error) { if(error.code!=='ENOENT') throw error; }
 const publication=assembleKnowledgePublication(manifest.release,packs,previous);
 const publicText=JSON.stringify(publication,null,2)+'\n';
 const apiText=JSON.stringify({ schemaVersion:1, release:manifest.release, entries:publication.entries.map(({id,version,review})=>({id,version,review})) },null,2)+'\n';
-const outputs=[[publicationFile,publicText],[path.join(root,'../backend/src/evix_api/knowledge-catalog.json'),apiText]];
+const outputs=[[publicationFile,publicText],[path.join(root,'../backend/src/multi_agent/agents/research_agent/knowledge-catalog.json'),apiText]];
 if(process.argv.includes('--write')) {
   for(const [file,content] of outputs) await writeFile(file,content);
 } else {
-  for(const [file,content] of outputs) if(await readFile(file,'utf8')!==content) throw Error('Knowledge publication output is stale: '+path.basename(file));
+  // Generated projections may be checked out with CRLF; reviewed source hashes above remain byte-exact.
+  for(const [file,content] of outputs) if((await readFile(file,'utf8')).replace(/\r\n/g,'\n')!==content) throw Error('Knowledge publication output is stale: '+path.basename(file));
 }
 console.log(JSON.stringify({status:'pass',release:manifest.release,concepts:currentKnowledgeEntries(publication).length,exactVersions:publication.entries.length,mode:process.argv.includes('--write')?'write':'check'}));

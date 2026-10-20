@@ -90,6 +90,53 @@ def test_topic_decisions_exact_target_cas_revoke_and_reconfirm(harness):
     assert owner.get(path).json()["decision"]["revision"] == 3
 
 
+def test_current_and_historical_decisions_stay_bound_to_their_version(harness):
+    _, login, _, _ = harness
+    owner, _ = login()
+    p, _ = project(owner)
+    path = f'/api/projects/{p["id"]}/topic'
+    blank = {"revision": 0, "status": "draft", "versionId": None, "contentHash": None}
+
+    def history(version):
+        response = owner.get(path + "/versions/" + version["id"])
+        assert response.status_code == 200, response.text
+        return response.json()["decision"]
+
+    def decide(version, revision, action="confirm"):
+        response = owner.post(path + "/decisions", json=decision_body(version, revision, action))
+        assert response.status_code == 201, response.text
+        return response.json()["decision"]
+
+    first_response = save(owner, path)
+    assert first_response.status_code == 201, first_response.text
+    first = first_response.json()["version"]
+    assert history(first) == blank
+    first_confirmation = decide(first, 0)
+    assert owner.get(path).json()["decision"] == history(first) == first_confirmation
+
+    second_response = save(owner, path, 1)
+    assert second_response.status_code == 201, second_response.text
+    second = second_response.json()["version"]
+    assert second_response.json()["decision"] == {**blank, "revision": 1}
+    assert history(second) == blank
+    second_confirmation = decide(second, 1)
+    assert owner.get(path).json()["decision"] == history(second) == second_confirmation
+    assert history(first) == first_confirmation
+
+    revoked = decide(second, 2, "revoke")
+    assert revoked == {"revision": 3, "status": "revoked", "versionId": second["id"], "contentHash": second["contentHash"]}
+    assert owner.get(path).json()["decision"] == history(second) == revoked
+    assert history(first) == first_confirmation
+    third_response = save(owner, path, 2)
+    assert third_response.status_code == 201, third_response.text
+    third = third_response.json()["version"]
+    assert third_response.json()["decision"] == {**blank, "revision": 3}
+    assert owner.get(path).json()["decision"] == {**blank, "revision": 3}
+    assert history(third) == blank
+    assert history(second) == revoked
+    assert history(first) == first_confirmation
+
+
 def test_topic_membership_roles_revoke_project_and_database_isolation(harness, pg_engine):
     _, login, _, _ = harness
     owner, owner_identity = login()

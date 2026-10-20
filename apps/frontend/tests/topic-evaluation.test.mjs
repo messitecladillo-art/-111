@@ -11,10 +11,12 @@ import { strictJson, sha256, parseScenarioPack, parseLabels as parseReviewLabels
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const read = p => strictJson(fs.readFileSync(path.join(root, p), 'utf8'));
+const activeManifest = 'evals/topic-advisor/manifest-v2.json';
+const archivedManifest = 'evals/topic-advisor/manifest-v1.json';
 const content = 'apps/frontend/content/topic-advisor/';
 const bundle = parseTopicBundle({ catalog: read(content + 'catalog.json'), sources: read(content + 'sources.json'), events: read(content + 'hotspot-events.json'), model: read(content + 'ranker.json') });
 const pack = read('evals/topic-advisor/scenarios-v1.json'), labels = read('evals/topic-advisor/labels-v1.json'), reviews = read('evals/topic-advisor/reviews-v1.json');
-const bindings = read('evals/topic-advisor/reviewer-bindings-v1.json'), frozenAt = read('evals/topic-advisor/manifest-v1.json').frozenAt;
+const bindings = read('evals/topic-advisor/reviewer-bindings-v1.json'), frozenAt = read(archivedManifest).frozenAt;
 const parseLabels = (l, p, b, r, registry = bindings, time = frozenAt) => parseReviewLabels(l, p, b, r, registry, time);
 const clone = structuredClone;
 const refreshReviewHashes = (receipts, registry) => receipts.forEach(r => { r.reviewSha256 = sha256(Buffer.from(stableStringify(r.review))); if (registry) registry.reviewers.find(b => b.reviewerId === r.reviewerId).rawReviewSha256 = r.reviewSha256; });
@@ -177,26 +179,80 @@ test('a review cannot contain contradictory status claims', () => {
 });
 
 test('manifest requires exact frozen implementation, catalogue, training and review files', () => {
-  const manifest = read('evals/topic-advisor/manifest-v1.json');
+  const manifest = read(activeManifest);
   const drift = clone(manifest); drift.files[PRODUCTION_FILES[0]] = '0'.repeat(64);
   assert.throws(() => verifyManifest(root, drift), /hash drift/);
   const missing = clone(manifest); delete missing.files[PRODUCTION_FILES[0]];
   assert.throws(() => verifyManifest(root, missing), /omits/);
   const escape = clone(manifest); escape.files['../secret'] = '0'.repeat(64);
   assert.throws(() => verifyManifest(root, escape), /unknown/);
+  const legacy = clone(manifest);
+  const relative = PRODUCTION_FILES[0];
+  legacy.files[relative.replace('apps/frontend/', 'apps/evi-x-platform/')] = legacy.files[relative];
+  delete legacy.files[relative];
+  assert.throws(() => verifyManifest(root, legacy), /unknown/);
+  let calls = 0;
+  const dynamic = clone(manifest);
+  Object.defineProperty(dynamic.files, relative, { enumerable: true, get() { calls++; return manifest.files[relative]; } });
+  assert.throws(() => verifyManifest(root, dynamic), /dynamic/); assert.equal(calls, 0);
 });
 
-test('hard-linked evaluation input is rejected; scratch cleanup stays inside created temp directory', t => {
+function copyFrozenInputs(t) {
   const prefix = 'evix-topic-eval-', dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   t.after(() => {
     const absolute = path.resolve(dir);
     assert.equal(path.dirname(absolute), path.resolve(os.tmpdir())); assert.ok(path.basename(absolute).startsWith(prefix));
     fs.rmSync(absolute, { recursive: true, force: true });
   });
-  const manifest = read('evals/topic-advisor/manifest-v1.json');
   for (const relative of [...PRODUCTION_FILES, ...EVALUATION_FILES]) {
     const target = path.join(dir, relative); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.copyFileSync(path.join(root, relative), target);
   }
+  return dir;
+}
+
+test('renamed static closure retains the original freeze and archived review provenance', () => {
+  const manifest = read(activeManifest), source = read(archivedManifest);
+  const identity = verifyManifest(root, manifest);
+  assert.deepEqual(Object.keys(manifest.files).sort(), [...PRODUCTION_FILES, ...EVALUATION_FILES].sort());
+  assert.ok(Object.keys(manifest.files).every(relative => !relative.startsWith('apps/evi-x-platform/')));
+  for (const field of ['packId', 'baseRevision', 'evaluationClass', 'frozenAt']) assert.equal(manifest[field], source[field]);
+  assert.equal(identity.migration.sourceSealedAt, source.sealedAt);
+  assert.ok(Date.parse(manifest.sealedAt) > Date.parse(source.sealedAt));
+  assert.deepEqual(manifest.migration.changedFiles, ['.gitattributes', 'apps/frontend/scripts/topic-evaluation.mjs']);
+  for (const file of [archivedManifest, 'evals/topic-advisor/scenarios-v1.json', 'evals/topic-advisor/labels-v1.json', 'evals/topic-advisor/reviews-v1.json', 'evals/topic-advisor/reviewer-bindings-v1.json']) {
+    assert.deepEqual(fs.readFileSync(path.join(root, file)), execFileSync('git', ['show', `HEAD:${file}`], { cwd: root, maxBuffer: 4 * 1024 * 1024 }), file);
+  }
+});
+
+test('migration cannot redate reviews, redirect provenance, or expand its changed-file allowance', () => {
+  for (const mutate of [
+    m => { m.frozenAt = m.sealedAt; },
+    m => { m.baseRevision = '0'.repeat(40); },
+    m => { m.migration.sourceManifestSha256 = '0'.repeat(64); },
+    m => { m.migration.sourceManifest = '../other.json'; },
+    m => { m.migration.changedFiles.push(PRODUCTION_FILES[0]); },
+    m => { m.sealedAt = m.frozenAt; },
+  ]) {
+    const manifest = read(activeManifest); mutate(manifest);
+    assert.throws(() => verifyManifest(root, manifest), /migration|unknown/);
+  }
+});
+
+test('tampered inputs fail hashing and rehashed data or review mutations fail migration continuity', t => {
+  const dir = copyFrozenInputs(t);
+  assert.equal(verifyManifest(dir, read(activeManifest)).verifiedFiles, PRODUCTION_FILES.length + EVALUATION_FILES.length);
+  for (const relative of [PRODUCTION_FILES[0], 'evals/topic-advisor/scenarios-v1.json', 'evals/topic-advisor/labels-v1.json', 'evals/topic-advisor/reviews-v1.json', 'evals/topic-advisor/reviewer-bindings-v1.json', archivedManifest]) {
+    const file = path.join(dir, relative), bytes = fs.readFileSync(file), manifest = read(activeManifest);
+    fs.appendFileSync(file, '\n');
+    assert.throws(() => verifyManifest(dir, manifest), /hash drift/, relative);
+    manifest.files[relative] = sha256(fs.readFileSync(file));
+    assert.throws(() => verifyManifest(dir, manifest), /migration/, relative);
+    fs.writeFileSync(file, bytes);
+  }
+});
+
+test('hard-linked evaluation input is rejected; scratch cleanup stays inside created temp directory', t => {
+  const dir = copyFrozenInputs(t), manifest = read(activeManifest);
   fs.linkSync(path.join(dir, PRODUCTION_FILES[0]), path.join(dir, 'linked-copy.ts'));
   assert.throws(() => verifyManifest(dir, manifest), /linked input/);
 });
@@ -288,7 +344,7 @@ test('all frozen inputs survive Git clean filters with an explicit byte policy',
 });
 
 test('artifact seal time cannot precede archived label freeze', () => {
-  const manifest = clone(read('evals/topic-advisor/manifest-v1.json'));
+  const manifest = clone(read(activeManifest));
   manifest.sealedAt = '2020-01-01T00:00:00Z';
   assert.throws(() => verifyManifest(root, manifest), /seal predates/u);
   delete manifest.sealedAt;

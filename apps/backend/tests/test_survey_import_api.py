@@ -384,24 +384,62 @@ async def test_database_cancel_keeps_slot_until_callback_closes(settings, monkey
 
 
 @pytest.mark.asyncio
-async def test_database_deadline_waits_for_callback_close_and_never_parses(settings, monkeypatch):
+@pytest.mark.parametrize("slow_phase", ["initial", "charge"])
+async def test_database_deadline_waits_for_callback_close_and_never_parses(settings, monkeypatch, slow_phase):
     from evix_api.uploads import sav as routes
     service, closed, parsed = TemporarySavImports(settings), threading.Event(), []
-    monkeypatch.setattr(routes, "DB_DEADLINE_SECONDS", .02)
+    started, settle_entered, release = asyncio.Event(), asyncio.Event(), threading.Event()
+    loop = asyncio.get_running_loop()
+    calls = []
+    original_deadline = routes.DB_DEADLINE_SECONDS
+    original_call, original_settle = service._database_call, service._settle
+
+    async def database_call(callback, *args, **kwargs):
+        # A short initial deadline can expire on thread startup before the
+        # charge callback ever runs. Apply it only to the phase under test.
+        slow = kwargs.get("charge", False) == (slow_phase == "charge")
+        monkeypatch.setattr(routes, "DB_DEADLINE_SECONDS", .02 if slow else original_deadline)
+        return await original_call(callback, *args, **kwargs)
+
+    async def settle(task):
+        settle_entered.set()
+        await original_settle(task)
+
     def authorize(_request, charge=False):
-        if charge:
-            time.sleep(.06)
-            closed.set()
+        calls.append(charge)
+        if charge == (slow_phase == "charge"):
+            loop.call_soon_threadsafe(started.set)
+            try:
+                assert release.wait(5)
+            finally:
+                closed.set()
         return "user"
+
     async def parser(*_args, **_kwargs):
         parsed.append(True)
         return result()
+
+    monkeypatch.setattr(service, "_database_call", database_call)
+    monkeypatch.setattr(service, "_settle", settle)
     monkeypatch.setattr(sav, "parse_sav_bytes", parser)
-    with pytest.raises(ApiError) as error:
-        await service.convert(request_with_events([
-            {"type": "http.request", "body": b"x", "more_body": False}]), authorize, lambda *_args: None)
+    operation = asyncio.create_task(service.convert(request_with_events([
+        {"type": "http.request", "body": b"x", "more_body": False}]), authorize, lambda *_args: None))
+    try:
+        await asyncio.wait_for(started.wait(), 2)
+        await asyncio.wait_for(settle_entered.wait(), 2)
+        assert not operation.done() and not closed.is_set() and not parsed
+        assert service._operations
+        assert service._users == ({"user"} if slow_phase == "charge" else set())
+        release.set()
+        with pytest.raises(ApiError) as error:
+            await operation
+    finally:
+        release.set()
+        await asyncio.gather(operation, return_exceptions=True)
+
     assert error.value.code == "sav_auth_timeout" and closed.is_set() and not parsed
     assert not service._users and not service._operations
+    assert calls == ([False, True] if slow_phase == "charge" else [False])
 
 
 @pytest.mark.asyncio

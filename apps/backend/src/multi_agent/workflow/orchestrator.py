@@ -65,8 +65,7 @@ class WorkflowState:
         return cls(**data)
 
 
-# The three human gates mirror the v0.1 workflow: approved research design,
-# approved questionnaire, and final reviewed report.
+# Human approval follows review of the research design and questionnaire.
 _PIPELINE: dict[str, tuple[AgentRole, ...]] = {
     "full_research": (
         AgentRole.RESEARCH,
@@ -84,10 +83,10 @@ _PIPELINE: dict[str, tuple[AgentRole, ...]] = {
     "report": (AgentRole.WRITING, AgentRole.REVIEWER),
 }
 
-_APPROVAL_AFTER: dict[str, frozenset[int]] = {
-    "topic_design": frozenset({1}),
-    "questionnaire": frozenset({3}),
-    "full_research": frozenset({1, 3}),
+_APPROVAL_AFTER_REVIEW: dict[str, frozenset[AgentRole]] = {
+    "topic_design": frozenset({AgentRole.RESEARCH}),
+    "questionnaire": frozenset({AgentRole.SURVEY}),
+    "full_research": frozenset({AgentRole.RESEARCH, AgentRole.SURVEY}),
 }
 
 
@@ -220,8 +219,9 @@ class WorkflowEngine:
                 state.status = WorkflowStatus.READY
                 return state
 
+        needs_approval = review_target(state) in _APPROVAL_AFTER_REVIEW.get(state.task_type, ())
         state.revision += 1
-        if index in _APPROVAL_AFTER.get(state.task_type, ()):
+        if needs_approval:
             state.status = WorkflowStatus.NEEDS_INPUT
             state.awaiting_approval = f"approve_{role.value}"
             return state
