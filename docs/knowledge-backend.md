@@ -13,7 +13,7 @@ register_knowledge(app, settings, db, session_user, owned_project, lock_user, op
 
 迁移头更新为 `0005_knowledge`。七张新表使用 PostgreSQL RLS；用户私有数据只能由对应账户访问，项目词条引用由现有团队成员权限控制。所有修改沿用本站 Origin、会话及 CSRF 校验。
 
-发布时生成 `evix_api/knowledge-catalog.json`，结构为 `{schemaVersion:1,entries:[{id,version,review}]}`。词条版本是正整数。仅 `review.status=reviewed`、作者与审阅者不同、含审阅日期的词条进入可引用目录。目录应同时保留已发布的历史版本。无目录时不能创建未知引用；目录不携带教材全文。
+发布时生成 `multi_agent/agents/research_agent/knowledge-catalog.json`，结构为 `{schemaVersion:1,entries:[{id,version,review}]}`。词条版本是正整数。仅 `review.status=reviewed`、作者与审阅者不同、含审阅日期的词条进入可引用目录。目录应同时保留已发布的历史版本。无目录时不能创建未知引用；目录不携带教材全文。
 
 ## 个人与项目状态
 

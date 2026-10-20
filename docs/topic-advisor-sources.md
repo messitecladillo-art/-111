@@ -6,10 +6,10 @@
 
 | 文件 | 内容 | 数据性质 |
 | --- | --- | --- |
-| `apps/evi-x-platform/content/topic-advisor/catalog.json` | 24 个选题模式，覆盖 10 个领域 | 原创、待验证的研究设计 |
-| `apps/evi-x-platform/content/topic-advisor/hotspot-events.json` | 24 条公开事件或政策线索 | 已核对事实与提议假设分列 |
-| `apps/evi-x-platform/content/topic-advisor/sources.json` | 25 条来源、定位与适用边界 | 来源元数据及原创概括 |
-| `apps/evi-x-platform/content/topic-advisor/train.json` | 60 组情境偏好对，仅 `train` 划分 | `authored_synthetic`，人工编写的模拟偏好 |
+| `apps/frontend/content/topic-advisor/catalog.json` | 24 个选题模式，覆盖 10 个领域 | 原创、待验证的研究设计 |
+| `apps/frontend/content/topic-advisor/hotspot-events.json` | 24 条公开事件或政策线索 | 已核对事实与提议假设分列 |
+| `apps/frontend/content/topic-advisor/sources.json` | 25 条来源、定位与适用边界 | 来源元数据及原创概括 |
+| `apps/frontend/content/topic-advisor/train.json` | 60 组情境偏好对，仅 `train` 划分 | `authored_synthetic`，人工编写的模拟偏好 |
 
 `ranker.json` 由独立的实现工作流生成；本说明不将其拟合结果称作实际评委偏好、真实调查效果或泛化能力。模型机制和复现方式见 [topic-advisor-model.md](topic-advisor-model.md)。
 

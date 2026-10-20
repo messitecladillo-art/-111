@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { build, version as esbuildVersion } from 'esbuild';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const platform = path.join(root, 'apps/evi-x-platform');
+const platform = path.join(root, 'apps/frontend');
 const output = path.join(root, '.collab/runs/20261014-knowledge/browser-benchmark');
 if (!output.startsWith(root + path.sep)) throw Error('Benchmark output must remain inside this checkout.');
 const workerPath = path.join(platform, 'lib/knowledge/knowledge.worker.ts');

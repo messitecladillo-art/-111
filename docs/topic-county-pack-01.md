@@ -72,7 +72,7 @@
 
 ## 文件与复核
 
-- `apps/evi-x-platform/content/topic-advisor/county-pack-01.json`：供后续严格解析与审校流程读取的草稿包。
+- `apps/frontend/content/topic-advisor/county-pack-01.json`：供后续严格解析与审校流程读取的草稿包。
 - `corpus-source/topic-advisor/county-pack-01/captures.json`：HTTP状态、原始响应SHA-256、大小、日期元信息和不超过40字符的核验片段；未归档页面全文。
 - `recovery.json`：六次web读取结果。乌审记录的是可读范围、原创摘要与极短定位；**没有原始HTTP响应SHA**，不冒充有原始字节快照。
 - `editorial-evidence.json`：包指纹、每条来源原创摘要指纹、各地区资料覆盖与待复核状态。

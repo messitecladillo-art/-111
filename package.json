@@ -2,7 +2,7 @@
   "name": "evix-hosted-workspace",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["apps/evi-x-platform", "packages/evi-x-shared"],
+  "workspaces": ["apps/frontend", "packages/evi-x-shared"],
   "scripts": {
     "dev:web": "npm run dev --workspace evi-x-zhengda-champion-platform",
     "build:web": "npm run build --workspace evi-x-zhengda-champion-platform",

@@ -74,7 +74,7 @@ API 仅在 PostgreSQL 保存既有 `RateEvent` 限额事件，操作日志只包
 
 ## 运行与部署
 
-API 使用现有 Python **3.12**、PostgreSQL、非 owner 应用角色和 Alembic 迁移流程；[pyreadstat 1.3.6](https://pypi.org/project/pyreadstat/1.3.6/) 固定在 `pyproject.toml` 与 `uv.lock`。测试的 pandas 属于开发依赖。沿用 [API 运行说明](../apps/evi-x-api/README.md)，在 API 目录安装锁定依赖：
+API 使用现有 Python **3.12**、PostgreSQL、非 owner 应用角色和 Alembic 迁移流程；[pyreadstat 1.3.6](https://pypi.org/project/pyreadstat/1.3.6/) 固定在 `pyproject.toml` 与 `uv.lock`。测试的 pandas 属于开发依赖。沿用 [API 运行说明](../apps/backend/README.md)，在 API 目录安装锁定依赖：
 
 ```powershell
 uv sync --locked --no-dev

@@ -4,7 +4,7 @@
 
 ## 数据、来源与训练
 
-固定输入位于 `apps/evi-x-platform/content/topic-advisor/`：
+固定输入位于 `apps/frontend/content/topic-advisor/`：
 
 | 文件 | 作用 |
 | --- | --- |

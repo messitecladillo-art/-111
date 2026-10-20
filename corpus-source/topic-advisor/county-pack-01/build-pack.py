@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
-APP = ROOT / 'apps/evi-x-platform'
+APP = ROOT / 'apps/frontend'
 CATALOG = json.loads((APP / 'content/topic-advisor/regions.catalog.json').read_text(encoding='utf-8'))
 VERSION = CATALOG['catalogVersion']
 CAPTURES = {s['id']: s for s in json.loads((HERE / 'captures.json').read_text(encoding='utf-8'))['sources']}

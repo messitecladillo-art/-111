@@ -33,7 +33,7 @@ POST 请求顶层字段保持兼容。v2 回执额外绑定 `sourceVersions`：�
 常用检查：
 
 ```powershell
-cd apps/evi-x-platform
+cd apps/frontend
 npm run topic:check
 npm run test:topics
 npm run typecheck -- --incremental false

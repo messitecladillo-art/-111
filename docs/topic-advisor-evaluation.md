@@ -11,9 +11,10 @@
 | `evals/topic-advisor/scenarios-v1.json` | 12 例输入、任务、主分层、地区/来源/事件家族及合成分类 |
 | `evals/topic-advisor/reviews-v1.json` | 两份独立 AI 评审、来源、理由、范围与身份说明 |
 | `evals/topic-advisor/labels-v1.json` | 协调者冻结的共同断言，绑定精确场景指纹和两位评审 |
-| `evals/topic-advisor/manifest-v1.json` | 场景、标签、评审、全部运行依赖、排序器与训练输入的 SHA-256 |
-| `apps/evi-x-platform/scripts/topic-evaluation.mjs` | 输入验证、隔离检查、两基线、统计口径和特征审计 |
-| `apps/evi-x-platform/scripts/evaluate-topic-advisor.mjs` | 固定输入的离线命令，不接受任意数据路径 |
+| `evals/topic-advisor/manifest-v1.json` | 保留原始目录与哈希的历史封存记录，原字节不变 |
+| `evals/topic-advisor/manifest-v2.json` | 当前目录的迁移清单，校验原 v1 清单和全部运行输入共 22 个文件 |
+| `apps/frontend/scripts/topic-evaluation.mjs` | 输入验证、隔离检查、两基线、统计口径和特征审计 |
+| `apps/frontend/scripts/evaluate-topic-advisor.mjs` | 固定输入的离线命令，不接受任意数据路径 |
 
 外部原文在本批不重新抓取。有关事件的断言只检查冻结目录的地域、日期、阅读覆盖和状态语义，不据此确认真实市场需求、实际活动执行或新的地方事实。既有县域公共投影继续为空，本批不批准内容发布，不推进赛事 CLI 阶段或 Gate。
 
@@ -65,13 +66,17 @@
 
 `frozenAt` 保留历史标签冻结时刻，供核对评审是否在有效授权期内完成；`sealedAt` 记录本次整包封存时刻，两者分别核验。发布修正不重写原始评审时间、情境或评审内容。源代码及其他冻结文件使用 LF；`scenarios-v1.json` 以 Git `-text -eol` 保存两位评审实际读取的原始字节。回归测试对每个冻结文件执行 Git clean-filter 比对，避免本地通过而 Linux 检出后指纹失效。
 
+2026-10-20 的 v2 仅记录仓库迁移：`apps/evi-x-platform` 改为 `apps/frontend`。离线命令固定加载 v2，v1 本身作为精确哈希绑定的历史输入保留。v2 沿用 v1 的标签 `frozenAt` 与 `baseRevision`，单独记录迁移封装的 `sealedAt` 和 `migration.repositoryRevision`；它不延长原评审有效期，也不产生新人工批准。除 `.gitattributes` 的目录/共享解析器字节策略及评测验证器外，其余映射文件必须继续匹配 v1 哈希，包括全部场景、标签、评审、排序实现、模型和训练材料。即使只重算 v2 中的数据哈希，原始记录连续性检查仍会拒绝。迁移说明与复算入口见 `evals/topic-advisor/README.md`。
+
+本次将原 v1 的 21 个输入从历史提交恢复并逐个核验哈希，分别执行原版与迁移版命令；两份完整报告除封装身份字段外一致。两基线仍各有 12 个场景、20 条边界断言，不能据迁移复验宣称新评分或推荐质量提升。当前验证结果以新清单身份表示，旧封存记录及其原始结论继续保留。
+
 每个场景登记情境、地区、来源和事件家族。隔离检查拒绝跨 calibration/development/final 集的同家族和近重复；校名、专业或标题变化不能产生新的独立情境。Jaccard 近重复阈值为 0.9，标记的是字段级相似，不替代语义审阅。现有包只有 calibration 集，不宣称已经有封闭测试集。
 
 当前包不以“训练资料零精确重合”证明独立性；共享框架、源事件及等价情境必须在后续切分时人工核对。训练脚本继续只读取固定 `train.json`，评测文件不进入训练或产品浏览器包。
 
 ## 本地复算
 
-在 `apps/evi-x-platform` 中运行，使用仓库已有 Node 版本，不需要模型 Key、数据库或网络：
+在 `apps/frontend` 中运行，使用仓库已有 Node 版本，不需要模型 Key、数据库或网络：
 
 ```powershell
 node --experimental-strip-types scripts/evaluate-topic-advisor.mjs --verify

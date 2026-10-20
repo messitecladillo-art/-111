@@ -1,4 +1,4 @@
-# Reference values for apps/evi-x-platform/tests/sampling-methods.test.mjs.
+# Reference values for apps/frontend/tests/sampling-methods.test.mjs.
 # Requires R with the survey and sampling packages:
 #   Rscript tools/build-sampling-reference.R
 # The data are synthetic and generated here with a fixed seed; the JSON stores both the data and
@@ -83,5 +83,5 @@ out$pips <- list(sizes = sizes, n = 4, pik = inclusionprobabilities(sizes, 4))
 out$power <- list(prop = as.numeric(power.prop.test(p1 = 0.30, p2 = 0.45, power = 0.8)$n),
   mean = as.numeric(power.t.test(delta = 0.5, sd = 1, power = 0.8)$n))
 
-write_json(out, "apps/evi-x-platform/tests/fixtures/sampling-reference.json", digits = NA, auto_unbox = TRUE, pretty = FALSE)
+write_json(out, "apps/frontend/tests/fixtures/sampling-reference.json", digits = NA, auto_unbox = TRUE, pretty = FALSE)
 cat("wrote sampling-reference.json\n")

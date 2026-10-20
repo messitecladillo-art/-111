@@ -11,10 +11,10 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PARENT = ROOT / 'apps/evi-x-platform/content/topic-advisor/county-pack-01.json'
+PARENT = ROOT / 'apps/frontend/content/topic-advisor/county-pack-01.json'
 SUPPLEMENT = Path(__file__).resolve().parent / 'supplement-20261015.json'
 REVIEW = Path(__file__).resolve().parent / 'review-first-candidates.json'
-OUTPUT = ROOT / 'apps/evi-x-platform/content/topic-advisor/county-pack-01-candidates-v2.json'
+OUTPUT = ROOT / 'apps/frontend/content/topic-advisor/county-pack-01-candidates-v2.json'
 HASHES = {
     'parent': 'a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58',
     'supplement': 'af301a0e0e046be2312c9f5b034e8f57888e86440421d03dbbc4ca25d0cb9c9f',

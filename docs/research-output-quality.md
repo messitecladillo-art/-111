@@ -36,7 +36,7 @@ LaTeX 输出复用现有工作台，图表以有限 PGF 数据坐标表达，表
 复算与生成（CSV 和输出目录自行提供，不自动下载）：
 
 ```text
-cd apps/evi-x-platform
+cd apps/frontend
 node --experimental-strip-types scripts/build-quality-benchmark.mjs <source.csv> <private-output-directory>
 npm run test:unit
 npm run typecheck
