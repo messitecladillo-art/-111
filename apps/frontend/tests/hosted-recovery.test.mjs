@@ -16,6 +16,7 @@ import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test
 import { hostedReportHookModule } from './helpers/hosted-report-hook.mjs';
 import { createReportPermissionGuard } from '../lib/report-permission.ts';
 import { REPORT_READ_OPTIONS } from '../lib/report-persistence.ts';
+import { questionnaireRepositoryModule, questionnairePersistence } from './helpers/questionnaire-repository.mjs';
 
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
@@ -42,6 +43,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
   hooks.useSyncExternalStore = externalStoreHook(hooks, () => { dirty = true; });
   const jsx = (type, props, key) => ({ type, props, key });
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/workbench/useWorkbenchHandoffs': workbenchHookModule(hooks), ...mocks };
+  if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; }
   if (relative.endsWith('/HostedReport.tsx')) imports['./useHostedReport'] = hostedReportHookModule(hooks, { auth: imports['./HostedSession'], api: imports['./api-client'], globals });
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -62,11 +64,11 @@ function questionnaireScreen({ invalidCurrent = false, denied = false, tab } = {
   const oldDesign = shared.newQuestionnaire(), submitted = { ...oldDesign, title: '已提交问卷' };
   const local = { ...submitted, title: '等待回执时的新编辑' };
   const head = { id: projectId, projectId, revision: 1, design: oldDesign, updatedAt: timestamp };
-  const latest = { ...head, revision: 2, design: submitted };
+  const latest = { ...head, id: requestId, revision: 2, design: submitted };
   const pending = { design: submitted, expectedRevision: 1, idempotencyKey: requestId };
   let cache, resolveSave, calls = [], reads = 0;
   const auth = { session: { user: { id: projectId }, mode: 'local_test' }, identityEpoch:1,isCurrentAccount:()=>true,getDraft: () => ({ head, initial: oldDesign, snapshot: { design: local, pending: invalidCurrent }, pendingSave: pending, saveUncertain: false, tab }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, body) => { calls.push(body); return new Promise((resolve, reject) => { resolveSave = () => denied ? reject(new HostedApiError(403)) : resolve(latest); }); } };
-  const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if(url.endsWith('/topic-binding')){return{versionId:projectId,binding:null,bindingHash:null,designTransferHash:'a'.repeat(64)};} if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
+  const api = { HostedApiError, errorMessage: e => e.message, downloadQuestionnaire() {}, hostedRequest: async url => { reads++; if(url.endsWith('/topic-binding')){return{versionId:url.split('/').at(-2),binding:null,bindingHash:null,designTransferHash:'a'.repeat(64)};} if (url.endsWith('/questionnaire')) return { questionnaire: latest }; if (url.endsWith('/versions')) return { versions: [], nextBeforeRevision: null }; if (url === '/api/services') return { services: [] }; if (url.endsWith('/proposals')) return { proposals: [] }; return { project: { id: projectId, title: '合成项目', teamId: projectId, revision: 1, createdAt: timestamp }, membershipRole: 'owner' }; } };
   const screen = mount('../components/hosted/HostedProject.tsx', {
     'next/link': { default: 'a' }, 'next/dynamic': { default: () => 'DynamicComponent' }, '@evix/shared': shared, '@/lib/questionnaire-library': library,
     '@/lib/questionnaire-mapping':mapping,'@/components/topic-advisor/TopicQuestionnaireProposal':{default:'TopicQuestionnaireProposal'},'@/lib/topic-questionnaire-api':{...topicApi,verifyTopicBindingReceipt:async raw=>raw},
@@ -110,9 +112,9 @@ test('questionnaire late save receipt keeps edits made while the retry was in fl
   s.screen.unmount();
 });
 
-test('questionnaire permission rejection resolves uncertainty while preserving the local draft', async () => {
+test('questionnaire permission rejection on an uncertain replay retains the original request and local draft', async () => {
   const s = questionnaireScreen({ denied: true }); await s.screen.settle(); button(s.screen, '核对并重试原保存').props.onClick(); await tick(); s.resolve(); await s.screen.settle();
-  assert.equal(s.cache.pendingSave, null); assert.equal(s.cache.saveUncertain, false); assert.equal(s.cache.snapshot.design.title, s.local.title); assert.equal(s.cache.head.revision, 1);
+  assert.equal(s.cache.pendingSave, s.pending); assert.equal(s.cache.saveUncertain, true); assert.equal(s.cache.snapshot.design.title, s.local.title); assert.equal(s.cache.head.revision, 1);
   s.screen.unmount();
 });
 

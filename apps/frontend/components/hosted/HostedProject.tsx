@@ -2,14 +2,15 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { newQuestionnaire, parseCollection, parseHeadResponse, parseProjectResponse, parseProposal, parseProposalSummary, summarizeProposal, parseVersionPage, parseQuestionnaireHead, parseQuestionnaireVersion, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersion, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
+import { newQuestionnaire, parseCollection, parseProjectResponse, parseProposal, parseProposalSummary, summarizeProposal, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
 import {canonical,type DesignSnapshot} from '@/lib/questionnaire-mapping';
 import TopicQuestionnaireProposal from '@/components/topic-advisor/TopicQuestionnaireProposal';
 import type {HostedDesignLoad} from '@/components/design/QuestionnaireStudio';
-import {prepareTopicQuestionnaireMutation,prepareTopicRestoreMutation,verifyTopicBindingReceipt,type TopicBindingMutation,type TopicBindingReceipt} from '@/lib/topic-questionnaire-api';
+import {prepareTopicQuestionnaireMutation,prepareTopicRestoreMutation,type TopicBindingMutation} from '@/lib/topic-questionnaire-api';
 import type {TopicQuestionnaireApplication,TopicQuestionnaireBinding,TopicQuestionnaireSource,TopicQuestionnaireTarget} from '@/lib/topic-questionnaire';
 import type {TopicResearchBrief,TopicVersionSummary} from '@/lib/topic-project';
-import { parseQuestionnaireLibraryContent } from '@/lib/questionnaire-library';
+import { prepareQuestionnaireSave, questionnaireFingerprint as fingerprint, type QuestionnaireSaveRequest } from '@/lib/questionnaire-persistence';
+import { createQuestionnaireRepository, QuestionnaireSaveError } from './questionnaire-repository';
 import { HostedApiError, downloadQuestionnaire, errorMessage, hostedRequest } from './api-client';
 import { LoginRequired } from './HostedFrame';
 import { useHostedSession } from './HostedSession';
@@ -28,12 +29,11 @@ const SurveyCollection = dynamic(() => import('@/components/survey/SurveyCollect
 const HostedTopic = dynamic(() => import('@/components/hosted/HostedTopic'), { loading: () => <p role="status">正在恢复选题与研究简报…</p> });
 
 type ProjectTab = 'topic' | 'design' | 'silicon' | 'collection' | 'analysis' | 'report' | 'defense' | 'members';
-type SaveRequest = { design: Questionnaire; expectedRevision: number; idempotencyKey: string; sourceProposalId?: string; topicBindingMutation?:TopicBindingMutation };
+type SaveRequest = QuestionnaireSaveRequest;
 type PendingTopicApply={application:TopicQuestionnaireApplication;source:TopicQuestionnaireSource;target:TopicQuestionnaireTarget;editRevision:number;expectedBefore:string};
 type TopicReconciliation={versionId:string;beforeBinding:TopicQuestionnaireBinding|null};
 type GenerationRequest = { serviceId: string; serviceRevision: number; brief: string; expectedQuestionnaireRevision: number; idempotencyKey: string; consent: true };
 type CachedProject={head:QuestionnaireHead|null;headBinding?:TopicQuestionnaireBinding|null;initial:Questionnaire;snapshot:DesignSnapshot|null;sourceProposal?:string;proposal:Proposal|null;brief:string;pendingSave:SaveRequest|null;pendingBinding?:TopicQuestionnaireBinding|null;pendingTopicApply?:PendingTopicApply|null;topicReconciliation?:TopicReconciliation|null;pendingGeneration:GenerationRequest|null;saveUncertain:boolean;generationUncertain:boolean;conflict:boolean;tab?:ProjectTab};
-const fingerprint = (design: Questionnaire) => parseQuestionnaireLibraryContent(design).serialized;
 
 export default function HostedProject({ projectId }: { projectId: string }) {
   const { identityEpoch } = useHostedSession();
@@ -76,6 +76,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [siliconOpened, setSiliconOpened] = useState(cached?.tab === 'silicon'), [siliconMaxCalls, setSiliconMaxCalls] = useState<number | undefined>();
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
   const pendingSave = useRef<SaveRequest | null>(cached?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached?.pendingGeneration||null), operation = useRef(false);
+  const uncertainSaveAttempt=useRef(!!cached?.pendingSave),freshRejectedRequest=useRef<SaveRequest|null>(null);
   const pendingTopicApply=useRef<PendingTopicApply|null>(cached?.pendingTopicApply??null),sourceLive=useRef<TopicQuestionnaireSource|null>(null),selectedSource=useRef<TopicQuestionnaireSource|null>(null),sourceEpoch=useRef(0);
   const pendingBinding=useRef<TopicQuestionnaireBinding|null>(cached?.pendingBinding??null),publishedRevision=useRef(0);
   const reconciliationRef=useRef(topicReconciliation);
@@ -85,6 +86,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [mountedScope]=useState(()=>({ownerId,identityEpoch,projectId}));
   const liveScope=useRef({ownerId,identityEpoch,projectId});
   const currentAccount=useCallback(()=>alive.current&&mountedScope.ownerId===ownerId&&mountedScope.identityEpoch===identityEpoch&&mountedScope.projectId===projectId&&liveScope.current.ownerId===ownerId&&liveScope.current.identityEpoch===identityEpoch&&liveScope.current.projectId===projectId&&isCurrentAccount(ownerId,identityEpoch),[isCurrentAccount,ownerId,identityEpoch,projectId,mountedScope]);
+  const repository=useMemo(()=>createQuestionnaireRepository(projectId,{read:hostedRequest,mutate:auth.mutate}),[projectId,auth.mutate]);
   useLayoutEffect(()=>{writableRef.current=writable;headBindingRef.current=headBinding;liveScope.current={ownerId,identityEpoch,projectId};},[writable,headBinding,ownerId,identityEpoch,projectId]);
   const questionnaireServices = useMemo(() => services.filter(s => s.capabilities.includes('questionnaire')), [services]);
   const questionnaireNames = useMemo(() => serviceNames(questionnaireServices), [questionnaireServices]);
@@ -112,16 +114,15 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const sourceChange=useCallback((source:TopicQuestionnaireSource|null)=>{if(!currentAccount())return;sourceEpoch.current++;sourceLive.current=source;if(selectedSource.current&&canonical(selectedSource.current)!==canonical(source)){selectedSource.current=null;setTopicSource(null);}},[currentAccount]);
   const startQuestionnaire=useCallback((brief:TopicResearchBrief,version:TopicVersionSummary,decisionRevision:number)=>{const source={brief:structuredClone(brief),version:structuredClone(version),dirty:false,decisionRevision};if(!currentAccount()||!writableRef.current||!sourceLive.current||canonical(source)!==canonical(sourceLive.current))return;selectedSource.current=source;setTopicSource(source);setTopicProposalOpen(true);setTab('design');},[currentAccount]);
   function rememberHead(value: QuestionnaireHead | null) { headRef.current = value; setHead(value); }
-  const bindingFor=useCallback(async(value:Pick<QuestionnaireHead,'id'|'design'>):Promise<TopicBindingReceipt>=>verifyTopicBindingReceipt(await hostedRequest(`/api/projects/${projectId}/questionnaire/versions/${encodeURIComponent(value.id)}/topic-binding`,{maxBytes:2_100_000}),{versionId:value.id,design:value.design}),[projectId]);
   function loadPaired(intent:Omit<HostedDesignLoad,'id'>):Promise<boolean>{const id=crypto.randomUUID();loadCompletion.current?.resolve(false);return new Promise(resolve=>{loadCompletion.current={id,resolve};setLoad({id,...intent});});}
   const reloadVersions = useCallback(async (before?: number) => {
     setLoadingHistory(true);
     try {
-      const page = parseVersionPage(await hostedRequest(`/api/projects/${projectId}/questionnaire/versions${before ? `?beforeRevision=${before}` : ''}`));
-      if (alive.current) { setVersions(rows => before ? [...rows, ...page.versions.filter(v => !rows.some(row => row.id === v.id))] : page.versions); setNextBeforeRevision(page.nextBeforeRevision); setHistoryError(''); }
-    } catch(e) { if (alive.current) setHistoryError(errorMessage(e)); }
-    finally { if (alive.current) setLoadingHistory(false); }
-  }, [projectId]);
+      const page = await repository.versions(before,currentAccount);
+      if (currentAccount()&&page) { setVersions(rows => before ? [...rows, ...page.versions.filter(v => !rows.some(row => row.id === v.id))] : page.versions); setNextBeforeRevision(page.nextBeforeRevision); setHistoryError(''); }
+    } catch(e) { if (currentAccount()) setHistoryError(errorMessage(e)); }
+    finally { if (currentAccount()) setLoadingHistory(false); }
+  }, [repository,currentAccount]);
   const reloadProposals = useCallback(async () => {
     try {
       const rows=parseCollection(await hostedRequest(`/api/projects/${projectId}/proposals`),'proposals',parseProposalSummary,50);
@@ -133,21 +134,23 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     let cancelled=false;
     void (async () => {
       try {
-        const [p, q, s] = await Promise.all([hostedRequest(`/api/projects/${projectId}`), hostedRequest(`/api/projects/${projectId}/questionnaire`), hostedRequest('/api/services').catch(() => ({services:[]}))]);
-        const data = parseProjectResponse(p), saved = parseHeadResponse(q), connections = parseCollection(s, 'services', parseService, 8);
-        const base=cached?.head??saved,sidecar=base?await bindingFor(base):null;
-        if (!alive.current || cancelled) return;
+        const stillCurrent=()=>currentAccount()&&!cancelled;
+        const [p, saved, s] = await Promise.all([hostedRequest(`/api/projects/${projectId}`), repository.head(stillCurrent), hostedRequest('/api/services').catch(() => ({services:[]}))]);
+        if(!stillCurrent()||saved===undefined)return;
+        const data = parseProjectResponse(p), connections = parseCollection(s, 'services', parseService, 8);
+        const base=cached?.head??saved,sidecar=base?await repository.bindingFor(base,stillCurrent):null;
+        if (!stillCurrent() || base&&!sidecar) return;
         setHeadBinding(sidecar?.binding??null);headBindingRef.current=sidecar?.binding??null;setBindingReady(true);
         setProject(data.project); setRole(data.membershipRole);
         if(cached){if((saved?.revision||0)!==(cached.head?.revision||0)){setConflict(true);setNotice('已恢复本标签页的草稿；云端版本已变化，请先核对最新版本。');}else setNotice('已恢复本标签页的编辑与撤销历史。未保存内容仅在当前登录会话内保留。');}
         else{rememberHead(saved);setInitial(saved?.design||newQuestionnaire());if(!saved){setTopicOpened(true);setTab('topic');}}
         setServices(connections); setServiceId(connections.find(s => s.capabilities.includes('questionnaire'))?.id || '');
         void reloadVersions(); void reloadProposals();
-      } catch (e) { if (alive.current && !cancelled) setError(errorMessage(e)); }
-      finally { if (alive.current && !cancelled) setLoading(false); }
+      } catch (e) { if (currentAccount() && !cancelled) setError(errorMessage(e)); }
+      finally { if (currentAccount() && !cancelled) setLoading(false); }
     })();
     return () => { cancelled=true; alive.current = false;loadCompletion.current?.resolve(false);loadCompletion.current=null; };
-  }, [projectId, cached, reloadVersions, reloadProposals,bindingFor]);
+  }, [projectId, cached, reloadVersions, reloadProposals,repository,currentAccount]);
   useEffect(() => { setUnsaved(projectId, dirty || saving || saveUncertain); return () => setUnsaved(projectId, false); }, [setUnsaved, projectId, dirty, saving, saveUncertain]);
   function loadDesign(design: Questionnaire, message: string, origin?: string,paired?:Pick<HostedDesignLoad,'topicBinding'|'topicRestoreOrigin'>) {
     if(!writable){setReadonlyDesign(design);setNotice(message);return;}
@@ -160,19 +163,14 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   async function sendPendingSave(freshSourceEpoch?:number):Promise<boolean>{
     const request=pendingSave.current,application=pendingTopicApply.current,before=draftRevision.current;
     if(!request)throw Error('缺少原保存请求。');
+    // A rejected replay cannot disprove an earlier commit using the same key.
+    freshRejectedRequest.current=uncertainSaveAttempt.current?null:request;
+    uncertainSaveAttempt.current=true;
     persistPending();
-    const receipt=parseQuestionnaireHead(await auth.mutate(`/api/projects/${projectId}/questionnaire/versions`,request));
-    if(!currentAccount()||!writableRef.current)return false;
-    if(receipt.projectId!==projectId||receipt.revision!==request.expectedRevision+1||fingerprint(receipt.design)!==fingerprint(request.design))throw Error('保存回执与原请求不一致，请核对原保存。');
-    const savedBinding=await bindingFor(receipt);
-    if(!currentAccount()||!writableRef.current)return false;
-    if(canonical(savedBinding.binding)!==canonical(application?.application.binding??pendingBinding.current))throw Error('已保存版本的来源绑定与原保存请求不一致，请保留原请求核对。');
-    const current=parseHeadResponse(await hostedRequest(`/api/projects/${projectId}/questionnaire`));
-    if(!currentAccount()||!writableRef.current)return false;
-    if(!current||current.revision<receipt.revision||current.revision===receipt.revision&&(current.id!==receipt.id||fingerprint(current.design)!==fingerprint(receipt.design)))throw Error('保存回执与当前版本尚未完成核对，请重试原保存。');
-    const currentBinding=current.id===receipt.id?savedBinding:await bindingFor(current);
-    if(!currentAccount()||!writableRef.current)return false;
-    const resolved=()=>{pendingSave.current=null;pendingTopicApply.current=null;setSaveUncertain(false);setSourceProposal(undefined);};
+    const verified=await repository.save(request,application?.application.binding??pendingBinding.current,()=>currentAccount()&&writableRef.current);
+    if(!verified){if(currentAccount())setSaveUncertain(true);return false;}
+    const {receipt,savedBinding,current,currentBinding}=verified;
+    const resolved=()=>{pendingSave.current=null;pendingTopicApply.current=null;uncertainSaveAttempt.current=false;freshRejectedRequest.current=null;setSaveUncertain(false);setSourceProposal(undefined);};
     if(application){rememberReconciliation({versionId:receipt.id,beforeBinding:application.application.beforeBinding});persistPending();}
     if(current.revision>receipt.revision){resolved();setConflict(true);persistPending({saveUncertain:false,conflict:true});setNotice(`本次已保存为 v${receipt.revision}；云端已有 v${current.revision}。当前编辑已保留，请核对最新版本。`);void reloadVersions();return false;}
     rememberHead(current);headBindingRef.current=currentBinding.binding;setHeadBinding(currentBinding.binding);setBindingReady(true);
@@ -189,21 +187,30 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     }else{resolved();setConflict(false);setNotice(`已保存 v${receipt.revision}。${latest.current&&fingerprint(latest.current.design)!==fingerprint(receipt.design)?'保存期间的新编辑仍在本页，需再次保存。':'刷新或重新登录后可恢复。'}`);}
     void reloadVersions();return true;
   }
-  function saveFailure(e:unknown){if(!currentAccount())return;setError(errorMessage(e));if(e instanceof HostedApiError&&e.status>=400&&e.status<500&&e.code!=='invalid_server_receipt'){pendingSave.current=null;pendingTopicApply.current=null;setSaveUncertain(false);if(e.status===409)setConflict(true);if(e.status===403){writableRef.current=false;setRole('viewer');}}else if(pendingSave.current)setSaveUncertain(true);}
+  function saveFailure(e:unknown){
+    if(!currentAccount())return;
+    setError(errorMessage(e));
+    const rejected=e instanceof QuestionnaireSaveError&&e.phase==='mutation'&&e.cause instanceof HostedApiError&&e.cause.status>=400&&e.cause.status<500&&e.cause.code!=='invalid_server_receipt';
+    if(rejected&&pendingSave.current===freshRejectedRequest.current){const cause=e.cause as HostedApiError;pendingSave.current=null;pendingTopicApply.current=null;uncertainSaveAttempt.current=false;setSaveUncertain(false);if(cause.status===409)setConflict(true);}
+    else if(pendingSave.current)setSaveUncertain(true);
+    freshRejectedRequest.current=null;
+    if(rejected&&(e.cause as HostedApiError).status===403){writableRef.current=false;setRole('viewer');}
+  }
   async function save(){
     if(operation.current||!currentAccount()||!writableRef.current||!bindingReady||!pendingSave.current&&(!latest.current||latest.current.pending||conflict))return;
     operation.current=true;setSaving(true);setError('');
     try{
       if(!pendingSave.current){
-        const next=structuredClone(latest.current!),before=draftRevision.current,base=headRef.current,headReceipt=base?await bindingFor(base):null;
+        const next=structuredClone(latest.current!),before=draftRevision.current,base=headRef.current,headReceipt=base?await repository.bindingFor(base,()=>currentAccount()&&writableRef.current):null;
         if(!currentAccount()||!writableRef.current)return;
+        if(base&&!headReceipt)return;
         if(before!==draftRevision.current||latest.current?.pending)throw Error('核对绑定期间已有新编辑，未发送旧草稿。请重新保存。');
         let mutation:TopicBindingMutation|undefined;
         if(canonical(next.topicBinding??null)!==canonical(headReceipt?.binding??null)){
           if(!next.topicRestoreOrigin)throw Error('这份草稿的绑定恢复来源尚未核对，请先载入已保存版本或核对原采纳结果。');
           mutation=prepareTopicRestoreMutation(headReceipt?.bindingHash??null,next.topicRestoreOrigin);
         }
-        pendingBinding.current=next.topicBinding??null;pendingSave.current={design:next.design,expectedRevision:base?.revision??0,idempotencyKey:crypto.randomUUID(),...(sourceProposal?{sourceProposalId:sourceProposal}:{}),...(mutation?{topicBindingMutation:mutation}:{})};
+        pendingBinding.current=next.topicBinding??null;pendingSave.current=prepareQuestionnaireSave(next.design,base?.revision??0,{sourceProposalId:sourceProposal,topicBindingMutation:mutation});uncertainSaveAttempt.current=false;
       }
       await sendPendingSave();
     }catch(e){saveFailure(e);}finally{operation.current=false;if(currentAccount())setSaving(false);}
@@ -217,22 +224,23 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     try{
       const mutation=await prepareTopicQuestionnaireMutation(application,source,target);
       if(!guard())throw Error('核对期间来源或问卷已变化，请重新预览。');
-      const receipt=base?await bindingFor(base):null;
+      const receipt=base?await repository.bindingFor(base,guard):null;
       if(!guard())throw Error('读取来源绑定期间已有新编辑，请重新预览。');
+      if(base&&!receipt)throw Error('来源绑定尚未完成核对，请重新预览。');
       if(canonical(receipt?.binding??null)!==canonical(application.beforeBinding))throw Error('当前草稿的来源绑定与云端基础版本不同，请先保存恢复的草稿，再预览本次采纳。');
       pendingTopicApply.current={application,source,target,editRevision:live.editRevision??0,expectedBefore:canonical({design:application.before,binding:application.beforeBinding})};
-      pendingBinding.current=application.binding;pendingSave.current={design:structuredClone(application.after),expectedRevision:base?.revision??0,idempotencyKey:crypto.randomUUID(),topicBindingMutation:mutation};
+      pendingBinding.current=application.binding;pendingSave.current=prepareQuestionnaireSave(application.after,base?.revision??0,{topicBindingMutation:mutation});uncertainSaveAttempt.current=false;
       if(!await sendPendingSave(sourceGeneration))throw Error('保存结果需要核对；当前草稿已保留，请使用原保存请求或核对最新版本。');
     }catch(e){saveFailure(e);throw e;}finally{operation.current=false;if(currentAccount())setSaving(false);}
   }
   async function refreshHead(keepLocal: boolean) {
-    if (operation.current || saving || saveUncertain || pendingSave.current) return;
+    if (operation.current || !currentAccount() || saving || saveUncertain || pendingSave.current) return;
     operation.current = true; setReading(true); setError(''); const before = draftRevision.current;
     try {
-      const current = parseHeadResponse(await hostedRequest(`/api/projects/${projectId}/questionnaire`));
-      if (!currentAccount()) return;
-      const sidecar=current?await bindingFor(current):null;
-      if(!currentAccount())return;
+      const current = await repository.head(currentAccount);
+      if (!currentAccount()||current===undefined) return;
+      const sidecar=current?await repository.bindingFor(current,currentAccount):null;
+      if(!currentAccount()||current&&!sidecar)return;
       if (before !== draftRevision.current) throw Error('读取期间设计已修改，已保留最新编辑。请重新核对。');
       if (!keepLocal && dirty && !window.confirm('用最新云端版本替换本页设计？当前内容可通过撤销恢复，建议先下载备份。')) return;
       if (keepLocal && !window.confirm('以最新云端版本为基础，继续保留本页手工草稿？下一次保存将形成新版本，请先比较两份内容。')) return;
@@ -245,21 +253,21 @@ function ProjectEditor({ projectId }: { projectId: string }) {
       rememberHead(current);headBindingRef.current=sidecar?.binding??null;setHeadBinding(sidecar?.binding??null);setBindingReady(true); pendingSave.current = null;rememberReconciliation(null); setSaveUncertain(false); setConflict(false); setSourceProposal(undefined);
       if (!keepLocal) {if(writable)setLoad({ id: crypto.randomUUID(), design: current?.design || newQuestionnaire(),topicBinding:sidecar?.binding??null,topicRestoreOrigin:current?{questionnaireVersionId:current.id}:null,expectedEditRevision:latest.current?.editRevision });else setReadonlyDesign(current?.design || newQuestionnaire());}
       setNotice(keepLocal ? '已核对云端版本，保留本页内容作为手工草稿。请检查后保存。' : '已载入最新云端版本。'); await reloadVersions();
-    } catch (e) { if (alive.current) setError(errorMessage(e)); }
-    finally { operation.current = false; if (alive.current) setReading(false); }
+    } catch (e) { if (currentAccount()) setError(errorMessage(e)); }
+    finally { operation.current = false; if (currentAccount()) setReading(false); }
   }
   async function history(version: QuestionnaireVersionSummary) {
-    if (operation.current || saving || saveUncertain) return;
+    if (operation.current || !currentAccount() || saving || saveUncertain || pendingSave.current) return;
     operation.current = true; setReading(true); setError(''); const before = draftRevision.current;
     try {
-      const data = parseQuestionnaireVersion(await hostedRequest(`/api/projects/${projectId}/questionnaire/versions/${version.id}`), true) as QuestionnaireVersion;
-      if (!currentAccount()) return;
-      const sidecar=await bindingFor({id:data.id,design:data.design});
-      if(!currentAccount())return;
+      const data = await repository.version(version,currentAccount);
+      if (!currentAccount()||!data) return;
+      const sidecar=await repository.bindingFor({id:data.id,design:data.design},currentAccount);
+      if(!currentAccount()||!sidecar)return;
       if (before !== draftRevision.current) throw Error('读取期间设计已变化，未替换新编辑。请重新载入历史。');
       loadDesign(data.design, `已载入历史 v${data.revision}。保存将新增版本，保留历史原件。`,undefined,{topicBinding:sidecar.binding,topicRestoreOrigin:{questionnaireVersionId:data.id}});
-    } catch (e) { if (alive.current) setError(errorMessage(e)); }
-    finally { operation.current = false; if (alive.current) setReading(false); }
+    } catch (e) { if (currentAccount()) setError(errorMessage(e)); }
+    finally { operation.current = false; if (currentAccount()) setReading(false); }
   }
   async function generate() {
     if (generating || !writable || conflict || saving || saveUncertain) return;

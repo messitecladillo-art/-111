@@ -12,6 +12,7 @@ import * as core from '../lib/topic-questionnaire.ts';
 import * as contract from '../lib/topic-questionnaire-api.ts';
 import {emptyTopicBrief} from '../lib/topic-project.ts';
 import {externalStoreHook,workbenchHookModule} from './helpers/workbench-test-harness.mjs';
+import {questionnaireRepositoryModule,questionnairePersistence} from './helpers/questionnaire-repository.mjs';
 
 // Production component handlers/effects plus real proposal and receipt verification.
 // This bounded harness does not establish native browser focus, IME or visual acceptance.
@@ -30,6 +31,7 @@ function mount(relative,imports,initialProps,internal){
   const hooks={useState(init){const at=index++;if(!cells[at])cells[at]={value:typeof init==='function'?init():init};return[cells[at].value,next=>{if(!alive){writesAfterUnmount++;return;}next=typeof next==='function'?next(cells[at].value):next;if(!Object.is(next,cells[at].value)){cells[at].value=next;dirty=true;}}];},useRef(init){const at=index++;return cells[at]??={current:init};},useMemo(fn,deps){const at=index++;if(!cells[at]||!sameDeps(cells[at].deps,deps))cells[at]={value:fn(),deps};return cells[at].value;},useCallback(fn,deps){return hooks.useMemo(()=>fn,deps);},useEffect(fn,deps){const at=index++;if(!cells[at]||!sameDeps(cells[at].deps,deps)){const old=cells[at];cells[at]={deps};effects.push(()=>{old?.cleanup?.();cells[at].cleanup=fn();});}}};hooks.useLayoutEffect=hooks.useEffect;
   hooks.useSyncExternalStore=externalStoreHook(hooks,()=>{dirty=true;});
   const jsx=(type,props,key)=>({type,props,key}),mocks={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/workbench/useWorkbenchHandoffs':workbenchHookModule(hooks),...imports};
+  if(relative.endsWith('/HostedProject.tsx')){mocks['./questionnaire-repository']=questionnaireRepositoryModule({contract:mocks['@/lib/topic-questionnaire-api']});mocks['@/lib/questionnaire-persistence']=questionnairePersistence;}
   const compiled=ts.transpileModule(fs.readFileSync(new URL(relative,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   class Element{}
   const doc={activeElement:null,addEventListener(){},removeEventListener(){},querySelectorAll:()=>[],getElementById:()=>null};
@@ -37,7 +39,7 @@ function mount(relative,imports,initialProps,internal){
   vm.runInNewContext(compiled+(internal?`\nexports.tested=${internal};`:''),box);const component=internal?box.exports.tested:box.exports.default;
   const s={get tree(){return tree;},get writesAfterUnmount(){return writesAfterUnmount;},get props(){return props;},update(next){props={...props,...next};},async settle(){for(let n=0;n<40;n++){if(!alive)return;index=0;dirty=false;tree=component(props);const queue=effects;effects=[];queue.forEach(f=>f());await tick();if(!dirty&&!effects.length)return;}throw Error('Unstable effects');},async until(predicate){for(let n=0;n<150;n++){await s.settle();if(predicate())return;await new Promise(r=>setTimeout(r,2));}throw Error(`Expected state: ${label(tree).slice(0,500)}`);},unmount(){cells.forEach(c=>c.cleanup?.());alive=false;}};return s;
 }
-function host({blank=false,cached,drafts=new Map(),serverState,role='owner',holdBase=false,holdReceipt=false}={}){
+function host({blank=false,cached,drafts=new Map(),serverState,role='owner',holdBase=false,holdReceipt=false,readOverride}={}){
   const design=blank?questionnaire.newQuestionnaire():questionnaire.exampleQuestionnaire();
   const original={id:v1,projectId,revision:1,design,updatedAt:time};
   const state=serverState??{head:blank?null:original,versions:new Map(blank?[]:[[v1,{head:original,binding:null}]])};
@@ -48,6 +50,7 @@ function host({blank=false,cached,drafts=new Map(),serverState,role='owner',hold
   const safeContract={...contract,prepareTopicQuestionnaireMutation:(a,s,t)=>contract.prepareTopicQuestionnaireMutation(plain(a),plain(s),plain(t)),verifyTopicBindingReceipt:(raw,expected)=>contract.verifyTopicBindingReceipt(plain(raw),plain(expected))};
   const api={HostedApiError,errorMessage:e=>e.message,downloadQuestionnaire(){},hostedRequest:async(path,options)=>{
     reads.push({path,options});
+    if(readOverride){const override=await readOverride(path,{state,calls,reads});if(override!==undefined)return override;}
     if(path.endsWith('/topic-binding')){
       bindingReads++;const id=path.split('/').at(-2),entry=state.versions.get(id);assert.ok(entry,id);
       const raw={versionId:id,binding:entry.binding,bindingHash:entry.binding?await core.topicQuestionnaireHash(entry.binding):null,designTransferHash:await core.topicQuestionnaireHash(entry.head.design)};
@@ -120,6 +123,92 @@ test('remount during the editor acknowledgement retains the original request and
 
 test('wrong sidecar metadata leaves the request unresolved and never reports a successful editor apply',async()=>{
   const h=host({holdReceipt:true});await h.ready();await h.open();const a=await h.application(),done=h.apply(a);await h.screen.until(()=>h.calls.length===1);h.accept(a.binding);await h.screen.until(()=>h.pendingRead.length===1);const pending=h.pendingRead.shift();pending.resolve({...pending.raw,bindingHash:'0'.repeat(64)});await h.screen.until(()=>h.cache?.saveUncertain);assert.ok((await done).error);assert.ok(h.cache.pendingSave);assert.equal(h.cache.snapshot.design.title,a.before.title);assert.equal(h.studio().props.hosted.load,undefined);h.screen.unmount();
+});
+
+for(const point of ['sidecar-403','sidecar-404','head-403','head-404']){
+  test(`questionnaire ${point} after a committed POST preserves the exact original pending request`,async()=>{
+    let rejectRead=true;
+    const h=host({readOverride(path,{calls}){
+      if(!rejectRead||!calls.length)return;
+      if(point.startsWith('sidecar')&&path.endsWith(`/versions/${v2}/topic-binding`)||point.startsWith('head')&&path.endsWith('/questionnaire'))throw new HostedApiError(Number(point.split('-')[1]),'post_write_read_denied');
+    }});
+    await h.ready();h.edit('已实际发出但等待核对的问卷');await h.screen.settle();
+    button(h.screen,'保存新版本').props.onClick();await h.screen.until(()=>h.calls.length===1);
+    const pending=h.calls[0].body;
+    assert.equal(Object.isFrozen(pending),true);assert.equal(Object.isFrozen(pending.design.questions),true);
+    h.accept(null);await h.screen.until(()=>h.cache.saveUncertain&&label(h.screen.tree).includes('post_write_read_denied'));
+    await h.screen.settle();
+    assert.equal(h.cache.pendingSave,pending,'a GET rejection cannot prove the POST failed');
+    assert.equal(h.cache.head.revision,1);assert.equal(h.cache.snapshot.design.title,pending.design.title);
+    assert.equal(h.studio().props.hosted.load,undefined);
+    rejectRead=false;
+    button(h.screen,'核对并重试原保存').props.onClick();await h.screen.until(()=>h.calls.length===2);
+    assert.equal(h.calls[1].body,pending,'reconciliation uses the same request object and key');
+    h.accept(null,1);await h.screen.until(()=>h.cache.pendingSave===null);
+    assert.equal(h.cache.head.revision,2);assert.equal(h.cache.saveUncertain,false);h.screen.unmount();
+  });
+}
+
+test('an invalid 4xx mutation receipt stays unresolved instead of discarding the pending request',async()=>{
+  const h=host();await h.ready();h.edit('待核对回执');await h.screen.settle();
+  button(h.screen,'保存新版本').props.onClick();await h.screen.until(()=>h.calls.length===1);
+  const pending=h.calls[0].body;h.calls[0].reject(new HostedApiError(403,'invalid_server_receipt'));
+  await h.screen.until(()=>h.cache.saveUncertain);assert.equal(h.cache.pendingSave,pending);assert.equal(h.cache.head.revision,1);assert.ok(h.studio());h.screen.unmount();
+});
+
+for(const status of [403,409]){
+  test(`a definite first POST ${status} resolves only that new request and preserves the draft`,async()=>{
+    const h=host();await h.ready();h.edit('首次请求被明确拒绝的草稿');await h.screen.settle();
+    button(h.screen,'保存新版本').props.onClick();await h.screen.until(()=>h.calls.length===1);
+    h.calls[0].reject(new HostedApiError(status,'initial_post_rejected'));await h.screen.until(()=>h.cache.pendingSave===null);
+    assert.equal(h.cache.saveUncertain,false);assert.equal(h.cache.snapshot.design.title,'首次请求被明确拒绝的草稿');assert.equal(h.cache.head.revision,1);
+    if(status===409)assert.equal(h.cache.conflict,true);h.screen.unmount();
+  });
+  test(`a POST ${status} on retry cannot erase a committed-but-lost original request`,async()=>{
+    const h=host();await h.ready();h.edit('原保存可能已提交');await h.screen.settle();
+    button(h.screen,'保存新版本').props.onClick();await h.screen.until(()=>h.calls.length===1);
+    const original=h.calls[0].body;h.lose(null);await h.screen.until(()=>label(h.screen.tree).includes('synthetic_lost_receipt'));
+    button(h.screen,'核对并重试原保存').props.onClick();await h.screen.until(()=>h.calls.length===2);
+    assert.equal(h.calls[1].body,original);h.calls[1].reject(new HostedApiError(status,'replay_rejected'));
+    await h.screen.until(()=>label(h.screen.tree).includes('replay_rejected'));
+    assert.equal(h.cache.pendingSave,original);assert.equal(h.cache.saveUncertain,true);assert.equal(h.cache.head.revision,1);
+    assert.equal(h.state.head.revision,2,'the original POST is actually committed in this fixture');
+    assert.equal(h.cache.snapshot.design.title,'原保存可能已提交');h.screen.unmount();
+  });
+}
+
+for(const kind of ['id','revision','title']){
+  test(`a historical ${kind} mismatch cannot be loaded beside an unrelated verified binding`,async()=>{
+    const h=host({readOverride(path,{state}){
+      if(path.endsWith(`/questionnaire/versions/${v1}`)){
+        const entry=state.versions.get(v1).head;
+        return{id:kind==='id'?v2:v1,revision:kind==='revision'?2:1,createdAt:time,createdBy:projectId,design:kind==='title'?{...entry.design,title:'不同标题的另一份内容'}:entry.design};
+      }
+    }});await h.ready();const before=h.cache.snapshot.design,reads=h.reads.length;
+    button(h.screen,'载入编辑器').props.onClick();await h.screen.settle();
+    assert.equal(h.studio().props.hosted.load,undefined);assert.equal(h.cache.snapshot.design,before);
+    assert.ok(label(h.screen.tree).includes('历史问卷回执与所选版本不一致'));
+    assert.equal(h.reads.slice(reads).filter(row=>row.path.endsWith('/topic-binding')).length,0,'reject wrong immutable version before any source-binding read');h.screen.unmount();
+  });
+}
+
+test('a retained history callback cannot bypass an uncertain save created after it was rendered',async()=>{
+  const h=host();await h.ready();const oldHistory=button(h.screen,'载入编辑器').props.onClick;
+  h.edit('保留等待核对的最新草稿');await h.screen.settle();button(h.screen,'保存新版本').props.onClick();await h.screen.until(()=>h.calls.length===1);
+  const pending=h.calls[0].body;h.lose(null);await h.screen.until(()=>h.cache.saveUncertain);
+  const readCount=h.reads.length;oldHistory();await h.screen.settle();
+  assert.equal(h.reads.length,readCount);assert.equal(h.cache.pendingSave,pending);assert.equal(h.cache.saveUncertain,true);
+  assert.equal(h.cache.snapshot.design.title,'保留等待核对的最新草稿');assert.equal(h.studio().props.hosted.load,undefined);h.screen.unmount();
+});
+
+test('a late committed save after account authority changes keeps the original recovery request without publishing a receipt',async()=>{
+  const h=host();await h.ready();h.edit('账户切换前已发送的草稿');await h.screen.settle();
+  button(h.screen,'保存新版本').props.onClick();await h.screen.until(()=>h.calls.length===1);
+  const pending=h.calls[0].body,cacheBefore=h.cache;h.switchAccount();const reads=h.reads.length;
+  h.accept(null);await h.screen.settle();
+  assert.equal(h.cache,cacheBefore);assert.equal(h.cache.pendingSave,pending);assert.equal(h.cache.saveUncertain,true);
+  assert.equal(h.cache.head.revision,1);assert.equal(h.reads.length,reads,'stop before post-write verification when the account is stale');
+  assert.equal(h.studio().props.hosted.load,undefined);h.screen.unmount();
 });
 
 test('saving a paired undo appends a new version with an explicit server-resolved restore origin',async()=>{
