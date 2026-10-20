@@ -65,14 +65,17 @@ POST 回执必须满足：
 
 | 边界 | 待核对请求 | 可用操作 |
 | --- | --- | --- |
-| POST 明确返回可解析的 4xx 拒绝 | 清除；409 另进入冲突 | 按错误修正或核对当前版本 |
+| 新请求首次 POST 明确返回可解析的 4xx 拒绝 | 清除；409 另进入冲突 | 按错误修正或核对当前版本 |
 | POST 超时、5xx、无效服务回执 | 保留同一请求 | 核对并重试原保存 |
 | POST 已返回，后续内容校验或 GET 当前版本失败（包括 403/404） | 保留同一请求 | 核对原保存，不把 GET 错误当成 POST 被拒绝 |
+| 原结果未知后的重放返回 4xx（包括 403/409） | 保留同一请求及幂等标识 | 这次重放被拒不能证明原请求没有提交；继续核对原保存 |
 | 写权限周期改变，旧回调完成 | 不接纳旧回调；保留待核对请求并显示未知 | 当前权限允许后，用新票据核对同一请求 |
 
 `invalid_server_receipt` 即使附带 4xx 状态，也不能用来证明原写入已被拒绝。未核对期间，载入最新/历史版本的处理器同时检查 `pending.current`，不能只依赖某次渲染捕获的 `uncertain` 状态；这能防止旧载入回调抛弃原保存。
 
-这里没有自动重试循环。用户显式核对时重用同一请求，服务端按现有幂等协议处理。请求是否被处理仍由服务端回执证明，不能因网络异常推断未保存。
+`save()` 在开始时直接读取 `pending.current`，记录本次是否创建新请求，不依赖渲染闭包中的 `uncertain`。来自当前实例或会话缓存的待核对请求都算重放。只有新请求首次 POST 的确定拒绝可以清除请求；重放被拒、内容校验失败、后续读取失败均保留。原保存核对成功后才清除，之后新建的请求重新按首次调用判断。
+
+这里没有自动重试循环。用户显式核对时重用同一请求，服务端按现有幂等协议处理。请求是否被处理仍由服务端回执证明，不能因网络异常或重放遭拒推断未保存。普通保存和核对均不替换用户随后编辑的正文或 PPT。
 
 ## 载入版本与编辑器生命周期
 
@@ -103,7 +106,7 @@ POST 回执必须满足：
 在 `apps/frontend` 执行：
 
 ```powershell
-node --experimental-strip-types --test tests/report-persistence.test.mjs tests/project-report.test.mjs
+node --experimental-strip-types --test tests/report-persistence.test.mjs tests/report-save-retry.test.mjs tests/project-report.test.mjs
 node --experimental-strip-types --test tests/hosted-recovery.test.mjs tests/report-readonly.test.mjs
 npm run typecheck
 npm run lint

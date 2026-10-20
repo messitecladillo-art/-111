@@ -91,6 +91,8 @@ export function useHostedReport({ projectId, title, writable }: { projectId: str
   const save = useCallback(async () => {
     if (lock.current || !canWrite() || (conflict && !pending.current) || !current.current) return;
     lock.current = true; setBusy(true); setError('');
+    // A rejected replay cannot establish whether the earlier attempt committed.
+    const freshAttempt = pending.current === null;
     let receivedSave = false;
     try {
       pending.current ??= prepareReportSave(current.current, headRef.current?.revision ?? 0);
@@ -112,9 +114,9 @@ export function useHostedReport({ projectId, title, writable }: { projectId: str
     } catch (e) {
       if (!alive.current || !canWrite()) return;
       setError(errorMessage(e));
-      // Only a definite POST rejection resolves the original attempt. A bad receipt
-      // or a later HEAD failure may follow a committed write and must retain its key.
-      if (!receivedSave && e instanceof HostedApiError && e.status >= 400 && e.status < 500 && e.code !== 'invalid_server_receipt') {
+      // Only a fresh first POST rejection resolves the original attempt. A replay,
+      // bad receipt or later HEAD failure may follow a commit and must keep its key.
+      if (freshAttempt && !receivedSave && e instanceof HostedApiError && e.status >= 400 && e.status < 500 && e.code !== 'invalid_server_receipt') {
         pending.current = null; setUncertain(false);
         if (e.status === 409) setConflict(true);
       } else if (pending.current) setUncertain(true);
