@@ -366,7 +366,8 @@ def lease_job(root, identifier, *, expires, parent_pid=0, child_pid=None, phase=
     return job
 
 
-def test_restart_cleanup_only_expired_owned_jobs_and_opaque_receipts(tmp_path):
+@pytest.mark.parametrize("reverse_entries", [False, True])
+def test_restart_cleanup_only_expired_owned_jobs_and_opaque_receipts(tmp_path, monkeypatch, reverse_entries):
     root = sav._root(tmp_path / "scratch")
     now = time.time()
     stale = lease_job(root, "1" * 32, expires=now - 1)
@@ -375,6 +376,15 @@ def test_restart_cleanup_only_expired_owned_jobs_and_opaque_receipts(tmp_path):
     unowned = root / "other-app-data"
     unowned.mkdir()
     (unowned / "input.sav").write_bytes(b"do-not-delete")
+    original_iterdir = Path.iterdir
+
+    def enumerate_jobs(path):
+        entries = list(original_iterdir(path))
+        if path == root:
+            entries.sort(key=lambda entry: entry.name, reverse=reverse_entries)
+        return iter(entries)
+
+    monkeypatch.setattr(Path, "iterdir", enumerate_jobs)
     records = sav.cleanup_stale_imports(root, now=now)
     assert not stale.exists() and live.exists() and future.exists() and unowned.exists()
     assert records == [

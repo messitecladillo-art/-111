@@ -321,7 +321,8 @@ def cleanup_stale_imports(temp_root: Path | None = None, *, now: float | None = 
     root = _root(temp_root)
     timestamp = time.time() if now is None else now
     records = []
-    for job in root.iterdir():
+    # Directory enumeration differs across filesystems; keep opaque receipts stable.
+    for job in sorted(root.iterdir(), key=lambda entry: entry.name):
         match = JOB_NAME.fullmatch(job.name)
         if not match or _is_link(job) or not job.is_dir():
             continue
