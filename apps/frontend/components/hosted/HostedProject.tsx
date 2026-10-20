@@ -3,7 +3,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { newQuestionnaire, parseCollection, parseHeadResponse, parseProjectResponse, parseProposal, parseProposalSummary, summarizeProposal, parseVersionPage, parseQuestionnaireHead, parseQuestionnaireVersion, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersion, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
-import {canonical,type DesignSnapshot,type DesignTransfer} from '@/lib/questionnaire-mapping';
+import {canonical,type DesignSnapshot} from '@/lib/questionnaire-mapping';
 import TopicQuestionnaireProposal from '@/components/topic-advisor/TopicQuestionnaireProposal';
 import type {HostedDesignLoad} from '@/components/design/QuestionnaireStudio';
 import {prepareTopicQuestionnaireMutation,prepareTopicRestoreMutation,verifyTopicBindingReceipt,type TopicBindingMutation,type TopicBindingReceipt} from '@/lib/topic-questionnaire-api';
@@ -16,9 +16,8 @@ import { useHostedSession } from './HostedSession';
 import HostedMembers from './HostedMembers';
 import ResearchViewHost from '../research-view/ResearchViewHost';
 import { createSiliconRunner, parseSiliconLimits, serviceNames } from './silicon-runner';
-import type { DatasetTransfer } from '@/components/analysis/SurveyLab';
 import type { ReportSection } from '@/lib/editor-model';
-import type { ReportProposal } from '@/lib/project-report';
+import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/workbench/useWorkbenchHandoffs';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'), { loading: () => <p role="status">正在打开问卷编辑器…</p> });
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'), { loading: () => <p role="status">正在打开本地分析工具…</p> });
@@ -41,8 +40,12 @@ export default function HostedProject({ projectId }: { projectId: string }) {
   return <LoginRequired><ProjectEditor key={`${identityEpoch}:${projectId}`} projectId={projectId}/></LoginRequired>;
 }
 function ProjectEditor({ projectId }: { projectId: string }) {
-  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
   const auth = useHostedSession();
+  const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
+    JSON.stringify(['project', auth.session?.user?.id ?? null, auth.identityEpoch, projectId]),
+  );
+  const consumeResult = useHandoffAcknowledgement(handoffs, 'result', exchange.pending.result?.deliveryId);
+  const consumeReportProposal = useHandoffAcknowledgement(handoffs, 'report', exchange.pending.report?.deliveryId);
   const cacheKey=`project:${projectId}`;
   // The tab-local draft is read once at mount; state (not a ref) so initializers may use it during render.
   const [cached] = useState(() => auth.getDraft(cacheKey) as CachedProject|undefined);
@@ -66,12 +69,11 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [topicOpened, setTopicOpened] = useState(cached?.tab === 'topic');
   const [defenseOpened, setDefenseOpened] = useState(cached?.tab === 'defense');
   const [collectionOpened, setCollectionOpened] = useState(cached?.tab === 'collection');
-  const [reportOpened, setReportOpened] = useState(cached?.tab === 'report'), [reportProposal, setReportProposal] = useState<ReportProposal|null>(null);
-  const proposeEvidence = useCallback((section:ReportSection) => { setReportProposal({id:crypto.randomUUID(),section}); setReportOpened(true); setTab('report'); }, []);
-  const consumeReportProposal = useCallback(() => setReportProposal(null), []);
+  const [reportOpened, setReportOpened] = useState(cached?.tab === 'report');
+  const proposeEvidence = useCallback((section:ReportSection) => { handoffs.publish('report',{id:crypto.randomUUID(),section}); setReportOpened(true); setTab('report'); }, [handoffs]);
   const openResearchEditor = useCallback((section: 'design' | 'report') => { if (section === 'report') setReportOpened(true); setTab(section); }, []);
-  const [transfer, setTransfer] = useState<DesignTransfer | null>(null), [analysisOpened, setAnalysisOpened] = useState(cached?.tab === 'analysis');
-  const [siliconOpened, setSiliconOpened] = useState(cached?.tab === 'silicon'), [datasetTransfer, setDatasetTransfer] = useState<DatasetTransfer | null>(null), [siliconMaxCalls, setSiliconMaxCalls] = useState<number | undefined>();
+  const [analysisOpened, setAnalysisOpened] = useState(cached?.tab === 'analysis');
+  const [siliconOpened, setSiliconOpened] = useState(cached?.tab === 'silicon'), [siliconMaxCalls, setSiliconMaxCalls] = useState<number | undefined>();
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
   const pendingSave = useRef<SaveRequest | null>(cached?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached?.pendingGeneration||null), operation = useRef(false);
   const pendingTopicApply=useRef<PendingTopicApply|null>(cached?.pendingTopicApply??null),sourceLive=useRef<TopicQuestionnaireSource|null>(null),selectedSource=useRef<TopicQuestionnaireSource|null>(null),sourceEpoch=useRef(0);
@@ -308,12 +310,12 @@ function ProjectEditor({ projectId }: { projectId: string }) {
       <details className="hosted-project-tool"><summary><span>近期模型调用</span><small>{proposals.length} 条记录{callsError?' · 读取未完成':''}</small></summary><div className="hosted-project-tool-body"><p className="hosted-small">本项目由你发起的提案和调用状态可在重新登录后查看。</p><button disabled={generating} onClick={()=>void reloadProposals().catch(e=>setError(errorMessage(e)))}>刷新调用记录</button>{callsError&&<p role="alert">{callsError}</p>}<div className="hosted-history">{proposals.map(p=><div key={p.id}><span><strong>{p.title || ({running:'运行中',outcome_unknown:'结果待核对',failed:'生成失败',ready:'已生成'}[p.status])}</strong><small>{new Date(p.createdAt).toLocaleString('zh-CN')} · 基于 v{p.inputRevision}</small></span><button disabled={generating} onClick={()=>void openProposal(p.id)}>查看提案与状态</button></div>)}{!proposals.length&&<p>尚无模型调用记录。</p>}</div></div></details></div>
       {proposal && <section className="hosted-card hosted-proposal" aria-label="模型问卷提案"><span className="hosted-kicker">模型提案 · 基于问卷 v{proposal.inputRevision}</span><h3>{proposal.design?.title || '调用状态'}</h3>{proposal.design ? <><p>{proposal.design.objective}</p><ol ref={proposalMotion}>{proposal.design.questions.map(q => <li key={q.id}><strong>{q.text}</strong>{q.choices.length > 0 && <p>{q.choices.map(c => c.label).join(' / ')}</p>}</li>)}</ol>{proposal.inputRevision !== revision && <p className="hosted-alert">这份提案基于较早版本，保留供参考。请按当前版本重新生成。</p>}<div className="hosted-actions"><button className="hosted-primary" disabled={!writable || proposal.inputRevision !== revision || reading || saving || saveUncertain || conflict} onClick={() => loadDesign(proposal.design!, '已应用拟议设计，仍需检查与预测试；点击保存才会写入云端。', proposal.id)}>确认应用提案</button><button onClick={() => downloadQuestionnaire(proposal.design, '模型问卷提案.json')}>下载提案</button><button onClick={() => setProposal(null)}>收起提案</button></div></> : <><p>{proposal.status === 'failed' ? '本次生成失败。可以核对配置后再次发起。' : '调用结果尚未明确，当前设计没有改变。核对只查询已保存状态。'}</p>{proposal.errorCode && <small>状态代码：{proposal.errorCode}</small>}<button disabled={generating} onClick={() => void refreshProposal()}>核对调用状态</button></>}</section>}
       <p className="hosted-edit-status" data-state={saveState} role="status"><span className="hosted-save-indicator" aria-hidden="true"/>{saving ? '正在等待云端保存回执…' : saveUncertain ? '保存结果待核对' : conflict ? '云端版本有变化，请核对后保存' : dirty ? '有未保存的修改' : revision ? `已与云端 v${revision} 对齐` : '从空白设计开始'}{snapshot?.pending && ' · 请修正暂存数值后保存'}</p>
-      {writable?<fieldset className="hosted-editor-fieldset" disabled={reading}><legend className="hosted-sr-only">项目问卷编辑器</legend><QuestionnaireStudio localOnly onSnapshot={onSnapshot} onAnalyze={value => { setTransfer({ id: crypto.randomUUID(), snapshot: value }); setAnalysisOpened(true); setTab('analysis'); }} hosted={{ initialDesign: initial,initialBinding:headBinding,initialRestoreOrigin:head?{questionnaireVersionId:head.id}:null,writable,onEdit:onEditorEdit,cacheKey:`questionnaire:${projectId}`, load, savedFingerprint,savedBinding:headBinding, onLoaded: acknowledgeLoad, onDetachProposal: detach }}/></fieldset>:<ReadonlyQuestionnaire design={readonlyDesign||head?.design||initial}/>}
+      {writable?<fieldset className="hosted-editor-fieldset" disabled={reading}><legend className="hosted-sr-only">项目问卷编辑器</legend><QuestionnaireStudio localOnly onSnapshot={onSnapshot} onAnalyze={value => { handoffs.publish('design',{ id: crypto.randomUUID(), snapshot: value }); setAnalysisOpened(true); setTab('analysis'); }} hosted={{ initialDesign: initial,initialBinding:headBinding,initialRestoreOrigin:head?{questionnaireVersionId:head.id}:null,writable,onEdit:onEditorEdit,cacheKey:`questionnaire:${projectId}`, load, savedFingerprint,savedBinding:headBinding, onLoaded: acknowledgeLoad, onDetachProposal: detach }}/></fieldset>:<ReadonlyQuestionnaire design={readonlyDesign||head?.design||initial}/>}
     </div>
-    {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { setDatasetTransfer(handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
-    {collectionOpened && <div hidden={tab !== 'collection'}><SurveyCollection projectId={projectId} savedRevision={revision} canPublish={!dirty && !saving && !saveUncertain && !conflict} writable={writable} onAnalyze={value => { setDatasetTransfer(value); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
-    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab onResultSnapshot={writable?result=>{setResultProposal(result);setReportOpened(true);setTab("report");}:undefined} designSnapshot={snapshot} designTransfer={transfer} datasetTransfer={datasetTransfer} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
-    {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)} projectId={projectId} title={project.title} writable={writable} proposal={reportProposal} onProposalConsumed={consumeReportProposal}/></div>}
+    {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { handoffs.publish('dataset',handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
+    {collectionOpened && <div hidden={tab !== 'collection'}><SurveyCollection projectId={projectId} savedRevision={revision} canPublish={!dirty && !saving && !saveUncertain && !conflict} writable={writable} onAnalyze={value => { handoffs.publish('dataset',value); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab onResultSnapshot={writable?result=>{handoffs.publish('result',result);setReportOpened(true);setTab("report");}:undefined} designSnapshot={snapshot} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
+    {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={exchange.pending.result?.payload} onResultHandled={consumeResult} projectId={projectId} title={project.title} writable={writable} proposal={exchange.pending.report?.payload??null} onProposalConsumed={consumeReportProposal}/></div>}
     {defenseOpened && <div hidden={tab !== 'defense'}><HostedDefense projectId={projectId} onOpenReport={() => { setReportOpened(true); setTab('report'); }}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
   </div></ResearchViewHost>;

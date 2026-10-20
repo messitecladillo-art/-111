@@ -12,6 +12,7 @@ import * as collection from '../lib/survey-collection.ts';
 import * as research from '../lib/research-flow.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
 import * as topicApi from '../lib/topic-questionnaire-api.ts';
+import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test-harness.mjs';
 
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
@@ -42,8 +43,9 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
     useEffect(fn, deps) { const at = index++; if (!cells[at] || !sameDeps(cells[at].deps, deps)) { const before = cells[at]; cells[at] = { deps }; effects.push(() => { before?.cleanup?.(); cells[at].cleanup = fn(); }); } },
   };
   hooks.useLayoutEffect = hooks.useEffect;
+  hooks.useSyncExternalStore = externalStoreHook(hooks, () => { dirty = true; });
   const jsx = (type, props, key) => ({ type, props, key });
-  const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, ...mocks };
+  const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/workbench/useWorkbenchHandoffs': workbenchHookModule(hooks), ...mocks };
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, queueMicrotask, window: { confirm: () => true }, location: { reload() {} }, ...globals };

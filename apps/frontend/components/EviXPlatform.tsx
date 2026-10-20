@@ -37,13 +37,13 @@ const TopicAdvisor = dynamic(() => import('@/components/topic-advisor/TopicAdvis
 import TopicModelProposal from '@/components/topic-advisor/TopicModelProposal';
 import topicCatalog from '@/content/topic-advisor/catalog.json';
 import HostedServices from '@/components/hosted/HostedServices';
-import type {AgentQuestionnaireProposal} from '@/lib/agent-questionnaire-proposal';
+import { useHostedSession } from '@/components/hosted/HostedSession';
+import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/workbench/useWorkbenchHandoffs';
 import DiagnosisActions from "@/components/DiagnosisActions";
 import CompetitionCalendar from '@/components/overview/CompetitionCalendar';
 import ResearchPipeline from '@/components/overview/ResearchPipeline';
 import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-actions';
-import type { DesignSnapshot, DesignTransfer } from '@/lib/questionnaire-mapping';
-import type { DatasetHandoff } from '@/components/silicon/ResultsBoard';
+import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
 import type { DatasetValue } from '@/lib/canvas/execute';
 
 type UnknownRecord = Record<string, unknown>;
@@ -1036,13 +1036,12 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
 }
 
 export default function EviXPlatform() {
-  const [resultProposal,setResultProposal]=useState<import("@/lib/research-quality").ResultSnapshot|null>(null);
-  const [designSnapshot,setDesignSnapshot]=useState<DesignSnapshot|null>(null);
-  const [workspaceDataset,setWorkspaceDataset]=useState<DatasetValue|null>(null);
-  const [designTransfer,setDesignTransfer]=useState<DesignTransfer|null>(null);
-  const [datasetTransfer,setDatasetTransfer]=useState<DatasetHandoff|null>(null);
-  const [briefSource,setBriefSource]=useState<DiagnosisBriefSource|null>(null);
-  const [agentProposal,setAgentProposal]=useState<AgentQuestionnaireProposal|null>(null);
+  const { session, identityEpoch } = useHostedSession();
+  const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
+    JSON.stringify(['workspace', session?.user?.id ?? null, identityEpoch]),
+  );
+  const resultHandled = useHandoffAcknowledgement(handoffs, 'result', exchange.pending.result?.deliveryId);
+  const briefHandled = useHandoffAcknowledgement(handoffs, 'brief', exchange.pending.brief?.deliveryId);
   return (
     <WorkbenchShell panels={{
       overview: <>
@@ -1079,15 +1078,15 @@ export default function EviXPlatform() {
       </>,
       exam: <NetExamStudio />,
       preflight: <SubmissionPreflight />,
-      sampling: <SamplingWorkbench dataset={workspaceDataset} />,
+      sampling: <SamplingWorkbench dataset={exchange.dataset} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={resultProposal} onResultHandled={()=>setResultProposal(null)}/>,
+      editor: <EditingStudio localOnly resultProposal={exchange.pending.result?.payload} onResultHandled={resultHandled}/>,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab onResultSnapshot={result=>{setResultProposal(result);window.location.hash="editor";}} designSnapshot={designSnapshot} designTransfer={designTransfer} datasetTransfer={datasetTransfer} onDatasetChange={setWorkspaceDataset}/>,
-      canvas: <CanvasPanel dataset={workspaceDataset} design={designSnapshot} />,
-      silicon: <SiliconLab designSnapshot={designSnapshot} onSendToAnalysis={handoff=>{setDatasetTransfer(handoff);window.location.hash='analysis';}}/>,
-      design: <QuestionnaireStudio localOnly agentProposal={agentProposal} onAgentHandled={()=>setAgentProposal(null)} briefSource={briefSource} onBriefHandled={()=>setBriefSource(null)} onSnapshot={setDesignSnapshot} onAnalyze={snapshot=>{setDesignSnapshot(snapshot);setDesignTransfer({id:crypto.randomUUID(),snapshot});}} />,
-      diagnose: <DiagnosisPanel onBriefSource={setBriefSource} />,
+      analysis: <SurveyLab onResultSnapshot={result=>{handoffs.publish('result',result);window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onDatasetChange={handoffs.setDataset}/>,
+      canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} />,
+      silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
+      design: <QuestionnaireStudio localOnly briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={handoffs.setDesign} onAnalyze={snapshot=>{handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
+      diagnose: <DiagnosisPanel onBriefSource={source=>{if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>创建团队项目，生成、编辑并保存问卷版本。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
