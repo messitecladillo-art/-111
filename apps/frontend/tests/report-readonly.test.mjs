@@ -5,11 +5,15 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as model from '../lib/editor-model.ts';
 import * as format from '../lib/report-format.ts';
+import * as permission from '../lib/report-permission.ts';
+import { hostedReportHookModule } from './helpers/hosted-report-hook.mjs';
 
 const editorSource = readFileSync(new URL('../components/editors/EditingStudio.tsx', import.meta.url), 'utf8');
 const hostedSource = readFileSync(new URL('../components/hosted/HostedReport.tsx', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+const historyId = '00000000-0000-4000-8000-000000000001';
+const reportVersion = (revision, content, id = `00000000-0000-4000-8000-${String(revision).padStart(12, '0')}`) => ({ id, projectId: 'p', revision, title: content.title, updatedAt: '2026-10-20T00:00:00Z', content });
 
 // Execute the actual component and callbacks with controlled hooks/I/O. This is not a DOM renderer.
 function harness(source = editorSource, overrides = {}) {
@@ -34,6 +38,7 @@ function harness(source = editorSource, overrides = {}) {
   const modules = {
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'fragment' },
     '@/lib/editor-model': model, '@/lib/report-format': format,
+    '@/lib/report-permission': permission,
     '@/lib/report-blueprint': { matchBlueprintNode: () => null },
     '@/lib/report-benchmark': { writtenLines: text => text ? [text] : [] },
     '../motion/useWorkspaceMotion': { useContentReveal: () => ({ current: null }), useKeyedListMotion: () => ({ current: null }) },
@@ -52,6 +57,7 @@ function harness(source = editorSource, overrides = {}) {
     '@/lib/editor-export': { buildDocx: async () => new Blob(['docx']), buildPptx: async () => new Blob(['pptx']), downloadBlob: (blob, filename) => downloads.push({ blob, filename }), fileName: title => title },
     ...overrides.modules,
   };
+  if (source === hostedSource) modules['./useHostedReport'] = hostedReportHookModule(hooks, { auth: modules['./HostedSession'], api: modules['./api-client'] });
   const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   const exports = {};
   vm.runInNewContext(code, {
@@ -152,7 +158,7 @@ test('host forwards read-only state and stale save callbacks cannot write after 
   const receipt = deferred(), requests = [];
   const h = harness(hostedSource, {
     auth: { mutate: () => { writes++; return receipt.promise; } },
-    modules: { '../editors/EditingStudio': { __esModule: true, default: 'EditingStudio', createReportPermissionGuard: editor.createReportPermissionGuard }, './api-client': { hostedRequest: async url => { requests.push(url); return url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : null; }, errorMessage: error => error.message, HostedApiError: class extends Error {} } },
+    modules: { '../editors/EditingStudio': { __esModule: true, default: 'EditingStudio', createReportPermissionGuard: editor.createReportPermissionGuard }, './api-client': { hostedRequest: async url => { requests.push(url); return url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: null }; }, errorMessage: error => error.message, HostedApiError: class extends Error {} } },
   });
   const props = { projectId: 'p', title: 'report', writable: true, proposal: null, onProposalConsumed() {} };
   h.render(props); await tick(); h.render();
@@ -162,7 +168,7 @@ test('host forwards read-only state and stale save callbacks cannot write after 
   assert.equal(h.find(node => node.type === 'EditingStudio').props.projectBinding.readOnly, true);
   save(); assert.equal(writes, 1);
   h.render(props); const readsBeforeReceipt = requests.length;
-  receipt.resolve({ id: 'r', revision: 1, content: initial }); await tick(); h.render();
+  receipt.resolve(reportVersion(1, initial)); await tick(); h.render();
   assert.equal(requests.length, readsBeforeReceipt, 'stale save completion cannot load/accept the head');
   save(); assert.equal(writes, 1, 'old callbacks stay revoked after write permission is restored');
 });
@@ -170,8 +176,8 @@ test('host forwards read-only state and stale save callbacks cannot write after 
 test('restored child snapshot reaches the host even when child layout runs before host layout', async () => {
   const editor = harness().exports; let payload;
   const h = harness(hostedSource, {
-    auth: { mutate: async (url, body) => { payload = body; return { id: 'r', revision: 1, content: body.content }; } },
-    modules: { '../editors/EditingStudio': { __esModule: true, default: 'EditingStudio', createReportPermissionGuard: editor.createReportPermissionGuard }, './api-client': { hostedRequest: async url => url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : null, errorMessage: error => error.message, HostedApiError: class extends Error {} } },
+    auth: { mutate: async (url, body) => { payload = body; return reportVersion(1, body.content); } },
+    modules: { '../editors/EditingStudio': { __esModule: true, default: 'EditingStudio', createReportPermissionGuard: editor.createReportPermissionGuard }, './api-client': { hostedRequest: async url => url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: null }, errorMessage: error => error.message, HostedApiError: class extends Error {} } },
   });
   const props = { projectId: 'p', title: 'report', writable: true, proposal: null, onProposalConsumed() {} };
   h.render(props); await tick(); h.render(); h.render({ ...props, writable: false });
@@ -181,16 +187,58 @@ test('restored child snapshot reaches the host even when child layout runs befor
   assert.equal(payload.content.title, 'preserved child content'); await tick();
 });
 
+test('a save interrupted by revoked permission retains its original request for a current-ticket retry', async () => {
+  const receipt = deferred(), writes = [], reads = [];
+  let saved = null, cache;
+  const h = harness(hostedSource, {
+    auth: {
+      session: { user: { id: 'owner' } },
+      cacheDraft: (_key, value) => { cache = value; },
+      mutate: (_url, body) => {
+        writes.push(body);
+        if (writes.length === 1) return receipt.promise;
+        saved = reportVersion(1, body.content); return Promise.resolve(saved);
+      },
+    },
+    modules: {
+      '../editors/EditingStudio': { __esModule: true, default: 'EditingStudio' },
+      './api-client': {
+        hostedRequest: async url => { reads.push(url); return url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: saved }; },
+        errorMessage: value => value.message, HostedApiError: class extends Error {},
+      },
+    },
+  });
+  const props = { projectId: 'p', title: 'report', writable: true, proposal: null, onProposalConsumed() {} };
+  h.render(props); await tick(); h.render();
+  const before = h.find(node => node.type === 'EditingStudio');
+  const staleLoad = h.find(node => node.type === 'button' && node.props.children === '载入最新版本').props.onClick;
+  h.find(node => node.type === 'button' && node.props.children === '保存报告与 PPT').props.onClick();
+  h.render({ ...props, writable: false }); h.render(props);
+  const count = reads.length;
+  receipt.resolve(reportVersion(1, writes[0].content)); await tick(); h.render();
+  assert.equal(reads.length, count, 'revoked save may not validate or read the current head');
+  assert.equal(cache.pending, writes[0]);
+  assert.equal(h.find(node => node.type === 'EditingStudio').key, before.key);
+  const load = h.find(node => node.type === 'button' && node.props.children === '载入最新版本');
+  assert.equal(load.props.disabled, true); load.props.onClick(); staleLoad(); await tick();
+  assert.equal(reads.length, count, 'neither current nor stale load may abandon an outstanding save');
+  h.find(node => node.type === 'button' && node.props.children === '核对并重试原保存').props.onClick();
+  await tick(); h.render();
+  assert.equal(writes.length, 2); assert.equal(writes[1], writes[0]);
+  assert.equal(cache.pending, null);
+  assert.equal(h.find(node => node.type === 'EditingStudio').props.projectBinding.status, '云端 v1');
+});
+
 function loadHarness(readonly = false) {
   const editor = harness().exports, initial = model.createEditorContent(), requests = [];
   let nextRead, payload;
   const h = harness(hostedSource, {
-    auth: { mutate: async (url, body) => { payload = body; return { id: 'saved', revision: 2, content: body.content }; } },
+    auth: { mutate: async (url, body) => { payload = body; return reportVersion(2, body.content); } },
     modules: { '../editors/EditingStudio': { __esModule: true, default: 'EditingStudio', createReportPermissionGuard: editor.createReportPermissionGuard }, './api-client': { hostedRequest: async url => {
       requests.push(url);
       if (nextRead) return nextRead(url);
-      if (url.endsWith('/versions')) return { versions: [{ id: 'history', title: 'history', revision: 1 }], nextBeforeRevision: null };
-      return { id: 'head', revision: 1, content: initial };
+      if (url.endsWith('/versions')) { const summary = Object.fromEntries(Object.entries(reportVersion(1, initial)).filter(([key]) => key !== 'content')); return { versions: [summary], nextBeforeRevision: null }; }
+      return { report: reportVersion(1, initial) };
     }, errorMessage: error => error.message, HostedApiError: class extends Error {} } },
   });
   return { h, initial, requests, props: { projectId: 'p', title: 'report', writable: !readonly, proposal: null, onProposalConsumed() {} }, setRead(callback) { nextRead = callback; }, get payload() { return payload; } };
@@ -204,7 +252,7 @@ test('cloud load started before downgrade cannot remount or overwrite unsaved co
   f.setRead(() => late.promise);
   h.find(node => node.type === 'button' && node.props.children === '载入最新版本').props.onClick();
   h.render({ ...f.props, writable: false }); h.render(f.props);
-  late.resolve({ id: 'late', revision: 2, content: { ...f.initial, title: 'late overwrite' } });
+  late.resolve({ report: reportVersion(2, { ...f.initial, title: 'late overwrite' }) });
   await tick(); h.render();
   const retained = h.find(node => node.type === 'EditingStudio');
   assert.equal(retained.key, editor.key, 'existing editor instance and its local undo history stay mounted');
@@ -217,10 +265,10 @@ test('history second read cannot apply after its permission epoch is revoked', a
   const f = loadHarness(), { h } = f, history = deferred();
   h.render(f.props); await tick(); h.render();
   const initial = h.find(node => node.type === 'EditingStudio').props.projectBinding.initialContent;
-  f.setRead(url => url.endsWith('/history') ? history.promise : { id: 'head', revision: 1, content: f.initial });
+  f.setRead(url => url.endsWith(`/${historyId}`) ? history.promise : { report: reportVersion(1, f.initial) });
   h.find(node => node.type === 'button' && Array.isArray(node.props.children) && node.props.children[0] === 'v').props.onClick();
   await tick(); h.render({ ...f.props, writable: false });
-  history.resolve({ id: 'history', revision: 1, content: { ...f.initial, title: 'late history' } }); await tick(); h.render();
+  history.resolve(reportVersion(1, { ...f.initial, title: 'late history' })); await tick(); h.render();
   assert.equal(h.find(node => node.type === 'EditingStudio').props.projectBinding.initialContent, initial);
 });
 
@@ -235,7 +283,7 @@ test('stale cloud load callback cannot start after downgrade and restored access
 test('current viewer can deliberately load a cloud report without write capability', async () => {
   const f = loadHarness(true), { h } = f;
   h.render(f.props); await tick(); h.render();
-  f.setRead(() => ({ id: 'new-head', revision: 2, content: { ...f.initial, title: 'viewer selected cloud' } }));
+  f.setRead(() => ({ report: reportVersion(2, { ...f.initial, title: 'viewer selected cloud' }) }));
   h.find(node => node.type === 'button' && node.props.children === '载入最新版本').props.onClick(); await tick(); h.render();
   const binding = h.find(node => node.type === 'EditingStudio').props.projectBinding;
   assert.equal(binding.readOnly, true); assert.equal(binding.initialContent.title, 'viewer selected cloud'); assert.equal(f.payload, undefined);

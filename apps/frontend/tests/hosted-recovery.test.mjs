@@ -13,18 +13,14 @@ import * as research from '../lib/research-flow.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
 import * as topicApi from '../lib/topic-questionnaire-api.ts';
 import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test-harness.mjs';
+import { hostedReportHookModule } from './helpers/hosted-report-hook.mjs';
+import { createReportPermissionGuard } from '../lib/report-permission.ts';
+import { REPORT_READ_OPTIONS } from '../lib/report-persistence.ts';
 
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
-// Keep the component boundary lightweight while executing the production permission guard.
-const studioSource = fs.readFileSync(new URL('../components/editors/EditingStudio.tsx', import.meta.url), 'utf8');
-const studioAst = ts.createSourceFile('EditingStudio.tsx', studioSource, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
-const guardDeclaration = studioAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'createReportPermissionGuard');
-assert.ok(guardDeclaration, 'EditingStudio must export its production permission guard');
-const guardModule = { exports: {} };
-vm.runInNewContext(ts.transpileModule(guardDeclaration.getText(studioAst), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, guardModule);
-const editingStudioBoundary = { default: 'EditingStudio', createReportPermissionGuard: guardModule.exports.createReportPermissionGuard };
+const editingStudioBoundary = { default: 'EditingStudio', createReportPermissionGuard };
 const projectId = 'a51fd4b9-7672-491b-9251-dea7809cfc8a';
 const requestId = '49e8b234-6365-4916-a6d4-fc4e7930af34';
 const timestamp = '2026-10-11T00:00:00Z';
@@ -46,6 +42,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
   hooks.useSyncExternalStore = externalStoreHook(hooks, () => { dirty = true; });
   const jsx = (type, props, key) => ({ type, props, key });
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/workbench/useWorkbenchHandoffs': workbenchHookModule(hooks), ...mocks };
+  if (relative.endsWith('/HostedReport.tsx')) imports['./useHostedReport'] = hostedReportHookModule(hooks, { auth: imports['./HostedSession'], api: imports['./api-client'], globals });
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, queueMicrotask, window: { confirm: () => true }, location: { reload() {} }, ...globals };
@@ -59,7 +56,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
 }
 function nodes(node) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(nodes); return [node, ...nodes(node.props?.children)]; }
 function button(screen, text) { const found = nodes(screen.tree).find(n => n.type === 'button' && n.props.children === text); assert.ok(found, `Missing button: ${text}`); return found; }
-class HostedApiError extends Error { constructor(status) { super(`HTTP ${status}`); this.status = status; } }
+class HostedApiError extends Error { constructor(status, code = 'request_failed') { super(`HTTP ${status}`); this.status = status; this.code = code; } }
 
 function questionnaireScreen({ invalidCurrent = false, denied = false, tab } = {}) {
   const oldDesign = shared.newQuestionnaire(), submitted = { ...oldDesign, title: '已提交问卷' };
@@ -165,6 +162,160 @@ test('report format save receipt clears dirty status but later edits remain unsa
   binding().onSnapshot({...late,title:''});await screen.settle();assert.equal(binding().status,'有未保存修改');
   screen.unmount();
 });
+
+function reportLifecycleScreen({ mutate, read } = {}) {
+  const initial = editor.createEditorContent();
+  let head = { id: requestId, projectId, revision: 1, title: initial.title, updatedAt: timestamp, content: initial }, cache;
+  const writes = [], reads = [];
+  const auth = {
+    session: { user: { id: projectId } }, getDraft: () => undefined,
+    cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {},
+    mutate: async (url, body, method, options) => {
+      writes.push({ url, body, method, options });
+      if (mutate) return mutate(body, { head, write: writes.length, setHead: value => { head = value; } });
+      head = { ...head, id: projectId, revision: body.expectedRevision + 1, title: body.content.title, content: body.content };
+      return head;
+    },
+  };
+  const screen = mount('../components/hosted/HostedReport.tsx', {
+    '../editors/EditingStudio': editingStudioBoundary,
+    './HostedSession': { useHostedSession: () => auth },
+    './api-client': {
+      errorMessage: value => value.message, HostedApiError,
+      hostedRequest: async (url, options) => {
+        reads.push({ url, options });
+        if (read) { const value = await read(url, { head, reads, writes }); if (value !== undefined) return value; }
+        return url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: head };
+      },
+    },
+  }, { projectId, title: initial.title, writable: true, proposal: null, onProposalConsumed() {} });
+  return {
+    screen, initial, writes, reads,
+    get cache() { return cache; },
+    binding: () => nodes(screen.tree).find(n => n.props?.projectBinding).props.projectBinding,
+    edit(value) { nodes(screen.tree).find(n => n.props?.projectBinding).props.projectBinding.onSnapshot(value); },
+  };
+}
+
+test('report saves one frozen request and reads full versions with the report-sized receipt limit', async () => {
+  const fixture = reportLifecycleScreen(), { screen } = fixture;
+  await screen.settle();
+  const changed = { ...fixture.initial, title: '完整报告读取边界' };
+  fixture.edit(changed); await screen.settle();
+  button(screen, '保存报告与 PPT').props.onClick(); await screen.settle();
+  assert.equal(fixture.writes.length, 1);
+  const write = fixture.writes[0];
+  assert.equal(write.method, 'POST'); assert.equal(write.options, REPORT_READ_OPTIONS);
+  assert.equal(Object.isFrozen(write.body), true); assert.equal(Object.isFrozen(write.body.content.report), true);
+  assert.notEqual(write.body.content, changed); assert.equal(Object.isFrozen(changed), false);
+  for (const request of fixture.reads.filter(value => value.url.endsWith('/report'))) assert.equal(request.options, REPORT_READ_OPTIONS);
+  button(screen, '载入最新版本').props.onClick(); await screen.settle();
+  assert.equal(fixture.reads.at(-1).options, REPORT_READ_OPTIONS);
+  screen.unmount();
+});
+
+test('report full historical version reads use the same report-sized receipt limit', async () => {
+  const fixture = reportLifecycleScreen({ read(url, { head }) {
+    if (url.endsWith('/versions')) return { versions: [Object.fromEntries(Object.entries(head).filter(([key]) => key !== 'content'))], nextBeforeRevision: null };
+    if (url.endsWith(`/versions/${requestId}`)) return head;
+  } });
+  await fixture.screen.settle();
+  nodes(fixture.screen.tree).find(node => node.type === 'button' && Array.isArray(node.props.children) && node.props.children[0] === 'v').props.onClick();
+  await fixture.screen.settle();
+  const read = fixture.reads.find(value => value.url.endsWith(`/versions/${requestId}`));
+  assert.ok(read); assert.equal(read.options, REPORT_READ_OPTIONS);
+  fixture.screen.unmount();
+});
+
+test('a different history version receipt cannot replace the current draft or remount its editor', async () => {
+  const fixture = reportLifecycleScreen({ read(url, { head }) {
+    if (url.endsWith('/versions')) return { versions: [Object.fromEntries(Object.entries(head).filter(([key]) => key !== 'content'))], nextBeforeRevision: null };
+    if (url.endsWith(`/versions/${requestId}`)) return { ...head, id: projectId, content: { ...head.content, subtitle: '错误历史内容' } };
+  } });
+  await fixture.screen.settle();
+  const current = { ...fixture.initial, subtitle: '当前草稿' };
+  fixture.edit(current); await fixture.screen.settle();
+  const original = nodes(fixture.screen.tree).find(value => value.props?.projectBinding);
+  nodes(fixture.screen.tree).find(node => node.type === 'button' && Array.isArray(node.props.children) && node.props.children[0] === 'v').props.onClick();
+  await fixture.screen.settle();
+  const retained = nodes(fixture.screen.tree).find(value => value.props?.projectBinding);
+  assert.equal(retained.key, original.key); assert.equal(retained.props.projectBinding.initialContent, original.props.projectBinding.initialContent);
+  assert.equal(fixture.cache.content, current); assert.equal(fixture.cache.pending, null);
+  assert.equal(fixture.binding().status, '有未保存修改');
+  assert.ok(nodes(fixture.screen.tree).some(value => value.props?.role === 'alert'));
+  fixture.screen.unmount();
+});
+
+test('late original report history cannot replace a catalogue refreshed after saving', async () => {
+  let resolveOld, historyCalls = 0;
+  const old = new Promise(resolve => { resolveOld = resolve; });
+  const fixture = reportLifecycleScreen({ read(url, { head }) {
+    if (!url.endsWith('/versions')) return;
+    if (++historyCalls === 1) return old;
+    return { versions: [Object.fromEntries(Object.entries(head).filter(([key]) => key !== 'content'))], nextBeforeRevision: null };
+  } });
+  await fixture.screen.settle();
+  fixture.edit({ ...fixture.initial, subtitle: '新版本目录' }); await fixture.screen.settle();
+  button(fixture.screen, '保存报告与 PPT').props.onClick(); await fixture.screen.settle();
+  const oldSummary = { id: requestId, projectId, revision: 1, title: fixture.initial.title, updatedAt: timestamp };
+  resolveOld({ versions: [oldSummary], nextBeforeRevision: 1 }); await fixture.screen.settle();
+  const versions = nodes(fixture.screen.tree).filter(node => node.type === 'button' && Array.isArray(node.props.children) && node.props.children[0] === 'v');
+  assert.equal(versions.length, 1); assert.equal(versions[0].props.children[1], 2);
+  assert.equal(nodes(fixture.screen.tree).some(node => node.type === 'button' && node.props.children === '读取更早版本'), false);
+  fixture.screen.unmount();
+});
+
+for (const fault of ['different-content', 'wrong-successor', 'different-head', 'head-403', 'head-404', 'invalid-post-receipt']) {
+  test(`report ${fault} retains the exact original pending request until a verified retry`, async () => {
+    let failed = false;
+    const fixture = reportLifecycleScreen({
+      mutate(body, state) {
+        const receipt = { ...state.head, id: projectId, revision: body.expectedRevision + 1, title: body.content.title, content: body.content };
+        state.setHead(receipt);
+        if (!failed && fault === 'invalid-post-receipt') { failed = true; throw new HostedApiError(400, 'invalid_server_receipt'); }
+        if (!failed && fault === 'different-content') { failed = true; return { ...receipt, content: { ...body.content, subtitle: '不是提交内容' } }; }
+        if (!failed && fault === 'wrong-successor') { failed = true; return { ...receipt, revision: receipt.revision + 1 }; }
+        return receipt;
+      },
+      read(url, { head, writes }) {
+        if (!failed && writes.length && url.endsWith('/report')) {
+          failed = true;
+          if (fault === 'head-403' || fault === 'head-404') throw new HostedApiError(Number(fault.slice(5)));
+          if (fault === 'different-head') return { report: { ...head, id: requestId } };
+        }
+      },
+    });
+    await fixture.screen.settle();
+    const local = { ...fixture.initial, subtitle: '尚未提交的新报告' };
+    fixture.edit(local); await fixture.screen.settle();
+    button(fixture.screen, '保存报告与 PPT').props.onClick(); await fixture.screen.settle();
+    const original = fixture.writes[0].body;
+    assert.equal(fixture.cache.pending, original);
+    assert.equal(fixture.binding().status, '保存结果待核对');
+    assert.equal(button(fixture.screen, '载入最新版本').props.disabled, true);
+    const current = { ...local, subtitle: '核对期间继续输入' };
+    fixture.edit(current); await fixture.screen.settle();
+    button(fixture.screen, '核对并重试原保存').props.onClick(); await fixture.screen.settle();
+    assert.equal(fixture.writes[1].body, original, 'retry must not substitute the newer edit or key');
+    assert.equal(fixture.cache.pending, null); assert.equal(fixture.cache.head.revision, 2);
+    assert.equal(fixture.cache.content, current); assert.equal(fixture.binding().status, '有未保存修改');
+    fixture.screen.unmount();
+  });
+}
+
+for (const status of [403, 409]) {
+  test(`report definite POST ${status} resolves uncertainty while retaining the local draft`, async () => {
+    const fixture = reportLifecycleScreen({ mutate: () => { throw new HostedApiError(status); } });
+    await fixture.screen.settle();
+    const changed = { ...fixture.initial, subtitle: '保留被拒绝的编辑' };
+    fixture.edit(changed); await fixture.screen.settle();
+    button(fixture.screen, '保存报告与 PPT').props.onClick(); await fixture.screen.settle();
+    assert.equal(fixture.cache.pending, null); assert.equal(fixture.cache.content, changed);
+    assert.equal(fixture.cache.conflict, status === 409);
+    assert.equal(fixture.binding().status, status === 409 ? '云端版本已变化' : '有未保存修改');
+    fixture.screen.unmount();
+  });
+}
 
 test('public survey retries its frozen payload after timeout, reload and closure, then reuses its receipt', async () => {
   const token = 'a'.repeat(43), storage = new Map(), requests = [];

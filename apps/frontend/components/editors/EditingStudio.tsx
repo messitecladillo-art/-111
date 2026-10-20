@@ -22,20 +22,12 @@ import QualityStudio,{QualitySlidePreview,QualityGraphic} from './QualityStudio'
 import {appendQualityResult} from '@/lib/quality-layouts';
 import {makeSlideObject,type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
+import { createReportPermissionGuard } from '@/lib/report-permission';
 
 export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; readOnly?: boolean; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean };
 
-/** A committed permission transition revokes every previously captured write capability. */
-export function createReportPermissionGuard(readOnly: boolean) {
-  let denied = readOnly, epoch = 0;
-  return {
-    get readOnly() { return denied; },
-    get epoch() { return epoch; },
-    update(nextReadOnly: boolean) { if (denied !== nextReadOnly) { denied = nextReadOnly; epoch++; } },
-    allows(ticket: number) { return !denied && ticket === epoch; },
-  };
-}
+export { createReportPermissionGuard } from '@/lib/report-permission';
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
