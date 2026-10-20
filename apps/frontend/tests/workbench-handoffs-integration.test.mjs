@@ -8,6 +8,7 @@ import * as questionnaireLibrary from '../lib/questionnaire-library.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
 import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test-harness.mjs';
 import { questionnaireRepositoryModule, questionnairePersistence } from './helpers/questionnaire-repository.mjs';
+import { questionnaireProposalRepositoryModule, questionnaireProposalContract } from './helpers/questionnaire-proposals.mjs';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
@@ -65,7 +66,7 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
     '@/components/workbench/useWorkbenchHandoffs': workbenchHookModule(hooks),
     ...mocks,
   };
-  if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; }
+  if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; imports['./questionnaire-proposal-repository'] = questionnaireProposalRepositoryModule(); imports['@/lib/questionnaire-proposals'] = questionnaireProposalContract; }
   const window = { location: { hash: '' }, confirm: () => true, addEventListener() {}, removeEventListener() {}, scrollTo() {} };
   const code = ts.transpileModule(fs.readFileSync(new URL(relative, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },

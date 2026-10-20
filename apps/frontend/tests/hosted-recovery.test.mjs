@@ -17,6 +17,7 @@ import { hostedReportHookModule } from './helpers/hosted-report-hook.mjs';
 import { createReportPermissionGuard } from '../lib/report-permission.ts';
 import { REPORT_READ_OPTIONS } from '../lib/report-persistence.ts';
 import { questionnaireRepositoryModule, questionnairePersistence } from './helpers/questionnaire-repository.mjs';
+import { questionnaireProposalRepositoryModule, questionnaireProposalContract } from './helpers/questionnaire-proposals.mjs';
 
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 
@@ -43,7 +44,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
   hooks.useSyncExternalStore = externalStoreHook(hooks, () => { dirty = true; });
   const jsx = (type, props, key) => ({ type, props, key });
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/workbench/useWorkbenchHandoffs': workbenchHookModule(hooks), ...mocks };
-  if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; }
+  if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; imports['./questionnaire-proposal-repository'] = questionnaireProposalRepositoryModule(); imports['@/lib/questionnaire-proposals'] = questionnaireProposalContract; }
   if (relative.endsWith('/HostedReport.tsx')) imports['./useHostedReport'] = hostedReportHookModule(hooks, { auth: imports['./HostedSession'], api: imports['./api-client'], globals });
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;

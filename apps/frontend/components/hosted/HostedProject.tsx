@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { newQuestionnaire, parseCollection, parseProjectResponse, parseProposal, parseProposalSummary, summarizeProposal, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
+import { newQuestionnaire, parseCollection, parseProjectResponse, summarizeProposal, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
 import {canonical,type DesignSnapshot} from '@/lib/questionnaire-mapping';
 import TopicQuestionnaireProposal from '@/components/topic-advisor/TopicQuestionnaireProposal';
 import type {HostedDesignLoad} from '@/components/design/QuestionnaireStudio';
@@ -11,6 +11,8 @@ import type {TopicQuestionnaireApplication,TopicQuestionnaireBinding,TopicQuesti
 import type {TopicResearchBrief,TopicVersionSummary} from '@/lib/topic-project';
 import { prepareQuestionnaireSave, questionnaireFingerprint as fingerprint, type QuestionnaireSaveRequest } from '@/lib/questionnaire-persistence';
 import { createQuestionnaireRepository, QuestionnaireSaveError } from './questionnaire-repository';
+import { isDefiniteGenerationRejection, prepareQuestionnaireGeneration, type QuestionnaireGenerationRequest } from '@/lib/questionnaire-proposals';
+import { createQuestionnaireProposalRepository, QuestionnaireProposalError } from './questionnaire-proposal-repository';
 import { HostedApiError, downloadQuestionnaire, errorMessage, hostedRequest } from './api-client';
 import { LoginRequired } from './HostedFrame';
 import { useHostedSession } from './HostedSession';
@@ -32,7 +34,7 @@ type ProjectTab = 'topic' | 'design' | 'silicon' | 'collection' | 'analysis' | '
 type SaveRequest = QuestionnaireSaveRequest;
 type PendingTopicApply={application:TopicQuestionnaireApplication;source:TopicQuestionnaireSource;target:TopicQuestionnaireTarget;editRevision:number;expectedBefore:string};
 type TopicReconciliation={versionId:string;beforeBinding:TopicQuestionnaireBinding|null};
-type GenerationRequest = { serviceId: string; serviceRevision: number; brief: string; expectedQuestionnaireRevision: number; idempotencyKey: string; consent: true };
+type GenerationRequest = QuestionnaireGenerationRequest;
 type CachedProject={head:QuestionnaireHead|null;headBinding?:TopicQuestionnaireBinding|null;initial:Questionnaire;snapshot:DesignSnapshot|null;sourceProposal?:string;proposal:Proposal|null;brief:string;pendingSave:SaveRequest|null;pendingBinding?:TopicQuestionnaireBinding|null;pendingTopicApply?:PendingTopicApply|null;topicReconciliation?:TopicReconciliation|null;pendingGeneration:GenerationRequest|null;saveUncertain:boolean;generationUncertain:boolean;conflict:boolean;tab?:ProjectTab};
 
 export default function HostedProject({ projectId }: { projectId: string }) {
@@ -64,7 +66,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [loadingHistory,setLoadingHistory] = useState(false);
   const [readonlyDesign,setReadonlyDesign]=useState<Questionnaire|null>(null);
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [generating, setGenerating] = useState(false), [reading, setReading] = useState(false);
-  const [saveUncertain, setSaveUncertain] = useState(!!cached?.pendingSave||cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
+  const [saveUncertain, setSaveUncertain] = useState(!!cached?.pendingSave||cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(!!cached?.pendingGeneration||cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<ProjectTab>(cached?.tab || 'design');
   const [topicOpened, setTopicOpened] = useState(cached?.tab === 'topic');
   const [defenseOpened, setDefenseOpened] = useState(cached?.tab === 'defense');
@@ -77,17 +79,22 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
   const pendingSave = useRef<SaveRequest | null>(cached?.pendingSave||null), pendingGeneration = useRef<GenerationRequest | null>(cached?.pendingGeneration||null), operation = useRef(false);
   const uncertainSaveAttempt=useRef(!!cached?.pendingSave),freshRejectedRequest=useRef<SaveRequest|null>(null);
+  const generationOperation=useRef(false),callsEpoch=useRef(0),generationWriteEpoch=useRef(0);
   const pendingTopicApply=useRef<PendingTopicApply|null>(cached?.pendingTopicApply??null),sourceLive=useRef<TopicQuestionnaireSource|null>(null),selectedSource=useRef<TopicQuestionnaireSource|null>(null),sourceEpoch=useRef(0);
   const pendingBinding=useRef<TopicQuestionnaireBinding|null>(cached?.pendingBinding??null),publishedRevision=useRef(0);
   const reconciliationRef=useRef(topicReconciliation);
   const loadCompletion=useRef<{id:string;resolve:(accepted:boolean)=>void}|null>(null),headBindingRef=useRef(headBinding),writableRef=useRef(false);
   const writable = role === 'owner' || role === 'editor';
+  const [generationPermission,setGenerationPermission]=useState({writable,epoch:0});
+  const generationPermissionEpoch=generationPermission.epoch+Number(generationPermission.writable!==writable);
+  if(generationPermission.writable!==writable)setGenerationPermission({writable,epoch:generationPermissionEpoch});
   const ownerId=auth.session?.user?.id??'',identityEpoch=auth.identityEpoch,isCurrentAccount=auth.isCurrentAccount;
   const [mountedScope]=useState(()=>({ownerId,identityEpoch,projectId}));
   const liveScope=useRef({ownerId,identityEpoch,projectId});
   const currentAccount=useCallback(()=>alive.current&&mountedScope.ownerId===ownerId&&mountedScope.identityEpoch===identityEpoch&&mountedScope.projectId===projectId&&liveScope.current.ownerId===ownerId&&liveScope.current.identityEpoch===identityEpoch&&liveScope.current.projectId===projectId&&isCurrentAccount(ownerId,identityEpoch),[isCurrentAccount,ownerId,identityEpoch,projectId,mountedScope]);
   const repository=useMemo(()=>createQuestionnaireRepository(projectId,{read:hostedRequest,mutate:auth.mutate}),[projectId,auth.mutate]);
-  useLayoutEffect(()=>{writableRef.current=writable;headBindingRef.current=headBinding;liveScope.current={ownerId,identityEpoch,projectId};},[writable,headBinding,ownerId,identityEpoch,projectId]);
+  const proposalRepository=useMemo(()=>createQuestionnaireProposalRepository(projectId,{read:hostedRequest,mutate:auth.mutate}),[projectId,auth.mutate]);
+  useLayoutEffect(()=>{writableRef.current=writable;generationWriteEpoch.current=generationPermissionEpoch;headBindingRef.current=headBinding;liveScope.current={ownerId,identityEpoch,projectId};},[writable,generationPermissionEpoch,headBinding,ownerId,identityEpoch,projectId]);
   const questionnaireServices = useMemo(() => services.filter(s => s.capabilities.includes('questionnaire')), [services]);
   const questionnaireNames = useMemo(() => serviceNames(questionnaireServices), [questionnaireServices]);
   // Model-backed runs are a write action on the project; viewers can still rehearse with the offline engine.
@@ -106,7 +113,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const saveState = saving ? 'saving' : saveUncertain ? 'uncertain' : conflict ? 'conflict' : dirty ? 'dirty' : revision ? 'saved' : 'empty';
   const topicDisabledReason=saving?'正在等待本次保存回执，请保留当前提案。':saveUncertain?'保存回执尚待核对。请使用原保存请求核对，所选字段仍保留。':reading?'正在读取版本与来源绑定，请稍后继续。':conflict?'云端基础版本需要核对，请先选择保留草稿或载入已保存版本。':!bindingReady?'正在核对来源绑定，请稍后继续。':'';
   const { cacheDraft, setUnsaved } = auth, userId = auth.session?.user?.id;
-  useLayoutEffect(()=>{if(initial&&userId)cacheDraft(cacheKey,{head,headBinding,initial,snapshot,sourceProposal,proposal,brief,pendingSave:pendingSave.current,pendingBinding:pendingBinding.current,pendingTopicApply:pendingTopicApply.current,topicReconciliation,pendingGeneration:pendingGeneration.current,saveUncertain:saveUncertain||saving,generationUncertain:generationUncertain||generating,conflict,tab} satisfies CachedProject,dirty||saving||saveUncertain,userId);},[cacheKey,head,headBinding,initial,snapshot,sourceProposal,proposal,brief,saveUncertain,generationUncertain,conflict,dirty,saving,generating,userId,cacheDraft,tab,topicReconciliation]);
+  useLayoutEffect(()=>{if(initial&&userId)cacheDraft(cacheKey,{head,headBinding,initial,snapshot,sourceProposal,proposal,brief,pendingSave:pendingSave.current,pendingBinding:pendingBinding.current,pendingTopicApply:pendingTopicApply.current,topicReconciliation,pendingGeneration:pendingGeneration.current,saveUncertain:saveUncertain||saving,generationUncertain:generationUncertain||generating,conflict,tab} satisfies CachedProject,dirty||saving||saveUncertain||generating||generationUncertain,userId);},[cacheKey,head,headBinding,initial,snapshot,sourceProposal,proposal,brief,saveUncertain,generationUncertain,conflict,dirty,saving,generating,userId,cacheDraft,tab,topicReconciliation]);
   const onSnapshot = useCallback((next: DesignSnapshot) => {if(!currentAccount())return; latest.current = next; draftRevision.current++;publishedRevision.current=draftRevision.current; setSnapshot(next); }, [currentAccount]);
   const detach = useCallback(() => setSourceProposal(undefined), []);
   const acknowledgeLoad = useCallback((id:string,accepted:boolean) => {setLoad(value=>value?.id===id?undefined:value);if(loadCompletion.current?.id===id){loadCompletion.current.resolve(accepted);loadCompletion.current=null;}}, []);
@@ -124,11 +131,13 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     finally { if (currentAccount()) setLoadingHistory(false); }
   }, [repository,currentAccount]);
   const reloadProposals = useCallback(async () => {
+    if(!currentAccount())return;
+    const epoch=++callsEpoch.current;
     try {
-      const rows=parseCollection(await hostedRequest(`/api/projects/${projectId}/proposals`),'proposals',parseProposalSummary,50);
-      if(alive.current) {setProposals(rows);setCallsError('');}
-    } catch(e) {if(alive.current)setCallsError(errorMessage(e));}
-  },[projectId]);
+      const rows=await proposalRepository.list(currentAccount);
+      if(currentAccount()&&epoch===callsEpoch.current&&rows) {setProposals(rows);setCallsError('');}
+    } catch(e) {if(currentAccount()&&epoch===callsEpoch.current)setCallsError(errorMessage(e));}
+  },[proposalRepository,currentAccount]);
   useEffect(() => {
     alive.current = true;
     let cancelled=false;
@@ -151,7 +160,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     })();
     return () => { cancelled=true; alive.current = false;loadCompletion.current?.resolve(false);loadCompletion.current=null; };
   }, [projectId, cached, reloadVersions, reloadProposals,repository,currentAccount]);
-  useEffect(() => { setUnsaved(projectId, dirty || saving || saveUncertain); return () => setUnsaved(projectId, false); }, [setUnsaved, projectId, dirty, saving, saveUncertain]);
+  useEffect(() => { setUnsaved(projectId, dirty || saving || saveUncertain || generating || generationUncertain); return () => setUnsaved(projectId, false); }, [setUnsaved, projectId, dirty, saving, saveUncertain,generating,generationUncertain]);
   function loadDesign(design: Questionnaire, message: string, origin?: string,paired?:Pick<HostedDesignLoad,'topicBinding'|'topicRestoreOrigin'>) {
     if(!writable){setReadonlyDesign(design);setNotice(message);return;}
     if (latest.current?.pending) { setError('请先修正暂存的数值输入，再载入设计。'); return; }
@@ -159,7 +168,8 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     setSourceProposal(origin); setLoad({ id: crypto.randomUUID(), design,...paired,expectedEditRevision:latest.current?.editRevision }); setTab('design'); setNotice(message); setError('');
   }
   function rememberReconciliation(value:TopicReconciliation|null){reconciliationRef.current=value;setTopicReconciliation(value);}
-  function persistPending(overrides:Partial<CachedProject>={}){if(initial&&userId&&currentAccount())cacheDraft(cacheKey,{head:headRef.current,headBinding:headBindingRef.current,initial,snapshot:latest.current,sourceProposal,proposal,brief,pendingSave:pendingSave.current,pendingBinding:pendingBinding.current,pendingTopicApply:pendingTopicApply.current,topicReconciliation:reconciliationRef.current,pendingGeneration:pendingGeneration.current,saveUncertain:true,generationUncertain,conflict,tab,...overrides} satisfies CachedProject,true,userId);}
+  function persistProjectDraft(overrides:Partial<CachedProject>={}){if(initial&&userId&&currentAccount())cacheDraft(cacheKey,{head:headRef.current,headBinding:headBindingRef.current,initial,snapshot:latest.current,sourceProposal,proposal,brief,pendingSave:pendingSave.current,pendingBinding:pendingBinding.current,pendingTopicApply:pendingTopicApply.current,topicReconciliation:reconciliationRef.current,pendingGeneration:pendingGeneration.current,saveUncertain:saveUncertain||saving,generationUncertain:generationUncertain||generating,conflict,tab,...overrides} satisfies CachedProject,true,userId);}
+  function persistPending(overrides:Partial<CachedProject>={}){persistProjectDraft({saveUncertain:true,...overrides});}
   async function sendPendingSave(freshSourceEpoch?:number):Promise<boolean>{
     const request=pendingSave.current,application=pendingTopicApply.current,before=draftRevision.current;
     if(!request)throw Error('缺少原保存请求。');
@@ -270,36 +280,42 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     finally { operation.current = false; if (currentAccount()) setReading(false); }
   }
   async function generate() {
-    if (generating || !writable || conflict || saving || saveUncertain) return;
+    const canDispatch=()=>currentAccount()&&writableRef.current&&generationWriteEpoch.current===generationPermissionEpoch;
+    if (generationOperation.current || operation.current || !canDispatch() || conflict || saving || saveUncertain || pendingSave.current) return;
     const service = services.find(s => s.id === serviceId);
     if (!pendingGeneration.current && (!service || !consent || !brief.trim())) return;
-    pendingGeneration.current ??= { serviceId: service!.id, serviceRevision: service!.revision, brief: brief.trim(), expectedQuestionnaireRevision: headRef.current?.revision || 0, idempotencyKey: crypto.randomUUID(), consent: true };
+    generationOperation.current=true;
+    const freshAttempt=pendingGeneration.current===null;
     setGenerating(true); setError('');
     try {
-      const value = parseProposal(await auth.mutate(`/api/projects/${projectId}/proposals`, pendingGeneration.current));
-      if (!alive.current) return;
-      setProposal(value); pendingGeneration.current = null; setGenerationUncertain(false);
-      setProposals(rows => [summarizeProposal(value),...rows.filter(p=>p.id!==value.id)].slice(0,50));
+      pendingGeneration.current ??= prepareQuestionnaireGeneration(service!,brief,headRef.current?.revision||0,consent);
+      persistProjectDraft({generationUncertain:true});
+      const value = await proposalRepository.generate(pendingGeneration.current,canDispatch);
+      if (!canDispatch()||!value) return;
+      rememberProposal(value); pendingGeneration.current = null; setGenerationUncertain(false);
       setNotice(value.status === 'ready' ? '问卷建议已生成，请预览后确认应用。' : value.status === 'failed' ? '本次生成未完成。当前问卷没有变化。' : '本次调用尚待核对，系统不会自动重新调用模型。');
     } catch (e) {
-      if (!alive.current) return;
+      if (!canDispatch()) return;
       setError(errorMessage(e));
-      if (e instanceof HostedApiError && e.status >= 400 && e.status < 500) { pendingGeneration.current = null; setGenerationUncertain(false); }
+      if (freshAttempt&&e instanceof QuestionnaireProposalError&&e.phase==='request'&&e.cause instanceof HostedApiError&&isDefiniteGenerationRejection(e.cause.status,e.cause.code)) { pendingGeneration.current = null; setGenerationUncertain(false); }
       else setGenerationUncertain(true);
-    } finally { if (alive.current) setGenerating(false); }
+    } finally { generationOperation.current=false;if(currentAccount()){setGenerating(false);setGenerationUncertain(!!pendingGeneration.current);} }
   }
+  function rememberProposal(value:Proposal){callsEpoch.current++;setProposal(value);setProposals(rows=>[summarizeProposal(value),...rows.filter(p=>p.id!==value.id)].slice(0,50));}
   async function refreshProposal() {
-    if (!proposal || generating) return;
+    if (!currentAccount()||!proposal || generationOperation.current) return;
+    generationOperation.current=true;
     setGenerating(true); setError('');
-    try { const result = parseProposal(await hostedRequest(`/api/projects/${projectId}/proposals/${proposal.id}`)); if (alive.current) setProposal(result); }
-    catch (e) { if (alive.current) setError(errorMessage(e)); } finally { if (alive.current) setGenerating(false); }
+    try { const result = await proposalRepository.get(proposal,currentAccount); if (currentAccount()&&result) rememberProposal(result); }
+    catch (e) { if (currentAccount()) setError(errorMessage(e)); } finally { generationOperation.current=false;if (currentAccount()) setGenerating(false); }
   }
   async function openProposal(id: string) {
-    if (generating) return;
+    if (!currentAccount()||generationOperation.current) return;
+    generationOperation.current=true;
     setGenerating(true); setCallsError('');
-    try { const result = parseProposal(await hostedRequest(`/api/projects/${projectId}/proposals/${id}`)); if (alive.current) {setProposal(result); setTab('design');} }
-    catch(e) {if(alive.current)setCallsError(errorMessage(e));}
-    finally {if(alive.current)setGenerating(false);}
+    try { const result = await proposalRepository.get(proposals.find(p=>p.id===id)??{id},currentAccount); if (currentAccount()&&result) {rememberProposal(result); setTab('design');} }
+    catch(e) {if(currentAccount())setCallsError(errorMessage(e));}
+    finally {generationOperation.current=false;if(currentAccount())setGenerating(false);}
   }
   if (loading) return <p className="hosted-loading" role="status">正在恢复项目与问卷版本…</p>;
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
