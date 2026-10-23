@@ -40,6 +40,8 @@ export function traceExhibits(content: EditorContent | null, design: Questionnai
     const steps: TraceStep[] = [
       { kind: 'result', text: `结果「${r.title}」`, detail: `${METHOD_LABELS[r.method] ?? r.method}${frame ? (planned ? ` · 计划有效样本 ${planned}` : '') : ` · 有效样本 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}`}` },
       ...r.warnings.filter(w => /^原表/u.test(w)).map((w): TraceStep => ({ kind: 'scope', text: '计算范围', detail: sentence(w) })),
+      // A frame's recorded caveat (a non-probability stage) bounds what its numbers can claim, so it stays on the path.
+      ...(frame ? r.warnings.map((w): TraceStep => ({ kind: 'scope', text: '抽样说明', detail: sentence(w) })) : []),
       ...r.warnings.filter(w => /^质控/u.test(w)).map((w): TraceStep => ({ kind: 'quality', text: '质量控制', detail: sentence(w.replace(/^质控：/u, '')) })),
       { kind: 'source', text: frame ? '抽样设计' : `数据「${r.sourceName}」`,
         detail: `${frame ? r.sourceName : SOURCE_KIND[r.classification] ?? r.classification} · 指纹 SHA-256 ${r.sourceHash.slice(0, 12)}…${r.sourceUrl ? ` · ${r.sourceUrl}` : ''}` },

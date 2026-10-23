@@ -33,10 +33,12 @@ export default function Composer({ onSend, inputRef }: { onSend: (text: string) 
     setHistory(list => [...list.filter(item => item !== text), text].slice(-50));
     change('');
   };
+  // Enter runs a command typed in full, even one that can take an argument (/来处 alone lists the exhibits);
+  // a partial name, or Tab, completes it and leaves room for the argument.
   const complete = (index: number, run: boolean) => {
     const command = options[index];
     if (!command) return;
-    if (run && !command.args) send(`/${command.name}`);
+    if (run && (!command.args || word === command.name)) send(`/${command.name}`);
     else change(`/${command.name} `);
   };
   const key = (event: KeyboardEvent<HTMLTextAreaElement>) => {

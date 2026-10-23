@@ -154,6 +154,12 @@ test('an exhibit traces back through its result, scope, quality control and data
   assert.deepEqual([trace.steps[5].text, trace.steps[5].detail], ['变量「不存在的列」', '没有对应到问卷室里的题目']);
   assert.equal(traceExhibits(content, null)[0].steps[4].detail, '问卷室里还没有问卷，无法对应到题目');
   assert.equal(exhibitKey('图 1－1'), exhibitKey('图1.1'));
+  // A sampling frame traces to the plan, keeping its recorded caveat.
+  const caveat = '城区居民含拦截、配额或方便抽样阶段，不是概率样本，不报告严格的抽样误差';
+  const planned = traceExhibits(reportWith([{ id: 'f', kind: 'table', text: '抽样框', evidenceId: 'f1', valueColumn: 1 }], [{ ...frame('f1', 300), warnings: [caveat] }]), design)[0];
+  assert.deepEqual(planned.steps.map(s => [s.kind, s.text]), [['result', '结果「居民抽样框」'], ['scope', '抽样说明'], ['source', '抽样设计']]);
+  assert.equal(planned.steps[0].detail, '抽样设计 · 计划有效样本 300');
+  assert.equal(planned.steps[1].detail, caveat);
 });
 
 test('/来处 answers with the path of one exhibit, offers a choice among several, and says when there is none', () => {
