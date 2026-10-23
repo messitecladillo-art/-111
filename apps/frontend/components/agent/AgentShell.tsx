@@ -80,6 +80,7 @@ export default function AgentShell() {
   }
 
   const inputRef = useRef<HTMLTextAreaElement>(null), headingRef = useRef<HTMLHeadingElement>(null), mirrorRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const go = useCallback((id: RoomId) => { if (currentRoom() !== id) window.location.hash = id; }, []);
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
   const showWorkbench = useCallback(() => { window.location.hash = lastRoom; }, [lastRoom]);
@@ -166,7 +167,11 @@ export default function AgentShell() {
       // Focus moves before the key is typed, so the slash itself lands in the command line.
       if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) inputRef.current?.focus();
       if (event.key === '\\' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setTalkOpen(open => !open); }
-      if (event.key === 'Escape') setRailOpen(false);
+      // Escape puts the phone drawer away; focus inside it goes back to the button that opened it, not into hiding.
+      if (event.key === 'Escape' && document.querySelector('[data-rail="open"]')) {
+        if (document.getElementById('agent-rail')?.contains(document.activeElement)) menuRef.current?.focus();
+        setRailOpen(false);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -184,7 +189,7 @@ export default function AgentShell() {
       <a className={styles.skip} href="#mirror" onClick={event => { event.preventDefault(); mirrorRef.current?.focus(); }}>跳到主要内容</a>
 
       <header className={styles.bar}>
-        <button type="button" className={`${styles.iconButton} ${styles.menu}`} aria-label="房间" aria-expanded={railOpen} aria-controls="agent-rail" onClick={() => setRailOpen(!railOpen)}>☰</button>
+        <button ref={menuRef} type="button" className={`${styles.iconButton} ${styles.menu}`} aria-label="房间" aria-expanded={railOpen} aria-controls="agent-rail" onClick={() => setRailOpen(!railOpen)}>☰</button>
         <a className={styles.brand} href="#overview"><b aria-hidden="true">◇</b><strong>证见</strong><small>镜室</small></a>
         <span className={styles.crumb}><i aria-hidden="true">›</i>{here.name}<span>{project === '未命名研究' ? '' : `· ${project}`}</span></span>
         <span className={styles.spacer} />
