@@ -44,14 +44,19 @@ const THEME_KEY = "evix.workbench.theme.v1";
 const THEME_EVENT = "evix:theme-change";
 let transientTheme: Theme | null = null;
 
-function currentTheme(): Theme {
+function chosenTheme(): Theme | null {
   if (transientTheme) return transientTheme;
   try {
     const saved = window.localStorage.getItem(THEME_KEY);
     if (saved === "light" || saved === "dark") return saved;
   } catch { /* Private or restricted browsing still supports an in-memory preference. */ }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return null;
 }
+function currentTheme(): Theme {
+  return chosenTheme() ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+/** The agent shell is designed night-first: until the user picks a theme anywhere, it opens dark. */
+const nightFirstTheme = (): Theme => chosenTheme() ?? "dark";
 function subscribeTheme(listener: () => void) {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   const onStorage = (event: StorageEvent) => { if (event.key === THEME_KEY || event.key === null) { transientTheme = null; listener(); } };
@@ -65,8 +70,8 @@ export function saveTheme(value: Theme) {
   try { window.localStorage.setItem(THEME_KEY, value); } catch { /* Optional UI preference, never research data. */ }
   window.dispatchEvent(new Event(THEME_EVENT));
 }
-export function useThemePreference(): Theme {
-  return useSyncExternalStore(subscribeTheme, currentTheme, () => "light" as Theme);
+export function useThemePreference(nightFirst = false): Theme {
+  return useSyncExternalStore(subscribeTheme, nightFirst ? nightFirstTheme : currentTheme, () => (nightFirst ? "dark" : "light") as Theme);
 }
 
 export function NavIcon({ kind }: { kind: string }) {
@@ -93,7 +98,7 @@ export function NavIcon({ kind }: { kind: string }) {
 type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => { ready: Promise<void> } };
 
 /** Switch theme with a circular reveal from the toggle where View Transitions are available. */
-function switchTheme(next: Theme, event: MouseEvent<HTMLButtonElement>) {
+export function switchTheme(next: Theme, event: MouseEvent<HTMLButtonElement>) {
   const doc = document as ViewTransitionDocument;
   if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { saveTheme(next); return; }
   const rect = event.currentTarget.getBoundingClientRect();

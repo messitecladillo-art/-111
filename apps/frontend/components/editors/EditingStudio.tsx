@@ -82,7 +82,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled,reportInsert,onReportInsertHandled,questionnaire=null}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled,reportInsert,onReportInsertHandled,questionnaire=null,onContentChange}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -94,6 +94,8 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   useLayoutEffect(() => { permission.current.update(readOnly); }, [readOnly]);
   const canMutate = useCallback(() => !readOnly && permission.current.allows(permissionEpoch), [readOnly, permissionEpoch]);
   const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
+  // The agent shell reads the report it hosts to light the report room; it never writes through this.
+  useEffect(() => { onContentChange?.(content); }, [content, onContentChange]);
   const reportSettings = content.reportFormat ?? DEFAULT_REPORT_SETTINGS;
   const reportFormat = reportSettings.options;
   const onSnapshot = projectBinding?.onSnapshot;

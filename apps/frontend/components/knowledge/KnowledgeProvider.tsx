@@ -55,14 +55,15 @@ const KnowledgeControlContext = createContext<KnowledgeControl | null>(null);
 export function useKnowledge() { const value = useContext(KnowledgeControlContext); if (!value) throw Error('缺少知识镜上下文'); return value; }
 
 export default function KnowledgeProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname(), auth = useHostedSession(), theme = useThemePreference();
+  const pathname = usePathname(), auth = useHostedSession(), theme = useThemePreference(pathname === '/agent');
   const account = useKnowledgeAccount();
   const { recordVisit, updatePrefs, setFavorite } = account;
   const hash = useSyncExternalStore(subscribeHash, () => location.hash, () => '');
   const scope = useSyncExternalStore(subscribeScope, scopeSnapshot, () => '');
   const context = useMemo(() => { const [activeModule, tags] = scope.split('|'); return contextFromLocation(pathname, activeModule ? `#${activeModule}` : hash, tags?.split(',') ?? []); }, [pathname, hash, scope]);
-  const visible = ['/workspace','/knowledge','/services','/preflight'].includes(pathname) || pathname.startsWith('/projects') || pathname.startsWith('/examples/');
-  const researchPage = visible && pathname !== '/services';
+  const visible = ['/workspace','/agent','/knowledge','/services','/preflight'].includes(pathname) || pathname.startsWith('/projects') || pathname.startsWith('/examples/');
+  // The agent shell asks the knowledge base itself (/查), so it needs no floating launcher.
+  const researchPage = visible && pathname !== '/services' && pathname !== '/agent';
   const mounted = useSyncExternalStore(subscribeHydration, () => true, () => false);
   const [shown, setShown] = useState(false), [mode, setMode] = useState<'float' | 'pinned' | 'reading'>('float');
   const [ready, setReady] = useState(false);

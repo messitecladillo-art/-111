@@ -1,0 +1,91 @@
+/**
+ * Illumination: how much of the project the evidence reaches. Each lit room scores its own checks; the report room
+ * scores by the deterministic report benchmark. A failed check is a blind spot, with the room that can fix it.
+ * Only what the shell can actually see counts, so rooms not yet connected have no light rather than invented light.
+ */
+import { createEditorContent, type EditorContent } from '../editor-model.ts';
+import { questionIsMapped, questionnaireIssues, type Questionnaire } from '../questionnaire.ts';
+import { benchmarkReport, type BenchmarkResult } from '../report-benchmark.ts';
+import type { RoomId } from './rooms.ts';
+
+/** What the shell can see of the project: the shared questionnaire and dataset, and the report once its room has opened. */
+export type ProjectView = {
+  design: Questionnaire | null;
+  dataset: { name: string; rows: number; simulated: boolean } | null;
+  report: EditorContent | null;
+  /** A registered result on its way to the report. */
+  resultPending: boolean;
+};
+/** One check of one room. `go` is where it can be fixed, which is not always the room it lights. */
+export type LightCheck = { id: string; room: RoomId; go: RoomId; label: string; passed: boolean; detail: string };
+export type RoomLight = { room: RoomId; score: number; checks: LightCheck[]; summary: string };
+export type Illumination = { rooms: RoomLight[]; overall: number; blind: LightCheck[]; benchmark: BenchmarkResult | null };
+
+/** The rooms whose light the shell can measure today, in research order. */
+export const LIT_ROOMS = ['design', 'analysis', 'editor'] as const satisfies readonly RoomId[];
+
+const TEMPLATE = createEditorContent().report.map(s => [s.title, s.body] as const);
+/** A report still equal to the starting template has no writing of its own, whatever the benchmark makes of its prompts. */
+export function reportWritten(content: EditorContent): boolean {
+  return content.report.length !== TEMPLATE.length
+    || content.report.some((s, i) => s.title !== TEMPLATE[i][0] || s.body !== TEMPLATE[i][1] || (s.blocks?.length ?? 0) > 0);
+}
+
+const share = (checks: LightCheck[]) => checks.length ? checks.filter(c => c.passed).length / checks.length : 0;
+
+function designLight(d: Questionnaire | null): RoomLight {
+  const n = d?.questions.length ?? 0;
+  const check = (id: string, passed: boolean, label: string, detail: string): LightCheck => ({ id: `design.${id}`, room: 'design', go: 'design', label, passed, detail });
+  if (!d || !n) return { room: 'design', score: 0, summary: '还没有题目', checks: [check('questions', false, '问卷还没有题目', '在问卷室新建题目，或从选题诊断带入草稿。')] };
+  const blockers = questionnaireIssues(d).filter(i => i.level === 'blocker').length, mapped = d.questions.filter(questionIsMapped).length;
+  const framed = !!d.objective.trim() && !!d.population.trim();
+  const checks = [
+    check('questions', true, `问卷已有 ${n} 道题`, d.title.trim() ? `《${d.title.trim()}》` : '问卷尚未命名'),
+    check('blockers', !blockers, blockers ? `${blockers} 处阻断问题` : '没有阻断问题', blockers ? '题干、编码、选项或跳题有错，回收前必须改正。' : '题干、编码、选项与跳题都能通过检查。'),
+    check('mapped', mapped === n, mapped === n ? '每道题都对应研究问题与分析计划' : `${n - mapped} 道题没有对应研究问题或分析计划`, `${mapped} / ${n} 道题已映射。`),
+    check('frame', framed, framed ? '写明了决策目标与调查对象' : '决策目标或调查对象还没写', framed ? d.population.trim() : '目标与对象决定了抽样框和结论的外推边界。'),
+  ];
+  return { room: 'design', score: share(checks), checks, summary: `${n} 道题${blockers ? ` · ${blockers} 处阻断` : ''}` };
+}
+
+function analysisLight(view: ProjectView): RoomLight {
+  const results = view.report?.quality?.results ?? [], confirmed = (view.report?.quality?.findings ?? []).filter(f => f.status === 'confirmed').length;
+  const registered = results.length + (view.resultPending ? 1 : 0);
+  const data = view.dataset;
+  const checks: LightCheck[] = [
+    { id: 'analysis.data', room: 'analysis', go: 'analysis', passed: !!data, label: data ? `已载入「${data.name}」` : '还没有载入数据',
+      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}` : '在分析室导入回收的问卷数据；没有数据时可用硅基样本生成教学模拟数据。' },
+    { id: 'analysis.results', room: 'analysis', go: 'analysis', passed: registered > 0, label: registered ? `已登记 ${registered} 项分析结果` : '还没有登记分析结果',
+      detail: registered ? '登记的结果带着来源与计算过程进入报告。' : '在分析室完成一项描述、检验或图表，发送到报告即登记。' },
+    { id: 'analysis.findings', room: 'analysis', go: 'editor', passed: confirmed > 0, label: confirmed ? `已确认 ${confirmed} 条研究发现` : '还没有确认研究发现',
+      detail: confirmed ? '已确认的发现可以写成结论与建议。' : '在报告室的研究发现面板里，把结果整理成发现并逐条确认。' },
+  ];
+  return { room: 'analysis', score: share(checks), checks, summary: data ? `${data.rows} 行 · ${registered} 项结果` : '还没有数据' };
+}
+
+function reportLight(content: EditorContent | null): [RoomLight, BenchmarkResult | null] {
+  // The editor's checklist gives the bare template some structure points; light starts with the first words of the report's own.
+  if (!content || !reportWritten(content)) return [{ room: 'editor', score: 0, summary: '仍是空白模板', checks: [
+    { id: 'report.body', room: 'editor', go: 'editor', passed: false, label: '报告仍是空白模板', detail: '走进报告室按蓝图写第一章；分析结果、抽样方案与公式都能一键插入。模板自带的结构分不算光。' }] }, null];
+  const benchmark = benchmarkReport(content);
+  const checks = benchmark.checks.filter(c => c.status !== 'na').map((c): LightCheck => ({
+    id: `report.${c.id}`, room: 'editor', go: c.fixes.find(f => f.module)?.module ?? 'editor', label: c.label, passed: c.status === 'pass', detail: c.detail,
+  }));
+  const passed = checks.filter(c => c.passed).length;
+  // The benchmark reports its total out of 100; light is a share.
+  return [{ room: 'editor', score: benchmark.score / 100, checks, summary: `体检 ${passed} / ${checks.length} 项通过` }, benchmark];
+}
+
+/** Light for every measurable room, the overall share, and the blind spots in research order. */
+export function illuminate(view: ProjectView): Illumination {
+  const [report, benchmark] = reportLight(view.report);
+  const rooms = [designLight(view.design), analysisLight(view), report];
+  return {
+    rooms, benchmark,
+    overall: rooms.reduce((sum, r) => sum + r.score, 0) / rooms.length,
+    // A report check counts as a blind spot only when it fails outright; partial credit is light that is still arriving.
+    blind: rooms.flatMap(r => r.checks.filter(c => !c.passed && (r.room !== 'editor' || c.id === 'report.body' || benchmark?.checks.find(b => `report.${b.id}` === c.id)?.status === 'fail'))),
+  };
+}
+
+export const roomLight = (light: Illumination, room: RoomId) => light.rooms.find(r => r.room === room) ?? null;

@@ -9,6 +9,7 @@ import { NAV_ITEMS, NavIcon, PageHeading, ThemeProvider, ThemeToggle, WorkbenchF
 export { useWorkbenchTheme } from './workbench/shell-kit';
 
 type Panel = Exclude<Section, "lifecycle">;
+export type WorkbenchPanel = Panel;
 const ITEMS = NAV_ITEMS;
 
 /**
@@ -23,6 +24,8 @@ export type WorkbenchNav = {
   canvasFocus: { nodeId: string; token: number } | null;
 };
 const NavContext = createContext<WorkbenchNav | null>(null);
+/** Lets another shell (the agent shell) host workbench modules that navigate through this context. */
+export const WorkbenchNavProvider = NavContext.Provider;
 export function useWorkbenchNav(): WorkbenchNav {
   const value = useContext(NavContext);
   if (!value) throw Error("useWorkbenchNav must be used inside WorkbenchShell");

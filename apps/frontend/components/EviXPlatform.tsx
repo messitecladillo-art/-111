@@ -4,6 +4,7 @@ import {
   FormEvent,
   KeyboardEvent,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -19,7 +20,10 @@ import { COMPETITION_UPDATE } from "@/data/competition-update";
 import LifecycleWarRoom from "@/components/LifecycleWarRoom";
 import EvidenceFlight from "@/components/EvidenceFlight";
 import ChoiceGroup from "@/components/ChoiceGroup";
-import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme } from "@/components/WorkbenchShell";
+import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel } from "@/components/WorkbenchShell";
+import type { ReactNode } from "react";
+import type { EditorContent } from "@/lib/editor-model";
+import type { ProjectView } from "@/lib/agent/illumination";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio'));
@@ -1035,7 +1039,12 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
   return <ResearchCanvas workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
 }
 
-export default function EviXPlatform() {
+/**
+ * Every workbench module, wired to the shared handoff store, and what the agent shell may read of the project:
+ * the shared questionnaire and dataset, and, when observeReport is set, the report once its room has been opened.
+ * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
+ */
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView } {
   const { session, identityEpoch } = useHostedSession();
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
     JSON.stringify(['workspace', session?.user?.id ?? null, identityEpoch]),
@@ -1044,8 +1053,10 @@ export default function EviXPlatform() {
   const briefHandled = useHandoffAcknowledgement(handoffs, 'brief', exchange.pending.brief?.deliveryId);
   // Paragraphs, tables and formulas a workbench module sends to the report; the editor applies each once.
   const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
-  return (
-    <WorkbenchShell panels={{
+  const [report,setReport]=useState<EditorContent|null>(null);
+  const dataset=exchange.dataset;
+  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated"}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
+  const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => ({
       overview: <>
       <section className="hero" id="overview" aria-labelledby="hero-title">
         <div className="hero-grid" aria-hidden="true" />
@@ -1082,7 +1093,7 @@ export default function EviXPlatform() {
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={exchange.pending.result?.payload} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null}/>,
+      editor: <EditingStudio localOnly resultProposal={exchange.pending.result?.payload} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?setReport:undefined}/>,
       defense: <DefenseStudio />,
       analysis: <SurveyLab onResultSnapshot={result=>{handoffs.publish('result',result);window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onDatasetChange={handoffs.setDataset}/>,
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} />,
@@ -1092,6 +1103,10 @@ export default function EviXPlatform() {
       workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>创建团队项目，生成、编辑并保存问卷版本。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
-    }} />
-  );
+  }), [exchange, handoffs, resultHandled, briefHandled, reportInsert, observeReport]);
+  return { panels, view };
+}
+
+export default function EviXPlatform() {
+  return <WorkbenchShell panels={useWorkbenchModules().panels} />;
 }
