@@ -66,6 +66,21 @@ const FIGURE_REFERENCE = /(?:^|[\s，。；：、（(“"如见由据从在和�
 const FIGURE_TOKEN = /\[\[(图|表):([^\]\n]{1,80})\]\]/gu;
 /** "图 4－1", "图4.1" and "图 4-1" name the same exhibit. */
 const exhibitNumber = (text: string) => text.replace(/\s+/gu, '').replace(/[０-９]/gu, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/[－—.．]/gu, '-');
+/**
+ * The numbers a LaTeX body gives its floats. The document class decides the scheme, so both are accepted: one sequence
+ * through the document (图 3), and one per chapter, or per section when there are no chapters (图 2-1).
+ */
+function latexExhibitNumbers(latex: string): string[] {
+  const unit = /\\chapter\{/.test(latex) ? 'chapter' : 'section', numbers: string[] = [];
+  const total = { figure: 0, table: 0 }, local = { figure: 0, table: 0 };
+  let part = 0;
+  for (const m of latex.matchAll(new RegExp(String.raw`\\${unit}(\*?)\{|\\begin\{(figure|table)\*?\}`, 'g'))) {
+    if (!m[2]) { if (!m[1]) { part++; local.figure = local.table = 0; } continue; }
+    const kind = m[2] as 'figure' | 'table', head = kind === 'figure' ? '图' : '表';
+    numbers.push(`${head}${++total[kind]}`, ...(part ? [`${head}${part}-${++local[kind]}`] : []));
+  }
+  return numbers;
+}
 const CITATION = /[[［]\s*\d+(?:\s*[-–—,，、]\s*\d+)*\s*[\]］]/gu;
 const GBT_TYPE = /\[(?:J|M|D|C|N|R|S|P|Z|G|A|EB\/OL|DB\/OL|CP\/DK|[JMDCNRSPZG]\/OL)\]/u;
 
@@ -131,10 +146,11 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const analysisExhibits = analysis.reduce((sum, s) => sum + exhibitsIn(s), 0);
   const analysisProse = analysis.flatMap(s => s.lines).filter(l => !isCaption(l) && !isHeading(l));
   // A reference counts only when it reaches an exhibit: an inserted reference to a chart or table block,
-  // or a typed number that a numbered block or a typed caption carries.
+  // or a typed number that a numbered block, a typed caption or a float of the LaTeX body carries.
   const labels = reportLabels(content.report);
   const numbers = new Set([...labels.values()].filter(l => l.kind !== 'equation').map(l => exhibitNumber(l.reference)));
   for (const line of bodyLines) { const caption = CAPTION.exec(line); if (caption && isCaption(line)) numbers.add(exhibitNumber(caption[0])); }
+  for (const number of latexExhibitNumbers(latex)) numbers.add(number);
   const exhibitReferences = (text: string) => [...text.matchAll(FIGURE_REFERENCE)].filter(m => numbers.has(exhibitNumber(m[1]))).length
     + [...text.matchAll(FIGURE_TOKEN)].filter(m => labels.get(m[2])?.kind === (m[1] === '图' ? 'figure' : 'table')).length;
 

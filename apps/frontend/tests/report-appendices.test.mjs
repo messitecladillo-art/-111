@@ -55,6 +55,10 @@ test('the data appendix records every registered result with its source, sample,
   // One shared source is named once, in the opening sentence.
   const shared = dataAppendix({ ...content, quality: { ...content.quality, results: [result('1'), result('3', { method: 'numeric', warnings: [] })] } });
   assert.deepEqual(shared.slice(0, 3), ['本报告的统计结果来自以下 2 项已登记的分析，数据均来自社区问卷（模拟数据）：', lines[2], '2. 结果3（数值描述）：有效样本 400（共 432）。']);
+  // Two uploads under one name stay two sources, told apart by their fingerprints.
+  const twins = dataAppendix({ ...content, quality: { ...content.quality, results: [result('1'), result('4', { sourceHash: 'c'.repeat(64), warnings: [] })] } });
+  assert.match(twins[0], /按数据来源列出/);
+  assert.deepEqual(twins.filter(l => l.startsWith('数据来源')), [`数据来源：社区问卷（模拟数据；SHA-256 ${'a'.repeat(16)}…）`, `数据来源：社区问卷（模拟数据；SHA-256 ${'c'.repeat(16)}…）`]);
   assert.deepEqual(dataAppendix(createEditorContent()), []);
 });
 

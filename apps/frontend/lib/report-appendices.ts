@@ -56,20 +56,26 @@ export function dataAppendix(content: EditorContent): string[] {
   if (!results.length) return [];
   const kind = (c: string) => c === 'simulated' ? '模拟数据' : c === 'public' ? '公开数据' : '用户提供数据';
   const record = (warnings: readonly string[]) => warnings.filter(w => /^原表|^缺失编码|^质控/.test(w)).map(w => w.replace(/[。；]$/u, ''));
-  const groups = new Map<string, typeof results>();
+  type Result = (typeof results)[number];
+  // A source is its content, not its display name: two uploads called the same stay two sources.
+  const groups = new Map<string, Result[]>();
   for (const r of results) {
-    const key = r.method === 'sampling-frame' ? '' : `${r.sourceName}（${kind(r.classification)}）`;
+    const key = r.method === 'sampling-frame' ? '' : JSON.stringify([r.sourceName, r.classification, r.sourceHash, r.sourceUrl]);
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
-  const ordered = [...groups].sort(([a], [b]) => Number(a === '') - Number(b === ''));
+  const ordered = [...groups].sort(([a], [b]) => Number(a === '') - Number(b === '')).map(([key, list]) => ({ frames: key === '', first: list[0], list }));
+  const named = (r: Result) => `${r.sourceName}（${kind(r.classification)}`;
+  // Sources that share a name are told apart by their fingerprint, and by their address when one is recorded.
+  const source = ({ frames, first }: (typeof ordered)[number]) => frames ? '' : ordered.filter(g => !g.frames && named(g.first) === named(first)).length < 2 ? `${named(first)}）`
+    : `${named(first)}；SHA-256 ${first.sourceHash.slice(0, 16)}…${first.sourceUrl ? `；${first.sourceUrl}` : ''}）`;
   let n = 0;
-  const item = (r: (typeof results)[number]) => literalText(`${++n}. ${r.title}（${METHOD_LABELS[r.method] ?? r.method}）`
+  const item = (r: Result) => literalText(`${++n}. ${r.title}（${METHOD_LABELS[r.method] ?? r.method}）`
     + (r.method === 'sampling-frame' ? '。' : `：有效样本 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${record(r.warnings).map(w => `；${w}`).join('')}。`));
-  const single = ordered.length === 1 && ordered[0][0] !== '';
+  const single = ordered.length === 1 && !ordered[0].frames;
   return [
-    single ? literalText(`本报告的统计结果来自以下 ${results.length} 项已登记的分析，数据均来自${ordered[0][0]}：`)
+    single ? literalText(`本报告的统计结果来自以下 ${results.length} 项已登记的分析，数据均来自${source(ordered[0])}：`)
       : `本报告的统计结果来自以下 ${results.length} 项已登记的分析，按数据来源列出：`,
-    ...ordered.flatMap(([source, list]) => [...(single ? [] : [literalText(source ? `数据来源：${source}` : '抽样设计：')]), ...list.map(item)]),
+    ...ordered.flatMap(group => [...(single ? [] : [literalText(group.frames ? '抽样设计：' : `数据来源：${source(group)}`)]), ...group.list.map(item)]),
     '各结果的计算前提（缺失处理、是否加权、检验的适用条件）见正文各节的注释。',
   ];
 }

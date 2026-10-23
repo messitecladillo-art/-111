@@ -144,6 +144,13 @@ test('figure references count sentences that cite an exhibit the report has, not
   assert.match(check(benchmarkReport(content), 'figureReferences').detail, /引用图表 2 次，图表共 2 个/);
 });
 
+test('floats kept only in the LaTeX body can be cited by their sequential or per-chapter numbers', () => {
+  const content = createEditorContent();
+  content.report = [section('s', '一、分析', '如图 1 所示，两组差异明显；表 2-1 给出检验结果，图 5 并不存在。')];
+  content.latex = { version: 1, body: '\\chapter{引言}\\begin{figure}\\caption{甲}\\end{figure}\\chapter*{附记}\\chapter{分析}\\begin{table*}\\caption{乙}\\end{table*}', reportHash: '' };
+  assert.match(check(benchmarkReport(content), 'figureReferences').detail, /引用图表 2 次，图表共 2 个/);
+});
+
 test('the rules are general norms; nothing counts figures, tables or formulas against one report', () => {
   for (const key of ['figures', 'tables', 'formulas', 'methods', 'bodyChars']) assert.ok(!(key in BENCHMARK_RULES), key);
   // Formulas follow the methods a report uses, not a fixed number.
