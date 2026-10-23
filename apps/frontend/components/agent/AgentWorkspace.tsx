@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { parseCollection, parseProject, parseService, type Proposal, type Project, type Service } from '@evix/shared';
 import BrandMark from '@/components/brand/BrandMark';
+import MirrorRoom from './MirrorRoom';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { downloadQuestionnaire, errorMessage, hostedRequest, HostedApiError } from '@/components/hosted/api-client';
 import { createQuestionnaireRepository } from '@/components/hosted/questionnaire-repository';
@@ -24,7 +25,7 @@ type ServiceState = 'idle' | 'loading' | 'ready' | 'error';
 type ProjectState = 'idle' | 'loading' | 'ready' | 'error';
 
 const QUICK_PROMPTS = [
-  { label: '生成问卷', prompt: '帮我设计一份关于校园咖啡消费的问卷，目标是了解购买频次、价格接受度与决策因素，样本拟面向本校学生。' },
+  { label: '生成问卷', prompt: '帮我设计一份研究问卷。研究主题是【填写主题】，目标人群是【填写人群】，希望了解【核心问题】与【决策因素】。' },
   { label: '缩小选题', prompt: '帮我比较两个选题方向的研究价值与实施难度，并给出第一周验证计划。' },
   { label: '检查数据', prompt: '我想在项目里检查数据质量并做量表信度分析。' },
   { label: '准备答辩', prompt: '帮我梳理答辩中评委可能追问的问题和对应证据。' },
@@ -39,7 +40,7 @@ const PIPELINE = [
   { label: '路演与答辩', note: '追问、计时与证据' },
 ];
 
-const TOOL_STATUS: Record<AgentToolStatus, string> = { running: '调用中', done: '已完成', failed: '未启动', unknown: '待核对' };
+const TOOL_STATUS: Record<AgentToolStatus, string> = { running: '[调用中]', done: '[已完成]', failed: '[未启动]', unknown: '[待核对]' };
 
 function serviceCanQuestionnaire(service: Service) { return service.capabilities.includes('questionnaire'); }
 function failureText(value: unknown) { return value instanceof Error ? value.message : '模型调用未完成。'; }
@@ -107,15 +108,22 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [panelTab, setPanelTab] = useState<PanelTab>('artifacts');
   const [artifactsOpen, setArtifactsOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [storageBlocked, setStorageBlocked] = useState(false);
+  const [roomTransition, setRoomTransition] = useState(false);
+  const [sendPulse, setSendPulse] = useState(false);
+  const [freshArtifact, setFreshArtifact] = useState<string | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
+  const roomTimer = useRef<number | null>(null);
+  const pulseTimer = useRef<number | null>(null);
+  const freshTimer = useRef<number | null>(null);
 
   const activeSession = sessions.find(session => session.id === activeId) ?? null;
   const activeProject = activeSession?.projectId ? projects.find(project => project.id === activeSession.projectId) ?? null : null;
@@ -194,7 +202,13 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
   useLayoutEffect(() => {
     const node = threadRef.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [activeSession?.id, messages.length, generating, panelTab]);
+  }, [activeSession?.id, messages.length, generating]);
+
+  useEffect(() => () => {
+    if (roomTimer.current) window.clearTimeout(roomTimer.current);
+    if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
+    if (freshTimer.current) window.clearTimeout(freshTimer.current);
+  }, []);
 
   useEffect(() => {
     const node = inputRef.current;
@@ -215,6 +229,11 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     setSessionsOpen(false);
     setQuery('');
     setDraft('');
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setRoomTransition(true);
+      if (roomTimer.current) window.clearTimeout(roomTimer.current);
+      roomTimer.current = window.setTimeout(() => setRoomTransition(false), 820);
+    }
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [activeSession?.projectId, ownerId]);
 
@@ -256,6 +275,12 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
           : withArtifact;
       });
       setPanelTab('artifacts');
+      setArtifactsOpen(true);
+      if (artifact) {
+        setFreshArtifact(artifact.id);
+        if (freshTimer.current) window.clearTimeout(freshTimer.current);
+        freshTimer.current = window.setTimeout(() => setFreshArtifact(null), 2600);
+      }
       return;
     }
     if (proposal.status === 'failed') {
@@ -289,6 +314,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     const ownerSnapshot = ownerId, epoch = identityEpoch;
     const current = () => isCurrentAccount(ownerSnapshot, epoch);
     setGenerating(true);
+    setReconciling(false);
     setError('');
     setNotice('');
     updateSession(sessionId, session => updateAgentMessage(session, messageId, message => message.role === 'assistant' && message.kind === 'consent'
@@ -325,7 +351,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
       if (!current()) return;
       reportFailure(sessionId, toolId, failure);
     } finally {
-      if (current()) setGenerating(false);
+      if (current()) { setGenerating(false); setReconciling(false); }
     }
   }, [activeSession, finishGeneration, generating, identityEpoch, isCurrentAccount, mutate, ownerId, questionnaireServices, reportFailure, updateSession]);
 
@@ -336,6 +362,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     const ownerSnapshot = ownerId, epoch = identityEpoch;
     const current = () => isCurrentAccount(ownerSnapshot, epoch);
     setGenerating(true);
+    setReconciling(true);
     setError('');
     updateSession(sessionId, session => patchTool(session, pendingValue.toolMessageId, 'running', '正在核对原请求…'));
     try {
@@ -347,7 +374,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
       if (!current()) return;
       reportFailure(sessionId, pendingValue.toolMessageId, failure);
     } finally {
-      if (current()) setGenerating(false);
+      if (current()) { setGenerating(false); setReconciling(false); }
     }
   }, [activeSession, finishGeneration, generating, identityEpoch, isCurrentAccount, mutate, ownerId, reportFailure, updateSession]);
 
@@ -378,6 +405,9 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     setDraft('');
     setError('');
     setNotice('');
+    setSendPulse(true);
+    if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
+    pulseTimer.current = window.setTimeout(() => setSendPulse(false), 480);
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [activeSession, questionnaireServices, updateSession]);
 
@@ -393,30 +423,37 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     }
   }
 
+  function trackMirror(event: ReactPointerEvent<HTMLElement>) {
+    const node = event.currentTarget;
+    const rect = node.getBoundingClientRect();
+    node.style.setProperty('--ag-mx', `${Math.round(event.clientX - rect.left)}px`);
+    node.style.setProperty('--ag-my', `${Math.round(event.clientY - rect.top)}px`);
+  }
+
   function fillPrompt(prompt: string) {
     setDraft(prompt);
     setArtifactsOpen(false);
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  const statusText = generating ? '正在等待模型回执' : pending ? '有待核对的调用' : serviceState === 'error' ? '模型服务读取失败' : authenticated ? '就绪' : '未登录';
+  const statusText = generating ? (reconciling ? '正在核对原请求' : '正在等待模型回执') : pending ? '有待核对的调用' : serviceState === 'error' ? '模型服务读取失败' : authenticated ? '就绪' : '未登录';
 
   if (!authenticated) {
     return <div className="workbench agent-app" data-theme={theme}><div className={styles.shell}>
       <Rail authenticated={false} email="" theme={theme} onNewSession={() => {}}/>
       <SessionPanel
         authenticated={false} sessions={[]} groups={[]} query={query} activeId={null} projectState={projectState}
-        onQuery={setQuery} onSelect={() => {}} onDelete={() => {}} onNewSession={() => {}} onLogout={() => {}} email=""
+        onQuery={setQuery} onSelect={() => {}} onDelete={() => {}} onNewSession={() => {}} onLogout={() => {}} onClose={() => setSessionsOpen(false)} email=""
         projectName={() => '未绑定项目'} storageBlocked={false} sessionsOpen={false}
       />
-      <main className={styles.main}>
+      <main className={styles.main} onPointerMove={trackMirror}>
         <LoginPanel error={auth.error} onRefresh={() => void auth.refresh().catch(() => {})}/>
       </main>
       <aside className={styles.artifacts}>
         <PanelHeader onClose={() => setArtifactsOpen(false)}/>
-        <div className={styles.panelBody}>
+        <div key={panelTab} className={styles.panelBody}>
           <section className={styles.guestPanel}>
-            <span className={styles.panelKicker}>FIRST REAL CHAIN</span>
+            <span className={styles.panelKicker}>{'// FIRST REAL CHAIN'}</span>
             <h3>问卷生成已接通真实模型</h3>
             <p>登录后绑定项目、选择个人模型服务并明确确认，才会发出调用。其他研究环节提供工作台入口，不伪装成已完成的 Agent 操作。</p>
             <ul><li>会话按账号隔离保存在此浏览器</li><li>模型结果与本地编排明确区分</li><li>不确定的调用保留原请求供核对</li></ul>
@@ -432,14 +469,15 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
       authenticated sessions={sessions} groups={groups} query={query} activeId={activeId} projectState={projectState}
       onQuery={setQuery} onSelect={selectSession} onDelete={removeSession} onNewSession={() => startSession()}
       onLogout={() => void logout().catch(failure => setError(errorMessage(failure)))}
+      onClose={() => setSessionsOpen(false)}
       email={account?.user?.email ?? ''} projectName={projectName} storageBlocked={storageBlocked} sessionsOpen={sessionsOpen}
     />
-    <main className={styles.main} aria-busy={generating}>
+    <main className={styles.main} aria-busy={generating} onPointerMove={trackMirror}>
       <header className={styles.mainHeader}>
         <div className={styles.headerTitle}>
           <button type="button" className={`${styles.iconButton} ${styles.sessionsToggle}`} aria-label="打开会话列表" onClick={() => setSessionsOpen(value => !value)}><NavIcon kind="menu"/></button>
           <div>
-            <span className={styles.headerEyebrow}>RESEARCH AGENT</span>
+            <span className={styles.headerEyebrow}>:: RESEARCH AGENT ::</span>
             <h1>{activeSession?.title ?? '研究 Agent'}</h1>
             <p>{activeProject?.title ?? '未绑定项目'} · {statusText}</p>
           </div>
@@ -456,25 +494,27 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
           <button type="button" className={`${styles.ghostButton} ${styles.panelToggle}`} onClick={() => setArtifactsOpen(value => !value)}><NavIcon kind="grid"/><span>产物</span></button>
           {activeProject && <Link className={styles.ghostButton} href={`/projects/${activeProject.id}`}>打开工作台</Link>}
         </div>
+        {generating && <span className={styles.headerActivity} aria-hidden="true"/>}
       </header>
       {(error || notice) && <div className={styles.noticeBar} data-tone={error ? 'alert' : 'notice'} role={error ? 'alert' : 'status'}>
-        <span>{error || notice}</span>
+        <span><b className={styles.noticeGlyph}>{error ? '!!' : '::'}</b> {error || notice}</span>
         <button type="button" aria-label="关闭提示" onClick={() => { setError(''); setNotice(''); }}><NavIcon kind="close"/></button>
       </div>}
       <div ref={threadRef} className={styles.thread} role="log" aria-live="polite" aria-relevant="additions">
-        <div className={styles.threadInner}>
+        <div key={activeSession?.id ?? 'empty'} className={styles.threadInner}>
           {messages.length === 0
             ? <Welcome authenticated projectBound={Boolean(activeProject)} onPrompt={fillPrompt}/>
             : messages.map(message => <MessageView
                 key={message.id} message={message} services={questionnaireServices} busy={generating} projectBound={Boolean(activeProject)}
                 serviceState={serviceState} onSubmit={submitConsent} onCancel={cancelConsent} onReconcile={reconcile}
               />)}
-          {generating && <p className={styles.thinking} role="status"><span aria-hidden="true"/>{pending ? '正在核对原请求并等待回执…' : '正在等待模型回执…'}</p>}
+          {generating && <p className={styles.thinking} role="status"><span aria-hidden="true"/>{reconciling ? '正在核对原请求并等待回执…' : '正在等待模型回执…'}</p>}
         </div>
       </div>
       <div className={styles.composerWrap}>
         <div className={styles.quickRow}>{QUICK_PROMPTS.map(item => <button key={item.label} type="button" className={styles.quickChip} disabled={generating || Boolean(pending)} onClick={() => fillPrompt(item.prompt)}>{item.label}</button>)}</div>
         <div className={styles.composerBox}>
+          <span className={styles.promptGlyph} aria-hidden="true">&gt;</span>
           <label className={styles.srOnly} htmlFor="agent-composer">告诉研究 Agent 你的任务</label>
           <textarea
             id="agent-composer" ref={inputRef} className={styles.composerInput} rows={1} maxLength={2000}
@@ -487,27 +527,36 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
               <span>Enter 发送 · Shift Enter 换行</span>
               <span data-tone={questionnaireServices.length ? 'ready' : 'warn'}>{questionnaireServices.length ? `问卷模型：${questionnaireServices[0].label}` : '未配置问卷模型'}</span>
             </div>
-            <button type="button" className={styles.sendButton} disabled={!draft.trim() || generating || Boolean(pending)} onClick={submitDraft} aria-label="发送">
+            <button type="button" className={styles.sendButton} data-firing={sendPulse || undefined} disabled={!draft.trim() || generating || Boolean(pending)} onClick={submitDraft} aria-label="发送">
               <NavIcon kind="arrow"/>
             </button>
           </div>
         </div>
-        <p className={styles.composerNote}>模型只在确认后调用 · 会话仅存此浏览器 · 不生成虚假数据、引用或结论</p>
+        <p className={styles.composerNote}><span>[MODE: AGENT]</span><span>[STORE: LOCAL]</span><span>[MODEL: {questionnaireServices[0]?.label ?? 'NONE'}]</span><span>模型只在确认后调用 · 不生成虚假数据、引用或结论</span></p>
       </div>
     </main>
     <aside className={styles.artifacts} data-open={artifactsOpen}>
       <PanelHeader onClose={() => setArtifactsOpen(false)}/>
       <div className={styles.panelTabs} role="tablist" aria-label="会话面板">
-        {([['artifacts', '产物'], ['plan', '计划'], ['context', '上下文']] as Array<[PanelTab, string]>).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={panelTab === id} className={styles.panelTab} onClick={() => setPanelTab(id)}>{label}</button>)}
+        {([['artifacts', '产物'], ['plan', '计划'], ['context', '上下文']] as Array<[PanelTab, string]>).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={panelTab === id} className={styles.panelTab} onClick={() => setPanelTab(id)}>[ {label} ]</button>)}
       </div>
-      <div className={styles.panelBody}>
+      <div key={panelTab} className={styles.panelBody}>
         {panelTab === 'artifacts' && (artifacts.length
-          ? artifacts.map(artifact => <ArtifactCard key={artifact.id} artifact={artifact} projectId={activeSession?.projectId ?? null}/>)
-          : <section className={styles.panelEmpty}><span className={styles.panelKicker}>ARTIFACTS</span><h3>还没有产物</h3><p>在对话中生成问卷后，可编辑的提案会出现在这里，并保留模型服务与问卷版本。</p><Link href="/services">管理模型服务 →</Link></section>)}
+          ? artifacts.map(artifact => <ArtifactCard key={artifact.id} artifact={artifact} projectId={activeSession?.projectId ?? null} fresh={freshArtifact === artifact.id}/>)
+          : <section className={styles.panelEmpty}><span className={styles.panelKicker}>{'// ARTIFACTS'}</span><h3>还没有产物</h3><p>在对话中生成问卷后，可编辑的提案会出现在这里，并保留模型服务与问卷版本。</p><pre className={styles.panelAscii}>{`+-- artifacts --------+
+|  waiting for model  |
+|  receipt...         |
++---------------------+`}</pre><Link href="/services">管理模型服务 →</Link></section>)}
         {panelTab === 'plan' && <PlanPanel projectId={activeSession?.projectId ?? null} hasArtifact={artifacts.length > 0} inProgress={generating || Boolean(pending)}/>}
         {panelTab === 'context' && <ContextPanel project={activeProject} headRevision={headRevision} services={questionnaireServices} serviceState={serviceState} storageBlocked={storageBlocked} hasPending={Boolean(pending)}/>}
       </div>
     </aside>
+    {roomTransition && <div className={styles.roomTransition} aria-hidden="true">
+      <span/><span/><span/><span/>
+      <pre>{`ENTERING MIRROR ROOM
+> session init_...
+> mirror room linked`}</pre>
+    </div>}
   </div></div>;
 }
 
@@ -529,24 +578,25 @@ function Rail({ authenticated, email, theme, onNewSession }: { authenticated: bo
 type SessionPanelProps = {
   authenticated: boolean; sessions: AgentSession[]; groups: ReturnType<typeof groupSessionsByDay>; query: string; activeId: string | null;
   projectState: ProjectState; email: string; storageBlocked: boolean; sessionsOpen: boolean;
-  onQuery: (value: string) => void; onSelect: (id: string) => void; onDelete: (id: string) => void; onNewSession: () => void; onLogout: () => void;
+  onQuery: (value: string) => void; onSelect: (id: string) => void; onDelete: (id: string) => void; onNewSession: () => void; onLogout: () => void; onClose: () => void;
   projectName: (id: string | null) => string;
 };
 
-function SessionPanel({ authenticated, sessions, groups, query, activeId, projectState, email, storageBlocked, sessionsOpen, onQuery, onSelect, onDelete, onNewSession, onLogout, projectName }: SessionPanelProps) {
+function SessionPanel({ authenticated, sessions, groups, query, activeId, projectState, email, storageBlocked, sessionsOpen, onQuery, onSelect, onDelete, onNewSession, onLogout, onClose, projectName }: SessionPanelProps) {
   return <aside className={styles.sessions} data-open={sessionsOpen} aria-label="会话列表">
     <div className={styles.sessionsHead}>
-      <div><span className={styles.sessionsKicker}>EVI-X</span><h2>研究 Agent</h2></div>
-      <button type="button" className={styles.newSession} onClick={onNewSession} disabled={!authenticated}><NavIcon kind="plus"/><span>新会话</span></button>
+      <div><span className={styles.sessionsKicker}>[ EVI-X ]</span><h2>研究 Agent</h2></div>
+      <div className={styles.sessionsActions}><button type="button" className={styles.newSession} onClick={onNewSession} disabled={!authenticated}><NavIcon kind="plus"/><span>新会话</span></button><button type="button" className={styles.sessionsClose} onClick={onClose} aria-label="关闭会话列表"><NavIcon kind="close"/></button></div>
     </div>
     <label className={styles.searchBox}><NavIcon kind="search"/><input aria-label="搜索会话" value={query} onChange={event => onQuery(event.target.value)} placeholder="搜索会话" disabled={!authenticated}/></label>
     <div className={styles.sessionScroll}>
       {!authenticated && <div className={styles.guestSessions}><p>登录后，会话会按账号隔离保存在此浏览器。</p><Link href="/login">邮箱登录</Link></div>}
       {authenticated && !groups.length && <p className={styles.sessionEmpty}>{sessions.length ? '没有匹配的会话。' : '还没有会话。点击“新会话”开始。'}</p>}
       {groups.map(group => <section key={group.label} className={styles.sessionGroup}>
-        <p className={styles.sessionGroupLabel}>{group.label}</p>
+        <p className={styles.sessionGroupLabel}>:: {group.label}</p>
         {group.sessions.map(session => <div key={session.id} className={styles.sessionRow} data-active={activeId === session.id}>
           <button type="button" className={styles.sessionMain} onClick={() => onSelect(session.id)} aria-current={activeId === session.id ? 'page' : undefined}>
+            <span className={styles.sessionMarker} aria-hidden="true">&gt;</span>
             <span className={styles.sessionTitle}>{session.title}</span>
             <span className={styles.sessionMeta}>{projectName(session.projectId)} · {formatRelativeTime(session.updatedAt)}</span>
           </button>
@@ -565,7 +615,7 @@ function SessionPanel({ authenticated, sessions, groups, query, activeId, projec
 
 function PanelHeader({ onClose }: { onClose: () => void }) {
   return <div className={styles.panelHead}>
-    <div><span className={styles.panelKicker}>SESSION</span><h2>工作区</h2></div>
+    <div><span className={styles.panelKicker}>{'// SESSION'}</span><h2>工作区</h2></div>
     <button type="button" className={`${styles.iconButton} ${styles.panelClose}`} aria-label="关闭产物面板" onClick={onClose}><NavIcon kind="close"/></button>
   </div>;
 }
@@ -573,8 +623,8 @@ function PanelHeader({ onClose }: { onClose: () => void }) {
 function Welcome({ authenticated, projectBound, onPrompt }: { authenticated: boolean; projectBound: boolean; onPrompt: (prompt: string) => void }) {
   if (!authenticated) return null;
   return <section className={styles.welcome}>
-    <div className={styles.welcomeMark}><BrandMark size={46}/></div>
-    <span className={styles.welcomeKicker}>EVI-X RESEARCH AGENT</span>
+    <MirrorRoom/>
+    <div className={styles.welcomeHead}><span className={styles.welcomeMarkSmall}><BrandMark size={30}/></span><span className={styles.welcomeKicker}>:: EVI-X RESEARCH AGENT ::</span></div>
     <h2>今天想研究什么？</h2>
     <p>先从一句真实的问题开始。我可以调用你的模型生成可编辑问卷，也会把你带到选题、分析、报告与答辩的正确入口。</p>
     <div className={styles.welcomeGrid}>
@@ -594,7 +644,7 @@ function MessageView({ message, services, busy, projectBound, serviceState, onSu
     <div className={styles.assistantBody}>
       <div className={styles.messageMeta}>
         <strong>研究 Agent</strong>
-        <span className={styles.badge} data-source={message.source}>{message.source === 'model' ? '模型回执' : '本地编排'}</span>
+        <span className={styles.badge} data-source={message.source}>{message.source === 'model' ? ':: 模型回执' : ':: 本地编排'}</span>
         <time dateTime={message.at}>{formatRelativeTime(message.at)}</time>
       </div>
       <div className={styles.messageText} data-tone={message.tone}>{message.text.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
@@ -607,10 +657,11 @@ function MessageView({ message, services, busy, projectBound, serviceState, onSu
       <div className={styles.toolCard} data-status={message.status}>
         <div className={styles.toolHead}>
           <span className={styles.toolIcon} data-status={message.status}>{message.status === 'done' ? '✓' : message.status === 'running' ? '' : '!'}</span>
-          <div><strong>生成问卷建议</strong><small>questionnaire.generate · 个人模型</small></div>
+          <div><strong>生成问卷建议</strong><small>q.generate :: personal-model</small></div>
           <span className={styles.toolStatus} data-status={message.status}>{TOOL_STATUS[message.status]}</span>
         </div>
         <p>{message.detail}</p>
+        <code className={styles.toolTrace}>{message.status === 'running' ? '> q.generate --stream :: awaiting receipt' : message.status === 'done' ? '> receipt verified :: artifact staged' : message.status === 'unknown' ? '> receipt uncertain :: replay original request' : `> generation rejected${message.errorCode ? ` :: ${message.errorCode}` : ''}`}</code>
         {message.errorCode && <code>{message.errorCode}</code>}
         {message.status === 'running' && <div className={styles.toolProgress} aria-hidden="true"><span/></div>}
         {message.status === 'unknown' && message.canReconcile && <div className={styles.toolActions}><button type="button" disabled={busy} onClick={onReconcile}>核对原请求</button><span>只重放同一请求，不自动产生新费用。</span></div>}
@@ -646,7 +697,7 @@ function ConsentCard({ message, services, busy, projectBound, serviceState, onSu
     onSubmit(message.id, { brief, serviceId });
   }
   return <section className={styles.consentCard} aria-label="模型调用确认">
-    <div className={styles.consentHead}><span className={styles.panelKicker}>CONSENT REQUIRED</span><h3>调用模型前确认</h3><p>只有确认后才会读取项目版本并把研究需求发送到你选择的供应商。</p></div>
+    <div className={styles.consentHead}><span className={styles.panelKicker}>{'// CONSENT REQUIRED'}</span><h3>调用模型前确认</h3><p>只有确认后才会读取项目版本并把研究需求发送到你选择的供应商。</p></div>
     <ol className={styles.consentPlan}>
       <li><span>1</span><div><b>读取项目问卷版本</b><small>确定这次提案基于哪一版</small></div></li>
       <li><span>2</span><div><b>发送研究需求</b><small>使用你的 API 额度</small></div></li>
@@ -675,9 +726,9 @@ function ConsentCard({ message, services, busy, projectBound, serviceState, onSu
   </section>;
 }
 
-function ArtifactCard({ artifact, projectId }: { artifact: AgentArtifact; projectId: string | null }) {
-  return <article className={styles.artifactCard}>
-    <header><span className={styles.panelKicker}>QUESTIONNAIRE PROPOSAL</span><small>基于问卷 v{artifact.inputRevision}</small></header>
+function ArtifactCard({ artifact, projectId, fresh }: { artifact: AgentArtifact; projectId: string | null; fresh: boolean }) {
+  return <article className={styles.artifactCard} data-fresh={fresh || undefined}>
+    <header><span className={styles.panelKicker}>{'// QUESTIONNAIRE PROPOSAL'}</span><small>基于问卷 v{artifact.inputRevision}</small></header>
     <h3>{artifact.title}</h3>
     {artifact.objective && <p>{artifact.objective}</p>}
     <dl className={styles.artifactMeta}>
@@ -697,7 +748,7 @@ function ArtifactCard({ artifact, projectId }: { artifact: AgentArtifact; projec
 function PlanPanel({ projectId, hasArtifact, inProgress }: { projectId: string | null; hasArtifact: boolean; inProgress: boolean }) {
   const href = projectId ? `/projects/${projectId}` : '/projects';
   return <section className={styles.planPanel}>
-    <span className={styles.panelKicker}>RESEARCH PIPELINE</span>
+    <span className={styles.panelKicker}>{'// RESEARCH PIPELINE'}</span>
     <h3>研究流程</h3>
     <ol className={styles.planList}>
       {PIPELINE.map((step, index) => {
@@ -711,7 +762,7 @@ function PlanPanel({ projectId, hasArtifact, inProgress }: { projectId: string |
 
 function ContextPanel({ project, headRevision, services, serviceState, storageBlocked, hasPending }: { project: Project | null; headRevision: number | null; services: Service[]; serviceState: ServiceState; storageBlocked: boolean; hasPending: boolean }) {
   return <section className={styles.contextPanel}>
-    <span className={styles.panelKicker}>CONTEXT</span>
+    <span className={styles.panelKicker}>{'// CONTEXT'}</span>
     <h3>当前上下文</h3>
     <dl className={styles.contextList}>
       <div><dt>项目</dt><dd>{project?.title ?? '未绑定'}</dd></div>
@@ -728,8 +779,8 @@ function ContextPanel({ project, headRevision, services, serviceState, storageBl
 function LoginPanel({ error, onRefresh }: { error: string; onRefresh: () => void }) {
   return <div className={styles.loginWrap}>
     <section className={styles.loginCard}>
-      <BrandMark size={52}/>
-      <span className={styles.panelKicker}>EVI-X RESEARCH AGENT</span>
+      <MirrorRoom compact/>
+      <div className={styles.loginBrand}><BrandMark size={34}/><span className={styles.panelKicker}>:: EVI-X RESEARCH AGENT ::</span></div>
       <h2>把研究任务交给一段对话</h2>
       <p>登录后，会话按账号隔离保存在这个浏览器。生成问卷时会读取项目版本，并在调用你的模型服务前征求确认。</p>
       <div className={styles.loginActions}><Link className={styles.primaryButton} href="/login">邮箱登录</Link><Link className={styles.ghostButton} href="/workspace">先看研究工具</Link></div>
