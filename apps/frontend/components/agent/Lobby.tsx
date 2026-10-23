@@ -19,7 +19,7 @@ export default function Lobby({ light, view, onOpen, headingRef }: { light: Illu
   // Light leaves a lit room along the corridor; it is drawn on the wire to the next room only.
   const upstreamLit = (id: RoomId) => { const i = ORDER.indexOf(id); return i > 0 && score(ORDER[i - 1]) > 0; };
   const spots = allSpots ? light.blind : light.blind.slice(0, 6);
-  const design = view.design, issues = design ? questionnaireIssues(design) : [];
+  const design = view.design, issues = design ? questionnaireIssues(design) : [], asked = design?.questions.filter(q => q.text.trim()).length ?? 0;
   const blockers = issues.filter(i => i.level === 'blocker').length, mapped = design?.questions.filter(questionIsMapped).length ?? 0;
   const results = view.report?.quality?.results.length ?? 0, confirmed = view.report?.quality?.findings.filter(f => f.status === 'confirmed').length ?? 0;
   const benchmark = light.benchmark, report = roomLight(light, 'editor');
@@ -72,10 +72,10 @@ export default function Lobby({ light, view, onOpen, headingRef }: { light: Illu
     <section className={styles.section} aria-labelledby="lobby-chain">
       <div className={styles.sectionHead}><h2 id="lobby-chain">证据链</h2><span>问卷 → 数据 → 结果 → 报告</span></div>
       <div className={styles.chain}>
-        <div className={styles.link} data-empty={!design?.questions.length}>
+        <div className={styles.link} data-empty={!asked}>
           <span>问卷</span>
-          <strong>{design?.questions.length ? (design.title.trim() || '未命名问卷') : '还没有问卷'}</strong>
-          {!!design?.questions.length && <small><b>{design.questions.length}</b> 道题 · <b>{blockers}</b> 处阻断 · <b>{mapped}</b>/{design.questions.length} 已映射</small>}
+          <strong>{design && asked ? (design.title.trim() || '未命名问卷') : '还没有题目'}</strong>
+          {design && asked > 0 && <small><b>{asked}</b> 道题 · <b>{blockers}</b> 处阻断 · <b>{mapped}</b>/{design.questions.length} 已映射</small>}
         </div>
         <div className={styles.link} data-empty={!view.dataset}>
           <span>数据</span>

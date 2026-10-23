@@ -34,18 +34,19 @@ export function reportWritten(content: EditorContent): boolean {
 const share = (checks: LightCheck[]) => checks.length ? checks.filter(c => c.passed).length / checks.length : 0;
 
 function designLight(d: Questionnaire | null): RoomLight {
-  const n = d?.questions.length ?? 0;
+  // A question counts once it has a stem: the studio opens with a blank one, which is a form, not evidence.
+  const n = d?.questions.length ?? 0, asked = d?.questions.filter(q => q.text.trim()).length ?? 0;
   const check = (id: string, passed: boolean, label: string, detail: string): LightCheck => ({ id: `design.${id}`, room: 'design', go: 'design', label, passed, detail });
-  if (!d || !n) return { room: 'design', score: 0, summary: '还没有题目', checks: [check('questions', false, '问卷还没有题目', '在问卷室新建题目，或从选题诊断带入草稿。')] };
+  if (!d || !asked) return { room: 'design', score: 0, summary: '还没有题目', checks: [check('questions', false, '问卷还没有题目', '在问卷室写下第一道题，或从选题诊断带入草稿。')] };
   const blockers = questionnaireIssues(d).filter(i => i.level === 'blocker').length, mapped = d.questions.filter(questionIsMapped).length;
   const framed = !!d.objective.trim() && !!d.population.trim();
   const checks = [
-    check('questions', true, `问卷已有 ${n} 道题`, d.title.trim() ? `《${d.title.trim()}》` : '问卷尚未命名'),
+    check('questions', true, `问卷已有 ${asked} 道题${asked < n ? `，另有 ${n - asked} 道未写题干` : ''}`, d.title.trim() ? `《${d.title.trim()}》` : '问卷尚未命名'),
     check('blockers', !blockers, blockers ? `${blockers} 处阻断问题` : '没有阻断问题', blockers ? '题干、编码、选项或跳题有错，回收前必须改正。' : '题干、编码、选项与跳题都能通过检查。'),
     check('mapped', mapped === n, mapped === n ? '每道题都对应研究问题与分析计划' : `${n - mapped} 道题没有对应研究问题或分析计划`, `${mapped} / ${n} 道题已映射。`),
     check('frame', framed, framed ? '写明了决策目标与调查对象' : '决策目标或调查对象还没写', framed ? d.population.trim() : '目标与对象决定了抽样框和结论的外推边界。'),
   ];
-  return { room: 'design', score: share(checks), checks, summary: `${n} 道题${blockers ? ` · ${blockers} 处阻断` : ''}` };
+  return { room: 'design', score: share(checks), checks, summary: `${asked} 道题${blockers ? ` · ${blockers} 处阻断` : ''}` };
 }
 
 function analysisLight(view: ProjectView): RoomLight {

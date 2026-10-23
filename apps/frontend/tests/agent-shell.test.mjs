@@ -41,6 +41,8 @@ test('the questionnaire lights its room by its own checks, never by question cou
   assert.equal(room.checks.length, 4);
   assert.ok(room.checks[0].passed && room.score > 0 && room.score <= 1);
   assert.match(room.summary, new RegExp(`${design.questions.length} 道题`));
+  const blank = { ...design, questions: design.questions.map(q => ({ ...q, text: '' })) };
+  assert.equal(illuminate({ ...empty, design: blank }).rooms[0].score, 0, 'blank stems are a form, not evidence');
   const unmapped = { ...design, questions: design.questions.map(q => ({ ...q, analysis: 'undecided' })) };
   assert.equal(illuminate({ ...empty, design: unmapped }).rooms[0].checks.find(c => c.id === 'design.mapped').passed, false);
 });
