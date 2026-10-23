@@ -3,7 +3,7 @@
   "run_id": "20261007-p0",
   "nonce": "p0-review-01",
   "base_revision": "manifest:fc3da02c0118cc388cd7c5a9934969599a104167d14bc7d39c3ded58b8b64844",
-  "source": "apps/evi-x-platform/lib/questionnaire.ts",
+  "source": "apps/frontend/lib/questionnaire.ts",
   "sourceSha256": "4509b89a302ea49e00e5be2d6c5ecf5bf8f4f42437d4082183babdeeedd1aed4",
   "translation": "TypeScript transpileModule; no schema logic replaced",
   "cases": [

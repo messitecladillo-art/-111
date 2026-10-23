@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-15",
+  "sources": [
+    {
+      "id": "course-design",
+      "title": "教学资料：市场调查方案设计",
+      "locator": "03、10章决赛市场调查理论与方法ppt/2第二章 市场调查方案设计 .pptx；幻灯片6—18，重点9—13、18",
+      "supportedClaims": [
+        "先把管理决策转为需收集的信息问题。",
+        "对象、时间、预算与执行条件共同约束调查。"
+      ],
+      "limitations": [
+        "教学资料不是现届规则或评委反馈。",
+        "只深读指定幻灯片，未复制原文。"
+      ],
+      "authority": "user_supplied_teaching_material",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "user-materials/03、10章决赛市场调查理论与方法ppt/2第二章 市场调查方案设计 .pptx",
+      "sha256": "72a035c53b1bfb44e0c40761b387010ceecf08a8a4a265747d8b3f4c7bbfb865"
+    },
+    {
+      "id": "course-collection",
+      "title": "教学资料：数据收集方法",
+      "locator": "03、10章决赛市场调查理论与方法ppt/3第三章 数据收集方法 .pptx；幻灯片30、37—38",
+      "supportedClaims": [
+        "采集方法应匹配总体、问题、费用、时间与操作条件。",
+        "观察行为可补充问卷，但有覆盖与观察者偏差。"
+      ],
+      "limitations": [
+        "只深读指定幻灯片，不能证明团队已经执行。"
+      ],
+      "authority": "user_supplied_teaching_material",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "user-materials/03、10章决赛市场调查理论与方法ppt/3第三章 数据收集方法 .pptx",
+      "sha256": "dff392db24a593eb5f02c7ecbcd16ec5ede0e7689e3376e8ea761c6ac6d2d873"
+    },
+    {
+      "id": "course-sampling",
+      "title": "教学资料：抽样方法",
+      "locator": "03、10章决赛市场调查理论与方法ppt/6第六章 抽样方法 .pptx；幻灯片13、16、18—27、47—48",
+      "supportedClaims": [
+        "先明确总体、抽样单位与抽样框。",
+        "便利或配额样本不能直接给出概率样本的抽样误差。"
+      ],
+      "limitations": [
+        "课件个别公式未采用；未对全书背书。"
+      ],
+      "authority": "user_supplied_teaching_material",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "user-materials/03、10章决赛市场调查理论与方法ppt/6第六章 抽样方法 .pptx",
+      "sha256": "1d78bfa580392b30e15be08b0a45643a76edcb9e1e91de0c7cf763557ea7fb24"
+    },
+    {
+      "id": "course-fieldwork",
+      "title": "教学资料：调查组织与实施",
+      "locator": "03、10章决赛市场调查理论与方法ppt/9第九章 市场调查的组织与实施 .pptx；幻灯片9、31",
+      "supportedClaims": [
+        "执行需安排质量复核、隐私保护及异常处理。",
+        "不得代填或替换调查对象来补样本。"
+      ],
+      "limitations": [
+        "只读相关幻灯片，不代表当前执行能力。"
+      ],
+      "authority": "user_supplied_teaching_material",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "user-materials/03、10章决赛市场调查理论与方法ppt/9第九章 市场调查的组织与实施 .pptx",
+      "sha256": "93645b543a3425d453d263fd24dfbea3b93a773471b0a7e205bfbec5143de231"
+    },
+    {
+      "id": "case-food",
+      "title": "本地案例片段：南京冷冻速食消费研究",
+      "locator": "10、2024年获奖作品6篇+8篇PPT/冰消“冻”释，“食”遇新春—基于南京市主城区冷冻速食产品市场调查及消费者特征研究 报告 (1)-公众号：学生竞赛库.pdf；物理页2、4，总78页",
+      "supportedClaims": [
+        "报告摘要呈现购买者与未购买者障碍，并并置消费者和商户访谈。"
+      ],
+      "limitations": [
+        "仅读摘要与目录，未验证原始数据、技术实现或奖项。",
+        "文件夹奖项标签不是官方证据；不移植题名、数字、问卷或结论。"
+      ],
+      "authority": "user_supplied_case_excerpt",
+      "coverage": "reference",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "user-materials/2024-cases/frozen-food-report.pdf",
+      "sha256": "c62cc3247b63421fae4b8e5c647c09be6c331ce07b32a029c70cfa8fd3029e94"
+    },
+    {
+      "id": "case-camping",
+      "title": "本地案例片段：重庆短途露营研究",
+      "locator": "10、2024年获奖作品6篇+8篇PPT/“露”出本心，“营”造自然——重庆市主城区短途露营市场现状与消费偏好分析-参赛报告 (2)-公众号：学生竞赛库.pdf；物理页2、14—17，总85页",
+      "supportedClaims": [
+        "报告按参与经历分支，并安排经营者、产品商家、消费者三方访谈。"
+      ],
+      "limitations": [
+        "仅深读指定片段，不认证其概率抽样、结论或奖项。",
+        "历史热度不能证明2026需求；不复制问卷、题名或数值。"
+      ],
+      "authority": "user_supplied_case_excerpt",
+      "coverage": "reference",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "user-materials/2024-cases/camping-report.pdf",
+      "sha256": "1613fd14d8581c08b1272933f907eb11119dc4fd8a0315eeece196406b73a3a7"
+    },
+    {
+      "id": "case-pattern-ledger",
+      "title": "已有三案例的机制与复用风险记录",
+      "locator": "winning-case-patterns.md：Observed recurring patterns、Differentiation test；case-corpus.md：Cross-case rules",
+      "supportedClaims": [
+        "选题须有决策张力、证据入口和实质差异。",
+        "发现与行动对应，同时独立检查方法缺陷。"
+      ],
+      "limitations": [
+        "三案例奖项来自用户陈述，具体一二等奖映射未知。",
+        "机制为分析者推断，不是评奖因果；本轮未复核全部外部原件。"
+      ],
+      "authority": "repository_analyst_inference",
+      "coverage": "reference",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "skill/zhengda-cup-champion/references/case-corpus.md"
+    },
+    {
+      "id": "award-index",
+      "title": "历史官方获奖公告索引",
+      "locator": "award-cases.ts：awardCaseLibraryNotice、verifiedCase；对应官方案例JSON",
+      "supportedClaims": [
+        "已有库将公告题名信息与用户提供的案例片段分开。"
+      ],
+      "limitations": [
+        "本轮仅审读已有索引与边界，未重核每条公告。",
+        "仅题名和奖项列表不能支持方法、样本、结论、评委原因或获奖概率。",
+        "此源不用于偏好标签。"
+      ],
+      "authority": "historical_official_listing_index",
+      "coverage": "listing_only",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "path": "corpus-source/case-studies/official-award-case-library-2024-2025.json"
+    },
+    {
+      "id": "wh-coupons",
+      "title": "武汉市商务局：2026假日零售消费券",
+      "locator": "一、发放时间；二、投放对象；三、使用规则；四、活动流程",
+      "supportedClaims": [
+        "9月24日至12月底分批投放，资金核销完毕即止。",
+        "领取和核销存在武汉地域与门店范围条件。"
+      ],
+      "limitations": [
+        "不证明具体门店尚有名额；需复核当期状态。",
+        "横截面调查不能证明净增消费。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://sw.wuhan.gov.cn/xwdt/gzdt/202609/t20260924_2853752.shtml",
+      "publishedAt": "2026-09-24"
+    },
+    {
+      "id": "wh-community",
+      "title": "武汉城市日历：一刻钟便民生活服务月启动",
+      "locator": "日历开始/结束时间；社区改造方案；商户与居民共建一个家园",
+      "supportedClaims": [
+        "启动仪式为2026年9月24日。",
+        "正文讨论维修、休闲空间与居民需求收集等场景。"
+      ],
+      "limitations": [
+        "日历仅明确启动日，不能从服务月名称推断结束日。",
+        "未使用宣传性满意度与覆盖数字。"
+      ],
+      "authority": "official_city_calendar",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.wuhan.gov.cn/ztzl/24zt/csrl/202609/t20260922_2851992.shtml",
+      "publishedAt": "2026-09-22"
+    },
+    {
+      "id": "wh-digital",
+      "title": "武汉市数智经济高质量发展十五五规划",
+      "locator": "武政〔2026〕11号；三（二）、三（五）、三（六）",
+      "supportedClaims": [
+        "规划提出数据供给、企业转型、智慧商贸、数字生活和就业服务方向。"
+      ],
+      "limitations": [
+        "规划目标不是已实现结果；具体痛点及开放资源需另核查。",
+        "不能从学校或城市推断个人已获得产业入口。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.wuhan.gov.cn/zwgk/xxgk/zfwj/szfwj/202609/t20260917_2849323.shtml",
+      "publishedAt": "2026-09-17"
+    },
+    {
+      "id": "wh-innovation",
+      "title": "武汉市科技创新和产业创新深度融合系列措施",
+      "locator": "武政规〔2026〕6号；六份措施及附则，重点中试、技术经理人、数据、终端、金融、场景开放",
+      "supportedClaims": [
+        "系列措施于2026年10月8日起施行，相关措施有效期2年。",
+        "内容涵盖转化服务、数据、智能终端、金融及应用场景。"
+      ],
+      "limitations": [
+        "不代表学生有资格获奖补或能读取企业秘密。",
+        "政策激励不是实际投入和效果。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.wuhan.gov.cn/gwfbpt/szf/whsrmzf/202609/t20260908_2845078.shtml",
+      "publishedAt": "2026-09-08"
+    },
+    {
+      "id": "wh-ai-list",
+      "title": "武汉人工智能加消费应用成果公示",
+      "locator": "公示正文分类、拟发布状态与日期；附件清单未读取",
+      "supportedClaims": [
+        "公示期为2026年9月21日至28日，内容为拟发布应用成果。"
+      ],
+      "limitations": [
+        "附件未深读，不能声称某场景已落地或有效。",
+        "公示已结束，不等于最终名单确认。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://jxj.wuhan.gov.cn/zxzj/zxzj_xmgs/202609/t20260922_2852083.html",
+      "publishedAt": "2026-09-21"
+    },
+    {
+      "id": "wh-autumn-briefing",
+      "title": "武汉金秋消费季发布会问答",
+      "locator": "农业农村局2026-09-18正文；文艺活动上新；问答03动感武汉、05丰穗武汉",
+      "supportedClaims": [
+        "发布会披露秋季京剧、音乐、杂技与网球、电竞赛程。",
+        "同时披露乡村休闲线路与农业产销安排。"
+      ],
+      "limitations": [
+        "使用发布会具名部门答复；临时变更需向主办方复核。",
+        "计划赛程不是实际参与或消费效果。"
+      ],
+      "authority": "official_press_conference_transcript",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://nyncj.wuhan.gov.cn/xwzx_25/xxlb/202609/t20260918_2849737.html",
+      "publishedAt": "2026-09-18"
+    },
+    {
+      "id": "hb-biotech",
+      "title": "湖北第五届生命健康科技创新创业大赛通知",
+      "locator": "三、赛道；四、赛程；六、要求；七、报名时间",
+      "supportedClaims": [
+        "赛事涉及药物、器械和数字健康，初赛至决赛安排在2026年10—11月。"
+      ],
+      "limitations": [
+        "不是正大杯通知，仅支持转化生态背景。",
+        "报名10月15日24时关闭，存在机构推荐限制。",
+        "不接触患者、基因、诊断信息。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://mpa.hubei.gov.cn/zfxxgk/zc/qtzdgkwj/qtwj/202609/t20260924_6022541.shtml",
+      "publishedAt": "2026-09-24"
+    },
+    {
+      "id": "hb-device-service",
+      "title": "湖北在研器械登记咨询系统上线",
+      "locator": "上线日期和项目登记、在线咨询、动态管理三功能段",
+      "supportedClaims": [
+        "2026年6月16日上线面向机构的登记与咨询服务。"
+      ],
+      "limitations": [
+        "上线不证明当前使用率或转化效果。",
+        "未进入系统、未接触秘密产品信息。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://mpa.hubei.gov.cn/bmdt/dtyw/202606/t20260618_5961137.shtml",
+      "publishedAt": "2026-06-18"
+    },
+    {
+      "id": "national-economy",
+      "title": "国家统计局：2026年8月经济运行答记者问",
+      "locator": "2026-09-15；消费问题答复、内外需答复",
+      "supportedClaims": [
+        "答复区分商品与服务消费，并讨论即时零售、体验、乡村和入境消费。"
+      ],
+      "limitations": [
+        "全国背景不能证明武汉具体人群需求。",
+        "不以增长率训练获奖概率；下一期发布后应刷新。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.stats.gov.cn/sj/zxfbhjd/202609/t20260915_1965332.html",
+      "publishedAt": "2026-09-15"
+    },
+    {
+      "id": "national-jobs",
+      "title": "2026全国公共就业招聘专项活动通知",
+      "locator": "人社部函〔2026〕1号；二（七）（八）、附件第7—8项；官方全文转载",
+      "supportedClaims": [
+        "全国安排10月金秋招聘月和10—11月高校毕业生秋季招聘。"
+      ],
+      "limitations": [
+        "湖南转载国家通知，不把网页所在省当政策适用省。",
+        "本地场次、岗位与进入权限须另核验。"
+      ],
+      "authority": "official_republication_of_national_notice",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.hunan.gov.cn/zqt/zcsd/202601/t20260121_33898512.html",
+      "publishedAt": "2026-01-21"
+    },
+    {
+      "id": "national-finance",
+      "title": "金融产品网络营销管理办法",
+      "locator": "八部门公告〔2026〕第9号；第八、九、十三、三十九条；官方全文转载",
+      "supportedClaims": [
+        "规定关键信息展示、核实渠道与拒收选择，2026年9月30日起施行。"
+      ],
+      "limitations": [
+        "只支持信息理解研究，不是个案法律意见。",
+        "不收集账户资产，不测试真实投资借贷。"
+      ],
+      "authority": "official_republication_of_national_notice",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.hunan.gov.cn/zqt/zcsd/202604/t20260427_33964799.html",
+      "publishedAt": "2026-04-27"
+    },
+    {
+      "id": "suzhou-tourism",
+      "title": "苏州市促进入境旅游若干措施",
+      "locator": "苏州政规〔2026〕7号；三、服务环境；四、附则",
+      "supportedClaims": [
+        "措施涉及线路、外语与消费服务，施行期2026-09-10至2027-09-09。"
+      ],
+      "limitations": [
+        "只支持苏州背景；受访者入口及语言条件需确认。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.suzhou.gov.cn/szsrmzf/szfgfxwjk/202608/66643e2c0b2b4620be196dd1c1993644.shtml",
+      "publishedAt": "2026-08-06"
+    },
+    {
+      "id": "sichuan-service",
+      "title": "商务部活动页：四川乐享天府服务消费季",
+      "locator": "活动时间、地区、主办单位与主题段",
+      "supportedClaims": [
+        "记录活动期2026-09-29至12-31，涉及餐饮、家政、文旅和体育。"
+      ],
+      "limitations": [
+        "官方活动平台转载中国商务新闻网，非效果评估。",
+        "未单列发布日期，事件发布日留空而不冒用活动日期。"
+      ],
+      "authority": "official_event_platform",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://dzswgf.mofcom.gov.cn/ecps/sale/detail/6564"
+    },
+    {
+      "id": "yangcheng-subsidy",
+      "title": "阳城县政府：家居消费季启动",
+      "locator": "正文第1—3段；活动周期与领核券方式",
+      "supportedClaims": [
+        "活动周期2026-09-19至10-10，采取线上领券线下核销。"
+      ],
+      "limitations": [
+        "本轮核验时已结束，仅作历史回访线索。",
+        "不能包装成仍可领券。"
+      ],
+      "authority": "official_county_event_report",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.yczf.gov.cn/mobile/xwdt_mobile/ycxw_mobile/202609/t20260920_2393576.shtml",
+      "publishedAt": "2026-09-20"
+    },
+    {
+      "id": "haizhu-draft",
+      "title": "海珠AI规划征求意见页（待复核）",
+      "locator": "索引显示2026-09-30至10-30；打开时动态公告正文未返回",
+      "supportedClaims": [
+        "仅检索到官方页面线索。"
+      ],
+      "limitations": [
+        "未核验动态正文，不能算全文已读。",
+        "征求意见稿不是生效政策；不进入当前热点权重。"
+      ],
+      "authority": "unverified_official_page_index",
+      "coverage": "reference",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.haizhu.gov.cn/hdjlpt/yjzj/answer/53195",
+      "publishedAt": "2026-09-30"
+    },
+    {
+      "id": "county-history",
+      "title": "商务部：县域商业三年行动计划（历史）",
+      "locator": "商办流通函2023年第419号；总体思路、重点任务（二）（五）",
+      "supportedClaims": [
+        "历史计划围绕县乡村物流、商业设施与农产品流通。"
+      ],
+      "limitations": [
+        "行动期截至2025年，不能作2026窗口。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.mofcom.gov.cn/zfxxgk/gkml/art/2023/art_311aa70ce5c74463bd95afad8ddc0cc3.html",
+      "publishedAt": "2023-07-27"
+    },
+    {
+      "id": "community-history",
+      "title": "商务部：便民生活圈三年行动计划（历史）",
+      "locator": "2023-2025计划；总体思路与工作目标",
+      "supportedClaims": [
+        "历史计划强调依据居民需求与社区条件完善服务。"
+      ],
+      "limitations": [
+        "行动期截至2025年，不推断2026项目或资金。"
+      ],
+      "authority": "official_primary",
+      "coverage": "fulltext",
+      "retrievedAt": "2026-10-15",
+      "rights": "metadata_and_original_summary_only",
+      "url": "https://www.mofcom.gov.cn/ghjh/art/2023/art_a1495044fd694f0c920f1430b4dca1de.html",
+      "publishedAt": "2023-07-12"
+    }
+  ]
+}

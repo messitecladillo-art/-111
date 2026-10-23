@@ -1,0 +1,1015 @@
+{
+  "protocol": "agent-collab/v1",
+  "nonce": "pack01-semantic-review-20261015",
+  "sender": "knowledge_core",
+  "receiver": "root",
+  "baseRevision": "abe5752e03dd872437d42551dc8d57028f2fc33c",
+  "classification": "original educational content; public primary sources",
+  "producer": "knowledge_content",
+  "reviewer": "knowledge_core",
+  "reviewedAt": "2026-10-14T16:16:48.973Z",
+  "inputSha256": "6b451ad5a15593273c80538f16f0bf53ef9bb1abb1c8e65e3198b4043eaba430",
+  "outputSha256": "fcaf9be1b279bfa59a74c7bed2006e0ec1af26ebc5079ce07e8e7bad9ca43ffa",
+  "entryCount": 100,
+  "deepCount": 28,
+  "formulaCount": 20,
+  "decision": "approved",
+  "checkedEntryIds": [
+    "mean",
+    "median",
+    "variance",
+    "standard-deviation",
+    "quantile",
+    "interquartile-range",
+    "skewness",
+    "kurtosis",
+    "outlier",
+    "histogram",
+    "empirical-distribution",
+    "normal-distribution",
+    "bernoulli-distribution",
+    "binomial-distribution",
+    "poisson-distribution",
+    "central-limit-theorem",
+    "law-large-numbers",
+    "statistical-power",
+    "type-two-error",
+    "null-hypothesis",
+    "alternative-hypothesis",
+    "one-sided-test",
+    "paired-t-test",
+    "fisher-exact",
+    "cramers-v",
+    "odds-ratio",
+    "relative-risk",
+    "bootstrap",
+    "permutation-test",
+    "simple-random-sampling",
+    "stratified-sampling",
+    "cluster-sampling",
+    "systematic-sampling",
+    "inclusion-probability",
+    "sampling-weight",
+    "nonresponse-error",
+    "coverage-error",
+    "missing-completely-at-random",
+    "missing-at-random",
+    "missing-not-at-random",
+    "listwise-deletion",
+    "pairwise-deletion",
+    "mean-imputation",
+    "measurement-error",
+    "sampling-error",
+    "research-question",
+    "hypothesis",
+    "unit-of-analysis",
+    "construct",
+    "measurement-level",
+    "nominal-scale",
+    "ordinal-scale",
+    "interval-scale",
+    "ratio-scale",
+    "cognitive-interview",
+    "double-barreled-question",
+    "leading-question",
+    "recall-bias",
+    "social-desirability-bias",
+    "response-rate",
+    "informed-consent",
+    "qualitative-coding",
+    "thematic-analysis",
+    "data-dictionary",
+    "preregistration",
+    "linear-regression",
+    "logistic-regression",
+    "regularization",
+    "multicollinearity",
+    "residual",
+    "r-squared",
+    "roc-auc",
+    "confusion-matrix",
+    "precision-recall",
+    "class-imbalance",
+    "probability-calibration",
+    "random-seed",
+    "feature-selection",
+    "silhouette-score",
+    "adjusted-rand-index",
+    "probability",
+    "conditional-probability",
+    "independence",
+    "expectation",
+    "covariance",
+    "bayes-theorem",
+    "linear-combination",
+    "matrix-rank",
+    "inverse-matrix",
+    "positive-semidefinite",
+    "singular-value-decomposition",
+    "derivative",
+    "partial-derivative",
+    "hessian",
+    "convexity",
+    "constrained-optimization",
+    "local-global-optimum",
+    "euclidean-norm",
+    "directed-acyclic-graph",
+    "entropy"
+  ],
+  "sources": [
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda351.htm",
+      "title": "NIST：位置统计量",
+      "locators": [
+        "Definition of Location / robustness"
+      ],
+      "entryIds": [
+        "mean",
+        "median"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda356.htm",
+      "title": "NIST：离散程度",
+      "locators": [
+        "Definitions of Variability"
+      ],
+      "entryIds": [
+        "variance",
+        "standard-deviation",
+        "interquartile-range"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.quantile.html",
+      "title": "NumPy：分位数",
+      "locators": [
+        "Notes，分位数定义与不同估计方法"
+      ],
+      "entryIds": [
+        "quantile",
+        "interquartile-range"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm",
+      "title": "NIST：偏度与峰度",
+      "locators": [
+        "Definition of Skewness / Kurtosis / excess kurtosis"
+      ],
+      "entryIds": [
+        "skewness",
+        "kurtosis"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm",
+      "title": "NIST：离群值识别",
+      "locators": [
+        "outliers / labeling / accommodation / identification"
+      ],
+      "entryIds": [
+        "outlier"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda33e.htm",
+      "title": "NIST：直方图",
+      "locators": [
+        "Definition，分箱与频数/密度归一化"
+      ],
+      "entryIds": [
+        "histogram"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ecdf.html",
+      "title": "SciPy：经验累积分布",
+      "locators": [
+        "Notes / empirical distribution function"
+      ],
+      "entryIds": [
+        "empirical-distribution"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda3661.htm",
+      "title": "NIST：正态分布",
+      "locators": [
+        "Probability Density Function / Common Statistics"
+      ],
+      "entryIds": [
+        "normal-distribution"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bernoulli.html",
+      "title": "SciPy：伯努利分布",
+      "locators": [
+        "Notes，二点概率质量函数"
+      ],
+      "entryIds": [
+        "bernoulli-distribution"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binom.html",
+      "title": "SciPy：二项分布",
+      "locators": [
+        "Notes，n、p与概率质量函数"
+      ],
+      "entryIds": [
+        "binomial-distribution"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.poisson.html",
+      "title": "SciPy：泊松分布",
+      "locators": [
+        "Notes，μ与概率质量函数"
+      ],
+      "entryIds": [
+        "poisson-distribution"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_class06-prep-b.pdf",
+      "title": "MIT18.05：大数定律与中心极限定理",
+      "locators": [
+        "Reading 6b，第6—7页第5节标准化与经典中心极限定理",
+        "Reading 6b，第2—3页第3节大数定律；第1页系统偏差说明"
+      ],
+      "entryIds": [
+        "central-limit-theorem",
+        "law-large-numbers"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/prc/section2/prc222.htm",
+      "title": "NIST：检验样本量",
+      "locators": [
+        "Sample sizes required，差异、α、β与样本量"
+      ],
+      "entryIds": [
+        "statistical-power"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35.htm",
+      "title": "NIST：假设检验与推断",
+      "locators": [
+        "Hypothesis Tests，α、β及power"
+      ],
+      "entryIds": [
+        "statistical-power",
+        "type-two-error",
+        "null-hypothesis",
+        "alternative-hypothesis",
+        "one-sided-test",
+        "hypothesis"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_rel.html",
+      "title": "SciPy：配对t检验",
+      "locators": [
+        "Notes，差值的标准误与配对设计"
+      ],
+      "entryIds": [
+        "paired-t-test"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html",
+      "title": "SciPy：Fisher精确检验",
+      "locators": [
+        "Notes，2×2表条件分布及双侧p值定义"
+      ],
+      "entryIds": [
+        "fisher-exact"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.contingency.association.html",
+      "title": "SciPy：Cramér V",
+      "locators": [
+        "Cramér V / Notes"
+      ],
+      "entryIds": [
+        "cramers-v"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.contingency.odds_ratio.html",
+      "title": "SciPy：优势比",
+      "locators": [
+        "sample / conditional odds ratio区别"
+      ],
+      "entryIds": [
+        "odds-ratio"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.contingency.relative_risk.html",
+      "title": "SciPy：相对风险",
+      "locators": [
+        "病例人数/暴露组总数与风险比"
+      ],
+      "entryIds": [
+        "relative-risk"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html",
+      "title": "SciPy：Bootstrap区间",
+      "locators": [
+        "resampling / paired / BCa / DegenerateDataWarning"
+      ],
+      "entryIds": [
+        "bootstrap"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html",
+      "title": "SciPy：置换检验",
+      "locators": [
+        "independent/samples/pairings / exact vs randomized"
+      ],
+      "entryIds": [
+        "permutation-test"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www150.statcan.gc.ca/n1/edu/power-pouvoir/ch13/prob/5214899-eng.htm",
+      "title": "Statistics Canada：概率抽样",
+      "locators": [
+        "Simple random / systematic / stratified / cluster sampling"
+      ],
+      "entryIds": [
+        "simple-random-sampling",
+        "stratified-sampling",
+        "cluster-sampling",
+        "systematic-sampling"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www150.statcan.gc.ca/n1/edu/power-pouvoir/ch6/5214809-eng.htm",
+      "title": "Statistics Canada：抽样权重",
+      "locators": [
+        "Design weight，入样概率倒数及权重调整"
+      ],
+      "entryIds": [
+        "inclusion-probability",
+        "sampling-weight"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www150.statcan.gc.ca/n1/edu/power-pouvoir/ch6/nse-endae/5214806-eng.htm",
+      "title": "Statistics Canada：非抽样误差",
+      "locators": [
+        "Coverage / measurement / non-response error"
+      ],
+      "entryIds": [
+        "nonresponse-error",
+        "coverage-error",
+        "measurement-error",
+        "recall-bias"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://arxiv.org/pdf/1306.2812",
+      "title": "Seaman等：What Is Meant by Missing at Random?",
+      "locators": [
+        "PDF第2—3页，Definitions1—5"
+      ],
+      "entryIds": [
+        "missing-completely-at-random",
+        "missing-at-random",
+        "missing-not-at-random"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.statsmodels.org/stable/missing.html",
+      "title": "statsmodels：缺失数据处理",
+      "locators": [
+        "missing='drop' / 'raise'与结果影响"
+      ],
+      "entryIds": [
+        "listwise-deletion"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://pandas.pydata.org/docs/user_guide/missing_data.html",
+      "title": "pandas：协方差及缺失范围",
+      "locators": [
+        "Calculation with missing data；有效样本与缺失传播"
+      ],
+      "entryIds": [
+        "pairwise-deletion"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://stats.oarc.ucla.edu/sas/seminars/multiple-imputation-in-sas/mi_new_1/",
+      "title": "UCLA OARC：缺失与成对删除",
+      "locators": [
+        "Pairwise deletion / covariance matrix"
+      ],
+      "entryIds": [
+        "pairwise-deletion"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/impute.html",
+      "title": "scikit-learn：缺失值插补",
+      "locators": [
+        "SimpleImputer，均值/中位数等策略"
+      ],
+      "entryIds": [
+        "mean-imputation"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www150.statcan.gc.ca/n1/edu/power-pouvoir/ch6/sampling-echantillonage/5214807-eng.htm",
+      "title": "Statistics Canada：抽样误差",
+      "locators": [
+        "Estimating the sampling error / design properties"
+      ],
+      "entryIds": [
+        "sampling-error"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www150.statcan.gc.ca/n1/edu/power-pouvoir/ch13/sample-echantillon/5214900-eng.htm",
+      "title": "Statistics Canada：样本选择与研究目标",
+      "locators": [
+        "Establish the survey's objectives / survey units"
+      ],
+      "entryIds": [
+        "research-question",
+        "unit-of-analysis"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://help.osf.io/article/330-welcome-to-registrations",
+      "title": "OSF：Registrations & Preregistrations",
+      "locators": [
+        "Overview / Effective Practices for a Rigorous Preregistration"
+      ],
+      "entryIds": [
+        "hypothesis",
+        "preregistration"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.ddialliance.org/DDI-Lifecycle/3.2/model/item-types/Variable/",
+      "title": "DDI Alliance：Variable",
+      "locators": [
+        "name / label / analysis unit / representation"
+      ],
+      "entryIds": [
+        "unit-of-analysis",
+        "data-dictionary"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.cosmin.nl/wp-content/uploads/COSMIN-manual-V2_final.pdf",
+      "title": "COSMIN Manual v2.0：构念与测量",
+      "locators": [
+        "PDF第20—21页（正文20—21页）Construct：构念定义、边界及子构念"
+      ],
+      "entryIds": [
+        "construct"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://courses.ems.psu.edu/natureofgeoinfo/print/c3_p9.html",
+      "title": "Penn State：名义测量",
+      "locators": [
+        "8. Nominal Level，非排序类别与数字编码"
+      ],
+      "entryIds": [
+        "measurement-level",
+        "nominal-scale"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://courses.ems.psu.edu/natureofgeoinfo/print/c3_p10.html",
+      "title": "Penn State：顺序测量",
+      "locators": [
+        "9. Ordinal Level，排序与不能假定相等距离"
+      ],
+      "entryIds": [
+        "measurement-level",
+        "ordinal-scale"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://courses.ems.psu.edu/natureofgeoinfo/print/c3_p11.html",
+      "title": "Penn State：等距与等比测量",
+      "locators": [
+        "10. Interval and Ratio Levels"
+      ],
+      "entryIds": [
+        "measurement-level",
+        "interval-scale",
+        "ratio-scale"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.cdc.gov/nchs/ccqder/question-evaluation/cognitive-interviewing.html",
+      "title": "CDC CCQDER：认知访谈",
+      "locators": [
+        "Characteristics / Follow-up questions / Findings"
+      ],
+      "entryIds": [
+        "cognitive-interview",
+        "recall-bias"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://analysisfunction.civilservice.gov.uk/policy-store/questionnaire-design-guidance/",
+      "title": "英国Government Analysis Function：问卷设计",
+      "locators": [
+        "Avoid leading questions / ask one thing / time references"
+      ],
+      "entryIds": [
+        "double-barreled-question",
+        "leading-question"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.cdc.gov/nchs/ccqder/question-evaluation/index.html",
+      "title": "CDC CCQDER：题目评估",
+      "locators": [
+        "Difficulty answering / social desirability bias"
+      ],
+      "entryIds": [
+        "social-desirability-bias"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://aapor.org/wp-content/uploads/2024/03/Standards-Definitions-10th-edition.pdf",
+      "title": "AAPOR：Standard Definitions",
+      "locators": [
+        "第十版，PDF第85—86页附录Response Rates：RR1—RR6及处置分母"
+      ],
+      "entryIds": [
+        "response-rate"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.hhs.gov/ohrp/regulations-and-policy/belmont-report/read-the-belmont-report/index.html",
+      "title": "HHS：Belmont Report",
+      "locators": [
+        "PartC，Information / Comprehension / Voluntariness"
+      ],
+      "entryIds": [
+        "informed-consent"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.cdc.gov/field-epi-manual/php/chapters/qualitative-data.html",
+      "title": "CDC：定性资料收集与分析",
+      "locators": [
+        "Coding and Analysis / memos / verifying conclusions"
+      ],
+      "entryIds": [
+        "qualitative-coding",
+        "thematic-analysis"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.ddialliance.org/DDI-Lifecycle/3.3/model/composite-types/VariableRepresentationType/",
+      "title": "DDI Alliance：VariableRepresentationType",
+      "locators": [
+        "valid/missing value representation及imputation reference"
+      ],
+      "entryIds": [
+        "data-dictionary"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm",
+      "title": "NIST：线性最小二乘回归",
+      "locators": [
+        "linear in parameters / least squares / limitations"
+      ],
+      "entryIds": [
+        "linear-regression"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression",
+      "title": "scikit-learn：Logistic回归与正则",
+      "locators": [
+        "Logistic regression，二分类link与penalty"
+      ],
+      "entryIds": [
+        "logistic-regression",
+        "regularization"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.outliers_influence.variance_inflation_factor.html",
+      "title": "statsmodels：方差膨胀因子",
+      "locators": [
+        "VIF / multicollinearity"
+      ],
+      "entryIds": [
+        "multicollinearity"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd44.htm",
+      "title": "NIST：模型诊断与残差",
+      "locators": [
+        "Residuals / R² Is Not Enough"
+      ],
+      "entryIds": [
+        "residual",
+        "r-squared"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.r2_score.html",
+      "title": "scikit-learn：R²得分",
+      "locators": [
+        "Definitions / negative score / force_finite"
+      ],
+      "entryIds": [
+        "r-squared"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html",
+      "title": "scikit-learn：ROC AUC",
+      "locators": [
+        "binary score / average / multiclass configuration"
+      ],
+      "entryIds": [
+        "roc-auc"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html",
+      "title": "scikit-learn：混淆矩阵",
+      "locators": [
+        "Cij，真实行与预测列"
+      ],
+      "entryIds": [
+        "confusion-matrix"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_fscore_support.html",
+      "title": "scikit-learn：查准率与查全率",
+      "locators": [
+        "precision / recall / averaging / zero_division"
+      ],
+      "entryIds": [
+        "precision-recall"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.utils.class_weight.compute_class_weight.html",
+      "title": "scikit-learn：类别权重",
+      "locators": [
+        "balanced / class labels"
+      ],
+      "entryIds": [
+        "class-imbalance"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/calibration.html",
+      "title": "scikit-learn：概率校准",
+      "locators": [
+        "calibration curves / classifier calibration / proper scoring"
+      ],
+      "entryIds": [
+        "probability-calibration"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/common_pitfalls.html#controlling-randomness",
+      "title": "scikit-learn：控制随机性",
+      "locators": [
+        "Controlling randomness / random_state"
+      ],
+      "entryIds": [
+        "random-seed"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/feature_selection.html",
+      "title": "scikit-learn：特征选择",
+      "locators": [
+        "univariate / recursive / pipeline warning"
+      ],
+      "entryIds": [
+        "feature-selection"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.silhouette_score.html",
+      "title": "scikit-learn：轮廓系数",
+      "locators": [
+        "a,b / labels2至n−1 / distance"
+      ],
+      "entryIds": [
+        "silhouette-score"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html",
+      "title": "scikit-learn：调整兰德指数",
+      "locators": [
+        "label permutation invariant / chance adjustment"
+      ],
+      "entryIds": [
+        "adjusted-rand-index"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_class02-prep.pdf",
+      "title": "MIT18.05：概率术语",
+      "locators": [
+        "第1—4页，sample space / events / probability rules"
+      ],
+      "entryIds": [
+        "probability"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_class03-prep.pdf",
+      "title": "MIT18.05：条件概率、独立与贝叶斯",
+      "locators": [
+        "Conditional probability / independence / Bayes theorem"
+      ],
+      "entryIds": [
+        "conditional-probability",
+        "independence",
+        "bayes-theorem"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_class04-prep-b.pdf",
+      "title": "MIT18.05：离散变量期望",
+      "locators": [
+        "第2页，期望定义"
+      ],
+      "entryIds": [
+        "expectation"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/mit18_05_s22_class07-prep-b.pdf",
+      "title": "MIT18.05：协方差与相关",
+      "locators": [
+        "第1—2页，covariance / correlation"
+      ],
+      "entryIds": [
+        "covariance"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/6913aa2f37dada8fdda334168b30339b_MIT18_06SCF11_Ses1.1sum.pdf",
+      "title": "MIT18.06SC：线性方程的几何",
+      "locators": [
+        "第2—3页，Column Picture / Matrix Picture"
+      ],
+      "entryIds": [
+        "linear-combination"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.matrix_rank.html",
+      "title": "NumPy：矩阵秩",
+      "locators": [
+        "SVD方法 / tolerance / numerical rank"
+      ],
+      "entryIds": [
+        "matrix-rank"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.inv.html",
+      "title": "NumPy：逆矩阵",
+      "locators": [
+        "Notes，singular / ill-conditioned"
+      ],
+      "entryIds": [
+        "inverse-matrix"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf",
+      "title": "Boyd与Vandenberghe：Convex Optimization",
+      "locators": [
+        "2.2.5正半定；3.1凸函数；4.2.2局部与全局最优"
+      ],
+      "entryIds": [
+        "positive-semidefinite",
+        "convexity",
+        "local-global-optimum"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html",
+      "title": "NumPy：奇异值分解",
+      "locators": [
+        "Notes，U S Vh因子与正交/酉性质"
+      ],
+      "entryIds": [
+        "singular-value-decomposition"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.differentiate.derivative.html",
+      "title": "SciPy：一阶导数",
+      "locators": [
+        "Description / finite difference / precision limitations"
+      ],
+      "entryIds": [
+        "derivative"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.differentiate.jacobian.html",
+      "title": "SciPy：Jacobian",
+      "locators": [
+        "偏导矩阵与数值估计"
+      ],
+      "entryIds": [
+        "partial-derivative"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.differentiate.hessian.html",
+      "title": "SciPy：Hessian",
+      "locators": [
+        "second partial derivatives / scalar-valued function"
+      ],
+      "entryIds": [
+        "hessian"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html",
+      "title": "SciPy：优化问题",
+      "locators": [
+        "bounds / constraints / local minimization"
+      ],
+      "entryIds": [
+        "constrained-optimization",
+        "local-global-optimum"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html",
+      "title": "NumPy：向量与矩阵范数",
+      "locators": [
+        "ord=2与向量范数"
+      ],
+      "entryIds": [
+        "euclidean-norm"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://networkx.org/documentation/stable/reference/algorithms/dag.html",
+      "title": "NetworkX：有向无环图",
+      "locators": [
+        "is_directed_acyclic_graph / topological_sort"
+      ],
+      "entryIds": [
+        "directed-acyclic-graph"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    },
+    {
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.entropy.html",
+      "title": "SciPy：熵",
+      "locators": [
+        "Shannon entropy / base / probability normalization"
+      ],
+      "entryIds": [
+        "entropy"
+      ],
+      "inspection": "primary source opened; relevant concept/condition inspected"
+    }
+  ],
+  "checks": [
+    "All 100 definitions, uses, examples, confusions and questions read independently.",
+    "All 20 formulas inspected symbol-by-symbol and conditions checked; safe KaTeX rendering verified.",
+    "Numeric examples checked independently; formula samples do not assert actual fieldwork.",
+    "Only implemented tools have links; EFA/inference/regression theory does not add invented tool output.",
+    "Cross-package IDs checked against the core60 catalog; review identity differs from producer.",
+    "No textbook images, exercises, whole chapters or private corpus fulltext copied."
+  ],
+  "repairs": [
+    {
+      "entries": [
+        "central-limit-theorem",
+        "law-large-numbers"
+      ],
+      "reason": "CLT slides did not contain LLN; replaced with actual combined MIT Reading6b and exact sections."
+    },
+    {
+      "entries": [
+        "construct"
+      ],
+      "reason": "Definition and boundary located in Construct section20–21, not preface."
+    },
+    {
+      "entries": [
+        "response-rate"
+      ],
+      "reason": "Linked actual AAPOR10 RR1–RR6 appendix, not only landing page."
+    },
+    {
+      "entries": [
+        "measurement-level",
+        "nominal-scale",
+        "ordinal-scale"
+      ],
+      "reason": "Use primary Penn State nominal/ordinal teaching pages instead of OpenStax licensing-dependent source."
+    }
+  ],
+  "limitations": [
+    "Conceptual explanatory review; no new statistical method implementation or contest Gate approval.",
+    "This is not external domain-expert certification, nor proof of search generalization beyond the reference fixtures.",
+    "Future source editions can change; exact approved glossary version is retained."
+  ]
+}

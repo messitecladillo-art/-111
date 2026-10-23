@@ -17,7 +17,7 @@ with zipfile.ZipFile(archive) as baseline:
         original_hash, relative = line.split('  ', 1)
         assert hashlib.sha256(baseline.read(relative)).hexdigest() == original_hash, relative
         current = root / relative
-        archived = root / relative.replace('apps/evi-x-platform/app/api/', 'apps/evi-x-platform/legacy/cloudflare-api/')
+        archived = root / relative.replace('apps/frontend/app/api/', 'apps/frontend/legacy/cloudflare-api/')
         if current.is_file():
             state = 'unchanged' if hashlib.sha256(current.read_bytes()).hexdigest() == original_hash else 'modified_with_original_backup'
             location = relative

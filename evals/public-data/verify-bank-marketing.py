@@ -33,9 +33,9 @@ REL_TOLERANCE = ABS_TOLERANCE = 1e-10
 HERE = Path(__file__).absolute().parent
 REPO = HERE.parent.parent
 ENGINE_FILES = (
-    'apps/evi-x-platform/lib/survey-analysis.ts',
-    'apps/evi-x-platform/lib/analysis-recipes.ts',
-    'apps/evi-x-platform/lib/inference.ts',
+    'apps/frontend/lib/survey-analysis.ts',
+    'apps/frontend/lib/analysis-recipes.ts',
+    'apps/frontend/lib/inference.ts',
 )
 # Inference outputs appended after the descriptive results. Their values are checked
 # independently with SciPy/statsmodels by verify-bank-marketing-inference.py.

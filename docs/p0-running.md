@@ -1,15 +1,17 @@
 # 证见 EVI-X P0 本地运行
 
-本批直接升级 `apps/evi-x-platform`，保留原工作台、品牌、问卷设计、变量映射、统计、报告/PPT 本地导出和答辩工具。新增 `apps/evi-x-api` 和 `packages/evi-x-shared`。第一批的托管闭环是邮箱登录、团队项目、个人模型配置、问卷提案、确认应用、编辑、保存和历史载入。
+本批直接升级 `apps/frontend`，保留原工作台、品牌、问卷设计、变量映射、统计、报告/PPT 本地导出和答辩工具。新增 `apps/backend` 和 `packages/evi-x-shared`。第一批的托管闭环是邮箱登录、团队项目、个人模型配置、问卷提案、确认应用、编辑、保存和历史载入。
 
 ## 安装与启动
 
 要求 Node.js 22.13+、Python 3.12、uv 和 PostgreSQL 17。本机已用 Node 24.15、Python 3.12.14 验证。JS 依赖使用仓库根 `package-lock.json`；Python 使用 API 目录的 `uv.lock`。
 
+本地启动脚本兼容 Windows PowerShell 5.1 和 PowerShell 7，无需为启动后端单独安装 PowerShell 7。
+
 ```powershell
 # 仓库根目录
 npm ci --ignore-scripts --no-audit --no-fund
-uv sync --locked --project apps/evi-x-api --python 3.12
+uv sync --locked --project apps/backend --python 3.12
 
 # 优先使用 Docker Linux 引擎。只映射本机端口 55432。
 docker compose -f deploy/compose.dev.yaml up -d
@@ -40,7 +42,7 @@ npm run start --workspace evi-x-zhengda-champion-platform
 
 ```powershell
 # Docker 不可用时的备选；与 Docker 实例二选一，不能同时占用 55432。
-apps/evi-x-api/.venv/Scripts/python.exe scripts/setup-local-postgres.py
+apps/backend/.venv/Scripts/python.exe scripts/setup-local-postgres.py
 .\scripts\start-p0-postgres.ps1
 .\scripts\migrate-p0.ps1
 ```
@@ -69,7 +71,7 @@ npm run typecheck:web
 npm run build:web
 
 $env:EVIX_TEST_DATABASE_URL = 'postgresql+psycopg://evix_owner:local-p0-owner-only@127.0.0.1:55432/evix_p0_test'
-Push-Location apps/evi-x-api
+Push-Location apps/backend
 .venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp ../../.local/pytest-p0-rerun-01
 Pop-Location
 ```
@@ -82,7 +84,7 @@ Pop-Location
 
 ## 保留与迁移边界
 
-迁移前 452 文件已打包，并逐条核对源 manifest：`.collab/runs/20261007-p0/baseline-source.zip` 和 `baseline-receipt.json`。旧的 32 个业务 route 文件保存在 `apps/evi-x-platform/legacy/cloudflare-api`，新应用不会回退到旧身份或旧数据库。
+迁移前 452 文件已打包，并逐条核对源 manifest：`.collab/runs/20261007-p0/baseline-source.zip` 和 `baseline-receipt.json`。旧的 32 个业务 route 文件保存在 `apps/frontend/legacy/cloudflare-api`，新应用不会回退到旧身份或旧数据库。
 
 本批所有账户、项目、凭据、模型及問卷版本操作进入 FastAPI/PostgreSQL。为继续提供现有工作台，五个纯知识/规则/诊断路由暂留 Next：cases、case detail、rules、control-contract、diagnose；它们不访问用户身份、凭据或数据库。P2 再统一领域服务。
 

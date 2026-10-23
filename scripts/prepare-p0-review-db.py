@@ -19,7 +19,7 @@ with psycopg.connect(owner + name, autocommit=True, connect_timeout=5) as connec
     connection.execute('ALTER DEFAULT PRIVILEGES FOR ROLE evix_owner IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO evix_app')
     connection.execute('ALTER DEFAULT PRIVILEGES FOR ROLE evix_owner IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO evix_app')
 environment = dict(os.environ, EVIX_MIGRATION_DATABASE_URL=owner.replace('postgresql:', 'postgresql+psycopg:') + name)
-subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], cwd=root / 'apps/evi-x-api', env=environment, check=True)
+subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], cwd=root / 'apps/backend', env=environment, check=True)
 with psycopg.connect('postgresql://evix_app:local-p0-app-only@127.0.0.1:55432/' + name) as connection:
     row = connection.execute("SELECT current_user, (SELECT version_num FROM alembic_version), (SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user)").fetchone()
     assert row == ('evix_app', '0002_silicon_runs', False), row

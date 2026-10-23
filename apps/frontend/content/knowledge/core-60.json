@@ -1,0 +1,3493 @@
+{
+  "schemaVersion": 1,
+  "version": "2026.10.14-a1",
+  "entries": [
+    {
+      "id": "p-value",
+      "version": 1,
+      "name": "p 值",
+      "englishName": "p-value",
+      "aliases": [
+        "p值",
+        "P值",
+        "显著性概率"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "在给定原假设与统计模型成立时，出现当前检验统计量或更极端结果的概率。它衡量数据与该模型的不相容程度。",
+      "uses": [
+        "解释检验输出时，与效应量、区间、抽样设计一起阅读。"
+      ],
+      "examples": [
+        "示例：独立分组比较得到 p=0.03，表示所用零差异模型下，这样或更极端的统计量并不常见；并非零差异假设只有3%概率成立。"
+      ],
+      "relatedIds": [
+        "significance-level",
+        "effect-size",
+        "confidence-interval"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "asa-p2016",
+          "title": "ASA：统计显著性与 p 值六原则",
+          "url": "https://www.amstat.org/asa/files/pdfs/P-ValueStatement.pdf",
+          "locator": "第2页，原则1—6",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.308Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "p=\\Pr(T\\ge t_{\\mathrm{obs}}\\mid H_0)",
+        "symbols": [
+          {
+            "symbol": "T",
+            "meaning": "右尾检验的随机统计量"
+          },
+          {
+            "symbol": "t_{\\mathrm{obs}}",
+            "meaning": "观测统计量"
+          },
+          {
+            "symbol": "H_0",
+            "meaning": "原假设及相应模型"
+          }
+        ],
+        "conditions": [
+          "示式为右尾检验；左尾与双侧的极端性定义不同。",
+          "检验前明确抽样独立性、模型和多重比较规则。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "significance-level",
+          "distinction": "α是在分析前选择的错误率阈值；p是基于本次数据计算的量。"
+        },
+        {
+          "entryId": "effect-size",
+          "distinction": "小p值不代表效果大或业务重要。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "p大于0.05能证明没有差异吗？",
+          "answer": "不能。报告估计差异及其区间，检查精度和检验功效；证据不足与等效性结论不同。"
+        }
+      ]
+    },
+    {
+      "id": "confidence-interval",
+      "version": 1,
+      "name": "置信区间",
+      "englishName": "confidence interval",
+      "aliases": [
+        "CI",
+        "95%CI",
+        "置信限"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "由样本和指定方法构造的参数区间。频率学派95%置信水平指重复抽样时，该构造程序约95%的区间覆盖真实参数。",
+      "uses": [
+        "在均值、比例、相关系数旁展示估计的不确定性。"
+      ],
+      "examples": [
+        "示例：样本均值100元、标准差20元、n=25，若独立同分布且总体正态，95%均值t区间约为91.74—108.26元。"
+      ],
+      "relatedIds": [
+        "standard-error-mean",
+        "p-value",
+        "population"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "nist-ci-mean",
+          "title": "NIST：均值置信区间",
+          "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm",
+          "locator": "Confidence Interval / Definition / repeated-sampling interpretation",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\bar x\\pm t_{1-\\alpha/2,n-1}\\frac{s}{\\sqrt n}",
+        "symbols": [
+          {
+            "symbol": "\\bar x",
+            "meaning": "样本均值",
+            "unit": "原变量单位"
+          },
+          {
+            "symbol": "s",
+            "meaning": "样本标准差",
+            "unit": "原变量单位"
+          },
+          {
+            "symbol": "n",
+            "meaning": "独立观测数"
+          },
+          {
+            "symbol": "t",
+            "meaning": "t分布分位数"
+          },
+          {
+            "symbol": "\\alpha",
+            "meaning": "非覆盖率"
+          }
+        ],
+        "conditions": [
+          "此式针对独立同分布正态总体的均值；大样本近似还需适当矩条件。",
+          "复杂抽样或非概率样本不能直接套用为总体误差界。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "standard-error-mean",
+          "distinction": "标准误是估计量的波动尺度；区间还需要分布及置信水平。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "区间内每个数都有95%概率吗？",
+          "answer": "不是。频率学派固定参数、随机区间的解释，不能转成该固定区间内参数的概率分布。"
+        }
+      ]
+    },
+    {
+      "id": "effect-size",
+      "version": 1,
+      "name": "效应量",
+      "englishName": "effect size",
+      "aliases": [
+        "效果量",
+        "差异大小",
+        "实际效应"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "描述差异或关系大小的量，如均值差、相关系数、Cramér V。选用哪种量取决于变量、设计与所问问题。",
+      "uses": [
+        "把统计显著性转换成可讨论的差距，给建议确定业务意义。"
+      ],
+      "examples": [
+        "示例：两组平均消费差2元与差50元，即使p值相同，也可能需要不同决策。"
+      ],
+      "relatedIds": [
+        "p-value",
+        "pearson-correlation",
+        "chi-square"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "asa-p2016",
+          "title": "ASA：统计显著性与 p 值六原则",
+          "url": "https://www.amstat.org/asa/files/pdfs/P-ValueStatement.pdf",
+          "locator": "第2页，原则1—6",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        },
+        {
+          "id": "scipy-association",
+          "title": "SciPy：分类关联的效应大小",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.contingency.association.html",
+          "locator": "association，Cramér V与其他分类关联量",
+          "scope": "效应量示例的具体定义；不将此页中关联措辞当作因果解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\Delta=\\bar x_A-\\bar x_B",
+        "symbols": [
+          {
+            "symbol": "\\Delta",
+            "meaning": "示例中的原始均值差",
+            "unit": "原变量单位"
+          },
+          {
+            "symbol": "\\bar x_A",
+            "meaning": "A组均值"
+          },
+          {
+            "symbol": "\\bar x_B",
+            "meaning": "B组均值"
+          }
+        ],
+        "conditions": [
+          "这是原始差异效应量；报告组别方向、单位和不确定性。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "p-value",
+          "distinction": "p值不度量差距大小。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "可以统一用0.2、0.5、0.8解释所有效应吗？",
+          "answer": "不能。不同效应量有不同尺度，业务阈值也不同；优先解释真实单位及决策所需的差距。"
+        }
+      ]
+    },
+    {
+      "id": "significance-level",
+      "version": 1,
+      "name": "显著性水平",
+      "englishName": "significance level",
+      "aliases": [
+        "α",
+        "alpha",
+        "阿尔法",
+        "一类错误率"
+      ],
+      "domain": "stats",
+      "depth": "brief",
+      "definition": "分析前设定的检验规则阈值。若原假设和模型成立，正确校准的检验在重复抽样中的拒绝概率不超过该水平。",
+      "uses": [
+        "预先登记检验决策规则，并结合多重比较调整。"
+      ],
+      "examples": [
+        "示例：α=0.05与本次算出的p=0.03分属阈值和数据结果。"
+      ],
+      "relatedIds": [
+        "p-value",
+        "cronbach-alpha",
+        "multiple-comparisons"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "asa-p2016",
+          "title": "ASA：统计显著性与 p 值六原则",
+          "url": "https://www.amstat.org/asa/files/pdfs/P-ValueStatement.pdf",
+          "locator": "第2页，原则1—6",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        },
+        {
+          "id": "nist-ci-mean",
+          "title": "NIST：均值置信区间",
+          "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm",
+          "locator": "Hypothesis Test，Significance Level α与拒绝域",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "standard-error-mean",
+      "version": 1,
+      "name": "均值标准误",
+      "englishName": "standard error of the mean",
+      "aliases": [
+        "SEM",
+        "SE",
+        "均值标准误差"
+      ],
+      "domain": "stats",
+      "depth": "brief",
+      "definition": "样本均值作为估计量在重复抽样中的波动尺度。独立同分布观测的常用估计为样本标准差除以样本量平方根。",
+      "uses": [
+        "判断均值估计精度，构建相应的置信区间。"
+      ],
+      "examples": [
+        "示例：标准差20、n=25时，均值标准误为4；标准差描述个体差异，标准误描述均值估计波动。"
+      ],
+      "relatedIds": [
+        "confidence-interval",
+        "structural-equation-model"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "scipy-sem",
+          "title": "SciPy：均值标准误",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.sem.html",
+          "locator": "sem / Parameters / Notes",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        },
+        {
+          "id": "nist-ci-mean",
+          "title": "NIST：均值置信区间",
+          "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm",
+          "locator": "Confidence Interval / Definition / repeated-sampling interpretation",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "cronbach-alpha",
+      "version": 1,
+      "name": "Cronbach α 系数",
+      "englishName": "Cronbach's alpha",
+      "aliases": [
+        "α",
+        "alpha",
+        "克隆巴赫",
+        "克朗巴赫",
+        "内部一致性",
+        "信度系数"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "由题项协方差与总分方差形成的内部一致性系数。理解它需要先明确构念、题项方向和维度；把α解释为可靠性估计还涉及测量模型假设。",
+      "uses": [
+        "检查同一量表题项之间的共同变动，记录反向计分与缺失处理。"
+      ],
+      "examples": [
+        "示例：五道满意度题中一题方向相反，应先按原量表说明反向计分，再计算α；不能为了提高α盲目删除题目。"
+      ],
+      "relatedIds": [
+        "reverse-item",
+        "validity",
+        "likert-scale"
+      ],
+      "methodIds": [
+        "scale-consistency"
+      ],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "量表信度分析",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "cronbach-1951",
+          "title": "Cronbach：Coefficient Alpha and the Internal Structure of Tests",
+          "url": "https://doi.org/10.1007/BF02310555",
+          "locator": "1951，16(3)，297—334；出版社公开摘要",
+          "scope": "原创概念与一般系数定义；未宣称取得全文授权"
+        },
+        {
+          "id": "cosmin-content2018",
+          "title": "COSMIN：内容效度共识研究",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5891557/",
+          "locator": "Introduction / COSMIN definitions / relevance, comprehensiveness, comprehensibility",
+          "scope": "原文为患者报告量表；此处只借用测量概念，不能直接作为市场调查验证标准"
+        },
+        {
+          "id": "psych-alpha",
+          "title": "William Revelle：psych alpha 文档",
+          "url": "https://personality-project.org/r/psych/help/alpha.html",
+          "locator": "Details，raw alpha公式与reverse key计分",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\alpha=\\frac{k}{k-1}\\left(1-\\frac{\\sum_{j=1}^{k}s_j^2}{s_T^2}\\right)",
+        "symbols": [
+          {
+            "symbol": "k",
+            "meaning": "题项数"
+          },
+          {
+            "symbol": "s_j^2",
+            "meaning": "第j题的样本方差"
+          },
+          {
+            "symbol": "s_T^2",
+            "meaning": "同一应答范围内题项总分方差"
+          }
+        ],
+        "conditions": [
+          "至少两题，总分方差大于0，各题方向和样本口径一致。",
+          "高α不证明单维、内容充分或效度；题目重复也可能抬高α。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "significance-level",
+          "distinction": "同样写α，此处是量表系数而非假设检验阈值。"
+        },
+        {
+          "entryId": "validity",
+          "distinction": "内部一致性不能代替构念、内容等效度证据。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "α超过0.7就能宣布量表有效吗？",
+          "answer": "不能。阈值需要场景依据，且α不检验效度；还应核对构念、题项覆盖、维度与测量使用目的。"
+        }
+      ]
+    },
+    {
+      "id": "validity",
+      "version": 1,
+      "name": "效度",
+      "englishName": "validity",
+      "aliases": [
+        "测量效度",
+        "内容效度",
+        "构念效度",
+        "有效性"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "围绕测量分数的解释与用途，检查它是否得到与目标构念相符的证据支持。内容覆盖、结构、与其他变量的关系等提供不同方面的证据。",
+      "uses": [
+        "在设计题项、改编量表和说明分数含义时核对证据。"
+      ],
+      "examples": [
+        "示例：调查交通便利度，却只问公交满意度，可能遗漏步行、无障碍和换乘方面；题目彼此很一致也不能补上这些遗漏。"
+      ],
+      "relatedIds": [
+        "operationalization",
+        "cronbach-alpha",
+        "pilot-study"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "cosmin-content2018",
+          "title": "COSMIN：内容效度共识研究",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5891557/",
+          "locator": "Introduction / COSMIN definitions / relevance, comprehensiveness, comprehensibility",
+          "scope": "原文为患者报告量表；此处只借用测量概念，不能直接作为市场调查验证标准"
+        },
+        {
+          "id": "cosmin-manual2024",
+          "title": "COSMIN Manual v2.0",
+          "url": "https://www.cosmin.nl/wp-content/uploads/COSMIN-manual-V2_final.pdf",
+          "locator": "第11—13页，测量属性分类与Table1.1",
+          "scope": "原文聚焦患者报告量表；这里只解释测量概念，不复制表格、规范或全文"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "cronbach-alpha",
+          "distinction": "重复题可以有很高一致性，但仍未充分覆盖目标概念。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "一次因子分析就完成效度验证了吗？",
+          "answer": "它能提供结构方面证据，不能独自验证全部分数解释。应明确用途并综合内容、外部关系等证据。"
+        }
+      ]
+    },
+    {
+      "id": "reverse-item",
+      "version": 1,
+      "name": "反向题与反向计分",
+      "englishName": "reverse-keyed item",
+      "aliases": [
+        "反向题",
+        "反向编码",
+        "reverse scoring",
+        "逆向题"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "反向题在构念方向上与其他题相反；反向计分按既定计分键把分值转换到共同方向。否定句与反向题不必然等同。",
+      "uses": [
+        "量表合成与信度计算前，按照原量表和变量字典处理。"
+      ],
+      "examples": [
+        "示例：1—5等距编码题用6−原值，原值1变为5、3仍为3；缺失编码99先识别为缺失，不能变成−93。"
+      ],
+      "relatedIds": [
+        "cronbach-alpha",
+        "likert-scale",
+        "missing-value"
+      ],
+      "methodIds": [
+        "scale-consistency"
+      ],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "psych-alpha",
+          "title": "William Revelle：psych alpha 文档",
+          "url": "https://personality-project.org/r/psych/help/alpha.html",
+          "locator": "Details，raw alpha公式与reverse key计分",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "x^{\\prime}=L+U-x",
+        "symbols": [
+          {
+            "symbol": "x",
+            "meaning": "有效原始题值"
+          },
+          {
+            "symbol": "L",
+            "meaning": "有效量尺下端"
+          },
+          {
+            "symbol": "U",
+            "meaning": "有效量尺上端"
+          },
+          {
+            "symbol": "x^{\\prime}",
+            "meaning": "反向计分值"
+          }
+        ],
+        "conditions": [
+          "适用于按数字等距排列的计分档位；不等距编码用明确映射表。",
+          "只依据语义与已登记计分键，不能按负相关结果临时决定反向。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "missing-value",
+          "distinction": "缺失值不属于可反向的有效题值。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "把全部负相关题反向能修好信度吗？",
+          "answer": "不能这样推断。先查语义、数据映射、维度与应答错误，统计相关方向不等于计分键。"
+        }
+      ]
+    },
+    {
+      "id": "sampling-frame",
+      "version": 1,
+      "name": "抽样框",
+      "englishName": "sampling frame",
+      "aliases": [
+        "样本框",
+        "sampling list",
+        "抽样名单"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "能够定位并抽取目标调查单位的名单、地址框或其他操作性载体。抽样框实际覆盖的单位可能与研究总体有差异。",
+      "uses": [
+        "核对哪些人有机会入样、重复记录和遗漏人群，制定抽样实施步骤。"
+      ],
+      "examples": [
+        "示例：要研究全校在校生，却只从社团群发链接，群名单未覆盖所有学生；多收答卷并不能自动补齐覆盖缺口。"
+      ],
+      "relatedIds": [
+        "population",
+        "sample",
+        "selection-bias"
+      ],
+      "methodIds": [],
+      "materialIds": [
+        "local-population-frame"
+      ],
+      "toolLinks": [
+        {
+          "label": "设计抽样方案",
+          "href": "/workspace#sampling"
+        }
+      ],
+      "sources": [
+        {
+          "id": "aapor-best",
+          "title": "AAPOR：调查研究最佳实践",
+          "url": "https://aapor.org/standards-and-ethics/best-practices/",
+          "locator": "Select a sample / sampling frame / questionnaire pretesting",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "population",
+          "distinction": "总体是研究希望解释的全部单位；框是实际用于抽取单位的载体。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "抽样框就是已回收答卷名单吗？",
+          "answer": "通常不是。抽样框在抽取样本时使用，回收名单是抽样与应答之后形成的记录。"
+        }
+      ]
+    },
+    {
+      "id": "design-effect",
+      "version": 1,
+      "name": "设计效应",
+      "englishName": "design effect",
+      "aliases": [
+        "DEFF",
+        "deff",
+        "设计效果",
+        "有效样本量"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "同一估计量在实际抽样设计下的方差，与同样本量简单随机抽样方差的比值。它与变量、估计方式和设计共同有关。",
+      "uses": [
+        "估计复杂抽样下的精度损失或收益，记录规划参数出处。"
+      ],
+      "examples": [
+        "示例：规划假设DEFF=2且计划完成400份，近似有效样本量200；这是规划情景，并非完成调查后测得的设计效应。"
+      ],
+      "relatedIds": [
+        "sampling-frame",
+        "finite-population-correction",
+        "standard-error-mean"
+      ],
+      "methodIds": [],
+      "materialIds": [
+        "local-cluster-multistage"
+      ],
+      "toolLinks": [
+        {
+          "label": "抽样精度规划",
+          "href": "/workspace#sampling"
+        }
+      ],
+      "sources": [
+        {
+          "id": "statcan-deff2020",
+          "title": "Statistics Canada：设计效应与样本量",
+          "url": "https://www150.statcan.gc.ca/n1/pub/12-001-x/2020001/article/00005/01-eng.htm",
+          "locator": "Section1，设计效应定义、有效样本量",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\mathrm{DEFF}=\\frac{\\operatorname{Var}_{D}(\\hat\\theta)}{\\operatorname{Var}_{SRS}(\\hat\\theta)}",
+        "symbols": [
+          {
+            "symbol": "D",
+            "meaning": "实际抽样设计"
+          },
+          {
+            "symbol": "SRS",
+            "meaning": "同样本量简单随机抽样参照"
+          },
+          {
+            "symbol": "\\hat\\theta",
+            "meaning": "指定估计量"
+          }
+        ],
+        "conditions": [
+          "必须明确估计量和参照设计；不同指标的DEFF可能不同。",
+          "便利样本不能因乘上假定DEFF就变成概率样本。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "sample",
+          "distinction": "实际样本数不等于简单随机抽样等效的有效样本量。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "DEFF永远大于1吗？",
+          "answer": "不一定。适当分层等设计可能提高效率；也不能把某一变量的估计值无条件用于所有变量。"
+        }
+      ]
+    },
+    {
+      "id": "finite-population-correction",
+      "version": 1,
+      "name": "有限总体修正",
+      "englishName": "finite population correction",
+      "aliases": [
+        "FPC",
+        "有限母体修正",
+        "总体修正系数"
+      ],
+      "domain": "stats",
+      "depth": "brief",
+      "definition": "从有限总体无放回抽样时，抽样比例会影响估计量方差。在以N−1定义总体方差的简单随机抽样公式中，方差修正为1−n/N，标准误修正为它的平方根。",
+      "uses": [
+        "较高抽样比例下计算精度；说明总体大小、抽取方式和修正约定。"
+      ],
+      "examples": [
+        "示例：无放回随机抽取总体一半，方差修正为0.5；它不修正漏答或便利招募偏差。"
+      ],
+      "relatedIds": [
+        "design-effect",
+        "sampling-frame",
+        "sample"
+      ],
+      "methodIds": [],
+      "materialIds": [
+        "learning-precision-design"
+      ],
+      "toolLinks": [
+        {
+          "label": "抽样精度",
+          "href": "/workspace#sampling"
+        }
+      ],
+      "sources": [
+        {
+          "id": "statcan-survey2003",
+          "title": "Statistics Canada：Survey Methods and Practices",
+          "url": "https://www150.statcan.gc.ca/n1/pub/12-587-x/12-587-x2003001-eng.pdf",
+          "locator": "书内第137页；PDF第149页，FPC及无放回方差",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "missing-value",
+      "version": 1,
+      "name": "缺失值",
+      "englishName": "missing value",
+      "aliases": [
+        "NA",
+        "NaN",
+        "缺测",
+        "空白",
+        "missing data"
+      ],
+      "domain": "stats",
+      "depth": "brief",
+      "definition": "某个应有测量未得到有效值的状态。未答、跳题不适用、拒答与损坏数据可能表现为同样空白，但需要分别编码和解释。",
+      "uses": [
+        "建立变量字典与每项分析的有效分母，避免把缺失当0。"
+      ],
+      "examples": [
+        "示例：没有购买经历的人跳过消费金额，与买过但未填写金额的人应区别记录。"
+      ],
+      "relatedIds": [
+        "reverse-item",
+        "population",
+        "sample"
+      ],
+      "methodIds": [
+        "sample-denominator"
+      ],
+      "materialIds": [
+        "local-missing-scope"
+      ],
+      "toolLinks": [
+        {
+          "label": "答卷质控与分析",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "pandas-missing",
+          "title": "pandas：缺失数据",
+          "url": "https://pandas.pydata.org/docs/user_guide/missing_data.html",
+          "locator": "Values considered missing / missing-data representations",
+          "scope": "定义与条件；原创教学解释"
+        },
+        {
+          "id": "aapor-best",
+          "title": "AAPOR：调查研究最佳实践",
+          "url": "https://aapor.org/standards-and-ethics/best-practices/",
+          "locator": "Select a sample / sampling frame / questionnaire pretesting",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "pearson-correlation",
+      "version": 1,
+      "name": "Pearson 相关",
+      "englishName": "Pearson correlation",
+      "aliases": [
+        "皮尔逊",
+        "r",
+        "线性相关",
+        "Pearson r"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "衡量两变量线性共同变化方向和强度的系数，范围−1到1。描述系数本身不要求正态；常规显著性推断需要额外模型假设。",
+      "uses": [
+        "观察数值变量的线性关联，先检查散点、离群与有效配对样本。"
+      ],
+      "examples": [
+        "示例：购买金额随收入升高而升高可有正r，但促销偏好、年龄等也可能同时相关，不能由r推出收入变化的因果效应。"
+      ],
+      "relatedIds": [
+        "spearman-correlation",
+        "p-value",
+        "effect-size"
+      ],
+      "methodIds": [
+        "paired-association"
+      ],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "相关分析",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "scipy-pearson",
+          "title": "SciPy：Pearson 相关",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.pearsonr.html",
+          "locator": "Notes，公式、常量输入与推断假设",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "r=\\frac{\\sum_i(x_i-\\bar x)(y_i-\\bar y)}{\\sqrt{\\sum_i(x_i-\\bar x)^2\\sum_i(y_i-\\bar y)^2}}",
+        "symbols": [
+          {
+            "symbol": "x_i,y_i",
+            "meaning": "同一单位的有效配对值"
+          },
+          {
+            "symbol": "\\bar x,\\bar y",
+            "meaning": "配对样本均值"
+          },
+          {
+            "symbol": "r",
+            "meaning": "无量纲相关系数"
+          }
+        ],
+        "conditions": [
+          "两变量方差均非0；每对值来自同一调查单位。",
+          "常规零相关检验通常依赖独立观测及二元正态模型。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "spearman-correlation",
+          "distinction": "Spearman基于秩衡量单调关系，Pearson衡量线性关系。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "r接近0说明没有关系吗？",
+          "answer": "只能说明线性关系弱；U形等非线性关系仍可能很强，先看散点图。"
+        }
+      ]
+    },
+    {
+      "id": "spearman-correlation",
+      "version": 1,
+      "name": "Spearman 秩相关",
+      "englishName": "Spearman rank correlation",
+      "aliases": [
+        "斯皮尔曼",
+        "ρ",
+        "rho",
+        "等级相关",
+        "秩相关"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "将两变量转成秩后计算的相关系数，用于描述单调共同变化。并列值通常使用平均秩处理。",
+      "uses": [
+        "分析有序等级或明显非线性但单调的关系，核对并列值和配对范围。"
+      ],
+      "examples": [
+        "示例：排名靠前的人满意度通常更高可形成单调关联；关系可能不是固定斜率。"
+      ],
+      "relatedIds": [
+        "pearson-correlation",
+        "likert-scale",
+        "p-value"
+      ],
+      "methodIds": [
+        "paired-association"
+      ],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "秩相关分析",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "scipy-spearman",
+          "title": "SciPy：Spearman 秩相关",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.spearmanr.html",
+          "locator": "Description / Notes / small-sample permutation",
+          "scope": "定义与条件；原创教学解释"
+        },
+        {
+          "id": "scipy-pearson",
+          "title": "SciPy：Pearson 相关",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.pearsonr.html",
+          "locator": "Notes，公式、常量输入与推断假设",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\rho_s=\\operatorname{cor}(R_X,R_Y)",
+        "symbols": [
+          {
+            "symbol": "R_X,R_Y",
+            "meaning": "两变量的秩"
+          },
+          {
+            "symbol": "\\operatorname{cor}",
+            "meaning": "对秩计算Pearson相关"
+          }
+        ],
+        "conditions": [
+          "并列值按预先一致的秩规则处理，常量变量不可计算。",
+          "小样本渐近p值精度可能不足，可用适当置换方法。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "pearson-correlation",
+          "distinction": "秩相关不要求原变量间是直线关系。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "用了Spearman就完全没有前提了吗？",
+          "answer": "仍需正确配对、明确观测独立性及应答范围；它也不能把关联变成因果。"
+        }
+      ]
+    },
+    {
+      "id": "chi-square",
+      "version": 1,
+      "name": "卡方独立性检验",
+      "englishName": "chi-square test of independence",
+      "aliases": [
+        "χ²",
+        "chi2",
+        "卡方检验",
+        "列联表检验"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "比较列联表的观测频数与独立性假设下的期望频数，检验分类变量是否存在关联。该检验的方向与大小需由比例及效应量补充。",
+      "uses": [
+        "检验不同组的分类分布是否相同，报告有效n、期望频数及Cramér V等。"
+      ],
+      "examples": [
+        "示例：比较两个城市是否购买的2×2人数表；每个人只计一次，稀疏期望频数时需评估Fisher精确检验等方案。"
+      ],
+      "relatedIds": [
+        "effect-size",
+        "p-value",
+        "multiple-comparisons"
+      ],
+      "methodIds": [
+        "categorical-association"
+      ],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "交叉表与分类检验",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "scipy-chi",
+          "title": "SciPy：列联表独立性检验",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html",
+          "locator": "Notes，期望频数与检验条件",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\chi^2=\\sum_{ij}\\frac{(O_{ij}-E_{ij})^2}{E_{ij}}",
+        "symbols": [
+          {
+            "symbol": "O_{ij}",
+            "meaning": "观测人数"
+          },
+          {
+            "symbol": "E_{ij}",
+            "meaning": "独立性模型下期望人数"
+          }
+        ],
+        "conditions": [
+          "输入为计数且观测独立；期望频数需适合渐近近似。",
+          "多选选项计数、重复测量和加权调查不能直接当普通独立单元表。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "effect-size",
+          "distinction": "卡方统计量与样本量相关，不能独自代表实际关联强弱。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "整体显著能指出哪一格造成差异吗？",
+          "answer": "不能直接指出。查看比例与残差，若追加比较需预先说明多重比较规则。"
+        }
+      ]
+    },
+    {
+      "id": "t-test",
+      "version": 1,
+      "name": "两独立样本 t 检验",
+      "englishName": "two-sample t-test",
+      "aliases": [
+        "t检验",
+        "Welch",
+        "韦尔奇",
+        "均值差检验"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "在相应抽样与模型条件下检验两组总体均值是否相同。Welch版本使用分别估计的组内方差，无需等方差假定。",
+      "uses": [
+        "比较两独立组数值均值，结合均值差、区间、样本大小和异常值。"
+      ],
+      "examples": [
+        "示例：A与B为不同消费者；如果同一消费者前后各回答一次，应使用配对设计，不能按两独立组处理。"
+      ],
+      "relatedIds": [
+        "analysis-of-variance",
+        "confidence-interval",
+        "effect-size"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "组间比较",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "nist-ttest",
+          "title": "NIST：两样本均值 t 检验",
+          "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda353.htm",
+          "locator": "unequal variances / Welch–Satterthwaite degrees of freedom",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "t=\\frac{\\bar x_1-\\bar x_2}{\\sqrt{s_1^2/n_1+s_2^2/n_2}}",
+        "symbols": [
+          {
+            "symbol": "\\bar x_g",
+            "meaning": "第g组均值"
+          },
+          {
+            "symbol": "s_g^2",
+            "meaning": "第g组样本方差"
+          },
+          {
+            "symbol": "n_g",
+            "meaning": "第g组有效样本量"
+          }
+        ],
+        "conditions": [
+          "此式是零均值差的Welch检验统计量，自由度按Welch–Satterthwaite计算。",
+          "组间与组内观测独立，有限方差，正态模型或适当大样本近似；异常值需检查。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "analysis-of-variance",
+          "distinction": "两组均值问题可用t检验；多组问题还需要整体与事后比较策略。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "Welch检验能处理所有非正态分布吗？",
+          "answer": "不能。它处理方差不等，不是对所有重尾、极端离群或依赖数据的通用修复。"
+        }
+      ]
+    },
+    {
+      "id": "analysis-of-variance",
+      "version": 1,
+      "name": "单因素方差分析",
+      "englishName": "one-way analysis of variance",
+      "aliases": [
+        "ANOVA",
+        "方差分析",
+        "F检验",
+        "Welch ANOVA"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "比较多个独立组的总体均值。经典单因素ANOVA通过组间与组内变动构造F统计量，整体拒绝只说明至少存在一项均值差异。",
+      "uses": [
+        "对多个组提出整体均值比较，随后按设计做已计划的对比或校正后比较。"
+      ],
+      "examples": [
+        "示例：比较三个年龄组消费金额，整体显著不意味着三组两两都不同。"
+      ],
+      "relatedIds": [
+        "t-test",
+        "multiple-comparisons",
+        "effect-size"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "多组比较",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "scipy-anova",
+          "title": "SciPy：单因素方差分析",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.f_oneway.html",
+          "locator": "Notes / equal_var / Welch ANOVA",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "F=\\frac{MS_{\\mathrm{between}}}{MS_{\\mathrm{within}}}",
+        "symbols": [
+          {
+            "symbol": "MS",
+            "meaning": "相应平方和除以自由度得到的均方"
+          },
+          {
+            "symbol": "F",
+            "meaning": "经典单因素ANOVA检验统计量"
+          }
+        ],
+        "conditions": [
+          "经典版本要求独立、组内正态及等方差；Welch ANOVA使用不同统计量与自由度。",
+          "检查零方差、组样本量、离群以及多重比较。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "t-test",
+          "distinction": "方差分析虽然名称带方差，主要检验均值，而非检验方差是否相等。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "不等方差就不能比较均值吗？",
+          "answer": "可评估Welch ANOVA等方法，但仍需独立性及适合的数据分布，并说明估计量和比较计划。"
+        }
+      ]
+    },
+    {
+      "id": "multiple-comparisons",
+      "version": 1,
+      "name": "多重比较",
+      "englishName": "multiple comparisons",
+      "aliases": [
+        "多重检验",
+        "Holm",
+        "Bonferroni",
+        "多重校正"
+      ],
+      "domain": "stats",
+      "depth": "brief",
+      "definition": "同时进行多次推断会改变整组误报风险。校正或控制程序应按照预先定义的检验家族及错误率目标选择。",
+      "uses": [
+        "报告多次两两比较时，说明校正范围与方法。"
+      ],
+      "examples": [
+        "示例：先检验总体差异再做三个组的成对比较，仍需说明成对检验怎样控制整体错误。"
+      ],
+      "relatedIds": [
+        "p-value",
+        "significance-level",
+        "analysis-of-variance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "statsmodels-multiple",
+          "title": "statsmodels：多重检验校正",
+          "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html",
+          "locator": "method，Holm、Bonferroni与FDR区分",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "structural-equation-model",
+      "version": 1,
+      "name": "结构方程模型",
+      "englishName": "structural equation modeling",
+      "aliases": [
+        "SEM",
+        "结构方程",
+        "潜变量模型",
+        "路径模型"
+      ],
+      "domain": "stats",
+      "depth": "deep",
+      "definition": "用一个模型同时描述测量关系和变量间结构关系。包含潜变量时，需要测量指标、可识别约束、适当估计和模型诊断。",
+      "uses": [
+        "当理论需要同时讨论测量和路径关系时，先写出理论模型及替代模型。"
+      ],
+      "examples": [
+        "示例：用多题测量感知价值与满意度，再分析路径；横断面拟合良好本身不证明价值导致满意度。"
+      ],
+      "relatedIds": [
+        "standard-error-mean",
+        "validity",
+        "operationalization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "lavaan-sem",
+          "title": "lavaan：结构方程模型示例",
+          "url": "https://lavaan.ugent.be/tutorial/sem.html",
+          "locator": "测量模型、结构回归、方差与协方差语法",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "formula": {
+        "tex": "\\eta=B\\eta+\\Gamma\\xi+\\zeta",
+        "symbols": [
+          {
+            "symbol": "\\eta",
+            "meaning": "内生潜变量向量"
+          },
+          {
+            "symbol": "\\xi",
+            "meaning": "外生潜变量向量"
+          },
+          {
+            "symbol": "B,\\Gamma",
+            "meaning": "结构关系系数矩阵"
+          },
+          {
+            "symbol": "\\zeta",
+            "meaning": "结构扰动"
+          }
+        ],
+        "conditions": [
+          "此为常见线性结构式，不涵盖所有SEM类型；还需测量模型和识别约束。",
+          "指定估计量、数据类型、样本、缺失处理、拟合与替代解释。"
+        ]
+      },
+      "confusions": [
+        {
+          "entryId": "standard-error-mean",
+          "distinction": "SEM也指均值标准误；此处是模型家族。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "路径系数显著就说明因果关系成立吗？",
+          "answer": "不成立。模型路径是假设表达；因果解释还依赖设计、时间顺序与识别假设。"
+        }
+      ]
+    },
+    {
+      "id": "vector",
+      "version": 1,
+      "name": "向量",
+      "englishName": "vector",
+      "aliases": [
+        "矢量",
+        "特征向量表示",
+        "数据向量"
+      ],
+      "domain": "math",
+      "depth": "brief",
+      "definition": "在指定空间中按顺序组织的一组分量，可以表示位置、方向或多个数值特征。分量的次序、维度和单位决定其意义。",
+      "uses": [
+        "理解受访者特征表示以及线性代数运算。"
+      ],
+      "examples": [
+        "示例：以(消费额,购买次数)表示个人时，两项单位不同，计算距离前应考虑尺度。"
+      ],
+      "relatedIds": [
+        "matrix",
+        "distance",
+        "feature"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-linear-notes",
+          "title": "MIT OpenCourseWare：线性方程几何讲义",
+          "url": "https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/6913aa2f37dada8fdda334168b30339b_MIT18_06SCF11_Ses1.1sum.pdf",
+          "locator": "PDF第2—3页，Column Picture / Matrix Picture",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "matrix",
+      "version": 1,
+      "name": "矩阵",
+      "englishName": "matrix",
+      "aliases": [
+        "数据矩阵",
+        "矩阵运算",
+        "matrix algebra"
+      ],
+      "domain": "math",
+      "depth": "brief",
+      "definition": "按行与列排列的数值对象。调查中常以行表示观测单位、列表示变量；矩阵运算还可能表示线性变换。",
+      "uses": [
+        "理解多变量分析输入和公式维度。"
+      ],
+      "examples": [
+        "示例：100名受访者、4项测量构成100×4数据矩阵，转置后不再有相同的行单位。"
+      ],
+      "relatedIds": [
+        "vector",
+        "eigenvalue",
+        "principal-components"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mit-linear-notes",
+          "title": "MIT OpenCourseWare：线性方程几何讲义",
+          "url": "https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/6913aa2f37dada8fdda334168b30339b_MIT18_06SCF11_Ses1.1sum.pdf",
+          "locator": "PDF第2—3页，Column Picture / Matrix Picture",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "eigenvalue",
+      "version": 1,
+      "name": "特征值与特征向量",
+      "englishName": "eigenvalue and eigenvector",
+      "aliases": [
+        "特征值",
+        "特征向量",
+        "eigenvalues",
+        "λ"
+      ],
+      "domain": "math",
+      "depth": "brief",
+      "definition": "对方阵A，非零向量v满足Av=λv时，v为特征向量、λ为对应特征值。实特征向量与实特征值情形下，该方向经变换只被缩放或反向；一般情况可涉及复数。",
+      "uses": [
+        "理解PCA方向及协方差矩阵分解。"
+      ],
+      "examples": [
+        "示例：对角矩阵diag(2,1)沿第一坐标方向将向量长度扩大为2倍，对应特征值2。"
+      ],
+      "relatedIds": [
+        "matrix",
+        "principal-components"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "numpy-eig",
+          "title": "NumPy：特征值与特征向量",
+          "url": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html",
+          "locator": "Notes，av=w v",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "gradient",
+      "version": 1,
+      "name": "梯度",
+      "englishName": "gradient",
+      "aliases": [
+        "grad",
+        "∇",
+        "偏导向量",
+        "最速上升"
+      ],
+      "domain": "math",
+      "depth": "brief",
+      "definition": "标量函数各坐标偏导组成的向量。在指定欧氏坐标度量下，指向局部一阶增幅最大的方向；负梯度常用于优化。",
+      "uses": [
+        "理解参数训练与优化迭代。"
+      ],
+      "examples": [
+        "示例：f(x,y)=x²+y²的梯度为(2x,2y)，在(1,2)为(2,4)。"
+      ],
+      "relatedIds": [
+        "vector",
+        "overfitting"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "scipy-opt",
+          "title": "SciPy：多变量优化",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html",
+          "locator": "jac / gradient vector / numerical differentiation",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "distance",
+      "version": 1,
+      "name": "距离与尺度",
+      "englishName": "distance and scaling",
+      "aliases": [
+        "欧氏距离",
+        "Euclidean distance",
+        "距离度量",
+        "L2"
+      ],
+      "domain": "math",
+      "depth": "brief",
+      "definition": "距离刻画对象之间的差异程度，需选择与特征含义相适应的度量。欧氏距离是坐标差平方和的平方根。",
+      "uses": [
+        "聚类与近邻分析前判断特征量纲、标准化和距离选择。"
+      ],
+      "examples": [
+        "示例：收入以元记录、满意度为1—5，未经尺度处理的欧氏距离可能几乎只由收入决定。"
+      ],
+      "relatedIds": [
+        "vector",
+        "k-means",
+        "feature"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "numpy-norm",
+          "title": "NumPy：矩阵和向量范数",
+          "url": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html",
+          "locator": "ord=None / vector2-norm",
+          "scope": "定义与条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "api",
+      "version": 1,
+      "name": "应用程序接口",
+      "englishName": "application programming interface",
+      "aliases": [
+        "API",
+        "接口",
+        "API Key"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "供软件之间按约定交互的功能与规则集合。API Key通常是调用服务时使用的凭据，并非接口本身。",
+      "uses": [
+        "理解模型连接、数据导入及服务调用边界。"
+      ],
+      "examples": [
+        "示例：软件向服务发送结构化请求并接收结果；Key用来识别或授权调用。"
+      ],
+      "relatedIds": [
+        "json",
+        "idempotency"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "模型服务",
+          "href": "/services"
+        }
+      ],
+      "sources": [
+        {
+          "id": "mdn-api",
+          "title": "MDN：API",
+          "url": "https://developer.mozilla.org/en-US/docs/Glossary/API",
+          "locator": "API定义与接口契约",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "sha256",
+      "version": 1,
+      "name": "SHA-256 文件指纹",
+      "englishName": "SHA-256",
+      "aliases": [
+        "SHA256",
+        "哈希",
+        "hash",
+        "内容摘要",
+        "文件指纹"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "将字节序列映射为256位摘要的密码学哈希算法。它用于核对内容是否变化；摘要本身不证明数据真实、合法或没有被伪造。",
+      "uses": [
+        "给数据和成果版本登记指纹，检查导出、回读是否一致。"
+      ],
+      "examples": [
+        "示例：仅换行符变化也会改变文件字节摘要，因此字节指纹与语义内容不同。"
+      ],
+      "relatedIds": [
+        "utf8",
+        "csv",
+        "transaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "nist-sha",
+          "title": "NIST FIPS180-4：Secure Hash Standard",
+          "url": "https://csrc.nist.gov/pubs/fips/180-4/upd1/final",
+          "locator": "SHA系列摘要算法",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "utf8",
+      "version": 1,
+      "name": "UTF-8 字符编码",
+      "englishName": "UTF-8",
+      "aliases": [
+        "UTF8",
+        "字符编码",
+        "Unicode",
+        "乱码"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "以1—4个字节编码Unicode标量值的方式。字符、码点与字节是不同概念，读取时采用错误编码可能造成乱码。",
+      "uses": [
+        "检查中文CSV、题干及跨语言接口传输。"
+      ],
+      "examples": [
+        "示例：同一中文文字在UTF-8与其他编码下的字节不同；切勿仅凭文件后缀判断编码。"
+      ],
+      "relatedIds": [
+        "csv",
+        "json",
+        "sha256"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mdn-utf8",
+          "title": "MDN：UTF-8",
+          "url": "https://developer.mozilla.org/en-US/docs/Glossary/UTF-8",
+          "locator": "Unicode与可变长编码",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "csv",
+      "version": 1,
+      "name": "CSV 表格文件",
+      "englishName": "comma-separated values",
+      "aliases": [
+        "CSV",
+        "TSV",
+        "逗号分隔",
+        "分隔文件"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "用文本表达记录与字段的表格交换格式。分隔符、引号、换行和字符编码需约定；CSV不自带完整变量测量信息。",
+      "uses": [
+        "导入答卷时核对分隔符、表头和变量字典。"
+      ],
+      "examples": [
+        "示例：带逗号的选项文字需要正确引号保护；不能简单按每个逗号拆开。"
+      ],
+      "relatedIds": [
+        "utf8",
+        "missing-value",
+        "json"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "导入数据",
+          "href": "/workspace#analysis"
+        }
+      ],
+      "sources": [
+        {
+          "id": "python-csv",
+          "title": "Python：CSV文件读取与写入",
+          "url": "https://docs.python.org/3/library/csv.html",
+          "locator": "Dialects / quoting / newline",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "json",
+      "version": 1,
+      "name": "JSON 数据格式",
+      "englishName": "JavaScript Object Notation",
+      "aliases": [
+        "JSON",
+        "结构化数据",
+        "键值"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "以对象、数组、字符串、数字、布尔和null等表达结构化数据的文本格式。语法正确不意味着符合业务约束。",
+      "uses": [
+        "理解问卷、方案和版本的结构化保存。"
+      ],
+      "examples": [
+        "示例：一个节点对象可以有id与标题，但重复id仍可能违反流程约束。"
+      ],
+      "relatedIds": [
+        "api",
+        "transaction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mdn-json",
+          "title": "MDN：JSON",
+          "url": "https://developer.mozilla.org/en-US/docs/Glossary/JSON",
+          "locator": "文本数据交换格式",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "transaction",
+      "version": 1,
+      "name": "数据库事务",
+      "englishName": "database transaction",
+      "aliases": [
+        "事务",
+        "ACID",
+        "原子提交",
+        "rollback"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "将多项数据库操作作为一个整体提交或回滚的机制。事务隔离及并发约束还决定其他操作能看见什么。",
+      "uses": [
+        "理解为什么保存版本、扣减预算和登记任务需要统一确认。"
+      ],
+      "examples": [
+        "示例：预算预留成功而任务创建失败，应一起回滚，避免留下无任务的额度占用。"
+      ],
+      "relatedIds": [
+        "idempotency",
+        "api"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "postgres-transaction",
+          "title": "PostgreSQL：事务",
+          "url": "https://www.postgresql.org/docs/current/tutorial-transactions.html",
+          "locator": "BEGIN / COMMIT / ROLLBACK",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "idempotency",
+      "version": 1,
+      "name": "幂等性",
+      "englishName": "idempotency",
+      "aliases": [
+        "幂等",
+        "重复请求",
+        "idempotent",
+        "请求去重"
+      ],
+      "domain": "computing",
+      "depth": "brief",
+      "definition": "在同一约定下重复执行操作，其预期效果与执行一次相同。它并不保证返回内容完全相同，也不自动等于不会重复计费。",
+      "uses": [
+        "防止重复点击、重试和队列重复消息重复发布成果。"
+      ],
+      "examples": [
+        "示例：同一幂等键对应同一保存意图；换了版本或内容不能冒用原键。"
+      ],
+      "relatedIds": [
+        "transaction",
+        "api"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "mdn-idem",
+          "title": "MDN：幂等",
+          "url": "https://developer.mozilla.org/en-US/docs/Glossary/Idempotent",
+          "locator": "同一请求重复的预期服务端效果",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "feature",
+      "version": 1,
+      "name": "特征",
+      "englishName": "feature",
+      "aliases": [
+        "features",
+        "输入特征",
+        "特征变量",
+        "解释变量"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "模型用于描述一个对象的输入属性或其变换。是否允许使用某一特征取决于任务、可获得时间与数据含义。",
+      "uses": [
+        "在预测或聚类前建立特征字典与预处理规则。"
+      ],
+      "examples": [
+        "示例：预测购买前意愿时，交易完成后的付款状态不属于当时可获得的合法预测输入。"
+      ],
+      "relatedIds": [
+        "data-leakage",
+        "vector",
+        "distance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-cv",
+          "title": "scikit-learn：交叉验证",
+          "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+          "locator": "3.1，训练测试分离、预处理与交叉验证",
+          "scope": "概念定义与使用条件；原创教学解释"
+        },
+        {
+          "id": "sklearn-leak",
+          "title": "scikit-learn：常见错误与防数据泄漏",
+          "url": "https://scikit-learn.org/stable/common_pitfalls.html",
+          "locator": "Data leakage / pipelines",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "overfitting",
+      "version": 1,
+      "name": "过拟合",
+      "englishName": "overfitting",
+      "aliases": [
+        "过度拟合",
+        "overfit",
+        "泛化不足"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "模型过多适应训练数据的偶然特点，以至于在新的适用数据上表现下降。复杂度、数据量和验证方式共同影响风险。",
+      "uses": [
+        "比较训练和验证表现，避免把样本内准确率当泛化能力。"
+      ],
+      "examples": [
+        "示例：把训练样本逐条记住能得到满分，却无法预测新受访者。"
+      ],
+      "relatedIds": [
+        "cross-validation",
+        "train-test-split",
+        "data-leakage"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-cv",
+          "title": "scikit-learn：交叉验证",
+          "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+          "locator": "3.1，训练测试分离、预处理与交叉验证",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "cross-validation",
+      "version": 1,
+      "name": "交叉验证",
+      "englishName": "cross-validation",
+      "aliases": [
+        "CV",
+        "K折",
+        "k-fold",
+        "交叉检验"
+      ],
+      "domain": "ml",
+      "depth": "deep",
+      "definition": "多次划分训练与验证部分，用未参与本轮拟合的样本评估模型。划分必须符合时间、群组及调参设计。",
+      "uses": [
+        "估计泛化表现，比较候选方法；把数据预处理也放在每折训练内部。"
+      ],
+      "examples": [
+        "示例：同一受访者有多次答卷，应按受访者分组分折，不能让其不同答卷同时进入训练与验证。"
+      ],
+      "relatedIds": [
+        "overfitting",
+        "data-leakage",
+        "train-test-split"
+      ],
+      "methodIds": [
+        "prediction-validation"
+      ],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-cv",
+          "title": "scikit-learn：交叉验证",
+          "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+          "locator": "3.1，训练测试分离、预处理与交叉验证",
+          "scope": "概念定义与使用条件；原创教学解释"
+        },
+        {
+          "id": "sklearn-leak",
+          "title": "scikit-learn：常见错误与防数据泄漏",
+          "url": "https://scikit-learn.org/stable/common_pitfalls.html",
+          "locator": "Data leakage / pipelines",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "train-test-split",
+          "distinction": "独立测试集通常留到最后；交叉验证主要用于开发选择，反复查看测试结果会污染验收。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "随机五折总是最合适吗？",
+          "answer": "不是。时间预测应保持先后，重复对象应分组；折数与分法要对应未来使用情景。"
+        }
+      ]
+    },
+    {
+      "id": "data-leakage",
+      "version": 1,
+      "name": "数据泄漏",
+      "englishName": "data leakage",
+      "aliases": [
+        "信息泄漏",
+        "目标泄漏",
+        "训练泄漏",
+        "leakage"
+      ],
+      "domain": "ml",
+      "depth": "deep",
+      "definition": "模型开发使用了在真实预测时不可获得的信息，或让验证数据影响训练与选择，使评估变得过于乐观。",
+      "uses": [
+        "核对特征时间、重复对象、预处理拟合范围和标签来源。"
+      ],
+      "examples": [
+        "示例：先用全体样本均值填补缺失，再拆分训练测试，测试分布已参与预处理；应只在训练集拟合填补规则。"
+      ],
+      "relatedIds": [
+        "cross-validation",
+        "feature",
+        "train-test-split"
+      ],
+      "methodIds": [
+        "prediction-validation"
+      ],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-leak",
+          "title": "scikit-learn：常见错误与防数据泄漏",
+          "url": "https://scikit-learn.org/stable/common_pitfalls.html",
+          "locator": "Data leakage / pipelines",
+          "scope": "概念定义与使用条件；原创教学解释"
+        },
+        {
+          "id": "sklearn-cv",
+          "title": "scikit-learn：交叉验证",
+          "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+          "locator": "3.1，训练测试分离、预处理与交叉验证",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "overfitting",
+          "distinction": "泄漏是验证或信息边界出错；过拟合也可能在没有泄漏时发生。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "没有使用目标列就不会泄漏吗？",
+          "answer": "仍可能泄漏。目标的代理、事后变量、重复记录和使用全样本的特征选择都需要检查。"
+        }
+      ]
+    },
+    {
+      "id": "k-means",
+      "version": 1,
+      "name": "K-means 聚类",
+      "englishName": "K-means clustering",
+      "aliases": [
+        "K均值",
+        "kmeans",
+        "K-means",
+        "聚类"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "将数据分为指定K个组，通过迭代分配与更新中心，减小组内平方距离之和。结果依赖尺度、K和初始化，并不自动发现真实市场类别。",
+      "uses": [
+        "探索人群分层，记录特征、尺度、种子、选择K依据与稳定性。"
+      ],
+      "examples": [
+        "示例：消费频率与消费额聚成三组后，应检查重抽样是否稳定，不能仅凭一次结果命名永久人群。"
+      ],
+      "relatedIds": [
+        "distance",
+        "feature",
+        "market-segmentation"
+      ],
+      "methodIds": [
+        "segment-stability"
+      ],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-kmeans",
+          "title": "scikit-learn：K-means",
+          "url": "https://scikit-learn.org/stable/modules/clustering.html#k-means",
+          "locator": "K-means，inertia、局部最小值与初始化",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "principal-components",
+      "version": 1,
+      "name": "主成分分析",
+      "englishName": "principal component analysis",
+      "aliases": [
+        "PCA",
+        "主成分",
+        "降维",
+        "主成分提取"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "把相关数值变量转换到相互正交的最大方差方向，用少数方向概括变动。高解释方差不等于具有强因果意义。",
+      "uses": [
+        "理解高维数据压缩、变量尺度和主成分解释。"
+      ],
+      "examples": [
+        "示例：两个高度相关消费指标可能被一个方向概括，但若金额尺度远大于频次，先核对标准化。"
+      ],
+      "relatedIds": [
+        "eigenvalue",
+        "matrix",
+        "distance"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-pca",
+          "title": "scikit-learn：主成分分析",
+          "url": "https://scikit-learn.org/stable/modules/decomposition.html#pca",
+          "locator": "2.5.1 PCA，最大方差方向",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "train-test-split",
+      "version": 1,
+      "name": "训练集与测试集",
+      "englishName": "training and test sets",
+      "aliases": [
+        "训练集",
+        "测试集",
+        "验证集",
+        "holdout",
+        "训练测试划分"
+      ],
+      "domain": "ml",
+      "depth": "brief",
+      "definition": "训练集用于拟合；验证数据用于开发选择；最终测试数据用于评估未见样本表现。三者的角色取决于实验设计，而非文件名。",
+      "uses": [
+        "在预测前固定划分与分组规则，登记最终测试是否被用于调参。"
+      ],
+      "examples": [
+        "示例：每次看测试集成绩后换模型，测试集逐渐成为开发集，需要新的独立评估。"
+      ],
+      "relatedIds": [
+        "cross-validation",
+        "data-leakage",
+        "overfitting"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sklearn-cv",
+          "title": "scikit-learn：交叉验证",
+          "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+          "locator": "3.1，训练测试分离、预处理与交叉验证",
+          "scope": "概念定义与使用条件；原创教学解释"
+        },
+        {
+          "id": "sklearn-leak",
+          "title": "scikit-learn：常见错误与防数据泄漏",
+          "url": "https://scikit-learn.org/stable/common_pitfalls.html",
+          "locator": "Data leakage / pipelines",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "population",
+      "version": 1,
+      "name": "目标总体",
+      "englishName": "target population",
+      "aliases": [
+        "总体",
+        "母体",
+        "研究总体",
+        "population"
+      ],
+      "domain": "research",
+      "depth": "brief",
+      "definition": "研究希望描述或推断的全部合格单位，应明确单位、地域、时间和纳入条件。它与实际样本及抽样框不必相同。",
+      "uses": [
+        "写研究范围、设计抽样和报告外推边界。"
+      ],
+      "examples": [
+        "示例：本学期武汉在校本科生，不等于某个社团群中的所有成员。"
+      ],
+      "relatedIds": [
+        "sampling-frame",
+        "sample",
+        "selection-bias"
+      ],
+      "methodIds": [],
+      "materialIds": [
+        "local-population-frame"
+      ],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "openstax-stats-terms",
+          "title": "OpenStax：统计学关键术语",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/1-1-definitions-of-statistics-probability-and-key-terms",
+          "locator": "Key Terms，总体、样本、参数与统计量",
+          "scope": "概念定义与使用条件；原创教学解释"
+        },
+        {
+          "id": "aapor-best",
+          "title": "AAPOR：调查研究最佳实践",
+          "url": "https://aapor.org/standards-and-ethics/best-practices/",
+          "locator": "Select a sample / sampling frame / questionnaire pretesting",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "sample",
+      "version": 1,
+      "name": "样本与分析样本",
+      "englishName": "sample and analysis sample",
+      "aliases": [
+        "样本",
+        "有效样本",
+        "样本量",
+        "n"
+      ],
+      "domain": "research",
+      "depth": "brief",
+      "definition": "样本是实际观察的研究单位集合；某项分析样本是满足该分析纳入、变量与分支条件的子集。回收数、质控后人数和每项有效n应分开记录。",
+      "uses": [
+        "为每个图表和检验说明真实分母。"
+      ],
+      "examples": [
+        "示例：回收300份，经预先登记质控留下280份；两题均有效者260人，相关分析应报260。"
+      ],
+      "relatedIds": [
+        "population",
+        "missing-value",
+        "design-effect"
+      ],
+      "methodIds": [
+        "sample-denominator"
+      ],
+      "materialIds": [
+        "local-missing-scope"
+      ],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "openstax-stats-terms",
+          "title": "OpenStax：统计学关键术语",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/1-1-definitions-of-statistics-probability-and-key-terms",
+          "locator": "Key Terms，总体、样本、参数与统计量",
+          "scope": "概念定义与使用条件；原创教学解释"
+        },
+        {
+          "id": "aapor-best",
+          "title": "AAPOR：调查研究最佳实践",
+          "url": "https://aapor.org/standards-and-ethics/best-practices/",
+          "locator": "Select a sample / sampling frame / questionnaire pretesting",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "operationalization",
+      "version": 1,
+      "name": "操作化",
+      "englishName": "operationalization",
+      "aliases": [
+        "操作性定义",
+        "概念操作化",
+        "操作定义",
+        "operational definition"
+      ],
+      "domain": "research",
+      "depth": "deep",
+      "definition": "把抽象概念落实为可复述的观察或测量步骤，明确对象、指标、时间和计分方式，使他人知道实际测了什么。",
+      "uses": [
+        "连接研究问题、变量、问卷题项和分析结果。"
+      ],
+      "examples": [
+        "示例：将出行便利定义为最近一次到店时间、换乘次数和主观便利评价，而不是只用一句“出行方便”。"
+      ],
+      "relatedIds": [
+        "validity",
+        "likert-scale",
+        "structural-equation-model"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "问卷设计",
+          "href": "/workspace#design"
+        }
+      ],
+      "sources": [
+        {
+          "id": "openstax-operation",
+          "title": "OpenStax：变量操作性定义",
+          "url": "https://openstax.org/books/psychology-2e/pages/2-3-analyzing-findings",
+          "locator": "operational definition与相关/因果区分",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "validity",
+          "distinction": "操作化说明怎样测；效度证据回答这样测是否支持目标解释。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "直接引用成熟量表就不需要操作化说明吗？",
+          "answer": "仍需交代构念、适用人群、改编、题项、量尺与计分；原研究的证据不能自动覆盖新用途。"
+        }
+      ]
+    },
+    {
+      "id": "likert-scale",
+      "version": 1,
+      "name": "李克特题项与量表",
+      "englishName": "Likert item and scale",
+      "aliases": [
+        "Likert",
+        "李克特",
+        "李氏量表",
+        "五点量表",
+        "量表题"
+      ],
+      "domain": "research",
+      "depth": "brief",
+      "definition": "李克特型题项以有序选项表达同意等程度；多道相关题项可按有依据的计分规则组成量表。单题与合成分数的测量性质需分别判断。",
+      "uses": [
+        "设计态度测量，说明选项锚点、方向和合成规则。"
+      ],
+      "examples": [
+        "示例：“非常不同意”至“非常同意”编码1—5，数字标签本身不证明相邻心理距离相等。"
+      ],
+      "relatedIds": [
+        "reverse-item",
+        "cronbach-alpha",
+        "operationalization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "uk-question-design",
+          "title": "英国Government Analysis Function：问卷设计",
+          "url": "https://analysisfunction.civilservice.gov.uk/policy-store/questionnaire-design-guidance/",
+          "locator": "Rating scales / testing questions",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "pilot-study",
+      "version": 1,
+      "name": "预测试",
+      "englishName": "pilot study and pretesting",
+      "aliases": [
+        "预调查",
+        "预测试",
+        "pilot",
+        "试填",
+        "认知访谈"
+      ],
+      "domain": "research",
+      "depth": "brief",
+      "definition": "正式调查前用适当对象测试题目理解、操作流程、跳题、耗时和数据产出，并依据真实观察记录修改。",
+      "uses": [
+        "在发布前发现歧义与流程问题；把试填与正式样本分开。"
+      ],
+      "examples": [
+        "示例：请试填者解释“最近”指几天，若理解各异，就把时间范围明确为过去30天。"
+      ],
+      "relatedIds": [
+        "operationalization",
+        "likert-scale",
+        "validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [
+        {
+          "label": "问卷试填",
+          "href": "/workspace#design"
+        }
+      ],
+      "sources": [
+        {
+          "id": "aapor-best",
+          "title": "AAPOR：调查研究最佳实践",
+          "url": "https://aapor.org/standards-and-ethics/best-practices/",
+          "locator": "Select a sample / sampling frame / questionnaire pretesting",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        },
+        {
+          "id": "uk-question-design",
+          "title": "英国Government Analysis Function：问卷设计",
+          "url": "https://analysisfunction.civilservice.gov.uk/policy-store/questionnaire-design-guidance/",
+          "locator": "Rating scales / testing questions",
+          "scope": "概念定义与使用条件；原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "selection-bias",
+      "version": 1,
+      "name": "选择偏差",
+      "englishName": "selection bias",
+      "aliases": [
+        "自选择偏差",
+        "招募偏差",
+        "样本选择",
+        "便利样本"
+      ],
+      "domain": "research",
+      "depth": "brief",
+      "definition": "进入或留在研究样本的机制与所研究特征关联，使观察到的关系或分布偏离目标。扩大同渠道样本通常不能自动消除它。",
+      "uses": [
+        "检查招募渠道、覆盖、拒答与排除规则，并限制外推。"
+      ],
+      "examples": [
+        "示例：只向球迷群发赛事满意度问卷，无法代表所有城市居民。"
+      ],
+      "relatedIds": [
+        "sampling-frame",
+        "population",
+        "sample"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "aapor-best",
+          "title": "AAPOR：调查研究最佳实践",
+          "url": "https://aapor.org/standards-and-ethics/best-practices/",
+          "locator": "Select a sample / sampling frame / questionnaire pretesting",
+          "scope": "概念定义与使用条件；本文为原创教学解释"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "mixed-methods",
+      "version": 1,
+      "name": "混合方法研究",
+      "englishName": "mixed methods research",
+      "aliases": [
+        "mixed methods",
+        "定量定性结合",
+        "混合研究",
+        "三角互证"
+      ],
+      "domain": "research",
+      "depth": "brief",
+      "definition": "在研究设计、收集、分析或解释中有计划地整合定量与定性方法，以回答单一路径难以回答的问题。仅并列两份结果不等于完成整合。",
+      "uses": [
+        "用访谈解释统计发现，或由访谈形成待量化检验的题项。"
+      ],
+      "examples": [
+        "示例：先访谈提出便利性维度，再调查其分布，最后对相互矛盾结果做联合解释。"
+      ],
+      "relatedIds": [
+        "operationalization",
+        "abduction",
+        "validity"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "nih-mixed",
+          "title": "NIH：混合方法研究最佳实践",
+          "url": "https://obssr.od.nih.gov/sites/g/files/mnhszr296/files/Best_Practices_for_Mixed_Methods_Research.pdf",
+          "locator": "Nature and Design of Mixed Methods Research",
+          "scope": "健康研究语境；此处解释方法整合，不作为赛事规范"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "epistemology",
+      "version": 1,
+      "name": "认识论",
+      "englishName": "epistemology",
+      "aliases": [
+        "知识论",
+        "认识论",
+        "知识与证据"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "讨论知识、信念、证成及其来源和界限的哲学领域。研究中可用它检查“为什么相信这一结论”以及证据支持到什么程度。",
+      "uses": [
+        "辨别观察、解释和价值判断，整理主张与依据关系。"
+      ],
+      "examples": [
+        "示例：几位访谈者认可某建议，是他们的意见记录；要推断全体居民也认可，还需要其他依据。"
+      ],
+      "relatedIds": [
+        "induction",
+        "deduction",
+        "abduction"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sep-epistem",
+          "title": "Stanford Encyclopedia of Philosophy：认识论",
+          "url": "https://plato.stanford.edu/entries/epistemology/",
+          "locator": "What is Knowledge? / What is Justification?",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "induction",
+      "version": 1,
+      "name": "归纳推理",
+      "englishName": "inductive reasoning",
+      "aliases": [
+        "归纳",
+        "induction",
+        "由样本推广"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "由观察到的事例或规律提出超出已知前提的信息，支持一般判断或未来判断。前提为真也不逻辑保证结论必真。",
+      "uses": [
+        "理解从样本到总体、从已观察到未观察的推断需要哪些条件。"
+      ],
+      "examples": [
+        "示例：访谈的顾客都重视价格，可以形成待检验线索，不能直接断定每位顾客都重视价格。"
+      ],
+      "relatedIds": [
+        "deduction",
+        "abduction",
+        "selection-bias"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sep-induction",
+          "title": "Stanford Encyclopedia of Philosophy：归纳逻辑",
+          "url": "https://plato.stanford.edu/entries/logic-inductive/",
+          "locator": "Introduction，归纳支持与不确定性",
+          "scope": "概念解释与应用边界；原创教学表述"
+        },
+        {
+          "id": "sep-abduction",
+          "title": "Stanford Encyclopedia of Philosophy：溯因推理",
+          "url": "https://plato.stanford.edu/entries/abduction/",
+          "locator": "1.1 Deduction, induction, abduction / 3 Status",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "deduction",
+      "version": 1,
+      "name": "演绎推理",
+      "englishName": "deductive reasoning",
+      "aliases": [
+        "演绎",
+        "deduction",
+        "逻辑推导"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "在有效推理形式下，结论由前提必然推出。有效性保证前提都为真时结论为真，但不替代对前提事实的核验。",
+      "uses": [
+        "检查论证是否跳步、条件是否齐全。"
+      ],
+      "examples": [
+        "示例：若项目定义所有纳入者都须近30天购买，且某人已纳入，则按定义他应满足该条件；还需核验纳入记录。"
+      ],
+      "relatedIds": [
+        "induction",
+        "abduction",
+        "epistemology"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sep-abduction",
+          "title": "Stanford Encyclopedia of Philosophy：溯因推理",
+          "url": "https://plato.stanford.edu/entries/abduction/",
+          "locator": "1.1 Deduction, induction, abduction / 3 Status",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "abduction",
+      "version": 1,
+      "name": "溯因推理",
+      "englishName": "abductive reasoning",
+      "aliases": [
+        "溯因",
+        "最佳解释推理",
+        "abduction",
+        "推断最佳解释"
+      ],
+      "domain": "philosophy",
+      "depth": "deep",
+      "definition": "从已观察的现象比较候选解释，提出或支持较合适的解释。它超出逻辑演绎，解释优越性仍须证据检验。",
+      "uses": [
+        "在研究发现中组织解释与替代解释，指导后续调查。"
+      ],
+      "examples": [
+        "示例：赛事满意度下降可能来自排队，也可能来自天气、票价或样本变动；逐项提出可观察预测，而非直接选择最顺口的原因。"
+      ],
+      "relatedIds": [
+        "induction",
+        "deduction",
+        "falsifiability"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sep-abduction",
+          "title": "Stanford Encyclopedia of Philosophy：溯因推理",
+          "url": "https://plato.stanford.edu/entries/abduction/",
+          "locator": "1.1 Deduction, induction, abduction / 3 Status",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "deduction",
+          "distinction": "现象可由某解释产生，不代表该解释已被必然推出。"
+        },
+        {
+          "entryId": "induction",
+          "distinction": "归纳常依赖观测频率，溯因显式比较解释能力；边界在哲学中也有争议。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "最简单的解释就一定是真的？",
+          "answer": "不一定。简洁性是比较考虑之一，还需覆盖事实、与背景知识一致及经新证据检验。"
+        }
+      ]
+    },
+    {
+      "id": "falsifiability",
+      "version": 1,
+      "name": "可证伪性",
+      "englishName": "falsifiability",
+      "aliases": [
+        "证伪",
+        "可反驳",
+        "falsifiable"
+      ],
+      "domain": "philosophy",
+      "depth": "brief",
+      "definition": "一个主张是否允许明确的经验结果与之冲突。它用于讨论科学主张的可检验性，不等于被否定一次就可忽略测量和辅助假设。",
+      "uses": [
+        "把模糊解释转成可检查的预测和反例条件。"
+      ],
+      "examples": [
+        "示例：“所有高满意顾客都会复购”可由一名可靠观察到未复购的高满意顾客反驳，但需确认时间与复购定义。"
+      ],
+      "relatedIds": [
+        "abduction",
+        "deduction",
+        "operationalization"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "sep-popper",
+          "title": "Stanford Encyclopedia of Philosophy：Karl Popper",
+          "url": "https://plato.stanford.edu/entries/popper/",
+          "locator": "Falsifiability / scientific methodology",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "gis",
+      "version": 1,
+      "name": "地理信息系统",
+      "englishName": "geographic information system",
+      "aliases": [
+        "GIS",
+        "地理信息",
+        "空间数据系统"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "用于管理、分析和展示地理定位数据与属性信息的系统。地图可视化只是其中一部分，数据位置和空间关系也能用于分析。",
+      "uses": [
+        "理解门店位置、服务范围和空间样本分布。"
+      ],
+      "examples": [
+        "示例：把调查点与交通站点放在同一坐标参考系后，再分析可达关系。"
+      ],
+      "relatedIds": [
+        "coordinate-reference-system",
+        "spatial-autocorrelation",
+        "modifiable-areal-unit"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "qgis-intro",
+          "title": "QGIS：GIS介绍",
+          "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/introducing_gis.html",
+          "locator": "Overview，GIS与空间数据",
+          "scope": "固定3.40文档用于稳定概念说明，非当前软件安装指南"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "coordinate-reference-system",
+      "version": 1,
+      "name": "坐标参考系",
+      "englishName": "coordinate reference system",
+      "aliases": [
+        "CRS",
+        "坐标系",
+        "WGS84",
+        "地图投影"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "规定坐标怎样对应地球上位置的参考框架。经纬度与投影坐标的单位、基准和适用范围不同，不能直接混用。",
+      "uses": [
+        "叠加空间数据及计算距离、面积前核对。"
+      ],
+      "examples": [
+        "示例：经纬度的度数不是米；选用投影仍需检查目标区域内的距离和面积变形。"
+      ],
+      "relatedIds": [
+        "gis",
+        "distance",
+        "spatial-autocorrelation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "qgis-crs",
+          "title": "QGIS：坐标参考系",
+          "url": "https://docs.qgis.org/3.40/en/docs/gentle_gis_introduction/coordinate_reference_systems.html",
+          "locator": "8.4—8.5，投影变形与CRS",
+          "scope": "固定版本概念说明；具体坐标变换与地图使用须另核"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "spatial-autocorrelation",
+      "version": 1,
+      "name": "空间自相关",
+      "englishName": "spatial autocorrelation",
+      "aliases": [
+        "Moran I",
+        "Moran's I",
+        "莫兰指数",
+        "空间相关"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "空间邻近或由权重矩阵连接的单位，其属性是否呈相似或相异分布的关系。Global Moran's I是一种整体概括，解释依赖空间权重与零假设。",
+      "uses": [
+        "观察区域指标是否聚集，核对邻接规则与多尺度稳定性。"
+      ],
+      "examples": [
+        "示例：邻近街区满意度相似可表现为正空间自相关，但不能由此推断具体顾客互相影响。"
+      ],
+      "relatedIds": [
+        "gis",
+        "coordinate-reference-system",
+        "ecological-fallacy"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "esri-moran",
+          "title": "Esri：Global Moran's I原理",
+          "url": "https://doc.esri.com/en/arcgis-pro/latest/tool-reference/spatial-statistics/h-how-spatial-autocorrelation-moran-s-i-spatial-st.html",
+          "locator": "Global Moran's I，邻接与空间权重",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "ecological-fallacy",
+      "version": 1,
+      "name": "生态谬误",
+      "englishName": "ecological fallacy",
+      "aliases": [
+        "聚合谬误",
+        "区群谬误",
+        "生态学谬误",
+        "群体推断个体"
+      ],
+      "domain": "geography",
+      "depth": "deep",
+      "definition": "把群体或地区层面的统计关系直接解释为个体层面的关系。聚合改变了分析单位，两个层级的关联可能不同甚至相反。",
+      "uses": [
+        "使用城市、街道或高校汇总数据时，核对每个结论的分析单位。"
+      ],
+      "examples": [
+        "示例：富裕城区的平均消费更高，不足以证明该城区中收入更高的每个人都消费更多；城区构成与个体差异要分别检验。"
+      ],
+      "relatedIds": [
+        "modifiable-areal-unit",
+        "population",
+        "pearson-correlation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "robinson1950",
+          "title": "Robinson：Ecological Correlations and the Behavior of Individuals",
+          "url": "https://fisher.stats.uwo.ca/faculty/aim/2015/9938/articles/Robinson1950AmericanSociologicalReview.pdf",
+          "locator": "351—357，群体与个体相关的不同",
+          "scope": "只转述聚合层级错误，不复制历史表格或种族用语"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "modifiable-areal-unit",
+          "distinction": "MAUP关注怎样划区改变结果；生态谬误关注从聚合层级跳到个体层级。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "有地区相关数据就能给个体建议吗？",
+          "answer": "可以形成情境线索，但个体判断需要个体层级证据或明确的多层模型与假设。"
+        }
+      ]
+    },
+    {
+      "id": "modifiable-areal-unit",
+      "version": 1,
+      "name": "可变空间单元问题",
+      "englishName": "modifiable areal unit problem",
+      "aliases": [
+        "MAUP",
+        "可变面积单元问题",
+        "空间尺度效应",
+        "分区效应"
+      ],
+      "domain": "geography",
+      "depth": "brief",
+      "definition": "同一基础空间数据采用不同区域规模或边界汇总时，统计分布与关系可能改变的问题，包括尺度与分区方面。",
+      "uses": [
+        "区域比较时登记边界版本，并评估换尺度或划区后的稳定性。"
+      ],
+      "examples": [
+        "示例：按街道与按等面积网格汇总同一批门店，密度排名可能不同。"
+      ],
+      "relatedIds": [
+        "ecological-fallacy",
+        "gis",
+        "spatial-autocorrelation"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "esri-maup",
+          "title": "Esri GIS Dictionary：MAUP",
+          "url": "https://support.esri.com/en-us/gis-dictionary/modifiable-areal-unit-problem",
+          "locator": "词条定义，区域划分与统计结果",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "importance-performance",
+      "version": 1,
+      "name": "重要性—表现分析",
+      "englishName": "importance-performance analysis",
+      "aliases": [
+        "IPA",
+        "重要性表现",
+        "重要性满意度",
+        "重要性绩效",
+        "四象限"
+      ],
+      "domain": "social",
+      "depth": "deep",
+      "definition": "把属性的重要性与表现评价放入同一二维框架，用于讨论资源优先级。指标测量、轴切点和不确定性会影响象限解释。",
+      "uses": [
+        "将已明确口径的两个维度组织成决策讨论，并检查切点敏感性。"
+      ],
+      "examples": [
+        "示例：排队体验重要性高、表现低，可列入改进候选；还需核对改进成本、实施对象和证据精度。"
+      ],
+      "relatedIds": [
+        "international-phonetic",
+        "operationalization",
+        "effect-size"
+      ],
+      "methodIds": [
+        "evidence-action"
+      ],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "martilla1977",
+          "title": "Martilla与James：Importance-Performance Analysis",
+          "url": "https://journals.sagepub.com/doi/10.1177/002224297704100112",
+          "locator": "1977，41(1)，77—79；公开摘要（重要性与表现属性）",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [
+        {
+          "entryId": "international-phonetic",
+          "distinction": "IPA也指国际音标；此处为市场研究决策框架。"
+        }
+      ],
+      "questions": [
+        {
+          "question": "落在优先改进象限就证明投资一定有效吗？",
+          "answer": "不能。象限提供讨论框架，仍需成本、因果证据或试点；切点变化和评价误差也可能改变分区。"
+        }
+      ]
+    },
+    {
+      "id": "international-phonetic",
+      "version": 1,
+      "name": "国际音标",
+      "englishName": "International Phonetic Alphabet",
+      "aliases": [
+        "IPA",
+        "国际音标表",
+        "音标"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "以标准化符号表示语音的系统，由国际语音学会维护。与市场研究的IPA重要性—表现分析共享缩写，但指向不同学科。",
+      "uses": [
+        "阅读语音、语言或文本研究材料时识别缩写含义。"
+      ],
+      "examples": [
+        "示例：文献中IPA chart若讨论辅音和元音，指音标图，并非四象限分析。"
+      ],
+      "relatedIds": [
+        "importance-performance",
+        "utf8"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ipa-official",
+          "title": "International Phonetic Association：IPA与音标图",
+          "url": "https://www.internationalphoneticassociation.org/content/ipa-chart",
+          "locator": "The International Phonetic Alphabet and the IPA Chart",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "consumer-behavior",
+      "version": 1,
+      "name": "消费者行为",
+      "englishName": "consumer behavior",
+      "aliases": [
+        "购买行为",
+        "消费者决策",
+        "消费行为"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "消费者在选择、购买、使用与处置产品或服务时的活动和决策过程。行为、态度与意向需要分别测量。",
+      "uses": [
+        "区分愿意购买与已经购买，明确决策环节和研究对象。"
+      ],
+      "examples": [
+        "示例：受访者表示愿意付费是意向；真实订单或可核对的购买记录是另一类行为证据。"
+      ],
+      "relatedIds": [
+        "market-segmentation",
+        "operationalization",
+        "opportunity-cost"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "ama-consumer-behavior",
+          "title": "American Marketing Association: Consumer Behavior",
+          "url": "https://www.ama.org/topics/consumer-behavior/",
+          "locator": "What is Consumer Behavior?",
+          "scope": "消费者选择、购买、使用及处置；仅引用来源定位，解释和示例为原创。"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-15T00:20:00+08:00"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "market-segmentation",
+      "version": 1,
+      "name": "市场细分",
+      "englishName": "market segmentation",
+      "aliases": [
+        "细分市场",
+        "STP",
+        "人群细分",
+        "客群分层"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "按与决策有关的需求、特征或行为差异划分市场，以选择服务对象与方案。细分可以有理论规则，也可以由数据探索，不等同于必须聚类。",
+      "uses": [
+        "为不同人群提出有依据、可触达且可实施的策略。"
+      ],
+      "examples": [
+        "示例：按赛事参与角色区分观众与参赛者，比盲目用任意三个统计簇更可能对应实际服务。"
+      ],
+      "relatedIds": [
+        "k-means",
+        "consumer-behavior",
+        "feature"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "openstax-segment",
+          "title": "OpenStax：市场细分",
+          "url": "https://openstax.org/books/principles-marketing/pages/5-1-market-segmentation-and-consumer-markets",
+          "locator": "市场细分定义与分类依据",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    },
+    {
+      "id": "opportunity-cost",
+      "version": 1,
+      "name": "机会成本",
+      "englishName": "opportunity cost",
+      "aliases": [
+        "机会成本",
+        "替代成本",
+        "放弃收益"
+      ],
+      "domain": "social",
+      "depth": "brief",
+      "definition": "为选择某项方案而放弃的最佳可行替代方案的价值。它不仅是支付费用，也包括时间和其他稀缺资源的替代用途。",
+      "uses": [
+        "比较资源有限时的研究或行动方案。"
+      ],
+      "examples": [
+        "示例：团队用一天绘制装饰页，可能放弃一天的数据核查；比较的机会成本取决于最好可行替代工作。"
+      ],
+      "relatedIds": [
+        "importance-performance",
+        "consumer-behavior"
+      ],
+      "methodIds": [],
+      "materialIds": [],
+      "toolLinks": [],
+      "sources": [
+        {
+          "id": "openstax-cost",
+          "title": "OpenStax：选择、预算与机会成本",
+          "url": "https://openstax.org/books/principles-economics-3e/pages/2-1-how-individuals-make-choices-based-on-their-budget-constraint",
+          "locator": "Opportunity Cost",
+          "scope": "概念解释与应用边界；原创教学表述"
+        }
+      ],
+      "review": {
+        "status": "reviewed",
+        "producer": "knowledge_content",
+        "reviewer": "knowledge_core",
+        "checkedAt": "2026-10-14T15:39:39.310Z"
+      },
+      "updatedAt": "2026-10-14",
+      "confusions": [],
+      "questions": []
+    }
+  ]
+}

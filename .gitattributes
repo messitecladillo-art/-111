@@ -1,14 +1,61 @@
 # Control contracts are stored as LF repository bytes on every checkout.
 skill/zhengda-cup-champion/assets/runtime/workflow.json text eol=lf
 skill/zhengda-cup-champion/assets/runtime/gates.json text eol=lf
-apps/evi-x-platform/data/control-plane-contract.snapshot.json text eol=lf
-apps/evi-x-platform/data/control-plane-contract.generated.ts text eol=lf
+apps/frontend/data/control-plane-contract.snapshot.json text eol=lf
+apps/frontend/data/control-plane-contract.generated.ts text eol=lf
 
 # Preserve the existing repository bytes used by the unchanged rule checker.
 corpus-source/official-rules/edition16-undergrad-rules.json text eol=lf
 corpus-source/official-rules/edition16-undergrad-practice-source.txt text eol=lf
-apps/evi-x-platform/data/rule-corpus.snapshot.json text eol=lf
-apps/evi-x-platform/data/rule-corpus.generated.ts text eol=lf
+apps/frontend/data/rule-corpus.snapshot.json text eol=lf
+apps/frontend/data/rule-corpus.generated.ts text eol=lf
 
 # Preserve the pinned auditor's exact repository code bytes.
 skill/zhengda-cup-champion/scripts/audit_submission_files.py text eol=lf
+
+# Preserve immutable upstream OCR assets exactly, including license notices.
+apps/frontend/public/knowledge-assets/** -text
+
+# Knowledge publication hashes use LF source bytes on all platforms.
+apps/frontend/content/knowledge/*.json text eol=lf
+
+# Generated release projections; source packs and review records stay reviewable.
+apps/frontend/content/knowledge/published.json linguist-generated=true
+apps/backend/src/multi_agent/agents/research_agent/knowledge-catalog.json linguist-generated=true
+
+apps/frontend/content/topic-advisor/*.json text eol=lf
+apps/backend/src/multi_agent/agents/research_agent/topic_assets/*.json text eol=lf linguist-generated=true
+
+# Region snapshots and upstream notices are verified as exact original bytes.
+corpus-source/topic-advisor/regions/areacodes* -text linguist-vendored=true
+corpus-source/topic-advisor/regions/source.json text eol=lf
+apps/frontend/content/topic-advisor/regions.catalog.json linguist-generated=true
+packages/evi-x-shared/fixtures/topic-region-v2.json text eol=lf
+packages/evi-x-shared/fixtures/topic-project-v2.json text eol=lf
+packages/evi-x-shared/fixtures/topic-questionnaire-transfer-v1.json text eol=lf linguist-generated=true
+
+# Editorial records and draft inputs bind exact bytes, including the first Windows snapshot.
+corpus-source/topic-advisor/county-pack-01/*.json -text
+apps/frontend/content/topic-advisor/county-pack-01.json -text linguist-generated=true
+apps/frontend/content/topic-advisor/county-pack-01-candidates-v2.json -text linguist-generated=true
+corpus-source/topic-advisor/county-publications.json text eol=lf
+apps/frontend/content/topic-advisor/published-counties.json linguist-generated=true
+
+# Offline topic calibration freezes exact source bytes across Windows and Linux.
+.gitattributes text eol=lf
+apps/frontend/lib/topic-advisor/core.ts text eol=lf
+apps/frontend/lib/topic-advisor/types.ts text eol=lf
+apps/frontend/lib/topic-advisor/parse.ts text eol=lf
+apps/frontend/lib/topic-advisor/geography.ts text eol=lf
+apps/frontend/lib/topic-advisor/regions.ts text eol=lf
+apps/frontend/lib/topic-advisor/training.ts text eol=lf
+apps/frontend/lib/questionnaire.ts text eol=lf
+# The shared copy is tested byte-for-byte against the canonical parser above.
+packages/evi-x-shared/src/questionnaire.ts text eol=lf
+apps/frontend/scripts/train-topic-advisor.mjs text eol=lf
+apps/frontend/scripts/topic-evaluation.mjs text eol=lf
+apps/frontend/scripts/evaluate-topic-advisor.mjs text eol=lf
+apps/frontend/tests/topic-evaluation.test.mjs text eol=lf
+evals/topic-advisor/*.json text eol=lf
+# Preserve the exact scenario bytes read by the archived independent reviews.
+evals/topic-advisor/scenarios-v1.json -text -eol

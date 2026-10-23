@@ -1,0 +1,1420 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "topic-advisor-20261015-v1",
+  "authorship": "Original proposed patterns; no judge labels or award predictions",
+  "patterns": [
+    {
+      "id": "p01-campus-food",
+      "title": "校园餐食选择：便利与可负担之间的服务缺口",
+      "domain": "economy",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "campus",
+        "service"
+      ],
+      "accessNeeds": [
+        "campus_students",
+        "campus_ops"
+      ],
+      "resourceNeeds": [
+        "questionnaire",
+        "observation",
+        "interviews"
+      ],
+      "decisionOwner": "校园餐饮服务管理方",
+      "decision": "决定优先调整哪一时段、供餐组合或信息展示",
+      "question": "同一校区不同作息学生的选择障碍有什么差异？",
+      "population": "选定校区成年学生与获准访谈服务人员",
+      "minimumEvidence": [
+        "营业时段与价格记录",
+        "使用者和未使用者访谈",
+        "多个时段排队观察",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "描述与交叉比较",
+        "行为时间记录"
+      ],
+      "differentiators": [
+        "区分时间与价格约束",
+        "纳入未购买者"
+      ],
+      "scopeLimits": [
+        "不从一校推全市",
+        "不把健康感知当医学事实",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无法接触决策方却承诺改造",
+        "朋友代填"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "case-food"
+      ],
+      "minimumDays": 10,
+      "minimumBudgetYuan": 200,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p02-campus-reuse",
+      "title": "校园闲置物品：交接成本如何影响实际流通",
+      "domain": "society",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "campus",
+        "retail"
+      ],
+      "accessNeeds": [
+        "campus_students",
+        "campus_ops"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation",
+        "questionnaire"
+      ],
+      "decisionOwner": "校园生活服务或学生组织",
+      "decision": "决定交接点与交易信息规范",
+      "question": "发布、联系、交接阶段分别在哪里流失？",
+      "population": "同校区有转让经历和潜在参与的成年学生",
+      "minimumEvidence": [
+        "流程访谈",
+        "匿名阶段记录",
+        "交接地点观察",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "阶段描述",
+        "情境比较"
+      ],
+      "differentiators": [
+        "关注实际交接",
+        "同时纳入未参与者"
+      ],
+      "scopeLimits": [
+        "不读取私信全文",
+        "不由环保意愿推减排量",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "未经授权读取平台私信",
+        "缺少真实使用场景"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-sampling",
+        "course-fieldwork"
+      ],
+      "minimumDays": 10,
+      "minimumBudgetYuan": 150,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p03-campus-digital",
+      "title": "校园数字服务：找得到却办不成的环节",
+      "domain": "technology",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "campus",
+        "digital",
+        "service"
+      ],
+      "accessNeeds": [
+        "campus_students",
+        "campus_ops"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "prototype_test",
+        "observation"
+      ],
+      "decisionOwner": "校园服务窗口或平台管理方",
+      "decision": "决定修改导航、说明还是人工支持",
+      "question": "完成同一非敏感服务任务时在哪一步停止？",
+      "population": "自愿参加任务测试的成年学生",
+      "minimumEvidence": [
+        "公开任务流程",
+        "脱敏观察记录",
+        "可改动范围确认",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "任务完成观察",
+        "认知访谈",
+        "顺序平衡的页面测试"
+      ],
+      "differentiators": [
+        "记录完成行为",
+        "比较新手与熟悉者"
+      ],
+      "scopeLimits": [
+        "不使用真实账号密码",
+        "小样本不代表全校满意度",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "测试需泄露账号",
+        "没有可修改决策"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital"
+      ],
+      "minimumDays": 12,
+      "minimumBudgetYuan": 300,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p04-job-matching",
+      "title": "秋招信息到投递：高校就业服务的断点",
+      "domain": "employment",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "campus",
+        "employment"
+      ],
+      "accessNeeds": [
+        "jobseekers",
+        "training_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "public_data"
+      ],
+      "decisionOwner": "高校就业服务中心或就业站",
+      "decision": "决定优化岗位解释、咨询还是投递辅导",
+      "question": "看到岗位到真正投递被什么信息缺口阻断？",
+      "population": "本地明确届次的成年求职者与服务人员",
+      "minimumEvidence": [
+        "当期招聘通知",
+        "求职阶段访谈",
+        "岗位与服务流程对照",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "阶段描述",
+        "公开岗位编码",
+        "分组访谈"
+      ],
+      "differentiators": [
+        "区分未看到与不愿投",
+        "对照岗位和服务要求"
+      ],
+      "scopeLimits": [
+        "不推断真实录用率",
+        "学校名气不是能力证据",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "仅凭学校名气推就业能力",
+        "无求职者入口"
+      ],
+      "sourceIds": [
+        "course-design",
+        "national-jobs",
+        "case-pattern-ledger"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 300,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p05-community-repair",
+      "title": "社区小修小补：居民需求与服务可达性",
+      "domain": "society",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "community",
+        "service"
+      ],
+      "accessNeeds": [
+        "community_residents",
+        "community_partner",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation",
+        "questionnaire"
+      ],
+      "decisionOwner": "社区服务中心与便民商户",
+      "decision": "决定常设点、巡回服务或信息台账",
+      "question": "不同生活时段居民如何找到并完成维修？",
+      "population": "选定社区成年居民与经营者",
+      "minimumEvidence": [
+        "网点营业与清单",
+        "最近一次维修经历",
+        "合作范围确认",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "服务路径描绘",
+        "时段人群比较"
+      ],
+      "differentiators": [
+        "区分距离时间信任",
+        "纳入商户成本"
+      ],
+      "scopeLimits": [
+        "限定社区边界",
+        "知晓不等于实际可及",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无法核实网点",
+        "宣称全市需求"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-community"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 400,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p06-elder-meals",
+      "title": "社区助餐：到店、取餐与支持需求",
+      "domain": "society",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "community",
+        "service"
+      ],
+      "accessNeeds": [
+        "older_adults",
+        "community_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation"
+      ],
+      "decisionOwner": "社区助餐运营方",
+      "decision": "决定时段、取餐辅助和沟通方式",
+      "question": "使用者和未使用者的进入障碍分别是什么？",
+      "population": "获准接触的社区老年居民及服务人员",
+      "minimumEvidence": [
+        "自愿短访谈",
+        "实际供餐流程价格",
+        "未使用者覆盖说明",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "服务旅程观察",
+        "分组需求描述"
+      ],
+      "differentiators": [
+        "纳入不会线上预约者",
+        "结合服务能力约束"
+      ],
+      "scopeLimits": [
+        "不收病历与收入证明",
+        "便利接触不覆盖所有老人",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无适当同意或社区协助",
+        "只有线上问卷"
+      ],
+      "sourceIds": [
+        "course-sampling",
+        "course-fieldwork",
+        "community-history"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 600,
+      "sensitive": true,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p07-county-logistics",
+      "title": "县乡快递最后一段：取件时间与服务成本",
+      "domain": "economy",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "county",
+        "rural",
+        "service"
+      ],
+      "accessNeeds": [
+        "community_residents",
+        "logistics_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation",
+        "field_travel"
+      ],
+      "decisionOwner": "乡镇快递站或物流服务方",
+      "decision": "决定时段、配送组织或信息提醒",
+      "question": "取件成本主要来自距离、班次还是信息差？",
+      "population": "选定乡镇服务范围内成年居民和站点",
+      "minimumEvidence": [
+        "站点村落范围",
+        "真实营业线路",
+        "取件经历访谈",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "路线时段记录",
+        "双向访谈",
+        "成本情景分析"
+      ],
+      "differentiators": [
+        "观察实际取件",
+        "区分地理与运输限制"
+      ],
+      "scopeLimits": [
+        "不外推全县",
+        "情景节约不是实际节约",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无出行条件",
+        "需要无授权运单个人信息"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "county-history"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 1000,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p08-farm-trust",
+      "title": "地方农产品：如何核验产地与品质信息",
+      "domain": "economy",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "rural",
+        "retail"
+      ],
+      "accessNeeds": [
+        "farmers",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "observation"
+      ],
+      "decisionOwner": "合作社或农产品销售方",
+      "decision": "决定改善哪类信息与售后解释",
+      "question": "消费者想核实的内容与经营者能提供的证据是否一致？",
+      "population": "一种产品、一个渠道的成年购买者和经营者",
+      "minimumEvidence": [
+        "公开标签材料",
+        "购买与未购买访谈",
+        "商户可提供证据",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "信息理解任务",
+        "障碍分组"
+      ],
+      "differentiators": [
+        "限定产品与渠道",
+        "将信任与证据区分"
+      ],
+      "scopeLimits": [
+        "不验证食品疗效",
+        "价格变化不归因于展示",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "只做泛品牌偏好",
+        "采集身份化交易记录"
+      ],
+      "sourceIds": [
+        "course-design",
+        "case-food",
+        "county-history"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 800,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p09-wuhan-coupons",
+      "title": "武汉消费券：领到、看懂与核销的落差",
+      "domain": "economy",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "community",
+        "retail"
+      ],
+      "accessNeeds": [
+        "community_residents",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "observation"
+      ],
+      "decisionOwner": "武汉合作门店或商务服务组织",
+      "decision": "决定改善规则说明、店内引导或协助",
+      "question": "哪些流程障碍让消费者有券却未使用？",
+      "population": "武汉指定商圈成年消费者和参与门店",
+      "minimumEvidence": [
+        "当期规则",
+        "已用未用未领三类经历",
+        "门店可用范围",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "流程分段描述",
+        "规则理解任务"
+      ],
+      "differentiators": [
+        "区分优惠替代和新增消费",
+        "纳入数字工具不熟练者"
+      ],
+      "scopeLimits": [
+        "不声称因果拉动消费",
+        "名额和截止需复核",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "结束仍当当前",
+        "跨城套用武汉规则"
+      ],
+      "sourceIds": [
+        "wh-coupons",
+        "course-design",
+        "course-sampling"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 400,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p10-wuhan-sports",
+      "title": "武汉赛事：从看比赛到停留消费的条件",
+      "domain": "sports",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "sports",
+        "tourism"
+      ],
+      "accessNeeds": [
+        "tourists",
+        "event_organizer",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "observation"
+      ],
+      "decisionOwner": "赛事周边服务方或场馆合作方",
+      "decision": "决定优化交通、导览与周边服务组合",
+      "question": "本地和外地观众的停留障碍怎样不同？",
+      "population": "一项可进入的武汉赛事成年观众",
+      "minimumEvidence": [
+        "最新赛程许可",
+        "观赛前后旅程",
+        "服务方可执行范围",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "阶段比较",
+        "本外地分组"
+      ],
+      "differentiators": [
+        "先限定单项赛事",
+        "记录时间而非只问意愿"
+      ],
+      "scopeLimits": [
+        "不推城市赛事总效益",
+        "意愿不是真实消费",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无现场入口",
+        "赛事已结束且无回访渠道"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-fieldwork"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 1000,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p11-wuhan-night-tour",
+      "title": "武汉夜游：导览、衔接与返程的体验障碍",
+      "domain": "tourism",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "tourism",
+        "service"
+      ],
+      "accessNeeds": [
+        "tourists",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "observation",
+        "interviews",
+        "field_travel"
+      ],
+      "decisionOwner": "选定夜游片区服务方",
+      "decision": "决定优化导览、休息点或返程说明",
+      "question": "首访与重访者在同一路线遇到哪些断点？",
+      "population": "选定路线自愿参加的成年游客",
+      "minimumEvidence": [
+        "开放交通核查",
+        "安全时段观察",
+        "首访重访访谈",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "旅程记录",
+        "节点比较"
+      ],
+      "differentiators": [
+        "串联到达游览离开",
+        "区分游客与居民使用目的"
+      ],
+      "scopeLimits": [
+        "不收个人连续轨迹",
+        "活动日期最新核验",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无法安全夜间观察",
+        "把单日烟花客流当全年"
+      ],
+      "sourceIds": [
+        "wh-autumn-briefing",
+        "case-camping",
+        "course-collection"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 600,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p12-wuhan-ai-retail",
+      "title": "武汉智能消费服务：便利与人工支持的边界",
+      "domain": "technology",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "retail",
+        "digital",
+        "service"
+      ],
+      "accessNeeds": [
+        "merchants",
+        "community_residents"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "prototype_test",
+        "observation"
+      ],
+      "decisionOwner": "合作门店或数字服务商",
+      "decision": "决定哪些任务自动化、哪些保留人工",
+      "question": "在哪些服务步骤消费者需要人工支持？",
+      "population": "选定门店成年顾客与员工",
+      "minimumEvidence": [
+        "真实功能核验",
+        "匿名任务记录",
+        "商户约束访谈",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "任务观察",
+        "失败场景分类",
+        "原型比较"
+      ],
+      "differentiators": [
+        "以任务完成为结果",
+        "纳入技术不熟练者"
+      ],
+      "scopeLimits": [
+        "公示不等于落地",
+        "不输入个人或企业秘密",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "只有AI热度没有服务入口",
+        "预设AI必然有效"
+      ],
+      "sourceIds": [
+        "wh-digital",
+        "wh-ai-list",
+        "course-design"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 600,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p13-wuhan-data-jobs",
+      "title": "武汉数据岗位：培训与入门任务的对接",
+      "domain": "employment",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "employment",
+        "industry",
+        "digital"
+      ],
+      "accessNeeds": [
+        "firms",
+        "jobseekers",
+        "training_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "public_data",
+        "questionnaire"
+      ],
+      "decisionOwner": "本地培训合作方或就业中心",
+      "decision": "决定调整入门训练与岗位解释",
+      "question": "岗位要求、求职认知和培训内容在哪些任务不一致？",
+      "population": "武汉成年求职者与获准访谈企业",
+      "minimumEvidence": [
+        "当期公开岗位",
+        "匿名任务访谈",
+        "培训目录",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "要求编码",
+        "供需对照"
+      ],
+      "differentiators": [
+        "不把职位名当技能",
+        "考察学习进入成本"
+      ],
+      "scopeLimits": [
+        "不推岗位总量",
+        "学校身份不是能力代理",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "缺企业培训入口",
+        "模拟岗位当真需求"
+      ],
+      "sourceIds": [
+        "wh-digital",
+        "wh-innovation",
+        "course-design"
+      ],
+      "minimumDays": 28,
+      "minimumBudgetYuan": 800,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p14-hubei-biotech-service",
+      "title": "湖北成果转化：咨询与中试服务怎么找",
+      "domain": "biology",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [],
+      "settingTags": [
+        "industry",
+        "service"
+      ],
+      "accessNeeds": [
+        "firms",
+        "training_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "public_data"
+      ],
+      "decisionOwner": "合作成果转化服务机构",
+      "decision": "决定优化目录、对接流程或材料清单",
+      "question": "不同成熟度团队如何选择转化服务？",
+      "population": "湖北获准访谈的成年研发与服务人员",
+      "minimumEvidence": [
+        "公开目录流程",
+        "供需双方访谈",
+        "不涉密的阶段信息",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "服务路径访谈",
+        "信息缺口分类"
+      ],
+      "differentiators": [
+        "研究服务而非药物疗效",
+        "区分项目成熟度"
+      ],
+      "scopeLimits": [
+        "不接触患者数据与实验结果",
+        "政策不是效果",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "需患者或基因信息",
+        "无机构入口"
+      ],
+      "sourceIds": [
+        "hb-device-service",
+        "hb-biotech",
+        "wh-innovation",
+        "course-fieldwork"
+      ],
+      "minimumDays": 35,
+      "minimumBudgetYuan": 1500,
+      "sensitive": true,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p15-wuhan-sme-finance",
+      "title": "武汉科创企业：融资服务信息如何触达",
+      "domain": "finance",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "industry",
+        "service"
+      ],
+      "accessNeeds": [
+        "firms"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "public_data"
+      ],
+      "decisionOwner": "合作企业服务组织",
+      "decision": "决定改善解释、转介或材料清单",
+      "question": "企业在哪一步无法判断政策是否适用？",
+      "population": "武汉自愿参与的企业或服务人员",
+      "minimumEvidence": [
+        "当前政策",
+        "匿名流程访谈",
+        "可提供服务清单",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "政策流程映射",
+        "理解测试"
+      ],
+      "differentiators": [
+        "聚焦信息获取成本",
+        "不用融资规模充当成功标签"
+      ],
+      "scopeLimits": [
+        "不提供投资建议",
+        "不收财报账号或估值",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "承诺资金必然获批",
+        "缺企业入口"
+      ],
+      "sourceIds": [
+        "wh-innovation",
+        "course-design",
+        "course-fieldwork"
+      ],
+      "minimumDays": 28,
+      "minimumBudgetYuan": 1000,
+      "sensitive": true,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p16-sme-digital",
+      "title": "小企业数字化：具体任务的采用与放弃",
+      "domain": "technology",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "industry",
+        "digital"
+      ],
+      "accessNeeds": [
+        "firms",
+        "employees"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation"
+      ],
+      "decisionOwner": "合作企业管理方",
+      "decision": "决定先改进哪一重复工作任务",
+      "question": "购买、使用和放弃工具之间有哪些约束？",
+      "population": "获准接触的某行业企业员工和管理者",
+      "minimumEvidence": [
+        "任务清单",
+        "匿名使用经历",
+        "公开工具成本",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "任务分解",
+        "角色对照"
+      ],
+      "differentiators": [
+        "纳入放弃者",
+        "分开管理者与一线员工"
+      ],
+      "scopeLimits": [
+        "不外传企业资料",
+        "自报节省不是实测效率",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无企业协助",
+        "拟上传企业秘密"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-collection",
+        "wh-digital"
+      ],
+      "minimumDays": 28,
+      "minimumBudgetYuan": 1000,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p17-culture-repeat",
+      "title": "文化活动：首次参与为何没变成再次到访",
+      "domain": "entertainment",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "tourism",
+        "service"
+      ],
+      "accessNeeds": [
+        "tourists",
+        "event_organizer"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "observation"
+      ],
+      "decisionOwner": "文化场馆或活动服务方",
+      "decision": "决定改善触达、体验解释或复访服务",
+      "question": "首访与重访者的期待、体验和后续信息有何差异？",
+      "population": "一场馆成年参与者及未参与者",
+      "minimumEvidence": [
+        "当期活动信息",
+        "经历分支访谈",
+        "可改动清单",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "阶段分组",
+        "障碍分析"
+      ],
+      "differentiators": [
+        "纳入未参与者",
+        "分开内容兴趣与服务门槛"
+      ],
+      "scopeLimits": [
+        "意愿不是复购",
+        "不套用历史画像",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "只换获奖题名城市",
+        "无场馆入口"
+      ],
+      "sourceIds": [
+        "case-camping",
+        "case-pattern-ledger",
+        "course-sampling"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 500,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p18-suzhou-inbound",
+      "title": "苏州入境体验：导览与支付说明障碍",
+      "domain": "tourism",
+      "regionTags": [
+        "江苏"
+      ],
+      "cityTags": [
+        "苏州"
+      ],
+      "settingTags": [
+        "tourism",
+        "service"
+      ],
+      "accessNeeds": [
+        "tourists",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation",
+        "prototype_test"
+      ],
+      "decisionOwner": "苏州合作文旅服务方",
+      "decision": "决定改进哪一说明或导览环节",
+      "question": "不同语言游客怎样完成路线、支付和咨询任务？",
+      "population": "特定苏州景区或街区成年入境游客和商户",
+      "minimumEvidence": [
+        "当期服务说明",
+        "语言适配访谈",
+        "匿名任务记录",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "任务观察",
+        "语言版本比较"
+      ],
+      "differentiators": [
+        "观察实际完成行为",
+        "核验商家支持能力"
+      ],
+      "scopeLimits": [
+        "仅限语言覆盖样本",
+        "不查护照和支付账户",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无语言及游客入口",
+        "套用到其他城市"
+      ],
+      "sourceIds": [
+        "suzhou-tourism",
+        "course-collection"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 1000,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p19-regional-job-service",
+      "title": "县域就业站：服务如何到达目标人群",
+      "domain": "employment",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "county",
+        "community",
+        "employment"
+      ],
+      "accessNeeds": [
+        "jobseekers",
+        "community_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "public_data"
+      ],
+      "decisionOwner": "本地就业服务站",
+      "decision": "决定改变时段、宣传或咨询流程",
+      "question": "有需求者为何未使用附近就业服务？",
+      "population": "一县域明确社区的成年求职者",
+      "minimumEvidence": [
+        "当前活动通知",
+        "真实服务范围",
+        "使用未使用访谈",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "渠道阶段比较",
+        "旅程分析"
+      ],
+      "differentiators": [
+        "比较未触达者",
+        "结合交通作息"
+      ],
+      "scopeLimits": [
+        "不推断失业原因",
+        "不收社保账号负债",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "站内方便样本代表全县",
+        "无社区入口"
+      ],
+      "sourceIds": [
+        "national-jobs",
+        "course-sampling",
+        "course-design"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 700,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p20-financial-literacy",
+      "title": "金融营销信息：费用与风险提示能否读懂",
+      "domain": "finance",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "campus",
+        "community",
+        "digital"
+      ],
+      "accessNeeds": [
+        "campus_students"
+      ],
+      "resourceNeeds": [
+        "prototype_test",
+        "questionnaire",
+        "interviews"
+      ],
+      "decisionOwner": "校园消费者教育服务方",
+      "decision": "决定优先改进哪类公开信息解释",
+      "question": "在虚构材料中读者容易漏看什么关键信息？",
+      "population": "自愿参与的成年学生或年轻消费者",
+      "minimumEvidence": [
+        "监管公开文本",
+        "标明虚构的材料",
+        "同意与退出安排",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "理解任务",
+        "顺序平衡比较"
+      ],
+      "differentiators": [
+        "测理解不测资产",
+        "区分识别能力与偏好"
+      ],
+      "scopeLimits": [
+        "不收账户资产债务",
+        "不测真实购买",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "诱导投资借贷",
+        "解读成信用评估"
+      ],
+      "sourceIds": [
+        "national-finance",
+        "course-design",
+        "course-fieldwork"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 300,
+      "sensitive": true,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p21-rural-tourism",
+      "title": "乡村短途游：宣传吸引与服务兑现的差距",
+      "domain": "tourism",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "rural",
+        "tourism"
+      ],
+      "accessNeeds": [
+        "tourists",
+        "farmers",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "observation",
+        "field_travel"
+      ],
+      "decisionOwner": "合作乡村休闲经营者",
+      "decision": "决定完善预约、交通说明或体验项目",
+      "question": "游客期待与经营者持续服务能力如何匹配？",
+      "population": "一条可进入线路的成年游客和经营者",
+      "minimumEvidence": [
+        "当期线路确认",
+        "现场观察",
+        "淡旺时段约束访谈",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "旅程记录",
+        "双向比较"
+      ],
+      "differentiators": [
+        "纳入非节假日约束",
+        "区分流量与稳定需求"
+      ],
+      "scopeLimits": [
+        "不从一节日推全年",
+        "不收儿童个人信息",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无出行与经营者入口",
+        "将宣传当疗效"
+      ],
+      "sourceIds": [
+        "case-camping",
+        "wh-autumn-briefing",
+        "course-collection"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 1000,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p22-policy-uptake",
+      "title": "一项本地服务政策：知晓到办成的障碍",
+      "domain": "policy",
+      "regionTags": [],
+      "cityTags": [],
+      "settingTags": [
+        "community",
+        "service"
+      ],
+      "accessNeeds": [
+        "community_residents",
+        "community_partner"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "public_data",
+        "prototype_test"
+      ],
+      "decisionOwner": "本地服务窗口或社区",
+      "decision": "决定修改说明、指引还是转介",
+      "question": "目标人群在哪一步不能判断或完成办理？",
+      "population": "已确认政策范围内成年居民",
+      "minimumEvidence": [
+        "生效文本",
+        "资格边界",
+        "不采证件的任务测试",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "流程映射",
+        "理解访谈"
+      ],
+      "differentiators": [
+        "只选一项政策",
+        "区分无资格与看不懂"
+      ],
+      "scopeLimits": [
+        "不代部门认资格",
+        "草案和过期文件不是现行",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "地域未核查",
+        "需账号证件代办"
+      ],
+      "sourceIds": [
+        "course-design",
+        "course-fieldwork",
+        "community-history"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 300,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p23-sichuan-service",
+      "title": "四川服务消费：跨场景组合的真实需求",
+      "domain": "economy",
+      "regionTags": [
+        "四川"
+      ],
+      "cityTags": [],
+      "settingTags": [
+        "service",
+        "tourism",
+        "retail"
+      ],
+      "accessNeeds": [
+        "tourists",
+        "merchants"
+      ],
+      "resourceNeeds": [
+        "interviews",
+        "questionnaire",
+        "observation"
+      ],
+      "decisionOwner": "四川合作商圈或服务方",
+      "decision": "决定如何组合餐饮体验与配套",
+      "question": "跨场景体验受到哪些交通、价格和时间阻断？",
+      "population": "四川指定活动点成年消费者和商户",
+      "minimumEvidence": [
+        "活动仍举办确认",
+        "参与未参与访谈",
+        "可执行服务范围",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "路径分析",
+        "预算时段分组"
+      ],
+      "differentiators": [
+        "分析跨场景约束",
+        "比较实际参与和意愿"
+      ],
+      "scopeLimits": [
+        "限定一个片区",
+        "不推全省效果",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无本地入口",
+        "过期还计划现场招募"
+      ],
+      "sourceIds": [
+        "sichuan-service",
+        "course-design",
+        "case-food"
+      ],
+      "minimumDays": 21,
+      "minimumBudgetYuan": 800,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    },
+    {
+      "id": "p24-wuhan-community-sport",
+      "title": "武汉社区运动空间：时段与使用冲突",
+      "domain": "sports",
+      "regionTags": [
+        "湖北"
+      ],
+      "cityTags": [
+        "武汉"
+      ],
+      "settingTags": [
+        "community",
+        "sports"
+      ],
+      "accessNeeds": [
+        "community_residents",
+        "community_partner"
+      ],
+      "resourceNeeds": [
+        "observation",
+        "interviews",
+        "questionnaire"
+      ],
+      "decisionOwner": "社区或运动空间管理方",
+      "decision": "决定调整时段、预约或配套服务",
+      "question": "不同作息居民面对同一空间的障碍有何差异？",
+      "population": "武汉一个场地成年使用者和未使用者",
+      "minimumEvidence": [
+        "开放规则",
+        "多时段非识别观察",
+        "管理方与居民访谈",
+        "先记录样本入口、同意方式与推断范围"
+      ],
+      "methods": [
+        "时段描述",
+        "需求比较"
+      ],
+      "differentiators": [
+        "纳入未使用者",
+        "分开空间与时间约束"
+      ],
+      "scopeLimits": [
+        "不记录未成年人身份",
+        "不推全市缺口",
+        "天数和费用为作者的前期探索估算，须以样本、场地和报价复核。"
+      ],
+      "rejectWhen": [
+        "无场地授权",
+        "只用线上满意度"
+      ],
+      "sourceIds": [
+        "wh-community",
+        "course-collection",
+        "course-sampling"
+      ],
+      "minimumDays": 14,
+      "minimumBudgetYuan": 400,
+      "sensitive": false,
+      "contentClass": "authored_proposed_pattern",
+      "thresholdBasis": "author_planning_estimate_not_empirical"
+    }
+  ]
+}

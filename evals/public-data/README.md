@@ -22,14 +22,14 @@ dc8d576e9bda0f41ee891251bd84bab9a39ce576cba715aac08adc2374a01fde
 
 ## 准备与运行
 
-要求项目支持的 Node.js 22.13+、Python 3.10+；Python 不需要第三方包。可用项目隔离的 `apps/evi-x-api/.venv/Scripts/python.exe`。脚本通过自己的位置寻找仓库源码，运行时不要求终端位于仓库根目录。
+要求项目支持的 Node.js 22.13+、Python 3.10+；Python 不需要第三方包。可用项目隔离的 `apps/backend/.venv/Scripts/python.exe`。脚本通过自己的位置寻找仓库源码，运行时不要求终端位于仓库根目录。
 
 只需首次手动下载官方归档并解压：先解开下载包，再解开其中的 `bank.zip`，取得 `bank.csv` 与 `bank-names.txt`。建议放在根目录已忽略的 `.collab/public-data/bank/`，或使用仓库外的数据目录。**不要将原始 CSV 加入 Git；本目录只保存脚本与说明。**
 
 在仓库根目录执行（PowerShell）：
 
 ```powershell
-& "apps/evi-x-api/.venv/Scripts/python.exe" -X utf8 `
+& "apps/backend/.venv/Scripts/python.exe" -X utf8 `
   "evals/public-data/verify-bank-marketing.py" `
   --csv ".collab/public-data/bank/bank.csv" `
   --output ".collab/public-data/bank/verification"

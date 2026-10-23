@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./questionnaire": "./src/questionnaire.ts" },
+  "exports": { ".": "./src/index.ts", "./questionnaire": "./src/questionnaire.ts", "./topic-transfer": "./src/topic-transfer.ts" },
   "scripts": { "test": "node --experimental-strip-types --test tests/*.test.mjs" },
   "devDependencies": { "typescript": "5.9.3" }
 }

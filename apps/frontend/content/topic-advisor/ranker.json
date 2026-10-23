@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "topic-pairwise-v1-18f067e9-fc56061d-2fa8c95c-904b1589",
+  "algorithm": "projected_pairwise_logistic_v1",
+  "featureNames": [
+    "confirmedAccess",
+    "possibleAccess",
+    "resourceFit",
+    "geographyFit",
+    "settingFit",
+    "interestFit",
+    "timeFit",
+    "budgetFit",
+    "decisionClarity",
+    "evidenceDesign",
+    "differentiation",
+    "actionability",
+    "currentEventMatch",
+    "lowSensitivity"
+  ],
+  "weights": [
+    1.147938647325,
+    1.103980570823,
+    0.415527037228,
+    0.537353158695,
+    1.054783868465,
+    1.050517701399,
+    0.280096074536,
+    0.404557196782,
+    0,
+    0,
+    0,
+    0,
+    0.595457476037,
+    0.165259119605
+  ],
+  "training": {
+    "dataClass": "authored_synthetic",
+    "pairCount": 60,
+    "trainSha256": "18f067e920f8a35a94d72ffafe09b5969d9f11808a6aa03c59e56fb82c454e1f",
+    "catalogSha256": "fc56061d01cd84ca1f84cec6bc048ed36d5e3e49620119c01747f93dd65decbc",
+    "eventsSha256": "2fa8c95c79eab6c9e26f49cbb55ff5358a0a848990197f100623af352a279bdf",
+    "sourcesSha256": "904b15899ac0f96796a214829297ddacf38a283ef83fe4653a7268f5c09961a7",
+    "epochs": 2400,
+    "learningRate": 0.12,
+    "l2": 0.015,
+    "loss": 0.037462813145,
+    "pairAccuracy": 1
+  },
+  "limitations": [
+    "训练标签由作者基于来源与研究设计原则编写，属于合成偏好，不是真实比赛评分、获奖结果或受访者数据。",
+    "该模型仅为透明线性排序器，未微调任何大语言模型；训练集一致率不能代表外部泛化或真实选题质量。",
+    "只有 train.json 参与训练；独立留出测试应在训练完成后单独运行，不能据其结果反复调参后仍称为盲测。",
+    "学校名称、学校层次和身份不进入特征；缺失渠道不会由地点或学校推断。",
+    "渠道不可得、必要资源缺失、地域冲突和明确时间预算不足，由模型外的硬检查阻止推荐。",
+    "时效只是事件线索与所选日期的匹配，不证明问题强度、市场规模或调查可行性。"
+  ]
+}
