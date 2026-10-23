@@ -15,7 +15,8 @@ export function LightBar({ score, cells = 4 }: { score: number; cells?: number }
 const NOISE = '░▒▓#%*+=:01xX∆◊';
 /**
  * 显影: a number with an origin develops from cyan noise into gold, once, when its reply is new.
- * A reply restored from an earlier visit, or a reader who prefers less motion, sees the number at once.
+ * A reply restored from an earlier visit, or a reader who prefers less motion, sees the number at once; assistive
+ * technology always reads the final number, never the noise.
  */
 export function Develop({ text, at }: { text: string; at: number }) {
   const [shown, setShown] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function Develop({ text, at }: { text: string; at: number }) {
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [text, at]);
-  return <span className={styles['s-gold']} data-developing={shown === null ? undefined : ''}>{shown ?? text}</span>;
+  return <><span className={styles.srOnly}>{text}</span><span className={styles['s-gold']} data-developing={shown === null ? undefined : ''} aria-hidden="true">{shown ?? text}</span></>;
 }
 
 /** One line of marked text from the router. */

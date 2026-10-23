@@ -91,9 +91,12 @@ export default function AgentShell() {
   };
 
   // A new room takes focus at its heading, unless the user is typing to the agent: commands keep the command line.
-  const lastFocusRoom = useRef(room);
+  // A render from the server's guess, before the address was read, records nothing; the first room seen is where the
+  // page opened, so arriving by link moves no focus. Only later moves take it.
+  const lastFocusRoom = useRef<RoomId | null>(null);
   useEffect(() => {
-    if (lastFocusRoom.current === room) return;
+    if (room !== currentRoom()) return;
+    if (lastFocusRoom.current === null || lastFocusRoom.current === room) { lastFocusRoom.current = room; return; }
     lastFocusRoom.current = room;
     mirrorRef.current?.scrollTo({ top: 0 });
     if (document.activeElement === inputRef.current || room === 'canvas') return;
@@ -163,6 +166,7 @@ export default function AgentShell() {
       // Focus moves before the key is typed, so the slash itself lands in the command line.
       if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) inputRef.current?.focus();
       if (event.key === '\\' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setTalkOpen(open => !open); }
+      if (event.key === 'Escape') setRailOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -174,7 +178,9 @@ export default function AgentShell() {
   const total = light.benchmark ? roomLight(light, 'editor')!.checks.length : 0;
 
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}>
-    <div className={`workbench ${styles.shell}`} data-theme={theme} data-room={room} data-talk={talkOpen ? 'open' : 'closed'} data-dock={overlay ? 'overlay' : 'docked'} data-pane={pane} data-rail={railOpen ? 'open' : 'closed'}>
+    <div className={`workbench ${styles.shell}`} data-theme={theme} data-room={room} data-talk={talkOpen ? 'open' : 'closed'} data-dock={overlay ? 'overlay' : 'docked'} data-pane={pane} data-rail={railOpen ? 'open' : 'closed'}
+      // On a phone the rail is a drawer: a tap anywhere else puts it away.
+      onPointerDown={event => { if (railOpen && !(event.target as Element).closest('#agent-rail, [aria-controls="agent-rail"]')) setRailOpen(false); }}>
       <a className={styles.skip} href="#mirror" onClick={event => { event.preventDefault(); mirrorRef.current?.focus(); }}>跳到主要内容</a>
 
       <header className={styles.bar}>
@@ -190,7 +196,7 @@ export default function AgentShell() {
         <button type="button" className={styles.barButton} onClick={event => switchTheme(theme === 'dark' ? 'light' : 'dark', event)} aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'} title={theme === 'dark' ? '昼' : '夜'}>
           <NavIcon kind={theme === 'dark' ? 'sun' : 'moon'} />
         </button>
-        <Link className={`${styles.barButton} ${styles.hideNarrow}`} href="/workspace">经典工作台</Link>
+        <Link className={`${styles.barButton} ${styles.hideNarrow}`} href={`/workspace#${room}`}>经典工作台</Link>
         <div className={styles.account}><AccountStatus /></div>
       </header>
 

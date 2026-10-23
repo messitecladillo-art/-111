@@ -165,7 +165,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '夜': return { turn: ctx.theme === 'dark' ? { lines: [[t('现在就是深色主题。')]] } : { lines: [[t('已切换到深色主题。')]], act: { type: 'theme', theme: 'dark' } } };
     case '昼': return { turn: ctx.theme === 'light' ? { lines: [[t('现在就是浅色主题。')]] } : { lines: [[t('已切换到浅色主题。')]], act: { type: 'theme', theme: 'light' } } };
     case '清空': return { turn: { lines: [[t('清空之前请确认：')]], cards: [{ kind: 'confirm', title: '清空本页对话', lines: [[t('只清除这里的对话记录；问卷、数据与报告都不受影响。', 'dim')]], confirm: { label: '清空', action: { type: 'clear' } }, cancel: '保留' }] } };
-    case '经典': return { turn: { lines: [[t('经典工作台保留了全部模块的原样排布。')]], chips: [{ label: '打开经典工作台 ↗', action: { type: 'href', href: '/workspace' } }] } };
+    case '经典': return { turn: { lines: [[t('经典工作台保留了全部模块的原样排布。')]], chips: [{ label: '打开经典工作台 ↗', action: { type: 'href', href: `/workspace#${ctx.room}` } }] } };
     default: return { turn: help() };
   }
 }
