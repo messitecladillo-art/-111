@@ -134,6 +134,9 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
       : <Link className="wb-brand" href="/workspace" title="返回工作台概览" onClick={close}>{brand}</Link>}
     <button className="wb-menu" ref={menuRef} type="button" aria-controls="workbench-navigation" aria-expanded={open} onClick={() => setOpen(value => !value)} aria-label={open ? "关闭导航" : "打开导航"}><NavIcon kind={open ? "close" : "menu"}/></button>
     {onSearch && <button type="button" className="wb-sidebar-search" onPointerDown={event => event.preventDefault()} onClick={onSearch} title="搜索知识、方法、资料与功能"><NavIcon kind="search"/><span>全局搜索</span><kbd>Ctrl K</kbd></button>}
+    <Link className="wb-agent-entry" href="/agent" onClick={close} title="打开会话式研究 Agent">
+      <NavIcon kind="spark"/><span><strong>研究 Agent</strong><small>会话式研究台</small></span><em>NEW</em>
+    </Link>
     <nav className="wb-navigation" id="workbench-navigation" aria-label="主要导航">
       {NAV_GROUPS.map(group => <div className="wb-nav-group" key={group}>
         <p className="wb-nav-label">{group}</p>

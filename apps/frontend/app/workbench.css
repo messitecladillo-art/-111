@@ -82,6 +82,9 @@
   color-scheme: dark;
 }
 .workbench *, .workbench *::before, .workbench *::after { box-sizing: border-box; }
+.workbench.agent-app { display: block; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; background: var(--wb-bg); }
+.workbench.agent-app[data-theme="dark"] { background: var(--wb-bg); }
+@media (min-width: 900px) { .workbench.agent-app:not(.hosted-auth) { background: var(--wb-bg); } }
 .workbench .wb-panel[hidden] { display: none !important; }
 .workbench :focus-visible:not(.wb-canvas *) { outline: 2px solid var(--wb-accent); outline-offset: 3px; box-shadow: 0 0 0 5px var(--wb-accent-soft); }
 .workbench ::selection { background: var(--evx-gold); color: var(--evx-ink); }
@@ -127,6 +130,13 @@
 .wb-sidebar-search { justify-content: flex-start; width: 100%; }
 .wb-sidebar-search kbd { margin-left: auto; }
 .wb-sidebar-search:hover { border-color: rgba(244, 185, 66, 0.4); color: var(--wb-text); }
+.wb-agent-entry { display: flex; align-items: center; gap: 10px; margin: 9px 0 2px; padding: 9px 11px; border: 1px solid rgba(244, 185, 66, 0.34); border-radius: var(--wb-radius); background: linear-gradient(135deg, rgba(244, 185, 66, 0.15), rgba(0, 179, 164, 0.09)); color: var(--wb-text); text-decoration: none; transition: border-color var(--motion-fast) var(--ease-arrive), background var(--motion-fast) var(--ease-arrive), transform var(--motion-slow) var(--wb-ease); }
+.wb-agent-entry svg { width: 18px; height: 18px; flex: none; color: var(--evx-gold); }
+.wb-agent-entry > span { display: grid; min-width: 0; line-height: 1.35; }
+.wb-agent-entry strong { font-size: 13px; font-weight: 650; letter-spacing: 0.02em; }
+.wb-agent-entry small { font-size: 9.5px; color: var(--wb-muted); }
+.wb-agent-entry em { margin-left: auto; padding: 2px 6px; border-radius: 999px; background: var(--evx-gold); color: var(--evx-ink); font-size: 8.5px; font-style: normal; font-weight: 800; letter-spacing: 0.1em; }
+.wb-agent-entry:hover { border-color: rgba(244, 185, 66, 0.62); background: linear-gradient(135deg, rgba(244, 185, 66, 0.22), rgba(0, 179, 164, 0.12)); transform: translateY(-1px); }
 .workbench kbd { padding: 2px 6px; border: 1px solid var(--wb-line); border-radius: 4px; color: var(--wb-muted); font: 11px/1.3 var(--wb-mono); white-space: nowrap; }
 .wb-navigation { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(244, 185, 66, 0.25) transparent; margin-inline: -4px; padding-inline: 4px; }
 .wb-nav-group + .wb-nav-group { margin-top: 14px; }
@@ -262,9 +272,9 @@
 
 /* Form fields deliberately exclude native choice inputs and keep their module styling. */
 .workbench fieldset { --choice-text: var(--wb-text); --choice-muted: var(--wb-muted); --choice-border: var(--wb-line); --choice-surface: var(--wb-solid); --choice-selected: var(--wb-accent-soft); --choice-accent: var(--wb-accent); color-scheme: inherit; }
-.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):not(.wb-canvas *) { min-width: 0; border-color: var(--wb-line); color: var(--wb-text); background: var(--wb-solid); }
+.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):not(.wb-canvas *):not(.agent-app *) { min-width: 0; border-color: var(--wb-line); color: var(--wb-text); background: var(--wb-solid); }
 .workbench :is(input, textarea)::placeholder { color: var(--wb-muted); opacity: 1; }
-.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):focus-visible:not(.wb-canvas *) { border-color: var(--wb-accent); outline: 2px solid var(--wb-accent); outline-offset: 2px; box-shadow: none; }
+.workbench :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea):focus-visible:not(.wb-canvas *):not(.agent-app *) { border-color: var(--wb-accent); outline: 2px solid var(--wb-accent); outline-offset: 2px; box-shadow: none; }
 .workbench select option { color: var(--wb-text); background: var(--wb-solid); }
 .workbench :is(.diagnose-form, .diagnosis-result, .rule-form, .rule-result) { min-height: 0; padding: 24px; border: 1px solid var(--wb-line); border-radius: var(--wb-radius-lg); color: var(--wb-text); background: var(--wb-surface); box-shadow: var(--wb-shadow); }
 .workbench .diagnose-grid { gap: 18px; align-items: stretch; }
