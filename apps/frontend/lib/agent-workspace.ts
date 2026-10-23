@@ -42,6 +42,7 @@ export type AgentSession = {
   messages: AgentMessage[];
   artifacts: AgentArtifact[];
   pending: PendingGeneration | null;
+  draft: string;
 };
 
 export type AgentSessionIndexEntry = {
@@ -176,9 +177,10 @@ export function parseAgentSession(value: unknown, ownerId: string, expectedId?: 
   const messages = row.messages.map(parseMessage).filter((item): item is AgentMessage => Boolean(item)).slice(-MAX_MESSAGES);
   const artifacts = row.artifacts.map(parseArtifact).filter((item): item is AgentArtifact => Boolean(item)).slice(-MAX_ARTIFACTS);
   const pending = parsePending(row.pending);
+  const draft = row.draft === undefined ? '' : text(row.draft, 2000, true);
   const boundProject = projectId(row.projectId);
-  if (boundProject === undefined) return null;
-  return { version: 1, id, ownerId: rowOwner, title, projectId: boundProject, createdAt, updatedAt, messages, artifacts, pending };
+  if (boundProject === undefined || draft === null) return null;
+  return { version: 1, id, ownerId: rowOwner, title, projectId: boundProject, createdAt, updatedAt, messages, artifacts, pending, draft };
 }
 
 function readJson(store: AgentStorage | null, key: string): unknown {
@@ -252,7 +254,7 @@ export function saveActiveSessionId(ownerId: string, id: string | null, store: A
 
 export function createAgentSession(ownerId: string, projectId: string | null = null): AgentSession {
   const at = nowIso();
-  return { version: 1, id: newAgentId(), ownerId, title: DEFAULT_TITLE, projectId, createdAt: at, updatedAt: at, messages: [], artifacts: [], pending: null };
+  return { version: 1, id: newAgentId(), ownerId, title: DEFAULT_TITLE, projectId, createdAt: at, updatedAt: at, messages: [], artifacts: [], pending: null, draft: '' };
 }
 
 export function titleFromMessage(message: string): string {

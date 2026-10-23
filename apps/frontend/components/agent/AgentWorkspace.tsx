@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type UIEvent as ReactUIEvent } from 'react';
 import { parseCollection, parseProject, parseService, type Proposal, type Project, type Service } from '@evix/shared';
 import BrandMark from '@/components/brand/BrandMark';
 import MirrorRoom from './MirrorRoom';
@@ -25,10 +25,10 @@ type ServiceState = 'idle' | 'loading' | 'ready' | 'error';
 type ProjectState = 'idle' | 'loading' | 'ready' | 'error';
 
 const QUICK_PROMPTS = [
-  { label: '生成问卷', prompt: '帮我设计一份研究问卷。研究主题是【填写主题】，目标人群是【填写人群】，希望了解【核心问题】与【决策因素】。' },
-  { label: '缩小选题', prompt: '帮我比较两个选题方向的研究价值与实施难度，并给出第一周验证计划。' },
-  { label: '检查数据', prompt: '我想在项目里检查数据质量并做量表信度分析。' },
-  { label: '准备答辩', prompt: '帮我梳理答辩中评委可能追问的问题和对应证据。' },
+  { label: '生成问卷', hint: '进入模型确认与可编辑提案', prompt: '帮我设计一份研究问卷。研究主题是【填写主题】，目标人群是【填写人群】，希望了解【核心问题】与【决策因素】。' },
+  { label: '缩小选题', hint: '比较研究方向与首周验证', prompt: '帮我比较两个选题方向的研究价值与实施难度，并给出第一周验证计划。' },
+  { label: '检查数据', hint: '前往数据质量与分析入口', prompt: '我想在项目里检查数据质量并做量表信度分析。' },
+  { label: '准备答辩', hint: '梳理追问、证据与演练入口', prompt: '帮我梳理答辩中评委可能追问的问题和对应证据。' },
 ];
 
 const PIPELINE = [
@@ -107,6 +107,8 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
   const [headRevision, setHeadRevision] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState('');
+  const [preferredServiceId, setPreferredServiceId] = useState('');
+  const [intentMenuOpen, setIntentMenuOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [notice, setNotice] = useState('');
@@ -124,6 +126,9 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
   const roomTimer = useRef<number | null>(null);
   const pulseTimer = useRef<number | null>(null);
   const freshTimer = useRef<number | null>(null);
+  const intentRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const lastSessionId = useRef<string | null>(null);
 
   const activeSession = sessions.find(session => session.id === activeId) ?? null;
   const activeProject = activeSession?.projectId ? projects.find(project => project.id === activeSession.projectId) ?? null : null;
@@ -131,6 +136,17 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
   const artifacts = activeSession?.artifacts ?? [];
   const pending = activeSession?.pending ?? null;
   const questionnaireServices = useMemo(() => services.filter(serviceCanQuestionnaire), [services]);
+  const selectedServiceId = questionnaireServices.some(service => service.id === preferredServiceId) ? preferredServiceId : questionnaireServices[0]?.id ?? '';
+  const selectedService = questionnaireServices.find(service => service.id === selectedServiceId) ?? null;
+  const composerPlaceholder = generating
+    ? '正在等待回执；可以先起草下一条消息…'
+    : pending
+      ? '先核对上一条调用；也可以继续起草…'
+      : !activeProject
+        ? '先在顶部绑定项目，再描述研究任务…'
+        : !questionnaireServices.length
+          ? '描述研究任务；生成问卷前需要配置模型服务…'
+          : '描述你想推进的研究任务，或点击 + 选择一个意图…';
   const visibleSessions = useMemo(() => filterSessions(sessions, query), [sessions, query]);
   const groups = useMemo(() => groupSessionsByDay(visibleSessions), [visibleSessions]);
   const projectName = useCallback((projectId: string | null) => projects.find(project => project.id === projectId)?.title ?? (projectId ? '项目不可用' : '未绑定项目'), [projects]);
@@ -139,8 +155,10 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     if (!authenticated) { setSessions([]); setActiveId(null); setLoaded(true); return; }
     const rows = loadAgentSessions(ownerId);
     const last = loadActiveSessionId(ownerId);
+    const initial = last && rows.some(session => session.id === last) ? rows.find(session => session.id === last)! : rows[0] ?? null;
     setSessions(rows);
-    setActiveId(last && rows.some(session => session.id === last) ? last : rows[0]?.id ?? null);
+    setActiveId(initial?.id ?? null);
+    setDraft(initial?.draft ?? '');
     setLoaded(true);
   }, [authenticated, ownerId]);
 
@@ -149,6 +167,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     const session = createAgentSession(ownerId, null);
     setSessions([session]);
     setActiveId(session.id);
+    setDraft('');
   }, [authenticated, loaded, ownerId, sessions.length]);
 
   useEffect(() => {
@@ -201,7 +220,11 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
 
   useLayoutEffect(() => {
     const node = threadRef.current;
-    if (node) node.scrollTop = node.scrollHeight;
+    if (!node) return;
+    const changed = lastSessionId.current !== (activeSession?.id ?? null);
+    lastSessionId.current = activeSession?.id ?? null;
+    if (changed) stickToBottom.current = true;
+    if (stickToBottom.current) node.scrollTop = node.scrollHeight;
   }, [activeSession?.id, messages.length, generating]);
 
   useEffect(() => () => {
@@ -217,6 +240,21 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     node.style.height = `${Math.min(node.scrollHeight, 176)}px`;
   }, [draft]);
 
+  useEffect(() => {
+    if (!intentMenuOpen) return;
+    const closeOnPointer = (event: PointerEvent) => { const target = event.target as Element | null; if (intentRef.current?.contains(event.target as Node) || target?.closest('[aria-haspopup="menu"]')) return; setIntentMenuOpen(false); };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') setIntentMenuOpen(false); };
+    document.addEventListener('pointerdown', closeOnPointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => { document.removeEventListener('pointerdown', closeOnPointer); document.removeEventListener('keydown', closeOnEscape); };
+  }, [intentMenuOpen]);
+
+  useEffect(() => {
+    if (!loaded || !authenticated) return;
+    if (window.matchMedia('(max-width: 980px)').matches) return;
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [loaded, authenticated, activeSession?.id]);
+
   const updateSession = useCallback((id: string, update: (session: AgentSession) => AgentSession) => {
     setSessions(previous => previous.map(session => session.id === id ? update(session) : session));
   }, []);
@@ -227,6 +265,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     setSessions(previous => [session, ...previous]);
     setActiveId(session.id);
     setSessionsOpen(false);
+    setArtifactsOpen(false);
     setQuery('');
     setDraft('');
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -238,19 +277,21 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
   }, [activeSession?.projectId, ownerId]);
 
   const selectSession = useCallback((id: string) => {
+    const session = sessions.find(item => item.id === id);
     setActiveId(id);
     setSessionsOpen(false);
-    setDraft('');
+    setArtifactsOpen(false);
+    setDraft(session?.draft ?? '');
     setError('');
     setNotice('');
-  }, []);
+  }, [sessions]);
 
   const removeSession = useCallback((id: string) => {
     if (!ownerId || !window.confirm('删除这段会话？本浏览器中的记录将不可恢复。')) return;
     deleteAgentSession(ownerId, id);
     const next = sessions.filter(session => session.id !== id);
     setSessions(next);
-    if (activeId === id) setActiveId(next[0]?.id ?? null);
+    if (activeId === id) { setActiveId(next[0]?.id ?? null); setDraft(next[0]?.draft ?? ''); }
   }, [activeId, ownerId, sessions]);
 
   const bindProject = useCallback((value: string) => {
@@ -276,6 +317,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
       });
       setPanelTab('artifacts');
       setArtifactsOpen(true);
+      setSessionsOpen(false);
       if (artifact) {
         setFreshArtifact(artifact.id);
         if (freshTimer.current) window.clearTimeout(freshTimer.current);
@@ -309,6 +351,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     if (!projectId) { setError('请先为当前会话绑定项目。'); return; }
     const service = questionnaireServices.find(item => item.id === input.serviceId);
     if (!service) { setError('请选择一个具备问卷能力的模型服务。'); return; }
+    setPreferredServiceId(service.id);
     const brief = input.brief.trim();
     if (!brief || brief.length > 6000) { setError('研究需求应为 1–6,000 字符。'); return; }
     const ownerSnapshot = ownerId, epoch = identityEpoch;
@@ -393,7 +436,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
       if (!activeSession.projectId) {
         next = appendAgentMessage(next, assistantText('问卷生成需要先绑定一个项目：项目决定问卷版本与保存位置。请用顶部项目选择器绑定，或先创建一个项目。', { actions: [{ label: '我的项目', href: '/projects' }] }));
       } else {
-        const service = questionnaireServices[0];
+        const service = selectedService;
         next = appendAgentMessage(next, assistantText('可以。我会先读取项目当前的问卷版本，再用你选择的模型服务生成一份可编辑的问卷建议。发送范围只有这份研究需求和你的模型配置。'));
         next = appendAgentMessage(next, consentMessage({ brief: value.slice(0, 6000), serviceId: service?.id ?? '', serviceLabel: service?.label ?? '' }));
       }
@@ -401,15 +444,16 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
       const reply = localReply(intent, activeSession.projectId);
       next = appendAgentMessage(next, assistantText(reply.text, { actions: reply.actions }));
     }
-    updateSession(activeSession.id, () => next);
+    updateSession(activeSession.id, () => ({ ...next, draft: '' }));
     setDraft('');
     setError('');
     setNotice('');
+    stickToBottom.current = true;
     setSendPulse(true);
     if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
     pulseTimer.current = window.setTimeout(() => setSendPulse(false), 480);
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [activeSession, questionnaireServices, updateSession]);
+  }, [activeSession, selectedService, updateSession]);
 
   function submitDraft() {
     if (!draft.trim() || generating || activeSession?.pending) return;
@@ -430,10 +474,31 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     node.style.setProperty('--ag-my', `${Math.round(event.clientY - rect.top)}px`);
   }
 
+  function changeDraft(value: string) {
+    const next = value.slice(0, 2000);
+    setDraft(next);
+    if (activeSession) updateSession(activeSession.id, session => session.draft === next ? session : { ...session, draft: next });
+  }
+
   function fillPrompt(prompt: string) {
-    setDraft(prompt);
+    changeDraft(prompt);
     setArtifactsOpen(false);
     requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function trackScroll(event: ReactUIEvent<HTMLDivElement>) {
+    const node = event.currentTarget;
+    stickToBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 90;
+  }
+
+  function toggleSessions() {
+    setArtifactsOpen(false);
+    setSessionsOpen(value => !value);
+  }
+
+  function toggleArtifacts() {
+    setSessionsOpen(false);
+    setArtifactsOpen(value => !value);
   }
 
   const statusText = generating ? (reconciling ? '正在核对原请求' : '正在等待模型回执') : pending ? '有待核对的调用' : serviceState === 'error' ? '模型服务读取失败' : authenticated ? '就绪' : '未登录';
@@ -475,10 +540,10 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
     <main className={styles.main} aria-busy={generating} onPointerMove={trackMirror}>
       <header className={styles.mainHeader}>
         <div className={styles.headerTitle}>
-          <button type="button" className={`${styles.iconButton} ${styles.sessionsToggle}`} aria-label="打开会话列表" onClick={() => setSessionsOpen(value => !value)}><NavIcon kind="menu"/></button>
+          <button type="button" className={`${styles.iconButton} ${styles.sessionsToggle}`} aria-label="打开会话列表" onClick={toggleSessions}><NavIcon kind="menu"/></button>
           <div>
             <span className={styles.headerEyebrow}>:: RESEARCH AGENT ::</span>
-            <h1>{activeSession?.title ?? '研究 Agent'}</h1>
+            <h1 title={activeSession?.title}>{activeSession?.title ?? '研究 Agent'}</h1>
             <p>{activeProject?.title ?? '未绑定项目'} · {statusText}</p>
           </div>
         </div>
@@ -491,7 +556,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
               {projects.map(project => <option key={project.id} value={project.id}>{project.title}</option>)}
             </select>
           </label>
-          <button type="button" className={`${styles.ghostButton} ${styles.panelToggle}`} onClick={() => setArtifactsOpen(value => !value)}><NavIcon kind="grid"/><span>产物</span></button>
+          <button type="button" className={`${styles.ghostButton} ${styles.panelToggle}`} onClick={toggleArtifacts}><NavIcon kind="grid"/><span>产物</span></button>
           {activeProject && <Link className={styles.ghostButton} href={`/projects/${activeProject.id}`}>打开工作台</Link>}
         </div>
         {generating && <span className={styles.headerActivity} aria-hidden="true"/>}
@@ -500,39 +565,66 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
         <span><b className={styles.noticeGlyph}>{error ? '!!' : '::'}</b> {error || notice}</span>
         <button type="button" aria-label="关闭提示" onClick={() => { setError(''); setNotice(''); }}><NavIcon kind="close"/></button>
       </div>}
-      <div ref={threadRef} className={styles.thread} role="log" aria-live="polite" aria-relevant="additions">
+      <div ref={threadRef} className={styles.thread} role="log" aria-live="polite" aria-relevant="additions" onScroll={trackScroll}>
         <div key={activeSession?.id ?? 'empty'} className={styles.threadInner}>
           {messages.length === 0
             ? <Welcome authenticated projectBound={Boolean(activeProject)} onPrompt={fillPrompt}/>
             : messages.map(message => <MessageView
                 key={message.id} message={message} services={questionnaireServices} busy={generating} projectBound={Boolean(activeProject)}
-                serviceState={serviceState} onSubmit={submitConsent} onCancel={cancelConsent} onReconcile={reconcile}
+                preferredServiceId={selectedServiceId} serviceState={serviceState} onSubmit={submitConsent} onCancel={cancelConsent} onReconcile={reconcile}
               />)}
           {generating && <p className={styles.thinking} role="status"><span aria-hidden="true"/>{reconciling ? '正在核对原请求并等待回执…' : '正在等待模型回执…'}</p>}
         </div>
       </div>
       <div className={styles.composerWrap}>
-        <div className={styles.quickRow}>{QUICK_PROMPTS.map(item => <button key={item.label} type="button" className={styles.quickChip} disabled={generating || Boolean(pending)} onClick={() => fillPrompt(item.prompt)}>{item.label}</button>)}</div>
-        <div className={styles.composerBox}>
-          <span className={styles.promptGlyph} aria-hidden="true">&gt;</span>
-          <label className={styles.srOnly} htmlFor="agent-composer">告诉研究 Agent 你的任务</label>
-          <textarea
-            id="agent-composer" ref={inputRef} className={styles.composerInput} rows={1} maxLength={2000}
-            value={draft} placeholder="描述你想推进的研究任务，例如：为项目生成一份问卷…" disabled={generating}
-            onChange={event => setDraft(event.target.value)} onKeyDown={onComposerKeyDown}
-            onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
-          />
-          <div className={styles.composerFoot}>
-            <div className={styles.composerMeta}>
-              <span>Enter 发送 · Shift Enter 换行</span>
-              <span data-tone={questionnaireServices.length ? 'ready' : 'warn'}>{questionnaireServices.length ? `问卷模型：${questionnaireServices[0].label}` : '未配置问卷模型'}</span>
-            </div>
-            <button type="button" className={styles.sendButton} data-firing={sendPulse || undefined} disabled={!draft.trim() || generating || Boolean(pending)} onClick={submitDraft} aria-label="发送">
-              <NavIcon kind="arrow"/>
-            </button>
+        <div className={styles.composerFrame}>
+          {intentMenuOpen && <div ref={intentRef} className={styles.intentMenu} role="menu" aria-label="快捷研究意图">
+            <div className={styles.intentMenuHead}><span>:: INTENT</span><span>FILL DRAFT / NO SEND</span></div>
+            {QUICK_PROMPTS.map((item, index) => <button key={item.label} type="button" role="menuitem" className={styles.intentItem} onClick={() => { fillPrompt(item.prompt); setIntentMenuOpen(false); }}>
+              <span className={styles.intentIndex}>{String(index + 1).padStart(2, '0')}</span>
+              <span className={styles.intentCopy}><b>{item.label}</b><small>{item.hint}</small></span>
+              <span className={styles.intentArrow} aria-hidden="true">→</span>
+            </button>)}
+            <p className={styles.intentMenuNote}>选择后只填入输入框，不会直接发送。</p>
+          </div>}
+          <div className={styles.composerChrome}>
+            <span className={styles.composerKicker}>:: PROMPT</span>
+            <span className={styles.composerChromeRight}>AGENT / MIRROR ROOM</span>
           </div>
+          <div className={styles.composerBox}>
+            <div className={styles.composerInputRow}>
+              <span className={styles.promptLine} aria-hidden="true"><b>evix@mirror</b><i>:~$</i></span>
+              <div>
+                <label className={styles.srOnly} htmlFor="agent-composer">告诉研究 Agent 你的任务</label>
+                <textarea
+                  id="agent-composer" ref={inputRef} className={styles.composerInput} rows={1} maxLength={2000}
+                  value={draft} placeholder={composerPlaceholder}
+                  onChange={event => changeDraft(event.target.value)} onKeyDown={onComposerKeyDown}
+                  onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }}
+                />
+              </div>
+            </div>
+            <div className={styles.composerFoot}>
+              <div className={styles.composerToolsLeft}>
+                <button type="button" className={styles.addButton} data-open={intentMenuOpen || undefined} aria-label="选择快捷意图" aria-haspopup="menu" aria-expanded={intentMenuOpen} title="快捷意图" onPointerDown={event => event.preventDefault()} onClick={() => setIntentMenuOpen(value => !value)}><NavIcon kind="plus"/></button>
+                <label className={styles.modelSelect} title="下一次问卷提案的默认模型">
+                  <span>MODEL</span>
+                  <select aria-label="选择问卷模型" value={selectedServiceId} disabled={generating || Boolean(pending) || !questionnaireServices.length} onChange={event => setPreferredServiceId(event.target.value)}>
+                    {!questionnaireServices.length && <option value="">未配置</option>}
+                    {questionnaireServices.map(service => <option key={service.id} value={service.id}>{service.label}</option>)}
+                  </select>
+                </label>
+                {!questionnaireServices.length && <Link href="/services" className={styles.modelConfig}>配置</Link>}
+              </div>
+              <div className={styles.composerToolsRight}>
+                <span className={styles.keyHint}>ENTER 发送</span>
+                <span className={styles.composerCount}>{draft.length} / 2000</span>
+                <button type="button" className={styles.sendButton} data-firing={sendPulse || undefined} data-busy={generating || undefined} disabled={!draft.trim() || generating || Boolean(pending)} onClick={submitDraft} aria-label="发送" title="Enter 发送 · Shift+Enter 换行"><span>{generating ? '处理中' : '发送'}</span><NavIcon kind="arrow"/></button>
+              </div>
+            </div>
+          </div>
+          <div className={styles.composerStatus}><span>[MODE: AGENT]</span><span>[STORE: LOCAL]</span><span>[SEQ: {String(messages.length).padStart(3, '0')}]</span><span className={styles.composerStatusRight}>模型只在确认后调用 · 不生成虚假数据、引用或结论</span></div>
         </div>
-        <p className={styles.composerNote}><span>[MODE: AGENT]</span><span>[STORE: LOCAL]</span><span>[MODEL: {questionnaireServices[0]?.label ?? 'NONE'}]</span><span>模型只在确认后调用 · 不生成虚假数据、引用或结论</span></p>
       </div>
     </main>
     <aside className={styles.artifacts} data-open={artifactsOpen}>
@@ -595,7 +687,7 @@ function SessionPanel({ authenticated, sessions, groups, query, activeId, projec
       {groups.map(group => <section key={group.label} className={styles.sessionGroup}>
         <p className={styles.sessionGroupLabel}>:: {group.label}</p>
         {group.sessions.map(session => <div key={session.id} className={styles.sessionRow} data-active={activeId === session.id}>
-          <button type="button" className={styles.sessionMain} onClick={() => onSelect(session.id)} aria-current={activeId === session.id ? 'page' : undefined}>
+          <button type="button" className={styles.sessionMain} onClick={() => onSelect(session.id)} aria-current={activeId === session.id ? 'page' : undefined} title={session.title}>
             <span className={styles.sessionMarker} aria-hidden="true">&gt;</span>
             <span className={styles.sessionTitle}>{session.title}</span>
             <span className={styles.sessionMeta}>{projectName(session.projectId)} · {formatRelativeTime(session.updatedAt)}</span>
@@ -634,8 +726,8 @@ function Welcome({ authenticated, projectBound, onPrompt }: { authenticated: boo
   </section>;
 }
 
-function MessageView({ message, services, busy, projectBound, serviceState, onSubmit, onCancel, onReconcile }: {
-  message: AgentMessage; services: Service[]; busy: boolean; projectBound: boolean; serviceState: ServiceState;
+function MessageView({ message, services, busy, projectBound, preferredServiceId, serviceState, onSubmit, onCancel, onReconcile }: {
+  message: AgentMessage; services: Service[]; busy: boolean; projectBound: boolean; preferredServiceId: string; serviceState: ServiceState;
   onSubmit: (id: string, input: { brief: string; serviceId: string }) => void; onCancel: (id: string) => void; onReconcile: () => void;
 }) {
   if (message.role === 'user') return <article className={styles.userRow}><div className={styles.userBubble}>{message.text}</div><span className={styles.userLabel}>你</span></article>;
@@ -671,22 +763,22 @@ function MessageView({ message, services, busy, projectBound, serviceState, onSu
   return <article className={styles.assistantRow}>
     <span className={styles.assistantAvatar}><BrandMark size={24}/></span>
     <div className={styles.assistantBody}>
-      <ConsentCard message={message} services={services} busy={busy} projectBound={projectBound} serviceState={serviceState} onSubmit={onSubmit} onCancel={onCancel}/>
+      <ConsentCard message={message} services={services} busy={busy} projectBound={projectBound} preferredServiceId={preferredServiceId} serviceState={serviceState} onSubmit={onSubmit} onCancel={onCancel}/>
     </div>
   </article>;
 }
 
-function ConsentCard({ message, services, busy, projectBound, serviceState, onSubmit, onCancel }: {
-  message: Extract<AgentMessage, { kind: 'consent' }>; services: Service[]; busy: boolean; projectBound: boolean; serviceState: ServiceState;
+function ConsentCard({ message, services, busy, projectBound, preferredServiceId, serviceState, onSubmit, onCancel }: {
+  message: Extract<AgentMessage, { kind: 'consent' }>; services: Service[]; busy: boolean; projectBound: boolean; preferredServiceId: string; serviceState: ServiceState;
   onSubmit: (id: string, input: { brief: string; serviceId: string }) => void; onCancel: (id: string) => void;
 }) {
   const [brief, setBrief] = useState(message.brief);
-  const [serviceChoice, setServiceChoice] = useState(message.serviceId);
+  const [serviceChoice, setServiceChoice] = useState(message.serviceId || preferredServiceId);
   const [consented, setConsented] = useState(false);
   const [localError, setLocalError] = useState('');
-  const serviceId = serviceChoice || services[0]?.id || '';
-  if (message.status === 'cancelled') return <div className={styles.consentDone}><strong>已取消本次生成</strong><p>项目问卷没有变化。需要时可以在输入框重新发起。</p></div>;
-  if (message.status === 'submitted') return <div className={styles.consentDone}><strong>已确认发送</strong><p>正在读取项目版本并调用模型；回执会显示在下方。</p></div>;
+  const serviceId = serviceChoice || preferredServiceId || services[0]?.id || '';
+  if (message.status === 'cancelled') return <div className={styles.consentDone}><span className={styles.consentStamp}>[ VOID ]</span><strong>已取消本次生成</strong><p>项目问卷没有变化。需要时可以在输入框重新发起。</p></div>;
+  if (message.status === 'submitted') return <div className={styles.consentDone}><span className={styles.consentStamp}>[ SENT ]</span><strong>已确认发送</strong><p>正在读取项目版本并调用模型；回执会显示在下方。</p></div>;
   const service = services.find(item => item.id === serviceId);
   function submit() {
     if (!projectBound) { setLocalError('请先在顶部绑定项目。'); return; }

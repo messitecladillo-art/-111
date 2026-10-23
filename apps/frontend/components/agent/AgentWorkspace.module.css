@@ -424,3 +424,131 @@
 .sessionsClose svg { width: 14px; height: 14px; }
 .sessionsClose:hover { color: var(--ag-gold-pale); border-color: rgba(244, 185, 66, 0.3); }
 @media (max-width: 980px) { .sessionsClose { display: grid; } }
+/* Mirror console composer */
+.shell .composerWrap { position: relative; width: min(920px, calc(100% - 44px)); padding: 4px 0 15px; background: linear-gradient(180deg, transparent, var(--wb-bg) 26%); }
+.composerWrap::after { content: ""; display: block; height: 9px; margin: 1px 30px 0; border-radius: 50%; background: linear-gradient(180deg, rgba(244, 185, 66, 0.24), transparent); filter: blur(6px); opacity: 0.7; pointer-events: none; }
+.composerFrame { position: relative; padding: 9px 12px 8px; border: 1px solid rgba(244, 185, 66, 0.34); border-radius: 14px; color-scheme: dark; color: #f3eee2; background: radial-gradient(120% 150% at 0% 0%, rgba(0, 179, 164, 0.11), transparent 56%), radial-gradient(100% 130% at 100% 100%, rgba(244, 185, 66, 0.12), transparent 62%), linear-gradient(165deg, #0a1d30, #06121e 72%); box-shadow: 0 26px 64px -34px rgba(3, 10, 17, 0.95), 0 0 0 1px rgba(244, 185, 66, 0.05) inset; transition: border-color 220ms ease, box-shadow 220ms ease; }
+.composerFrame:focus-within { border-color: rgba(244, 185, 66, 0.66); box-shadow: 0 0 0 4px rgba(244, 185, 66, 0.08), 0 32px 74px -32px rgba(0, 0, 0, 0.98); }
+.composerFrame::before, .composerFrame::after { content: ""; position: absolute; width: 10px; height: 10px; border: 1px solid rgba(244, 185, 66, 0.7); opacity: 0.7; transition: width 240ms var(--wb-ease), height 240ms var(--wb-ease), border-color 240ms, opacity 240ms; pointer-events: none; }
+.composerFrame::before { left: -1px; top: -1px; border-right: 0; border-bottom: 0; border-radius: 14px 0 0 0; }
+.composerFrame::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; border-radius: 0 0 14px 0; }
+.composerFrame:focus-within::before, .composerFrame:focus-within::after { width: 28px; height: 28px; border-color: var(--ag-teal); opacity: 1; }
+.composerChrome { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font: 600 8.5px/1.2 var(--wb-mono); letter-spacing: 0.16em; }
+.composerKicker { color: rgba(244, 185, 66, 0.86); }
+.composerChromeRight { color: rgba(79, 209, 193, 0.72); }
+.intentRail { display: flex; align-items: center; gap: 6px; padding: 7px 0 8px; overflow-x: auto; scrollbar-width: none; }
+.intentRail::-webkit-scrollbar { display: none; }
+.intentLabel { flex: none; color: rgba(244, 185, 66, 0.7); font: 700 8px/1 var(--wb-mono); letter-spacing: 0.16em; }
+.intentToken { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 6px; background: rgba(255, 255, 255, 0.025); color: #cbd6df; font-size: 10.5px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: color 150ms, border-color 150ms, background 150ms; }
+.intentToken > span { color: var(--ag-gold); font: 600 8.5px/1 var(--wb-mono); }
+.intentToken:hover:not(:disabled) { border-color: rgba(244, 185, 66, 0.52); background: rgba(244, 185, 66, 0.08); color: #ffe3a6; }
+.intentToken:disabled { opacity: 0.4; cursor: not-allowed; }
+.intentHint { flex: none; margin-left: auto; color: #6f8292; font: 500 8.5px/1 var(--wb-mono); letter-spacing: 0.02em; }
+.shell .composerBox { padding: 9px 11px 7px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; background: rgba(3, 10, 17, 0.34); box-shadow: none; transition: background 180ms, border-color 180ms; }
+.shell .composerBox:focus-within { border-color: rgba(79, 209, 193, 0.35); background: rgba(3, 10, 17, 0.5); box-shadow: none; }
+.composerBox::before, .composerBox::after { content: none; }
+.composerInputRow { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.promptLine { padding-top: 1px; color: var(--ag-gold); font: 600 10px/1.8 var(--wb-mono); white-space: nowrap; }
+.promptLine b { color: var(--ag-gold-pale); font-weight: 600; }
+.promptLine i { color: rgba(79, 209, 193, 0.9); font-style: normal; }
+.promptLine::after { content: "▌"; margin-left: 2px; color: var(--ag-teal); animation: cursorBlink 1.3s steps(1) infinite; }
+.shell .composerBox .composerInput { display: block; width: 100%; min-height: 46px; padding: 0; border: 0; outline: 0; resize: none; overflow-y: auto; background: transparent; color: #f3eee2; caret-color: var(--ag-gold); font-size: 13px; line-height: 1.8; }
+.shell .composerBox .composerInput::placeholder { color: #6f8292; }
+.shell .composerBox .composerInput:focus-visible { outline: none; border: 0; box-shadow: none; }
+.shell .composerFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.shell .composerMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #7f91a1; font: 500 8.5px/1.4 var(--wb-mono); letter-spacing: 0.02em; }
+.composerMeta b { color: #b7c4cf; font-weight: 600; }
+.composerMeta > i { color: #405363; font-style: normal; }
+.composerCount { color: #6f8292; }
+.composerTools { display: flex; align-items: center; gap: 7px; flex: none; }
+.modelChip { display: inline-flex; align-items: center; gap: 6px; max-width: 190px; min-height: 30px; padding: 0 8px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #cbd6df; text-decoration: none; transition: border-color 150ms; }
+.modelChip > span { flex: none; color: var(--ag-gold); font: 700 8px/1 var(--wb-mono); letter-spacing: 0.08em; }
+.modelChip > b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 500; }
+.modelChip[data-tone="warn"] > b { color: #f2a65a; }
+.modelChip:hover { border-color: rgba(244, 185, 66, 0.45); }
+.shell .sendButton { display: inline-flex; width: auto; height: auto; min-height: 32px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid #f4b942; border-radius: 7px; background: linear-gradient(145deg, #ffd66e, #eeae3c); color: #04121e; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; box-shadow: 0 10px 24px -14px rgba(244, 185, 66, 0.95); cursor: pointer; }
+.sendButton > span { white-space: nowrap; }
+.shell .sendButton svg { width: 15px; height: 15px; }
+.shell .sendButton:hover:not(:disabled) { filter: brightness(1.06); }
+.shell .sendButton:disabled { border-color: rgba(244, 185, 66, 0.24); background: transparent; color: #6f8292; opacity: 1; box-shadow: none; }
+.composerStatus { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding-top: 7px; color: #6f8292; font: 500 8.5px/1.5 var(--wb-mono); letter-spacing: 0.02em; }
+.composerStatus span:nth-child(1) { color: rgba(79, 209, 193, 0.82); }
+.composerStatus span:nth-child(2) { color: rgba(244, 185, 66, 0.78); }
+.composerStatusRight { margin-left: auto; color: #6f8292; }
+@media (max-width: 720px) {
+  .shell .composerWrap { width: calc(100% - 24px); }
+  .composerFrame { padding: 8px 9px 7px; }
+  .composerChromeRight, .intentHint, .composerStatusRight { display: none; }
+  .composerInputRow { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .promptLine { padding-top: 0; font-size: 9px; }
+  .promptLine b { display: none; }
+  .modelChip { max-width: 120px; }
+  .shell .sendButton { padding: 0 10px; }
+}
+/* DSH-inspired command popover + control row */
+.intentMenu { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); z-index: 40; padding: 10px; border: 1px solid rgba(244, 185, 66, 0.42); border-radius: 12px; background: radial-gradient(120% 130% at 0% 0%, rgba(0, 179, 164, 0.1), transparent 55%), linear-gradient(165deg, #0b2034, #050f1a 78%); box-shadow: 0 28px 60px -26px rgba(0, 0, 0, 0.96), 0 0 0 1px rgba(244, 185, 66, 0.06) inset; animation: menuIn 180ms cubic-bezier(0.16, 0.8, 0.12, 1) both; }
+.intentMenuHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 8px; color: rgba(244, 185, 66, 0.8); font: 600 8px/1.2 var(--wb-mono); letter-spacing: 0.14em; }
+.intentMenuHead > span:last-child { color: rgba(79, 209, 193, 0.65); }
+.intentItem { display: grid; grid-template-columns: 24px minmax(0, 1fr) 16px; gap: 8px; align-items: center; width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #f3eee2; text-align: left; cursor: pointer; transition: background 150ms, border-color 150ms; }
+.intentItem:hover { border-color: rgba(244, 185, 66, 0.3); background: rgba(244, 185, 66, 0.08); }
+.intentIndex { color: var(--ag-gold); font: 600 9px/1 var(--wb-mono); }
+.intentCopy { min-width: 0; }
+.intentCopy b { display: block; font-size: 11.5px; font-weight: 600; }
+.intentCopy small { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #7f91a1; font-size: 9.5px; }
+.intentArrow { color: rgba(79, 209, 193, 0.8); font-size: 13px; }
+.intentMenuNote { margin: 7px 4px 0; color: #6f8292; font: 500 8.5px/1.5 var(--wb-mono); letter-spacing: 0.02em; }
+.composerToolsLeft { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.composerToolsRight { display: flex; align-items: center; gap: 8px; flex: none; }
+.addButton { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: rgba(255, 255, 255, 0.03); color: #cbd6df; cursor: pointer; transition: color 150ms, border-color 150ms, background 150ms, transform 160ms; }
+.addButton svg { width: 15px; height: 15px; transition: transform 180ms var(--wb-ease); }
+.addButton:hover, .addButton[data-open="true"] { border-color: rgba(244, 185, 66, 0.5); background: rgba(244, 185, 66, 0.08); color: var(--ag-gold); }
+.addButton[data-open="true"] svg { transform: rotate(45deg); }
+.modelSelect { display: inline-flex; align-items: center; gap: 5px; min-width: 0; min-height: 30px; padding: 0 7px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; background: rgba(255, 255, 255, 0.02); transition: border-color 150ms; }
+.modelSelect > span { flex: none; color: var(--ag-gold); font: 700 8px/1 var(--wb-mono); letter-spacing: 0.08em; }
+.modelSelect select { min-width: 0; max-width: 160px; border: 0; outline: 0; background: transparent; color: #cbd6df; font-size: 9.5px; cursor: pointer; }
+.modelSelect select:disabled { color: #6f8292; cursor: not-allowed; }
+.modelSelect select option { color: #0a1f33; background: #f7f4ed; }
+.modelSelect:focus-within { border-color: rgba(244, 185, 66, 0.5); }
+.modelConfig { color: var(--ag-gold); font-size: 9px; text-decoration: none; white-space: nowrap; }
+.modelConfig:hover { color: var(--ag-gold-pale); }
+.keyHint { color: #6f8292; font: 500 8.5px/1 var(--wb-mono); white-space: nowrap; }
+@keyframes menuIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 720px) {
+  .intentMenu { left: 8px; right: 8px; }
+  .keyHint { display: none; }
+  .modelSelect select { max-width: 96px; }
+  .composerToolsLeft { gap: 5px; }
+  .composerToolsRight { gap: 6px; }
+}
+/* Composer readability and touch targets */
+.composerChrome { font-size: 9px; }
+.composerStatus { font-size: 9px; color: #8294a4; }
+.shell .composerBox .composerInput::placeholder { color: #8799a9; }
+.promptLine { font-size: 10.5px; }
+.addButton { width: 32px; height: 32px; }
+.modelSelect { min-height: 32px; }
+.modelSelect select { font-size: 10px; max-width: 175px; }
+.keyHint { font-size: 9px; }
+.composerCount { font-size: 9px; }
+.shell .sendButton { min-height: 34px; font-size: 11.5px; }
+.intentCopy b { font-size: 12px; }
+.intentCopy small { font-size: 10px; }
+.intentMenuNote { font-size: 9px; }
+.shell .composerFoot { flex-wrap: wrap; row-gap: 6px; }
+@media (max-width: 720px) {
+  .modelSelect select { max-width: 100px; }
+  .composerStatus { font-size: 8.5px; }
+}
+/* Composer polish */
+.intentMenu { right: auto; width: min(440px, calc(100% - 24px)); padding: 9px; }
+.intentItem { padding: 6px 8px; }
+.intentCopy small { font-size: 9.5px; }
+.promptLine::after { opacity: 0.35; animation: none; }
+.composerFrame:focus-within .promptLine::after { opacity: 1; animation: cursorBlink 1.3s steps(1) infinite; }
+.sendButton[data-busy="true"] > span::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 6px; vertical-align: -1px; border: 1.5px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 800ms linear infinite; }
+.promptCard strong { font-size: 12px; }
+.promptCard span { font-size: 10.8px; }
+.welcomeNote { font-size: 10.5px !important; }
+.consentStamp { display: inline-block; margin-bottom: 4px; color: var(--wb-gold-text); font: 700 9px/1 var(--wb-mono); letter-spacing: 0.12em; }
+.consentDone strong { display: block; }
+@media (max-width: 720px) { .intentMenu { left: 8px; width: calc(100% - 16px); } }

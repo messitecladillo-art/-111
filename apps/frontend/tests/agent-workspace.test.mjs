@@ -60,7 +60,7 @@ test('sessions and pending receipts survive a storage round trip per owner', () 
   let session = createAgentSession(owner);
   session = appendAgentMessage(session, userMessage('生成一份问卷'));
   session = appendAgentMessage(session, questionnaireToolMessage('tool-1', 'unknown', '结果待核对', { canReconcile: true }));
-  session = { ...session, pending: { request: pendingRequest, serviceLabel: '合成模型', toolMessageId: 'tool-1', createdAt: new Date().toISOString() } };
+  session = { ...session, draft: '尚未发送的草稿', pending: { request: pendingRequest, serviceLabel: '合成模型', toolMessageId: 'tool-1', createdAt: new Date().toISOString() } };
   assert.equal(saveAgentSession(session, store), true);
   assert.equal(saveSessionIndex(owner, [session], store), true);
   const loaded = loadAgentSessions(owner, store);
@@ -68,6 +68,7 @@ test('sessions and pending receipts survive a storage round trip per owner', () 
   assert.equal(loaded[0].messages[0].text, '生成一份问卷');
   assert.equal(loaded[0].pending.request.idempotencyKey, pendingRequest.idempotencyKey);
   assert.equal(loaded[0].messages[1].canReconcile, true);
+  assert.equal(loaded[0].draft, '尚未发送的草稿');
   assert.equal(loadAgentSessions('44444444-4444-4444-8444-444444444444', store).length, 0);
 });
 
