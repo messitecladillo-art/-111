@@ -38,7 +38,7 @@ export default function RoomRail({ room, light, onNavigate }: { room: RoomId; li
       })}
     </Fragment>)}
     <div className={styles.railFoot}>
-      照度来自问卷室、分析室<br />与报告室的检查。<br />
+      照度来自问卷、抽样、分析<br />与报告四间房的检查。<br />
       <Link href="/workspace">经典工作台 ↗</Link>
     </div>
   </nav>;

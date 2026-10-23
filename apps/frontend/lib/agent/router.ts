@@ -5,6 +5,7 @@
  */
 import { lightBar, percent } from './glyphs.ts';
 import { LIT_ROOMS, roomLight, type Illumination, type LightCheck } from './illumination.ts';
+import { exhibitKey, type Trace, type TraceStep } from './provenance.ts';
 import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
 
 /** gold: a number with an origin · cyan: generated, unconfirmed · teal: a method or command · error: failures only. */
@@ -25,9 +26,11 @@ export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
   | { kind: 'tool'; title: string; lines: Line[]; links?: AgentLink[] }
   | { kind: 'confirm'; title: string; lines: Line[]; confirm: AgentLink; cancel: string }
-  | { kind: 'entry'; id: string; name: string; english?: string; definition: string; formula?: string; sources: string[]; reviewed: boolean };
+  | { kind: 'entry'; id: string; name: string; english?: string; definition: string; formula?: string; sources: string[]; reviewed: boolean }
+  | { kind: 'trace'; reference: string; title: string; steps: TraceStep[] };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
-export type RouterContext = { room: RoomId; light: Illumination; theme?: 'light' | 'dark' };
+/** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
+export type RouterContext = { room: RoomId; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[] };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
 export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean };
 
@@ -35,8 +38,9 @@ export type Command = { name: string; args?: string; line: string; words: readon
 const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `走进${r.name}`, words: [r.id] }));
 export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
-  { name: '照度', line: '已接入三间房的证据完整度', words: ['status'] },
+  { name: '照度', line: '各房间的证据完整度', words: ['status'] },
   { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
+  { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
   { name: '查', args: '概念或方法', line: '在知识镜中查定义、公式与出处', words: ['lookup', 'search'] },
   ...ROOM_COMMANDS,
   { name: '夜', line: '切换到深色主题', words: ['dark'] },
@@ -71,7 +75,7 @@ function help(): AgentTurn {
     cards: [
       { kind: 'tool', title: '命令', lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(`　${c.line}`, 'dim')]) },
       { kind: 'tool', title: '房间', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
-      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开分析室', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
+      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开分析室', '图 1-1 的数字从哪来', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
     ],
     chips: [recommend(say('下一步做什么')), say('/照度')],
   };
@@ -94,7 +98,7 @@ function status(ctx: RouterContext, scope?: RoomId): AgentTurn {
     };
   }
   return {
-    lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的三间房；其他房间接入 Agent 主循环后再点亮。', 'dim')]],
+    lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的房间：问卷、抽样、分析与报告；其他房间接入 Agent 主循环后再点亮。', 'dim')]],
     cards: [{ kind: 'tool', title: '读取 · 项目照度', lines: light.rooms.map(r => [t(`${named(r.room)}　`), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(` ${percent(r.score).padStart(4, ' ')}`, 'gold'), t(`　${r.summary}`, 'dim')]) }],
     chips: [recommend(say('下一步做什么')), say('还缺什么', '/盲区')],
   };
@@ -118,10 +122,28 @@ function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
 
 function nextStep(ctx: RouterContext): AgentTurn {
   const spot = ctx.light.blind[0];
-  if (!spot) return { lines: [[t('三间房的检查都通过了。')], [t('可以去答辩室演练追问，交稿前在提交前体检里查一遍文件。', 'dim')]], chips: [say('/答辩'), say('/提交')] };
+  if (!spot) return { lines: [[t('有照度的房间，检查都通过了。')], [t('可以去答辩室演练追问，交稿前在提交前体检里查一遍文件。', 'dim')]], chips: [say('/答辩'), say('/提交')] };
   return {
     lines: [[t('下一步：'), t(spot.label, 'strong'), t('。')], [t(spot.detail, 'dim')]],
     chips: [recommend(say(`走进${named(spot.go)}`, `/${roomById(spot.go).command}`)), say('还缺什么', '/盲区')],
+  };
+}
+
+/** 回溯: one exhibit's path back to its origin, or the exhibits to choose from. `arg` is an exhibit number or words of its title. */
+function trace(ctx: RouterContext, arg = ''): AgentTurn {
+  const traces = ctx.traces ?? [], wanted = arg.trim(), key = exhibitKey(wanted);
+  if (!traces.length) return {
+    lines: [[t('报告里还没有来自登记结果的图表。')], [t('在分析室完成一项分析并发送到报告，或从抽样室插入抽样框，就能沿光路回溯到数据与题目。', 'dim')]],
+    chips: [recommend(say('/分析')), say('/报告')],
+  };
+  const chosen = wanted ? traces.filter(x => exhibitKey(x.reference) === key || x.title.includes(wanted)) : traces.length === 1 ? traces : [];
+  if (chosen.length === 1) {
+    const x = chosen[0];
+    return { lines: [[t(x.reference, 'strong'), t(`「${x.title}」的数字，沿光路回到来处：`)]], cards: [{ kind: 'trace', reference: x.reference, title: x.title, steps: x.steps }] };
+  }
+  return {
+    lines: wanted ? [[t('报告里没有'), t(`「${wanted}」`, 'strong'), t('，可以回溯的图表有：')]] : [[t('报告里有 '), t(String(traces.length), 'gold'), t(' 个来自登记结果的图表，回溯哪一个？')]],
+    chips: traces.slice(0, 8).map(x => say(`${x.reference} ${x.title}`.slice(0, 26), `/来处 ${x.reference}`)),
   };
 }
 
@@ -160,6 +182,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '下一步': return { turn: nextStep(ctx) };
     case '照度': return { turn: status(ctx, scope) };
     case '盲区': return { turn: blindSpots(ctx, scope) };
+    case '来处': return { turn: trace(ctx, arg) };
     case '查': return arg ? { lookup: arg, explicit: true }
       : { turn: { lines: [[t('查什么？例如 '), t('/查 设计效应', 'teal'), t('。')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] } };
     case '夜': return { turn: ctx.theme === 'dark' ? { lines: [[t('现在就是深色主题。')]] } : { lines: [[t('已切换到深色主题。')]], act: { type: 'theme', theme: 'dark' } } };
@@ -177,6 +200,8 @@ const NEXT = /下一步|接下来|该做什么|先做什么|从哪(里)?开始|�
 const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|短板|没通过/u;
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
 const WHERE = /^(我在哪|这是哪|当前房间|我在哪里)/u;
+const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
+const EXHIBIT = /([图表])\s*([0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?)/u;
 const LOOKUP = [/^(?:什么是|何为|啥是|解释一下|解释|查一下|查查|查|搜一下|搜索|搜)\s*(.+)$/u, /^(.+?)(?:是什么意思|是什么|是啥|什么意思|怎么算|怎么计算|的公式|的定义|指的是什么)$/u];
 const OPEN = /^(?:打开|去|进入|走进|切到|切换到|带我去|回到|前往|看看|到)\s*(.+)$/u;
 
@@ -193,6 +218,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
+  if (TRACE.test(input)) { const m = EXHIBIT.exec(input); return { turn: trace(ctx, m ? m[1] + m[2] : '') }; }
   if (WHERE.test(input)) { const room = roomById(ctx.room); return { turn: { lines: [[t('你在'), t(room.name, 'strong'), t('。')], [t(room.line, 'dim')]] } }; }
   for (const pattern of LOOKUP) { const m = pattern.exec(input); if (m?.[1]?.trim()) return { lookup: m[1].trim(), explicit: true }; }
   const verb = OPEN.exec(input), rooms = mentionedRooms(verb?.[1] ?? input);

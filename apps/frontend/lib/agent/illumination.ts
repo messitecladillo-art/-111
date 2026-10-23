@@ -22,7 +22,7 @@ export type RoomLight = { room: RoomId; score: number; checks: LightCheck[]; sum
 export type Illumination = { rooms: RoomLight[]; overall: number; blind: LightCheck[]; benchmark: BenchmarkResult | null };
 
 /** The rooms whose light the shell can measure today, in research order. */
-export const LIT_ROOMS = ['design', 'analysis', 'editor'] as const satisfies readonly RoomId[];
+export const LIT_ROOMS = ['design', 'sampling', 'analysis', 'editor'] as const satisfies readonly RoomId[];
 
 const TEMPLATE = createEditorContent().report.map(s => [s.title, s.body] as const);
 /** A report still equal to the starting template has no writing of its own, whatever the benchmark makes of its prompts. */
@@ -49,8 +49,27 @@ function designLight(d: Questionnaire | null): RoomLight {
   return { room: 'design', score: share(checks), checks, summary: `${asked} 道题${blockers ? ` · ${blockers} 处阻断` : ''}` };
 }
 
+function samplingLight(view: ProjectView): RoomLight {
+  // A plan becomes evidence once it is written into the report as frames; a draft kept in the sampling room is not yet.
+  const frames = (view.report?.quality?.results ?? []).filter(r => r.method === 'sampling-frame');
+  const check = (id: string, passed: boolean, label: string, detail: string, go: RoomId = 'sampling'): LightCheck => ({ id: `sampling.${id}`, room: 'sampling', go, label, passed, detail });
+  if (!frames.length) return { room: 'sampling', score: 0, summary: '方案还没写进报告', checks: [check('frame', false, '抽样方案还没写进报告', '在抽样室定好分阶段方案，一键插入报告的调查方案章节；写进报告的方案才算证据。')] };
+  const planned = frames.map(r => r.metrics.find(m => m.label === '计划有效样本')?.value ?? 0);
+  const total = planned.reduce((sum, v) => sum + v, 0), stated = planned.every(v => v > 0), rows = view.dataset?.rows ?? 0;
+  const nonProbability = frames.filter(r => r.warnings.some(w => /不是概率样本/u.test(w))).length;
+  const checks = [
+    check('frame', true, `报告写入了 ${frames.length} 个抽样框`, frames.map(r => r.title).join('、')),
+    check('size', stated, stated ? `计划有效样本共 ${total} 份` : '有抽样框没写计划有效样本量', '样本量决定估计精度，也是回收率与有效率的分母。'),
+    !view.dataset ? check('reach', false, '还没有回收数据可对照计划', '在分析室载入回收数据后，这里核对回收是否达到计划样本量。', 'analysis')
+      : check('reach', stated && rows >= total, rows >= total ? `回收 ${rows} 份，达到计划的 ${total} 份` : `回收 ${rows} 份，未达计划的 ${total} 份`,
+        rows >= total ? '回收份数按分析室载入的数据计；有效率见质量控制。' : '补充回收，或在报告中说明样本不足对估计精度的影响。'),
+  ];
+  return { room: 'sampling', score: share(checks), checks, summary: `${frames.length} 个抽样框 · 计划 ${total} 份${nonProbability ? ` · ${nonProbability} 个含非概率阶段` : ''}` };
+}
+
 function analysisLight(view: ProjectView): RoomLight {
-  const results = view.report?.quality?.results ?? [], confirmed = (view.report?.quality?.findings ?? []).filter(f => f.status === 'confirmed').length;
+  // Sampling frames are registered as results too, but they are the sampling room's evidence, not an analysis.
+  const results = (view.report?.quality?.results ?? []).filter(r => r.method !== 'sampling-frame'), confirmed = (view.report?.quality?.findings ?? []).filter(f => f.status === 'confirmed').length;
   const registered = results.length + (view.resultPending ? 1 : 0);
   const data = view.dataset;
   const checks: LightCheck[] = [
@@ -80,7 +99,7 @@ function reportLight(content: EditorContent | null): [RoomLight, BenchmarkResult
 /** Light for every measurable room, the overall share, and the blind spots in research order. */
 export function illuminate(view: ProjectView): Illumination {
   const [report, benchmark] = reportLight(view.report);
-  const rooms = [designLight(view.design), analysisLight(view), report];
+  const rooms = [designLight(view.design), samplingLight(view), analysisLight(view), report];
   return {
     rooms, benchmark,
     overall: rooms.reduce((sum, r) => sum + r.score, 0) / rooms.length,

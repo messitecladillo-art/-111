@@ -172,6 +172,18 @@
 .entryFormula { margin: 4px 0 10px; padding: 6px 0; overflow-x: auto; color: var(--ax-fg); }
 .entrySources { margin: 0; color: var(--ax-dim); font: 12px/1.7 var(--ax-mono); }
 
+/* 回溯: the light path from an exhibit back to its origin, drawn on one gold rule. */
+.trace .cardTitle { color: var(--ax-gold); }
+.traceHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 2px 0 12px; font-size: 14px; }
+.traceHead b { color: var(--ax-gold); font: 400 12.5px var(--ax-mono); }
+.path { margin: 0 0 0 7px; padding: 2px 0; list-style: none; border-left: 1px solid var(--ax-gold-line); }
+.path li { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: baseline; padding: 6px 0; }
+.path li > b { margin-left: -5px; color: var(--ax-gold); font: 400 11px var(--ax-mono); letter-spacing: -0.08em; }
+.path li strong { display: block; font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
+.path li[data-kind="question"] strong { font-family: var(--ax-serif); font-weight: 600; }
+.path li small { display: block; margin-top: 1px; color: var(--ax-dim); font: 12px/1.65 var(--ax-mono); overflow-wrap: anywhere; }
+.origin { display: flex; align-items: center; gap: 8px; margin: 4px 0 0 1px; color: var(--ax-gold-hot); font: 500 12.5px var(--ax-mono); letter-spacing: 0.2em; }
+.origin b { color: var(--ax-gold); font-weight: 400; letter-spacing: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .chipsLabel { align-self: center; margin-right: 4px; color: var(--ax-dim); font: 11.5px var(--ax-mono); letter-spacing: 0.08em; }
 .chip { min-height: 30px; padding: 3px 11px; border: 1px solid var(--ax-rule-strong); border-radius: 2px; background: transparent; color: var(--ax-fg); font: 13px var(--ax-mono); cursor: pointer; transition: color 140ms, border-color 140ms, background-color 140ms; }
@@ -278,7 +290,10 @@
 .go { min-height: 28px; padding: 0 10px; border: 1px solid var(--ax-rule-strong); border-radius: 2px; background: transparent; color: var(--ax-dim); font: 12.5px var(--ax-mono); white-space: nowrap; cursor: pointer; }
 .go:hover { border-color: var(--ax-teal); color: var(--ax-teal); }
 .clear { margin: 0; color: var(--ax-gold); font: 13px var(--ax-mono); }
-.chain { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.traceRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 14px 0 0; color: var(--ax-dim); font-size: 12.5px; }
+.goGold { border-color: var(--ax-gold-line); color: var(--ax-gold); }
+.goGold:hover { border-color: var(--ax-gold); color: var(--ax-gold-hot); background: var(--ax-gold-soft); }
 .link { display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 14px 16px; border: 1px solid var(--ax-rule); border-radius: 2px; }
 .link > span { color: var(--ax-dim); font: 11.5px var(--ax-mono); letter-spacing: 0.14em; }
 .link > strong { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }

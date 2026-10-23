@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { Formula } from '@/components/math/Tex';
-import type { AgentAction, AgentCard } from '@/lib/agent/router';
+import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
 import { Spans } from './Glyphs';
 import type { Message } from './transcript-store';
 import styles from './AgentShell.module.css';
@@ -52,6 +52,20 @@ function MessageView({ message, onAction, onAnswer }: { message: Message } & Han
   </div>;
 }
 
+/** Numbers in a recorded step develop into gold; digits inside a fingerprint, a variable code or "SHA-256" stay plain. */
+const NUMBER = /(?<![0-9A-Za-z.-])\d+(?:[.,]\d+)*%?(?![0-9A-Za-z])/gu;
+function numbers(text: string): Line {
+  const line: Line = [];
+  let last = 0;
+  for (const m of text.matchAll(NUMBER)) {
+    if (m.index > last) line.push({ text: text.slice(last, m.index) });
+    line.push({ text: m[0], mark: 'gold' });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) line.push({ text: text.slice(last) });
+  return line;
+}
+
 function Card({ card, message, onAction, onAnswer }: { card: AgentCard; message: Extract<Message, { role: 'agent' }> } & Handlers) {
   if (card.kind === 'entry') return <div className={`${styles.card} ${styles.entry}`}>
     <span className={styles.cardTitle}>知识镜 · {card.reviewed ? '已审核词条' : '待审核词条'}</span>
@@ -62,6 +76,17 @@ function Card({ card, message, onAction, onAnswer }: { card: AgentCard; message:
     <div className={styles.cardLinks}><button type="button" className={styles.chip} onClick={() => onAction({ type: 'entry', id: card.id })}>展开词条 →</button></div>
   </div>;
   if (card.kind === 'confirm') return <Confirm card={card} message={message} onAction={onAction} onAnswer={onAnswer} />;
+  if (card.kind === 'trace') return <div className={`${styles.card} ${styles.trace}`}>
+    <span className={styles.cardTitle}>回溯 · {card.reference}</span>
+    <p className={styles.traceHead}><b>{card.reference}</b>{card.title}</p>
+    <ol className={styles.path} aria-label="光路：从图表回到来处">
+      {card.steps.map((step, i) => <li key={i} data-kind={step.kind}>
+        <b aria-hidden="true">◀──</b>
+        <div><strong><Spans line={numbers(step.text)} at={message.at} /></strong><small><Spans line={numbers(step.detail)} at={message.at} /></small></div>
+      </li>)}
+    </ol>
+    <p className={styles.origin}><b aria-hidden="true">◉</b>来处</p>
+  </div>;
   return <div className={styles.card}>
     <span className={styles.cardTitle}>{card.title}</span>
     <div className={styles.cardLines}>{card.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}</div>

@@ -9,6 +9,7 @@ import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { NavIcon, ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
 import { illuminate, roomLight } from '@/lib/agent/illumination';
+import { traceExhibits } from '@/lib/agent/provenance';
 import { isRoomId, roomById, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, type AgentAction, type AgentTurn } from '@/lib/agent/router';
 import Composer from './Composer';
@@ -59,6 +60,7 @@ export default function AgentShell() {
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
+  const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
 
   const [visited, setVisited] = useState<RoomId[]>([room]);
   const [talkOpen, setTalkOpen] = useState(true);
@@ -107,15 +109,15 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable while the
   // report is re-scored on every keystroke and the transcript need not re-render with it.
-  const latest = useRef({ room, light, theme, knowledge });
-  useEffect(() => { latest.current = { room, light, theme, knowledge }; });
+  const latest = useRef({ room, light, theme, knowledge, traces });
+  useEffect(() => { latest.current = { room, light, theme, knowledge, traces }; });
   const agent = useMemo(() => {
     const send = (raw: string) => {
       const text = raw.trim();
       if (!text) return;
-      const { room, light, theme } = latest.current;
+      const { room, light, theme, traces } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room, light, theme });
+      const routed = route(text, { room, light, theme, traces });
       setTalkOpen(true);
       setPane('talk');
       if ('lookup' in routed) {
@@ -220,7 +222,7 @@ export default function AgentShell() {
       <main ref={mirrorRef} id="mirror" className={styles.mirror} data-room={room} tabIndex={-1} aria-label={`镜面：${here.name}`} data-dialog-background
         onPointerDown={() => { if (overlay && talkOpen) setTalkOpen(false); }}>
         {!narrow && <button type="button" className={styles.talkTab} onClick={() => setTalkOpen(true)} aria-label="展开对话">◆ 对话</button>}
-        {room === 'overview' ? <Lobby light={light} view={deferredView} onOpen={go} headingRef={headingRef} />
+        {room === 'overview' ? <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={headingRef} />
           : room !== 'canvas' && <header className={styles.roomHead}>
             <h1 ref={headingRef} tabIndex={-1}>{here.name}</h1>
             {lit && <span className={styles.roomLight}><LightBar score={lit.score} /><b>{percent(lit.score)}</b>{lit.summary}</span>}

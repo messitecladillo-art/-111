@@ -13,7 +13,9 @@ const PLAN: readonly (readonly RoomId[])[] = [['diagnose', 'rules', 'design', 's
 const ORDER: readonly RoomId[] = [...PLAN[0], ...[...PLAN[1]].reverse()];
 
 /** 前厅: where the light reaches, where it does not, and the evidence chain it rests on. Everything here is read from the project. */
-export default function Lobby({ light, view, onOpen, headingRef }: { light: Illumination; view: ProjectView; onOpen: (room: RoomId) => void; headingRef: Ref<HTMLHeadingElement> }) {
+export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }: {
+  light: Illumination; view: ProjectView; traces: number; onOpen: (room: RoomId) => void; onSay: (text: string) => void; headingRef: Ref<HTMLHeadingElement>;
+}) {
   const [allSpots, setAllSpots] = useState(false);
   const score = (id: RoomId) => roomLight(light, id)?.score ?? 0;
   // Light leaves a lit room along the corridor; it is drawn on the wire to the next room only.
@@ -21,7 +23,9 @@ export default function Lobby({ light, view, onOpen, headingRef }: { light: Illu
   const spots = allSpots ? light.blind : light.blind.slice(0, 6);
   const design = view.design, issues = design ? questionnaireIssues(design) : [], asked = design?.questions.filter(q => q.text.trim()).length ?? 0;
   const blockers = issues.filter(i => i.level === 'blocker').length, mapped = design?.questions.filter(questionIsMapped).length ?? 0;
-  const results = view.report?.quality?.results.length ?? 0, confirmed = view.report?.quality?.findings.filter(f => f.status === 'confirmed').length ?? 0;
+  // Sampling frames are registered like results, but they are the sampling plan, not an analysis.
+  const registered = view.report?.quality?.results ?? [], results = registered.filter(r => r.method !== 'sampling-frame').length;
+  const confirmed = view.report?.quality?.findings.filter(f => f.status === 'confirmed').length ?? 0, sampling = roomLight(light, 'sampling');
   const benchmark = light.benchmark, report = roomLight(light, 'editor');
 
   return <div className={styles.lobby}>
@@ -51,7 +55,7 @@ export default function Lobby({ light, view, onOpen, headingRef }: { light: Illu
       <p className={styles.legend} aria-label="图例">
         <span><i>·</i> 无证据</span><span><b>░</b> 微弱</span><span><b>▒</b> 部分</span><span><b>▓</b> 充分</span><span><b>█</b> 全部通过</span>
       </p>
-      <p className={styles.note}>照度来自问卷室、分析室与报告室的检查；虚线框的房间接入 Agent 主循环后再点亮。</p>
+      <p className={styles.note}>照度来自问卷室、抽样室、分析室与报告室的检查；虚线框的房间接入 Agent 主循环后再点亮。</p>
       <div className={styles.gallery}><span>镜廊</span>
         <a href="#cases">案例库</a><a href="#silicon">硅基样本</a><span className={styles.note}>只映照，不替你下结论。</span>
       </div>
@@ -65,17 +69,22 @@ export default function Lobby({ light, view, onOpen, headingRef }: { light: Illu
           <div><strong>{spot.label}</strong><small>{spot.detail}</small></div>
           <button type="button" className={styles.go} onClick={() => onOpen(spot.go)}>去{roomById(spot.go).name} →</button>
         </li>)}
-      </ul> : <p className={styles.clear}>没有盲区：三间房的检查全部通过。</p>}
+      </ul> : <p className={styles.clear}>没有盲区：有照度的房间，检查全部通过。</p>}
       {light.blind.length > 6 && <button type="button" className={styles.go} style={{ marginTop: 12 }} onClick={() => setAllSpots(!allSpots)}>{allSpots ? '收起' : `展开全部 ${light.blind.length} 处`}</button>}
     </section>
 
     <section className={styles.section} aria-labelledby="lobby-chain">
-      <div className={styles.sectionHead}><h2 id="lobby-chain">证据链</h2><span>问卷 → 数据 → 结果 → 报告</span></div>
+      <div className={styles.sectionHead}><h2 id="lobby-chain">证据链</h2><span>问卷 → 抽样 → 数据 → 结果 → 报告</span></div>
       <div className={styles.chain}>
         <div className={styles.link} data-empty={!asked}>
           <span>问卷</span>
           <strong>{design && asked ? (design.title.trim() || '未命名问卷') : '还没有题目'}</strong>
           {design && asked > 0 && <small><b>{asked}</b> 道题 · <b>{blockers}</b> 处阻断 · <b>{mapped}</b>/{design.questions.length} 已映射</small>}
+        </div>
+        <div className={styles.link} data-empty={!sampling?.score}>
+          <span>抽样</span>
+          <strong>{sampling?.score ? sampling.summary : '方案还没写进报告'}</strong>
+          {!!sampling?.score && <small>{sampling.checks.filter(c => !c.passed).map(c => c.label).join('；') || '抽样框、样本量与回收都已对上'}</small>}
         </div>
         <div className={styles.link} data-empty={!view.dataset}>
           <span>数据</span>
@@ -95,6 +104,10 @@ export default function Lobby({ light, view, onOpen, headingRef }: { light: Illu
           </div>}
         </div>
       </div>
+      <p className={styles.traceRow}>
+        {traces ? <><button type="button" className={`${styles.go} ${styles.goGold}`} onClick={() => onSay('/来处')}>◀── 沿光路回溯 {traces} 个图表</button><span>每个来自登记结果的图表，都能沿光路回到数据文件与题目。</span></>
+          : <span>报告里还没有来自登记结果的图表；有了之后，这里可以沿光路回溯它们的来处。</span>}
+      </p>
     </section>
   </div>;
 }

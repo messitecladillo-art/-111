@@ -1,14 +1,25 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { brailleBars, lightBar, percent } from '../lib/agent/glyphs.ts';
-import { illuminate, reportWritten } from '../lib/agent/illumination.ts';
+import { illuminate, reportWritten, roomLight } from '../lib/agent/illumination.ts';
+import { exhibitKey, traceExhibits } from '../lib/agent/provenance.ts';
 import { COMMANDS, lookupTurn, matchCommands, mentionedRooms, route } from '../lib/agent/router.ts';
 import { ROOMS, isRoomId } from '../lib/agent/rooms.ts';
 import { createEditorContent } from '../lib/editor-model.ts';
 import { exampleQuestionnaire } from '../lib/questionnaire.ts';
 
 const empty = { design: null, dataset: null, report: null, resultPending: false };
-const ctx = (view = empty, room = 'overview') => ({ room, light: illuminate(view) });
+const ctx = (view = empty, room = 'overview', traces = []) => ({ room, light: illuminate(view), traces });
+const result = (id, extra = {}) => ({ id, title: `结果${id}`, sourceName: '社区问卷.csv', sourceUrl: '', sourceHash: '3fa1'.repeat(16), resultHash: 'b'.repeat(64), classification: 'user_provided',
+  method: 'groups', n: 400, total: 432, headers: ['设施', '均值'], rows: [['健身路径', 2.97]], metrics: [], warnings: [], ...extra });
+const frame = (id, planned) => result(id, { title: '居民抽样框', sourceName: '本研究抽样设计', method: 'sampling-frame', n: 0, total: 0, metrics: [{ label: '计划有效样本', value: planned }] });
+/** The starting template with blocks in its first chapter and the results they rest on. */
+function reportWith(blocks, results) {
+  const content = createEditorContent();
+  content.report = content.report.map((s, i) => i === 1 ? { ...s, blocks } : s);
+  content.quality = { version: 1, results, findings: [] };
+  return content;
+}
 const text = turn => [...turn.lines, ...(turn.cards ?? []).flatMap(c => c.lines ?? [])].map(line => line.map(s => s.text).join('')).join('\n');
 
 test('bars and braille draw the score they are given, and only a perfect score is drawn solid', () => {
@@ -29,8 +40,8 @@ test('bars and braille draw the score they are given, and only a perfect score i
 test('an empty project is dark everywhere, and its blind spots follow the research path', () => {
   const light = illuminate(empty);
   assert.equal(light.overall, 0);
-  assert.deepEqual(light.rooms.map(r => r.room), ['design', 'analysis', 'editor']);
-  assert.deepEqual(light.blind.map(c => c.id), ['design.questions', 'analysis.data', 'analysis.results', 'analysis.findings', 'report.body']);
+  assert.deepEqual(light.rooms.map(r => r.room), ['design', 'sampling', 'analysis', 'editor']);
+  assert.deepEqual(light.blind.map(c => c.id), ['design.questions', 'sampling.frame', 'analysis.data', 'analysis.results', 'analysis.findings', 'report.body']);
   assert.equal(light.blind.find(c => c.id === 'analysis.findings').go, 'editor', 'findings are confirmed in the report room');
   assert.equal(light.benchmark, null);
 });
@@ -50,17 +61,18 @@ test('the questionnaire lights its room by its own checks, never by question cou
 test('the report room is dark until the template is written over, then scored by the benchmark', () => {
   const template = createEditorContent();
   assert.equal(reportWritten(template), false);
-  assert.equal(illuminate({ ...empty, report: template }).rooms[2].score, 0);
+  assert.equal(roomLight(illuminate({ ...empty, report: template }), 'editor').score, 0);
   const written = { ...template, report: template.report.map((s, i) => i === 1 ? { ...s, body: '本研究关注社区体育设施的使用与满意度，调查对象为甲区常住居民。' } : s) };
   assert.equal(reportWritten(written), true);
   const light = illuminate({ ...empty, report: written });
   assert.ok(light.benchmark);
-  assert.equal(light.rooms[2].score, light.benchmark.score / 100, 'the benchmark totals out of 100; light is a share');
-  assert.ok(light.rooms[2].score > 0 && light.rooms[2].score < 1);
+  const report = roomLight(light, 'editor');
+  assert.equal(report.score, light.benchmark.score / 100, 'the benchmark totals out of 100; light is a share');
+  assert.ok(report.score > 0 && report.score < 1);
   const failed = new Set(light.benchmark.checks.filter(c => c.status === 'fail').map(c => `report.${c.id}`));
   assert.deepEqual(light.blind.filter(c => c.room === 'editor').map(c => c.id), [...failed], 'only outright failures are blind spots');
   // Data and registered results light the analysis room.
-  const lit = illuminate({ ...empty, dataset: { name: '社区问卷', rows: 430, simulated: true }, resultPending: true }).rooms[1];
+  const lit = roomLight(illuminate({ ...empty, dataset: { name: '社区问卷', rows: 430, simulated: true }, resultPending: true }), 'analysis');
   assert.equal(lit.score, 2 / 3);
   assert.match(lit.checks[0].detail, /430 行 · 教学模拟数据/);
 });
@@ -111,4 +123,50 @@ test('every room has a unique command and glyph, and the command list completes 
   assert.equal(matchCommands('').length, COMMANDS.length);
   assert.deepEqual(matchCommands('问').map(c => c.name), ['问卷']);
   assert.deepEqual(matchCommands('des').map(c => c.name), ['问卷']);
+});
+
+test('a sampling plan lights its room once written into the report, and is checked against what was collected', () => {
+  const report = reportWith([], [frame('f1', 400)]);
+  const without = illuminate({ ...empty, report });
+  assert.deepEqual(roomLight(without, 'sampling').checks.map(c => [c.id, c.passed]), [['sampling.frame', true], ['sampling.size', true], ['sampling.reach', false]]);
+  assert.equal(without.blind.find(c => c.id === 'sampling.reach').go, 'analysis', 'collected data is loaded in the analysis room');
+  assert.equal(roomLight(without, 'analysis').checks.find(c => c.id === 'analysis.results').passed, false, 'a frame is not an analysis');
+  const short = roomLight(illuminate({ ...empty, report, dataset: { name: '回收', rows: 300, simulated: false } }), 'sampling');
+  assert.match(short.checks[2].label, /回收 300 份，未达计划的 400 份/);
+  const reached = roomLight(illuminate({ ...empty, report, dataset: { name: '回收', rows: 452, simulated: false } }), 'sampling');
+  assert.equal(reached.score, 1);
+  assert.equal(roomLight(illuminate({ ...empty, report: reportWith([], [frame('f2', 0)]) }), 'sampling').checks[1].passed, false);
+});
+
+test('an exhibit traces back through its result, scope, quality control and data file to the questions it asked', () => {
+  const design = exampleQuestionnaire(), asked = design.questions[0];
+  const r = result('r1', { variables: [asked.variable, '不存在的列'], warnings: ['原表 452 行，筛选后 432 行，共同应答范围 432 行，有效计算 400 行。', '缺失编码：99', '质控：自「原始问卷」剔除 20 行（作答过快），剔除台账 SHA-256 0123456789abcdef…', '未加权、未插补。'] });
+  const content = reportWith([{ id: 'b1', kind: 'chart', text: '各设施满意度', evidenceId: 'r1', valueColumn: 1 }, { id: 'b2', kind: 'table', text: '', evidenceId: 'gone', valueColumn: 1 }], [r]);
+  const [trace, ...rest] = traceExhibits(content, design);
+  assert.equal(rest.length, 0, 'a block whose result is gone has no path to show');
+  assert.equal(trace.reference, '图 1-1');
+  assert.equal(trace.title, '各设施满意度');
+  assert.deepEqual(trace.steps.map(s => s.kind), ['result', 'scope', 'quality', 'source', 'question', 'question']);
+  assert.equal(trace.steps[0].detail, '分组均值比较 · 有效样本 400（共 432）');
+  assert.equal(trace.steps[2].detail, '自「原始问卷」剔除 20 行（作答过快），剔除台账 SHA-256 0123456789abcdef…');
+  assert.match(trace.steps[3].detail, /^用户提供数据 · 指纹 SHA-256 3fa13fa13fa1…$/);
+  assert.equal(trace.steps[4].text, `第 1 题「${asked.text.trim()}」`);
+  assert.deepEqual([trace.steps[5].text, trace.steps[5].detail], ['变量「不存在的列」', '没有对应到问卷室里的题目']);
+  assert.equal(traceExhibits(content, null)[0].steps[4].detail, '问卷室里还没有问卷，无法对应到题目');
+  assert.equal(exhibitKey('图 1－1'), exhibitKey('图1.1'));
+});
+
+test('/来处 answers with the path of one exhibit, offers a choice among several, and says when there is none', () => {
+  const design = exampleQuestionnaire();
+  const chart = { id: 'b1', kind: 'chart', text: '各设施满意度', evidenceId: 'r1', valueColumn: 1 };
+  const one = traceExhibits(reportWith([chart], [result('r1')]), design);
+  assert.match(text(route('/来处', ctx()).turn), /报告里还没有来自登记结果的图表/);
+  const card = route('/来处', ctx(empty, 'overview', one)).turn.cards[0];
+  assert.equal(card.kind, 'trace');
+  assert.equal(card.reference, '图 1-1');
+  assert.equal(route('图 1－1 的数字从哪来？', ctx(empty, 'overview', one)).turn.cards[0].kind, 'trace');
+  const two = traceExhibits(reportWith([chart, { id: 'b2', kind: 'table', text: '使用频次', evidenceId: 'r2', valueColumn: 1 }], [result('r1'), result('r2')]), design);
+  assert.deepEqual(route('/来处', ctx(empty, 'overview', two)).turn.chips.map(c => c.action.text), ['/来处 图 1-1', '/来处 表 1-1']);
+  assert.equal(route('/来处 使用频次', ctx(empty, 'overview', two)).turn.cards[0].reference, '表 1-1');
+  assert.match(text(route('/来处 图 9-9', ctx(empty, 'overview', two)).turn), /报告里没有「图 9-9」/);
 });
