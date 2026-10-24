@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { parseEditorContent, type EditorContent } from '../../lib/editor-model';
-import { buildLatexSource, createLatexCompileGuard, decodeLatexPdf, generateLatexBody, insertLatexSnippet, LATEX_INSERTS, LATEX_LIMITS, latexCompileInput, latexCompileKey, latexLineSelection, latexReportKey, latexSha256, parseLatexCompileReceipt, type LatexDiagnostic } from '../../lib/latex-report';
+import { approvedLatexSource, previewLatexSource, createLatexCompileGuard, decodeLatexPdf, generateLatexBody, insertLatexSnippet, LATEX_INSERTS, LATEX_LIMITS, latexCompileInput, latexCompileKey, latexLineSelection, latexReportKey, latexSha256, parseLatexCompileReceipt, type LatexDiagnostic } from '../../lib/latex-report';
 import { useHostedSession } from '../hosted/HostedSession';
 import PdfPreview from './PdfPreview';
 import styles from './LatexWorkbench.module.css';
@@ -32,7 +32,7 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
   const alive = useRef(true), guard = useRef(createLatexCompileGuard());
   const reportKey = latexReportKey(content);
   const input = useMemo(() => latexCompileInput(content), [content]);
-  const inputKey = latexCompileKey(input), source = buildLatexSource(input);
+  const inputKey = latexCompileKey(input), sourcePreview=useMemo(()=>previewLatexSource(input),[input]),source=sourcePreview.source,sourceError=sourcePreview.error;
   const current = useRef({ projectId, inputKey });
   useLayoutEffect(() => { current.current = { projectId, inputKey }; }, [projectId, inputKey]);
   const currentReportHash = hash?.key === reportKey ? hash.value : null;
@@ -77,7 +77,7 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
     requestAnimationFrame(() => { const field = textarea.current; if (field) { const range = latexLineSelection(field.value, line); field.focus(); field.setSelectionRange(range.start, range.end); field.scrollTop = Math.max(0, line - 4) * 24; } });
   };
   const compile = useCallback(async () => {
-    if (!projectId || !content.latex || abort.current) return;
+    if (!projectId || !content.latex || abort.current || sourceError) return;
     const controller = new AbortController(), ticket = guard.current.start(projectId, inputKey);
     abort.current = controller; setBusy(true); setError(''); setNotice(''); setDiagnostics([]);
     const accepts = () => alive.current && guard.current.accepts(ticket, current.current.projectId ?? '', current.current.inputKey);
@@ -95,7 +95,8 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
       } else setNotice(receipt.status === 'unavailable' ? '编译服务暂未启用，可先导出源码。' : '编译未完成，请检查下方诊断。');
     } catch (e) { if (accepts()) setError(e instanceof Error ? e.message : '编译请求失败，请重试。'); }
     finally { if (alive.current && abort.current === controller) { abort.current = null; setBusy(false); } }
-  }, [content.latex, input, inputKey, mutate, projectId, source]);
+  }, [content.latex, input, inputKey, mutate, projectId, source, sourceError]);
+  async function exportSource(){const target={projectId,inputKey};try{const receipt=await approvedLatexSource(input);if(!alive.current||current.current.projectId!==target.projectId||current.current.inputKey!==target.inputKey||receipt.inputKey!==target.inputKey)return;downloadSource(receipt.source,content.title);}catch(error){if(alive.current)setError(error instanceof Error?error.message:'源码未能导出。');}}
   const cancel = () => { guard.current.cancel(); abort.current?.abort(); abort.current = null; setBusy(false); setNotice('已停止等待，可继续编辑。'); };
 
   return <section className={styles.workbench} aria-label="LaTeX 排版工作台">
@@ -103,9 +104,9 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
       <div><strong>LaTeX 排版</strong><span className={styles.subtitle}>正文与 PDF 对照</span></div>
       <div className={styles.actions}>
         {content.latex && <button type="button" disabled={disabled || !currentReportHash} onClick={() => setConfirmRegenerate(true)}>从报告重新生成</button>}
-        <button type="button" disabled={!content.latex} onClick={() => downloadSource(source, content.title)}>导出 .tex</button>
+        <button type="button" disabled={!content.latex||!!sourceError} onClick={() => void exportSource()}>导出 .tex</button>
         {onSave && <button type="button" disabled={disabled} onClick={onSave}>保存版本</button>}
-        {busy ? <button type="button" onClick={cancel}>停止等待</button> : <button type="button" className={styles.primary} disabled={!projectId || !content.latex} onClick={() => void compile()}>编译 PDF <kbd>Ctrl ↵</kbd></button>}
+        {busy ? <button type="button" onClick={cancel}>停止等待</button> : <button type="button" className={styles.primary} disabled={!projectId || !content.latex||!!sourceError} onClick={() => void compile()}>编译 PDF <kbd>Ctrl ↵</kbd></button>}
       </div>
     </header>
     {confirmRegenerate && <div className={styles.confirm} role="alertdialog" aria-label="重新生成 LaTeX 正文">
@@ -117,6 +118,7 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
       {!projectId ? <Link href="/projects">进入项目后编译 PDF →</Link> : <span>{busy ? '正在编译…' : 'A4 · 三线表 1.5 / 0.75 / 1.5 pt'}</span>}
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
+    {sourceError&&<p className={styles.error} role="alert">{sourceError}</p>}
     {notice && <p className={styles.notice} role="status">{notice}</p>}
     <div className={styles.panes}>
       <div className={styles.sourcePane}>

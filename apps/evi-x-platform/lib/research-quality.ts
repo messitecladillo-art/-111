@@ -17,7 +17,7 @@ export type ResearchFinding = {
 export type ResearchQuality = { version: 1; results: ResultSnapshot[]; findings: ResearchFinding[] };
 export type ReportBlock = {
   id: string; kind: 'paragraph' | 'chart' | 'table' | 'formula' | 'citation' | 'callout';
-  text: string; evidenceId: string; valueColumn: number;
+  text: string; evidenceId: string; valueColumn: number; figureId?: string;
 };
 export const QUALITY_LAYOUTS = ['cover', 'problem', 'chart', 'comparison', 'segments', 'insight', 'action', 'closing'] as const;
 export type QualityLayout = typeof QUALITY_LAYOUTS[number];
@@ -26,7 +26,7 @@ export type SlideObject = {
   x: number; y: number; width: number; height: number; rotation: number; opacity: number;
   locked: boolean; groupId: string;
   text: string; fontSize: number; color: string; align: 'left' | 'center' | 'right';
-  bold?:boolean; sourceBlockId?:string;
+  bold?:boolean; sourceBlockId?:string; sourceSectionId?:string; figureId?:string;
   evidenceId: string; valueColumn: number; chartType: 'bar' | 'line' | 'pie';
   assetId: string; shape: 'rect' | 'ellipse' | 'line';
 };
@@ -87,14 +87,17 @@ export function parseResearchQuality(value: unknown): ResearchQuality {
   return {version:1,results,findings};
 }
 export function parseReportBlock(value:unknown):ReportBlock {
-  const b=qualityRecord(value,['id','kind','text','evidenceId','valueColumn']);
+  const b=qualityRecord(value,['id','kind','text','evidenceId','valueColumn','figureId']);
   if(!['paragraph','chart','table','formula','citation','callout'].includes(b.kind as string))return fail();
-  return {id:qualityText(b.id,80,true),kind:b.kind as ReportBlock['kind'],text:qualityText(b.text,12000),evidenceId:qualityText(b.evidenceId,80),valueColumn:finite(b.valueColumn,0,29,true)};
+  if(Object.hasOwn(b,'figureId')&&!['chart','table'].includes(b.kind as string))return fail();
+  return {id:qualityText(b.id,80,true),kind:b.kind as ReportBlock['kind'],text:qualityText(b.text,12000),evidenceId:qualityText(b.evidenceId,80),valueColumn:finite(b.valueColumn,0,29,true),...(Object.hasOwn(b,'figureId')?{figureId:qualityText(b.figureId,80,true)}:{})};
 }
 export function parseSlideObject(value:unknown):SlideObject {
-  const o=qualityRecord(value,['id','kind','x','y','width','height','rotation','opacity','locked','groupId','text','fontSize','color','align','evidenceId','valueColumn','chartType','assetId','shape','bold','sourceBlockId']);
+  const o=qualityRecord(value,['id','kind','x','y','width','height','rotation','opacity','locked','groupId','text','fontSize','color','align','evidenceId','valueColumn','chartType','assetId','shape','bold','sourceBlockId','sourceSectionId','figureId']);
   if(Object.hasOwn(o,'bold')&&typeof o.bold!=='boolean')return fail();
-  const optional={...(Object.hasOwn(o,'bold')?{bold:o.bold as boolean}:{}),...(Object.hasOwn(o,'sourceBlockId')?{sourceBlockId:qualityText(o.sourceBlockId,80,true)}:{})};
+  if(Object.hasOwn(o,'figureId')&&!['chart','table'].includes(o.kind as string))return fail();
+  if(Object.hasOwn(o,'sourceSectionId')&&(!Object.hasOwn(o,'sourceBlockId')||!['chart','table'].includes(o.kind as string)))return fail();
+  const optional={...(Object.hasOwn(o,'bold')?{bold:o.bold as boolean}:{}),...(Object.hasOwn(o,'sourceBlockId')?{sourceBlockId:qualityText(o.sourceBlockId,80,true)}:{}),...(Object.hasOwn(o,'sourceSectionId')?{sourceSectionId:qualityText(o.sourceSectionId,80,true)}:{}),...(Object.hasOwn(o,'figureId')?{figureId:qualityText(o.figureId,80,true)}:{})};
   if(!['text','chart','table','vector','shape'].includes(o.kind as string)||typeof o.locked!=='boolean'||!['left','center','right'].includes(o.align as string)||!['bar','line','pie'].includes(o.chartType as string)||!['rect','ellipse','line'].includes(o.shape as string)||typeof o.color!=='string'||!/^#[a-fA-F0-9]{6}$/.test(o.color))return fail();
   if((o.kind==='vector'||o.assetId!=='')&&!['mosaic-edge','focus-loop','path-ribbon'].includes(o.assetId as string))return fail();
   const x=finite(o.x,0,100),y=finite(o.y,0,100),width=finite(o.width,.1,100),height=finite(o.height,.1,100);

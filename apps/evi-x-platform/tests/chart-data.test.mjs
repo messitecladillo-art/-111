@@ -12,6 +12,10 @@ const compute = (table, selected, codes = []) => {
 };
 const numericTable = values => ({ headers: ['数值'], rows: values.map(value => [String(value)]), skippedBlankLines: 0, delimiter: ',' });
 const near = (actual, expected, tolerance = 1e-12) => assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+test('interpolated quartiles keep Tukey whiskers outside the box in small samples',()=>{
+ for(const values of [[1,2,2,4],[-4,-2,-2,-1],[1,1,1,9],[2]]){const {snapshot}=compute(numericTable(values),node('numeric'));const d=snapshot.distributions[0];assert.ok(d.box.low<=d.box.q1);assert.ok(d.box.high>=d.box.q3);assert.ok(d.box.q1<=d.box.median&&d.box.median<=d.box.q3);assert.equal(d.bins.reduce((n,b)=>n+b.count,0),values.length);}
+ const {snapshot}=compute(numericTable([1,2,2,4]),node('numeric'));assert.equal(snapshot.distributions[0].box.high,2.5);assert.deepEqual(snapshot.distributions[0].box.outliers,[4]);
+});
 
 test('frequency uses exact computed counts and Unicode identity without conflating zero and missing', () => {
   const table = parseSurveyCsv('渠道\n校园 🧩\n 社区 \n0\n校园 🧩\nNA\n" "');

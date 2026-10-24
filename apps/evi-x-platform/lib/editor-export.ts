@@ -1,5 +1,6 @@
 import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences, type SvgPreviewRenderer } from "./quality-export.ts";
-import { ACCENTS, type EditorContent } from "./editor-model.ts";
+import { ACCENTS, parseEditorContent, type EditorContent } from "./editor-model.ts";
+import {addFrameToWord} from './report-frame-export.ts';
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
@@ -11,6 +12,7 @@ export function downloadBlob(blob: Blob, name: string) {
 export function fileName(title: string) { return title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 80) || "未命名研究"; }
 export async function buildDocx(content: EditorContent, inputOptions: ReportFormatOptions = content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS, renderSvg?:SvgPreviewRenderer): Promise<Blob> {
   assertFindingReferences(content);
+  content=parseEditorContent(content);
   await validateQuality(content);
   const options=parseReportFormatOptions(inputOptions);
   const report=content.report.filter(section=>options.part==='appendix'?reportPart(section.title)==='appendix':reportPart(section.title)!=='appendix');
@@ -33,8 +35,10 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   ];
   const page={size:{width:11906,height:16838},margin:{top:1440,bottom:1440,left:1803,right:1803,header:720,footer:720,gutter:0}};
   const sections:ConstructorParameters<typeof Document>[0]['sections'][number][]=[];
+  const sectionKinds:('cover'|'body'|'appendix'|'preliminary')[]=[];
   const footer=()=>new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,indent:{firstLine:0,firstLineChars:0},spacing:{before:0,after:0,line:240},children:[new TextRun({...bodyRun,children:[PageNumber.CURRENT]})]})]});
   function addSection(children:ConstructorParameters<typeof Document>[0]["sections"][number]["children"],kind:'cover'|'preliminary'|'body',restart?:number){
+    sectionKinds.push(kind==='body'&&options.part==='appendix'?'appendix':kind);
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
   const title=()=>new Paragraph({style:'Title',children:[new TextRun({...bodyRun,text:content.title,size:32,sizeComplexScript:32,bold:true})]});
@@ -47,12 +51,26 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
     const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
     // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
-    if(section.body)section.body.split('\n').forEach(line=>{
-      const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
-      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:[new TextRun({text:line})]}));
-    });
+    const generatedAppendix=part==='appendix'&&!section.blocks?.length&&/^appendix-(?:data|ai|claims)-[a-f0-9]{64}$/.test(section.id);
+    if(generatedAppendix){
+      // A metadata field is a line inside one record, not a separate prose paragraph.
+      // Keep the selected profile's fonts and paragraph spacing between complete records.
+      const records=section.body.split('\n\n');
+      records.forEach((record,index)=>{
+        const runs=record.split('\n').map((line,i)=>new TextRun({text:line,...(i?{break:1}:{})}));
+        if(index===records.length-1&&section.source)runs.push(new TextRun({text:`来源 / 说明：${section.source}`,break:1}));
+        children.push(new Paragraph({style:'ReportReference',children:runs}));
+      });
+    }else{
+      const bodyLines=section.body.split('\n'),lastWritten=bodyLines.findLastIndex(line=>line.trim().length>0);
+      const attachSource=part==='appendix'&&!!section.source&&!section.blocks?.length&&lastWritten>=0&&bodyLines[lastWritten].length<=500;
+      if(section.body)bodyLines.forEach((line,index)=>{
+        const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
+        children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',...(attachSource&&index>=lastWritten?{keepNext:true}:{}),children:[new TextRun({text:line})]}));
+      });
+    }
     if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg));
-    if(section.source)children.push(new Paragraph({style:'ReportReference',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
+    if(section.source&&!generatedAppendix)children.push(new Paragraph({style:'ReportReference',...(part==='appendix'&&section.source.length<=500?{keepLines:true}:{}),children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
     if(preliminary){addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;}
     else if(part==='body'&&bodyStarted){const index=sections.length-1;sections[index]={...sections[index],children:[...sections[index].children,...children]};}
     else {addSection(children,'body',bodyStarted?undefined:1);bodyStarted=true;}
@@ -62,6 +80,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   // Word's half-line spacing is a line-relative measure, not an approximation in points.
   // docx exposes twips but not beforeLines, so set this exact OOXML attribute after packing.
   const archive=await JSZip.loadAsync(await Packer.toArrayBuffer(doc));
+  if(content.reportFrame)await addFrameToWord(archive,content.reportFrame,sectionKinds);
   const styleXml=await archive.file('word/styles.xml')!.async('string');
   archive.file('word/styles.xml',styleXml.replace(/<w:style\b[\s\S]*?<\/w:style>/g,block=>{
     if(!/w:styleId="(?:Normal|ReportReference|ReportSpecialHeading|ReportCaption|Heading[1-5])"/.test(block))return block;
@@ -69,8 +88,9 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   }));
   return new Blob([await archive.generateAsync({type:'arraybuffer',compression:'DEFLATE'})],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
-export async function buildPptx(content: EditorContent): Promise<Blob> {
+export async function buildPptx(content: EditorContent, renderSvg?:SvgPreviewRenderer): Promise<Blob> {
   assertFindingReferences(content);
+  content=parseEditorContent(content);
   await validateQuality(content);
   const { default: PptxGenJS } = await import("pptxgenjs");
   const pptx = new PptxGenJS();
@@ -84,7 +104,7 @@ export async function buildPptx(content: EditorContent): Promise<Blob> {
     const slide = pptx.addSlide();
     slide.background = { color: "FFFFFF" };
     if(item.objects!==undefined){
-      const sources=addQualityObjects(slide,pptx,item.objects,content);
+      const sources=await addQualityObjects(slide,pptx,item.objects,content,renderSvg);
       if(item.notes||sources)slide.addNotes([item.notes,sources].filter(Boolean).join("\n\n"));
       continue;
     }
