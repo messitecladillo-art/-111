@@ -1,5 +1,6 @@
-.root { --pf-paper: var(--paper, #f7f4ed); --pf-card: #fffefa; --pf-ink: var(--ink, #071a2b); --pf-muted: #64737e; --pf-line: rgba(7,26,43,.14); --pf-accent: #00796f; --pf-soft: #edf4f1; --pf-risk: #a63c36; --pf-risk-bg: #fcf0ea; color:var(--pf-ink); }
-.root[data-theme="dark"] { --pf-paper:#081826; --pf-card:#102536; --pf-ink:#ecf1ee; --pf-muted:#a5b8c6; --pf-line:rgba(207,225,232,.18); --pf-accent:#52cbbb; --pf-soft:#15372f; --pf-risk:#ffb1a1; --pf-risk-bg:#3a252a; }
+/* The palette follows the workbench tokens, with this module's own values as fallbacks. */
+.root { --pf-paper: var(--wb-bg, var(--paper, #f7f4ed)); --pf-card: var(--wb-solid, #fffefa); --pf-ink: var(--wb-text, var(--ink, #071a2b)); --pf-muted: var(--wb-muted, #64737e); --pf-line: var(--wb-line-strong, rgba(7,26,43,.14)); --pf-accent: var(--wb-accent, #00796f); --pf-soft: color-mix(in srgb, var(--wb-accent, #00796f) 8%, var(--wb-solid, #fffefa)); --pf-risk: #a63c36; --pf-risk-bg: #fcf0ea; color:var(--pf-ink); }
+.root[data-theme="dark"] { --pf-paper: var(--wb-bg, #081826); --pf-card: var(--wb-solid, #102536); --pf-ink: var(--wb-text, #ecf1ee); --pf-muted: var(--wb-muted, #a5b8c6); --pf-line: var(--wb-line-strong, rgba(207,225,232,.18)); --pf-accent: var(--wb-accent, #52cbbb); --pf-soft: color-mix(in srgb, var(--wb-accent, #52cbbb) 12%, var(--wb-solid, #102536)); --pf-risk:#ffb1a1; --pf-risk-bg:#3a252a; }
 .standalone { min-height:100vh; background:var(--pf-paper); padding:0 clamp(24px,5vw,88px) 56px; }
 .siteNav { display:flex; justify-content:space-between; align-items:center; height:76px; border-bottom:1px solid var(--pf-line); margin-bottom:42px; }
 .siteNav nav { display:flex; align-items:center; gap:22px; font-size:14px; }
