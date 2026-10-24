@@ -54,12 +54,17 @@ function designLight(d: Questionnaire | null): RoomLight {
 function samplingLight(view: ProjectView): RoomLight {
   // A plan becomes evidence once the report carries its frame tables; a draft kept in the sampling room is not yet.
   // Inserting a revised plan registers new frames beside the old ones, so each group counts once, by its latest frame;
-  // groups are told apart by their stable ID, never by the name the author can change or reuse.
+  // groups are told apart by their stable ID, never by the name the author can change or reuse. Frames saved before
+  // the ID carried a group have only their title to go by, and a later frame of the same title supersedes them.
   const results = view.report?.quality?.results ?? [];
   const placed = new Set((view.report?.report ?? []).flatMap(s => (s.blocks ?? []).map(b => b.evidenceId)));
   const latest = new Map<string, (typeof results)[number]>();
-  for (const r of results) if (r.method === 'sampling-frame' && placed.has(r.id)) { const group = frameGroup(r.id) ?? r.id; latest.delete(group); latest.set(group, r); }
-  const frames = [...latest.values()];
+  for (const r of results) if (r.method === 'sampling-frame' && placed.has(r.id)) {
+    const group = frameGroup(r.id), key = group ? `group:${group}` : `title:${r.title}`;
+    latest.delete(key); latest.set(key, r);
+  }
+  const revisedTitles = new Set([...latest.entries()].filter(([key]) => key.startsWith('group:')).map(([, r]) => r.title));
+  const frames = [...latest.entries()].filter(([key, r]) => key.startsWith('group:') || !revisedTitles.has(r.title)).map(([, r]) => r);
   const check = (id: string, passed: boolean, label: string, detail: string, go: RoomId = 'sampling'): LightCheck => ({ id: `sampling.${id}`, room: 'sampling', go, label, passed, detail });
   if (!frames.length) return { room: 'sampling', score: 0, summary: '方案还没写进报告', checks: [check('frame', false, '抽样方案还没写进报告', '在抽样室定好分阶段方案，一键插入报告的调查方案章节；写进报告的方案才算证据。')] };
   const planned = frames.map(r => r.metrics.find(m => m.label === '计划有效样本')?.value ?? 0);
