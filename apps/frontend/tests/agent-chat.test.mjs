@@ -76,9 +76,12 @@ test('a reply’s formulas are typeset, never shown as TeX, and its emphasis is 
   const [line] = replyLines(String.raw`设计效应 $\text{DEFF}=1+(m-1)\rho$，**很重要**。`);
   assert.deepEqual(line, [{ text: '设计效应 ' }, { text: String.raw`\text{DEFF}=1+(m-1)\rho`, mark: 'tex' }, { text: '，' }, { text: '很重要', mark: 'strong' }, { text: '。' }]);
   assert.deepEqual(replyLines(String.raw`样本量：` + '\n' + String.raw`$$n=\frac{z^2p(1-p)}{e^2}$$`), [[{ text: '样本量：' }], [{ text: String.raw`n=\frac{z^2p(1-p)}{e^2}`, mark: 'math' }]]);
-  assert.deepEqual(replyLines(String.raw`\(a+b\) 与 \[c=d\]`)[0].map(s => s.mark), ['tex', undefined, 'math']);
+  assert.deepEqual(replyLines(String.raw`\(a+b\) 与 \[c=d\]`).map(l => l.map(s => s.mark)), [['tex', undefined], ['math']], 'a display formula stands on its own line');
   assert.deepEqual(replyLines('经费 $5 以内'), [[{ text: '经费 $5 以内' }]], 'a lone dollar stays text');
   assert.deepEqual(replyLines(`$${'x'.repeat(500)}$`)[0].map(s => s.mark), [undefined], 'too long to be a formula');
   assert.equal(replyLines('第一段\n\n\n第二段').length, 2);
+  assert.deepEqual(replyLines('样本量：\n$$\n' + String.raw`n = \frac{z^2 p(1-p)}` + '\n' + String.raw`{e^2}` + '\n$$\n然后回收。'),
+    [[{ text: '样本量：' }], [{ text: String.raw`n = \frac{z^2 p(1-p)} {e^2}`, mark: 'math' }], [{ text: '然后回收。' }]], 'a display formula over several lines is one formula');
+  assert.deepEqual(replyLines(String.raw`\[` + '\n' + 'a=b' + '\n' + String.raw`\]`), [[{ text: 'a=b', mark: 'math' }]]);
   assert.equal(line.map(spanText).join(''), String.raw`设计效应 $\text{DEFF}=1+(m-1)\rho$，很重要。`, 'history keeps the formula’s delimiters');
 });

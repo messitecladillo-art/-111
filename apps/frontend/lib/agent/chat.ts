@@ -124,7 +124,10 @@ const TEX_LIMIT = 400;
  * be a formula stays text.
  */
 export function replyLines(reply: string): Line[] {
-  return reply.split(/\n+/u).map(p => p.trim()).filter(Boolean).map(paragraph => {
+  // A display formula written over several lines is one formula: it is folded onto a line of its own first.
+  const folded = reply.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/gu, (_, dollars?: string, bracket?: string) =>
+    `\n$$${(dollars ?? bracket ?? '').replace(/\s*\n\s*/gu, ' ').trim()}$$\n`);
+  return folded.split(/\n+/u).map(p => p.trim()).filter(Boolean).map(paragraph => {
     const line: Line = [];
     let last = 0;
     for (const m of paragraph.matchAll(MARKUP)) {
