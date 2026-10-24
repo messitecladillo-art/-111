@@ -270,8 +270,11 @@
 .toolButton:hover { background: var(--c-hover); color: var(--c-fg); }
 .toolButton svg { width: 17px; height: 17px; }
 .modeChip { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0 8px; border-radius: 8px; color: var(--c-warn); font-size: 12.5px; white-space: nowrap; cursor: default; }
-.modelChip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--c-dim); font-size: 12.5px; white-space: nowrap; cursor: pointer; }
+.modelChip { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--c-dim); font-size: 12.5px; white-space: nowrap; cursor: pointer; }
 .modeChip svg, .modelChip svg { flex: none; width: 14px; height: 14px; }
+/* A long service name gives way before the send button does. */
+.chipText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chipSlot { position: relative; display: flex; min-width: 0; }
 .modelChip:hover { background: var(--c-hover); color: var(--c-fg); }
 .send { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--c-fg); color: var(--c-bg); cursor: pointer; }
 .send:disabled { background: var(--c-line-strong); color: var(--c-raise); cursor: default; }

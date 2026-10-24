@@ -93,7 +93,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     setLists(value => ({ ...value, state: 'loading', error: '' }));
     Promise.all([hostedRequest('/api/projects'), hostedRequest('/api/services')])
       .then(([projects, services]) => {
-        if (current()) setLists({ state: 'ready', projects: parseCollection(projects, 'projects', parseProject), services: parseCollection(services, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire')), error: '' });
+        if (current()) setLists({ state: 'ready', projects: parseCollection(projects, 'projects', parseProject), services: parseCollection(services, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire') || s.capabilities.includes('research')), error: '' });
       })
       .catch(failure => { if (current()) setLists(value => ({ ...value, state: 'error', error: reason(failure) })); })
       .finally(() => { reading.current = false; });
@@ -194,7 +194,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   useEffect(() => { if (open) load?.(); }, [open, load]);
   useEffect(() => { if (open && Date.now() - at < 1500) ref.current?.focus(); }, [open, at]);
   if (!g) return null;
-  const { projects, services } = g.lists;
+  const { projects } = g.lists, services = g.lists.services.filter(s => s.capabilities.includes('questionnaire'));
   // The conversation's own project comes first, as the preferred service does.
   const project = [projectId, filed].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
   const service = [serviceId, g.preferredService].find(id => services.some(s => s.id === id)) ?? services[0]?.id ?? '';

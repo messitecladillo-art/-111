@@ -7,14 +7,16 @@ import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
-import { errorMessage } from '@/components/hosted/api-client';
+import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
+import { CHAT_ERRORS, HISTORY_LIMIT, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
 import { illuminate, roomLight } from '@/lib/agent/illumination';
 import { traceExhibits } from '@/lib/agent/provenance';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
-import { lookupTurn, route, type AgentAction, type AgentTurn } from '@/lib/agent/router';
+import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type Span } from '@/lib/agent/router';
+import { readChatTurn, sendChatTurn } from './chat-client';
 import Composer from './Composer';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
@@ -62,7 +64,7 @@ export default function AgentShell() {
   const { panels, view, publishProposal } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
-  const { session: account, loading: accountLoading, error: sessionError, logout, refresh } = useHostedSession();
+  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate } = useHostedSession();
   const [accountNotice, setAccountNotice] = useState('');
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
@@ -129,6 +131,11 @@ export default function AgentShell() {
   const { account: generationAccount, load: loadLists, lists, preferredService, prefer } = generation;
   // Projects and services fill the sidebar and the composer's menus as soon as an account is known.
   useEffect(() => { if (generationAccount === 'ready') loadLists(); }, [generationAccount, loadLists]);
+  // Talking with a model is the user's choice, for this visit; every conversation asks once before its first sentence goes.
+  const [chatMode, setChatMode] = useState<'command' | 'model'>('command');
+  const consented = useRef(new Set<string>());
+  const chatServices = lists.services.filter(s => s.capabilities.includes('research'));
+  const chatService = chatServices.find(s => s.id === preferredService) ?? chatServices[0] ?? null;
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
@@ -152,19 +159,89 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
-  const latest = useRef({ panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide }; });
+  const latest = useRef({ panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate }; });
   const agent = useMemo(() => {
+    // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
       const text = raw.trim();
       if (!text) return;
+      if (latest.current.chatMode === 'model' && !/^[/／]/u.test(text)) ask(text);
+      else local(text);
+    };
+    const local = (text: string, note?: Line) => {
       const { panel, light, theme, traces, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
       const routed = route(text, { room: panel, light, theme, traces });
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
       if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
-      threads.append([user, { ...stamp(), role: 'agent', turn: routed.turn }]);
+      threads.append([user, { ...stamp(), role: 'agent', turn: note ? { ...routed.turn, lines: [note, ...routed.turn.lines] } : routed.turn }]);
+      if (routed.turn.act) perform(routed.turn.act);
+    };
+    // The first sentence of a conversation waits for consent: what goes to the service, what never does, who pays.
+    const ask = (text: string) => {
+      const { generation, chatService, owner } = latest.current;
+      if (generation.account !== 'ready' || !chatService) {
+        local(text, [span(generation.account === 'ready' ? '还没有启用「研究」能力的模型服务，' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
+        return;
+      }
+      threads.append([{ ...stamp(), role: 'user', text }]);
+      if (text.length > TEXT_LIMIT) { say([span(`模型对话一次最多 ${TEXT_LIMIT} 字，这一句有 ${text.length} 字；请分开发送。`, 'error')]); return; }
+      const thread = threads.view(owner).active;
+      if (thread && consented.current.has(`${thread}:${chatService.id}`)) { turn(text); return; }
+      threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('发给模型之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${chatService.label}」回答`,
+        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，以及项目照度、盲区与可回溯图表的摘要。')],
+          [span('不发送：问卷、数据与报告的原文。模型看不到原始数据，也不能改动项目；它请求的操作由这里执行，改动前仍会问你。', 'dim')],
+          [span('费用按你的服务商计；这段对话之后的句子不再询问。', 'dim')]],
+        confirm: { label: '发送', action: { type: 'chat', text } }, cancel: '不发送' }] } }]);
+    };
+    const say = (line: Line, chips?: AgentTurn['chips']) => threads.append([{ ...stamp(), role: 'agent', turn: { lines: [line], chips } }]);
+    const turn = (text: string) => {
+      const { panel, light, traces, chatService, owner, mutate } = latest.current;
+      if (!chatService) return;
+      const book = threads.view(owner), messages = book.threads.find(t => t.id === book.active)?.messages ?? [];
+      const asked = messages.map(m => m.role === 'user' && m.text === text).lastIndexOf(true);
+      const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(messages.slice(0, asked < 0 ? messages.length : asked).flatMap(chatLine)),
+        context: chatContext(panel, light, traces), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true };
+      const waiting: Message = { ...stamp(), role: 'agent', turn: { lines: [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
+      threads.append([waiting]);
+      sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label), failure => fail(waiting.id, failure, request.idempotencyKey, text));
+    };
+    const replace = (messageId: string, next: AgentTurn) => threads.patch(messageId, m => m.role === 'agent' ? { ...m, turn: next } : m);
+    // A receipt in place of the waiting line: the reply, marked as unverified, then each tool it asked for, run here.
+    const settle = (messageId: string, receipt: ChatReceipt, label: string) => {
+      if (receipt.status === 'ready' && receipt.reply) {
+        replace(messageId, { lines: [...receipt.reply.split(/\n+/u).filter(p => p.trim()).map(p => [span(p)]), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
+        for (const action of receipt.actions) run(messageId, action);
+        if (receipt.droppedActions) threads.appendAfter(messageId, { ...stamp(), role: 'agent', turn: { lines: [[span(`模型还请求了 ${receipt.droppedActions} 个不在清单里的操作，没有执行。`, 'dim')]] } });
+      } else if (receipt.status === 'failed') {
+        replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
+      } else {
+        replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span('这一轮已记下；核对只读取回执，不会再次调用模型。')]], chips: [{ label: '核对回执', action: { type: 'check', turn: receipt.id, message: messageId }, primary: true }] });
+      }
+    };
+    const fail = (messageId: string, failure: unknown, turnId: string, text: string) => {
+      if (failure instanceof HostedApiError && isDefiniteChatRejection(failure.status, failure.code)) {
+        replace(messageId, { lines: [[span('这一轮没有发出：', 'error'), span(CHAT_ERRORS[failure.code] ?? errorMessage(failure))]], chips: [{ label: '再问一次', action: { type: 'say', text } }] });
+      } else {
+        replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span(`${errorMessage(failure)} 这一轮可能已经记下；核对只读取回执，不会再次调用模型。`)]], chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: messageId }, primary: true }] });
+      }
+    };
+    const check = (turnId: string, messageId: string) => {
+      replace(messageId, { lines: [[span('正在核对回执…', 'dim')]] });
+      readChatTurn(turnId).then(receipt => settle(messageId, receipt, latest.current.chatService?.label ?? '模型'),
+        failure => failure instanceof HostedApiError && failure.status === 404
+          ? replace(messageId, { lines: [[span('这一轮没有发出，', 'error'), span('没有产生费用，可以再问一次。')]] })
+          : fail(messageId, failure, turnId, ''));
+    };
+    // A tool the model asked for, run as the matching command runs; drafting still begins with its own consent card.
+    const run = (afterId: string, action: ChatAction) => {
+      const { panel, light, theme, traces, generation } = latest.current;
+      const routed = toolTurn(action, { room: panel, light, theme, traces });
+      if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return; }
+      if ('lookup' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }); return; }
+      threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: routed.turn });
       if (routed.turn.act) perform(routed.turn.act);
     };
     const perform = (action: AgentAction) => {
@@ -177,6 +254,13 @@ export default function AgentShell() {
         // Only paths of this site; a stored conversation is never trusted to navigate anywhere else.
         case 'href': if (/^\/(?!\/)/.test(action.href)) window.location.assign(action.href); break;
         case 'say': send(action.text); break;
+        case 'chat': {
+          const { owner, chatService } = latest.current, thread = threads.view(owner).active;
+          if (thread && chatService) consented.current.add(`${thread}:${chatService.id}`);
+          turn(action.text);
+          break;
+        }
+        case 'check': check(action.turn, action.message); break;
       }
     };
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
@@ -237,7 +321,7 @@ export default function AgentShell() {
   };
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
-  const services = lists.services.map(s => ({ id: s.id, label: s.label, detail: s.model }));
+  const services = lists.services.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草'].filter(Boolean).join(' · ') }));
   const projectId = thread ? thread.projectId : book.draftProject;
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
@@ -300,13 +384,16 @@ export default function AgentShell() {
             : <div className={styles.empty}>
               <div className={styles.emptyMark}><BrandMark size={44} /></div>
               <h1>我们要研究什么？</h1>
-              <p>对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。起草问卷时会调用你自己的模型服务，并先请你确认。</p>
+              <p>{chatMode === 'model'
+                ? `对话由「${chatService?.label ?? '模型服务'}」回答：每段对话第一次发送前请你确认；它看不到原始数据，项目里的数字以工具读到的为准。`
+                : '对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。在模型菜单里可以改用你自己的模型服务对话。'}</p>
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
             </div>}
         </div>
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
-          services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer} onOpen={go} />
+          services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer}
+          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
       </main>
 
       <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background
@@ -338,4 +425,14 @@ export default function AgentShell() {
 function subscribeResize(listener: () => void) {
   window.addEventListener('resize', listener);
   return () => window.removeEventListener('resize', listener);
+}
+
+const span = (text: string, mark?: Mark): Span => mark ? { text, mark } : { text };
+/** A conversation entry as plain text for the model: what was said, without cards or buttons. */
+function chatLine(message: Message): ChatLine[] {
+  if (message.role === 'user') return [{ role: 'user', text: message.text }];
+  // A question put to the user (a consent or confirmation) is not part of what was said about the research.
+  if (message.role !== 'agent' || message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
+  const text = message.turn.lines.map(line => line.map(s => s.text).join('')).join('\n').trim();
+  return text ? [{ role: 'agent', text }] : [];
 }

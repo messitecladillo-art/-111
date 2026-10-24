@@ -7,6 +7,7 @@ import { lightBar, percent } from './glyphs.ts';
 import { LIT_ROOMS, roomLight, type Illumination, type LightCheck } from './illumination.ts';
 import { exhibitKey, type Trace, type TraceStep } from './provenance.ts';
 import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
+import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
 
@@ -22,7 +23,11 @@ export type AgentAction =
   | { type: 'clear' }
   | { type: 'href'; href: string }
   /** Sends a command as if the user had typed it, so every step stays in the transcript. */
-  | { type: 'say'; text: string };
+  | { type: 'say'; text: string }
+  /** Sends a sentence to the model the user has just agreed to, from the consent card. */
+  | { type: 'chat'; text: string }
+  /** Reads the receipt of a model turn whose outcome was unclear; never calls the model again. */
+  | { type: 'check'; turn: string; message: string };
 /** A primary link is the one step the agent recommends; a turn has at most one. */
 export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
@@ -259,6 +264,19 @@ export type KnowledgeHit = {
  * Answers a lookup from knowledge search hits. An explicit question accepts any hit; a bare phrase that might be
  * a term accepts only a name or alias match, so ordinary sentences are not answered with loosely related entries.
  */
+/** A tool the model asked for, run exactly as the matching command runs, against the same context. */
+export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
+  switch (action.tool) {
+    case 'next': return { turn: nextStep(ctx) };
+    case 'light': return { turn: status(ctx, action.args.room && lit(action.args.room) ? action.args.room : undefined) };
+    case 'blind': return { turn: blindSpots(ctx, action.args.room && lit(action.args.room) ? action.args.room : undefined) };
+    case 'trace': { const m = EXHIBIT.exec(action.args.reference); return { turn: trace(ctx, m ? m[1] + m[2] : action.args.reference) }; }
+    case 'open': return { turn: open(roomById(action.args.room), ctx) };
+    case 'lookup': return { lookup: action.args.query, explicit: true };
+    case 'draft': return { generate: action.args.brief };
+  }
+}
+
 export function lookupTurn(query: string, hits: readonly KnowledgeHit[], explicit: boolean): AgentTurn {
   const strong = hits.filter(h => h.match === 'name' || h.match === 'alias' || h.match === 'prefix');
   const pool = explicit ? hits : strong;

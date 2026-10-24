@@ -1,0 +1,99 @@
+// The 证见 Agent's model turn, as the browser sees it: what it sends (a bounded summary of the project, never data
+// rows), what comes back (a reply and at most three tool requests from a fixed list), and what each failure means.
+// The backend holds the same list and limits (apps/backend …/agent_chat.py); the browser checks them again.
+import type { Illumination } from './illumination.ts';
+import { isRoomId, roomById, type RoomId } from './rooms.ts';
+
+export type ChatAction =
+  | { tool: 'next'; args: Record<string, never> }
+  | { tool: 'light' | 'blind'; args: { room?: RoomId } }
+  | { tool: 'trace'; args: { reference: string } }
+  | { tool: 'open'; args: { room: RoomId } }
+  | { tool: 'lookup'; args: { query: string } }
+  | { tool: 'draft'; args: { brief: string } };
+export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
+export type ChatReceipt = { id: string; status: ChatStatus; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null };
+export type ChatLine = { role: 'user' | 'agent'; text: string };
+export type ChatContext = {
+  room: RoomId | null;
+  overall: number;
+  rooms: { room: RoomId; name: string; score: number; summary: string; blind: string[] }[];
+  traces: { reference: string; title: string }[];
+};
+export type ChatRequest = {
+  schemaVersion: 1; idempotencyKey: string; message: string; history: ChatLine[]; context: ChatContext;
+  serviceId: string; serviceRevision: number; consent: true;
+};
+
+export const HISTORY_LIMIT = 12, TEXT_LIMIT = 1200;
+const clip = (value: string, limit: number) => value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
+const round = (value: number) => Math.round(value * 100) / 100;
+
+/** What the model may see of the project: each module's light, its failing checks and the report's traceable figures. */
+export function chatContext(room: RoomId | null, light: Illumination, traces: readonly { reference: string; title: string }[]): ChatContext {
+  return {
+    room,
+    overall: round(light.overall),
+    rooms: light.rooms.map(r => ({ room: r.room, name: roomById(r.room).name, score: round(r.score), summary: clip(r.summary, 80),
+      blind: r.checks.filter(c => !c.passed).slice(0, 6).map(c => clip(c.label, 80)) })),
+    traces: traces.slice(0, 20).map(t => ({ reference: clip(t.reference, 20), title: clip(t.title, 80) })),
+  };
+}
+
+/** The recent conversation, oldest first, each entry within the backend's limits. */
+export function chatHistory(lines: readonly ChatLine[]): ChatLine[] {
+  return lines.filter(l => l.text.trim()).slice(-HISTORY_LIMIT).map(l => ({ role: l.role, text: clip(l.text.trim(), TEXT_LIMIT) }));
+}
+
+const TEXT_ARGS = { trace: ['reference', 20], lookup: ['query', 60], draft: ['brief', 600] } as const;
+function action(value: unknown): ChatAction | null {
+  const row = value as { tool?: unknown; args?: Record<string, unknown> } | null;
+  if (!row || typeof row !== 'object' || typeof row.tool !== 'string' || !row.args || typeof row.args !== 'object') return null;
+  const room = typeof row.args.room === 'string' && isRoomId(row.args.room) ? row.args.room : row.args.room === undefined ? undefined : null;
+  switch (row.tool) {
+    case 'next': return { tool: 'next', args: {} };
+    case 'light': case 'blind': return room === undefined ? { tool: row.tool, args: {} } : room ? { tool: row.tool, args: { room } } : null;
+    case 'open': return room ? { tool: 'open', args: { room } } : null;
+    case 'trace': case 'lookup': case 'draft': {
+      const [name, limit] = TEXT_ARGS[row.tool], given = row.args[name];
+      if (typeof given !== 'string' || !given.trim() || given.length > limit) return null;
+      return { tool: row.tool, args: { [name]: given.trim() } } as ChatAction;
+    }
+    default: return null;
+  }
+}
+
+/** A receipt from the backend, checked again: anything outside the agreed shape is refused, an unknown tool dropped. */
+export function parseChatReceipt(value: unknown): ChatReceipt {
+  const v = value as Record<string, unknown> | null;
+  if (!v || typeof v !== 'object' || typeof v.id !== 'string' || !['running', 'ready', 'failed', 'outcome_unknown'].includes(v.status as string)) throw Error('对话回执格式无效。');
+  const actions = Array.isArray(v.actions) ? v.actions.map(action).filter((a): a is ChatAction => !!a).slice(0, 3) : [];
+  return { id: v.id, status: v.status as ChatStatus, message: typeof v.message === 'string' ? v.message : null, reply: typeof v.reply === 'string' && v.reply.trim() ? v.reply : null, actions,
+    droppedActions: typeof v.droppedActions === 'number' ? v.droppedActions : 0, errorCode: typeof v.errorCode === 'string' ? v.errorCode : null };
+}
+
+/** What a refusal or a failure means to the user, in their words. */
+export const CHAT_ERRORS: Record<string, string> = {
+  capability_unavailable: '所选模型服务没有启用「研究」能力；在模型服务里勾选后再试。',
+  revision_conflict: '模型服务刚被修改过，请在模型菜单里重新选择后再发。',
+  call_rate_limit: '每小时最多 30 次对话模型调用，请稍后再试。',
+  call_active: '上一轮还在生成，请先核对它的回执。',
+  consent_required: '需要先确认发送的内容。',
+  input_too_large: '这段对话或项目摘要太长，新建一段对话再试。',
+  sensitive_input: '内容里出现了服务密钥，请删掉后再发。',
+  outcome_unknown: '同样的话有一轮结果尚未明确，请先核对那一轮的回执。',
+  provider_timeout: '模型服务没有及时回应。',
+  authentication_failed: '模型服务拒绝了密钥，请在模型服务里检查。',
+  rate_limited: '模型服务限流了，请稍后再试。',
+  invalid_response: '模型的回答不符合约定格式，没有采用。',
+  provider_rejected: '模型服务拒绝了这次请求。',
+  interrupted_call: '这一轮调用被中断了。',
+};
+
+/** A refusal before any call: nothing was billed, so sending again is safe. */
+export function isDefiniteChatRejection(status: number, code: string): boolean {
+  return status === 401 || status === 403 || status === 404
+    || (status === 409 && ['revision_conflict', 'idempotency_conflict', 'outcome_unknown'].includes(code))
+    || (status === 422)
+    || (status === 429 && ['call_active', 'call_rate_limit'].includes(code));
+}
