@@ -172,6 +172,37 @@
 .entryFormula { margin: 4px 0 10px; padding: 6px 0; overflow-x: auto; color: var(--ax-fg); }
 .entrySources { margin: 0; color: var(--ax-dim); font: 12px/1.7 var(--ax-mono); }
 
+/* 起草问卷: the consent form in its double frame (fields keep the workbench's own field look), the call as it runs,
+   and the proposal, whose stems stay cyan — generated, unverified — until the 问卷室 applies them. */
+.consentForm { display: grid; gap: 10px; margin-top: 2px; }
+.field { display: grid; grid-template-columns: 5.6em minmax(0, 1fr); gap: 4px 10px; align-items: start; font-size: 13px; }
+.field > span:first-child { padding-top: 7px; color: var(--ax-dim); font: 12px var(--ax-mono); }
+.field textarea { min-height: 76px; padding: 8px 10px; font: 13.5px/1.6 var(--ax-sans); resize: vertical; }
+.field select { min-height: 32px; padding: 4px 8px; font: 13px var(--ax-sans); }
+.field small { grid-column: 2; color: var(--ax-faint); font: 11px var(--ax-mono); text-align: right; }
+.fieldNote { margin: 0; padding-top: 6px; color: var(--ax-dim); font-size: 12.5px; }
+.fieldNote a { color: var(--ax-teal); }
+.fieldError { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--ax-err); font-size: 12.5px; }
+.scope { margin: 2px 0 0; color: var(--ax-dim); font-size: 12px; line-height: 1.7; }
+.chip:disabled { opacity: 0.45; cursor: not-allowed; }
+a.chip { display: inline-flex; align-items: center; text-decoration: none; }
+.jobLine { display: flex; gap: 10px; margin: 0; font: 12.5px/1.7 var(--ax-mono); overflow-wrap: anywhere; }
+.jobLine b { flex-shrink: 0; font-weight: 400; }
+.job[data-status="running"] .jobLine b { color: var(--ax-cyan); animation: pulse 1.2s ease-in-out infinite; }
+.job[data-status="done"] .jobLine b { color: var(--ax-gold); }
+.job[data-status="failed"] .jobLine b { color: var(--ax-err); }
+.job[data-status="unknown"] .jobLine b { color: var(--ax-cyan); }
+@keyframes pulse { 50% { opacity: 0.3; } }
+.proposal .cardTitle { color: var(--ax-cyan); }
+.proposalTitle { margin: 2px 0 6px; font: 600 16px var(--ax-serif); letter-spacing: 0.02em; }
+.proposalMeta { margin: 0 0 4px; color: var(--ax-dim); font-size: 12.5px; line-height: 1.7; }
+.proposalItems { margin: 10px 0 8px; padding-left: 1.7em; font-size: 13px; line-height: 1.7; }
+.proposalItems li { margin: 3px 0; }
+.proposalItems li::marker { color: var(--ax-faint); font-family: var(--ax-mono); }
+.proposalItems li span { color: var(--ax-cyan); }
+.proposalItems li small { margin-left: 8px; color: var(--ax-faint); font: 11px var(--ax-mono); white-space: nowrap; }
+.proposalFoot { margin: 0; color: var(--ax-faint); font: 11.5px/1.7 var(--ax-mono); }
+
 /* 回溯: the light path from an exhibit back to its origin, drawn on one gold rule. */
 .trace .cardTitle { color: var(--ax-gold); }
 .traceHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 2px 0 12px; font-size: 14px; }
@@ -364,7 +395,7 @@
   .panel { animation: mirror-fade 120ms linear both; }
   .sweep { animation: none; display: none; }
   .talk, .rail, .node { transition: none; }
-  .waiting::after { animation: none; }
+  .waiting::after, .job .jobLine b { animation: none; }
 }
 @keyframes mirror-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (forced-colors: active) {

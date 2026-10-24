@@ -115,6 +115,16 @@ test('knowledge answers are quoted from reviewed entries, and loose matches are 
   assert.deepEqual(ambiguous.chips.map(c => c.action.text), ['/查 设计效应', '/查 效应量']);
 });
 
+test('drafting a questionnaire asks for consent rather than calling; designing alone still opens the room', () => {
+  assert.deepEqual(route('/生成 甲区居民体育设施满意度', ctx()), { generate: '甲区居民体育设施满意度' });
+  assert.deepEqual(route('/生成', ctx()), { generate: '' });
+  const sentence = '帮我出一份关于社区体育设施满意度的问卷';
+  assert.deepEqual(route(sentence, ctx()), { generate: sentence });
+  assert.deepEqual(route('问卷初稿', ctx()), { generate: '问卷初稿' });
+  assert.deepEqual(route('我想设计问卷', ctx()).turn.act, { type: 'open', room: 'design' });
+  assert.deepEqual(matchCommands('生').map(c => c.name), ['生成']);
+});
+
 test('every room has a unique command and glyph, and the command list completes by prefix', () => {
   assert.equal(new Set(ROOMS.map(r => r.command)).size, ROOMS.length);
   assert.equal(new Set(ROOMS.map(r => r.glyph)).size, ROOMS.length);

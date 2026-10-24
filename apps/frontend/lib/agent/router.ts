@@ -7,6 +7,8 @@ import { lightBar, percent } from './glyphs.ts';
 import { LIT_ROOMS, roomLight, type Illumination, type LightCheck } from './illumination.ts';
 import { exhibitKey, type Trace, type TraceStep } from './provenance.ts';
 import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
+import type { Questionnaire } from '../questionnaire.ts';
+import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
 
 /** gold: a number with an origin · cyan: generated, unconfirmed · teal: a method or command · error: failures only. */
 export type Mark = 'gold' | 'cyan' | 'teal' | 'dim' | 'error' | 'strong';
@@ -27,12 +29,20 @@ export type AgentCard =
   | { kind: 'tool'; title: string; lines: Line[]; links?: AgentLink[] }
   | { kind: 'confirm'; title: string; lines: Line[]; confirm: AgentLink; cancel: string }
   | { kind: 'entry'; id: string; name: string; english?: string; definition: string; formula?: string; sources: string[]; reviewed: boolean }
-  | { kind: 'trace'; reference: string; title: string; steps: TraceStep[] };
+  | { kind: 'trace'; reference: string; title: string; steps: TraceStep[] }
+  /** The double frame before a model call: the research need as sent, the project it is saved to, the service that runs it. */
+  | { kind: 'consent'; brief: string; state: 'open' | 'submitted' | 'cancelled'; projectId?: string; projectTitle?: string; serviceId?: string; serviceLabel?: string }
+  /** A model call. `request` is kept while its outcome is unknown, so a check replays it exactly and costs nothing new. */
+  | { kind: 'job'; status: 'running' | 'done' | 'failed' | 'unknown'; detail: string; projectId: string; serviceLabel: string; model: string; request?: QuestionnaireGenerationRequest }
+  /** A questionnaire the model proposed: generated and not yet reviewed, so it is shown as such until the 问卷室 applies it. */
+  | { kind: 'proposal'; projectId: string; proposalId: string; serviceId: string; serviceRevision: number; serviceLabel: string; model: string; inputRevision: number; design: Questionnaire };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
 /** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
 export type RouterContext = { room: RoomId; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[] };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
-export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean };
+export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
+  /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
+  | { generate: string };
 
 export type Command = { name: string; args?: string; line: string; words: readonly string[] };
 const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `走进${r.name}`, words: [r.id] }));
@@ -41,6 +51,7 @@ export const COMMANDS: readonly Command[] = [
   { name: '照度', line: '各房间的证据完整度', words: ['status'] },
   { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
   { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
+  { name: '生成', args: '研究需求', line: '用你的模型服务起草问卷，确认后才调用', words: ['generate', 'draft'] },
   { name: '查', args: '概念或方法', line: '在知识镜中查定义、公式与出处', words: ['lookup', 'search'] },
   ...ROOM_COMMANDS,
   { name: '夜', line: '切换到深色主题', words: ['dark'] },
@@ -75,7 +86,7 @@ function help(): AgentTurn {
     cards: [
       { kind: 'tool', title: '命令', lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(`　${c.line}`, 'dim')]) },
       { kind: 'tool', title: '房间', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
-      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开分析室', '图 1-1 的数字从哪来', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
+      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开分析室', '图 1-1 的数字从哪来', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
     ],
     chips: [recommend(say('下一步做什么')), say('/照度')],
   };
@@ -183,6 +194,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '照度': return { turn: status(ctx, scope) };
     case '盲区': return { turn: blindSpots(ctx, scope) };
     case '来处': return { turn: trace(ctx, arg) };
+    case '生成': return { generate: arg };
     case '查': return arg ? { lookup: arg, explicit: true }
       : { turn: { lines: [[t('查什么？例如 '), t('/查 设计效应', 'teal'), t('。')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] } };
     case '夜': return { turn: ctx.theme === 'dark' ? { lines: [[t('现在就是深色主题。')]] } : { lines: [[t('已切换到深色主题。')]], act: { type: 'theme', theme: 'dark' } } };
@@ -195,6 +207,8 @@ function slash(body: string, ctx: RouterContext): Routed {
 
 const NIGHT = /(深色|夜间|暗色|暗黑)(主题|模式)|(切换?到|换成|改成|改为|用)(深色|夜间|暗色)/u;
 const DAY = /(浅色|日间|亮色|白天)(主题|模式)|(切换?到|换成|改成|改为|用)(浅色|日间|亮色)/u;
+// Asking for a draft names an act of writing; "设计问卷" alone only opens the 问卷室.
+const GENERATE = /(生成|起草|拟一份|出一份|写一份|做一份|帮我出|帮我写|帮我做|帮我拟)[^。！？]{0,30}?问卷|问卷(初稿|草稿|草案)/u;
 const HELP = /^(帮助|help|你能做什么|你会什么|你可以做什么|能做什么|怎么用|如何使用|有哪些命令|命令列表)$/iu;
 const NEXT = /下一步|接下来|该做什么|先做什么|从哪(里)?开始|怎么开始/u;
 const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|短板|没通过/u;
@@ -214,6 +228,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (HELP.test(input)) return { turn: help() };
   if (NIGHT.test(input)) return slash('夜', ctx);
   if (DAY.test(input)) return slash('昼', ctx);
+  if (GENERATE.test(input)) return { generate: input };
   const scope = mentionedRooms(input).map(r => r.id).find(lit);
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };

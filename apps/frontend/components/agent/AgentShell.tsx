@@ -17,6 +17,7 @@ import { LightBar } from './Glyphs';
 import Lobby from './Lobby';
 import RoomRail from './RoomRail';
 import Transcript from './Transcript';
+import { GenerationProvider, useGeneration } from './generation';
 import { stamp, transcript, type Message } from './transcript-store';
 import styles from './AgentShell.module.css';
 
@@ -49,7 +50,7 @@ const viewport = () => window.matchMedia(NARROW).matches ? 'narrow' : window.mat
  * into, kept mounted once visited. The rail shows where the light reaches; the status line says the rest in one row.
  */
 export default function AgentShell() {
-  const { panels, view } = useWorkbenchModules(true);
+  const { panels, view, publishProposal } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference(true);
   const room = useSyncExternalStore(subscribeHash, currentRoom, () => 'overview' as RoomId);
@@ -84,6 +85,7 @@ export default function AgentShell() {
   const inputRef = useRef<HTMLTextAreaElement>(null), headingRef = useRef<HTMLHeadingElement>(null), mirrorRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
   const go = useCallback((id: RoomId) => { if (currentRoom() !== id) window.location.hash = id; }, []);
+  const generation = useGeneration(publishProposal, go);
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
   const showWorkbench = useCallback(() => { window.location.hash = lastRoom; }, [lastRoom]);
   const nav = useMemo<WorkbenchNav>(() => ({ section: room, openFromCanvas, showWorkbench, canvasFocus }), [room, openFromCanvas, showWorkbench, canvasFocus]);
@@ -109,8 +111,8 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable while the
   // report is re-scored on every keystroke and the transcript need not re-render with it.
-  const latest = useRef({ room, light, theme, knowledge, traces });
-  useEffect(() => { latest.current = { room, light, theme, knowledge, traces }; });
+  const latest = useRef({ room, light, theme, knowledge, traces, generation });
+  useEffect(() => { latest.current = { room, light, theme, knowledge, traces, generation }; });
   const agent = useMemo(() => {
     const send = (raw: string) => {
       const text = raw.trim();
@@ -120,6 +122,11 @@ export default function AgentShell() {
       const routed = route(text, { room, light, theme, traces });
       setTalkOpen(true);
       setPane('talk');
+      // Drafting with a model always starts with the user's consent, never with a call.
+      if ('generate' in routed) {
+        transcript.update(list => [...list, user, { ...stamp(), role: 'agent', turn: latest.current.generation.start(routed.generate) }]);
+        return;
+      }
       if ('lookup' in routed) {
         transcript.update(list => [...list, user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]);
         return;
@@ -184,7 +191,7 @@ export default function AgentShell() {
   const passed = light.benchmark ? roomLight(light, 'editor')!.checks.filter(c => c.passed).length : 0;
   const total = light.benchmark ? roomLight(light, 'editor')!.checks.length : 0;
 
-  return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}>
+  return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
     <div className={`workbench ${styles.shell}`} data-theme={theme} data-room={room} data-talk={talkOpen ? 'open' : 'closed'} data-dock={overlay ? 'overlay' : 'docked'} data-pane={pane} data-rail={railOpen ? 'open' : 'closed'}
       // On a phone the rail is a drawer: a tap anywhere else puts it away.
       onPointerDown={event => { if (railOpen && !(event.target as Element).closest('#agent-rail, [aria-controls="agent-rail"]')) setRailOpen(false); }}>
@@ -247,5 +254,5 @@ export default function AgentShell() {
         <span className={styles.hideNarrow}>本地草稿，未同步云端</span>
       </footer>
     </div>
-  </WorkbenchNavProvider></ThemeProvider>;
+  </GenerationProvider></WorkbenchNavProvider></ThemeProvider>;
 }

@@ -3,6 +3,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { Formula } from '@/components/math/Tex';
 import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
+import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
 import type { Message } from './transcript-store';
 import styles from './AgentShell.module.css';
@@ -76,6 +77,9 @@ function Card({ card, message, onAction, onAnswer }: { card: AgentCard; message:
     <div className={styles.cardLinks}><button type="button" className={styles.chip} onClick={() => onAction({ type: 'entry', id: card.id })}>展开词条 →</button></div>
   </div>;
   if (card.kind === 'confirm') return <Confirm card={card} message={message} onAction={onAction} onAnswer={onAnswer} />;
+  if (card.kind === 'consent') return <ConsentCard messageId={message.id} card={card} at={message.at} />;
+  if (card.kind === 'job') return <JobCard messageId={message.id} card={card} />;
+  if (card.kind === 'proposal') return <ProposalView card={card} />;
   if (card.kind === 'trace') return <div className={`${styles.card} ${styles.trace}`}>
     <span className={styles.cardTitle}>回溯 · {card.reference}</span>
     <p className={styles.traceHead}><b>{card.reference}</b>{card.title}</p>
