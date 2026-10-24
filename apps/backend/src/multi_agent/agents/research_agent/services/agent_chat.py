@@ -7,6 +7,7 @@ An Operation is committed before dispatch; replay and GET never dispatch a model
 """
 from copy import deepcopy
 from datetime import datetime, timedelta
+import json
 import re
 
 from shared.errors import ApiError, ProviderFailure
@@ -66,11 +67,11 @@ def input_fingerprint(data):
 
 
 def contains_secret(value, secret):
-    """Whether a decoded string anywhere in `value` holds `secret`; JSON escaping cannot hide it."""
+    """Whether a decoded string anywhere in `value`, a property name included, holds `secret`; JSON escaping cannot hide it."""
     if isinstance(value, str):
         return secret in value
     if isinstance(value, dict):
-        return any(contains_secret(item, secret) for item in value.values())
+        return any(contains_secret(name, secret) or contains_secret(item, secret) for name, item in value.items())
     if isinstance(value, list):
         return any(contains_secret(item, secret) for item in value)
     return False
@@ -80,11 +81,16 @@ def agent_prompt(data):
     history = list(data["history"])
     while True:
         prompt = _prompt({"context": data["context"], "history": history, "message": data["message"]})
-        if len(prompt.encode("utf-8")) <= PROMPT_BYTES:
+        if encoded_size(prompt) <= PROMPT_BYTES:
             return prompt
         if not history:
             raise ApiError(422, "input_too_large", "这句话和项目摘要太长，请缩短后再试。")
         history.pop(0)
+
+
+def encoded_size(prompt):
+    """The prompt's size as the provider client sends it: escaped once more, as a string inside its JSON payload."""
+    return len(json.dumps(prompt, ensure_ascii=False).encode("utf-8"))
 
 
 def _prompt(material):

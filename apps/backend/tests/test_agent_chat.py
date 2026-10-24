@@ -108,7 +108,22 @@ def test_the_prompt_keeps_within_its_budget_by_dropping_the_oldest_history():
     history = [{"role": "user" if i % 2 == 0 else "agent", "text": f"第{i}条" + "长" * 1190} for i in range(12)]
     data = request(history=history, context={"notes": "摘" * 5000})
     prompt = chat.agent_prompt(data)
-    assert len(prompt.encode("utf-8")) <= chat.PROMPT_BYTES
+    assert chat.encoded_size(prompt) <= chat.PROMPT_BYTES
     embedded = json.loads(prompt.split("资料JSON：", 1)[1])
     assert embedded["history"] and embedded["history"] == history[-len(embedded["history"]):], "the newest entries are kept, in order"
     assert embedded["message"] == data["message"] and embedded["context"] == data["context"]
+
+
+def test_a_secret_used_as_a_property_name_is_found_too():
+    secret = r'sk-"named\key'
+    assert chat.contains_secret({"context": {secret: "值"}}, secret)
+    assert secret not in chat.agent_prompt(request(context={secret: "值"})), "escaped in the prompt, so only the decoded scan sees it"
+
+
+def test_the_budget_holds_for_the_payload_the_client_actually_sends():
+    # Backslashes and quotes double when escaped, and the client escapes the prompt once more inside its own JSON.
+    history = [{"role": "user", "text": "\\" * 1200} for _ in range(12)]
+    prompt = chat.agent_prompt(request(history=history, context={"quotes": '"' * 3000}))
+    payload = json.dumps({"model": "fixture-model", "messages": [{"role": "user", "content": prompt}], "stream": False,
+                          "max_tokens": 4096}, ensure_ascii=False).encode()
+    assert chat.encoded_size(prompt) <= chat.PROMPT_BYTES and len(payload) <= 65536
