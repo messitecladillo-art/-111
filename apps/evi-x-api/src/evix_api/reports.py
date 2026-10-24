@@ -182,11 +182,15 @@ def report_block(value):
 
 
 def slide_object(value):
-    o = object_fields(value, ("id", "kind", "x", "y", "width", "height", "rotation", "opacity", "locked", "groupId", "text", "fontSize", "color", "align", "evidenceId", "valueColumn", "chartType", "assetId", "shape"), ("bold", "sourceBlockId", "figureId"))
+    o = object_fields(value, ("id", "kind", "x", "y", "width", "height", "rotation", "opacity", "locked", "groupId", "text", "fontSize", "color", "align", "evidenceId", "valueColumn", "chartType", "assetId", "shape"), ("bold", "sourceBlockId", "sourceSectionId", "figureId"))
     if "bold" in o and type(o["bold"]) is not bool:
         raise ApiError()
     if "sourceBlockId" in o:
         composition_reference(o["sourceBlockId"])
+    if "sourceSectionId" in o:
+        composition_reference(o["sourceSectionId"])
+        if "sourceBlockId" not in o or o["kind"] not in ("chart", "table"):
+            raise ApiError()
     if o["kind"] not in ("text", "chart", "table", "vector", "shape") or type(o["locked"]) is not bool or o["align"] not in ("left", "center", "right") or o["chartType"] not in ("bar", "line", "pie") or o["shape"] not in ("rect", "ellipse", "line"):
         raise ApiError()
     if not isinstance(o["color"], str) or not re.fullmatch(r"#[a-fA-F0-9]{6}", o["color"]):
@@ -202,7 +206,7 @@ def slide_object(value):
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "visualStyle", "figures"))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "visualStyle", "figures", "reportFrame"))
     if type(x["version"]) is not int or x["version"] not in (1, 2, 3) or x["accent"] not in ("teal", "blue", "burgundy"):
         raise ApiError()
     if x["version"] == 1 and "quality" in x:
@@ -256,18 +260,39 @@ def report_content(value):
                 if item["layout"] not in (("cover", "content", "two-column") + (QUALITY_LAYOUTS if x["version"] != 1 else ())):
                     raise ApiError()
                 if "reportLink" in item:
-                    link = object_fields(item["reportLink"], ("version", "sectionId", "sectionHash", "slideHash"))
-                    if type(link["version"]) is not int or link["version"] not in ((1, 2) if x["version"] != 1 else (1,)):
+                    link = object_fields(item["reportLink"], ("version", "sectionId", "sectionHash", "slideHash"), ("sources",))
+                    if type(link["version"]) is not int or link["version"] not in ((1, 2, 3) if x["version"] == 3 else (1, 2) if x["version"] == 2 else (1,)):
                         raise ApiError()
                     composition_reference(link["sectionId"], single_line=True)
                     for field in ("sectionHash", "slideHash"):
                         if not isinstance(link[field], str) or not re.fullmatch(r"[a-f0-9]{64}", link[field]):
                             raise ApiError()
+                    if link["version"] == 3:
+                        sources = quality_list(link.get("sources"), 12)
+                        if not sources:
+                            raise ApiError()
+                        seen = set()
+                        for source in sources:
+                            object_fields(source, ("sectionId", "sectionHash", "blockIds"))
+                            composition_reference(source["sectionId"])
+                            quality_hash(source["sectionHash"])
+                            refs = quality_list(source["blockIds"], 60)
+                            for ref in refs:
+                                composition_reference(ref)
+                            if len(set(refs)) != len(refs) or source["sectionId"] in seen:
+                                raise ApiError()
+                            seen.add(source["sectionId"])
+                        if sources[0]["sectionId"] != link["sectionId"] or sources[0]["sectionHash"] != link["sectionHash"]:
+                            raise ApiError()
+                    elif "sources" in link:
+                        raise ApiError()
             structured = "blocks" if key == "report" else "objects"
             if structured in item:
                 pieces = quality_list(item[structured], 60)
                 for piece in pieces:
                     (report_block if key == "report" else slide_object)(piece)
+                    if key == "slides" and "sourceSectionId" in piece and x["version"] != 3:
+                        raise ApiError()
                     if piece["kind"] in ("chart", "table") and piece["evidenceId"] not in result_ids:
                         raise ApiError()
                 unique_quality(pieces)

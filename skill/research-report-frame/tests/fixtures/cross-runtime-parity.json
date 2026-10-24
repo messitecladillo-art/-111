@@ -1,0 +1,2965 @@
+{
+  "schema": "ReportFrameParity/v1",
+  "canonicalExample": {
+    "input": {
+      "title": "中文页框",
+      "integerFloat": 1.0,
+      "small": 1e-06,
+      "zero": -0.0
+    },
+    "canonical": "{\"integerFloat\":1,\"small\":0.000001,\"title\":\"中文页框\",\"zero\":0}",
+    "sha256": "d688b3b21e6846becab9a38fdc5d4f3d10c4253e38a9891064c995fc00278fa9"
+  },
+  "examples": [
+    {
+      "style": {
+        "schema": "ReportFrameStyle/v1",
+        "id": "banking-grid",
+        "version": 1,
+        "title": "银行研究·几何页框",
+        "status": "vector_draft",
+        "theme": "finance-grid",
+        "variant": "body",
+        "layout": "corners",
+        "paper": {
+          "widthMm": 210,
+          "heightMm": 297
+        },
+        "marginsMm": {
+          "top": 25.4,
+          "right": 31.8,
+          "bottom": 25.4,
+          "left": 31.8
+        },
+        "guardMm": 3,
+        "trimGuardMm": 3,
+        "protectedAreas": [
+          {
+            "id": "page-number",
+            "kind": "page_number",
+            "xMm": 84,
+            "yMm": 280,
+            "widthMm": 42,
+            "heightMm": 10
+          }
+        ],
+        "palette": {
+          "id": "blue",
+          "version": 1,
+          "primary": "#255D87",
+          "secondary": "#5492B2",
+          "accent": "#A0C8D7"
+        },
+        "lineWidthPt": 0.85,
+        "cornerSizeMm": 12,
+        "density": 0.4,
+        "strength": 0.6,
+        "appliesTo": [
+          "body",
+          "appendix"
+        ],
+        "sourceConcept": null,
+        "review": null
+      },
+      "definitionSha256": "c71761c4aa2b10f6ced51a1f91aad2ce8b131a7c0ec31d72ad364de9d20525a2",
+      "body": {
+        "id": "body",
+        "kind": "body",
+        "xMm": 31.8,
+        "yMm": 25.4,
+        "widthMm": 146.39999999999998,
+        "heightMm": 246.20000000000002
+      },
+      "primitiveCount": 16,
+      "primitives": [
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 20.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 32.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              25.2,
+              10.399999999999999
+            ],
+            [
+              25.2,
+              18.799999999999997
+            ],
+            [
+              19.799999999999997,
+              18.799999999999997
+            ],
+            [
+              19.799999999999997,
+              15.799999999999997
+            ],
+            [
+              15.599999999999998,
+              15.799999999999997
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": 15.6,
+          "cy": 18.799999999999997,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 20.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 32.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              184.79999999999998,
+              10.399999999999999
+            ],
+            [
+              184.79999999999998,
+              18.799999999999997
+            ],
+            [
+              190.2,
+              18.799999999999997
+            ],
+            [
+              190.2,
+              15.799999999999997
+            ],
+            [
+              194.39999999999998,
+              15.799999999999997
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": 194.39999999999998,
+          "cy": 18.799999999999997,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 276.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 264.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              25.2,
+              286.6
+            ],
+            [
+              25.2,
+              278.20000000000005
+            ],
+            [
+              19.799999999999997,
+              278.20000000000005
+            ],
+            [
+              19.799999999999997,
+              281.20000000000005
+            ],
+            [
+              15.599999999999998,
+              281.20000000000005
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": 15.6,
+          "cy": 278.20000000000005,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 276.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 264.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              184.79999999999998,
+              286.6
+            ],
+            [
+              184.79999999999998,
+              278.20000000000005
+            ],
+            [
+              190.2,
+              278.20000000000005
+            ],
+            [
+              190.2,
+              281.20000000000005
+            ],
+            [
+              194.39999999999998,
+              281.20000000000005
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "circle",
+          "cx": 194.39999999999998,
+          "cy": 278.20000000000005,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        }
+      ]
+    },
+    {
+      "style": {
+        "schema": "ReportFrameStyle/v1",
+        "id": "banking-grid",
+        "version": 1,
+        "title": "银行研究·几何页框",
+        "status": "vector_draft",
+        "theme": "finance-grid",
+        "variant": "chapter",
+        "layout": "corners",
+        "paper": {
+          "widthMm": 210,
+          "heightMm": 297
+        },
+        "marginsMm": {
+          "top": 25.4,
+          "right": 31.8,
+          "bottom": 25.4,
+          "left": 31.8
+        },
+        "guardMm": 3,
+        "trimGuardMm": 3,
+        "protectedAreas": [
+          {
+            "id": "page-number",
+            "kind": "page_number",
+            "xMm": 84,
+            "yMm": 280,
+            "widthMm": 42,
+            "heightMm": 10
+          }
+        ],
+        "palette": {
+          "id": "blue",
+          "version": 1,
+          "primary": "#255D87",
+          "secondary": "#5492B2",
+          "accent": "#A0C8D7"
+        },
+        "lineWidthPt": 0.85,
+        "cornerSizeMm": 12,
+        "density": 0.4,
+        "strength": 0.6,
+        "appliesTo": [
+          "body",
+          "appendix"
+        ],
+        "sourceConcept": null,
+        "review": null
+      },
+      "definitionSha256": "14a93a7a63d98a48d96fd4a5b7d98d5a5f7c1789ab3594ce0786c1002e399211",
+      "body": {
+        "id": "body",
+        "kind": "body",
+        "xMm": 31.8,
+        "yMm": 25.4,
+        "widthMm": 146.39999999999998,
+        "heightMm": 246.20000000000002
+      },
+      "primitiveCount": 20,
+      "primitives": [
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 20.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 32.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              25.2,
+              10.399999999999999
+            ],
+            [
+              25.2,
+              18.799999999999997
+            ],
+            [
+              19.799999999999997,
+              18.799999999999997
+            ],
+            [
+              19.799999999999997,
+              15.799999999999997
+            ],
+            [
+              15.599999999999998,
+              15.799999999999997
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              23.6,
+              10.899999999999999
+            ],
+            [
+              23.6,
+              17.2
+            ],
+            [
+              19.55,
+              17.2
+            ],
+            [
+              19.55,
+              14.95
+            ],
+            [
+              16.400000000000002,
+              14.95
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 15.6,
+          "cy": 18.799999999999997,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 20.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 32.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              184.79999999999998,
+              10.399999999999999
+            ],
+            [
+              184.79999999999998,
+              18.799999999999997
+            ],
+            [
+              190.2,
+              18.799999999999997
+            ],
+            [
+              190.2,
+              15.799999999999997
+            ],
+            [
+              194.39999999999998,
+              15.799999999999997
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              186.39999999999998,
+              10.899999999999999
+            ],
+            [
+              186.39999999999998,
+              17.2
+            ],
+            [
+              190.45,
+              17.2
+            ],
+            [
+              190.45,
+              14.95
+            ],
+            [
+              193.59999999999997,
+              14.95
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 194.39999999999998,
+          "cy": 18.799999999999997,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 276.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 264.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              25.2,
+              286.6
+            ],
+            [
+              25.2,
+              278.20000000000005
+            ],
+            [
+              19.799999999999997,
+              278.20000000000005
+            ],
+            [
+              19.799999999999997,
+              281.20000000000005
+            ],
+            [
+              15.599999999999998,
+              281.20000000000005
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              23.6,
+              286.1
+            ],
+            [
+              23.6,
+              279.8
+            ],
+            [
+              19.55,
+              279.8
+            ],
+            [
+              19.55,
+              282.05
+            ],
+            [
+              16.400000000000002,
+              282.05
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 15.6,
+          "cy": 278.20000000000005,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 276.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 264.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              184.79999999999998,
+              286.6
+            ],
+            [
+              184.79999999999998,
+              278.20000000000005
+            ],
+            [
+              190.2,
+              278.20000000000005
+            ],
+            [
+              190.2,
+              281.20000000000005
+            ],
+            [
+              194.39999999999998,
+              281.20000000000005
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              186.39999999999998,
+              286.1
+            ],
+            [
+              186.39999999999998,
+              279.8
+            ],
+            [
+              190.45,
+              279.8
+            ],
+            [
+              190.45,
+              282.05
+            ],
+            [
+              193.59999999999997,
+              282.05
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 194.39999999999998,
+          "cy": 278.20000000000005,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        }
+      ]
+    },
+    {
+      "style": {
+        "schema": "ReportFrameStyle/v1",
+        "id": "banking-grid",
+        "version": 1,
+        "title": "银行研究·几何页框",
+        "status": "vector_draft",
+        "theme": "finance-grid",
+        "variant": "cover",
+        "layout": "corners",
+        "paper": {
+          "widthMm": 210,
+          "heightMm": 297
+        },
+        "marginsMm": {
+          "top": 25.4,
+          "right": 31.8,
+          "bottom": 25.4,
+          "left": 31.8
+        },
+        "guardMm": 3,
+        "trimGuardMm": 3,
+        "protectedAreas": [
+          {
+            "id": "page-number",
+            "kind": "page_number",
+            "xMm": 84,
+            "yMm": 280,
+            "widthMm": 42,
+            "heightMm": 10
+          }
+        ],
+        "palette": {
+          "id": "blue",
+          "version": 1,
+          "primary": "#255D87",
+          "secondary": "#5492B2",
+          "accent": "#A0C8D7"
+        },
+        "lineWidthPt": 0.85,
+        "cornerSizeMm": 12,
+        "density": 0.4,
+        "strength": 0.6,
+        "appliesTo": [
+          "body",
+          "appendix"
+        ],
+        "sourceConcept": null,
+        "review": null
+      },
+      "definitionSha256": "1f84649055ef9ce44a9bcf5bf1d7317e6deb3f429db3056efa97d2f1fc862214",
+      "body": {
+        "id": "body",
+        "kind": "body",
+        "xMm": 31.8,
+        "yMm": 25.4,
+        "widthMm": 146.39999999999998,
+        "heightMm": 246.20000000000002
+      },
+      "primitiveCount": 22,
+      "primitives": [
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 20.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 32.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              25.2,
+              10.399999999999999
+            ],
+            [
+              25.2,
+              18.799999999999997
+            ],
+            [
+              19.799999999999997,
+              18.799999999999997
+            ],
+            [
+              19.799999999999997,
+              15.799999999999997
+            ],
+            [
+              15.599999999999998,
+              15.799999999999997
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              23.6,
+              10.899999999999999
+            ],
+            [
+              23.6,
+              17.2
+            ],
+            [
+              19.55,
+              17.2
+            ],
+            [
+              19.55,
+              14.95
+            ],
+            [
+              16.400000000000002,
+              14.95
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 15.6,
+          "cy": 18.799999999999997,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 48.400000000000006,
+          "y1": 19.2,
+          "x2": 29.200000000000003,
+          "y2": 19.2,
+          "stroke": "#A0C8D7",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.48
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 20.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 32.4,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              184.79999999999998,
+              10.399999999999999
+            ],
+            [
+              184.79999999999998,
+              18.799999999999997
+            ],
+            [
+              190.2,
+              18.799999999999997
+            ],
+            [
+              190.2,
+              15.799999999999997
+            ],
+            [
+              194.39999999999998,
+              15.799999999999997
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              186.39999999999998,
+              10.899999999999999
+            ],
+            [
+              186.39999999999998,
+              17.2
+            ],
+            [
+              190.45,
+              17.2
+            ],
+            [
+              190.45,
+              14.95
+            ],
+            [
+              193.59999999999997,
+              14.95
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 194.39999999999998,
+          "cy": 18.799999999999997,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 276.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 264.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              25.2,
+              286.6
+            ],
+            [
+              25.2,
+              278.20000000000005
+            ],
+            [
+              19.799999999999997,
+              278.20000000000005
+            ],
+            [
+              19.799999999999997,
+              281.20000000000005
+            ],
+            [
+              15.599999999999998,
+              281.20000000000005
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              23.6,
+              286.1
+            ],
+            [
+              23.6,
+              279.8
+            ],
+            [
+              19.55,
+              279.8
+            ],
+            [
+              19.55,
+              282.05
+            ],
+            [
+              16.400000000000002,
+              282.05
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 15.6,
+          "cy": 278.20000000000005,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 276.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 264.6,
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              184.79999999999998,
+              286.6
+            ],
+            [
+              184.79999999999998,
+              278.20000000000005
+            ],
+            [
+              190.2,
+              278.20000000000005
+            ],
+            [
+              190.2,
+              281.20000000000005
+            ],
+            [
+              194.39999999999998,
+              281.20000000000005
+            ]
+          ],
+          "stroke": "#255D87",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              186.39999999999998,
+              286.1
+            ],
+            [
+              186.39999999999998,
+              279.8
+            ],
+            [
+              190.45,
+              279.8
+            ],
+            [
+              190.45,
+              282.05
+            ],
+            [
+              193.59999999999997,
+              282.05
+            ]
+          ],
+          "stroke": "#5492B2",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 194.39999999999998,
+          "cy": 278.20000000000005,
+          "r": 0.55,
+          "stroke": "#A0C8D7",
+          "fill": "#A0C8D7",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 161.6,
+          "y1": 277.8,
+          "x2": 180.79999999999998,
+          "y2": 277.8,
+          "stroke": "#A0C8D7",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.48
+        }
+      ]
+    },
+    {
+      "style": {
+        "schema": "ReportFrameStyle/v1",
+        "id": "wuhan-sports-track",
+        "version": 1,
+        "title": "城市赛事·跑道页框",
+        "status": "vector_draft",
+        "theme": "sports-track",
+        "variant": "body",
+        "layout": "corners",
+        "paper": {
+          "widthMm": 210,
+          "heightMm": 297
+        },
+        "marginsMm": {
+          "top": 25.4,
+          "right": 31.8,
+          "bottom": 25.4,
+          "left": 31.8
+        },
+        "guardMm": 3,
+        "trimGuardMm": 3,
+        "protectedAreas": [
+          {
+            "id": "page-number",
+            "kind": "page_number",
+            "xMm": 84,
+            "yMm": 280,
+            "widthMm": 42,
+            "heightMm": 10
+          }
+        ],
+        "palette": {
+          "id": "forest",
+          "version": 1,
+          "primary": "#38604A",
+          "secondary": "#709365",
+          "accent": "#B8C6A0"
+        },
+        "lineWidthPt": 0.85,
+        "cornerSizeMm": 12,
+        "density": 0.4,
+        "strength": 0.6,
+        "appliesTo": [
+          "body",
+          "appendix"
+        ],
+        "sourceConcept": null,
+        "review": null
+      },
+      "definitionSha256": "750f1b8fe5400878105780f81c4ba07ba7f6b75f31bcec0de3bd4c23eaf9146a",
+      "body": {
+        "id": "body",
+        "kind": "body",
+        "xMm": 31.8,
+        "yMm": 25.4,
+        "widthMm": 146.39999999999998,
+        "heightMm": 246.20000000000002
+      },
+      "primitiveCount": 12,
+      "primitives": [
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 20.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 32.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              14.8,
+              20.4
+            ],
+            [
+              14.902661663514277,
+              18.833685693359378
+            ],
+            [
+              15.20889008453118,
+              17.29417145876975
+            ],
+            [
+              15.71344560986456,
+              15.807798811618921
+            ],
+            [
+              16.407695154586737,
+              14.399999999999999
+            ],
+            [
+              17.279759916505178,
+              13.09486285189535
+            ],
+            [
+              18.31471862576143,
+              11.914718625761427
+            ],
+            [
+              19.494862851895352,
+              10.879759916505176
+            ],
+            [
+              20.799999999999997,
+              10.007695154586735
+            ],
+            [
+              22.20779881161892,
+              9.313445609864559
+            ],
+            [
+              23.694171458769752,
+              8.808890084531178
+            ],
+            [
+              25.23368569335938,
+              8.502661663514274
+            ],
+            [
+              26.8,
+              8.399999999999999
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 20.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 32.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              195.2,
+              20.4
+            ],
+            [
+              195.0973383364857,
+              18.833685693359378
+            ],
+            [
+              194.7911099154688,
+              17.29417145876975
+            ],
+            [
+              194.28655439013542,
+              15.807798811618921
+            ],
+            [
+              193.59230484541325,
+              14.399999999999999
+            ],
+            [
+              192.72024008349482,
+              13.09486285189535
+            ],
+            [
+              191.68528137423857,
+              11.914718625761427
+            ],
+            [
+              190.50513714810464,
+              10.879759916505176
+            ],
+            [
+              189.2,
+              10.007695154586735
+            ],
+            [
+              187.79220118838106,
+              9.313445609864559
+            ],
+            [
+              186.30582854123023,
+              8.808890084531178
+            ],
+            [
+              184.7663143066406,
+              8.502661663514274
+            ],
+            [
+              183.2,
+              8.399999999999999
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 276.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 264.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              14.8,
+              276.6
+            ],
+            [
+              14.902661663514277,
+              278.16631430664063
+            ],
+            [
+              15.20889008453118,
+              279.7058285412303
+            ],
+            [
+              15.71344560986456,
+              281.1922011883811
+            ],
+            [
+              16.407695154586737,
+              282.6
+            ],
+            [
+              17.279759916505178,
+              283.90513714810464
+            ],
+            [
+              18.31471862576143,
+              285.0852813742386
+            ],
+            [
+              19.494862851895352,
+              286.1202400834948
+            ],
+            [
+              20.799999999999997,
+              286.9923048454133
+            ],
+            [
+              22.20779881161892,
+              287.6865543901355
+            ],
+            [
+              23.694171458769752,
+              288.1911099154688
+            ],
+            [
+              25.23368569335938,
+              288.49733833648577
+            ],
+            [
+              26.8,
+              288.6
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 276.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 264.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              195.2,
+              276.6
+            ],
+            [
+              195.0973383364857,
+              278.16631430664063
+            ],
+            [
+              194.7911099154688,
+              279.7058285412303
+            ],
+            [
+              194.28655439013542,
+              281.1922011883811
+            ],
+            [
+              193.59230484541325,
+              282.6
+            ],
+            [
+              192.72024008349482,
+              283.90513714810464
+            ],
+            [
+              191.68528137423857,
+              285.0852813742386
+            ],
+            [
+              190.50513714810464,
+              286.1202400834948
+            ],
+            [
+              189.2,
+              286.9923048454133
+            ],
+            [
+              187.79220118838106,
+              287.6865543901355
+            ],
+            [
+              186.30582854123023,
+              288.1911099154688
+            ],
+            [
+              184.7663143066406,
+              288.49733833648577
+            ],
+            [
+              183.2,
+              288.6
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        }
+      ]
+    },
+    {
+      "style": {
+        "schema": "ReportFrameStyle/v1",
+        "id": "wuhan-sports-track",
+        "version": 1,
+        "title": "城市赛事·跑道页框",
+        "status": "vector_draft",
+        "theme": "sports-track",
+        "variant": "chapter",
+        "layout": "corners",
+        "paper": {
+          "widthMm": 210,
+          "heightMm": 297
+        },
+        "marginsMm": {
+          "top": 25.4,
+          "right": 31.8,
+          "bottom": 25.4,
+          "left": 31.8
+        },
+        "guardMm": 3,
+        "trimGuardMm": 3,
+        "protectedAreas": [
+          {
+            "id": "page-number",
+            "kind": "page_number",
+            "xMm": 84,
+            "yMm": 280,
+            "widthMm": 42,
+            "heightMm": 10
+          }
+        ],
+        "palette": {
+          "id": "forest",
+          "version": 1,
+          "primary": "#38604A",
+          "secondary": "#709365",
+          "accent": "#B8C6A0"
+        },
+        "lineWidthPt": 0.85,
+        "cornerSizeMm": 12,
+        "density": 0.4,
+        "strength": 0.6,
+        "appliesTo": [
+          "body",
+          "appendix"
+        ],
+        "sourceConcept": null,
+        "review": null
+      },
+      "definitionSha256": "2ebef42c413647f18f0b9a1349f1fb754ce6ff109e39ce7fb3c36a00b2228d24",
+      "body": {
+        "id": "body",
+        "kind": "body",
+        "xMm": 31.8,
+        "yMm": 25.4,
+        "widthMm": 146.39999999999998,
+        "heightMm": 246.20000000000002
+      },
+      "primitiveCount": 20,
+      "primitives": [
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 20.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 32.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              14.8,
+              20.4
+            ],
+            [
+              14.902661663514277,
+              18.833685693359378
+            ],
+            [
+              15.20889008453118,
+              17.29417145876975
+            ],
+            [
+              15.71344560986456,
+              15.807798811618921
+            ],
+            [
+              16.407695154586737,
+              14.399999999999999
+            ],
+            [
+              17.279759916505178,
+              13.09486285189535
+            ],
+            [
+              18.31471862576143,
+              11.914718625761427
+            ],
+            [
+              19.494862851895352,
+              10.879759916505176
+            ],
+            [
+              20.799999999999997,
+              10.007695154586735
+            ],
+            [
+              22.20779881161892,
+              9.313445609864559
+            ],
+            [
+              23.694171458769752,
+              8.808890084531178
+            ],
+            [
+              25.23368569335938,
+              8.502661663514274
+            ],
+            [
+              26.8,
+              8.399999999999999
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              17.200000000000003,
+              20.4
+            ],
+            [
+              17.282129330811422,
+              19.146948554687505
+            ],
+            [
+              17.527112067624945,
+              17.9153371670158
+            ],
+            [
+              17.93075648789165,
+              16.72623904929514
+            ],
+            [
+              18.48615612366939,
+              15.6
+            ],
+            [
+              19.183807933204143,
+              14.55589028151628
+            ],
+            [
+              20.011774900609144,
+              13.611774900609142
+            ],
+            [
+              20.955890281516282,
+              12.783807933204141
+            ],
+            [
+              22.0,
+              12.086156123669388
+            ],
+            [
+              23.126239049295137,
+              11.530756487891646
+            ],
+            [
+              24.3153371670158,
+              11.127112067624942
+            ],
+            [
+              25.546948554687503,
+              10.88212933081142
+            ],
+            [
+              26.8,
+              10.799999999999999
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 18.16,
+          "cy": 11.759999999999998,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 20.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 32.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              195.2,
+              20.4
+            ],
+            [
+              195.0973383364857,
+              18.833685693359378
+            ],
+            [
+              194.7911099154688,
+              17.29417145876975
+            ],
+            [
+              194.28655439013542,
+              15.807798811618921
+            ],
+            [
+              193.59230484541325,
+              14.399999999999999
+            ],
+            [
+              192.72024008349482,
+              13.09486285189535
+            ],
+            [
+              191.68528137423857,
+              11.914718625761427
+            ],
+            [
+              190.50513714810464,
+              10.879759916505176
+            ],
+            [
+              189.2,
+              10.007695154586735
+            ],
+            [
+              187.79220118838106,
+              9.313445609864559
+            ],
+            [
+              186.30582854123023,
+              8.808890084531178
+            ],
+            [
+              184.7663143066406,
+              8.502661663514274
+            ],
+            [
+              183.2,
+              8.399999999999999
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              192.79999999999998,
+              20.4
+            ],
+            [
+              192.71787066918856,
+              19.146948554687505
+            ],
+            [
+              192.47288793237504,
+              17.9153371670158
+            ],
+            [
+              192.06924351210833,
+              16.72623904929514
+            ],
+            [
+              191.5138438763306,
+              15.6
+            ],
+            [
+              190.81619206679585,
+              14.55589028151628
+            ],
+            [
+              189.98822509939083,
+              13.611774900609142
+            ],
+            [
+              189.0441097184837,
+              12.783807933204141
+            ],
+            [
+              188.0,
+              12.086156123669388
+            ],
+            [
+              186.87376095070485,
+              11.530756487891646
+            ],
+            [
+              185.6846628329842,
+              11.127112067624942
+            ],
+            [
+              184.4530514453125,
+              10.88212933081142
+            ],
+            [
+              183.2,
+              10.799999999999999
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 191.83999999999997,
+          "cy": 11.759999999999998,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 276.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 264.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              14.8,
+              276.6
+            ],
+            [
+              14.902661663514277,
+              278.16631430664063
+            ],
+            [
+              15.20889008453118,
+              279.7058285412303
+            ],
+            [
+              15.71344560986456,
+              281.1922011883811
+            ],
+            [
+              16.407695154586737,
+              282.6
+            ],
+            [
+              17.279759916505178,
+              283.90513714810464
+            ],
+            [
+              18.31471862576143,
+              285.0852813742386
+            ],
+            [
+              19.494862851895352,
+              286.1202400834948
+            ],
+            [
+              20.799999999999997,
+              286.9923048454133
+            ],
+            [
+              22.20779881161892,
+              287.6865543901355
+            ],
+            [
+              23.694171458769752,
+              288.1911099154688
+            ],
+            [
+              25.23368569335938,
+              288.49733833648577
+            ],
+            [
+              26.8,
+              288.6
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              17.200000000000003,
+              276.6
+            ],
+            [
+              17.282129330811422,
+              277.85305144531253
+            ],
+            [
+              17.527112067624945,
+              279.08466283298424
+            ],
+            [
+              17.93075648789165,
+              280.2737609507049
+            ],
+            [
+              18.48615612366939,
+              281.40000000000003
+            ],
+            [
+              19.183807933204143,
+              282.44410971848373
+            ],
+            [
+              20.011774900609144,
+              283.38822509939087
+            ],
+            [
+              20.955890281516282,
+              284.2161920667959
+            ],
+            [
+              22.0,
+              284.91384387633065
+            ],
+            [
+              23.126239049295137,
+              285.4692435121084
+            ],
+            [
+              24.3153371670158,
+              285.8728879323751
+            ],
+            [
+              25.546948554687503,
+              286.1178706691886
+            ],
+            [
+              26.8,
+              286.20000000000005
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 18.16,
+          "cy": 285.24,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 276.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 264.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              195.2,
+              276.6
+            ],
+            [
+              195.0973383364857,
+              278.16631430664063
+            ],
+            [
+              194.7911099154688,
+              279.7058285412303
+            ],
+            [
+              194.28655439013542,
+              281.1922011883811
+            ],
+            [
+              193.59230484541325,
+              282.6
+            ],
+            [
+              192.72024008349482,
+              283.90513714810464
+            ],
+            [
+              191.68528137423857,
+              285.0852813742386
+            ],
+            [
+              190.50513714810464,
+              286.1202400834948
+            ],
+            [
+              189.2,
+              286.9923048454133
+            ],
+            [
+              187.79220118838106,
+              287.6865543901355
+            ],
+            [
+              186.30582854123023,
+              288.1911099154688
+            ],
+            [
+              184.7663143066406,
+              288.49733833648577
+            ],
+            [
+              183.2,
+              288.6
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              192.79999999999998,
+              276.6
+            ],
+            [
+              192.71787066918856,
+              277.85305144531253
+            ],
+            [
+              192.47288793237504,
+              279.08466283298424
+            ],
+            [
+              192.06924351210833,
+              280.2737609507049
+            ],
+            [
+              191.5138438763306,
+              281.40000000000003
+            ],
+            [
+              190.81619206679585,
+              282.44410971848373
+            ],
+            [
+              189.98822509939083,
+              283.38822509939087
+            ],
+            [
+              189.0441097184837,
+              284.2161920667959
+            ],
+            [
+              188.0,
+              284.91384387633065
+            ],
+            [
+              186.87376095070485,
+              285.4692435121084
+            ],
+            [
+              185.6846628329842,
+              285.8728879323751
+            ],
+            [
+              184.4530514453125,
+              286.1178706691886
+            ],
+            [
+              183.2,
+              286.20000000000005
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.521739
+        },
+        {
+          "type": "circle",
+          "cx": 191.83999999999997,
+          "cy": 285.24,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        }
+      ]
+    },
+    {
+      "style": {
+        "schema": "ReportFrameStyle/v1",
+        "id": "wuhan-sports-track",
+        "version": 1,
+        "title": "城市赛事·跑道页框",
+        "status": "vector_draft",
+        "theme": "sports-track",
+        "variant": "cover",
+        "layout": "corners",
+        "paper": {
+          "widthMm": 210,
+          "heightMm": 297
+        },
+        "marginsMm": {
+          "top": 25.4,
+          "right": 31.8,
+          "bottom": 25.4,
+          "left": 31.8
+        },
+        "guardMm": 3,
+        "trimGuardMm": 3,
+        "protectedAreas": [
+          {
+            "id": "page-number",
+            "kind": "page_number",
+            "xMm": 84,
+            "yMm": 280,
+            "widthMm": 42,
+            "heightMm": 10
+          }
+        ],
+        "palette": {
+          "id": "forest",
+          "version": 1,
+          "primary": "#38604A",
+          "secondary": "#709365",
+          "accent": "#B8C6A0"
+        },
+        "lineWidthPt": 0.85,
+        "cornerSizeMm": 12,
+        "density": 0.4,
+        "strength": 0.6,
+        "appliesTo": [
+          "body",
+          "appendix"
+        ],
+        "sourceConcept": null,
+        "review": null
+      },
+      "definitionSha256": "6f70df19856e92cc7e6f58585d01ad8b82bb12af878f189896ce2ec9ccf4e28e",
+      "body": {
+        "id": "body",
+        "kind": "body",
+        "xMm": 31.8,
+        "yMm": 25.4,
+        "widthMm": 146.39999999999998,
+        "heightMm": 246.20000000000002
+      },
+      "primitiveCount": 22,
+      "primitives": [
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 20.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 20.4,
+          "x2": 26.8,
+          "y2": 32.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              14.8,
+              20.4
+            ],
+            [
+              14.902661663514277,
+              18.833685693359378
+            ],
+            [
+              15.20889008453118,
+              17.29417145876975
+            ],
+            [
+              15.71344560986456,
+              15.807798811618921
+            ],
+            [
+              16.407695154586737,
+              14.399999999999999
+            ],
+            [
+              17.279759916505178,
+              13.09486285189535
+            ],
+            [
+              18.31471862576143,
+              11.914718625761427
+            ],
+            [
+              19.494862851895352,
+              10.879759916505176
+            ],
+            [
+              20.799999999999997,
+              10.007695154586735
+            ],
+            [
+              22.20779881161892,
+              9.313445609864559
+            ],
+            [
+              23.694171458769752,
+              8.808890084531178
+            ],
+            [
+              25.23368569335938,
+              8.502661663514274
+            ],
+            [
+              26.8,
+              8.399999999999999
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              17.200000000000003,
+              20.4
+            ],
+            [
+              17.282129330811422,
+              19.146948554687505
+            ],
+            [
+              17.527112067624945,
+              17.9153371670158
+            ],
+            [
+              17.93075648789165,
+              16.72623904929514
+            ],
+            [
+              18.48615612366939,
+              15.6
+            ],
+            [
+              19.183807933204143,
+              14.55589028151628
+            ],
+            [
+              20.011774900609144,
+              13.611774900609142
+            ],
+            [
+              20.955890281516282,
+              12.783807933204141
+            ],
+            [
+              22.0,
+              12.086156123669388
+            ],
+            [
+              23.126239049295137,
+              11.530756487891646
+            ],
+            [
+              24.3153371670158,
+              11.127112067624942
+            ],
+            [
+              25.546948554687503,
+              10.88212933081142
+            ],
+            [
+              26.8,
+              10.799999999999999
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 18.16,
+          "cy": 11.759999999999998,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 48.400000000000006,
+          "y1": 19.2,
+          "x2": 29.200000000000003,
+          "y2": 19.2,
+          "stroke": "#B8C6A0",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.48
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 20.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 20.4,
+          "x2": 183.2,
+          "y2": 32.4,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              195.2,
+              20.4
+            ],
+            [
+              195.0973383364857,
+              18.833685693359378
+            ],
+            [
+              194.7911099154688,
+              17.29417145876975
+            ],
+            [
+              194.28655439013542,
+              15.807798811618921
+            ],
+            [
+              193.59230484541325,
+              14.399999999999999
+            ],
+            [
+              192.72024008349482,
+              13.09486285189535
+            ],
+            [
+              191.68528137423857,
+              11.914718625761427
+            ],
+            [
+              190.50513714810464,
+              10.879759916505176
+            ],
+            [
+              189.2,
+              10.007695154586735
+            ],
+            [
+              187.79220118838106,
+              9.313445609864559
+            ],
+            [
+              186.30582854123023,
+              8.808890084531178
+            ],
+            [
+              184.7663143066406,
+              8.502661663514274
+            ],
+            [
+              183.2,
+              8.399999999999999
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              192.79999999999998,
+              20.4
+            ],
+            [
+              192.71787066918856,
+              19.146948554687505
+            ],
+            [
+              192.47288793237504,
+              17.9153371670158
+            ],
+            [
+              192.06924351210833,
+              16.72623904929514
+            ],
+            [
+              191.5138438763306,
+              15.6
+            ],
+            [
+              190.81619206679585,
+              14.55589028151628
+            ],
+            [
+              189.98822509939083,
+              13.611774900609142
+            ],
+            [
+              189.0441097184837,
+              12.783807933204141
+            ],
+            [
+              188.0,
+              12.086156123669388
+            ],
+            [
+              186.87376095070485,
+              11.530756487891646
+            ],
+            [
+              185.6846628329842,
+              11.127112067624942
+            ],
+            [
+              184.4530514453125,
+              10.88212933081142
+            ],
+            [
+              183.2,
+              10.799999999999999
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 191.83999999999997,
+          "cy": 11.759999999999998,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 38.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 276.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 26.8,
+          "y1": 276.6,
+          "x2": 26.8,
+          "y2": 264.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              14.8,
+              276.6
+            ],
+            [
+              14.902661663514277,
+              278.16631430664063
+            ],
+            [
+              15.20889008453118,
+              279.7058285412303
+            ],
+            [
+              15.71344560986456,
+              281.1922011883811
+            ],
+            [
+              16.407695154586737,
+              282.6
+            ],
+            [
+              17.279759916505178,
+              283.90513714810464
+            ],
+            [
+              18.31471862576143,
+              285.0852813742386
+            ],
+            [
+              19.494862851895352,
+              286.1202400834948
+            ],
+            [
+              20.799999999999997,
+              286.9923048454133
+            ],
+            [
+              22.20779881161892,
+              287.6865543901355
+            ],
+            [
+              23.694171458769752,
+              288.1911099154688
+            ],
+            [
+              25.23368569335938,
+              288.49733833648577
+            ],
+            [
+              26.8,
+              288.6
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              17.200000000000003,
+              276.6
+            ],
+            [
+              17.282129330811422,
+              277.85305144531253
+            ],
+            [
+              17.527112067624945,
+              279.08466283298424
+            ],
+            [
+              17.93075648789165,
+              280.2737609507049
+            ],
+            [
+              18.48615612366939,
+              281.40000000000003
+            ],
+            [
+              19.183807933204143,
+              282.44410971848373
+            ],
+            [
+              20.011774900609144,
+              283.38822509939087
+            ],
+            [
+              20.955890281516282,
+              284.2161920667959
+            ],
+            [
+              22.0,
+              284.91384387633065
+            ],
+            [
+              23.126239049295137,
+              285.4692435121084
+            ],
+            [
+              24.3153371670158,
+              285.8728879323751
+            ],
+            [
+              25.546948554687503,
+              286.1178706691886
+            ],
+            [
+              26.8,
+              286.20000000000005
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 18.16,
+          "cy": 285.24,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 171.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 276.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 183.2,
+          "y1": 276.6,
+          "x2": 183.2,
+          "y2": 264.6,
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              195.2,
+              276.6
+            ],
+            [
+              195.0973383364857,
+              278.16631430664063
+            ],
+            [
+              194.7911099154688,
+              279.7058285412303
+            ],
+            [
+              194.28655439013542,
+              281.1922011883811
+            ],
+            [
+              193.59230484541325,
+              282.6
+            ],
+            [
+              192.72024008349482,
+              283.90513714810464
+            ],
+            [
+              191.68528137423857,
+              285.0852813742386
+            ],
+            [
+              190.50513714810464,
+              286.1202400834948
+            ],
+            [
+              189.2,
+              286.9923048454133
+            ],
+            [
+              187.79220118838106,
+              287.6865543901355
+            ],
+            [
+              186.30582854123023,
+              288.1911099154688
+            ],
+            [
+              184.7663143066406,
+              288.49733833648577
+            ],
+            [
+              183.2,
+              288.6
+            ]
+          ],
+          "stroke": "#38604A",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "polyline",
+          "points": [
+            [
+              192.79999999999998,
+              276.6
+            ],
+            [
+              192.71787066918856,
+              277.85305144531253
+            ],
+            [
+              192.47288793237504,
+              279.08466283298424
+            ],
+            [
+              192.06924351210833,
+              280.2737609507049
+            ],
+            [
+              191.5138438763306,
+              281.40000000000003
+            ],
+            [
+              190.81619206679585,
+              282.44410971848373
+            ],
+            [
+              189.98822509939083,
+              283.38822509939087
+            ],
+            [
+              189.0441097184837,
+              284.2161920667959
+            ],
+            [
+              188.0,
+              284.91384387633065
+            ],
+            [
+              186.87376095070485,
+              285.4692435121084
+            ],
+            [
+              185.6846628329842,
+              285.8728879323751
+            ],
+            [
+              184.4530514453125,
+              286.1178706691886
+            ],
+            [
+              183.2,
+              286.20000000000005
+            ]
+          ],
+          "stroke": "#709365",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.461538
+        },
+        {
+          "type": "circle",
+          "cx": 191.83999999999997,
+          "cy": 285.24,
+          "r": 0.65,
+          "stroke": "#B8C6A0",
+          "fill": "#B8C6A0",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.6
+        },
+        {
+          "type": "line",
+          "x1": 161.6,
+          "y1": 277.8,
+          "x2": 180.79999999999998,
+          "y2": 277.8,
+          "stroke": "#B8C6A0",
+          "fill": "none",
+          "strokeWidthPt": 0.85,
+          "opacity": 0.48
+        }
+      ]
+    }
+  ]
+}

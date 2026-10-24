@@ -2,11 +2,13 @@ import {assertFindingReferences, assertTableRows, evidenceLabel, valueText} from
 import { chartData, resultFor, verifyResearchQuality, type ReportBlock } from './research-quality.ts';
 import {parseEditorContent,type EditorContent,type LatexReport} from './editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS, parseReportFormatOptions, parseReportFormatSettings, reportPart, type ReportFormatOptions } from './report-format.ts';
+import {frameTexPreamble} from './report-frame-export.ts';
+import {parseReportFrame,assertApprovedFrame,type ReportFrameStyle} from './report-frame.ts';
 import {figureTexPreamble} from './report-figure-tex.ts';
 import {figureFor,type ReportFigure,type ProjectVisualStyle} from './report-figure.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
-export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle };
+export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; frame?:ReportFrameStyle; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle };
 export type LatexDiagnostic = { severity: 'error' | 'warning'; line: number | null; message: string };
 export type LatexCompileReceipt = { status: 'compiled' | 'error' | 'unavailable'; source: string; sourceHash: string; pdfBase64: string | null; diagnostics: LatexDiagnostic[]; engine: 'xelatex' | null };
 
@@ -31,7 +33,7 @@ export function latexReportKey(content: EditorContent): string {
   const settings = parseReportFormatSettings(content.reportFormat ?? DEFAULT_REPORT_SETTINGS);
   const options = settings.options;
   return JSON.stringify({ title: content.title, subtitle: content.subtitle,
-    ...(content.figures?.length?{figures:content.figures,visualStyle:content.visualStyle}:{}),
+    ...(content.reportFrame?{reportFrame:content.reportFrame}:{}),...(content.figures?.length?{figures:content.figures,visualStyle:content.visualStyle}:{}),
     report: content.report.map(section => ({ id: section.id, title: section.title, body: section.body, source: section.source, ...(section.blocks?.length ? { blocks: section.blocks } : {}), ...(section.findingIds ? { findingIds: section.findingIds } : {}), ...(section.findingSnapshots ? { findingSnapshots: section.findingSnapshots } : {}) })),
     ...(content.report.some(s=>s.blocks?.length||s.findingIds?.length) ? { quality: content.quality } : {}),
     reportFormat: { edition: settings.edition, group: settings.group, region: settings.region, track: settings.track, stage: settings.stage, profileId: settings.profileId,
@@ -79,6 +81,7 @@ export function generateLatexBody(content: EditorContent): string {
 }
 export async function createLatexReport(content: EditorContent): Promise<LatexReport> {
   assertFindingReferences(content);content=parseEditorContent(content);
+  if(content.reportFrame)await assertApprovedFrame(content.reportFrame);
   if(content.quality)await verifyResearchQuality(content.quality);
   const body = generateLatexBody(content), reportHash = await latexReportHash(content);
   return { version: 1, body, reportHash };
@@ -92,13 +95,14 @@ export function latexFigureReferences(body:string):{index:number;start:number;en
 export function latexCompileInput(content: EditorContent): LatexCompileInput {
   const options = parseReportFormatOptions((content.reportFormat ?? DEFAULT_REPORT_SETTINGS).options);
   const original=content.latex?.body??'',refs=latexFigureReferences(original),used=[...new Set(refs.map(r=>r.index))].sort((a,b)=>a-b);
-  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options};
+  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{})};
   let offset=0,body='';for(const ref of refs){body+=original.slice(offset,ref.start)+used.indexOf(ref.index);offset=ref.end;}body+=original.slice(offset);
-  return { title: content.title, subtitle: content.subtitle, body, options,...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}) };
+  return { title: content.title, subtitle: content.subtitle, body, options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}) };
 }
 export function latexCompileKey(input: LatexCompileInput): string {
   const o = input.options;
   return JSON.stringify({ title: input.title, subtitle: input.subtitle, body: input.body,
+    ...(input.frame?{frame:input.frame}:{}),
     ...(input.figures?.length?{figures:input.figures}:{}),...(input.visualStyle?{visualStyle:input.visualStyle}:{}),
     options: { part: o.part, includeCover: o.includeCover, includeToc: o.includeToc, firstLineChars: o.firstLineChars, numberPages: o.numberPages } });
 }
@@ -125,13 +129,17 @@ export function buildLatexSource(input: LatexCompileInput): string {
   ];
   if(input.body.includes('\\begin{tikzpicture}'))lines.splice(3,0,'\\usepackage{pgfplots}','\\pgfplotsset{compat=1.18}');
   if(input.figures?.length){if(!input.visualStyle)throw Error('图形缺少配色版本。');lines.splice(3,0,'\\usepackage{tikz}');lines.splice(lines.indexOf('\\begin{document}'),0,...figureTexPreamble(input.figures,input.visualStyle));}
+  const frame=input.frame?parseReportFrame(input.frame):null;
+  if(frame&&frame.layout!=='none'){lines.splice(lines.indexOf('\\begin{document}'),0,...frameTexPreamble(frame));if(frame.appliesTo.includes('cover'))lines.push('\\ReportFrameActivetrue');}
   if (o.includeCover) lines.push('\\begin{titlepage}', '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
+  if(frame&&frame.layout!=='none')lines.push('\\ReportFrameActivefalse');
   if (o.includeToc) lines.push('\\pagenumbering{Roman}', '\\tableofcontents', '\\clearpage', '\\pagenumbering{arabic}');
+  if(frame&&frame.layout!=='none'&&frame.appliesTo.includes(o.part==='appendix'?'appendix':'body'))lines.push('\\ReportFrameActivetrue');
   lines.push('% BODY START', input.body.replace(/\r\n?/g, '\n'), '% BODY END', '\\end{document}', '');
   const source=lines.join('\n');if(new TextEncoder().encode(source).length>2_000_000)throw Error('排版源码超过 2 MB，请拆分图形或文档。');return source;
 }
 export function previewLatexSource(input:LatexCompileInput):{source:string;error:string}{try{return {source:buildLatexSource(input),error:''};}catch(error){return {source:'',error:error instanceof Error?error.message:'源码暂不能生成，请调整图形或文档。'};}}
-export async function approvedLatexSource(input:LatexCompileInput):Promise<{source:string;inputKey:string}>{const snapshot=structuredClone(input);return {source:buildLatexSource(snapshot),inputKey:latexCompileKey(snapshot)};}
+export async function approvedLatexSource(input:LatexCompileInput):Promise<{source:string;inputKey:string}>{const snapshot=structuredClone(input);if(snapshot.frame)snapshot.frame=await assertApprovedFrame(snapshot.frame);return {source:buildLatexSource(snapshot),inputKey:latexCompileKey(snapshot)};}
 
 export type LatexCompileTicket = { generation: number; projectId: string; inputKey: string };
 /** A response is useful only for its original project and exact input, even after cancel/retry. */

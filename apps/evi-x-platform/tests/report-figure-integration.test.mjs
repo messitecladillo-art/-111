@@ -61,7 +61,7 @@ test('a referenced v3 figure and palette enter the single-source fingerprint',as
  const {figure,...base}=await content(),upgraded={...base,version:3,visualStyle:visual,figures:[figure]};
  upgraded.report[0].blocks[0].figureId=figure.id;upgraded.slides[0].objects[0].figureId=figure.id;
  const bound=await bindReportSlide(upgraded,upgraded.slides[0],'source-section');
- assert.equal(bound.reportLink.version,2);assert.equal(bound.reportLink.sources,undefined);
+ assert.equal(bound.reportLink.version,3);assert.deepEqual(bound.reportLink.sources.map(s=>[s.sectionId,s.blockIds]),[['source-section',upgraded.report[0].blocks.map(b=>b.id)]]);
  assert.equal(await reportLinkState(upgraded,bound),'current');
  for(const change of [c=>c.figures[0].title+='改',c=>c.visualStyle.version++]){
   const changed=structuredClone(upgraded);change(changed);assert.equal(await reportLinkState(changed,bound),'report_changed');
