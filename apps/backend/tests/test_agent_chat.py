@@ -93,3 +93,22 @@ def test_the_receipt_starts_running_and_binds_the_request():
     receipt = chat.turn_receipt(data, "fixture")
     assert receipt["status"] == "running" and receipt["id"] == data["idempotencyKey"] and receipt["modelCalled"] is True
     assert receipt["inputFingerprint"] == chat.input_fingerprint(data) and receipt["reply"] is None and receipt["actions"] == []
+
+
+def test_a_secret_is_found_in_decoded_text_whatever_json_escaping_does():
+    secret = r'sk-"quoted\slashed'
+    data = request(history=[{"role": "user", "text": f"我的密钥是 {secret}"}])
+    assert secret not in chat.agent_prompt(data), "escaping hides it from a plain search of the prompt"
+    assert chat.contains_secret({"history": data["history"]}, secret)
+    assert chat.contains_secret({"reply": "好", "actions": [{"tool": "lookup", "args": {"query": secret}}]}, secret)
+    assert not chat.contains_secret(request(), secret)
+
+
+def test_the_prompt_keeps_within_its_budget_by_dropping_the_oldest_history():
+    history = [{"role": "user" if i % 2 == 0 else "agent", "text": f"第{i}条" + "长" * 1190} for i in range(12)]
+    data = request(history=history, context={"notes": "摘" * 5000})
+    prompt = chat.agent_prompt(data)
+    assert len(prompt.encode("utf-8")) <= chat.PROMPT_BYTES
+    embedded = json.loads(prompt.split("资料JSON：", 1)[1])
+    assert embedded["history"] and embedded["history"] == history[-len(embedded["history"]):], "the newest entries are kept, in order"
+    assert embedded["message"] == data["message"] and embedded["context"] == data["context"]

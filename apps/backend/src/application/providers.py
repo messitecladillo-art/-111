@@ -18,8 +18,8 @@ class LiveProvider(ChatCompletionClient):
         return await self.complete(config, key, message, 65536)
 
     async def agent_chat(self, config, key, message):
-        """One turn of the 证见 Agent conversation."""
-        return await self.complete(config, key, message, 32768)
+        """One turn of the 证见 Agent conversation; the prompt itself stays within agent_chat.PROMPT_BYTES."""
+        return await self.complete(config, key, message, 65536)
 
 
 class FixtureProvider:

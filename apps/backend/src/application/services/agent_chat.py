@@ -59,7 +59,7 @@ class AgentChatService:
             raise ApiError(409, 'outcome_unknown', '同样的话有一轮结果尚未明确，请先核对原回执。')
         config, key = (config_view(service), decrypt(self.settings, service))
         message = domain.agent_prompt(data)
-        if key in message:
+        if key in message or domain.contains_secret({'message': data['message'], 'history': data['history'], 'context': data['context']}, key):
             raise ApiError(422, 'sensitive_input', '对话包含服务密钥，请移除后重试。')
         session.add(RateEvent(scope=scope))
         op.response = domain.turn_receipt(data, self.settings.provider_mode)
@@ -71,6 +71,8 @@ class AgentChatService:
                 if not isinstance(raw, str) or key in raw:
                     raise ProviderFailure('invalid_response')
                 reply = domain.parse_reply(raw)
+                if domain.contains_secret(reply, key):
+                    raise ProviderFailure('invalid_response')
         except ProviderFailure as error:
             failure = error
         except (TimeoutError, asyncio.CancelledError):

@@ -134,8 +134,9 @@ export default function AgentShell() {
   // Talking with a model is the user's choice, for this visit; every conversation asks once before its first sentence goes.
   const [chatMode, setChatMode] = useState<'command' | 'model'>('command');
   const consented = useRef(new Set<string>());
-  const chatServices = lists.services.filter(s => s.capabilities.includes('research'));
-  const chatService = chatServices.find(s => s.id === preferredService) ?? chatServices[0] ?? null;
+  // The chat uses the service the model menu shows as chosen, never another one behind it.
+  const chosenService = lists.services.some(s => s.id === preferredService) ? preferredService : lists.services[0]?.id ?? '';
+  const chatService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
@@ -169,21 +170,23 @@ export default function AgentShell() {
       if (latest.current.chatMode === 'model' && !/^[/／]/u.test(text)) ask(text);
       else local(text);
     };
-    const local = (text: string, note?: Line) => {
+    const local = (text: string) => {
       const { panel, light, theme, traces, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
       const routed = route(text, { room: panel, light, theme, traces });
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
       if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
-      threads.append([user, { ...stamp(), role: 'agent', turn: note ? { ...routed.turn, lines: [note, ...routed.turn.lines] } : routed.turn }]);
+      threads.append([user, { ...stamp(), role: 'agent', turn: routed.turn }]);
       if (routed.turn.act) perform(routed.turn.act);
     };
     // The first sentence of a conversation waits for consent: what goes to the service, what never does, who pays.
     const ask = (text: string) => {
       const { generation, chatService, owner } = latest.current;
       if (generation.account !== 'ready' || !chatService) {
-        local(text, [span(generation.account === 'ready' ? '还没有启用「研究」能力的模型服务，' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
+        // Whatever the sentence routes to here, the user learns why the model was not asked.
+        local(text);
+        say([span(generation.account === 'ready' ? '所选的模型服务没有启用「研究」能力（在模型菜单里换一个，或在模型服务里勾选），' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
         return;
       }
       threads.append([{ ...stamp(), role: 'user', text }]);
@@ -202,7 +205,11 @@ export default function AgentShell() {
       if (!chatService) return;
       const book = threads.view(owner), messages = book.threads.find(t => t.id === book.active)?.messages ?? [];
       const asked = messages.map(m => m.role === 'user' && m.text === text).lastIndexOf(true);
-      const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(messages.slice(0, asked < 0 ? messages.length : asked).flatMap(chatLine)),
+      // A sentence whose consent card was declined, or never answered, was not sent and is not sent later either.
+      const declined = new Set(messages.flatMap((m, i) => m.role === 'agent' && m.answered !== 'confirmed'
+        && m.turn.cards?.some(card => card.kind === 'confirm' && card.confirm.action.type === 'chat') ? [i - 1] : []));
+      const said = messages.slice(0, asked < 0 ? messages.length : asked).filter((_, i) => !declined.has(i));
+      const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(said.flatMap(chatLine)),
         context: chatContext(panel, light, traces), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true };
       const waiting: Message = { ...stamp(), role: 'agent', turn: { lines: [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       threads.append([waiting]);
