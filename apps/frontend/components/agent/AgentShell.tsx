@@ -61,7 +61,7 @@ export default function AgentShell() {
   const { panels, view, publishProposal } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
-  const { session: account, loading: accountLoading } = useHostedSession();
+  const { session: account, loading: accountLoading, logout } = useHostedSession();
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
   useEffect(() => { if (owner) threads.bind(owner); }, [owner]);
@@ -77,7 +77,7 @@ export default function AgentShell() {
 
   const [visited, setVisited] = useState<RoomId[]>([]);
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
-  const [moduleMenu, setModuleMenu] = useState(false);
+  const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
   // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
   const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
@@ -108,13 +108,13 @@ export default function AgentShell() {
 
   const inputRef = useRef<HTMLTextAreaElement>(null), scrollRef = useRef<HTMLDivElement>(null), headingRef = useRef<HTMLHeadingElement>(null);
   const railRef = useRef<HTMLElement>(null);
-  // The module menu closes on a click outside the rail, as the composer's menus do.
+  // The rail's menus close on a click outside the rail, as the composer's menus do.
   useEffect(() => {
-    if (!moduleMenu) return;
-    const away = (event: PointerEvent) => { if (!railRef.current?.contains(event.target as Node)) setModuleMenu(false); };
+    if (!railMenu) return;
+    const away = (event: PointerEvent) => { if (!railRef.current?.contains(event.target as Node)) setRailMenu(null); };
     window.addEventListener('pointerdown', away);
     return () => window.removeEventListener('pointerdown', away);
-  }, [moduleMenu]);
+  }, [railMenu]);
   // Every way to the input goes through here. While the panel fills the screen the input is hidden, so the conversation
   // comes back first, synchronously, and a "/" typed to get there still lands in it.
   const focusInput = useCallback(() => {
@@ -211,7 +211,7 @@ export default function AgentShell() {
         const reopen = latest.current.lastPanel;
         if (currentPanel()) window.location.hash = ''; else if (reopen) window.location.hash = reopen;
       }
-      if (event.key === 'Escape') setModuleMenu(false);
+      if (event.key === 'Escape') setRailMenu(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -251,19 +251,29 @@ export default function AgentShell() {
           if (!expanded) closePanel();
           focusInput();
         }}><Icon name="chat" /></button>
-        <button type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="menu" aria-expanded={moduleMenu} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setModuleMenu(!moduleMenu)}><Icon name="grid" /></button>
+        <button type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="menu" aria-expanded={railMenu === 'modules'} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setRailMenu(railMenu === 'modules' ? null : 'modules')}><Icon name="grid" /></button>
         <button type="button" className={styles.railButton} aria-label="项目全景" title="项目全景" aria-pressed={panel === 'overview'} onClick={() => panel === 'overview' ? closePanel() : go('overview')}><Icon name="lamp" /></button>
         <button type="button" className={styles.railButton} aria-label={`知识镜搜索（${shortcut}）`} title={`知识镜搜索（${shortcut}）`} onClick={knowledge.openSearch}><Icon name="book" /></button>
         <span className={styles.spacer} />
         <button type="button" className={styles.railButton} aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'} title={theme === 'dark' ? '浅色' : '深色'} onClick={event => switchTheme(theme === 'dark' ? 'light' : 'dark', event)}><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
-        {owner && owner !== 'guest' ? <span className={styles.avatar} title={email}>{(email[0] ?? '?').toUpperCase()}</span>
+        {owner && owner !== 'guest'
+          ? <button type="button" className={styles.avatar} aria-label={`账号：${email}`} title={email} aria-haspopup="menu" aria-expanded={railMenu === 'account'}
+            onClick={() => setRailMenu(railMenu === 'account' ? null : 'account')}>{(email[0] ?? '?').toUpperCase()}</button>
           : <Link className={styles.avatar} data-guest="true" href="/login" title="登录">访</Link>}
-        {moduleMenu && <div className={styles.menu} role="menu" aria-label="模块" style={{ left: 50, top: 40, zIndex: 60, maxHeight: 'calc(100dvh - 56px)' }}>
+        {railMenu === 'account' && <div className={styles.menu} role="menu" aria-label="账号" aria-describedby="agent-account-note" style={{ left: 50, bottom: 10, zIndex: 60 }}>
+          <p id="agent-account-note" className={styles.menuNote} aria-hidden="true">{email}</p>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('workspace'); setRailMenu(null); }}>项目门户</button>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('services'); setRailMenu(null); }}>模型服务</button>
+          <Link role="menuitem" className={styles.menuItem} href="/workspace">经典工作台 ↗</Link>
+          {/* Signing out asks first when this tab still holds unsaved drafts. */}
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); void logout(); }}>退出登录</button>
+        </div>}
+        {railMenu === 'modules' && <div className={styles.menu} role="menu" aria-label="模块" style={{ left: 50, top: 40, zIndex: 60, maxHeight: 'calc(100dvh - 56px)' }}>
           {GROUPS.map(group => <div key={group} role="group" aria-label={ROOM_GROUPS[group]}>
             <p className={styles.menuLabel} aria-hidden="true">{ROOM_GROUPS[group]}</p>
             {ROOMS.filter(r => r.group === group).map(r => {
               const lightOf = roomLight(light, r.id);
-              return <button key={r.id} type="button" role="menuitemradio" className={styles.menuItem} aria-checked={panel === r.id} onClick={() => { go(r.id); setModuleMenu(false); }}>
+              return <button key={r.id} type="button" role="menuitemradio" className={styles.menuItem} aria-checked={panel === r.id} onClick={() => { go(r.id); setRailMenu(null); }}>
                 {r.name}{lightOf && <small>{percent(lightOf.score)}</small>}
               </button>;
             })}
