@@ -154,11 +154,13 @@ export const threads = {
     if (!listening) { window.addEventListener('storage', adopt); listening = true; }
     if (owner === id) return;
     const restored = read(id), unbound = owner === null ? book : EMPTY, earlier = carriedOver(id);
+    // A visitor who signs in keeps what they said as a guest in this tab: it moves into the account and leaves the tab.
+    const visited = id === 'guest' ? null : read('guest');
     owner = id;
     removed = restored.removed;
     // Another identity's transcript is dropped unread, as it always was.
-    for (const key of LEGACY) { try { window.sessionStorage.removeItem(key); } catch { /* Nothing to remove without storage. */ } }
-    commit({ threads: [...unbound.threads, ...(earlier ? [earlier] : [])], active: unbound.active ?? earlier?.id ?? restored.active, draftProject: null });
+    for (const key of [...LEGACY, ...(visited?.threads.length ? [PREFIX + 'guest'] : [])]) { try { window.sessionStorage.removeItem(key); } catch { /* Nothing to remove without storage. */ } }
+    commit({ threads: [...unbound.threads, ...(earlier ? [earlier] : []), ...(visited?.threads ?? [])], active: unbound.active ?? earlier?.id ?? visited?.active ?? restored.active, draftProject: null });
   },
   /** Opens a new, empty conversation; it becomes a thread with its first message. */
   draft(projectId: string | null = null) { commit({ ...book, active: null, draftProject: projectId }); },

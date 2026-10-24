@@ -31,6 +31,17 @@ test('conversations belong to one identity: another sees nothing, even before bi
   assert.equal(local.getItem('evix.agent.threads.v1:guest'), null);
 });
 
+test('a visitor who signs in keeps what they said as a guest; signing out again shows the account nothing', () => {
+  // The guest of the test above, in this tab, now signs in.
+  threads.bind('nora');
+  assert.deepEqual(threads.view('nora').threads.map(t => t.title), ['访客的问题']);
+  assert.equal(threads.view('nora').threads[0].id, threads.view('nora').active, 'the conversation stays open');
+  assert.equal(session.getItem('evix.agent.threads.v1:guest'), null, 'and leaves the guest’s tab storage');
+  assert.match(local.getItem('evix.agent.threads.v1:nora'), /访客的问题/);
+  threads.bind('guest');
+  assert.deepEqual(threads.view('guest').threads, [], 'a guest after sign-out sees none of the account’s conversations');
+});
+
 test('a conversation starts from a draft, is titled by its first words, and a late reply finds its own thread', () => {
   threads.bind('carol');
   threads.draft('project-1');
