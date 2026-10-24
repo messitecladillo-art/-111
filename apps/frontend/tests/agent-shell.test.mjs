@@ -72,7 +72,7 @@ test('the report room is dark until the template is written over, then scored by
   const failed = new Set(light.benchmark.checks.filter(c => c.status === 'fail').map(c => `report.${c.id}`));
   assert.deepEqual(light.blind.filter(c => c.room === 'editor').map(c => c.id), [...failed], 'only outright failures are blind spots');
   // Data and registered results light the analysis room.
-  const lit = roomLight(illuminate({ ...empty, dataset: { name: '社区问卷', rows: 430, simulated: true }, resultPending: true }), 'analysis');
+  const lit = roomLight(illuminate({ ...empty, dataset: { name: '社区问卷', rows: 430, simulated: true, hash: 'a'.repeat(64) }, resultPending: true }), 'analysis');
   assert.equal(lit.score, 2 / 3);
   assert.match(lit.checks[0].detail, /430 行 · 教学模拟数据/);
 });
@@ -127,24 +127,31 @@ test('every room has a unique command and glyph, and the command list completes 
 
 test('a sampling plan lights its room once the report carries it, judged on effective responses and its latest revision', () => {
   const table = id => ({ id: `t-${id}`, kind: 'table', text: '', evidenceId: id, valueColumn: 1 });
+  // Frame IDs carry a digest of the group's stable ID, then of the plan: sampling-frame-<group>-<content>.
+  const frameId = (group, content) => `sampling-frame-${group.repeat(8)}-${content.repeat(16)}`;
   const report = reportWith([table('f1')], [frame('f1', 400)]);
   assert.equal(roomLight(illuminate({ ...empty, report: reportWith([], [frame('f1', 400)]) }), 'sampling').score, 0, 'a frame the report no longer carries is not evidence');
   const without = illuminate({ ...empty, report });
   assert.deepEqual(roomLight(without, 'sampling').checks.map(c => [c.id, c.passed]), [['sampling.frame', true], ['sampling.size', true], ['sampling.reach', false]]);
   assert.equal(without.blind.find(c => c.id === 'sampling.reach').go, 'analysis', 'data is loaded and screened in the analysis room');
   assert.equal(roomLight(without, 'analysis').checks.find(c => c.id === 'analysis.results').passed, false, 'a frame is not an analysis');
-  const reach = view => roomLight(illuminate({ ...empty, report, ...view }), 'sampling').checks[2];
+  const loaded = { name: '回收', rows: 452, simulated: false, hash: '3fa1'.repeat(16) };
+  const reach = (view, content = report) => roomLight(illuminate({ ...empty, report: content, ...view }), 'sampling').checks[2];
   // Raw rows are not responses: the check stays open until quality control has spoken.
-  assert.match(reach({ dataset: { name: '回收', rows: 452, simulated: false } }).label, /回收 452 行，有效份数待质量控制/);
-  assert.equal(reach({ dataset: { name: '回收', rows: 452, simulated: false } }).passed, false);
-  assert.equal(reach({ dataset: { name: '回收', rows: 452, simulated: false, screened: true } }).passed, true);
+  assert.match(reach({ dataset: loaded }).label, /回收 452 行，有效份数待质量控制/);
+  assert.equal(reach({ dataset: loaded }).passed, false);
+  assert.equal(reach({ dataset: { ...loaded, screened: true } }).passed, true);
+  // A screening counts only for the data it screened, and never once that data is gone.
   const screened = reportWith([table('f1')], [frame('f1', 400), result('qc', { method: 'quality-control', n: 380, total: 452 })]);
-  const short = roomLight(illuminate({ ...empty, report: screened, dataset: { name: '回收', rows: 452, simulated: false } }), 'sampling').checks[2];
+  const short = reach({ dataset: loaded }, screened);
   assert.equal(short.passed, false);
   assert.match(short.label, /有效 380 份，未达计划的 400 份/);
-  // A group's plan revised and inserted again replaces the old frame instead of adding to it.
-  const revised = reportWith([table('f1'), table('f2')], [frame('f1', 400), frame('f2', 500)]);
-  assert.match(roomLight(illuminate({ ...empty, report: revised }), 'sampling').summary, /^1 个抽样框 · 计划 500 份/);
+  assert.match(reach({ dataset: { ...loaded, hash: 'c'.repeat(64) } }, screened).label, /有效份数待质量控制/, 'switching data leaves the old screening behind');
+  assert.match(reach({}, screened).label, /还没有回收数据可对照计划/);
+  // A group revised and inserted again replaces its old frame, renamed or not; two groups sharing a name both count.
+  const revised = reportWith([table(frameId('a', '1')), table(frameId('a', '2')), table(frameId('b', '3'))],
+    [{ ...frame(frameId('a', '1'), 400), title: '居民抽样框' }, { ...frame(frameId('a', '2'), 500), title: '社区居民抽样框' }, { ...frame(frameId('b', '3'), 200), title: '社区居民抽样框' }]);
+  assert.match(roomLight(illuminate({ ...empty, report: revised }), 'sampling').summary, /^2 个抽样框 · 计划 700 份/);
   assert.equal(roomLight(illuminate({ ...empty, report: reportWith([table('f3')], [frame('f3', 0)]) }), 'sampling').checks[1].passed, false);
 });
 

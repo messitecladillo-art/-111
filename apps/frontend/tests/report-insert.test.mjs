@@ -10,7 +10,7 @@ import { blueprintSections, matchBlueprintNode } from '../lib/report-blueprint.t
 import { placeResult } from '../lib/report-placement.ts';
 import { presentResult, sourceLine, tableSpans } from '../lib/report-tables.ts';
 import { readingParagraph } from '../lib/report-templates.ts';
-import { applyReportInsert, insertSummary, sampleSizeInsert, samplingDesignInsert } from '../lib/report-insert.ts';
+import { applyReportInsert, frameGroup, insertSummary, sampleSizeInsert, samplingDesignInsert } from '../lib/report-insert.ts';
 import { groupStatement, parseSelectionTree } from '../lib/sampling-selection.ts';
 import { sampleSize, methodsStatement } from '../lib/sampling.ts';
 import { texProblem } from '../lib/omml.ts';
@@ -64,6 +64,12 @@ test('the staged sampling design goes to the sampling section with frame tables 
   for (const f of formulas) assert.equal(texProblem(f.tex), null);
   const again = await samplingDesignInsert(groups, statement);
   assert.equal(again.items.find(i => i.kind === 'table').result.id, tables[0].result.id, 'the same design gives the same frame result');
+  // The frame ID carries a digest of the group's stable ID: renamed and resized, the group is still the same group.
+  const revised = (await samplingDesignInsert([{ ...groups[0], name: '改名后的群体', completes: (groups[0].completes ?? 0) + 50 }], statement)).items.find(i => i.kind === 'table').result.id;
+  assert.notEqual(revised, tables[0].result.id);
+  assert.equal(frameGroup(revised), frameGroup(tables[0].result.id));
+  assert.notEqual(frameGroup(tables[0].result.id), frameGroup(tables[1].result.id));
+  assert.equal(frameGroup('sampling-frame-0123456789abcdef'), null, 'frames from before the group digest have none');
   const applied = applyReportInsert(report(), insert);
   assert.equal(matchBlueprintNode(applied.content.report.find(s => s.id === applied.sectionId).title).id, 'design.sampling');
   assert.equal(applied.content.quality.results.length, 2);

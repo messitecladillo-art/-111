@@ -44,6 +44,13 @@ export function insertSummary(blocks: readonly ReportBlock[]): string {
 }
 
 /**
+ * A frame's result ID is `sampling-frame-<group>-<content>`: a digest of the group's stable ID, so a revised plan can
+ * replace its own group's frame whatever the group is called, then a digest of the plan itself. Frames registered
+ * before the group digest existed have no group and return null.
+ */
+export const frameGroup = (resultId: string): string | null => /^sampling-frame-([0-9a-f]{8})-[0-9a-f]{16}$/.exec(resultId)?.[1] ?? null;
+
+/**
  * The staged sampling design: its method paragraph, one frame table per group (parent units merge across their rows in
  * Word), and the inclusion probability. Names typed by the author are copied literally.
  */
@@ -53,12 +60,12 @@ export async function samplingDesignInsert(groups: readonly PlanGroup[], stateme
   for (const group of groups) {
     const name = group.name.trim() || '该群体', frame = frameTable(group);
     if (frame.rows.length) {
-      const sourceHash = await digestText(JSON.stringify(group));
+      const sourceHash = await digestText(JSON.stringify(group)), groupKey = (await digestText(group.id)).slice(0, 8);
       const result = await snapshotRecipe({
         method: 'sampling-frame', n: 0, total: 0, excluded: 0, missingRows: 0, invalidRows: 0, headers: frame.headers, rows: frame.rows,
         metrics: [{ label: '计划有效样本', value: group.completes }], interpretation: '',
         warnings: groupIsProbability(group) ? [] : [`${name}含拦截、配额或方便抽样阶段，不是概率样本，不报告严格的抽样误差`],
-      }, { title: `${name}抽样框`.slice(0, 150), sourceName: '本研究抽样设计', sourceUrl: '', sourceHash, classification: 'user_provided' }, `sampling-frame-${sourceHash.slice(0, 16)}`);
+      }, { title: `${name}抽样框`.slice(0, 150), sourceName: '本研究抽样设计', sourceUrl: '', sourceHash, classification: 'user_provided' }, `sampling-frame-${groupKey}-${sourceHash.slice(0, 16)}`);
       items.push({ kind: 'table', result, caption: captionText(`${name}各阶段抽样框与入样单位`) });
     }
     const p = equalProbabilityInclusion(group);
