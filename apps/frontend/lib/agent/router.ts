@@ -11,8 +11,11 @@ import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
 
-/** gold: a number with an origin · cyan: generated, unconfirmed · teal: a method or command · error: failures only. */
-export type Mark = 'gold' | 'cyan' | 'teal' | 'dim' | 'error' | 'strong';
+/**
+ * gold: a number with an origin · cyan: generated, unconfirmed · teal: a method or command · error: failures only.
+ * tex and math: the text is TeX, typeset inline or on a line of its own; formulas are never shown as plain text.
+ */
+export type Mark = 'gold' | 'cyan' | 'teal' | 'dim' | 'error' | 'strong' | 'tex' | 'math';
 export type Span = { text: string; mark?: Mark };
 export type Line = Span[];
 export type AgentAction =

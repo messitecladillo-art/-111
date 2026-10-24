@@ -170,6 +170,9 @@
 .s-dim { color: var(--c-dim); }
 .s-error { color: var(--c-err); }
 .s-strong { color: var(--c-fg); font-weight: 600; }
+/* A formula in a reply, typeset; a display one stands on its own line and scrolls rather than overflow. */
+.mathInline { display: inline-block; max-width: 100%; vertical-align: middle; }
+.mathBlock { display: block; max-width: 100%; margin: 6px 0; overflow-x: auto; overflow-y: hidden; }
 
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; padding: 40px 24px 24px; text-align: center; }
 .emptyMark { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 14px; color: var(--c-dim); }

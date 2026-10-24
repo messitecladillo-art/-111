@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
+import { renderTex } from '@/components/math/Tex';
 import { lightBar } from '@/lib/agent/glyphs';
 import type { Line } from '@/lib/agent/router';
 import styles from './AgentShell.module.css';
@@ -39,6 +40,7 @@ export function Develop({ text, at }: { text: string; at: number }) {
 /** One line of marked text from the router. */
 export function Spans({ line, at }: { line: Line; at: number }) {
   return <>{line.map((span, i) => span.mark === 'gold' ? <Develop key={i} text={span.text} at={at} />
+    : span.mark === 'tex' || span.mark === 'math' ? <span key={i} className={span.mark === 'math' ? styles.mathBlock : styles.mathInline} dangerouslySetInnerHTML={{ __html: renderTex(span.text, span.mark === 'math') }} />
     : span.mark ? <span key={i} className={styles[`s-${span.mark}`]}>{span.text}</span>
     : <Fragment key={i}>{span.text}</Fragment>)}</>;
 }

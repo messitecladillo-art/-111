@@ -8,7 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
-import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
+import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -239,7 +239,7 @@ export default function AgentShell() {
     // A receipt read back by 核对回执 has no chain to continue: it settles, and the user can ask again from there.
     const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>(), service?: Service) => {
       if (receipt.status === 'ready' && receipt.reply) {
-        replace(messageId, { lines: [...receipt.reply.split(/\n+/u).filter(p => p.trim()).map(p => [span(p)]), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
+        replace(messageId, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
         const asked = receipt.message;
         if (receipt.droppedActions) threads.appendAfter(messageId, { ...stamp(), role: 'agent', turn: { lines: [[span(`模型还请求了 ${receipt.droppedActions} 个不在清单里的操作，没有执行。`, 'dim')]] } });
         // What the read-only tools found goes back to the model, until the sentence's last step.
@@ -482,6 +482,6 @@ function chatLine(message: Message): ChatLine[] {
   if (message.role === 'user') return [{ role: 'user', text: message.text }];
   // A question put to the user (a consent or confirmation) is not part of what was said about the research.
   if (message.role !== 'agent' || message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
-  const text = message.turn.lines.map(line => line.map(s => s.text).join('')).join('\n').trim();
+  const text = message.turn.lines.map(line => line.map(spanText).join('')).join('\n').trim();
   return text ? [{ role: 'agent', text }] : [];
 }

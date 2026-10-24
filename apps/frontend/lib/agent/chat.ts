@@ -2,7 +2,7 @@
 // rows), what comes back (a reply and at most three tool requests from a fixed list), and what each failure means.
 // The backend holds the same list and limits (apps/backend …/agent_chat.py); the browser checks them again.
 import type { Illumination } from './illumination.ts';
-import type { AgentTurn } from './router.ts';
+import type { AgentTurn, Line, Span } from './router.ts';
 import { isRoomId, roomById, type RoomId } from './rooms.ts';
 
 export type ChatAction =
@@ -35,9 +35,12 @@ export const MAX_STEPS = 3;
 const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup']);
 export const isResultTool = (tool: ChatAction['tool']): tool is ToolResult['tool'] => RESULT_TOOLS.has(tool);
 
+/** A span as the model should read it: a formula keeps its TeX delimiters. */
+export const spanText = (span: Span): string => span.mark === 'tex' ? `$${span.text}$` : span.mark === 'math' ? `$$${span.text}$$` : span.text;
+
 /** A turn as plain text for the model, its cards' contents included, within the backend's limit. */
 export function turnText(turn: AgentTurn): string {
-  const join = (line: readonly { text: string }[]) => line.map(s => s.text).join('');
+  const join = (line: readonly Span[]) => line.map(spanText).join('');
   const parts = turn.lines.map(join);
   for (const card of turn.cards ?? []) {
     if (card.kind === 'tool') parts.push(card.title, ...card.lines.map(join));
@@ -111,6 +114,32 @@ export const CHAT_ERRORS: Record<string, string> = {
   provider_rejected: '模型服务拒绝了这次请求。',
   interrupted_call: '这一轮调用被中断了。',
 };
+
+// $$…$$ or \[…\] for a display formula, $…$ or \(…\) inline, **…** for emphasis. A lone $ stays text.
+const MARKUP = /\$\$([^$]+?)\$\$|\\\[([\s\S]+?)\\\]|\$([^$\n]+?)\$|\\\(([\s\S]+?)\\\)|\*\*([^*\n]+?)\*\*/gu;
+const TEX_LIMIT = 400;
+/**
+ * A model's reply as lines to render: a paragraph per line, its formulas typeset with KaTeX (trust off) instead of
+ * shown as TeX, its emphasis in bold. A formula on a line of its own stands as a display equation; one too long to
+ * be a formula stays text.
+ */
+export function replyLines(reply: string): Line[] {
+  return reply.split(/\n+/u).map(p => p.trim()).filter(Boolean).map(paragraph => {
+    const line: Line = [];
+    let last = 0;
+    for (const m of paragraph.matchAll(MARKUP)) {
+      const [whole, display, bracket, inline, paren, strong] = m;
+      const tex = (display ?? bracket ?? inline ?? paren)?.trim();
+      if (m.index > last) line.push({ text: paragraph.slice(last, m.index) });
+      if (strong !== undefined) line.push({ text: strong, mark: 'strong' });
+      else if (tex && tex.length <= TEX_LIMIT) line.push({ text: tex, mark: display !== undefined || bracket !== undefined ? 'math' : 'tex' });
+      else line.push({ text: whole });
+      last = m.index + whole.length;
+    }
+    if (last < paragraph.length) line.push({ text: paragraph.slice(last) });
+    return line;
+  });
+}
 
 /** A refusal before any call: nothing was billed, so sending again is safe. */
 export function isDefiniteChatRejection(status: number, code: string): boolean {

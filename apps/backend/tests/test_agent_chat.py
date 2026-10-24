@@ -163,3 +163,8 @@ def test_results_without_a_step_or_a_step_without_results_are_refused():
 def test_the_last_step_runs_no_tools_whatever_the_model_asks():
     raw = json.dumps({"reply": "照度显示问卷映射最弱。", "actions": [{"tool": "next", "args": {}}, {"tool": "light", "args": {}}]}, ensure_ascii=False)
     assert chat.parse_reply(raw, final=True) == {"reply": "照度显示问卷映射最弱。", "actions": [], "droppedActions": 2}
+
+
+def test_the_prompt_asks_for_formulas_in_latex_so_the_browser_can_typeset_them():
+    prompt = chat.agent_prompt(request())
+    assert "LaTeX" in prompt and "$$" in prompt
