@@ -142,7 +142,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
       }
       let request: QuestionnaireGenerationRequest;
       try { request = prepareQuestionnaireGeneration(service, brief, revision, true); }
-      catch (failure) { setJob(job.id, 'failed', reason(failure)); release(); return; }
+      catch (failure) { if (current()) setJob(job.id, 'failed', reason(failure)); release(); return; }
       setJob(job.id, 'running', '正在调用模型起草问卷…', request);
       await run(job.id, project.id, request, { label: service.label, model: service.model }, current);
     })();

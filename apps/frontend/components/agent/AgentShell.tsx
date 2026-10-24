@@ -5,6 +5,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, us
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { AccountStatus } from '@/components/hosted/HostedFrame';
+import { useHostedSession } from '@/components/hosted/HostedSession';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { NavIcon, ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -52,6 +53,10 @@ const viewport = () => window.matchMedia(NARROW).matches ? 'narrow' : window.mat
 export default function AgentShell() {
   const { panels, view, publishProposal } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
+  // The transcript belongs to whoever is signed in; it is bound once the session is known and dropped when it changes.
+  const { session: account, loading: accountLoading } = useHostedSession();
+  const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
+  useEffect(() => { if (owner) transcript.bind(owner); }, [owner]);
   const theme = useThemePreference(true);
   const room = useSyncExternalStore(subscribeHash, currentRoom, () => 'overview' as RoomId);
   const width = useSyncExternalStore(subscribeMedia, viewport, () => 'wide' as const), narrow = width === 'narrow';
