@@ -1,0 +1,1 @@
+检查前两阶段方案的资源、渠道、伦理和实施风险，整合为系统提示词指定的完整 ResearchOutput JSON。只使用任务或可信工具实际返回的证据引用；缺少关键输入时列出 unresolved_questions。

@@ -41,7 +41,7 @@
 ## 配图
 
 - 截图来自本地工作台的深色主题：教学示例问卷「校园服务体验」、离线演示引擎的 24 位虚构画像、12 行模拟数据、报告模板与案例库。截图前隐藏了开发指示器与本地验收横幅。每张图下标注「真实界面 · 示例数据」和具体内容。
-- 文件位于 `apps/evi-x-platform/public/landing/`：`app-*-960.webp` / `app-*-1600.webp` 为整屏截图，`crop-fidelity.webp` 为硅基样本结果页局部，`case-*` 为案例页面。来源与哈希登记在 `data/asset-provenance.json`。
+- 文件位于 `apps/frontend/public/landing/`：`app-*-960.webp` / `app-*-1600.webp` 为整屏截图，`crop-fidelity.webp` 为硅基样本结果页局部，`case-*` 为案例页面。来源与哈希登记在 `data/asset-provenance.json`。
 - 案例深读的五页取自用户提供的报告 PDF（语料 `CASE-NEW-BLUE-COLLAR`，哈希与 `user-case-intake-2026-08-04.json` 一致）：摘要、表 2 递进式证据链、抽样方案、LPA 画像、分类支持路径。封面含赛事标志与队名，不使用；所选页面没有受访者身份信息。页面保留「用户提供报告 · 奖项待核验」短标签，页脚注明版权归原作者。公开发布前须取得报告作者同意。
 - 首屏粒子、日食光环与硅基样本轨道都由代码生成，是示意，不对应任何运行结果。
 - 獬见使用已批准的生产锚点 `evi-x-character-anchor-v2`，放在与原图底色一致的象牙色纸面上，并标注「AI 辅助生成、经人工验收的原创概念角色」。
@@ -89,7 +89,7 @@
 
 没有新增依赖、后端接口、视频或外部字体。产品首页粒子画布使用 2D Canvas 与预渲染光点贴图，像素密度上限 1.75，离开视口时停止绘制；寻证之旅继续复用既有 Three.js 场景。
 
-定向回归命令：`node --experimental-strip-types --test apps/evi-x-platform/tests/landing-chronicle.test.mjs apps/evi-x-platform/tests/landing-navigation.test.mjs`。结果、核心源文件哈希与未完成检查记录在本次集成交接中；lint、类型检查、构建与浏览器验收由协调者集中执行。
+定向回归命令：`node --experimental-strip-types --test apps/frontend/tests/landing-chronicle.test.mjs apps/frontend/tests/landing-navigation.test.mjs`。结果、核心源文件哈希与未完成检查记录在本次集成交接中；lint、类型检查、构建与浏览器验收由协调者集中执行。
 
 ## 路由
 

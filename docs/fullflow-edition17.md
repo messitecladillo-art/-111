@@ -100,7 +100,7 @@ API 进程需要显式配置 `EVIX_LATEX_COMPILER`，指向已安装的 `xelatex
 
 ```powershell
 npm ci --ignore-scripts --no-audit --no-fund
-uv sync --locked --project apps/evi-x-api --python 3.12
+uv sync --locked --project apps/backend --python 3.12
 docker compose -f deploy/compose.dev.yaml up -d
 pwsh -NoProfile -File .\scripts\migrate-p0.ps1
 ```
@@ -114,7 +114,7 @@ pwsh -NoProfile -File .\scripts\start-p0-api.ps1
 npm run dev:web
 ```
 
-Docker 不可用时可用 `apps/evi-x-api/.venv/Scripts/python.exe scripts/setup-local-postgres.py` 准备原生 PostgreSQL，再运行 `pwsh -NoProfile -File .\scripts\start-p0-postgres.ps1`。两种方式二选一，不能同时占用 55432。
+Docker 不可用时可用 `apps/backend/.venv/Scripts/python.exe scripts/setup-local-postgres.py` 准备原生 PostgreSQL，再运行 `pwsh -NoProfile -File .\scripts\start-p0-postgres.ps1`。两种方式二选一，不能同时占用 55432。
 
 本地脚本创建被 Git 忽略的 `.local/p0-env.json`。体验账户与验证码读取方式见 [P0 运行指南](p0-running.md#本地体验账户)，不要把该文件作为公开部署配置。生产环境由进程或容器注入配置，应用不自动读取 `.env`。
 
@@ -149,7 +149,7 @@ npm run build:web
 后端测试需要单独配置 `EVIX_TEST_DATABASE_URL`，指向可创建隔离 schema 的合成测试数据库。不要使用真实业务数据库。每次为 `--basetemp` 选择新的目录：
 
 ```powershell
-Push-Location apps/evi-x-api
+Push-Location apps/backend
 try {
   .venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp ../../.local/pytest-fullflow-01
 } finally {

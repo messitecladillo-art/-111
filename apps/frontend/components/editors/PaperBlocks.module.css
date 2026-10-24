@@ -1,0 +1,20 @@
+.block { margin: 14px 0 10px; }
+.figure { display: block; inline-size: 100%; }
+.figure[aria-busy=true] { aspect-ratio: 16 / 9; }
+.figure > svg { display: block; inline-size: 100%; block-size: auto; }
+.figure[aria-busy=true] { background: linear-gradient(90deg, #f3f5f7, #fafbfc, #f3f5f7); border-radius: 4px; }
+.caption { margin: 6px 0 4px; text-align: center; text-indent: 0; font-size: 15px; }
+.tableScroll { overflow-x: auto; scrollbar-width: thin; }
+.tableScroll:focus-visible { outline: 2px solid #0f766e; outline-offset: 2px; }
+.table th, .table td { white-space: nowrap; }
+.table { min-inline-size: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.5; text-align: center; font-variant-numeric: tabular-nums; border-top: 1.5px solid #111; border-bottom: 1.5px solid #111; }
+.table thead th { font-weight: 700; padding: 6px 6px; border-bottom: 0.75px solid #111; }
+.table tbody th { font-weight: 400; padding: 4px 6px; }
+.table td { padding: 4px 6px; }
+.small { margin: 4px 0 8px !important; text-indent: 0 !important; font-size: 12px; line-height: 1.6; color: #3c4650; text-align: left !important; }
+.equation { margin: 4px 0; }
+.equation figure { margin: 0; }
+.callout { padding: 6px 12px; text-indent: 0 !important; background: #f4f7f8; border-left: 3px solid #9fb6c0; }
+.broken { padding: 0 3px; border-radius: 3px; color: #b42318; background: #fde8e7; }
+.error { color: #b42318; font-size: 13px; text-indent: 0 !important; }
+.cite { font-size: 0.72em; line-height: 0; vertical-align: super; }

@@ -30,4 +30,4 @@ test-results/
 /evaluations/frontend-design-production/
 
 # Historical practice bank: third-party material, served only from a private server path
-apps/evi-x-platform/data/net-exam-bank.json
+apps/frontend/data/net-exam-bank.json

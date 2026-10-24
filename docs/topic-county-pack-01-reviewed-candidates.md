@@ -10,7 +10,7 @@
 
 | 输入 | 原始字节 SHA-256 |
 |---|---|
-| `apps/evi-x-platform/content/topic-advisor/county-pack-01.json` | `a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58` |
+| `apps/frontend/content/topic-advisor/county-pack-01.json` | `a7c99603bbeaabc0b65758a8fe9b8142b0d431c41836997494eb6f9e93c08d58` |
 | `corpus-source/topic-advisor/county-pack-01/supplement-20261015.json` | `af301a0e0e046be2312c9f5b034e8f57888e86440421d03dbbc4ca25d0cb9c9f` |
 | `corpus-source/topic-advisor/county-pack-01/review-first-candidates.json` | `a17855b4789065fae877710828e33b3271f34334eaf700d5f304910ffbd5efec` |
 | `corpus-source/topic-advisor/county-pack-01/review-candidates-v2.json`（后续独立内容复核，不参与派生） | `543ee5ec7dd7cc9f6287cfb3862af9260d47f2c0febf1b569ed325aebfb7efbf` |
@@ -75,9 +75,9 @@ Linux/macOS 通常将首个命令名换为 `python3`。数据测试沿用仓库�
 
 | 检查或重建 | 必需的仓库路径 |
 |---|---|
-| 候选默认派生 | `apps/evi-x-platform/content/topic-advisor/county-pack-01.json`、`county-pack-01-candidates-v2.json`，以及 `corpus-source/topic-advisor/county-pack-01/build-reviewed-candidates.py`、`supplement-20261015.json`、`review-first-candidates.json` |
-| 内容复核状态及数据回归 | 同目录 `review-candidates-v2.json`，以及 `apps/evi-x-platform/tests/topic-county-pack.test.mjs` |
-| 原二十县重建及既有校验 | `corpus-source/topic-advisor/county-pack-01/build-pack.py`、`validate-pack.py`、`captures.json`、`recovery.json`、`editorial-evidence.json`，以及 `apps/evi-x-platform/content/topic-advisor/regions.catalog.json` |
+| 候选默认派生 | `apps/frontend/content/topic-advisor/county-pack-01.json`、`county-pack-01-candidates-v2.json`，以及 `corpus-source/topic-advisor/county-pack-01/build-reviewed-candidates.py`、`supplement-20261015.json`、`review-first-candidates.json` |
+| 内容复核状态及数据回归 | 同目录 `review-candidates-v2.json`，以及 `apps/frontend/tests/topic-county-pack.test.mjs` |
+| 原二十县重建及既有校验 | `corpus-source/topic-advisor/county-pack-01/build-pack.py`、`validate-pack.py`、`captures.json`、`recovery.json`、`editorial-evidence.json`，以及 `apps/frontend/content/topic-advisor/regions.catalog.json` |
 
 严格草稿解析还依赖基线中的 `lib/topic-publication.ts` 及其共享哈希、地区目录模块。数据 PR 以包含这些模块的发布核心 PR 为基线；真实数据测试独立保留在数据 PR 中，不让发布核心的合成测试依赖尚未加入的县域文件。
 

@@ -33,7 +33,7 @@
 
 ## 题库不随公开源码分发
 
-历史题库来自第三方备赛资料，公开传播授权尚未确认，因此题库 JSON 不进入 Git 仓库，`apps/evi-x-platform/data/net-exam-bank.json` 已列入 `.gitignore`。题目原文、答案与来源文件名只保存在运营方服务器的私有路径：
+历史题库来自第三方备赛资料，公开传播授权尚未确认，因此题库 JSON 不进入 Git 仓库，`apps/frontend/data/net-exam-bank.json` 已列入 `.gitignore`。题目原文、答案与来源文件名只保存在运营方服务器的私有路径：
 
 - API 进程设置 `EVIX_NET_EXAM_BANK_PATH` 指向题库文件（建议放在源码目录外，例如 `/srv/evix/private/net-exam-bank.json`；本机开发可用仓库根目录下已忽略的 `.local/net-exam-bank.json`）。
 - `GET /api/net-exam/bank` 只对已登录的受邀成员返回题库，响应沿用全局 `Cache-Control: no-store`；文件按修改时间与大小重新读取，结构不合格时返回 503，不提供旧内容。
@@ -52,7 +52,7 @@ python tools/build-net-exam-bank.py --extraction <本地提取目录> --output .
 
 生成器读原件时前后核对 SHA-256，校验提取文本哈希；输出须位于原始资料目录外。Office/PDF 文本提取属于上一批工具，本生成器不启动 Office、不调用模型。题库内容回归测试读取 `EVIX_NET_EXAM_BANK`（默认 `.local/net-exam-bank.json`），文件不存在时跳过，解析器合成夹具测试照常运行。
 
-在 `apps/evi-x-platform` 执行 `npm run test:unit`、`npm run lint`、`npm run typecheck`、`npm run build`。Windows 可设置 `EVIX_PYTHON` 指向已有 Python；构建前设置 `EVIX_API_ORIGIN` 为本地 FastAPI 地址，Next.js 会在构建时冻结代理目的地址。解析器测试覆盖多套卷题号错配、答案表作用域、真假标签、无后缀 Word 图/公式、冲突去重、缺失公式、ZIP/成员/文本哈希篡改、跨段选项粘连、合法两/三选项与普通“答案”语句；进度测试覆盖重复提交、账户隔离、损坏存储、错题纠正、空白题、过期答题及 1000 题压力样本。
+在 `apps/frontend` 执行 `npm run test:unit`、`npm run lint`、`npm run typecheck`、`npm run build`。Windows 可设置 `EVIX_PYTHON` 指向已有 Python；构建前设置 `EVIX_API_ORIGIN` 为本地 FastAPI 地址，Next.js 会在构建时冻结代理目的地址。解析器测试覆盖多套卷题号错配、答案表作用域、真假标签、无后缀 Word 图/公式、冲突去重、缺失公式、ZIP/成员/文本哈希篡改、跨段选项粘连、合法两/三选项与普通“答案”语句；进度测试覆盖重复提交、账户隔离、损坏存储、错题纠正、空白题、过期答题及 1000 题压力样本。
 
 题卡每页最多渲染 50 个按钮，题面与结果复用现有显现/选择动效；准确数值直接显示终值，减少动态模式显示终态。浏览器验收覆盖 1280×720、1440×900、1920 宽屏，记录真实选择、提交、错题重练、收藏、模拟交卷、刷新恢复及键盘交互。
 

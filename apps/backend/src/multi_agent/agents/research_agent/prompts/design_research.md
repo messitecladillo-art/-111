@@ -1,0 +1,1 @@
+依据上一阶段的资料梳理设计可调查的问题、目标、概念关系、研究对象和证据计划。输出中间 JSON：candidate_design、research_questions、framework、evidence_plan。区分已有证据与待验证假设，不声称已完成调查。

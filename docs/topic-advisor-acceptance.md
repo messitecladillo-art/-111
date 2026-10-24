@@ -57,7 +57,7 @@ Windows，Node 24.15，隔离 Python 3.12，实际 PostgreSQL 17 合成测试数
 
 ## 本地复核
 
-在 `apps/evi-x-platform` 执行 `npm run topic:check`、`npm run test:topics`、`npm run test:unit`、`npm run typecheck`、`npm run lint`、`npm run build`。
+在 `apps/frontend` 执行 `npm run topic:check`、`npm run test:topics`、`npm run test:unit`、`npm run typecheck`、`npm run lint`、`npm run build`。
 
 API 使用项目隔离环境执行 `python -m pytest tests/test_topics.py tests/test_topics_postgres.py`。数据库集成需要 `EVIX_TEST_DATABASE_URL` 指向专用合成数据库 `evix_p0_test`；缺少该环境时会明确跳过，不能据此声称数据库验收通过。私有环境配置、密钥、用户原始材料及本地运行目录均不进入 PR。
 

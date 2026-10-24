@@ -25,18 +25,18 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Unit and contract tests
-        working-directory: apps/evi-x-platform
+        working-directory: apps/frontend
         run: npm run test:unit
       - name: Shared package tests
         run: npm run test:shared
       - name: Typecheck
-        working-directory: apps/evi-x-platform
+        working-directory: apps/frontend
         run: npm run typecheck
       - name: Lint
-        working-directory: apps/evi-x-platform
+        working-directory: apps/frontend
         run: npm run lint
       - name: Production build
-        working-directory: apps/evi-x-platform
+        working-directory: apps/frontend
         env:
           NEXT_TELEMETRY_DISABLED: "1"
         run: npm run build
@@ -58,7 +58,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     defaults:
       run:
-        working-directory: apps/evi-x-api
+        working-directory: apps/backend
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

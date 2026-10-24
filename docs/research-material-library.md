@@ -26,7 +26,7 @@
 
 ## 验收
 
-`npm run lint`、`npm run typecheck`、`npm run test:unit`、`npm run build` 在 `apps/evi-x-platform` 执行。新增 `tests/research-materials.test.mjs` 验证完整卡片合同、中文组合检索、12 组严格解析、重复追加及分支隔离、一次撤销/重做、容量/ID 失败原子性和真实文本导出。
+`npm run lint`、`npm run typecheck`、`npm run test:unit`、`npm run build` 在 `apps/frontend` 执行。新增 `tests/research-materials.test.mjs` 验证完整卡片合同、中文组合检索、12 组严格解析、重复追加及分支隔离、一次撤销/重做、容量/ID 失败原子性和真实文本导出。
 
 浏览器验证：保留原题并追加 4 题，5→1→5 的撤销/重做，下载备份中的新 ID 与分支正确；原创练习 A 选项判分、实际卡片文件中的三个选项/答案/解释/哈希正确。资料检索与切页不覆盖问卷编辑内容。桌面尺寸和深浅主题以本地验收记录为准。
 

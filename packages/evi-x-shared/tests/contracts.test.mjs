@@ -13,7 +13,7 @@ for(const sample of fixtures.cases){
 }
 test('shared parser remains byte-identical to canonical legacy questionnaire implementation',()=>{
   const shared=readFileSync(new URL('../src/questionnaire.ts',import.meta.url));
-  const old=readFileSync(new URL('../../../apps/evi-x-platform/lib/questionnaire.ts',import.meta.url));
+  const old=readFileSync(new URL('../../../apps/frontend/lib/questionnaire.ts',import.meta.url));
   assert.equal(createHash('sha256').update(shared).digest('hex'),createHash('sha256').update(old).digest('hex'));
 });
 const id='550e8400-e29b-41d4-a716-446655440000', timestamp='2026-10-07T09:20:00.123456+00:00';
