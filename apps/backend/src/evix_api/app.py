@@ -5,7 +5,7 @@ from evix_api.dependencies import create_dependencies
 from evix_api.errors import install_handlers
 from multi_agent.workflow import WorkflowEngine
 from multi_agent.workflow.langgraph_runner import LangGraphRunner
-from evix_api.routes import system, auth, teams, projects, model_services, questionnaires, proposals, survey_runs, uploads, knowledge, topics, topic_agent, topic_projects, surveys, reports, latex, agent_tasks
+from evix_api.routes import system, auth, teams, projects, model_services, questionnaires, proposals, survey_runs, uploads, knowledge, topics, topic_agent, topic_projects, surveys, reports, latex, agent_tasks, agent_chat
 
 def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_config=None, workflow_handlers=None):
     runtime = create_runtime(settings, mail=mail, provider=provider, engine=engine)
@@ -30,6 +30,7 @@ def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_c
     knowledge.register_knowledge(app, settings, deps.db, deps.session_user, deps.owned_project, deps.lock_user, deps.operation, config=knowledge_config)
     topics.register_topics(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator)
     topic_agent.register_topic_agent(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator, owned_project=deps.owned_project)
+    agent_chat.register_agent_chat(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator)
     topic_projects.register_topic_projects(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation)
     reports.register_reports(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation)
     latex.register_latex(app, settings=settings, auth=deps.auth, db=deps.db, owned_project=deps.owned_project)

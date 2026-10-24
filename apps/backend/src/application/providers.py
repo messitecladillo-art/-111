@@ -17,6 +17,10 @@ class LiveProvider(ChatCompletionClient):
         """One simulated-respondent turn for a 硅基样本 run; `spec` is for fixtures only."""
         return await self.complete(config, key, message, 65536)
 
+    async def agent_chat(self, config, key, message):
+        """One turn of the 证见 Agent conversation."""
+        return await self.complete(config, key, message, 32768)
+
 
 class FixtureProvider:
     def __init__(self):
@@ -44,6 +48,11 @@ class FixtureProvider:
                 "researchQuestion": item["question"], "decisionOwner": item["decisionOwner"], "decision": item["decision"],
                 "whyHere": "合成验收。地区和调查条件仍需核查。", "firstWeekPlan": item["minimumEvidence"][:3],
                 "unknowns": ["尚未联系真实合作方"], "sourceIds": item["sourceIds"][:3]} for item in selected]}, ensure_ascii=False)
+
+    async def agent_chat(self, config, key, message):
+        self.calls += 1
+        # Conspicuously synthetic: verifies the conversation chain, never a model's advice.
+        return json.dumps({"reply": "合成测试回执：只验证对话链，不代表真实模型的建议。", "actions": [{"tool": "next", "args": {}}]}, ensure_ascii=False)
 
     async def answer(self, config, key, message, spec):
         self.calls += 1
