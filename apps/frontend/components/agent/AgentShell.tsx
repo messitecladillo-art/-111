@@ -57,6 +57,24 @@ const SUGGESTIONS = ['下一步做什么', '帮我出一份社区体育设施满
 const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
 
 /** The panel width remembered in this browser, if any; a width is a convenience only. */
+/**
+ * How this identity talks to the agent, remembered: an account's choice in this browser, a guest's for the tab. It is
+ * read through a store so the first client render matches the server's, which always starts in 指令模式.
+ */
+type ChatMode = 'command' | 'model';
+const MODE_KEY = 'evix.agent.chat-mode.v1:', modeListeners = new Set<() => void>();
+const modeStorage = (owner: string) => owner === 'guest' ? window.sessionStorage : window.localStorage;
+function subscribeMode(listener: () => void) { modeListeners.add(listener); return () => { modeListeners.delete(listener); }; }
+function readMode(owner: string | null): ChatMode {
+  if (!owner) return 'command';
+  try { return modeStorage(owner).getItem(MODE_KEY + owner) === 'model' ? 'model' : 'command'; } catch { return 'command'; }
+}
+function writeMode(owner: string | null, mode: ChatMode) {
+  if (!owner) return;
+  try { modeStorage(owner).setItem(MODE_KEY + owner, mode); } catch { /* Without storage the choice lasts until the page reloads. */ }
+  for (const listener of modeListeners) listener();
+}
+
 function savedPanelWidth(): number | null {
   try { const saved = Number(window.localStorage.getItem(PANEL_KEY)); if (saved >= 480 && saved <= 1800) return saved; } catch { /* Not remembered without storage. */ }
   return null;
@@ -139,7 +157,11 @@ export default function AgentShell() {
   // Projects and services fill the sidebar and the composer's menus as soon as an account is known.
   useEffect(() => { if (generationAccount === 'ready') loadLists(); }, [generationAccount, loadLists]);
   // Talking with a model is the user's choice, for this visit; every conversation asks once before its first sentence goes.
-  const [chatMode, setChatMode] = useState<'command' | 'model'>('command');
+  // Without storage the choice is still kept for this page, in memory.
+  const [modeHere, setModeHere] = useState<ChatMode | null>(null);
+  const storedMode = useSyncExternalStore(subscribeMode, () => readMode(owner), () => 'command' as ChatMode);
+  const chatMode = modeHere ?? storedMode;
+  const setChatMode = useCallback((mode: ChatMode) => { setModeHere(mode); writeMode(owner, mode); }, [owner]);
   const consented = useRef(new Set<string>());
   // The chat uses the service the model menu shows as chosen, never another one behind it.
   const chosenService = lists.services.some(s => s.id === preferredService) ? preferredService : lists.services[0]?.id ?? '';
