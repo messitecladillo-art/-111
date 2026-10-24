@@ -45,6 +45,8 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
     input.style.height = 'auto';
     input.style.height = `${Math.min(input.scrollHeight, 200)}px`;
   }, [value, inputRef]);
+  // Focus stays in the input while ↑ ↓ move through the commands, so the highlighted one is kept in sight here.
+  useEffect(() => { if (selected >= 0) document.getElementById(`agent-command-${selected}`)?.scrollIntoView({ block: 'nearest' }); }, [selected]);
   // A menu closes on a click elsewhere or on Escape.
   useEffect(() => {
     if (!menu) return;
@@ -93,8 +95,11 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
       if (next >= history.length) { setValue(''); setRecall(-1); } else { setValue(history[next]); setRecall(next); }
     }
   };
-  const item = (label: ReactNode, onClick: () => void, extra: { checked?: boolean; note?: string } = {}) =>
-    <button type="button" role="menuitemradio" aria-checked={extra.checked ?? false} className={styles.menuItem} onClick={() => { onClick(); setMenu(null); }}>{label}{extra.note && <small>{extra.note}</small>}</button>;
+  // A choice is a radio item and an action a plain one. Section labels are read through their group, notes through
+  // the menu's description, so a menu holds nothing but items and groups.
+  const item = (key: string, label: ReactNode, onClick: () => void, extra: { checked?: boolean; note?: string } = {}) =>
+    <button key={key} type="button" role={extra.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={extra.checked} className={styles.menuItem}
+      onClick={() => { onClick(); setMenu(null); }}>{label}{extra.note && <small>{extra.note}</small>}</button>;
 
   return <div ref={wrap} className={styles.composerWrap}>
     <div className={styles.contextRow}>
@@ -105,16 +110,18 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
         <Icon name={project ? 'cloud' : 'monitor'} />{project ? '云端项目' : '本地草稿'}
       </span>
     </div>
-    {menu === 'project' && <div className={styles.menu} data-place="above" role="menu" aria-label="选择项目" style={{ left: 10 }}>
+    {menu === 'project' && <div className={styles.menu} data-place="above" role="menu" aria-label="选择项目" aria-describedby={account !== 'ready' ? 'agent-project-note' : undefined} style={{ left: 10 }}>
       {account !== 'ready' ? <>
-        <p className={styles.menuNote}>登录后，可以把对话归入你的项目；模型提案也会存进项目。</p>
-        <Link className={styles.menuItem} href="/login">邮箱登录 ↗</Link>
+        <p id="agent-project-note" className={styles.menuNote} aria-hidden="true">登录后，可以把对话归入你的项目；模型提案也会存进项目。</p>
+        <Link role="menuitem" className={styles.menuItem} href="/login">邮箱登录 ↗</Link>
       </> : <>
-        <p className={styles.menuLabel}>归入项目</p>
-        {item('不归入项目', () => onProject(null), { checked: !projectId, note: '本地草稿' })}
-        {projects.map(p => <div key={p.id}>{item(p.label, () => onProject(p.id), { checked: p.id === projectId })}</div>)}
-        {!projects.length && <p className={styles.menuNote}>还没有项目。</p>}
-        <Link className={styles.menuItem} href="/projects">新建或管理项目 ↗</Link>
+        <div role="group" aria-label="归入项目">
+          <p className={styles.menuLabel} aria-hidden="true">归入项目</p>
+          {item('none', '不归入项目', () => onProject(null), { checked: !projectId, note: '本地草稿' })}
+          {projects.map(p => item(p.id, p.label, () => onProject(p.id), { checked: p.id === projectId }))}
+          {!projects.length && <p className={styles.menuNote}>还没有项目。</p>}
+        </div>
+        <Link role="menuitem" className={styles.menuItem} href="/projects">新建或管理项目 ↗</Link>
       </>}
     </div>}
     <form className={styles.composer} onSubmit={event => { event.preventDefault(); send(value); }}>
@@ -131,11 +138,11 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
       <div className={styles.toolbar}>
         <span style={{ position: 'relative' }}>
           <button type="button" className={styles.toolButton} aria-label="添加文件或数据" title="添加文件或数据" aria-haspopup="menu" aria-expanded={menu === 'attach'} onClick={() => toggle('attach')}><Icon name="plus" /></button>
-          {menu === 'attach' && <div className={styles.menu} data-place="above" role="menu" aria-label="添加" style={{ left: 0 }}>
-            <p className={styles.menuLabel}>在右侧打开对应模块添加</p>
-            {item('导入调查数据', () => onOpen('analysis'), { note: '数据分析' })}
-            {item('导入或编辑问卷', () => onOpen('design'), { note: '问卷设计' })}
-            {item('检查要提交的文件', () => onOpen('preflight'), { note: '提交前体检' })}
+          {menu === 'attach' && <div className={styles.menu} data-place="above" role="menu" aria-label="添加：在右侧打开对应模块" style={{ left: 0 }}>
+            <p className={styles.menuLabel} aria-hidden="true">在右侧打开对应模块添加</p>
+            {item('analysis', '导入调查数据', () => onOpen('analysis'), { note: '数据分析' })}
+            {item('design', '导入或编辑问卷', () => onOpen('design'), { note: '问卷设计' })}
+            {item('preflight', '检查要提交的文件', () => onOpen('preflight'), { note: '提交前体检' })}
           </div>}
         </span>
         <span className={styles.modeChip} title="读取与计算直接进行；调用模型、写入报告或改动项目之前，都会先请你确认。"><Icon name="info" />改动前确认</span>
@@ -144,13 +151,15 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
           <button type="button" className={styles.modelChip} aria-haspopup="menu" aria-expanded={menu === 'model'} onClick={() => toggle('model')}>
             <Icon name="bolt" />{service ? service.label : '指令模式'}<Icon name="down" />
           </button>
-          {menu === 'model' && <div className={styles.menu} data-place="above" role="menu" aria-label="模型服务" style={{ right: 0 }}>
-            <p className={styles.menuNote}>对话本身还是指令模式：听懂命令和常用说法，不调用模型。起草问卷时用下面选中的模型服务，并先请你确认。</p>
-            {account !== 'ready' ? <Link className={styles.menuItem} href="/login">登录后选择模型服务 ↗</Link> : <>
-              <p className={styles.menuLabel}>起草问卷用的模型服务</p>
-              {services.map(s => <div key={s.id}>{item(s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail })}</div>)}
-              {!services.length && <p className={styles.menuNote}>还没有能起草问卷的模型服务。</p>}
-              <button type="button" className={styles.menuItem} onClick={() => { onOpen('services'); setMenu(null); }}>接入或管理模型服务</button>
+          {menu === 'model' && <div className={styles.menu} data-place="above" role="menu" aria-label="模型服务" aria-describedby="agent-model-note" style={{ right: 0 }}>
+            <p id="agent-model-note" className={styles.menuNote} aria-hidden="true">对话本身还是指令模式：听懂命令和常用说法，不调用模型。起草问卷时用下面选中的模型服务，并先请你确认。</p>
+            {account !== 'ready' ? <Link role="menuitem" className={styles.menuItem} href="/login">登录后选择模型服务 ↗</Link> : <>
+              <div role="group" aria-label="起草问卷用的模型服务">
+                <p className={styles.menuLabel} aria-hidden="true">起草问卷用的模型服务</p>
+                {services.map(s => item(s.id, s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail }))}
+                {!services.length && <p className={styles.menuNote}>还没有能起草问卷的模型服务。</p>}
+              </div>
+              {item('manage', '接入或管理模型服务', () => onOpen('services'))}
             </>}
           </div>}
         </span>

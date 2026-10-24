@@ -83,6 +83,13 @@ test('slash commands, rooms and everyday phrasings route to what they name', () 
   assert.deepEqual(route('我想设计问卷', ctx()).turn.act, { type: 'open', room: 'design' });
   assert.deepEqual(route('/design', ctx()).turn.act, { type: 'open', room: 'design' });
   assert.equal(route('/问卷', ctx(empty, 'design')).turn.act, undefined, 'the room you are in is not entered again');
+  // With only the conversation showing, no module is open, the overview included.
+  assert.deepEqual(route('/全景', ctx(empty, null)).turn.act, { type: 'open', room: 'overview' });
+  assert.deepEqual(route('打开项目全景', ctx(empty, null)).turn.act, { type: 'open', room: 'overview' });
+  assert.equal(route('/全景', ctx(empty, 'overview')).turn.act, undefined);
+  assert.match(text(route('当前模块', ctx(empty, null)).turn), /右侧没有打开模块/);
+  assert.match(text(route('当前模块', ctx(empty, 'analysis')).turn), /右侧打开的是数据分析/);
+  assert.deepEqual(route('/经典', ctx(empty, null)).turn.chips[0].action, { type: 'href', href: '/workspace' });
   assert.deepEqual(route('切换到浅色模式', ctx()).turn.act, { type: 'theme', theme: 'light' });
   assert.deepEqual(route('/夜', ctx()).turn.act, { type: 'theme', theme: 'dark' });
   assert.match(text(route('下一步做什么？', ctx()).turn), /下一步：问卷还没有题目/);

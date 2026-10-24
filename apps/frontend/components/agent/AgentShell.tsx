@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { flushSync } from 'react-dom';
-import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
@@ -158,7 +158,7 @@ export default function AgentShell() {
       if (!text) return;
       const { panel, light, theme, traces, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room: panel ?? 'overview', light, theme, traces });
+      const routed = route(text, { room: panel, light, theme, traces });
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
       if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
@@ -259,15 +259,15 @@ export default function AgentShell() {
         {owner && owner !== 'guest' ? <span className={styles.avatar} title={email}>{(email[0] ?? '?').toUpperCase()}</span>
           : <Link className={styles.avatar} data-guest="true" href="/login" title="登录">访</Link>}
         {moduleMenu && <div className={styles.menu} role="menu" aria-label="模块" style={{ left: 50, top: 40, zIndex: 60, maxHeight: 'calc(100dvh - 56px)' }}>
-          {GROUPS.map(group => <Fragment key={group}>
-            <p className={styles.menuLabel}>{ROOM_GROUPS[group]}</p>
+          {GROUPS.map(group => <div key={group} role="group" aria-label={ROOM_GROUPS[group]}>
+            <p className={styles.menuLabel} aria-hidden="true">{ROOM_GROUPS[group]}</p>
             {ROOMS.filter(r => r.group === group).map(r => {
               const lightOf = roomLight(light, r.id);
               return <button key={r.id} type="button" role="menuitemradio" className={styles.menuItem} aria-checked={panel === r.id} onClick={() => { go(r.id); setModuleMenu(false); }}>
                 {r.name}{lightOf && <small>{percent(lightOf.score)}</small>}
               </button>;
             })}
-          </Fragment>)}
+          </div>)}
         </div>}
       </nav>
 

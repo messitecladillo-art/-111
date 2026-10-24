@@ -39,7 +39,8 @@ export type AgentCard =
   | { kind: 'proposal'; projectId: string; proposalId: string; serviceId: string; serviceRevision: number; serviceLabel: string; model: string; inputRevision: number; design: Questionnaire };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
 /** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
-export type RouterContext = { room: RoomId; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[] };
+/** `room` is the module open in the side panel, or null while only the conversation shows. */
+export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[] };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
 export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
   /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
@@ -201,7 +202,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '夜': return { turn: ctx.theme === 'dark' ? { lines: [[t('现在就是深色主题。')]] } : { lines: [[t('已切换到深色主题。')]], act: { type: 'theme', theme: 'dark' } } };
     case '昼': return { turn: ctx.theme === 'light' ? { lines: [[t('现在就是浅色主题。')]] } : { lines: [[t('已切换到浅色主题。')]], act: { type: 'theme', theme: 'light' } } };
     case '清空': return { turn: { lines: [[t('删除之前请确认：')]], cards: [{ kind: 'confirm', title: '删除这段对话', lines: [[t('只删除这段对话记录；问卷、数据与报告都不受影响。', 'dim')]], confirm: { label: '删除', action: { type: 'clear' } }, cancel: '保留' }] } };
-    case '经典': return { turn: { lines: [[t('经典工作台保留了全部模块的原样排布。')]], chips: [{ label: '打开经典工作台 ↗', action: { type: 'href', href: `/workspace#${ctx.room}` } }] } };
+    case '经典': return { turn: { lines: [[t('经典工作台保留了全部模块的原样排布。')]], chips: [{ label: '打开经典工作台 ↗', action: { type: 'href', href: ctx.room ? `/workspace#${ctx.room}` : '/workspace' } }] } };
     default: return { turn: help() };
   }
 }
@@ -235,7 +236,11 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
   if (TRACE.test(input)) { const m = EXHIBIT.exec(input); return { turn: trace(ctx, m ? m[1] + m[2] : '') }; }
-  if (WHERE.test(input)) { const room = roomById(ctx.room); return { turn: { lines: [[t('你在'), t(room.name, 'strong'), t('。')], [t(room.line, 'dim')]] } }; }
+  if (WHERE.test(input)) {
+    if (!ctx.room) return { turn: { lines: [[t('右侧没有打开模块，现在只显示对话。')]], chips: [say('打开项目全景', '/全景')] } };
+    const room = roomById(ctx.room);
+    return { turn: { lines: [[t('右侧打开的是'), t(room.name, 'strong'), t('。')], [t(room.line, 'dim')]] } };
+  }
   for (const pattern of LOOKUP) { const m = pattern.exec(input); if (m?.[1]?.trim()) return { lookup: m[1].trim(), explicit: true }; }
   const verb = OPEN.exec(input), rooms = mentionedRooms(verb?.[1] ?? input);
   if (rooms.length === 1) return { turn: open(rooms[0], ctx) };
