@@ -8,7 +8,7 @@ import {
 } from '@xyflow/react';
 import { isKind, nodeDef, type EditorSection, type NodeKind } from '@/lib/canvas/catalog';
 import {
-  CANVAS_LIMITS, CANVAS_SCHEMA, NODE_SIZE, REL_IN, REL_OUT, connectionProblem, defaultConfig, emptyDoc, newId, parseDoc, partitionScope, preflight, runScope, serializeDoc,
+  CANVAS_LIMITS, CANVAS_SCHEMA, NODE_SIZE, REL_IN, REL_OUT, connectionProblem, defaultConfig, newId, parseDoc, partitionScope, preflight, runScope, serializeDoc,
   type CanvasDoc, type CanvasEdge, type CanvasNode, type Issue,
 } from '@/lib/canvas/graph';
 import { reviewKey, runCanvas, type Cache, type DatasetValue, type NodeState, type NodeStatus, type RunEvent } from '@/lib/canvas/execute';
@@ -16,6 +16,8 @@ import { emptyHistory, record, redo, snapshotOf, undo, type History, type Snapsh
 import { applyPositions, cloneSelection, deleteSelection, pasteSelection, positionsChanged, type CanvasClipboard } from '@/lib/canvas/operations';
 import { autoLayout } from '@/lib/canvas/layout';
 import { buildTemplate } from '@/lib/canvas/templates';
+import { canvasScopeKey, type CanvasStorageScope } from '@/lib/canvas/scope';
+import { canvasScopeLifetime, scopedCanvasStorage } from '@/lib/canvas/storage';
 import type { Delimiter } from '@/lib/survey-analysis';
 import { CHART_THEMES } from '@/lib/chart-theme';
 import { questionnaireIssues } from '@/lib/questionnaire';
@@ -32,7 +34,6 @@ import { EMPTY_ISSUES, absolutePosition, snapToNeighbours, toFlowEdge, toFlowNod
 import CanvasPerformanceProbe from './CanvasPerformanceProbe';
 import styles from './Canvas.module.css';
 
-const STORAGE = 'evix.canvas.v1', VIEWPORT = 'evix.canvas.viewport.v1';
 const NODE_TYPES = { research: ResearchNode, cvgroup: GroupNode };
 const FIT_VIEW_OPTIONS = { padding: 0.2, maxZoom: 1 };
 const MULTI_SELECTION_KEYS = ['Meta', 'Control'];
@@ -53,17 +54,12 @@ const ARIA = {
 type Ghost = { id: string; kind: 'node'; x: number; y: number; w: number; h: number; title: string } | { id: string; kind: 'edge'; path: string; relation: boolean };
 type Toast = { id: number; text: string; tone?: 'error'; action?: { label: string; run: () => void } };
 export type ResearchCanvasProps = {
+  storageScope: CanvasStorageScope; identityEpoch: number; isCurrentScope: () => boolean;
   workspaceDataset: DatasetValue | null; design: DesignSnapshot | null;
   onOpen: (section: EditorSection, nodeId: string, title: string) => void; onShowWorkbench: () => void;
   focus: { nodeId: string; token: number } | null; active: boolean;
 };
 
-function loadDoc(): CanvasDoc {
-  try { const raw = localStorage.getItem(STORAGE); return raw ? parseDoc(JSON.parse(raw)) : emptyDoc(); } catch { return emptyDoc(); }
-}
-function loadViewport(): Viewport | undefined {
-  try { const v = JSON.parse(localStorage.getItem(VIEWPORT) || 'null'); return v && [v.x, v.y, v.zoom].every(Number.isFinite) ? v : undefined; } catch { return undefined; }
-}
 const subscribeReduced = (cb: () => void) => { const m = window.matchMedia('(prefers-reduced-motion: reduce)'); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb); };
 const systemReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const subscribeVisibility = (cb: () => void) => { document.addEventListener('visibilitychange', cb); return () => document.removeEventListener('visibilitychange', cb); };
@@ -71,16 +67,25 @@ const pageVisible = () => !document.hidden;
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
 
 export default function ResearchCanvas(props: ResearchCanvasProps) {
-  return <ReactFlowProvider><CanvasInner {...props} /></ReactFlowProvider>;
+  // Reset selection, undo, files, run cache and React Flow's viewport store together.
+  return <ReactFlowProvider key={`${canvasScopeKey(props.storageScope)}:${props.identityEpoch}`}><CanvasInner {...props} /></ReactFlowProvider>;
 }
 
-function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowWorkbench, focus, active }: ResearchCanvasProps) {
+function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: designSnapshot, onOpen, onShowWorkbench, focus, active }: ResearchCanvasProps) {
   const rf = useReactFlow();
   const theme = useWorkbenchTheme();
+  const [lifetime] = useState(() => canvasScopeLifetime(isCurrentScope));
+  const isCurrent = lifetime.isCurrent;
+  const [storage] = useState(() => {
+    let store: Storage | null = null;
+    try { store = window.localStorage; } catch { /* Save feedback reports unavailable browser storage. */ }
+    return scopedCanvasStorage(storageScope, store, isCurrent);
+  });
+  useLayoutEffect(() => { lifetime.activate(); return lifetime.deactivate; }, [lifetime]);
   // Only counts reach the canvas; the questionnaire itself stays in its editor.
   const design = useMemo<DesignSummary>(() => designSnapshot ? { title: designSnapshot.design.title, questions: designSnapshot.design.questions.length, issues: questionnaireIssues(designSnapshot.design).filter(i => i.level === 'blocker').length } : null, [designSnapshot]);
-  const [doc, setDoc] = useState<CanvasDoc>(loadDoc);
-  const [initialViewport] = useState(loadViewport);
+  const [doc, setDoc] = useState<CanvasDoc>(() => storage.readDocument());
+  const [initialViewport] = useState(() => storage.readViewport());
   const [history, setHistory] = useState<History>(emptyHistory);
   const [selected, setSelected] = useState<string[]>([]);
   const [selectedEdges, setSelectedEdges] = useState<string[]>([]);
@@ -146,6 +151,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
 
   /* ───────── history-aware updates ───────── */
   const commit = useCallback((next: CanvasDoc, label: string, coalesceKey?: string) => {
+    if (!isCurrent()) return;
     stopLayout(); finishKeyMove();
     if (next === docRef.current) return;
     const now = Date.now();
@@ -156,7 +162,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     if (!merge) recordBefore(label, snapshotOf(docRef.current));
     docRef.current = next;
     setDoc(next);
-  }, [finishKeyMove, recordBefore, stopLayout]);
+  }, [finishKeyMove, recordBefore, stopLayout, isCurrent]);
   const notify = useCallback((text: string, opts: Omit<Toast, 'id' | 'text'> = {}) => {
     window.clearTimeout(toastTimer.current);
     setToast({ id: Date.now(), text, ...opts });
@@ -179,12 +185,13 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   /* ───────── persistence (this browser only) ───────── */
   useEffect(() => {
     const t = window.setTimeout(() => {
+      if (!isCurrent()) return;
       setSave({ state: 'saving', at: Date.now() });
-      try { localStorage.setItem(STORAGE, serializeDoc(doc)); setSave({ state: 'saved', at: Date.now() }); }
+      try { if (storage.writeDocument(doc)) setSave({ state: 'saved', at: Date.now() }); }
       catch { setSave({ state: 'error', at: Date.now() }); }
     }, 800);
     return () => window.clearTimeout(t);
-  }, [doc]);
+  }, [doc, isCurrent, storage]);
   useEffect(() => { try { localStorage.setItem('evix.canvas.motion', motionPref); localStorage.setItem('evix.canvas.glass', String(glass)); } catch { /* preference only */ } }, [motionPref, glass]);
 
   /* ───────── derived flow elements ───────── */
@@ -411,8 +418,8 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     if (sel.length) setSelectedEdges(prev => { const s = new Set(prev); for (const c of sel) { if (c.selected) s.add(c.id); else s.delete(c.id); } return [...s]; });
   }, []);
   const onMoveEnd = useCallback((_: unknown, viewport: Viewport) => {
-    try { localStorage.setItem(VIEWPORT, JSON.stringify(viewport)); } catch { /* viewport preference only */ }
-  }, []);
+    try { storage.writeViewport(viewport); } catch { /* viewport preference only */ }
+  }, [storage]);
   const onDragStart = useCallback(() => {
     // A drag takes over from any running auto layout immediately, from the current frame.
     stopLayout(); finishKeyMove(); dragCancelled.current = false;
@@ -443,7 +450,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     return { ids, found };
   }, []);
   const execute = useCallback(async (scope: string[] | null) => {
-    if (controller.current) return;
+    if (!isCurrent() || controller.current) return;
     const d = docRef.current, { ids, found } = check(scope);
     if (!ids.length) { notify('没有可运行的节点。统计、数据与图表节点才会在画布上运行。'); return; }
     // Nodes that fail the check are skipped with their downstream; independent branches still run.
@@ -462,8 +469,9 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     try {
       await runCanvas(d, run, { workspace: workspaceDataset, files }, {
         cache: cache.current, signal: ac.signal, yieldMs: 16,
-        onState: (id, s) => { setStates(prev => new Map(prev).set(id, s)); if (['done', 'failed', 'blocked', 'waiting'].includes(s.status)) { done++; setRunning({ done, total: run.length }); } },
+        onState: (id, s) => { if (!isCurrent()) { ac.abort(); return; } setStates(prev => new Map(prev).set(id, s)); if (['done', 'failed', 'blocked', 'waiting'].includes(s.status)) { done++; setRunning({ done, total: run.length }); } },
         onEvent: e => {
+          if (!isCurrent()) { ac.abort(); return; }
           setEvents(prev => [...prev, e]);
           // One pulse per real hand-off; it clears itself so a disabled animation never leaves a lit edge.
           if (e.type === 'handoff' && e.edgeId && motion !== 'off') {
@@ -474,9 +482,9 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
         },
       });
     } finally {
-      controller.current = null; setRunning(null);
+      if (isCurrent()) { controller.current = null; setRunning(null); }
     }
-  }, [check, notify, workspaceDataset, files, motion, later]);
+  }, [check, notify, workspaceDataset, files, motion, later, isCurrent]);
   const cancelRun = useCallback(() => controller.current?.abort(), []);
 
   const approve = useCallback((nodeId: string, hash: string | null) => {
@@ -485,11 +493,13 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     notify(hash ? '已确认；重新运行后下游节点会继续。' : '已撤销确认。');
   }, [commit, notify]);
   const pickFile = useCallback(async (nodeId: string, file: File, delimiter: Delimiter) => {
+    if (!isCurrent()) return;
     const value = await readCsvFile(file, delimiter);
+    if (!isCurrent()) return;
     setFiles(f => new Map(f).set(nodeId, value));
     const d = docRef.current;
     commit({ ...d, nodes: d.nodes.map(n => n.id === nodeId ? { ...n, config: { ...n.config, source: 'file', fileName: file.name, fileHash: value.sourceHash } } : n) }, '选择数据文件');
-  }, [commit]);
+  }, [commit, isCurrent]);
 
   /* ───────── focus & locate ───────── */
   const locate = useCallback((id: string) => {
@@ -636,6 +646,7 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
   const saveText = save.state === 'saving' ? '保存中…' : save.state === 'error' ? '保存失败：本机存储不可用' : save.state === 'saved' ? `已保存到本机 ${new Date(save.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '自动保存到本机';
 
   const exportDoc = () => {
+    if (!isCurrent()) return;
     try {
       const url = URL.createObjectURL(new Blob([serializeDoc(doc)], { type: 'application/json;charset=utf-8' }));
       const a = document.createElement('a'); a.href = url; a.download = `${doc.title || '研究画布'}.canvas.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -644,16 +655,18 @@ function CanvasInner({ workspaceDataset, design: designSnapshot, onOpen, onShowW
     setMenuOpen(false);
   };
   const importDoc = async (file: File) => {
+    if (!isCurrent()) return;
     const target = docRef.current;
     try {
       const next = parseDoc(JSON.parse(await file.text()));
+      if (!isCurrent()) return;
       if (docRef.current !== target) { notify('读取期间画布已更改，请重新导入。', { tone: 'error' }); return; }
       commit(next, '导入画布'); setStates(new Map()); setIssues(null);
       setSelected([]); setSelectedEdges([]); setConfigClosed(null); setConnectOpen(false); setGhosts([]);
       flash(next.nodes.slice(0, 8).map(n => n.id), 'add');
       later(() => void rf.fitView({ duration: ms(MOTION.focus), padding: 0.2, maxZoom: 1 }), 30);
       notify(`已导入 ${next.nodes.length} 个节点；可撤销。`);
-    } catch (e) { notify(e instanceof Error ? e.message : '导入失败。', { tone: 'error' }); }
+    } catch (e) { if (!isCurrent()) return; notify(e instanceof Error ? e.message : '导入失败。', { tone: 'error' }); }
     setMenuOpen(false);
   };
 
