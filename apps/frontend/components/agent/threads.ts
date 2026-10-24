@@ -153,14 +153,22 @@ export const threads = {
   bind(id: string) {
     if (!listening) { window.addEventListener('storage', adopt); listening = true; }
     if (owner === id) return;
-    const restored = read(id), unbound = owner === null ? book : EMPTY, earlier = carriedOver(id);
-    // A visitor who signs in keeps what they said as a guest in this tab: it moves into the account and leaves the tab.
+    const restored = read(id), earlier = carriedOver(id);
+    // What this page holds goes with the identity it turns out to be: what was typed before any identity was known, and
+    // what a visitor said as a guest in this tab when they sign in, read from memory as well as storage, since storage
+    // may have failed. It then leaves the tab. An account's conversations never pass to another identity.
+    const unbound = owner === null || (owner === 'guest' && id !== 'guest') ? book : EMPTY;
     const visited = id === 'guest' ? null : read('guest');
     owner = id;
     removed = restored.removed;
     // Another identity's transcript is dropped unread, as it always was.
     for (const key of [...LEGACY, ...(visited?.threads.length ? [PREFIX + 'guest'] : [])]) { try { window.sessionStorage.removeItem(key); } catch { /* Nothing to remove without storage. */ } }
-    commit({ threads: [...unbound.threads, ...(earlier ? [earlier] : []), ...(visited?.threads ?? [])], active: unbound.active ?? earlier?.id ?? visited?.active ?? restored.active, draftProject: null });
+    const carried = new Map([...(visited?.threads ?? []), ...(earlier ? [earlier] : []), ...unbound.threads].map(t => [t.id, t]));
+    const wanted = [unbound.active, earlier?.id, visited?.active, restored.active];
+    commit({ threads: [...carried.values()], active: wanted.find(Boolean) ?? null, draftProject: null });
+    // Past the cap the wanted conversation may be gone; the next one still held opens instead.
+    const open = wanted.find(t => t && book.threads.some(held => held.id === t)) ?? null;
+    if (open !== book.active) commit({ ...book, active: open });
   },
   /** Opens a new, empty conversation; it becomes a thread with its first message. */
   draft(projectId: string | null = null) { commit({ ...book, active: null, draftProject: projectId }); },

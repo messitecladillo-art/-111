@@ -161,3 +161,24 @@ test('a conversation deleted in one tab does not come back from another tab’s 
   assert.equal(threads.view('lee').threads.some(t => t.id === doomed), false);
   assert.deepEqual(JSON.parse(local.getItem(key)).removed, [doomed], 'the deletion is saved back so the other tab drops it too');
 });
+
+test('a guest conversation held only in memory still moves into the account at sign-in', () => {
+  threads.bind('guest');
+  const setItem = session.setItem;
+  session.setItem = () => { throw new Error('QuotaExceededError'); };
+  threads.append([user('存储失败时访客问的问题')]);
+  session.setItem = setItem;
+  assert.equal(session.getItem('evix.agent.threads.v1:guest')?.includes('存储失败时访客问的问题') ?? false, false, 'nothing reached storage');
+  threads.bind('olga');
+  assert.deepEqual(threads.view('olga').threads.map(t => t.title), ['存储失败时访客问的问题']);
+  assert.equal(threads.view('olga').active, threads.view('olga').threads[0].id);
+});
+
+test('when the cap drops the conversation that was open, the account’s own open one opens instead', () => {
+  const many = Array.from({ length: 60 }, (_, i) => ({ id: `pia-${i}`, title: `对话 ${i}`, projectId: null, createdAt: 1000 + i, updatedAt: 1000 + i, messages: [user(`对话 ${i}`)] }));
+  local.setItem('evix.agent.threads.v1:pia', JSON.stringify({ threads: many, active: 'pia-59', removed: [] }));
+  session.setItem('evix.agent.threads.v1:guest', JSON.stringify({ threads: [{ id: 'old-guest', title: '很早的访客对话', projectId: null, createdAt: 1, updatedAt: 1, messages: [user('很早的访客对话')] }], active: 'old-guest', removed: [] }));
+  threads.bind('pia');
+  assert.equal(threads.view('pia').threads.length, 60);
+  assert.equal(threads.view('pia').active, 'pia-59');
+});
