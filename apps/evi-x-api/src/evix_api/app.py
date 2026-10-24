@@ -24,6 +24,7 @@ from .topic_projects import register_topic_projects
 from .topic_questionnaire import questionnaire_save_body, prepare_binding_save, persist_binding, topic_binding_receipt
 from .reports import register_reports
 from .latex import register_latex
+from .report_ai_usage import register_report_ai_usage
 from .mail import FixtureMail, ResendMail, MailFailure
 from .survey_import_routes import TemporarySavImports
 from .submission_preflight_routes import TemporarySubmissionPreflights
@@ -942,4 +943,5 @@ def create_app(settings: Settings | None = None, mail=None, provider=None, engin
     register_topic_projects(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_reports(app, auth=auth, db=db, owned_project=owned_project, operation=operation)
     register_latex(app, settings=settings, auth=auth, db=db, owned_project=owned_project)
+    register_report_ai_usage(app, auth=auth, db=db, owned_project=owned_project)
     return app

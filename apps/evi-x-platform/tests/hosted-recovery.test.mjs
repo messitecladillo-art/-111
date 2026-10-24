@@ -8,6 +8,7 @@ import * as shared from '../../../packages/evi-x-shared/src/index.ts';
 import * as library from '../lib/questionnaire-library.ts';
 import * as editor from '../lib/editor-model.ts';
 import * as reports from '../lib/project-report.ts';
+import * as appendices from '../lib/evidence-appendices.ts';
 import * as collection from '../lib/survey-collection.ts';
 import * as research from '../lib/research-flow.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
@@ -125,7 +126,7 @@ test('report pending retry resolves a newer head and preserves edits made before
   let cache, resolveSave, body;
   const auth = { session: { user: { id: projectId } }, getDraft: () => ({ content: submitted, head: old, pending, conflict: false }), cacheDraft: (_key, value) => { cache = value; }, setUnsaved() {}, mutate: (_path, request) => { body = request; return new Promise(resolve => { resolveSave = resolve; }); } };
   const screen = mount('../components/hosted/HostedReport.tsx', {
-    '../editors/EditingStudio': editingStudioBoundary, '@/lib/editor-model': editor, '@/lib/project-report': reports,
+    '../editors/EditingStudio': editingStudioBoundary, '@/lib/editor-model': editor, '@/lib/project-report': reports, '@/lib/evidence-appendices': appendices,
     './api-client': { hostedRequest: async url => url.endsWith('/versions') ? { versions: [], nextBeforeRevision: null } : { report: latest }, errorMessage: e => e.message, HostedApiError }, './HostedSession': { useHostedSession: () => auth },
   }, { projectId, title: content.title, writable: true, proposal: null, onProposalConsumed() {} });
   await screen.settle(); assert.equal(button(screen, '载入最新版本').props.disabled, true); assert.equal(button(screen, '核对并重试原保存').props.disabled, false);
@@ -142,7 +143,7 @@ test('report format save receipt clears dirty status but later edits remain unsa
   let finishSave,request,cache,unsaved;
   const auth={session:{user:{id:projectId}},getDraft:()=>undefined,cacheDraft:(_key,value)=>{cache=value;},setUnsaved:(_key,value)=>{unsaved=value;},mutate:(_path,body)=>{request=body;return new Promise(resolve=>{finishSave=()=>{const saved=editor.parseEditorContent(body.content);if(saved.reportFormat)saved.reportFormat.options=Object.fromEntries(Object.entries(saved.reportFormat.options).reverse());head={...head,revision:head.revision+1,content:saved};resolve(head);};});}};
   const screen=mount('../components/hosted/HostedReport.tsx',{
-    '../editors/EditingStudio':editingStudioBoundary,'@/lib/editor-model':editor,'@/lib/project-report':reports,
+    '../editors/EditingStudio':editingStudioBoundary,'@/lib/editor-model':editor,'@/lib/project-report':reports,'@/lib/evidence-appendices':appendices,
     './api-client':{hostedRequest:async url=>url.endsWith('/versions')?{versions:[],nextBeforeRevision:null}:{report:head},errorMessage:e=>e.message,HostedApiError},'./HostedSession':{useHostedSession:()=>auth},
   },{projectId,title:initial.title,writable:true,proposal:null,onProposalConsumed(){}});
   const binding=()=>nodes(screen.tree).find(n=>n.props?.projectBinding).props.projectBinding;
