@@ -37,7 +37,8 @@ export default function ProjectPortal() {
         <span>账号</span>
         <h3 title={email || undefined}>{account}</h3>
         <p>{signedIn ? '项目、问卷版本与模型服务都保存在这个账号里。' : signedOut ? '通过受邀邮箱登录后，项目、问卷版本与个人服务会保存在账号里。' : loading ? '正在读取登录状态。' : '暂时无法确认登录状态；可以在侧栏或页首重新连接。'}</p>
-        {signedOut && <Link className="ghost-button" href="/login">使用邮箱登录</Link>}
+        {/* While the service cannot be reached, signing in stays one step away for whoever was not signed in. */}
+        {!signedIn && !loading && <Link className="ghost-button" href="/login">使用邮箱登录</Link>}
       </article>
     </div>
     <details id="lifecycle" className={styles.lifecycle}>
