@@ -182,3 +182,15 @@ test('when the cap drops the conversation that was open, the account’s own ope
   assert.equal(threads.view('pia').threads.length, 60);
   assert.equal(threads.view('pia').active, 'pia-59');
 });
+
+test('a later step finds the conversation its sentence was asked in, and nothing once that conversation is gone', () => {
+  threads.bind('quinn');
+  const asked = user('原对话里的问题');
+  threads.append([asked]);
+  const home = threads.view('quinn').active;
+  threads.draft();
+  threads.append([user('另一段对话')]);
+  assert.equal(threads.threadOf(asked.id)?.id, home, 'found by its message, whichever conversation is open');
+  threads.remove(home);
+  assert.equal(threads.threadOf(asked.id), undefined);
+});

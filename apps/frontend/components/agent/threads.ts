@@ -200,6 +200,8 @@ export const threads = {
     if (thread) commit(withThread(thread, thread.messages.map(m => m.id === messageId ? { ...change(m), rev: Date.now() } : m)));
   },
   find(messageId: string): Message | undefined { return inThread(messageId)?.messages.find(m => m.id === messageId); },
+  /** The conversation holding `messageId`, while it still exists. */
+  threadOf(messageId: string): Thread | undefined { return inThread(messageId); },
   /** The project the conversation holding `messageId` is filed under. */
   projectOf(messageId: string): string | null { return inThread(messageId)?.projectId ?? null; },
   /** Files the conversation holding `messageId` under a project the user just chose for it, unless it already has one. */

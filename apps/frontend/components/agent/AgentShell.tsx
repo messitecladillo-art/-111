@@ -27,8 +27,11 @@ import Transcript from './Transcript';
 import { stamp, threads, type Message } from './threads';
 import type { Service } from '@evix/shared';
 
-/** A sentence's later steps: what the tools found, which ran already, and the service the user agreed to. */
-type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service };
+/**
+ * A sentence's later steps: what the tools found, which ran already, the service the user agreed to, and `after`, the
+ * reply they follow, which ties them to the conversation the sentence was asked in.
+ */
+type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service; after: string };
 import styles from './AgentShell.module.css';
 
 // Every workbench module opens in the panel and every panel hosts a module: the two lists cannot drift apart.
@@ -211,7 +214,10 @@ export default function AgentShell() {
       const { panel, light, traces, owner, mutate } = latest.current;
       const chatService = next?.service ?? latest.current.chatService;
       if (!chatService) return;
-      const book = threads.view(owner), messages = book.threads.find(t => t.id === book.active)?.messages ?? [];
+      // A later step stays in the sentence's own conversation, whichever one is open now, and stops if it was deleted.
+      const book = threads.view(owner), home = next ? threads.threadOf(next.after) : book.threads.find(t => t.id === book.active);
+      if (next && !home) return;
+      const messages = home?.messages ?? [];
       const asked = messages.map(m => m.role === 'user' && m.text === text).lastIndexOf(true);
       // A sentence whose consent card was declined, or never answered, was not sent and is not sent later either.
       const declined = new Set(messages.flatMap((m, i) => m.role === 'agent' && m.answered !== 'confirmed'
@@ -224,7 +230,7 @@ export default function AgentShell() {
       const waiting: Message = { ...stamp(), role: 'agent', turn: { lines: next
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
-      threads.append([waiting]);
+      if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
       const seen = next?.seen ?? new Set<string>();
       sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
     };
@@ -240,7 +246,7 @@ export default function AgentShell() {
         const fresh = receipt.actions.filter(action => { const key = action.tool + JSON.stringify(action.args); return !seen.has(key) && !!seen.add(key); });
         void Promise.all(fresh.map(action => run(messageId, action))).then(found => {
           const results = found.filter((r): r is ToolResult => !!r).slice(0, 4);
-          if (results.length && asked && service && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen, service });
+          if (results.length && asked && service && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen, service, after: messageId });
         });
       } else if (receipt.status === 'failed') {
         replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
