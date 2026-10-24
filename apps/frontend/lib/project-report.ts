@@ -43,13 +43,13 @@ export function appendEvidenceSection(content: EditorContent, section: ReportSec
   if (content.report.some(item => item.id === section.id)) throw Error('这份提案已加入报告。');
   return parseEditorContent({ ...content, report: insertBeforeBackMatter(content.report, { ...section }) });
 }
-/** New project reports start from the competition blueprint; IDs are fixed so an untouched draft compares equal. */
+/** New project reports start from the blueprint's default report type; IDs are fixed so an untouched draft compares equal. */
 export function newProjectReport(title: string): EditorContent {
   const content = createEditorContent();
   let shortened='';
   for(const character of title){if(shortened.length+character.length>120)break;shortened+=character;}
   content.title = shortened || content.title;
-  content.report = blueprintSections({ includeOptional: false });
+  content.report = blueprintSections();
   return content;
 }
 

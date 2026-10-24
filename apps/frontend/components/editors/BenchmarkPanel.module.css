@@ -64,3 +64,12 @@
   .actions { grid-column: 2; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { .track > span, .summary::before, .tile, .actions button, .rebuild { transition: none; } }
+.types { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; }
+.types legend { margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--wb-text); }
+.types label { display: flex; align-items: flex-start; gap: 8px; padding: 7px 9px; border: 1px solid var(--wb-line); border-radius: 6px; background: var(--wb-surface); cursor: pointer; }
+.types label:has(input:checked) { border-color: var(--wb-accent); }
+.types input { margin: 3px 0 0; accent-color: var(--wb-accent); }
+.types span { display: grid; gap: 2px; }
+.types b { font-size: 13px; font-weight: 600; color: var(--wb-text); }
+.types small { font-size: 12px; line-height: 1.55; color: var(--wb-muted); }
+.tile[data-level=na] .tileScore, .tile[data-level=na] .tileMeta { color: var(--wb-muted); }

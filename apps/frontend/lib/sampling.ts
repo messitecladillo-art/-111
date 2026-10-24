@@ -161,9 +161,9 @@ export type SamplingKind = 'srs' | 'stratified' | 'cluster' | 'quota' | 'conveni
 export const SAMPLING_KINDS: Record<SamplingKind, { label: string; probability: boolean; note: string }> = {
   srs: { label: '简单随机抽样', probability: true, note: '需要完整抽样框，每个单位入样概率相等。' },
   stratified: { label: '分层随机抽样', probability: true, note: '按已知结构分层后在层内随机抽取，可用设计权数恢复总体结构。' },
-  cluster: { label: '整群 / 多阶段抽样', probability: true, note: '先抽群（学校、社区、门店）再抽个体；群内相似使设计效应通常大于 1。' },
+  cluster: { label: '整群或多阶段抽样', probability: true, note: '先抽群（学校、社区、门店）再抽个体；群内相似使设计效应通常大于 1。' },
   quota: { label: '配额抽样（非概率）', probability: false, note: '按控制变量配额招募，层内不是随机抽取，样本结构可控但不能计算抽样误差。' },
-  convenience: { label: '便利 / 网络招募（非概率）', probability: false, note: '受访者自愿或经渠道触达，入样概率未知，只能描述样本。' },
+  convenience: { label: '便利抽样或网络招募（非概率）', probability: false, note: '受访者自愿或经渠道触达，入样概率未知，只能描述样本。' },
 };
 
 const pctText = (v: number) => `${round(v * 100, 1)}%`;

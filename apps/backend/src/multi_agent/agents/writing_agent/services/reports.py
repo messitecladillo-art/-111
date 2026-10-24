@@ -97,7 +97,9 @@ def quality_content(value):
         raise ApiError()
     results = quality_list(x["results"], MAX_RESULTS)
     for result in results:
-        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"))
+        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"), ("variables",))
+        for variable in quality_list(r.get("variables", []), 4):
+            quality_text(variable, 160, True)
         for key, maximum in (("id", 80), ("title", 150), ("sourceName", 240), ("method", 80)):
             quality_text(r[key], maximum, True)
         quality_text(r["sourceUrl"], 512)
@@ -184,8 +186,39 @@ def slide_object(value):
     bounded_number(o["fontSize"], 10, 72); bounded_number(o["valueColumn"], 0, 29, True)
 
 
+REFERENCE_TYPES = ("J", "M", "D", "C", "R", "N", "S", "EB/OL", "other")
+REFERENCE_LIMITS = {"id": 80, "title": 400, "source": 200, "publisher": 200, "place": 80, "year": 20, "volume": 40, "issue": 40, "pages": 60, "edition": 40, "date": 20, "accessed": 20, "url": 1000, "doi": 200, "number": 80, "text": 1000}
+
+
+def reference_line(value, maximum):
+    # Mirrors the browser parser: single-line text (UTF-16 length) without control characters; text() rejects unpaired surrogates.
+    text(value, maximum)
+    if re.search(r"[\x00-\x1f\x7f]", value):
+        raise ApiError()
+    return value
+
+
+def references_content(value):
+    if not isinstance(value, list) or len(value) > 200:
+        raise ApiError()
+    ids = set()
+    for entry in value:
+        e = object_fields(entry, ("id", "type", "authors", "title", "source", "publisher", "place", "year", "volume", "issue", "pages", "edition", "date", "accessed", "url", "doi", "number", "text"))
+        if e["type"] not in REFERENCE_TYPES or not isinstance(e["authors"], list) or len(e["authors"]) > 30:
+            raise ApiError()
+        for author in e["authors"]:
+            reference_line(author, 120)
+        for key, maximum in REFERENCE_LIMITS.items():
+            reference_line(e[key], maximum)
+        if not e["id"].strip(COMPOSITION_WHITESPACE) or e["id"] in ids:
+            raise ApiError()
+        ids.add(e["id"])
+
+
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality"))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references"))
+    if "references" in x:
+        references_content(x["references"])
     if type(x["version"]) is not int or x["version"] not in (1, 2) or x["accent"] not in ("teal", "blue", "burgundy"):
         raise ApiError()
     if x["version"] == 1 and "quality" in x:

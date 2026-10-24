@@ -140,3 +140,18 @@ export function exclusionLedger(report: QualityReport, excluded: ReadonlySet<Rul
   const rows = report.flagged.map(f => [String(f.row), f.id, f.reasons.map(r => label.get(r)).join('；'), f.reasons.some(r => excluded.has(r)) ? '剔除' : '保留待复核']);
   return [...header, ['原表行号', '答卷编号', '触发规则', '处理'].join(','), ...rows.map(r => r.map(csvCell).join(','))].join('\r\n') + '\r\n';
 }
+
+/**
+ * The screening as a result for the report: one row per rule with its criterion, the responses it flagged and
+ * whether those are removed. Counts only — no response-level data leaves the analysis.
+ */
+export function qualityResult(report: QualityReport, excluded: ReadonlySet<RuleId>, removed: number) {
+  const kept = report.total - removed;
+  return {
+    method: 'quality-control', n: kept, total: report.total, excluded: removed, missingRows: 0, invalidRows: 0, interpretation: '',
+    headers: ['规则', '判定标准', '标记份数', '处理'],
+    rows: report.rules.map(r => [r.label, r.criterion + (r.unparsed ? `；${r.unparsed} 行无法读取` : ''), r.flagged, excluded.has(r.id) ? '剔除' : '仅标记']),
+    metrics: [{ label: '回收份数', value: report.total }, { label: '剔除份数', value: removed }, { label: '有效份数', value: kept }, { label: '有效率 (%)', value: report.total ? kept / report.total * 100 : null }],
+    warnings: [...report.notes, '同一份答卷可能触发多条规则，各规则的标记份数相加可能超过剔除份数'],
+  };
+}

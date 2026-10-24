@@ -136,6 +136,8 @@ test('when every response is excluded the kept table is empty and cannot be relo
 test('findings registered from QC-kept rows keep the exclusion step', async () => {
   const { readFileSync } = await import('node:fs');
   const lab = readFileSync(new URL('../components/analysis/SurveyLab.tsx', import.meta.url), 'utf8');
-  const register = lab.slice(lab.indexOf('onRegister='), lab.indexOf('onResultSnapshot(result)'));
-  assert.match(register, /snapshotRecipe\(\{\.\.\.value,warnings:\[[^\]]*\.\.\.\(captured\.quality\?\[qualityLineageStep\(captured\.quality\)\]:\[\]\)\]/);
+  // Both registrations — analysis results and the screening itself — carry the lineage of earlier QC passes.
+  const handler = (start) => { const from = lab.indexOf(start); assert.ok(from >= 0, start); return lab.slice(from, lab.indexOf('onResultSnapshot(result)', from)); };
+  assert.match(handler('<AnalysisRecipeBoard onRegister='), /snapshotRecipe\(\{\.\.\.value,warnings:\[[^\]]*\.\.\.\(captured\.quality\?\[qualityLineageStep\(captured\.quality\)\]:\[\]\)\]/);
+  assert.match(handler('onRegister={onResultSnapshot?async input=>'), /snapshotRecipe\(\{\.\.\.input,warnings:\[[^\]]*\.\.\.\(captured\.quality\?\[qualityLineageStep\(captured\.quality\)\]:\[\]\)\]/);
 });

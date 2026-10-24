@@ -6,6 +6,7 @@ import { useKeyedListMotion } from '../motion/useWorkspaceMotion';
 import { Formula } from '../math/Tex';
 import SamplingDesigner from './SamplingDesigner';
 import DesignBuilder from './DesignBuilder';
+import type { ReportInsert } from '@/lib/report-insert';
 import SamplingLab from './SamplingLab';
 import { PowerCalc, SrsCalc } from './calculators/basic';
 import { CumRootFCalc, StratifiedCalc, StratifiedPlanCalc } from './calculators/stratified';
@@ -124,7 +125,7 @@ const PAGE_TITLES: Partial<Record<Page, { title: string; intro: string }>> = {
   refs: { title: '参考文献', intro: '本手册按抽样技术课程的常见顺序组织，说明文字为本系统编写，公式为下列文献中的标准结果。' },
 };
 
-export default function SamplingWorkbench({ dataset }: { dataset: DatasetValue | null }) {
+export default function SamplingWorkbench({ dataset, onReportInsert }: { dataset: DatasetValue | null; onReportInsert?: (insert: ReportInsert) => void }) {
   const [page, setPageState] = useState<Page>(() => { try { const p = window.localStorage.getItem('evix.sampling.page') as Page | null; return p && ALL_PAGES.includes(p) ? p : 'builder'; } catch { return 'builder'; } });
   const [query, setQuery] = useState('');
   const [estimator, setEstimator] = useState<string>('srs');
@@ -160,8 +161,8 @@ export default function SamplingWorkbench({ dataset }: { dataset: DatasetValue |
         <label className={styles.railSelect}>页面<select value={page} onChange={e => setPage(e.target.value as Page)}>{NAV.map(g => <optgroup key={g.label} label={g.label}>{g.items.map(i => <option key={i.id} value={i.id}>{i.number ? `${i.number}. ` : ''}{i.label}</option>)}</optgroup>)}</select></label>
         {meta && <header className={styles.pageHead}><h3>{meta.title}</h3><p>{meta.intro}</p></header>}
         {page === 'guide' && <DecisionGuide onOpen={setPage} />}
-        {page === 'builder' && <DesignBuilder />}
-        {page === 'size' && <SamplingDesigner embedded />}
+        {page === 'builder' && <DesignBuilder onReportInsert={onReportInsert} />}
+        {page === 'size' && <SamplingDesigner embedded onReportInsert={onReportInsert} />}
         {page === 'selection' && <div className={styles.stack}><SelectionCalc /><SystematicCalc mode="select" /><PpsCalc mode="select" /></div>}
         {page === 'estimate' && <div className={styles.stack}>
           <div className={styles.choice}><div role="tablist" aria-label="估计方法">{ESTIMATORS.map(([id, label]) => <button type="button" role="tab" key={id} aria-selected={estimator === id} onClick={() => setEstimator(id)}>{label}</button>)}</div></div>

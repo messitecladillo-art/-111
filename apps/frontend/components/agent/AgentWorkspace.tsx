@@ -40,7 +40,7 @@ const PIPELINE = [
   { label: '路演与答辩', note: '追问、计时与证据' },
 ];
 
-const TOOL_STATUS: Record<AgentToolStatus, string> = { running: '[调用中]', done: '[已完成]', failed: '[未启动]', unknown: '[待核对]' };
+const TOOL_STATUS: Record<AgentToolStatus, string> = { running: '[调用中]', done: '[已完成]', failed: '[失败]', unknown: '[待核对]' };
 
 function serviceCanQuestionnaire(service: Service) { return service.capabilities.includes('questionnaire'); }
 function failureText(value: unknown) { return value instanceof Error ? value.message : '模型调用未完成。'; }
@@ -548,6 +548,7 @@ function AgentWorkspaceSession({ theme }: { theme: Theme }) {
           </div>
         </div>
         <div className={styles.headerActions}>
+          <Link className={styles.ghostButton} href="/agent">返回镜室</Link>
           <label className={styles.projectSelect}>
             <span>项目</span>
             <select aria-label="绑定项目" value={activeSession?.projectId ?? ''} disabled={!activeSession || generating || Boolean(pending)} onChange={event => bindProject(event.target.value)}>

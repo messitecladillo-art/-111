@@ -6,6 +6,10 @@ import ts from 'typescript';
 import * as model from '../lib/editor-model.ts';
 import * as format from '../lib/report-format.ts';
 import * as permission from '../lib/report-permission.ts';
+import * as numbering from '../lib/report-numbering.ts';
+import * as references from '../lib/references.ts';
+import * as reportInsert from '../lib/report-insert.ts';
+import * as appendices from '../lib/report-appendices.ts';
 import { hostedReportHookModule } from './helpers/hosted-report-hook.mjs';
 
 const editorSource = readFileSync(new URL('../components/editors/EditingStudio.tsx', import.meta.url), 'utf8');
@@ -39,6 +43,8 @@ function harness(source = editorSource, overrides = {}) {
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'fragment' },
     '@/lib/editor-model': model, '@/lib/report-format': format,
     '@/lib/report-permission': permission,
+    // Pure report-engine modules run for real: numbering, references, inserts and appendices.
+    '@/lib/report-numbering': numbering, '@/lib/references': references, '@/lib/report-insert': reportInsert, '@/lib/report-appendices': appendices,
     '@/lib/report-blueprint': { matchBlueprintNode: () => null },
     '@/lib/report-benchmark': { writtenLines: text => text ? [text] : [] },
     '../motion/useWorkspaceMotion': { useContentReveal: () => ({ current: null }), useKeyedListMotion: () => ({ current: null }) },

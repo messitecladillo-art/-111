@@ -1,11 +1,13 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { detectQualityColumns, likertCandidates, evaluateQuality, exclusionLedger, keptTable, tableCsv, validateRules, type QualityReport, type QualityRules, type RuleId } from '@/lib/data-quality';
+import { detectQualityColumns, likertCandidates, evaluateQuality, exclusionLedger, keptTable, qualityResult, tableCsv, validateRules, type QualityReport, type QualityRules, type RuleId } from '@/lib/data-quality';
 import type { SurveyTable } from '@/lib/survey-analysis';
 import type { CollectionOrigin, QualityOrigin } from '@/lib/survey-collection';
 import styles from './QualityPanel.module.css';
 
-type Props = { table: SurveyTable; sourceName: string; sourceHash: string; simulated: boolean; silicon: boolean; collection?: CollectionOrigin; missingCodes: string[]; continueBlocked?: string; onApply: (csv: string, name: string, origin: QualityOrigin) => void };
+type Props = { table: SurveyTable; sourceName: string; sourceHash: string; simulated: boolean; silicon: boolean; collection?: CollectionOrigin; missingCodes: string[]; continueBlocked?: string; onApply: (csv: string, name: string, origin: QualityOrigin) => void;
+  /** Registers the screening (rules, counts, removal choices) as a report result; absent where there is no report to receive it. */
+  onRegister?: (result: ReturnType<typeof qualityResult>) => Promise<boolean> };
 const DEFAULT_EXCLUDE: RuleId[] = ['duration', 'attention', 'duplicateAnswers'];
 // Downloads carry a BOM so spreadsheet software reads UTF-8; the recorded hash covers these exact bytes.
 const withBom = (text: string) => '\uFEFF' + text;
@@ -17,7 +19,7 @@ async function sha256(text: string) { return [...new Uint8Array(await crypto.sub
 const stem = (name: string) => name.replace(/\.[^.]+$/, '');
 
 /** Register rules first, then see which responses they flag; nothing is removed until chosen. */
-export default function QualityPanel({ table, sourceName, sourceHash, simulated, silicon, collection, missingCodes, continueBlocked, onApply }: Props) {
+export default function QualityPanel({ table, sourceName, sourceHash, simulated, silicon, collection, missingCodes, continueBlocked, onApply, onRegister }: Props) {
   const detected = useMemo(() => detectQualityColumns(table), [table]);
   const candidates = useMemo(() => likertCandidates(table, missingCodes), [table, missingCodes]);
   const [rules, setRules] = useState<QualityRules>(() => ({
@@ -30,6 +32,8 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
   const [registered, setRegistered] = useState<{ at: string; key: string; report: QualityReport } | null>(null);
   const [exclude, setExclude] = useState<Set<RuleId>>(new Set(DEFAULT_EXCLUDE));
   const [error, setError] = useState('');
+  // The screening registered for the report, keyed by rules and removal choices, so a changed choice can be registered again.
+  const [reported, setReported] = useState<string | null>(null), [reporting, setReporting] = useState(false);
   const effective: QualityRules = { ...rules, straightlining: likert.length ? { columns: likert } : null };
   const key = JSON.stringify([effective, missingCodes, sourceHash]);
   const stale = registered !== null && registered.key !== key;
@@ -107,6 +111,7 @@ export default function QualityPanel({ table, sourceName, sourceHash, simulated,
       <div className={styles.actions}>
         <button type="button" onClick={() => download(exclusionLedger(report, exclude, { sourceName, sourceHash, registeredAt: registered!.at, missingCodes }), `${stem(sourceName)}-剔除台账.csv`, 'text/csv;charset=utf-8')}>下载剔除台账</button>
         <button type="button" onClick={() => download(tableCsv(kept.table), `${stem(sourceName)}-质控后.csv`, 'text/csv;charset=utf-8')}>下载质控后数据</button>
+        {onRegister && <button type="button" disabled={reporting || reported === `${key}|${[...exclude].sort().join(',')}`} onClick={() => { const choice = `${key}|${[...exclude].sort().join(',')}`; setReporting(true); void onRegister(qualityResult(report, exclude, kept.removed)).then(ok => { if (ok) setReported(choice); }).finally(() => setReporting(false)); }}>{reporting ? '正在登记…' : reported === `${key}|${[...exclude].sort().join(',')}` ? '已登记为报告结果' : '登记为报告结果'}</button>}
         <button type="button" className={styles.primary} disabled={!kept.removed || !kept.table.rows.length || !!continueBlocked} onClick={() => void apply()}>以质控后数据继续分析</button>
       </div>
       {continueBlocked && <p className={styles.hint}>{continueBlocked}</p>}

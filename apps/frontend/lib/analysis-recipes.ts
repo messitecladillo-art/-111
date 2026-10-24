@@ -12,7 +12,7 @@ export const ANALYSIS_BLOCKS = [
 export type AnalysisMethod = typeof ANALYSIS_BLOCKS[number]['id'];
 export type Recipe = {id:string;method:AnalysisMethod;x:number|null;y:number|null;question:string};
 /** One reported test: a ready-to-cite line plus the numbers behind it. */
-export type TestReport = { name:string; line:string; p:number|null; effect?:{name:string;value:number|null;interval?:Interval|null} };
+export type TestReport = { name:string; line:string; p:number|null; effect?:{name:string;value:number|null;interval?:Interval|null}; statistic?:{label:string;value:number;df:number[]} };
 export type PairwiseComparison = { a:string; b:string; difference:number; t:number; df:number; p:number; adjusted:number };
 export type Inference = { primary:TestReport; robustness:TestReport[]; comparisons?:PairwiseComparison[]; notes:string[] };
 export type RecipeResult = {
@@ -53,14 +53,14 @@ function groupInference(entries:[string,number[]][]):Inference|undefined {
     const w=welchT(values[0],values[1]);
     if(!w)return undefinedPrimary('两组数值都没有变异。');
     const mw=mannWhitney(values[0],values[1]);
-    const primary:TestReport={name:'Welch t 检验',line:`Welch t(${formatStat(w.df,1)}) = ${formatStat(w.t)}, ${formatP(w.p)}, 均值差（表中第 1 组 − 第 2 组）= ${formatStat(w.difference)}, 95% CI ${intervalText(w.ci)}${w.hedgesG===null?'':`, Hedges g = ${formatStat(w.hedgesG)}`}`,p:w.p,effect:{name:'Hedges g',value:w.hedgesG,interval:w.gInterval}};
+    const primary:TestReport={name:'Welch t 检验',line:`Welch t(${formatStat(w.df,1)}) = ${formatStat(w.t)}, ${formatP(w.p)}, 均值差（表中第 1 组 − 第 2 组）= ${formatStat(w.difference)}, 95% CI ${intervalText(w.ci)}${w.hedgesG===null?'':`, Hedges g = ${formatStat(w.hedgesG)}`}`,p:w.p,effect:{name:'Hedges g',value:w.hedgesG,interval:w.gInterval},statistic:{label:'Welch t',value:w.t,df:[w.df]}};
     const robustness:TestReport[]=mw?[{name:'Mann–Whitney U 检验',line:`U = ${formatStat(mw.u,1)}, ${formatP(mw.p)}（${mw.method==='exact'?'精确分布':'正态近似，含并列与连续性校正'}），秩二列相关 r = ${formatCoefficient(mw.rankBiserial)}`,p:mw.p,effect:{name:'秩二列相关 r',value:mw.rankBiserial}}]:[];
     notes.push('Hedges g 的区间为正态近似。');
     return {primary,robustness,notes};
   }
   const welch=welchAnova(values),classic=oneWayAnova(values),kw=kruskalWallis(values);
   if(!welch)return undefinedPrimary('至少一组数值没有变异，Welch 方差分析不定义。');
-  const primary:TestReport={name:'Welch 方差分析',line:`Welch F(${welch.df1}, ${formatStat(welch.df2,1)}) = ${formatStat(welch.f)}, ${formatP(welch.p)}`,p:welch.p,...(classic?{effect:{name:'η²（经典方差分析）',value:classic.etaSquared}}:{})};
+  const primary:TestReport={name:'Welch 方差分析',line:`Welch F(${welch.df1}, ${formatStat(welch.df2,1)}) = ${formatStat(welch.f)}, ${formatP(welch.p)}`,p:welch.p,statistic:{label:'Welch F',value:welch.f,df:[welch.df1,welch.df2]},...(classic?{effect:{name:'η²（经典方差分析）',value:classic.etaSquared}}:{})};
   const robustness:TestReport[]=[];
   if(classic)robustness.push({name:'经典方差分析',line:`F(${classic.df1}, ${classic.df2}) = ${formatStat(classic.f)}, ${formatP(classic.p)}, η² = ${formatCoefficient(classic.etaSquared)}（假定各组方差相等）`,p:classic.p,effect:{name:'η²',value:classic.etaSquared}});
   if(kw)robustness.push({name:'Kruskal–Wallis 检验',line:`H(${kw.df}) = ${formatStat(kw.h)}, ${formatP(kw.p)}, ε² = ${formatCoefficient(kw.epsilonSquared)}（含并列校正）`,p:kw.p,effect:{name:'ε²',value:kw.epsilonSquared}});
@@ -108,7 +108,9 @@ export function runRecipe(table:SurveyTable,recipe:Recipe,missingCodes:string[])
       result.metrics=[{label:'有效分组数',value:groups.size}];result.interpretation='每组只使用该组的有效数值。组大小不平衡、招募和混杂因素均需解释；显著差异不等于因果，也不说明差异大小是否重要。';
       if([...groups.values()].some(v=>v.length<5))result.warnings.push('至少一组不足 5 人，描述可能不稳定，且小组可能有重识别风险；5 不是合格线。');
       const inference=groupInference([...groups]);
-      if(inference){result.inference=inference;result.metrics.push({label:inference.primary.name.startsWith('Welch t')?'p 值（Welch t）':'p 值（Welch F）',value:inference.primary.p});if(inference.primary.effect)result.metrics.push({label:inference.primary.effect.name,value:inference.primary.effect.value});}
+      if(inference){result.inference=inference;result.metrics.push({label:inference.primary.name.startsWith('Welch t')?'p 值（Welch t）':'p 值（Welch F）',value:inference.primary.p});if(inference.primary.effect)result.metrics.push({label:inference.primary.effect.name,value:inference.primary.effect.value});
+        // The statistic and its degrees of freedom travel with the result, so a report can state the full test.
+        const statistic=inference.primary.statistic;if(statistic)result.metrics.push({label:statistic.label,value:statistic.value},...(statistic.df.length===1?[{label:'自由度',value:statistic.df[0]}]:[{label:'分子自由度',value:statistic.df[0]},{label:'分母自由度',value:statistic.df[1]}]));}
     }else if(recipe.method==='crosstab'){
       const rowLabels=[...new Set(pairs.map(p=>p[0]))],colLabels=[...new Set(pairs.map(p=>p[1]))];
       if(rowLabels.length>MAX_LEVELS||colLabels.length>MAX_LEVELS)throw new Error('交叉表每侧最多 20 类，请先按研究依据重新编码。');

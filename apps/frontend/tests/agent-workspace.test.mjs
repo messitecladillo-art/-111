@@ -81,6 +81,41 @@ test('owner mismatch and malformed records are rejected', () => {
   assert.equal(loadAgentSession(owner, 'broken', store), null);
 });
 
+test('a running request reloads as reconcilable while retaining its exact request, draft and project', () => {
+  const store = memoryStorage();
+  let session = createAgentSession(owner, 'project-a');
+  session = appendAgentMessage(session, questionnaireToolMessage('in-flight', 'running', '等待供应商回执'));
+  session = { ...session, draft: '下一条尚未发送', pending: {
+    request: pendingRequest, serviceLabel: '测试服务', toolMessageId: 'in-flight', createdAt: session.updatedAt,
+  } };
+  saveAgentSession(session, store);
+  const before = JSON.stringify(session.pending.request);
+  const restored = loadAgentSession(owner, session.id, store);
+  assert.equal(restored.messages[0].status, 'unknown');
+  assert.equal(restored.messages[0].canReconcile, true);
+  assert.equal(JSON.stringify(restored.pending.request), before);
+  assert.equal(restored.pending.request.idempotencyKey, pendingRequest.idempotencyKey);
+  assert.equal(restored.projectId, 'project-a');
+  assert.equal(restored.draft, '下一条尚未发送');
+  assert.equal(loadAgentSession('different-owner', session.id, store), null);
+});
+
+test('a pending request whose tool card was truncated still has a recovery entry; settled sessions stay settled', () => {
+  const store = memoryStorage();
+  const session = createAgentSession(owner);
+  const pending = { request: pendingRequest, serviceLabel: '测试服务', toolMessageId: 'truncated-tool', createdAt: session.createdAt };
+  saveAgentSession({ ...session, pending, messages: [userMessage('保留下来的消息')] }, store);
+  const restored = loadAgentSession(owner, session.id, store);
+  const tool = restored.messages.find(message => message.id === pending.toolMessageId);
+  assert.equal(tool.status, 'unknown');
+  assert.equal(tool.canReconcile, true);
+  assert.equal(tool.at, pending.createdAt);
+  assert.deepEqual(restored.pending.request, pendingRequest);
+  saveAgentSession({ ...session, messages: [questionnaireToolMessage('done-tool', 'done', '收到回执')] }, store);
+  assert.equal(loadAgentSession(owner, session.id, store).messages[0].status, 'done');
+  assert.equal(loadAgentSession(owner, session.id, store).pending, null);
+});
+
 test('active session id is scoped to the owner', () => {
   const store = memoryStorage();
   saveActiveSessionId(owner, 'session-a', store);

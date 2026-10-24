@@ -71,6 +71,10 @@
 .fields legend { float: left; padding: 2px 0 0; font-weight: 700; margin-bottom: 8px; }
 .fields textarea { font-size: 16px; }
 .bodyInput { min-height: 260px; line-height: 1.85 !important; }
+.bodyTools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: -6px; }
+.bodyTools select { max-inline-size: 100%; padding: 4px 8px; font-size: 12.5px; color: var(--wb-text); background: var(--wb-surface); border: 1px solid var(--wb-line-strong); border-radius: 5px; }
+.bodyTools span { font-size: 12px; color: var(--wb-muted); }
+.bodyTools code { padding: 0 4px; border-radius: 3px; font-family: var(--wb-mono); font-size: 11.5px; color: var(--wb-text); background: var(--wb-well); }
 .itemActions { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; clear: both; }
 .itemActions span { margin-right: auto; font-size: 12px; color: var(--wb-muted); }
 .itemActions button { padding: 3px 8px; font-size: 14px; min-height: 40px; min-width: 40px; }
@@ -212,3 +216,6 @@
 .saveStatus[data-motion-state=warning] { color:var(--wb-amber); }
 @keyframes receiptSpin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .studio *,.studio *::before { animation:none!important; transition:none!important; } }
+.referenceList { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.referenceList li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); text-indent: 0; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.referenceList li[data-uncited] { color: var(--wb-muted, #64748b); }

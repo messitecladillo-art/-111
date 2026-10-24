@@ -1,5 +1,6 @@
 import { parseReportSlideLink, type ReportSlideLink } from './report-storyboard.ts';
 import { parseReportFormatSettings, type ReportFormatSettings } from './report-format.ts';
+import { parseReferences, type ReferenceEntry } from './references.ts';
 import { qualityText, QUALITY_LAYOUTS, parseResearchQuality, parseReportBlock, parseSlideObject, type ResearchQuality, type ReportBlock, type SlideObject, type QualityLayout } from './research-quality.ts';
 export type ReportSection = { id: string; title: string; body: string; source: string; blocks?:ReportBlock[]; findingIds?:string[]; findingSnapshots?:Record<string,string> };
 export type SlideLayout = "cover" | "content" | "two-column" | QualityLayout;
@@ -15,6 +16,8 @@ export type EditorContent = {
   reportFormat?: ReportFormatSettings;
   latex?: LatexReport;
   quality?: ResearchQuality;
+  /** Structured references (GB/T 7714—2015), cited in the text as [[引:ID]] and numbered by first citation. */
+  references?: ReferenceEntry[];
 };
 export type DraftSummary = { id: string; title: string; revision: number; updatedAt: string };
 export type Draft = DraftSummary & { content: EditorContent };
@@ -69,7 +72,7 @@ export function parseEditorContent(value: unknown): EditorContent {
     if (new Set(result.map(x => x.id)).size !== result.length) throw new Error("内容标识重复。");
     return result;
   }
-  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex", "quality"]);
+  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex", "quality", "references"]);
   if (![1,2].includes(x.version as number) || !["teal", "blue", "burgundy"].includes(x.accent as string) || (x.version===1&&Object.hasOwn(x,'quality'))) throw new Error("草稿版本或主题不受支持。");
   let latex: LatexReport | undefined;
   if (Object.hasOwn(x, 'latex')) {
@@ -82,6 +85,7 @@ export function parseEditorContent(value: unknown): EditorContent {
     ...(Object.hasOwn(x, 'reportFormat') ? { reportFormat: parseReportFormatSettings(x.reportFormat) } : {}),
     ...(latex ? { latex } : {}),
     ...(Object.hasOwn(x,'quality') ? {quality:parseResearchQuality(x.quality)} : {}),
+    ...(Object.hasOwn(x,'references') ? {references:parseReferences(x.references)} : {}),
     report: entries(x.report, EDITOR_LIMITS.sections, v => {
       const s = object(v, x.version===2?["id", "title", "body", "source", "blocks", "findingIds", "findingSnapshots"]:["id", "title", "body", "source"]);
       let blocks:ReportBlock[]|undefined;

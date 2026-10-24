@@ -3,7 +3,9 @@
 import {
   FormEvent,
   KeyboardEvent,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -19,7 +21,11 @@ import { COMPETITION_UPDATE } from "@/data/competition-update";
 import LifecycleWarRoom from "@/components/LifecycleWarRoom";
 import EvidenceFlight from "@/components/EvidenceFlight";
 import ChoiceGroup from "@/components/ChoiceGroup";
-import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme } from "@/components/WorkbenchShell";
+import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel } from "@/components/WorkbenchShell";
+import type { ReactNode } from "react";
+import type { EditorContent } from "@/lib/editor-model";
+import type { ProjectView } from "@/lib/agent/illumination";
+import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio'));
@@ -38,6 +44,7 @@ import TopicModelProposal from '@/components/topic-advisor/TopicModelProposal';
 import topicCatalog from '@/content/topic-advisor/catalog.json';
 import HostedServices from '@/components/hosted/HostedServices';
 import { useHostedSession } from '@/components/hosted/HostedSession';
+import { anonymousCanvasIdentity, LOCAL_CANVAS_WORKSPACE, type CanvasIdentity } from '@/lib/canvas/scope';
 import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/workbench/useWorkbenchHandoffs';
 import DiagnosisActions from "@/components/DiagnosisActions";
 import CompetitionCalendar from '@/components/overview/CompetitionCalendar';
@@ -1032,18 +1039,39 @@ function ruleTypeLabel(value: string) {
 
 function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design: DesignSnapshot | null }) {
   const nav = useWorkbenchNav();
-  return <ResearchCanvas workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
+  const auth = useHostedSession();
+  const [guest] = useState<CanvasIdentity>(() => {
+    let storage: Storage | null = null;
+    try { storage = typeof window === 'undefined' ? null : window.sessionStorage; } catch { /* This mount can use an ephemeral guest scope. */ }
+    return anonymousCanvasIdentity(storage, () => crypto.randomUUID());
+  });
+  if (auth.loading || !auth.session) return <p className="wb-canvas-loading" role="status">{auth.error ? '账号状态暂未就绪，请重新连接。' : '正在核对画布归属…'}</p>;
+  const ownerId = auth.session.authenticated ? auth.session.user?.id ?? null : null;
+  if (auth.session.authenticated && !ownerId) return <p className="wb-canvas-loading" role="alert">画布归属未确定，请重新登录。</p>;
+  return <ResearchCanvas storageScope={{ identity: ownerId ? { kind: 'account', id: ownerId } : guest, projectId: LOCAL_CANVAS_WORKSPACE }} identityEpoch={auth.identityEpoch} isCurrentScope={() => auth.isCurrentIdentity(ownerId, auth.identityEpoch)} workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
 }
 
-export default function EviXPlatform() {
+/**
+ * Every workbench module, wired to the shared handoff store, and what the agent shell may read of the project:
+ * the shared questionnaire and dataset, and, when observeReport is set, the report once its room has been opened.
+ * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
+ */
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void } {
   const { session, identityEpoch } = useHostedSession();
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
     JSON.stringify(['workspace', session?.user?.id ?? null, identityEpoch]),
   );
   const resultHandled = useHandoffAcknowledgement(handoffs, 'result', exchange.pending.result?.deliveryId);
   const briefHandled = useHandoffAcknowledgement(handoffs, 'brief', exchange.pending.brief?.deliveryId);
-  return (
-    <WorkbenchShell panels={{
+  // A model's questionnaire proposal waits in the 问卷室 for review; applying or keeping the design acknowledges it.
+  const proposalHandled = useHandoffAcknowledgement(handoffs, 'questionnaire', exchange.pending.questionnaire?.deliveryId);
+  const publishProposal = useCallback((proposal: AgentQuestionnaireProposal) => { handoffs.publish('questionnaire', proposal); }, [handoffs]);
+  // Paragraphs, tables and formulas a workbench module sends to the report; the editor applies each once.
+  const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
+  const [report,setReport]=useState<EditorContent|null>(null);
+  const dataset=exchange.dataset;
+  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
+  const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => ({
       overview: <>
       <section className="hero" id="overview" aria-labelledby="hero-title">
         <div className="hero-grid" aria-hidden="true" />
@@ -1078,18 +1106,22 @@ export default function EviXPlatform() {
       </>,
       exam: <NetExamStudio />,
       preflight: <SubmissionPreflight />,
-      sampling: <SamplingWorkbench dataset={exchange.dataset} />,
+      sampling: <SamplingWorkbench dataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={exchange.pending.result?.payload} onResultHandled={resultHandled}/>,
+      editor: <EditingStudio localOnly resultProposal={exchange.pending.result?.payload} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?setReport:undefined}/>,
       defense: <DefenseStudio />,
       analysis: <SurveyLab onResultSnapshot={result=>{handoffs.publish('result',result);window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onDatasetChange={handoffs.setDataset}/>,
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} />,
       silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
-      design: <QuestionnaireStudio localOnly briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={handoffs.setDesign} onAnalyze={snapshot=>{handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
+      design: <QuestionnaireStudio localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={handoffs.setDesign} onAnalyze={snapshot=>{handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={source=>{if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>创建团队项目，生成、编辑并保存问卷版本。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
-    }} />
-  );
+  }), [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport]);
+  return { panels, view, publishProposal };
+}
+
+export default function EviXPlatform() {
+  return <WorkbenchShell panels={useWorkbenchModules().panels} />;
 }

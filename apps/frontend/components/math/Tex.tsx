@@ -6,7 +6,8 @@ import styles from './Tex.module.css';
 
 /**
  * Every formula in the product is typeset with KaTeX from TeX source; plain-text formulas are not used.
- * The source strings are written by the application (never by users), and KaTeX runs with trust off.
+ * Sources come from the application and from authors' report formulas; KaTeX runs with trust off, so no
+ * command can load resources or emit raw HTML.
  */
 const cache = new Map<string, string>();
 export function renderTex(tex: string, display: boolean): string {

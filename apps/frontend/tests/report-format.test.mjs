@@ -11,7 +11,7 @@ test('sourced report output has exact A4, margins, East Asian fonts and line-rel
   assert.match(xml,/<w:pgSz[^>]*w:w="11906"[^>]*w:h="16838"/);
   for(const attributes of xml.matchAll(/<w:pgMar\b[^>]*\/>/g)){assert.match(attributes[0],/w:top="1440"/);assert.match(attributes[0],/w:bottom="1440"/);assert.match(attributes[0],/w:left="1803"/);assert.match(attributes[0],/w:right="1803"/);}
   for(const [id,font,size] of [['Normal','宋体',24],['Title','宋体',32],['Heading1','黑体',30],['Heading2','黑体',28],['Heading3','宋体',24],['Heading4','宋体',24],['Heading5','宋体',24],['ReportSpecialHeading','黑体',28],['ReportReference','宋体',24]]){
-    const found=style(styles,id);assert.equal(found.length,1,`${id} must be unambiguous`);assert.match(found[0],new RegExp(`w:eastAsia="${font}"`));assert.match(found[0],new RegExp(`w:ascii="${font}"`));assert.match(found[0],new RegExp(`<w:sz w:val="${size}"`));
+    const found=style(styles,id);assert.equal(found.length,1,`${id} must be unambiguous`);assert.match(found[0],new RegExp(`w:eastAsia="${font}"`));assert.match(found[0],/w:ascii="Times New Roman"/,'Latin text and numbers use Times New Roman');assert.match(found[0],new RegExp(`<w:sz w:val="${size}"`));
   }
   assert.match(style(styles,'Normal')[0],/w:beforeLines="50"/);assert.match(style(styles,'Normal')[0],/w:line="300"/);
   assert.match(style(styles,'Title')[0],/w:line="240"/);assert.match(style(styles,'Title')[0],/w:beforeAutospacing="(?:1|true)"/);assert.match(style(styles,'Title')[0],/w:afterAutospacing="(?:1|true)"/);

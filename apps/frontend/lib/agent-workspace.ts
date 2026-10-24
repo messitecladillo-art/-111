@@ -217,7 +217,20 @@ export function saveSessionIndex(ownerId: string, sessions: AgentSession[], stor
 
 export function loadAgentSession(ownerId: string, id: string, store: AgentStorage | null = typeof window === 'undefined' ? null : window.localStorage): AgentSession | null {
   if (!ownerId || !id) return null;
-  return parseAgentSession(readJson(store, sessionKey(ownerId, id)), ownerId, id);
+  const session = parseAgentSession(readJson(store, sessionKey(ownerId, id)), ownerId, id);
+  if (!session?.pending) return session;
+  // A new page has no live promise for a saved request. Keep its exact payload,
+  // and let the user reconcile it rather than silently issue another call.
+  const pending = session.pending;
+  let found = false;
+  const messages = session.messages.map(message => {
+    if (message.role !== 'assistant' || message.kind !== 'tool' || message.id !== pending.toolMessageId) return message;
+    found = true;
+    return { ...message, status: 'unknown' as const, canReconcile: true,
+      detail: message.status === 'unknown' ? message.detail : '页面已重新打开，请核对原请求的实际结果。' };
+  });
+  if (!found) messages.push({ ...questionnaireToolMessage(pending.toolMessageId, 'unknown', '页面已重新打开，请核对原请求的实际结果。', { canReconcile: true }), at: pending.createdAt });
+  return { ...session, messages: messages.slice(-MAX_MESSAGES) };
 }
 
 export function loadAgentSessions(ownerId: string, store: AgentStorage | null = typeof window === 'undefined' ? null : window.localStorage): AgentSession[] {

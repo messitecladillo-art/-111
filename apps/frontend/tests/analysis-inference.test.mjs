@@ -16,7 +16,11 @@ test('two groups report Welch t with Mann–Whitney as the robustness check', ()
   close(result.inference.primary.p, c.p, 'welch p');
   assert.match(result.inference.primary.line, /^Welch t\(\d+\.\d\) = -?\d+\.\d{2}, p (=|<) \.?\d+/);
   assert.equal(result.inference.robustness[0].name, 'Mann–Whitney U 检验');
-  assert.deepEqual(result.metrics.map(m => m.label), ['有效分组数', 'p 值（Welch t）', 'Hedges g']);
+  assert.deepEqual(result.metrics.map(m => m.label), ['有效分组数', 'p 值（Welch t）', 'Hedges g', 'Welch t', '自由度']);
+  // The statistic and its degrees of freedom are carried as numbers, matching the printed test line.
+  const metric = label => result.metrics.find(m => m.label === label).value;
+  assert.equal(metric('Welch t').toFixed(2), /= (-?\d+\.\d{2}),/.exec(result.inference.primary.line)[1]);
+  assert.equal(metric('自由度').toFixed(1), /^Welch t\((\d+\.\d)\)/.exec(result.inference.primary.line)[1]);
   assert.ok(result.inference.notes.some(n => n.includes('随机抽样')));
   assert.equal(result.rows.length, 2);
 });
@@ -24,6 +28,9 @@ test('two groups report Welch t with Mann–Whitney as the robustness check', ()
 test('three or more groups report Welch ANOVA, classic ANOVA, Kruskal–Wallis and Holm pairwise comparisons', () => {
   const c = ref.groups[0], result = run(groupTable(c.groups), 'groups', 0, 1);
   close(result.inference.primary.p, c.welchP, 'welch anova p');
+  close(result.metrics.find(m => m.label === 'Welch F').value, c.welchF, 'welch F metric');
+  assert.equal(result.metrics.find(m => m.label === '分子自由度').value, c.groups.length - 1);
+  close(result.metrics.find(m => m.label === '分母自由度').value, c.welchDf2, 'welch df2 metric');
   close(result.inference.robustness.find(r => r.name === '经典方差分析').p, c.fp, 'anova p');
   close(result.inference.robustness.find(r => r.name === 'Kruskal–Wallis 检验').p, c.hp, 'kw p');
   const pairs = result.inference.comparisons;

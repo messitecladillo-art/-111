@@ -2,6 +2,8 @@ import {assertFindingReferences, assertTableRows, evidenceLabel, valueText} from
 import { chartData, resultFor, verifyResearchQuality, type ReportBlock } from './research-quality.ts';
 import type { EditorContent, LatexReport } from './editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS, parseReportFormatOptions, parseReportFormatSettings, reportPart, type ReportFormatOptions } from './report-format.ts';
+import { referenceSegments, reportLabels, type BlockLabel } from './report-numbering.ts';
+import { formatReference, referenceNumbers, unfinishedCited, unfinishedReference } from './references.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
 export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions };
@@ -31,6 +33,8 @@ export function latexReportKey(content: EditorContent): string {
   return JSON.stringify({ title: content.title, subtitle: content.subtitle,
     report: content.report.map(section => ({ id: section.id, title: section.title, body: section.body, source: section.source, ...(section.blocks?.length ? { blocks: section.blocks } : {}), ...(section.findingIds ? { findingIds: section.findingIds } : {}), ...(section.findingSnapshots ? { findingSnapshots: section.findingSnapshots } : {}) })),
     ...(content.report.some(s=>s.blocks?.length||s.findingIds?.length) ? { quality: content.quality } : {}),
+    // Only drafts with structured references carry them, so the key of every older draft is unchanged.
+    ...(content.references?.length ? { references: content.references } : {}),
     reportFormat: { edition: settings.edition, group: settings.group, region: settings.region, track: settings.track, stage: settings.stage, profileId: settings.profileId,
       options: { part: options.part, includeCover: options.includeCover, includeToc: options.includeToc, firstLineChars: options.firstLineChars, numberPages: options.numberPages } },
   });
@@ -40,14 +44,26 @@ export async function latexSha256(value: string): Promise<string> {
 }
 export function latexReportHash(content: EditorContent): Promise<string> { return latexSha256(latexReportKey(content)); }
 
-function latexBlocks(blocks: ReportBlock[], content: EditorContent): string {
+type Cites = { labels: Map<string, BlockLabel>; citations: ReadonlyMap<string, number> };
+/**
+ * A line of report text for LaTeX: figure, table and equation references as their numbers, citations as superscript
+ * marks, everything else escaped; a dangling reference or citation stops the generation as the Word export does.
+ */
+function latexLine(text: string, refs: Cites, where: string): string {
+  const segments = referenceSegments(text, refs.labels, refs.citations);
+  if (segments.some(s => s.missing)) throw Error(`「${where}」中有${segments.some(s => s.missing && s.cite) ? '文献' : '图表'}引用已失效，请重新插入引用后再生成。`);
+  // The editor writes a literal dollar as \$; LaTeX escapes the dollar itself.
+  return segments.map(s => s.cite ? `\\textsuperscript{${escapeLatexText(s.text)}}` : escapeLatexParagraphText(s.text.replace(/\\\$/g, '$'))).join('');
+}
+
+function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites = { labels: reportLabels(content.report), citations: referenceNumbers(content).numbers }, where = '内容块'): string {
   return blocks.map(block=>{
     if(block.kind==='formula'){
       const commands=[...block.text.matchAll(/\\([A-Za-z]+)/g)].map(m=>m[1]);
       if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text'].includes(cmd)))throw Error('公式块包含非数学命令，请使用 LaTeX 工作台检查。');
       return `\\[\n${block.text}\n\\]`;
     }
-    if(block.kind!=='chart'&&block.kind!=='table')return `${escapeLatexParagraphText(block.text)}\\par`;
+    if(block.kind!=='chart'&&block.kind!=='table')return `${latexLine(block.text,refs,where)}\\par`;
     const r=resultFor(content.quality,block.evidenceId);
     const source=escapeLatexParagraphText(evidenceLabel(r));
     if(block.kind==='table'){
@@ -68,8 +84,14 @@ export function generateLatexBody(content: EditorContent): string {
   const part = (content.reportFormat ?? DEFAULT_REPORT_SETTINGS).options.part;
   const sections = content.report.filter(section => (reportPart(section.title) === 'appendix') === (part === 'appendix'));
   if (!sections.length) throw Error(part === 'appendix' ? '请先添加独立附录章节。' : '报告正文至少需要一个章节。');
-  const paragraphs = (text: string) => text.split(/\r\n|\r|\n/).map(line => `${escapeLatexParagraphText(line)}\\par`).join('\n');
-  const body = sections.map(section => `\\section{${escapeLatexText(section.title || '未命名章节')}}\n${paragraphs(section.body)}${section.blocks?.length ? `\n${latexBlocks(section.blocks,content)}` : ''}${section.source ? `\n\\textbf{来源 / 说明：} ${paragraphs(section.source)}` : ''}`).join('\n\n') + '\n';
+  const refs: Cites = { labels: reportLabels(content.report), citations: referenceNumbers(content).numbers }, entries = referenceNumbers(content).order;
+  // An appendix-only export prints no reference list, so an unfinished entry of the main report does not stop it.
+  if (part === 'appendix' && unfinishedCited(content, sections)) throw Error(`附录引用的第 ${unfinishedCited(content, sections)} 条参考文献尚未填写题名，请补全后再生成。`);
+  if (part !== 'appendix' && entries.some(unfinishedReference)) throw Error(`第 ${entries.findIndex(unfinishedReference) + 1} 条参考文献尚未填写题名，请补全或删除后再生成。`);
+  const paragraphs = (text: string, where: string) => text.split(/\r\n|\r|\n/).map(line => `${latexLine(line, refs, where)}\\par`).join('\n');
+  // Structured references print as a hanging list in citation order, as in the Word export.
+  const list = entries.map((entry, i) => `\\noindent\\hangindent=2em\\hangafter=1 [${i + 1}]~${escapeLatexParagraphText(formatReference(entry))}\\par`).join('\n');
+  const body = sections.map(section => `\\section{${escapeLatexText(section.title || '未命名章节')}}\n${paragraphs(section.body, section.title || '未命名章节')}${reportPart(section.title) === 'references' && list ? `\n${list}` : ''}${section.blocks?.length ? `\n${latexBlocks(section.blocks,content,refs,section.title || '未命名章节')}` : ''}${section.source ? `\n\\textbf{来源 / 说明：} ${paragraphs(section.source, section.title || '未命名章节')}` : ''}`).join('\n\n') + '\n';
   if (body.length > LATEX_LIMITS.body) throw Error('生成正文超过 120,000 字符，请先拆分报告。');
   return body;
 }

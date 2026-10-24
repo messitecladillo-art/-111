@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BLUEPRINT, blueprintNode, blueprintOutline, blueprintSections, chineseNumeral, insertBeforeBackMatter, insertBlueprintNode, matchBlueprintNode, renumberHeadings, stripHeadingNumber } from '../lib/report-blueprint.ts';
+import { BLUEPRINT, blueprintNode, blueprintOutline, blueprintSections, chineseNumeral, DEFAULT_REPORT_TYPE, insertBeforeBackMatter, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, renumberHeadings, REPORT_TYPES, reportType, stripHeadingNumber } from '../lib/report-blueprint.ts';
 import { createEditorContent, EDITOR_LIMITS, parseEditorContent } from '../lib/editor-model.ts';
 import { reportHeadingLevel, reportPart } from '../lib/report-format.ts';
 import { newProjectReport, reportContentsEqual } from '../lib/project-report.ts';
@@ -44,7 +44,32 @@ test('the skeleton is a valid report whose parts, heading levels and titles roun
     // Guidance is shown beside the section while writing and never stored in the body.
     for (const s of sections) assert.equal(s.body, '', s.title);
   }
-  assert.equal(blueprintSections({ includeOptional: false }).length, 40);
+  assert.equal(blueprintSections({ includeOptional: false }).length, blueprintSections().length, 'no modules chosen means the default report type');
+});
+
+test('report types are starting combinations of analysis modules, not one fixed outline', () => {
+  const frame = BLUEPRINT.filter(n => !n.optional).map(n => n.id);
+  for (const id of ['abstract', 'intro', 'design', 'design.sampling', 'data', 'sample', 'conclusion', 'references']) assert.ok(frame.includes(id), `${id} belongs to every report`);
+  // No analysis module is part of the frame: which ones a report needs depends on its research questions.
+  for (const id of ['compare', 'drivers', 'segments', 'demand', 'diagnosis', 'plan', 'secondary']) assert.ok(blueprintNode(id).optional, id);
+  const outlines = new Map(REPORT_TYPES.map(type => [type.id, blueprintSections({ nodes: type.nodes }).map(s => s.title).join('|')]));
+  assert.equal(new Set(outlines.values()).size, REPORT_TYPES.length, 'every type gives a different outline');
+  for (const type of REPORT_TYPES) {
+    for (const id of type.nodes) assert.ok(blueprintNode(id).optional, `${type.id}: ${id} is a module`);
+    const sections = blueprintSections({ nodes: type.nodes });
+    assert.deepEqual(parseEditorContent({ ...createEditorContent(), report: sections }).report, sections);
+    assert.ok(type.summary.length > 10 && type.label.length > 1);
+  }
+  assert.ok(!blueprintSections().some(s => /回归模型|满意度与绩效评价|人群画像|方案优先级/.test(s.title)), 'the default asks for no particular model');
+  assert.equal(reportType(DEFAULT_REPORT_TYPE).id, 'status');
+  const demand = blueprintSections({ nodes: reportType('demand').nodes }).map(s => s.title);
+  assert.ok(demand.includes('五、需求与意愿分析') && demand.includes('七、人群细分与画像') && !demand.some(t => /评价与问题诊断/.test(t)));
+  // A section brings its chapter even when only the section was asked for.
+  assert.ok(blueprintSections({ nodes: ['drivers.model'] }).some(s => s.id === 'bp-drivers'));
+  assert.throws(() => reportType('exemplar'), /没有这种报告类型/);
+  // Earlier skeletons' section IDs point at the sections that took them over.
+  const ids = new Set(blueprintSections({ includeOptional: true }).map(s => s.id));
+  for (const [from, to] of Object.entries(LEGACY_SECTION_IDS)) { assert.ok(!ids.has(from), from); assert.ok(ids.has(to), to); }
 });
 
 test('new project reports are deterministic, so an untouched draft is not dirty', () => {
@@ -68,7 +93,7 @@ test('outline numbers are stripped without eating digits that belong to the titl
 test('titles written in the author\'s own words still map to blueprint sections', () => {
   const cases = [
     ['一、绪论', 'intro'], ['研究背景', 'intro.background'], ['（五）抽样方案设计', 'design.sampling'], ['3.2 样本量与抽样', 'design.sampling'],
-    ['（三）基于 K-means 的人群细分', 'drivers.segment'], ['（四）多分类 Logistic 回归', 'drivers.model'], ['（一）IPA 分析', 'diagnosis.evaluation'],
+    ['（三）基于 K-means 的人群细分', 'segments.cluster'], ['（四）多分类 Logistic 回归', 'drivers.model'], ['（一）IPA 分析', 'diagnosis.evaluation'],
     ['5G 用户满意度评价', 'diagnosis.evaluation'], ['六、结论与建议', 'conclusion'], ['（二）对策与建议', 'conclusion.suggestions'],
     ['附录 3：访谈记录', 'appendix.interviews'], ['附录5 Python 代码', 'appendix.code'], ['参考文献', 'references'], ['摘要', 'abstract'], ['我们的发现', null],
   ];
