@@ -246,8 +246,12 @@
 .workbench .qdia-cards h3 small { display: block; font-size: 14px; letter-spacing: 0; }
 .workbench .qdia-cards p { margin: 10px 0 16px; }
 .workbench .step-check { position: static; margin-top: auto; padding-top: 12px; color: var(--wb-accent); }
-.workbench .case-scope-note { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 22px; padding: 20px; border-color: var(--wb-line); border-radius: var(--wb-radius-lg); background: var(--wb-surface); }
+/* The library's scope reads as one row: its name, then the four counts beside it. */
+.workbench .case-scope-note { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 22px; padding: 16px 20px; border-color: var(--wb-line); border-radius: var(--wb-radius-lg); background: var(--wb-surface); }
 .workbench .case-scope-kicker { color: var(--wb-amber); }
+.workbench .case-scope-main h3 { margin: 0; font-weight: 650; }
+.workbench .case-scope-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.workbench .case-scope-stats dd { color: var(--wb-text); }
 .workbench :is(.case-scope-stats div, .case-meta div) { background: var(--wb-well); }
 .workbench .case-toolbar { grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(108px, 0.55fr)); gap: 10px; }
 .workbench .case-grid, .workbench .loading-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 16px; }
@@ -364,6 +368,7 @@
   .workbench .hero-content { grid-template-columns: 1fr; }
   .workbench .hero-copy { max-width: 720px; }
   .workbench .case-scope-note, .workbench .rule-scope-banner { grid-template-columns: 1fr; }
+  .workbench .case-scope-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workbench .workspace-shell { grid-template-columns: 1fr; }
   .workbench .project-sidebar { border-right: 0; border-bottom: 1px solid var(--wb-line); }
   .workbench .closing-cta { flex-wrap: wrap; }

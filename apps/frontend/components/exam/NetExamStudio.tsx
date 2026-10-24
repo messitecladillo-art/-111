@@ -25,8 +25,11 @@ export default function NetExamStudio(){
  const {session,loading}=useHostedSession(),nav=useWorkbenchNav();
  const ready=useSyncExternalStore(subscribeReady,clientReady,serverReady);
  const userId=session?.authenticated?session.user?.id:undefined;
- if(!ready||loading)return <div className={styles.loading}>正在准备练习…</div>;
- if(!userId)return <div className={styles.loading}><p>登录后开始练习。</p><Link href="/login">邮箱登录</Link></div>;
+ if(!ready||loading)return <p className="hosted-empty" role="status">正在准备练习…</p>;
+ // Before signing in: what the practice offers and where progress is kept, then one way in.
+ if(!userId)return <div className="hosted-empty"><h2>登录后开始练习</h2><p>题库只提供给登录的成员。练习进度、错题与收藏按账号记在这台电脑的浏览器里。</p>
+  <ul className={styles.modeList} aria-label="练习方式">{EXAM_MODES.map(mode=><li key={mode}>{MODE_LABELS[mode]}</li>)}</ul>
+  <Link className="primary-button" href="/login">使用邮箱登录</Link></div>;
  return <ExamBankLoader key={userId} accountId={userId} active={String(nav.section)==='exam'}/>;
 }
 function ExamBankLoader({accountId,active}:{accountId:string;active:boolean}){
@@ -39,9 +42,9 @@ function ExamBankLoader({accountId,active}:{accountId:string;active:boolean}){
    .catch(error=>{if(current)setState(error instanceof HostedApiError&&error.code==='net_exam_bank_unavailable'?{status:'unavailable'}:{status:'failed',message:errorMessage(error)});});
   return()=>{current=false;};
  },[attempt]);
- if(state.status==='loading')return <div className={styles.loading}>正在读取题库…</div>;
- if(state.status==='unavailable')return <div className={styles.loading}><p>此服务器尚未配置网赛题库。</p><p>历史题库的公开传播授权尚未确认，不随公开源码分发；管理员按「网赛刷题」说明在服务器上放置本地生成的题库后即可使用。</p></div>;
- if(state.status==='failed')return <div className={styles.loading}><p>{state.message}</p><button type="button" onClick={()=>{setState({status:'loading'});setAttempt(n=>n+1);}}>重新读取</button></div>;
+ if(state.status==='loading')return <p className="hosted-empty" role="status">正在读取题库…</p>;
+ if(state.status==='unavailable')return <div className="hosted-empty"><h2>此服务器尚未配置网赛题库</h2><p>历史题库的公开传播授权尚未确认，不随公开源码分发；管理员按「网赛刷题」说明在服务器上放置本地生成的题库后即可使用。</p></div>;
+ if(state.status==='failed')return <div className="hosted-empty" role="alert"><h2>题库没有读到</h2><p>{state.message}</p><button type="button" className="primary-button" onClick={()=>{setState({status:'loading'});setAttempt(n=>n+1);}}>重新读取</button></div>;
  return <ExamAccount key={state.bank.version} accountId={accountId} active={active} bank={state.bank}/>;
 }
 function ExamAccount({accountId,active,bank}:{accountId:string;active:boolean;bank:ExamBank}){

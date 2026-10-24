@@ -18,7 +18,7 @@ import {
 } from "@/data/control-plane-contract.generated";
 import { RULE_CORPUS_META } from "@/data/rule-corpus.generated";
 import { COMPETITION_UPDATE } from "@/data/competition-update";
-import LifecycleWarRoom from "@/components/LifecycleWarRoom";
+import ProjectPortal from "@/components/workspace/ProjectPortal";
 import EvidenceFlight from "@/components/EvidenceFlight";
 import ChoiceGroup from "@/components/ChoiceGroup";
 import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel } from "@/components/WorkbenchShell";
@@ -1105,7 +1105,7 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={handoffs.setDesign} onAnalyze={snapshot=>{handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={source=>{if(source)handoffs.publish('brief',source);else briefHandled();}} />,
-      workspace: <section className="section"><h2>项目已接入邮箱账号</h2><p>创建团队项目，生成、编辑并保存问卷版本。</p><Link className="primary-button" href="/projects">打开我的项目</Link><details id="lifecycle"><summary>本地生命周期工具</summary><LifecycleWarRoom portalProject={null}/></details></section>,
+      workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
   }), [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport]);

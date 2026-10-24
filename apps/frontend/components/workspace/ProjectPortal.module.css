@@ -1,0 +1,12 @@
+/* 项目门户: three cards for the hosted side, then the lifecycle tool folded beneath them. */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; padding: 18px 20px 20px; border: 1px solid var(--wb-line); border-radius: var(--wb-radius-lg); background: var(--wb-solid); box-shadow: var(--wb-shadow); }
+.card > span { color: var(--wb-accent); font-size: 12px; font-weight: 650; letter-spacing: 0.06em; }
+.card h3 { max-width: 100%; margin: 0; overflow: hidden; color: var(--wb-text); font-family: var(--wb-heading, inherit); font-size: 17px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.card p { flex: 1; margin: 0 0 10px; color: var(--wb-muted); font-size: 13px; line-height: 1.7; }
+.lifecycle { border: 1px solid var(--wb-line); border-radius: var(--wb-radius-lg); background: var(--wb-solid); }
+.lifecycle > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 20px; cursor: pointer; }
+.lifecycle > summary b { color: var(--wb-text); font-size: 15px; }
+.lifecycle > summary small { color: var(--wb-muted); font-size: 12.5px; }
+.lifecycle[open] > summary { border-bottom: 1px solid var(--wb-line); }
+.lifecycle > :not(summary) { margin: 0; padding: 18px 20px 22px; }
