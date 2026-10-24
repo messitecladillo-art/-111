@@ -54,17 +54,18 @@ function designLight(d: Questionnaire | null): RoomLight {
 function samplingLight(view: ProjectView): RoomLight {
   // A plan becomes evidence once the report carries its frame tables; a draft kept in the sampling room is not yet.
   // Inserting a revised plan registers new frames beside the old ones, so each group counts once, by its latest frame;
-  // groups are told apart by their stable ID, never by the name the author can change or reuse. Frames saved before
-  // the ID carried a group have only their title to go by, and a later frame of the same title supersedes them.
+  // groups are told apart by their stable ID, never by the name the author can change or reuse.
   const results = view.report?.quality?.results ?? [];
   const placed = new Set((view.report?.report ?? []).flatMap(s => (s.blocks ?? []).map(b => b.evidenceId)));
-  const latest = new Map<string, (typeof results)[number]>();
+  const latest = new Map<string, (typeof results)[number]>(), legacy: (typeof results)[number][] = [];
   for (const r of results) if (r.method === 'sampling-frame' && placed.has(r.id)) {
-    const group = frameGroup(r.id), key = group ? `group:${group}` : `title:${r.title}`;
-    latest.delete(key); latest.set(key, r);
+    const group = frameGroup(r.id);
+    if (group) { latest.delete(group); latest.set(group, r); } else legacy.push(r);
   }
-  const revisedTitles = new Set([...latest.entries()].filter(([key]) => key.startsWith('group:')).map(([, r]) => r.title));
-  const frames = [...latest.entries()].filter(([key, r]) => key.startsWith('group:') || !revisedTitles.has(r.title)).map(([, r]) => r);
+  const frames = [...latest.values(), ...legacy];
+  // A frame saved before IDs carried a group cannot say whether a namesake is its revision or another group. It counts
+  // on its own and the clash is shown, never settled by a guess; until it is cleared the totals are not trusted.
+  const clashing = legacy.filter(r => frames.filter(f => f.title === r.title).length > 1).length;
   const check = (id: string, passed: boolean, label: string, detail: string, go: RoomId = 'sampling'): LightCheck => ({ id: `sampling.${id}`, room: 'sampling', go, label, passed, detail });
   if (!frames.length) return { room: 'sampling', score: 0, summary: '方案还没写进报告', checks: [check('frame', false, '抽样方案还没写进报告', '在抽样室定好分阶段方案，一键插入报告的调查方案章节；写进报告的方案才算证据。')] };
   const planned = frames.map(r => r.metrics.find(m => m.label === '计划有效样本')?.value ?? 0);
@@ -76,14 +77,16 @@ function samplingLight(view: ProjectView): RoomLight {
   const data = view.dataset;
   const screening = data ? results.findLast(r => r.method === 'quality-control' && r.sourceHash === data.hash) : undefined;
   const effective = data?.screened ? data.rows : screening ? screening.n : null;
-  const reach = effective !== null
+  const reach = clashing ? check('reach', false, '同名抽样框待厘清，暂不核对回收', '厘清同名的旧抽样框后，再按有效份数核对计划样本量。')
+    : effective !== null
     ? check('reach', stated && effective >= total, effective >= total ? `有效 ${effective} 份，达到计划的 ${total} 份` : `有效 ${effective} 份，未达计划的 ${total} 份`,
       effective < total ? '补充回收，或在报告中说明样本不足对估计精度的影响。' : data?.screened ? '有效份数取自已经质量控制的数据。' : '有效份数取自为这份数据登记的质量控制结果。')
     : view.dataset ? check('reach', false, `回收 ${view.dataset.rows} 行，有效份数待质量控制`, '原始行数不等于有效答卷：在分析室筛除无效答卷并登记质量控制结果后再核对计划。', 'analysis')
     : check('reach', false, '还没有回收数据可对照计划', '在分析室载入回收数据并完成质量控制后，按有效份数核对计划样本量。', 'analysis');
   const checks = [
     check('frame', true, `报告写入了 ${frames.length} 个抽样框`, frames.map(r => r.title).join('、')),
-    check('size', stated, stated ? `计划有效样本共 ${total} 份` : '有抽样框没写计划有效样本量', '样本量决定估计精度，也是回收率与有效率的分母。'),
+    ...(clashing ? [check('distinct', false, `${clashing} 个旧抽样框与其他抽样框同名`, '它们写于抽样框带群体标识之前，无法判断是同一群体的修订还是不同群体。在抽样室重新写入一次报告，并删去报告里旧的抽样框表格。')] : []),
+    check('size', stated, stated ? `计划有效样本共 ${total} 份${clashing ? '（含同名旧抽样框，可能重复）' : ''}` : '有抽样框没写计划有效样本量', '样本量决定估计精度，也是回收率与有效率的分母。'),
     reach,
   ];
   return { room: 'sampling', score: share(checks), checks, summary: `${frames.length} 个抽样框 · 计划 ${total} 份${nonProbability ? ` · ${nonProbability} 个含非概率阶段` : ''}` };

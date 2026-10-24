@@ -152,12 +152,21 @@ test('a sampling plan lights its room once the report carries it, judged on effe
   const revised = reportWith([table(frameId('a', '1')), table(frameId('a', '2')), table(frameId('b', '3'))],
     [{ ...frame(frameId('a', '1'), 400), title: '居民抽样框' }, { ...frame(frameId('a', '2'), 500), title: '社区居民抽样框' }, { ...frame(frameId('b', '3'), 200), title: '社区居民抽样框' }]);
   assert.match(roomLight(illuminate({ ...empty, report: revised }), 'sampling').summary, /^2 个抽样框 · 计划 700 份/);
-  // Frames saved before IDs carried a group fall back to their title, and a group revised since supersedes them.
+  // Frames saved before IDs carried a group each count on their own; a namesake is shown as a clash, never merged.
   const legacy = content => `sampling-frame-${content.repeat(16)}`;
-  const saved = reportWith([table(legacy('1')), table(legacy('2'))], [frame(legacy('1'), 400), frame(legacy('2'), 450)]);
-  assert.match(roomLight(illuminate({ ...empty, report: saved }), 'sampling').summary, /^1 个抽样框 · 计划 450 份/);
-  const mixed = reportWith([table(legacy('1')), table(frameId('a', '2'))], [frame(legacy('1'), 400), frame(frameId('a', '2'), 500)]);
-  assert.match(roomLight(illuminate({ ...empty, report: mixed }), 'sampling').summary, /^1 个抽样框 · 计划 500 份/);
+  const named = (id, planned, title) => ({ ...frame(id, planned), title });
+  const distinct = roomLight(illuminate({ ...empty, report: reportWith([table(legacy('1')), table(legacy('2'))], [named(legacy('1'), 400, '居民抽样框'), named(legacy('2'), 200, '学生抽样框')]) }), 'sampling');
+  assert.match(distinct.summary, /^2 个抽样框 · 计划 600 份/);
+  assert.equal(distinct.checks.some(c => c.id === 'sampling.distinct'), false, 'old frames with their own names are not in doubt');
+  for (const report of [
+    reportWith([table(legacy('1')), table(legacy('2'))], [frame(legacy('1'), 400), frame(legacy('2'), 450)]),
+    reportWith([table(legacy('1')), table(frameId('a', '2'))], [frame(legacy('1'), 400), frame(frameId('a', '2'), 500)]),
+  ]) {
+    const clash = roomLight(illuminate({ ...empty, report, dataset: { ...loaded, screened: true } }), 'sampling');
+    assert.match(clash.summary, /^2 个抽样框/, 'nothing is merged by name');
+    assert.equal(clash.checks.find(c => c.id === 'sampling.distinct').passed, false);
+    assert.match(clash.checks.find(c => c.id === 'sampling.reach').label, /同名抽样框待厘清/, 'a total in doubt is not checked against what was collected');
+  }
   assert.equal(roomLight(illuminate({ ...empty, report: reportWith([table('f3')], [frame('f3', 0)]) }), 'sampling').checks[1].passed, false);
 });
 
