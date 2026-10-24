@@ -44,6 +44,7 @@ import TopicModelProposal from '@/components/topic-advisor/TopicModelProposal';
 import topicCatalog from '@/content/topic-advisor/catalog.json';
 import HostedServices from '@/components/hosted/HostedServices';
 import { useHostedSession } from '@/components/hosted/HostedSession';
+import { anonymousCanvasIdentity, LOCAL_CANVAS_WORKSPACE, type CanvasIdentity } from '@/lib/canvas/scope';
 import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/workbench/useWorkbenchHandoffs';
 import DiagnosisActions from "@/components/DiagnosisActions";
 import CompetitionCalendar from '@/components/overview/CompetitionCalendar';
@@ -1038,7 +1039,16 @@ function ruleTypeLabel(value: string) {
 
 function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design: DesignSnapshot | null }) {
   const nav = useWorkbenchNav();
-  return <ResearchCanvas workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
+  const auth = useHostedSession();
+  const [guest] = useState<CanvasIdentity>(() => {
+    let storage: Storage | null = null;
+    try { storage = typeof window === 'undefined' ? null : window.sessionStorage; } catch { /* This mount can use an ephemeral guest scope. */ }
+    return anonymousCanvasIdentity(storage, () => crypto.randomUUID());
+  });
+  if (auth.loading || !auth.session) return <p className="wb-canvas-loading" role="status">{auth.error ? '账号状态暂未就绪，请重新连接。' : '正在核对画布归属…'}</p>;
+  const ownerId = auth.session.authenticated ? auth.session.user?.id ?? null : null;
+  if (auth.session.authenticated && !ownerId) return <p className="wb-canvas-loading" role="alert">画布归属未确定，请重新登录。</p>;
+  return <ResearchCanvas storageScope={{ identity: ownerId ? { kind: 'account', id: ownerId } : guest, projectId: LOCAL_CANVAS_WORKSPACE }} identityEpoch={auth.identityEpoch} isCurrentScope={() => auth.isCurrentIdentity(ownerId, auth.identityEpoch)} workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
 }
 
 /**

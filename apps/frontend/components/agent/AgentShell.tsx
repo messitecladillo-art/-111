@@ -266,6 +266,7 @@ export default function AgentShell() {
           <p id="agent-account-note" className={styles.menuNote} aria-hidden="true">{email}</p>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('workspace'); setRailMenu(null); }}>项目门户</button>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('services'); setRailMenu(null); }}>模型服务</button>
+          <Link role="menuitem" className={styles.menuItem} href="/agent/workspace">对话工作区 ↗</Link>
           <Link role="menuitem" className={styles.menuItem} href="/workspace">经典工作台 ↗</Link>
           {/* Signing out asks first when this tab still holds unsaved drafts. */}
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}>退出登录</button>
