@@ -21,7 +21,7 @@ function questionSteps(variables: readonly string[], design: Questionnaire | nul
   return variables.map(name => {
     const key = name.trim().toLowerCase();
     const index = design ? design.questions.findIndex(q => q.variable.trim().toLowerCase() === key || (!!q.text.trim() && q.text.trim() === name.trim())) : -1;
-    if (!design || index < 0) return { kind: 'question', text: `变量「${name}」`, detail: design ? '没有对应到问卷室里的题目' : '问卷室里还没有问卷，无法对应到题目' };
+    if (!design || index < 0) return { kind: 'question', text: `变量「${name}」`, detail: design ? '没有对应到问卷设计里的题目' : '问卷设计里还没有问卷，无法对应到题目' };
     const q = design.questions[index];
     return { kind: 'question', text: `第 ${index + 1} 题「${q.text.trim() || '题干待填写'}」`, detail: `变量 ${q.variable}` };
   });

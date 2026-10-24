@@ -1,28 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
+import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
-import { AccountStatus } from '@/components/hosted/HostedFrame';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
-import { NavIcon, ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
+import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
 import { illuminate, roomLight } from '@/lib/agent/illumination';
 import { traceExhibits } from '@/lib/agent/provenance';
-import { isRoomId, roomById, type RoomId } from '@/lib/agent/rooms';
+import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, type AgentAction, type AgentTurn } from '@/lib/agent/router';
 import Composer from './Composer';
-import { LightBar } from './Glyphs';
-import Lobby from './Lobby';
-import RoomRail from './RoomRail';
-import Transcript from './Transcript';
 import { GenerationProvider, useGeneration } from './generation';
-import { stamp, transcript, type Message } from './transcript-store';
+import { LightBar } from './Glyphs';
+import { Icon } from './icons';
+import Lobby from './Lobby';
+import Sidebar from './Sidebar';
+import Transcript from './Transcript';
+import { stamp, threads, type Message } from './threads';
 import styles from './AgentShell.module.css';
 
-// Every workbench module is a room and every room hosts a module: the two lists cannot drift apart.
+// Every workbench module opens in the panel and every panel hosts a module: the two lists cannot drift apart.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
 const ROOMS_ARE_PANELS: Same<RoomId, WorkbenchPanel> = true;
 void ROOMS_ARE_PANELS;
@@ -31,112 +32,130 @@ function subscribeHash(listener: () => void) {
   window.addEventListener('hashchange', listener);
   return () => window.removeEventListener('hashchange', listener);
 }
-function currentRoom(): RoomId {
+/** The module open in the side panel, read from the address: none, the overview, or a workbench module. */
+function currentPanel(): RoomId | null {
   const hash = window.location.hash.slice(1);
-  return hash === 'lifecycle' ? 'workspace' : isRoomId(hash) ? hash : 'overview';
+  return hash === 'lifecycle' ? 'workspace' : isRoomId(hash) ? hash : null;
 }
-// Below 1025px one pane shows at a time; below 1600px a room needs the whole mirror, so the conversation floats over it.
-const NARROW = '(max-width: 1024px)', MEDIUM = '(max-width: 1599px)';
 const subscribeNothing = () => () => {};
 const searchKey = () => /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
-function subscribeMedia(listener: () => void) {
-  const media = [window.matchMedia(NARROW), window.matchMedia(MEDIUM)];
-  for (const m of media) m.addEventListener('change', listener);
-  return () => { for (const m of media) m.removeEventListener('change', listener); };
+const EMPTY_MESSAGES: Message[] = [];
+const PANEL_KEY = 'evix.agent.panel-width.v1';
+const RAIL = 52, SIDEBAR = 264, MIN_PANEL = 480, MIN_TALK = 360;
+const SUGGESTIONS = ['下一步做什么', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '/照度'];
+const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
+
+/** The panel width remembered in this browser, if any; a width is a convenience only. */
+function savedPanelWidth(): number | null {
+  try { const saved = Number(window.localStorage.getItem(PANEL_KEY)); if (saved >= 480 && saved <= 1800) return saved; } catch { /* Not remembered without storage. */ }
+  return null;
 }
-const viewport = () => window.matchMedia(NARROW).matches ? 'narrow' : window.matchMedia(MEDIUM).matches ? 'medium' : 'wide';
 
 /**
- * 证见 · 镜室: the agent shell. One conversation is the spine; every workbench module is a room the agent walks
- * into, kept mounted once visited. The rail shows where the light reaches; the status line says the rest in one row.
+ * 证见 Agent, laid out like Codex: an icon rail, a sidebar of projects and conversations, one conversation in the
+ * middle, and every workbench module opening in a panel on the right, kept mounted once opened. The panel follows the
+ * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
   const { panels, view, publishProposal } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
-  // The transcript belongs to whoever is signed in; it is bound once the session is known and dropped when it changes.
+  const theme = useThemePreference('light');
   const { session: account, loading: accountLoading } = useHostedSession();
+  // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
-  useEffect(() => { if (owner) transcript.bind(owner); }, [owner]);
-  const theme = useThemePreference(true);
-  const room = useSyncExternalStore(subscribeHash, currentRoom, () => 'overview' as RoomId);
-  const width = useSyncExternalStore(subscribeMedia, viewport, () => 'wide' as const), narrow = width === 'narrow';
-  const overlay = width === 'medium' && room !== 'overview';
-  const messages = useSyncExternalStore(transcript.subscribe, () => transcript.view(owner), transcript.serverSnapshot);
+  useEffect(() => { if (owner) threads.bind(owner); }, [owner]);
+  const book = useSyncExternalStore(threads.subscribe, () => threads.view(owner), threads.serverSnapshot);
+  const thread = book.threads.find(t => t.id === book.active) ?? null;
+  const messages = thread?.messages ?? EMPTY_MESSAGES;
+  const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
 
-  const [visited, setVisited] = useState<RoomId[]>([room]);
-  const [talkOpen, setTalkOpen] = useState(true);
-  const [pane, setPane] = useState<'talk' | 'mirror'>('talk');
-  const [railOpen, setRailOpen] = useState(false);
-  const [lastRoom, setLastRoom] = useState<RoomId>('overview');
-  const [shownRoom, setShownRoom] = useState(room);
+  const [visited, setVisited] = useState<RoomId[]>([]);
+  if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
+  const [moduleMenu, setModuleMenu] = useState(false);
+  // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
+  // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
+  const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
+  const crowded = !!panel && viewport < 1680;
+  const [sideAlone, setSideAlone] = useState(true), [sideBeside, setSideBeside] = useState(false);
+  const sideOpen = crowded ? sideBeside : sideAlone;
+  const setSideOpen = crowded ? setSideBeside : setSideAlone;
+  const [expanded, setExpanded] = useState(false);
+  // The panel takes seven tenths of the room beside the sidebar, or the width last dragged to, and always leaves the
+  // conversation its minimum. Widths are read through stores so the first client render matches the server's.
+  const savedWidth = useSyncExternalStore(subscribeNothing, savedPanelWidth, () => null);
+  const [draggedWidth, setPanelWidth] = useState<number | null>(null);
+  const room = viewport - RAIL - (sideOpen ? SIDEBAR : 0);
+  const available = Math.max(MIN_PANEL, room - MIN_TALK);
+  const panelWidth = Math.min(available, draggedWidth ?? savedWidth ?? Math.round(Math.min(1240, Math.max(MIN_PANEL, room * 0.7))));
+  const [dragging, setDragging] = useState(false);
+  const [lastPanel, setLastPanel] = useState<RoomId | null>(null);
+  const [lastModule, setLastModule] = useState<RoomId>('overview');
+  const [shownPanel, setShownPanel] = useState(panel);
   const [canvasReturn, setCanvasReturn] = useState<{ nodeId: string; title: string } | null>(null);
   const [canvasFocus, setCanvasFocus] = useState<{ nodeId: string; token: number } | null>(null);
-  // Arriving in a room mounts its module for good, shows the mirror on a narrow screen, closes the drawer, and on a
-  // laptop lets the room have the whole mirror; the lobby is the conversation's home, so it opens there again.
-  if (!visited.includes(room)) setVisited([...visited, room]);
-  if (shownRoom !== room) {
-    setShownRoom(room);
-    if (room !== 'canvas') setLastRoom(room);
-    setPane('mirror');
-    setRailOpen(false);
-    if (width === 'medium') setTalkOpen(room === 'overview');
+  if (shownPanel !== panel) {
+    setShownPanel(panel);
+    if (panel) setLastPanel(panel);
+    if (panel && panel !== 'canvas') setLastModule(panel);
+    if (!panel) setExpanded(false);
   }
 
-  const inputRef = useRef<HTMLTextAreaElement>(null), headingRef = useRef<HTMLHeadingElement>(null), mirrorRef = useRef<HTMLElement>(null);
-  const menuRef = useRef<HTMLButtonElement>(null);
-  const go = useCallback((id: RoomId) => { if (currentRoom() !== id) window.location.hash = id; }, []);
+  const inputRef = useRef<HTMLTextAreaElement>(null), scrollRef = useRef<HTMLDivElement>(null), headingRef = useRef<HTMLHeadingElement>(null);
+  const railRef = useRef<HTMLElement>(null);
+  // The module menu closes on a click outside the rail, as the composer's menus do.
+  useEffect(() => {
+    if (!moduleMenu) return;
+    const away = (event: PointerEvent) => { if (!railRef.current?.contains(event.target as Node)) setModuleMenu(false); };
+    window.addEventListener('pointerdown', away);
+    return () => window.removeEventListener('pointerdown', away);
+  }, [moduleMenu]);
+  const go = useCallback((id: RoomId) => { if (currentPanel() !== id) window.location.hash = id; }, []);
+  const closePanel = useCallback(() => { window.location.hash = ''; }, []);
   const generation = useGeneration(publishProposal, go);
+  const { account: generationAccount, load: loadLists, lists, preferredService, prefer } = generation;
+  // Projects and services fill the sidebar and the composer's menus as soon as an account is known.
+  useEffect(() => { if (generationAccount === 'ready') loadLists(); }, [generationAccount, loadLists]);
+
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
-  const showWorkbench = useCallback(() => { window.location.hash = lastRoom; }, [lastRoom]);
-  const nav = useMemo<WorkbenchNav>(() => ({ section: room, openFromCanvas, showWorkbench, canvasFocus }), [room, openFromCanvas, showWorkbench, canvasFocus]);
+  const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
+  const nav = useMemo<WorkbenchNav>(() => ({ section: panel ?? 'overview', openFromCanvas, showWorkbench, canvasFocus }), [panel, openFromCanvas, showWorkbench, canvasFocus]);
   const backToCanvas = () => {
     if (canvasReturn) setCanvasFocus({ nodeId: canvasReturn.nodeId, token: Date.now() });
     setCanvasReturn(null);
     window.location.hash = 'canvas';
   };
 
-  // A new room takes focus at its heading, unless the user is typing to the agent: commands keep the command line.
-  // A render from the server's guess, before the address was read, records nothing; the first room seen is where the
-  // page opened, so arriving by link moves no focus. Only later moves take it.
-  const lastFocusRoom = useRef<RoomId | null>(null);
+  // A panel opened by the user takes focus at its heading; one opened from the composer leaves the keyboard there.
+  const lastFocusPanel = useRef<RoomId | null | undefined>(undefined);
   useEffect(() => {
-    if (room !== currentRoom()) return;
-    if (lastFocusRoom.current === null || lastFocusRoom.current === room) { lastFocusRoom.current = room; return; }
-    lastFocusRoom.current = room;
-    mirrorRef.current?.scrollTo({ top: 0 });
-    if (document.activeElement === inputRef.current || room === 'canvas') return;
-    const frame = requestAnimationFrame(() => (headingRef.current ?? mirrorRef.current)?.focus({ preventScroll: true }));
+    if (panel !== currentPanel()) return;
+    if (lastFocusPanel.current === undefined || lastFocusPanel.current === panel) { lastFocusPanel.current = panel; return; }
+    lastFocusPanel.current = panel;
+    if (!panel || panel === 'canvas' || document.activeElement === inputRef.current) return;
+    const frame = requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
     return () => cancelAnimationFrame(frame);
-  }, [room]);
+  }, [panel]);
 
-  // What the agent routes against is read when a message is sent, so its handlers stay stable while the
-  // report is re-scored on every keystroke and the transcript need not re-render with it.
-  const latest = useRef({ room, light, theme, knowledge, traces, generation });
-  useEffect(() => { latest.current = { room, light, theme, knowledge, traces, generation }; });
+  // What the agent routes against is read when a message is sent, so its handlers stay stable.
+  const toggleSide = () => setSideOpen(!sideOpen);
+  const latest = useRef({ panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide }; });
   const agent = useMemo(() => {
     const send = (raw: string) => {
       const text = raw.trim();
       if (!text) return;
-      const { room, light, theme, traces } = latest.current;
+      const { panel, light, theme, traces, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room, light, theme, traces });
-      setTalkOpen(true);
-      setPane('talk');
+      const routed = route(text, { room: panel ?? 'overview', light, theme, traces });
       // Drafting with a model always starts with the user's consent, never with a call.
-      if ('generate' in routed) {
-        transcript.update(list => [...list, user, { ...stamp(), role: 'agent', turn: latest.current.generation.start(routed.generate) }]);
-        return;
-      }
-      if ('lookup' in routed) {
-        transcript.update(list => [...list, user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]);
-        return;
-      }
-      transcript.update(list => [...list, user, { ...stamp(), role: 'agent', turn: routed.turn }]);
+      if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
+      if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
+      threads.append([user, { ...stamp(), role: 'agent', turn: routed.turn }]);
       if (routed.turn.act) perform(routed.turn.act);
     };
     const perform = (action: AgentAction) => {
@@ -145,119 +164,159 @@ export default function AgentShell() {
         case 'theme': saveTheme(action.theme); break;
         case 'search': latest.current.knowledge.openSearch(); break;
         case 'entry': latest.current.knowledge.open(action.id); break;
-        case 'clear': transcript.update(() => []); inputRef.current?.focus(); break;
-        // Only paths of this site; a stored transcript is never trusted to navigate anywhere else.
+        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) threads.remove(active); inputRef.current?.focus(); break; }
+        // Only paths of this site; a stored conversation is never trusted to navigate anywhere else.
         case 'href': if (/^\/(?!\/)/.test(action.href)) window.location.assign(action.href); break;
         case 'say': send(action.text); break;
       }
     };
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
-      transcript.update(list => list.map(m => m.id === id && m.role === 'agent' ? { ...m, answered } : m));
+      threads.patch(id, m => m.role === 'agent' ? { ...m, answered } : m);
       if (answered === 'confirmed' && action) perform(action);
       else inputRef.current?.focus();
     };
     return { send, perform, answer };
   }, [go]);
 
-  // Lookups wait for the knowledge index, then answer in place of their placeholder.
-  const pendingLookup = messages.find(m => m.role === 'pending');
+  // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
+  const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
   const { ready: knowledgeReady, search } = knowledge;
   useEffect(() => {
     if (pendingLookup?.role !== 'pending' || !knowledgeReady) return;
     let live = true;
-    const settle = (turn: AgentTurn) =>
-      transcript.update(list => list.map(m => m.id === pendingLookup.id ? { id: m.id, at: Date.now(), role: 'agent', turn } : m));
+    const settle = (turn: AgentTurn) => threads.patch(pendingLookup.id, () => ({ id: pendingLookup.id, at: Date.now(), role: 'agent', turn }));
     search(pendingLookup.query)
       .then(hits => { if (live) settle(lookupTurn(pendingLookup.query, hits, pendingLookup.explicit)); })
       .catch(() => { if (live) settle({ lines: [[{ text: '知识镜暂时没有回应，请稍后再问。', mark: 'error' }]] }); });
     return () => { live = false; };
   }, [pendingLookup, knowledgeReady, search]);
 
-  // "/" anywhere outside a field starts a command; Ctrl/⌘ + \ shows or hides the conversation.
+  // "/" anywhere outside a field starts a command, bringing the conversation back if the panel fills the screen;
+  // Ctrl B folds the sidebar; Ctrl \ closes or reopens the panel.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const typing = !!target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
-      // Focus moves before the key is typed, so the slash itself lands in the command line.
-      if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) inputRef.current?.focus();
-      if (event.key === '\\' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); setTalkOpen(open => !open); }
-      // Escape puts the phone drawer away; focus inside it goes back to the button that opened it, not into hiding.
-      if (event.key === 'Escape' && document.querySelector('[data-rail="open"]')) {
-        if (document.getElementById('agent-rail')?.contains(document.activeElement)) menuRef.current?.focus();
-        setRailOpen(false);
+      if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (inputRef.current?.offsetParent === null) { event.preventDefault(); setExpanded(false); requestAnimationFrame(() => inputRef.current?.focus()); }
+        else inputRef.current?.focus();
       }
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'b') { event.preventDefault(); latest.current.toggleSide(); }
+      if ((event.ctrlKey || event.metaKey) && event.key === '\\') {
+        event.preventDefault();
+        const reopen = latest.current.lastPanel;
+        if (currentPanel()) window.location.hash = ''; else if (reopen) window.location.hash = reopen;
+      }
+      if (event.key === 'Escape') setModuleMenu(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const here = roomById(room), lit = roomLight(light, room);
-  const project = view.design?.title.trim() || (view.report && view.report.title !== '我的市场调查研究' ? view.report.title.trim() : '') || '未命名研究';
-  const passed = light.benchmark ? roomLight(light, 'editor')!.checks.filter(c => c.passed).length : 0;
-  const total = light.benchmark ? roomLight(light, 'editor')!.checks.length : 0;
+  // The panel is widened or narrowed by dragging its edge; the width is remembered in this browser.
+  const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const startX = event.clientX, startWidth = Math.min(panelWidth, available);
+    const limit = () => Math.max(MIN_PANEL, window.innerWidth - RAIL - (sideOpen ? SIDEBAR : 0) - MIN_TALK);
+    setDragging(true);
+    const move = (e: PointerEvent) => setPanelWidth(Math.round(Math.min(limit(), Math.max(MIN_PANEL, startWidth + startX - e.clientX))));
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setPanelWidth(width => { try { if (width) window.localStorage.setItem(PANEL_KEY, String(width)); } catch { /* Not remembered without storage. */ } return width; });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
+  const services = lists.services.map(s => ({ id: s.id, label: s.label, detail: s.model }));
+  const projectId = thread ? thread.projectId : book.draftProject;
+  const projectLabel = projects.find(p => p.id === projectId)?.label;
+  const email = account?.user?.email ?? '';
+  const here = panel ? roomById(panel) : null, lit = panel ? roomLight(light, panel) : null;
 
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
-    <div className={`workbench ${styles.shell}`} data-theme={theme} data-room={room} data-talk={talkOpen ? 'open' : 'closed'} data-dock={overlay ? 'overlay' : 'docked'} data-pane={pane} data-rail={railOpen ? 'open' : 'closed'}
-      // On a phone the rail is a drawer: a tap anywhere else puts it away.
-      onPointerDown={event => { if (railOpen && !(event.target as Element).closest('#agent-rail, [aria-controls="agent-rail"]')) setRailOpen(false); }}>
-      <a className={styles.skip} href="#mirror" onClick={event => { event.preventDefault(); mirrorRef.current?.focus(); }}>跳到主要内容</a>
+    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? 'none'} data-expanded={expanded && !!panel}>
+      <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); inputRef.current?.focus(); }}>跳到输入框</a>
 
-      <header className={styles.bar}>
-        <button ref={menuRef} type="button" className={`${styles.iconButton} ${styles.menu}`} aria-label="房间" aria-expanded={railOpen} aria-controls="agent-rail" onClick={() => setRailOpen(!railOpen)}>☰</button>
-        <a className={styles.brand} href="#overview"><b aria-hidden="true">◇</b><strong>证见</strong><small>镜室</small></a>
-        <span className={styles.crumb}><i aria-hidden="true">›</i>{here.name}<span>{project === '未命名研究' ? '' : `· ${project}`}</span></span>
+      <nav ref={railRef} className={styles.rail} aria-label="工具" style={{ position: 'relative' }}>
+        <button type="button" className={styles.railButton} aria-label="对话" title="对话" aria-pressed={!panel} onClick={() => {
+          // From a panel filling the screen the conversation comes back beside it; otherwise the panel closes.
+          if (expanded) { setExpanded(false); requestAnimationFrame(() => inputRef.current?.focus()); } else { closePanel(); inputRef.current?.focus(); }
+        }}><Icon name="chat" /></button>
+        <button type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="menu" aria-expanded={moduleMenu} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setModuleMenu(!moduleMenu)}><Icon name="grid" /></button>
+        <button type="button" className={styles.railButton} aria-label="项目全景" title="项目全景" aria-pressed={panel === 'overview'} onClick={() => panel === 'overview' ? closePanel() : go('overview')}><Icon name="lamp" /></button>
+        <button type="button" className={styles.railButton} aria-label={`知识镜搜索（${shortcut}）`} title={`知识镜搜索（${shortcut}）`} onClick={knowledge.openSearch}><Icon name="book" /></button>
         <span className={styles.spacer} />
-        {narrow && <div className={styles.switch} role="tablist" aria-label="显示">
-          <button type="button" role="tab" aria-selected={pane === 'talk'} onClick={() => setPane('talk')}>对话</button>
-          <button type="button" role="tab" aria-selected={pane === 'mirror'} onClick={() => setPane('mirror')}>{here.name}</button>
+        <button type="button" className={styles.railButton} aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'} title={theme === 'dark' ? '浅色' : '深色'} onClick={event => switchTheme(theme === 'dark' ? 'light' : 'dark', event)}><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
+        {owner && owner !== 'guest' ? <span className={styles.avatar} title={email}>{(email[0] ?? '?').toUpperCase()}</span>
+          : <Link className={styles.avatar} data-guest="true" href="/login" title="登录">访</Link>}
+        {moduleMenu && <div className={styles.menu} role="menu" aria-label="模块" style={{ left: 50, top: 40, zIndex: 60, maxHeight: 'calc(100dvh - 56px)' }}>
+          {GROUPS.map(group => <Fragment key={group}>
+            <p className={styles.menuLabel}>{ROOM_GROUPS[group]}</p>
+            {ROOMS.filter(r => r.group === group).map(r => {
+              const lightOf = roomLight(light, r.id);
+              return <button key={r.id} type="button" role="menuitemradio" className={styles.menuItem} aria-checked={panel === r.id} onClick={() => { go(r.id); setModuleMenu(false); }}>
+                {r.name}{lightOf && <small>{percent(lightOf.score)}</small>}
+              </button>;
+            })}
+          </Fragment>)}
         </div>}
-        <button type="button" className={`${styles.barButton} ${styles.hideNarrow}`} onClick={knowledge.openSearch} title={`全局搜索（${shortcut}）`}><kbd>{shortcut}</kbd>搜索</button>
-        <button type="button" className={styles.barButton} onClick={event => switchTheme(theme === 'dark' ? 'light' : 'dark', event)} aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'} title={theme === 'dark' ? '昼' : '夜'}>
-          <NavIcon kind={theme === 'dark' ? 'sun' : 'moon'} />
-        </button>
-        <Link className={`${styles.barButton} ${styles.hideNarrow}`} href={`/workspace#${room}`}>经典工作台</Link>
-        <div className={styles.account}><AccountStatus /></div>
-      </header>
+      </nav>
 
-      <RoomRail room={room} light={light} onNavigate={() => setRailOpen(false)} />
+      <Sidebar book={book} projects={projects} account={generationAccount} email={email} onNew={id => { threads.draft(id); inputRef.current?.focus(); }}
+        onSelect={threads.select} onRemove={threads.remove} onCollapse={() => setSideOpen(false)} />
 
-      <section className={styles.talk} aria-label="与证见对话" data-dialog-background>
-        <div className={styles.talkInner}>
-          <div className={styles.talkHead}>
-            <b aria-hidden="true">◆</b><span>证见</span><span className={styles.modeTag}>指令模式</span><span className={styles.spacer} />
-            <button type="button" className={`${styles.iconButton} ${styles.collapse}`} onClick={() => setTalkOpen(false)} aria-label="收起对话（Ctrl / ⌘ \）" title="收起对话（Ctrl / ⌘ \）">⇤</button>
-          </div>
-          <Transcript messages={messages} onSay={agent.send} onAction={agent.perform} onAnswer={agent.answer} />
+      <main className={styles.main} aria-label="对话" data-dialog-background>
+        <header className={styles.top}>
+          {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
+          <span className={styles.topTitle}>{thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
+          <span className={styles.spacer} />
+          {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
+        </header>
+        <div ref={scrollRef} className={styles.scroll}>
+          {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
+            : <div className={styles.empty}>
+              <div className={styles.emptyMark}><BrandMark size={44} /></div>
+              <h1>我们要研究什么？</h1>
+              <p>对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。起草问卷时会调用你自己的模型服务，并先请你确认。</p>
+              <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
+            </div>}
         </div>
-      </section>
+        <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={loadLists}
+          projects={projects} projectId={projectId} onProject={threads.setProject}
+          services={services} serviceId={preferredService || services[0]?.id || ''} onService={prefer} onOpen={go} />
+      </main>
 
-      <main ref={mirrorRef} id="mirror" className={styles.mirror} data-room={room} tabIndex={-1} aria-label={`镜面：${here.name}`} data-dialog-background
-        onPointerDown={() => { if (overlay && talkOpen) setTalkOpen(false); }}>
-        {!narrow && <button type="button" className={styles.talkTab} onClick={() => setTalkOpen(true)} aria-label="展开对话">◆ 对话</button>}
-        {room === 'overview' ? <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={headingRef} />
-          : room !== 'canvas' && <header className={styles.roomHead}>
-            <h1 ref={headingRef} tabIndex={-1}>{here.name}</h1>
-            {lit && <span className={styles.roomLight}><LightBar score={lit.score} /><b>{percent(lit.score)}</b>{lit.summary}</span>}
-            <p>{here.line}</p>
-          </header>}
-        {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && visited.includes(id)).map(id =>
-          <div key={id} className={styles.panel} data-workbench-panel={id} hidden={room !== id}>{panels[id]}</div>)}
-        {canvasReturn && room !== 'canvas' && <div className={styles.canvasReturn} role="region" aria-label="画布返回">
+      <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background
+        style={{ ['--panel-w' as string]: `${panelWidth}px` }}>
+        <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
+        {here && <header className={styles.panelHead}>
+          <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>
+          {lit && <span className={styles.panelLight}><LightBar score={lit.score} /><b>{percent(lit.score)}</b>{lit.summary}</span>}
+          <span className={styles.spacer} />
+          {panel !== 'overview' && <Link className={styles.panelLink} href={`/workspace#${panel}`}>在经典工作台打开 ↗</Link>}
+          <button type="button" className={styles.iconButton} aria-pressed={expanded} aria-label={expanded ? '还原，显示对话' : '铺满，暂时收起对话'}
+            title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
+          <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
+        </header>}
+        <div className={styles.panelBody} data-room={panel ?? undefined}>
+          {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
+          {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && visited.includes(id)).map(id =>
+            <div key={id} className={styles.pane} data-workbench-panel={id} hidden={panel !== id}>{panels[id]}</div>)}
+        </div>
+        {canvasReturn && panel && panel !== 'canvas' && <div className={styles.canvasReturn} role="region" aria-label="画布返回">
           <button type="button" onClick={backToCanvas}>⟲ 返回画布{canvasReturn.title ? ` · ${canvasReturn.title}` : ''}</button>
           <button type="button" aria-label="不再显示返回画布" onClick={() => setCanvasReturn(null)}>×</button>
         </div>}
-      </main>
-
-      <Composer onSend={agent.send} inputRef={inputRef} />
-
-      <footer className={styles.status} aria-label="状态线">
-        <span>◇ {project}</span><i>·</i><span>{here.name}</span><i>·</i>
-        <span>照度 <b>{percent(light.overall)}</b></span><i>·</i><span>盲区 <b>{light.blind.length}</b></span>
-        {light.benchmark && <><i className={styles.hideNarrow}>·</i><span className={styles.hideNarrow}>体检 <b>{passed}/{total}</b></span></>}
-        <span className={styles.spacer} />
-        <span className={`${styles.modeLine} ${styles.hideNarrow}`}>指令模式 · 未接入模型</span><i className={styles.hideNarrow}>·</i>
-        <span className={styles.hideNarrow}>本地草稿，未同步云端</span>
-      </footer>
+      </section>
     </div>
   </GenerationProvider></WorkbenchNavProvider></ThemeProvider>;
+}
+
+function subscribeResize(listener: () => void) {
+  window.addEventListener('resize', listener);
+  return () => window.removeEventListener('resize', listener);
 }

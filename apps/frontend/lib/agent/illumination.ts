@@ -39,7 +39,7 @@ function designLight(d: Questionnaire | null): RoomLight {
   // A question counts once it has a stem: the studio opens with a blank one, which is a form, not evidence.
   const n = d?.questions.length ?? 0, asked = d?.questions.filter(q => q.text.trim()).length ?? 0;
   const check = (id: string, passed: boolean, label: string, detail: string): LightCheck => ({ id: `design.${id}`, room: 'design', go: 'design', label, passed, detail });
-  if (!d || !asked) return { room: 'design', score: 0, summary: '还没有题目', checks: [check('questions', false, '问卷还没有题目', '在问卷室写下第一道题，或从选题诊断带入草稿。')] };
+  if (!d || !asked) return { room: 'design', score: 0, summary: '还没有题目', checks: [check('questions', false, '问卷还没有题目', '在问卷设计里写下第一道题，或从选题诊断带入草稿。')] };
   const blockers = questionnaireIssues(d).filter(i => i.level === 'blocker').length, mapped = d.questions.filter(questionIsMapped).length;
   const framed = !!d.objective.trim() && !!d.population.trim();
   const checks = [
@@ -67,7 +67,7 @@ function samplingLight(view: ProjectView): RoomLight {
   // on its own and the clash is shown, never settled by a guess; until it is cleared the totals are not trusted.
   const clashing = legacy.filter(r => frames.filter(f => f.title === r.title).length > 1).length;
   const check = (id: string, passed: boolean, label: string, detail: string, go: RoomId = 'sampling'): LightCheck => ({ id: `sampling.${id}`, room: 'sampling', go, label, passed, detail });
-  if (!frames.length) return { room: 'sampling', score: 0, summary: '方案还没写进报告', checks: [check('frame', false, '抽样方案还没写进报告', '在抽样室定好分阶段方案，一键插入报告的调查方案章节；写进报告的方案才算证据。')] };
+  if (!frames.length) return { room: 'sampling', score: 0, summary: '方案还没写进报告', checks: [check('frame', false, '抽样方案还没写进报告', '在抽样设计里定好分阶段方案，一键插入报告的调查方案章节；写进报告的方案才算证据。')] };
   const planned = frames.map(r => r.metrics.find(m => m.label === '计划有效样本')?.value ?? 0);
   const total = planned.reduce((sum, v) => sum + v, 0), stated = planned.every(v => v > 0);
   const nonProbability = frames.filter(r => r.warnings.some(w => /不是概率样本/u.test(w))).length;
@@ -81,11 +81,11 @@ function samplingLight(view: ProjectView): RoomLight {
     : effective !== null
     ? check('reach', stated && effective >= total, effective >= total ? `有效 ${effective} 份，达到计划的 ${total} 份` : `有效 ${effective} 份，未达计划的 ${total} 份`,
       effective < total ? '补充回收，或在报告中说明样本不足对估计精度的影响。' : data?.screened ? '有效份数取自已经质量控制的数据。' : '有效份数取自为这份数据登记的质量控制结果。')
-    : view.dataset ? check('reach', false, `回收 ${view.dataset.rows} 行，有效份数待质量控制`, '原始行数不等于有效答卷：在分析室筛除无效答卷并登记质量控制结果后再核对计划。', 'analysis')
-    : check('reach', false, '还没有回收数据可对照计划', '在分析室载入回收数据并完成质量控制后，按有效份数核对计划样本量。', 'analysis');
+    : view.dataset ? check('reach', false, `回收 ${view.dataset.rows} 行，有效份数待质量控制`, '原始行数不等于有效答卷：在数据分析里筛除无效答卷并登记质量控制结果后再核对计划。', 'analysis')
+    : check('reach', false, '还没有回收数据可对照计划', '在数据分析里载入回收数据并完成质量控制后，按有效份数核对计划样本量。', 'analysis');
   const checks = [
     check('frame', true, `报告写入了 ${frames.length} 个抽样框`, frames.map(r => r.title).join('、')),
-    ...(clashing ? [check('distinct', false, `${clashing} 个旧抽样框与其他抽样框同名`, '它们写于抽样框带群体标识之前，无法判断是同一群体的修订还是不同群体。在抽样室重新写入一次报告，并删去报告里旧的抽样框表格。')] : []),
+    ...(clashing ? [check('distinct', false, `${clashing} 个旧抽样框与其他抽样框同名`, '它们写于抽样框带群体标识之前，无法判断是同一群体的修订还是不同群体。在抽样设计里重新写入一次报告，并删去报告里旧的抽样框表格。')] : []),
     check('size', stated, stated ? `计划有效样本共 ${total} 份${clashing ? '（含同名旧抽样框，可能重复）' : ''}` : '有抽样框没写计划有效样本量', '样本量决定估计精度，也是回收率与有效率的分母。'),
     reach,
   ];
@@ -99,11 +99,11 @@ function analysisLight(view: ProjectView): RoomLight {
   const data = view.dataset;
   const checks: LightCheck[] = [
     { id: 'analysis.data', room: 'analysis', go: 'analysis', passed: !!data, label: data ? `已载入「${data.name}」` : '还没有载入数据',
-      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}${data.screened ? ' · 已质量控制' : ''}` : '在分析室导入回收的问卷数据；没有数据时可用硅基样本生成教学模拟数据。' },
+      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}${data.screened ? ' · 已质量控制' : ''}` : '在数据分析里导入回收的问卷数据；没有数据时可用硅基样本生成教学模拟数据。' },
     { id: 'analysis.results', room: 'analysis', go: 'analysis', passed: registered > 0, label: registered ? `已登记 ${registered} 项分析结果` : '还没有登记分析结果',
-      detail: registered ? '登记的结果带着来源与计算过程进入报告。' : '在分析室完成一项描述、检验或图表，发送到报告即登记。' },
+      detail: registered ? '登记的结果带着来源与计算过程进入报告。' : '在数据分析里完成一项描述、检验或图表，发送到报告即登记。' },
     { id: 'analysis.findings', room: 'analysis', go: 'editor', passed: confirmed > 0, label: confirmed ? `已确认 ${confirmed} 条研究发现` : '还没有确认研究发现',
-      detail: confirmed ? '已确认的发现可以写成结论与建议。' : '在报告室的研究发现面板里，把结果整理成发现并逐条确认。' },
+      detail: confirmed ? '已确认的发现可以写成结论与建议。' : '在报告与 PPT 的研究发现面板里，把结果整理成发现并逐条确认。' },
   ];
   return { room: 'analysis', score: share(checks), checks, summary: data ? `${data.rows} 行 · ${registered} 项结果` : '还没有数据' };
 }
@@ -111,7 +111,7 @@ function analysisLight(view: ProjectView): RoomLight {
 function reportLight(content: EditorContent | null): [RoomLight, BenchmarkResult | null] {
   // The editor's checklist gives the bare template some structure points; light starts with the first words of the report's own.
   if (!content || !reportWritten(content)) return [{ room: 'editor', score: 0, summary: '仍是空白模板', checks: [
-    { id: 'report.body', room: 'editor', go: 'editor', passed: false, label: '报告仍是空白模板', detail: '走进报告室按蓝图写第一章；分析结果、抽样方案与公式都能一键插入。模板自带的结构分不算光。' }] }, null];
+    { id: 'report.body', room: 'editor', go: 'editor', passed: false, label: '报告仍是空白模板', detail: '打开报告与 PPT，按蓝图写第一章；分析结果、抽样方案与公式都能一键插入。模板自带的结构分不算光。' }] }, null];
   const benchmark = benchmarkReport(content);
   const checks = benchmark.checks.filter(c => c.status !== 'na').map((c): LightCheck => ({
     id: `report.${c.id}`, room: 'editor', go: c.fixes.find(f => f.module)?.module ?? 'editor', label: c.label, passed: c.status === 'pass', detail: c.detail,

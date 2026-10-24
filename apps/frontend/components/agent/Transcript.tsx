@@ -1,47 +1,43 @@
 'use client';
 
-import { memo, useEffect, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
 import { Formula } from '@/components/math/Tex';
 import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
 import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
-import type { Message } from './transcript-store';
+import type { Message } from './threads';
 import styles from './AgentShell.module.css';
 
 type Handlers = { onAction: (action: AgentAction) => void; onAnswer: (id: string, answer: 'confirmed' | 'cancelled', action?: AgentAction) => void };
 
-/** The conversation. It follows new replies unless the reader has scrolled back to read. Its handlers are stable, so it re-renders only with the transcript. */
-export default memo(function Transcript({ messages, onSay, ...handlers }: { messages: Message[]; onSay: (text: string) => void } & Handlers) {
-  const ref = useRef<HTMLDivElement>(null), pinned = useRef(true);
-  useLayoutEffect(() => {
-    const el = ref.current, last = messages.at(-1);
+/**
+ * One conversation, in a centred column inside the shell's scroll area. It follows new replies unless the reader has
+ * scrolled back to read; sending always brings the reader back down. Its handlers are stable, so it re-renders only
+ * when the conversation does.
+ */
+export default memo(function Transcript({ messages, scrollRef, ...handlers }: { messages: Message[]; scrollRef: RefObject<HTMLDivElement | null> } & Handlers) {
+  const pinned = useRef(true);
+  useEffect(() => {
+    const el = scrollRef.current;
     if (!el) return;
-    // Sending always brings the reader back down; replies only when they were already there.
-    if (pinned.current || last?.role === 'user' || last?.role === 'pending') { el.scrollTop = el.scrollHeight; pinned.current = true; }
-  }, [messages]);
-  return <div ref={ref} className={styles.transcript} role="log" aria-label="对话记录" aria-live="polite" aria-relevant="additions"
-    onScroll={event => { const el = event.currentTarget; pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48; }}>
-    {messages.length ? messages.map(message => <MessageView key={message.id} message={message} {...handlers} />) : <Welcome onSay={onSay} />}
+    const onScroll = () => { pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48; };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [scrollRef]);
+  useLayoutEffect(() => {
+    const el = scrollRef.current, last = messages.at(-1);
+    if (el && (pinned.current || last?.role === 'user' || last?.role === 'pending')) { el.scrollTop = el.scrollHeight; pinned.current = true; }
+  }, [messages, scrollRef]);
+  return <div className={styles.column} role="log" aria-label="对话记录" aria-live="polite" aria-relevant="additions">
+    {messages.map(message => <MessageView key={message.id} message={message} {...handlers} />)}
   </div>;
 });
 
-function Welcome({ onSay }: { onSay: (text: string) => void }) {
-  return <div className={styles.welcome}>
-    <b>◆ 证见 · 指令模式</b>
-    <h2>说出要做的事。</h2>
-    <p>我能带你走进任何一间房，告诉你哪里还暗、下一步该做什么；知识镜里的概念，我原文照录给你。</p>
-    <p><strong>现在还没有接入模型</strong>：我只听懂命令和常用说法，听不懂时会直说，不会编造。</p>
-    <div className={styles.chips}>{['下一步做什么', '/照度', '打开问卷室', '什么是设计效应'].map((s, i) =>
-      <button key={s} type="button" className={`${styles.chip} ${i === 0 ? styles.chipPrimary : ''}`} onClick={() => onSay(s)}>{s}</button>)}</div>
-  </div>;
-}
-
 function MessageView({ message, onAction, onAnswer }: { message: Message } & Handlers) {
-  if (message.role === 'user') return <div className={`${styles.message} ${styles.user}`}><b aria-hidden="true">›</b><p>{message.text}</p></div>;
-  if (message.role === 'pending') return <div className={styles.message}><b aria-hidden="true">◆</b><div className={styles.reply}><p className={styles.waiting}>正在查知识镜「{message.query}」</p></div></div>;
+  if (message.role === 'user') return <div className={`${styles.message} ${styles.user}`}><p>{message.text}</p></div>;
+  if (message.role === 'pending') return <div className={styles.message}><div className={styles.reply}><p className={styles.waiting}>正在查知识镜「{message.query}」</p></div></div>;
   const { turn } = message;
   return <div className={styles.message}>
-    <b aria-hidden="true">◆</b>
     <div className={styles.reply}>
       {turn.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}
       {turn.cards?.map((card, i) => <Card key={i} card={card} message={message} onAction={onAction} onAnswer={onAnswer} />)}
@@ -93,7 +89,9 @@ function Card({ card, message, onAction, onAnswer }: { card: AgentCard; message:
   </div>;
   return <div className={styles.card}>
     <span className={styles.cardTitle}>{card.title}</span>
-    <div className={styles.cardLines}>{card.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}</div>
+    {card.columns ? <div className={styles.cardGrid} style={{ gridTemplateColumns: `repeat(${Math.max(...card.lines.map(l => l.length)) - 1}, max-content) minmax(0, 1fr)` }}>
+      {card.lines.map((line, i) => <p key={i}>{line.map((span, j) => <span key={j}><Spans line={[span]} at={message.at} /></span>)}</p>)}
+    </div> : <div className={styles.cardLines}>{card.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}</div>}
     {!!card.links?.length && <div className={styles.cardLinks}>
       {card.links.map((link, i) => <button key={i} type="button" className={styles.chip} onClick={() => onAction(link.action)}>{link.label} →</button>)}
     </div>}

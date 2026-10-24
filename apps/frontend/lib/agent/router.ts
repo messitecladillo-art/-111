@@ -26,7 +26,8 @@ export type AgentAction =
 /** A primary link is the one step the agent recommends; a turn has at most one. */
 export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
-  | { kind: 'tool'; title: string; lines: Line[]; links?: AgentLink[] }
+  /** With `columns`, each line is a row and each span a cell, aligned under the row above. */
+  | { kind: 'tool'; title: string; lines: Line[]; links?: AgentLink[]; columns?: boolean }
   | { kind: 'confirm'; title: string; lines: Line[]; confirm: AgentLink; cancel: string }
   | { kind: 'entry'; id: string; name: string; english?: string; definition: string; formula?: string; sources: string[]; reviewed: boolean }
   | { kind: 'trace'; reference: string; title: string; steps: TraceStep[] }
@@ -34,7 +35,7 @@ export type AgentCard =
   | { kind: 'consent'; brief: string; state: 'open' | 'submitted' | 'cancelled'; projectId?: string; projectTitle?: string; serviceId?: string; serviceLabel?: string }
   /** A model call. `request` is kept while its outcome is unknown, so a check replays it exactly and costs nothing new. */
   | { kind: 'job'; status: 'running' | 'done' | 'failed' | 'unknown'; detail: string; projectId: string; serviceLabel: string; model: string; request?: QuestionnaireGenerationRequest }
-  /** A questionnaire the model proposed: generated and not yet reviewed, so it is shown as such until the 问卷室 applies it. */
+  /** A questionnaire the model proposed: generated and not yet reviewed, so it is shown as such until 问卷设计 applies it. */
   | { kind: 'proposal'; projectId: string; proposalId: string; serviceId: string; serviceRevision: number; serviceLabel: string; model: string; inputRevision: number; design: Questionnaire };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
 /** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
@@ -45,10 +46,10 @@ export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
   | { generate: string };
 
 export type Command = { name: string; args?: string; line: string; words: readonly string[] };
-const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `走进${r.name}`, words: [r.id] }));
+const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打开${r.name}`, words: [r.id] }));
 export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
-  { name: '照度', line: '各房间的证据完整度', words: ['status'] },
+  { name: '照度', line: '各模块的证据完整度', words: ['status'] },
   { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
   { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
   { name: '生成', args: '研究需求', line: '用你的模型服务起草问卷，确认后才调用', words: ['generate', 'draft'] },
@@ -56,7 +57,7 @@ export const COMMANDS: readonly Command[] = [
   ...ROOM_COMMANDS,
   { name: '夜', line: '切换到深色主题', words: ['dark'] },
   { name: '昼', line: '切换到浅色主题', words: ['day'] },
-  { name: '清空', line: '清空本页对话，项目数据不受影响', words: ['clear'] },
+  { name: '清空', line: '删除这段对话，项目数据不受影响', words: ['clear'] },
   { name: '经典', line: '打开经典工作台', words: ['classic'] },
   { name: '帮助', line: '全部命令与常用说法', words: ['help', '?'] },
 ];
@@ -72,7 +73,7 @@ const recommend = (link: AgentLink): AgentLink => ({ ...link, primary: true });
 const named = (id: RoomId) => roomById(id).name;
 const lit = (id: RoomId): id is (typeof LIT_ROOMS)[number] => (LIT_ROOMS as readonly RoomId[]).includes(id);
 
-/** Rooms named in a sentence, the longest name first, so 问卷室 outranks a passing 数据. */
+/** Modules named in a sentence, the longest name first, so 问卷设计 outranks a passing 数据. */
 export function mentionedRooms(text: string): Room[] {
   const lower = text.toLowerCase();
   return ROOMS.map(room => ({ room, length: Math.max(0, ...[room.name, ...room.aliases].filter(a => lower.includes(a.toLowerCase())).map(a => a.length)) }))
@@ -84,9 +85,9 @@ function help(): AgentTurn {
   return {
     lines: [[t('我是'), t('证见', 'strong'), t('。现在是'), t('指令模式', 'teal'), t('：还没有接入模型，我只听懂命令和下面这些说法；听不懂时会直说，不会编造。')]],
     cards: [
-      { kind: 'tool', title: '命令', lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(`　${c.line}`, 'dim')]) },
-      { kind: 'tool', title: '房间', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
-      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开分析室', '图 1-1 的数字从哪来', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
+      { kind: 'tool', title: '命令', columns: true, lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(c.line, 'dim')]) },
+      { kind: 'tool', title: '模块', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
+      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开数据分析', '图 1-1 的数字从哪来', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
     ],
     chips: [recommend(say('下一步做什么')), say('/照度')],
   };
@@ -94,7 +95,7 @@ function help(): AgentTurn {
 
 function lightLine(id: RoomId, light: Illumination): Line {
   const r = roomLight(light, id);
-  if (!r) return [t('照度：此房间尚未接入', 'dim')];
+  if (!r) return [t('证据完整度：这个模块尚未接入', 'dim')];
   return [t('照度 '), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(` ${percent(r.score)}`, 'gold'), t(`　${r.summary}`, 'dim')];
 }
 
@@ -104,13 +105,13 @@ function status(ctx: RouterContext, scope?: RoomId): AgentTurn {
     const r = roomLight(light, scope)!;
     return {
       lines: [[t(`${named(scope)}的照度 `), t(percent(r.score), 'gold'), t('，逐项如下：')]],
-      cards: [{ kind: 'tool', title: `读取 · ${named(scope)}`, lines: r.checks.slice(0, 12).map(c => [t(c.passed ? '✓ ' : '✕ ', c.passed ? 'gold' : 'error'), t(c.label), t(`　${c.detail}`, 'dim')]) }],
+      cards: [{ kind: 'tool', title: `读取 · ${named(scope)}`, columns: true, lines: r.checks.slice(0, 12).map(c => [t(c.passed ? '✓' : '✕', c.passed ? 'gold' : 'error'), t(c.label), t(c.detail, 'dim')]) }],
       chips: [say('下一步做什么')],
     };
   }
   return {
-    lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的房间：问卷、抽样、分析与报告；其他房间接入 Agent 主循环后再点亮。', 'dim')]],
-    cards: [{ kind: 'tool', title: '读取 · 项目照度', lines: light.rooms.map(r => [t(`${named(r.room)}　`), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(` ${percent(r.score).padStart(4, ' ')}`, 'gold'), t(`　${r.summary}`, 'dim')]) }],
+    lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的模块：问卷、抽样、分析与报告；其他模块接入 Agent 主循环后再计算。', 'dim')]],
+    cards: [{ kind: 'tool', title: '读取 · 项目照度', columns: true, lines: light.rooms.map(r => [t(named(r.room)), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(percent(r.score), 'gold'), t(r.summary, 'dim')]) }],
     chips: [recommend(say('下一步做什么')), say('还缺什么', '/盲区')],
   };
 }
@@ -125,7 +126,7 @@ function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
     cards: [{
       kind: 'tool', title: '读取 · 盲区',
       lines: [...shown.map((c: LightCheck) => [t('✕ ', 'error'), t(`${named(c.room)} · `, 'dim'), t(c.label), t(`　${c.detail}`, 'dim')]),
-        ...(spots.length > shown.length ? [[t(`还有 ${spots.length - shown.length} 处，前厅的照度图里列全了。`, 'dim')]] : [])],
+        ...(spots.length > shown.length ? [[t(`还有 ${spots.length - shown.length} 处，项目全景里列全了。`, 'dim')]] : [])],
       links: rooms.map(id => say(`去${named(id)}`, `/${roomById(id).command}`)),
     }],
   };
@@ -133,10 +134,10 @@ function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
 
 function nextStep(ctx: RouterContext): AgentTurn {
   const spot = ctx.light.blind[0];
-  if (!spot) return { lines: [[t('有照度的房间，检查都通过了。')], [t('可以去答辩室演练追问，交稿前在提交前体检里查一遍文件。', 'dim')]], chips: [say('/答辩'), say('/提交')] };
+  if (!spot) return { lines: [[t('有照度的模块，检查都通过了。')], [t('可以打开路演答辩演练追问，交稿前用提交前体检查一遍文件。', 'dim')]], chips: [say('/答辩'), say('/提交')] };
   return {
     lines: [[t('下一步：'), t(spot.label, 'strong'), t('。')], [t(spot.detail, 'dim')]],
-    chips: [recommend(say(`走进${named(spot.go)}`, `/${roomById(spot.go).command}`)), say('还缺什么', '/盲区')],
+    chips: [recommend(say(`打开${named(spot.go)}`, `/${roomById(spot.go).command}`)), say('还缺什么', '/盲区')],
   };
 }
 
@@ -144,7 +145,7 @@ function nextStep(ctx: RouterContext): AgentTurn {
 function trace(ctx: RouterContext, arg = ''): AgentTurn {
   const traces = ctx.traces ?? [], wanted = arg.trim(), key = exhibitKey(wanted);
   if (!traces.length) return {
-    lines: [[t('报告里还没有来自登记结果的图表。')], [t('在分析室完成一项分析并发送到报告，或从抽样室插入抽样框，就能沿光路回溯到数据与题目。', 'dim')]],
+    lines: [[t('报告里还没有来自登记结果的图表。')], [t('在数据分析里完成一项分析并发送到报告，或从抽样设计插入抽样框，就能沿光路回溯到数据与题目。', 'dim')]],
     chips: [recommend(say('/分析')), say('/报告')],
   };
   const chosen = wanted ? traces.filter(x => exhibitKey(x.reference) === key || x.title.includes(wanted)) : traces.length === 1 ? traces : [];
@@ -159,23 +160,23 @@ function trace(ctx: RouterContext, arg = ''): AgentTurn {
 }
 
 function open(room: Room, ctx: RouterContext): AgentTurn {
-  if (room.id === ctx.room) return { lines: [[t('你已经在'), t(room.name, 'strong'), t('。')], [t(room.line, 'dim')]] };
+  if (room.id === ctx.room) return { lines: [[t(room.name, 'strong'), t('已经在右侧打开。')], [t(room.line, 'dim')]] };
   return {
-    lines: [[t('走进'), t(room.name, 'strong'), t('。')]],
-    cards: [{ kind: 'tool', title: `走进 · ${room.name}`, lines: [[t(room.line, 'dim')], ...(lit(room.id) ? [lightLine(room.id, ctx.light)] : [])] }],
+    lines: [[t('在右侧打开'), t(room.name, 'strong'), t('。')]],
+    cards: [{ kind: 'tool', title: `打开 · ${room.name}`, lines: [[t(room.line, 'dim')], ...(lit(room.id) ? [lightLine(room.id, ctx.light)] : [])] }],
     act: { type: 'open', room: room.id },
   };
 }
 
 function choose(rooms: Room[]): AgentTurn {
   return {
-    lines: [[t('这句话涉及'), ...rooms.flatMap((r, i) => [...(i ? [t('、')] : []), t(r.name, 'strong')]), t('。')], [t('指令模式下我一次只走进一间房，先去哪一间？', 'dim')]],
+    lines: [[t('这句话涉及'), ...rooms.flatMap((r, i) => [...(i ? [t('、')] : []), t(r.name, 'strong')]), t('。')], [t('指令模式下我一次只打开一个模块，先开哪一个？', 'dim')]],
     chips: rooms.map(r => say(r.name, `/${r.command}`)),
   };
 }
 
 const unknown = (): AgentTurn => ({
-  lines: [[t('指令模式下我听不懂这句话，也不会去猜。')], [t('可以说“下一步做什么”“还缺什么”“打开问卷室”，或输入 ', 'dim'), t('/', 'teal'), t(' 查看全部命令。', 'dim')]],
+  lines: [[t('指令模式下我听不懂这句话，也不会去猜。')], [t('可以说“下一步做什么”“还缺什么”“打开问卷设计”，或输入 ', 'dim'), t('/', 'teal'), t(' 查看全部命令。', 'dim')]],
   chips: [recommend(say('下一步做什么')), say('/帮助')],
 });
 
@@ -199,7 +200,7 @@ function slash(body: string, ctx: RouterContext): Routed {
       : { turn: { lines: [[t('查什么？例如 '), t('/查 设计效应', 'teal'), t('。')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] } };
     case '夜': return { turn: ctx.theme === 'dark' ? { lines: [[t('现在就是深色主题。')]] } : { lines: [[t('已切换到深色主题。')]], act: { type: 'theme', theme: 'dark' } } };
     case '昼': return { turn: ctx.theme === 'light' ? { lines: [[t('现在就是浅色主题。')]] } : { lines: [[t('已切换到浅色主题。')]], act: { type: 'theme', theme: 'light' } } };
-    case '清空': return { turn: { lines: [[t('清空之前请确认：')]], cards: [{ kind: 'confirm', title: '清空本页对话', lines: [[t('只清除这里的对话记录；问卷、数据与报告都不受影响。', 'dim')]], confirm: { label: '清空', action: { type: 'clear' } }, cancel: '保留' }] } };
+    case '清空': return { turn: { lines: [[t('删除之前请确认：')]], cards: [{ kind: 'confirm', title: '删除这段对话', lines: [[t('只删除这段对话记录；问卷、数据与报告都不受影响。', 'dim')]], confirm: { label: '删除', action: { type: 'clear' } }, cancel: '保留' }] } };
     case '经典': return { turn: { lines: [[t('经典工作台保留了全部模块的原样排布。')]], chips: [{ label: '打开经典工作台 ↗', action: { type: 'href', href: `/workspace#${ctx.room}` } }] } };
     default: return { turn: help() };
   }
@@ -207,13 +208,13 @@ function slash(body: string, ctx: RouterContext): Routed {
 
 const NIGHT = /(深色|夜间|暗色|暗黑)(主题|模式)|(切换?到|换成|改成|改为|用)(深色|夜间|暗色)/u;
 const DAY = /(浅色|日间|亮色|白天)(主题|模式)|(切换?到|换成|改成|改为|用)(浅色|日间|亮色)/u;
-// Asking for a draft names an act of writing; "设计问卷" alone only opens the 问卷室.
+// Asking for a draft names an act of writing; "设计问卷" alone only opens 问卷设计.
 const GENERATE = /(生成|起草|拟一份|出一份|写一份|做一份|帮我出|帮我写|帮我做|帮我拟)[^。！？]{0,30}?问卷|问卷(初稿|草稿|草案)/u;
 const HELP = /^(帮助|help|你能做什么|你会什么|你可以做什么|能做什么|怎么用|如何使用|有哪些命令|命令列表)$/iu;
 const NEXT = /下一步|接下来|该做什么|先做什么|从哪(里)?开始|怎么开始/u;
 const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|短板|没通过/u;
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
-const WHERE = /^(我在哪|这是哪|当前房间|我在哪里)/u;
+const WHERE = /^(我在哪|这是哪|当前模块|打开的是什么|我在哪里)/u;
 const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
 const EXHIBIT = /([图表])\s*([0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?)/u;
 const LOOKUP = [/^(?:什么是|何为|啥是|解释一下|解释|查一下|查查|查|搜一下|搜索|搜)\s*(.+)$/u, /^(.+?)(?:是什么意思|是什么|是啥|什么意思|怎么算|怎么计算|的公式|的定义|指的是什么)$/u];
@@ -239,7 +240,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   const verb = OPEN.exec(input), rooms = mentionedRooms(verb?.[1] ?? input);
   if (rooms.length === 1) return { turn: open(rooms[0], ctx) };
   if (rooms.length > 1) return { turn: choose(rooms.slice(0, 4)) };
-  if (verb) return { turn: { lines: [[t('没有叫'), t(`「${verb[1]}」`, 'strong'), t('的房间。')]], chips: [say('/帮助')] } };
+  if (verb) return { turn: { lines: [[t('没有叫'), t(`「${verb[1]}」`, 'strong'), t('这个模块。')]], chips: [say('/帮助')] } };
   // A short phrase may be a term; a sentence the router cannot read is not guessed at.
   return input.length <= 16 ? { lookup: input, explicit: false } : { turn: unknown() };
 }

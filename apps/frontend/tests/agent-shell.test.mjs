@@ -88,8 +88,8 @@ test('slash commands, rooms and everyday phrasings route to what they name', () 
   assert.match(text(route('下一步做什么？', ctx()).turn), /下一步：问卷还没有题目/);
   assert.match(text(route('查一下进度', ctx()).turn), /整体照度 0%/);
   const scoped = route('问卷还缺什么', ctx()).turn;
-  assert.match(text(scoped), /问卷室里光到不了的角落有 1 处/);
-  assert.doesNotMatch(text(scoped), /分析室/);
+  assert.match(text(scoped), /问卷设计里光到不了的角落有 1 处/);
+  assert.doesNotMatch(text(scoped), /数据分析/);
   assert.equal(route('/清空', ctx()).turn.cards[0].kind, 'confirm', 'clearing asks first');
   assert.match(text(route('/xyz', ctx()).turn), /没有 \/xyz 这个命令/);
 });
@@ -193,8 +193,8 @@ test('an exhibit traces back through its result, scope, quality control and data
   assert.equal(trace.steps[2].detail, '自「原始问卷」剔除 20 行（作答过快），剔除台账 SHA-256 0123456789abcdef…');
   assert.match(trace.steps[3].detail, /^用户提供数据 · 指纹 SHA-256 3fa13fa13fa1…$/);
   assert.equal(trace.steps[4].text, `第 1 题「${asked.text.trim()}」`);
-  assert.deepEqual([trace.steps[5].text, trace.steps[5].detail], ['变量「不存在的列」', '没有对应到问卷室里的题目']);
-  assert.equal(traceExhibits(content, null)[0].steps[4].detail, '问卷室里还没有问卷，无法对应到题目');
+  assert.deepEqual([trace.steps[5].text, trace.steps[5].detail], ['变量「不存在的列」', '没有对应到问卷设计里的题目']);
+  assert.equal(traceExhibits(content, null)[0].steps[4].detail, '问卷设计里还没有问卷，无法对应到题目');
   assert.equal(exhibitKey('图 1－1'), exhibitKey('图1.1'));
   // A sampling frame traces to the plan, keeping its recorded caveat.
   const caveat = '城区居民含拦截、配额或方便抽样阶段，不是概率样本，不报告严格的抽样误差';

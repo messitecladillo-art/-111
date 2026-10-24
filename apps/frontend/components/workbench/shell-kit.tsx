@@ -55,8 +55,9 @@ function chosenTheme(): Theme | null {
 function currentTheme(): Theme {
   return chosenTheme() ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 }
-/** The agent shell is designed night-first: until the user picks a theme anywhere, it opens dark. */
-const nightFirstTheme = (): Theme => chosenTheme() ?? "dark";
+/** A surface with its own default (the agent opens light) still follows any theme the user picked anywhere. */
+const lightFirstTheme = (): Theme => chosenTheme() ?? "light";
+const darkFirstTheme = (): Theme => chosenTheme() ?? "dark";
 function subscribeTheme(listener: () => void) {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   const onStorage = (event: StorageEvent) => { if (event.key === THEME_KEY || event.key === null) { transientTheme = null; listener(); } };
@@ -70,8 +71,8 @@ export function saveTheme(value: Theme) {
   try { window.localStorage.setItem(THEME_KEY, value); } catch { /* Optional UI preference, never research data. */ }
   window.dispatchEvent(new Event(THEME_EVENT));
 }
-export function useThemePreference(nightFirst = false): Theme {
-  return useSyncExternalStore(subscribeTheme, nightFirst ? nightFirstTheme : currentTheme, () => (nightFirst ? "dark" : "light") as Theme);
+export function useThemePreference(fallback?: Theme): Theme {
+  return useSyncExternalStore(subscribeTheme, fallback === "light" ? lightFirstTheme : fallback === "dark" ? darkFirstTheme : currentTheme, () => fallback ?? "light");
 }
 
 export function NavIcon({ kind }: { kind: string }) {

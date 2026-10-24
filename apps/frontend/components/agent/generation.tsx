@@ -12,7 +12,7 @@ import type { AgentCard, AgentTurn, Mark, Span } from '@/lib/agent/router';
 import type { RoomId } from '@/lib/agent/rooms';
 import { QUESTION_TYPES } from '@/lib/questionnaire';
 import { isDefiniteGenerationRejection, prepareQuestionnaireGeneration, type QuestionnaireGenerationRequest } from '@/lib/questionnaire-proposals';
-import { stamp, transcript } from './transcript-store';
+import { stamp, threads } from './threads';
 import styles from './AgentShell.module.css';
 
 /**
@@ -20,7 +20,7 @@ import styles from './AgentShell.module.css';
  * Nothing is sent before the user confirms the brief, the project and the service in a double frame. The call is
  * idempotent: when its outcome is unknown the original request is kept, and checking it replays that request exactly,
  * so no second charge arises. The result is a proposal saved in the project; it changes nothing until the user applies
- * it in the 问卷室.
+ * it in 问卷设计.
  */
 type Consent = Extract<AgentCard, { kind: 'consent' }>;
 type Job = Extract<AgentCard, { kind: 'job' }>;
@@ -30,6 +30,9 @@ export type Generation = {
   account: 'loading' | 'guest' | 'ready';
   lists: Lists;
   busy: boolean;
+  /** The service the composer's model chip points at; the consent card starts from it. */
+  preferredService: string;
+  prefer: (serviceId: string) => void;
   load: () => void;
   start: (brief: string) => AgentTurn;
   submit: (messageId: string, input: { brief: string; projectId: string; serviceId: string }) => void;
@@ -47,8 +50,8 @@ const definite = (failure: unknown) => failure instanceof QuestionnaireProposalE
   && failure.cause instanceof HostedApiError && isDefiniteGenerationRejection(failure.cause.status, failure.cause.code);
 
 function patchCard<K extends AgentCard['kind']>(messageId: string, kind: K, change: (card: Extract<AgentCard, { kind: K }>) => Extract<AgentCard, { kind: K }>) {
-  transcript.update(list => list.map(m => m.id === messageId && m.role === 'agent' && m.turn.cards
-    ? { ...m, turn: { ...m.turn, cards: m.turn.cards.map(c => c.kind === kind ? change(c as Extract<AgentCard, { kind: K }>) : c) } } : m));
+  threads.patch(messageId, m => m.role === 'agent' && m.turn.cards
+    ? { ...m, turn: { ...m.turn, cards: m.turn.cards.map(c => c.kind === kind ? change(c as Extract<AgentCard, { kind: K }>) : c) } } : m);
 }
 /** A finished or failed call drops its request; only an unknown outcome keeps it for an exact replay. */
 function setJob(messageId: string, status: Job['status'], detail: string, request?: QuestionnaireGenerationRequest) {
@@ -58,7 +61,8 @@ function setJob(messageId: string, status: Job['status'], detail: string, reques
     return next;
   });
 }
-const reply = (turn: AgentTurn) => transcript.update(list => [...list, { ...stamp(), role: 'agent', turn }]);
+/** A reply goes to the conversation the call came from, even if the user has opened another one since. */
+const reply = (afterId: string, turn: AgentTurn) => threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn });
 
 const GenerationContext = createContext<Generation | null>(null);
 export const GenerationProvider = GenerationContext.Provider;
@@ -72,6 +76,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const [listsFor, setListsFor] = useState(`${owner}:${identityEpoch}`);
   if (listsFor !== `${owner}:${identityEpoch}`) { setListsFor(`${owner}:${identityEpoch}`); setLists(EMPTY); }
   const [busy, setBusy] = useState(false);
+  const [preferredService, prefer] = useState('');
   const lock = useRef(false);
   const release = useCallback(() => { lock.current = false; setBusy(false); }, []);
   const transport = useMemo(() => ({ read: hostedRequest, mutate }), [mutate]);
@@ -98,8 +103,8 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     if (proposal.status === 'ready' && proposal.design) {
       const design = proposal.design, n = design.questions.length;
       setJob(jobId, 'done', `已起草「${design.title || '未命名问卷'}」· ${n} 题 · 基于问卷 v${proposal.inputRevision}`);
-      reply({
-        lines: [[t(`模型拟了 ${n} 道题。`), t('它还只是建议：带进问卷室审阅，确认应用后才成为你的设计。', 'dim')]],
+      reply(jobId, {
+        lines: [[t(`模型拟了 ${n} 道题。`), t('它还只是建议：带进问卷设计审阅，确认应用后才成为你的设计。', 'dim')]],
         cards: [{ kind: 'proposal', projectId, proposalId: proposal.id, serviceId: proposal.serviceId, serviceRevision: proposal.serviceRevision, serviceLabel: service.label, model: service.model, inputRevision: proposal.inputRevision, design }],
       });
     } else if (proposal.status === 'failed') {
@@ -128,7 +133,8 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     const epoch = identityEpoch, current = () => isCurrentAccount(owner, epoch);
     patchCard(messageId, 'consent', card => ({ ...card, state: 'submitted', brief, projectId: project.id, projectTitle: project.title, serviceId: service.id, serviceLabel: service.label }));
     const job = { ...stamp(), role: 'agent' as const, turn: { lines: [[t('开始起草。')]], cards: [{ kind: 'job' as const, status: 'running' as const, detail: '正在读取项目当前的问卷版本…', projectId: project.id, serviceLabel: service.label, model: service.model }] } };
-    transcript.update(list => [...list, job]);
+    threads.appendAfter(messageId, job);
+    threads.file(messageId, project.id);
     void (async () => {
       let revision: number;
       try {
@@ -149,7 +155,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   }, [lists, owner, identityEpoch, isCurrentAccount, transport, run, release]);
 
   const reconcile = useCallback((messageId: string) => {
-    const message = transcript.snapshot().find(m => m.id === messageId);
+    const message = threads.find(messageId);
     const job = message?.role === 'agent' ? message.turn.cards?.find((c): c is Job => c.kind === 'job') : undefined;
     if (lock.current || !owner || !job?.request) return;
     lock.current = true;
@@ -165,7 +171,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     openRoom('design');
   }, [onProposal, openRoom]);
 
-  return useMemo(() => ({ account, lists, busy, load, start, submit, cancel, reconcile, bring }), [account, lists, busy, load, start, submit, cancel, reconcile, bring]);
+  return useMemo(() => ({ account, lists, busy, preferredService, prefer, load, start, submit, cancel, reconcile, bring }), [account, lists, busy, preferredService, load, start, submit, cancel, reconcile, bring]);
 }
 
 /** The double frame: what is sent, where it is saved, and which service runs it. Nothing runs until 起草 (y). */
@@ -180,8 +186,9 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   useEffect(() => { if (open && Date.now() - at < 1500) ref.current?.focus(); }, [open, at]);
   if (!g) return null;
   const { projects, services } = g.lists;
-  const project = projects.some(p => p.id === projectId) ? projectId : projects[0]?.id ?? '';
-  const service = services.some(s => s.id === serviceId) ? serviceId : services[0]?.id ?? '';
+  // The conversation's own project comes first, as the preferred service does.
+  const project = [projectId, threads.projectOf(messageId)].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
+  const service = [serviceId, g.preferredService].find(id => services.some(s => s.id === id)) ?? services[0]?.id ?? '';
   const ready = open && g.account === 'ready' && g.lists.state === 'ready' && !!brief.trim() && brief.length <= BRIEF_LIMIT && !!project && !!service && !g.busy;
   const submit = () => { if (ready) g.submit(messageId, { brief, projectId: project, serviceId: service }); };
   const key = (event: KeyboardEvent) => {
@@ -231,7 +238,7 @@ export function JobCard({ messageId, card }: { messageId: string; card: Job }) {
   </div>;
 }
 
-/** The model's questionnaire as proposed: its stems in cyan, since nothing in it is verified until the 问卷室 applies it. */
+/** The model's questionnaire as proposed: its stems in cyan, since nothing in it is verified until 问卷设计 applies it. */
 export function ProposalView({ card }: { card: ProposalCard }) {
   const g = useContext(GenerationContext), d = card.design;
   return <div className={`${styles.card} ${styles.proposal}`}>
@@ -242,7 +249,7 @@ export function ProposalView({ card }: { card: ProposalCard }) {
     <ol className={styles.proposalItems}>{d.questions.map(q => <li key={q.id}><span>{q.text}</span><small>{QUESTION_TYPES[q.type]}</small></li>)}</ol>
     <p className={styles.proposalFoot}>AI 拟议 · 尚未预测试 · {card.serviceLabel}（{card.model}）· 基于问卷 v{card.inputRevision}</p>
     <div className={styles.cardLinks}>
-      <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} disabled={!g} onClick={() => g?.bring(card)}>带入问卷室审阅 →</button>
+      <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} disabled={!g} onClick={() => g?.bring(card)}>带入问卷设计审阅 →</button>
       <Link className={styles.chip} href={`/projects/${encodeURIComponent(card.projectId)}`}>在项目中打开 ↗</Link>
       <button type="button" className={styles.chip} onClick={() => downloadQuestionnaire(d, `${(d.title || '问卷提案').replace(/[\\/:*?"<>|]/g, '-')}.json`)}>下载 JSON</button>
     </div>

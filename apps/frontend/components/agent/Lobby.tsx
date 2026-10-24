@@ -12,7 +12,7 @@ import styles from './AgentShell.module.css';
 const PLAN: readonly (readonly RoomId[])[] = [['diagnose', 'rules', 'design', 'sampling'], ['defense', 'editor', 'canvas', 'analysis']];
 const ORDER: readonly RoomId[] = [...PLAN[0], ...[...PLAN[1]].reverse()];
 
-/** 前厅: where the light reaches, where it does not, and the evidence chain it rests on. Everything here is read from the project. */
+/** 项目全景: where the evidence reaches, where it does not, and the chain it rests on. Everything here is read from the project. */
 export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }: {
   light: Illumination; view: ProjectView; traces: number; onOpen: (room: RoomId) => void; onSay: (text: string) => void; headingRef: Ref<HTMLHeadingElement>;
 }) {
@@ -30,9 +30,9 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
 
   return <div className={styles.lobby}>
     <header className={styles.lobbyHead}>
-      <b>前厅 · 镜室</b>
+      <b>证据完整度</b>
       <h1 ref={headingRef} tabIndex={-1}>每一个数字，都有来处。</h1>
-      <p>研究是一间镜室：证据是光，结论是房间，盲区是光到不了的角落。这里看到的每一格光，都来自项目里真实的问卷、数据与报告。</p>
+      <p>证据是光，盲区是光到不了的地方。这里的每一格光，都来自项目里真实的问卷、数据与报告。</p>
     </header>
 
     <section className={styles.section} aria-labelledby="lobby-map">
@@ -55,9 +55,9 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
       <p className={styles.legend} aria-label="图例">
         <span><i>·</i> 无证据</span><span><b>░</b> 微弱</span><span><b>▒</b> 部分</span><span><b>▓</b> 充分</span><span><b>█</b> 全部通过</span>
       </p>
-      <p className={styles.note}>照度来自问卷室、抽样室、分析室与报告室的检查；虚线框的房间接入 Agent 主循环后再点亮。</p>
-      <div className={styles.gallery}><span>镜廊</span>
-        <a href="#cases">案例库</a><a href="#silicon">硅基样本</a><span className={styles.note}>只映照，不替你下结论。</span>
+      <p className={styles.note}>照度来自问卷设计、抽样设计、数据分析与报告的检查；虚线框的模块接入后再计算。</p>
+      <div className={styles.gallery}><span>参考</span>
+        <a href="#cases">获奖案例</a><a href="#silicon">硅基样本</a><span className={styles.note}>只作参照，不替你下结论。</span>
       </div>
     </section>
 
@@ -69,7 +69,7 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
           <div><strong>{spot.label}</strong><small>{spot.detail}</small></div>
           <button type="button" className={styles.go} onClick={() => onOpen(spot.go)}>去{roomById(spot.go).name} →</button>
         </li>)}
-      </ul> : <p className={styles.clear}>没有盲区：有照度的房间，检查全部通过。</p>}
+      </ul> : <p className={styles.clear}>没有盲区：有照度的模块，检查全部通过。</p>}
       {light.blind.length > 6 && <button type="button" className={styles.go} style={{ marginTop: 12 }} onClick={() => setAllSpots(!allSpots)}>{allSpots ? '收起' : `展开全部 ${light.blind.length} 处`}</button>}
     </section>
 

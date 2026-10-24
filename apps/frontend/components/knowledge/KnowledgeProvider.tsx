@@ -55,7 +55,7 @@ const KnowledgeControlContext = createContext<KnowledgeControl | null>(null);
 export function useKnowledge() { const value = useContext(KnowledgeControlContext); if (!value) throw Error('缺少知识镜上下文'); return value; }
 
 export default function KnowledgeProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname(), auth = useHostedSession(), theme = useThemePreference(pathname === '/agent');
+  const pathname = usePathname(), auth = useHostedSession(), theme = useThemePreference(pathname === '/agent' ? 'light' : undefined);
   const account = useKnowledgeAccount();
   const { recordVisit, updatePrefs, setFavorite } = account;
   const hash = useSyncExternalStore(subscribeHash, () => location.hash, () => '');
