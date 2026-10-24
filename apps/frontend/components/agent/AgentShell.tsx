@@ -25,6 +25,10 @@ import Lobby from './Lobby';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message } from './threads';
+import type { Service } from '@evix/shared';
+
+/** A sentence's later steps: what the tools found, which ran already, and the service the user agreed to. */
+type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service };
 import styles from './AgentShell.module.css';
 
 // Every workbench module opens in the panel and every panel hosts a module: the two lists cannot drift apart.
@@ -201,9 +205,11 @@ export default function AgentShell() {
     };
     const say = (line: Line, chips?: AgentTurn['chips']) => threads.append([{ ...stamp(), role: 'agent', turn: { lines: [line], chips } }]);
     // `next` continues a sentence from what the previous step's tools found; without it, a new sentence starts.
-    // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new.
-    const turn = (text: string, next?: { step: number; results: ToolResult[]; seen: Set<string> }) => {
-      const { panel, light, traces, chatService, owner, mutate } = latest.current;
+    // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new. A
+    // continuation keeps the service the sentence began with, the one the user agreed to, even if the menu has moved on.
+    const turn = (text: string, next?: Chain) => {
+      const { panel, light, traces, owner, mutate } = latest.current;
+      const chatService = next?.service ?? latest.current.chatService;
       if (!chatService) return;
       const book = threads.view(owner), messages = book.threads.find(t => t.id === book.active)?.messages ?? [];
       const asked = messages.map(m => m.role === 'user' && m.text === text).lastIndexOf(true);
@@ -220,11 +226,12 @@ export default function AgentShell() {
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       threads.append([waiting]);
       const seen = next?.seen ?? new Set<string>();
-      sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen), failure => fail(waiting.id, failure, request.idempotencyKey, text));
+      sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
     };
     const replace = (messageId: string, next: AgentTurn) => threads.patch(messageId, m => m.role === 'agent' ? { ...m, turn: next } : m);
     // A receipt in place of the waiting line: the reply, marked as unverified, then each tool it asked for, run here.
-    const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>()) => {
+    // A receipt read back by 核对回执 has no chain to continue: it settles, and the user can ask again from there.
+    const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>(), service?: Service) => {
       if (receipt.status === 'ready' && receipt.reply) {
         replace(messageId, { lines: [...receipt.reply.split(/\n+/u).filter(p => p.trim()).map(p => [span(p)]), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
         const asked = receipt.message;
@@ -233,7 +240,7 @@ export default function AgentShell() {
         const fresh = receipt.actions.filter(action => { const key = action.tool + JSON.stringify(action.args); return !seen.has(key) && !!seen.add(key); });
         void Promise.all(fresh.map(action => run(messageId, action))).then(found => {
           const results = found.filter((r): r is ToolResult => !!r).slice(0, 4);
-          if (results.length && asked && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen });
+          if (results.length && asked && service && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen, service });
         });
       } else if (receipt.status === 'failed') {
         replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
@@ -255,6 +262,11 @@ export default function AgentShell() {
           ? replace(messageId, { lines: [[span('这一轮没有发出，', 'error'), span('没有产生费用，可以再问一次。')]] })
           : fail(messageId, failure, turnId, ''));
     };
+    // The knowledge index loads once per visit; a lookup in the loop waits for it a little rather than going unanswered.
+    const knowledgeReady = async (limit = 10_000) => {
+      for (const started = Date.now(); !latest.current.knowledge.ready && Date.now() - started < limit;) await new Promise(resolve => setTimeout(resolve, 250));
+      return latest.current.knowledge.ready;
+    };
     // A tool the model asked for, run as the matching command runs; drafting still begins with its own consent card.
     // A read-only tool's finding is returned so it can go back to the model.
     const run = async (afterId: string, action: ChatAction): Promise<ToolResult | null> => {
@@ -262,10 +274,12 @@ export default function AgentShell() {
       const routed = toolTurn(action, { room: panel, light, theme, traces });
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
       if ('lookup' in routed) {
-        if (!knowledge.ready) { threads.appendAfter(afterId, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }); return null; }
         let found: AgentTurn;
-        try { found = lookupTurn(routed.lookup, await knowledge.search(routed.lookup), routed.explicit); }
-        catch { found = { lines: [[span('知识镜暂时没有回应，请稍后再问。', 'error')]] }; }
+        if (!(knowledge.ready || await knowledgeReady())) found = { lines: [[span('知识镜还在加载，这次没有查到「', 'dim'), span(routed.lookup, 'strong'), span('」，稍后可以再问。', 'dim')]] };
+        else {
+          try { found = lookupTurn(routed.lookup, await latest.current.knowledge.search(routed.lookup), routed.explicit); }
+          catch { found = { lines: [[span('知识镜暂时没有回应，请稍后再问。', 'error')]] }; }
+        }
         threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: found });
         return { tool: 'lookup', text: turnText(found) };
       }
