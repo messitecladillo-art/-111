@@ -193,3 +193,4 @@
 @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 1350px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 15px; }.sidebar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }.history { grid-column: 1 / -1; }.sources { grid-column: 1 / -1; }.sources details { max-width: 760px; }.context { padding: 13px 15px; }.context > p { margin-top: 10px; }.modelSettings { border-top: 0; align-self: start; padding-top: 0; }.composerActions { padding-right: 88px; } }
 @media (prefers-reduced-motion: reduce) { .agent *, .agent *::before, .agent *::after { animation: none !important; transition: none !important; } }
+@media (max-width: 600px) { .heading { flex-wrap: wrap; } .composerActions { flex-wrap: wrap; padding-right: 0; } .composerActions > div { flex-wrap: wrap; min-width: 0; } }

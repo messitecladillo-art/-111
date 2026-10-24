@@ -56,6 +56,10 @@
 .workspace { min-width: 0; }
 .workspaceTop { display: flex; gap: 10px; align-items: center; margin-top: -8px; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--ta-line); min-width: 0; flex: 1; }
+/* On a narrow screen the tab strip scrolls sideways instead of pushing the page wider. */
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs > button { flex-shrink: 0; white-space: nowrap; }
 .root .tabs button { padding: 12px 13px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; white-space: nowrap; font-size: 13px; font-weight: 500; background: transparent; }
 .root .tabs button[aria-selected=true] { color: var(--ta-accent); border-bottom-color: var(--ta-accent); }
 .root .tabs button:hover { background: var(--ta-soft); }

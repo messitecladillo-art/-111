@@ -121,4 +121,6 @@
 @keyframes reveal { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
 @keyframes spin { to { transform:rotate(360deg); } }
 @media (max-width:1300px) { .layout { grid-template-columns:280px minmax(0,1fr); gap:18px; } .resultHeader { align-items:flex-start; flex-direction:column; } .emptyChecks { gap:12px; flex-wrap:wrap; justify-content:center; } .introTag { display:none; } }
+/* A phone has no room for the file list beside the result: they stack, and the empty state sheds its desktop padding. */
+@media (max-width:760px) { .layout { grid-template-columns:minmax(0,1fr); } .empty { min-height:0; padding:32px 18px; } }
 @media (prefers-reduced-motion:reduce) { .root *, .root *:before, .root *:after { animation:none!important; transition:none!important; } .root button:active:not(:disabled) { transform:none; } }
