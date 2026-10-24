@@ -2,6 +2,7 @@
 // rows), what comes back (a reply and at most three tool requests from a fixed list), and what each failure means.
 // The backend holds the same list and limits (apps/backend …/agent_chat.py); the browser checks them again.
 import type { Illumination } from './illumination.ts';
+import type { AgentTurn } from './router.ts';
 import { isRoomId, roomById, type RoomId } from './rooms.ts';
 
 export type ChatAction =
@@ -12,7 +13,9 @@ export type ChatAction =
   | { tool: 'lookup'; args: { query: string } }
   | { tool: 'draft'; args: { brief: string } };
 export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
-export type ChatReceipt = { id: string; status: ChatStatus; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null };
+export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null };
+/** What a read-only tool found, sent back so the model can go on from it. */
+export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup'; text: string };
 export type ChatLine = { role: 'user' | 'agent'; text: string };
 export type ChatContext = {
   room: RoomId | null;
@@ -23,7 +26,26 @@ export type ChatContext = {
 export type ChatRequest = {
   schemaVersion: 1; idempotencyKey: string; message: string; history: ChatLine[]; context: ChatContext;
   serviceId: string; serviceRevision: number; consent: true;
+  /** A continuation: the step it is (2 or more) and what the previous step's tools found. */
+  step?: number; toolResults?: ToolResult[];
 };
+
+/** One sentence is answered in at most this many calls; the backend lets the last ask for no tools. */
+export const MAX_STEPS = 3;
+const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup']);
+export const isResultTool = (tool: ChatAction['tool']): tool is ToolResult['tool'] => RESULT_TOOLS.has(tool);
+
+/** A turn as plain text for the model, its cards' contents included, within the backend's limit. */
+export function turnText(turn: AgentTurn): string {
+  const join = (line: readonly { text: string }[]) => line.map(s => s.text).join('');
+  const parts = turn.lines.map(join);
+  for (const card of turn.cards ?? []) {
+    if (card.kind === 'tool') parts.push(card.title, ...card.lines.map(join));
+    if (card.kind === 'entry') parts.push(`${card.name}：${card.definition}`, ...card.sources.map(s => `出处：${s}`));
+    if (card.kind === 'trace') parts.push(`${card.reference} ${card.title}`, ...card.steps.map(s => `${s.text} ${s.detail}`));
+  }
+  return clip(parts.filter(p => p.trim()).join('\n'), TEXT_LIMIT);
+}
 
 export const HISTORY_LIMIT = 12, TEXT_LIMIT = 1200;
 const clip = (value: string, limit: number) => value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
@@ -68,7 +90,7 @@ export function parseChatReceipt(value: unknown): ChatReceipt {
   const v = value as Record<string, unknown> | null;
   if (!v || typeof v !== 'object' || typeof v.id !== 'string' || !['running', 'ready', 'failed', 'outcome_unknown'].includes(v.status as string)) throw Error('对话回执格式无效。');
   const actions = Array.isArray(v.actions) ? v.actions.map(action).filter((a): a is ChatAction => !!a).slice(0, 3) : [];
-  return { id: v.id, status: v.status as ChatStatus, message: typeof v.message === 'string' ? v.message : null, reply: typeof v.reply === 'string' && v.reply.trim() ? v.reply : null, actions,
+  return { id: v.id, status: v.status as ChatStatus, step: typeof v.step === 'number' && v.step >= 1 ? v.step : 1, message: typeof v.message === 'string' ? v.message : null, reply: typeof v.reply === 'string' && v.reply.trim() ? v.reply : null, actions,
     droppedActions: typeof v.droppedActions === 'number' ? v.droppedActions : 0, errorCode: typeof v.errorCode === 'string' ? v.errorCode : null };
 }
 

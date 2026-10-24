@@ -43,3 +43,16 @@ def test_no_call_without_research_a_current_revision_or_consent(harness):
     unconsented = owner.post(PATH, json=request(serviceId=research["id"], serviceRevision=research["revision"], consent=False))
     assert unconsented.status_code == 422 and unconsented.json()["error"]["code"] == "consent_required"
     assert provider.calls == 0
+
+
+def test_continuations_are_turns_of_their_own_and_the_last_one_asks_for_nothing(harness):
+    _, login, _, provider = harness
+    owner, _ = login()
+    service = owner.post("/api/services", json=service_input(capabilities=["research"])).json()
+    results = [{"tool": "light", "text": "整体照度 25%。"}]
+    second = owner.post(PATH, json=request(serviceId=service["id"], serviceRevision=service["revision"], step=2, toolResults=results))
+    assert second.status_code == 201, second.text
+    assert second.json()["step"] == 2 and second.json()["actions"] == [{"tool": "next", "args": {}}]
+    last = owner.post(PATH, json=request(serviceId=service["id"], serviceRevision=service["revision"], step=3, toolResults=results)).json()
+    assert last["step"] == 3 and last["actions"] == [] and last["droppedActions"] == 1
+    assert provider.calls == 2

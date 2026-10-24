@@ -8,7 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
-import { CHAT_ERRORS, HISTORY_LIMIT, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest } from '@/lib/agent/chat';
+import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -196,11 +196,13 @@ export default function AgentShell() {
       threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('发给模型之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${chatService.label}」回答`,
         lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，以及项目照度、盲区与可回溯图表的摘要。')],
           [span('不发送：问卷、数据与报告的原文。模型看不到原始数据，也不能改动项目；它请求的操作由这里执行，改动前仍会问你。', 'dim')],
-          [span('费用按你的服务商计；这段对话之后的句子不再询问。', 'dim')]],
+          [span(`模型读完工具结果后可能接着回答，一句话最多调用 ${MAX_STEPS} 次；费用按你的服务商计。这段对话之后的句子不再询问。`, 'dim')]],
         confirm: { label: '发送', action: { type: 'chat', text } }, cancel: '不发送' }] } }]);
     };
     const say = (line: Line, chips?: AgentTurn['chips']) => threads.append([{ ...stamp(), role: 'agent', turn: { lines: [line], chips } }]);
-    const turn = (text: string) => {
+    // `next` continues a sentence from what the previous step's tools found; without it, a new sentence starts.
+    // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new.
+    const turn = (text: string, next?: { step: number; results: ToolResult[]; seen: Set<string> }) => {
       const { panel, light, traces, chatService, owner, mutate } = latest.current;
       if (!chatService) return;
       const book = threads.view(owner), messages = book.threads.find(t => t.id === book.active)?.messages ?? [];
@@ -208,20 +210,31 @@ export default function AgentShell() {
       // A sentence whose consent card was declined, or never answered, was not sent and is not sent later either.
       const declined = new Set(messages.flatMap((m, i) => m.role === 'agent' && m.answered !== 'confirmed'
         && m.turn.cards?.some(card => card.kind === 'confirm' && card.confirm.action.type === 'chat') ? [i - 1] : []));
-      const said = messages.slice(0, asked < 0 ? messages.length : asked).filter((_, i) => !declined.has(i));
+      // A continuation sees the whole sentence so far: the reply and the tools' cards come after the question.
+      const said = (next ? messages : messages.slice(0, asked < 0 ? messages.length : asked)).filter((_, i) => !declined.has(i));
       const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(said.flatMap(chatLine)),
-        context: chatContext(panel, light, traces), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true };
-      const waiting: Message = { ...stamp(), role: 'agent', turn: { lines: [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
+        context: chatContext(panel, light, traces), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true,
+        ...(next ? { step: next.step, toolResults: next.results } : {}) };
+      const waiting: Message = { ...stamp(), role: 'agent', turn: { lines: next
+        ? [[span('正在根据工具结果接着回答…', 'dim')]]
+        : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       threads.append([waiting]);
-      sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label), failure => fail(waiting.id, failure, request.idempotencyKey, text));
+      const seen = next?.seen ?? new Set<string>();
+      sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen), failure => fail(waiting.id, failure, request.idempotencyKey, text));
     };
     const replace = (messageId: string, next: AgentTurn) => threads.patch(messageId, m => m.role === 'agent' ? { ...m, turn: next } : m);
     // A receipt in place of the waiting line: the reply, marked as unverified, then each tool it asked for, run here.
-    const settle = (messageId: string, receipt: ChatReceipt, label: string) => {
+    const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>()) => {
       if (receipt.status === 'ready' && receipt.reply) {
         replace(messageId, { lines: [...receipt.reply.split(/\n+/u).filter(p => p.trim()).map(p => [span(p)]), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
-        for (const action of receipt.actions) run(messageId, action);
+        const asked = receipt.message;
         if (receipt.droppedActions) threads.appendAfter(messageId, { ...stamp(), role: 'agent', turn: { lines: [[span(`模型还请求了 ${receipt.droppedActions} 个不在清单里的操作，没有执行。`, 'dim')]] } });
+        // What the read-only tools found goes back to the model, until the sentence's last step.
+        const fresh = receipt.actions.filter(action => { const key = action.tool + JSON.stringify(action.args); return !seen.has(key) && !!seen.add(key); });
+        void Promise.all(fresh.map(action => run(messageId, action))).then(found => {
+          const results = found.filter((r): r is ToolResult => !!r).slice(0, 4);
+          if (results.length && asked && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen });
+        });
       } else if (receipt.status === 'failed') {
         replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
       } else {
@@ -243,13 +256,22 @@ export default function AgentShell() {
           : fail(messageId, failure, turnId, ''));
     };
     // A tool the model asked for, run as the matching command runs; drafting still begins with its own consent card.
-    const run = (afterId: string, action: ChatAction) => {
-      const { panel, light, theme, traces, generation } = latest.current;
+    // A read-only tool's finding is returned so it can go back to the model.
+    const run = async (afterId: string, action: ChatAction): Promise<ToolResult | null> => {
+      const { panel, light, theme, traces, generation, knowledge } = latest.current;
       const routed = toolTurn(action, { room: panel, light, theme, traces });
-      if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return; }
-      if ('lookup' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }); return; }
+      if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
+      if ('lookup' in routed) {
+        if (!knowledge.ready) { threads.appendAfter(afterId, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }); return null; }
+        let found: AgentTurn;
+        try { found = lookupTurn(routed.lookup, await knowledge.search(routed.lookup), routed.explicit); }
+        catch { found = { lines: [[span('知识镜暂时没有回应，请稍后再问。', 'error')]] }; }
+        threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: found });
+        return { tool: 'lookup', text: turnText(found) };
+      }
       threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: routed.turn });
       if (routed.turn.act) perform(routed.turn.act);
+      return isResultTool(action.tool) ? { tool: action.tool, text: turnText(routed.turn) } : null;
     };
     const perform = (action: AgentAction) => {
       switch (action.type) {

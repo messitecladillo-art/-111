@@ -127,3 +127,39 @@ def test_the_budget_holds_for_the_payload_the_client_actually_sends():
     payload = json.dumps({"model": "fixture-model", "messages": [{"role": "user", "content": prompt}], "stream": False,
                           "max_tokens": 4096}, ensure_ascii=False).encode()
     assert chat.encoded_size(prompt) <= chat.PROMPT_BYTES and len(payload) <= 65536
+
+
+def continuation(step=2, **extra):
+    return request(step=step, toolResults=[{"tool": "light", "text": "整体照度 25%。问卷设计 50%：每题映射研究问题未通过。"}], **extra)
+
+
+def test_a_continuation_carries_the_tool_results_and_says_which_step_it_is():
+    data = continuation()
+    assert chat.request_input(data) == data
+    assert chat.input_fingerprint(data) != chat.input_fingerprint(request(**{k: data[k] for k in chat.REQUEST_FIELDS}))
+    prompt = chat.agent_prompt(data)
+    assert "第2步" in prompt and "最后一步" not in prompt
+    assert json.loads(prompt.split("资料JSON：", 1)[1])["toolResults"] == data["toolResults"]
+    assert "最后一步" in chat.agent_prompt(continuation(step=chat.MAX_STEPS))
+    assert chat.turn_receipt(data, "fixture")["step"] == 2 and chat.turn_receipt(request(), "fixture")["step"] == 1
+
+
+@pytest.mark.parametrize("change", [
+    {"step": 1}, {"step": chat.MAX_STEPS + 1}, {"toolResults": []}, {"toolResults": [{"tool": "open", "text": "已打开"}]},
+    {"toolResults": [{"tool": "light", "text": ""}]}, {"toolResults": [{"tool": "light", "text": "x"}] * (chat.MAX_RESULTS + 1)},
+])
+def test_a_malformed_continuation_is_refused(change):
+    with pytest.raises(ApiError):
+        chat.request_input({**continuation(), **change})
+
+
+def test_results_without_a_step_or_a_step_without_results_are_refused():
+    with pytest.raises(ApiError):
+        chat.request_input({**request(), "toolResults": continuation()["toolResults"]})
+    with pytest.raises(ApiError):
+        chat.request_input({**request(), "step": 2})
+
+
+def test_the_last_step_runs_no_tools_whatever_the_model_asks():
+    raw = json.dumps({"reply": "照度显示问卷映射最弱。", "actions": [{"tool": "next", "args": {}}, {"tool": "light", "args": {}}]}, ensure_ascii=False)
+    assert chat.parse_reply(raw, final=True) == {"reply": "照度显示问卷映射最弱。", "actions": [], "droppedActions": 2}

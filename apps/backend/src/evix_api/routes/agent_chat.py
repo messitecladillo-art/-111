@@ -20,5 +20,5 @@ def register_agent_chat(app, settings, db, session_user, lock_user, operation, o
 
     @app.post('/api/agent/turns', status_code=201)
     async def create_turn(request: Request, user=Depends(auth), session=Depends(db)):
-        raw_data = await body(request, domain.REQUEST_FIELDS, limit=40000)
+        raw_data = await body(request, domain.REQUEST_FIELDS, domain.STEP_FIELDS, limit=60000)
         return await service.create_turn(user=user, session=session, check_session=lambda session, **kwargs: session_user(request, session, **kwargs), raw_data=raw_data)

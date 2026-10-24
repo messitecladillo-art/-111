@@ -55,3 +55,18 @@ test('each tool the model asks for runs exactly as its command does', () => {
   assert.deepEqual(toolTurn({ tool: 'draft', args: { brief: '社区体育设施满意度' } }, ctx()), { generate: '社区体育设施满意度' });
   assert.match(text(toolTurn({ tool: 'trace', args: { reference: '图 3-1' } }, ctx()).turn), /图/);
 });
+
+test('what a tool found is sent back as plain text, its cards included, and only for read-only tools', async () => {
+  const { isResultTool, turnText, MAX_STEPS } = await import('../lib/agent/chat.ts');
+  const light = toolTurn({ tool: 'light', args: {} }, ctx()).turn;
+  const found = turnText(light);
+  assert.match(found, /整体照度/);
+  assert.match(found, /问卷设计/, 'the card’s rows are part of it');
+  assert.ok(found.length <= 1200);
+  assert.equal(isResultTool('light'), true);
+  assert.equal(isResultTool('open'), false);
+  assert.equal(isResultTool('draft'), false);
+  assert.equal(MAX_STEPS, 3);
+  assert.equal(parseChatReceipt({ id: 'x', status: 'ready', reply: '好', actions: [] }).step, 1);
+  assert.equal(parseChatReceipt({ id: 'x', status: 'ready', step: 2, reply: '好', actions: [] }).step, 2);
+});
