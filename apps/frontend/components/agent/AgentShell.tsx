@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { flushSync } from 'react-dom';
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
@@ -114,6 +115,12 @@ export default function AgentShell() {
     window.addEventListener('pointerdown', away);
     return () => window.removeEventListener('pointerdown', away);
   }, [moduleMenu]);
+  // Every way to the input goes through here. While the panel fills the screen the input is hidden, so the conversation
+  // comes back first, synchronously, and a "/" typed to get there still lands in it.
+  const focusInput = useCallback(() => {
+    if (inputRef.current?.offsetParent === null) flushSync(() => setExpanded(false));
+    inputRef.current?.focus();
+  }, []);
   const go = useCallback((id: RoomId) => { if (currentPanel() !== id) window.location.hash = id; }, []);
   const closePanel = useCallback(() => { window.location.hash = ''; }, []);
   const generation = useGeneration(publishProposal, go);
@@ -164,7 +171,7 @@ export default function AgentShell() {
         case 'theme': saveTheme(action.theme); break;
         case 'search': latest.current.knowledge.openSearch(); break;
         case 'entry': latest.current.knowledge.open(action.id); break;
-        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) threads.remove(active); inputRef.current?.focus(); break; }
+        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) threads.remove(active); focusInput(); break; }
         // Only paths of this site; a stored conversation is never trusted to navigate anywhere else.
         case 'href': if (/^\/(?!\/)/.test(action.href)) window.location.assign(action.href); break;
         case 'say': send(action.text); break;
@@ -173,10 +180,10 @@ export default function AgentShell() {
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
       threads.patch(id, m => m.role === 'agent' ? { ...m, answered } : m);
       if (answered === 'confirmed' && action) perform(action);
-      else inputRef.current?.focus();
+      else focusInput();
     };
     return { send, perform, answer };
-  }, [go]);
+  }, [go, focusInput]);
 
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
@@ -197,10 +204,7 @@ export default function AgentShell() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const typing = !!target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
-      if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        if (inputRef.current?.offsetParent === null) { event.preventDefault(); setExpanded(false); requestAnimationFrame(() => inputRef.current?.focus()); }
-        else inputRef.current?.focus();
-      }
+      if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) focusInput();
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'b') { event.preventDefault(); latest.current.toggleSide(); }
       if ((event.ctrlKey || event.metaKey) && event.key === '\\') {
         event.preventDefault();
@@ -211,7 +215,7 @@ export default function AgentShell() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [focusInput]);
 
   // The panel is widened or narrowed by dragging its edge; the width is remembered in this browser.
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -239,12 +243,13 @@ export default function AgentShell() {
 
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
     <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? 'none'} data-expanded={expanded && !!panel}>
-      <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); inputRef.current?.focus(); }}>跳到输入框</a>
+      <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); focusInput(); }}>跳到输入框</a>
 
       <nav ref={railRef} className={styles.rail} aria-label="工具" style={{ position: 'relative' }}>
         <button type="button" className={styles.railButton} aria-label="对话" title="对话" aria-pressed={!panel} onClick={() => {
           // From a panel filling the screen the conversation comes back beside it; otherwise the panel closes.
-          if (expanded) { setExpanded(false); requestAnimationFrame(() => inputRef.current?.focus()); } else { closePanel(); inputRef.current?.focus(); }
+          if (!expanded) closePanel();
+          focusInput();
         }}><Icon name="chat" /></button>
         <button type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="menu" aria-expanded={moduleMenu} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setModuleMenu(!moduleMenu)}><Icon name="grid" /></button>
         <button type="button" className={styles.railButton} aria-label="项目全景" title="项目全景" aria-pressed={panel === 'overview'} onClick={() => panel === 'overview' ? closePanel() : go('overview')}><Icon name="lamp" /></button>
@@ -266,7 +271,7 @@ export default function AgentShell() {
         </div>}
       </nav>
 
-      <Sidebar book={book} projects={projects} account={generationAccount} email={email} onNew={id => { threads.draft(id); inputRef.current?.focus(); }}
+      <Sidebar book={book} projects={projects} account={generationAccount} email={email} onNew={id => { threads.draft(id); focusInput(); }}
         onSelect={threads.select} onRemove={threads.remove} onCollapse={() => setSideOpen(false)} />
 
       <main className={styles.main} aria-label="对话" data-dialog-background>

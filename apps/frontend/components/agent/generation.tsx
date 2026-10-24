@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { parseCollection, parseProject, parseService, type Project, type Proposal, type Service } from '@evix/shared';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { downloadQuestionnaire, hostedRequest, HostedApiError } from '@/components/hosted/api-client';
@@ -180,6 +180,8 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   const [brief, setBrief] = useState(card.brief);
   const [projectId, setProjectId] = useState('');
   const [serviceId, setServiceId] = useState('');
+  // The conversation's project is followed as it changes, so filing it elsewhere moves the default with it.
+  const filed = useSyncExternalStore(threads.subscribe, () => threads.projectOf(messageId), () => null);
   const ref = useRef<HTMLDivElement>(null), open = card.state === 'open';
   const load = g?.load;
   useEffect(() => { if (open) load?.(); }, [open, load]);
@@ -187,7 +189,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   if (!g) return null;
   const { projects, services } = g.lists;
   // The conversation's own project comes first, as the preferred service does.
-  const project = [projectId, threads.projectOf(messageId)].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
+  const project = [projectId, filed].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
   const service = [serviceId, g.preferredService].find(id => services.some(s => s.id === id)) ?? services[0]?.id ?? '';
   const ready = open && g.account === 'ready' && g.lists.state === 'ready' && !!brief.trim() && brief.length <= BRIEF_LIMIT && !!project && !!service && !g.busy;
   const submit = () => { if (ready) g.submit(messageId, { brief, projectId: project, serviceId: service }); };
