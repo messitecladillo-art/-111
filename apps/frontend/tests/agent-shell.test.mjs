@@ -125,17 +125,27 @@ test('every room has a unique command and glyph, and the command list completes 
   assert.deepEqual(matchCommands('des').map(c => c.name), ['问卷']);
 });
 
-test('a sampling plan lights its room once written into the report, and is checked against what was collected', () => {
-  const report = reportWith([], [frame('f1', 400)]);
+test('a sampling plan lights its room once the report carries it, judged on effective responses and its latest revision', () => {
+  const table = id => ({ id: `t-${id}`, kind: 'table', text: '', evidenceId: id, valueColumn: 1 });
+  const report = reportWith([table('f1')], [frame('f1', 400)]);
+  assert.equal(roomLight(illuminate({ ...empty, report: reportWith([], [frame('f1', 400)]) }), 'sampling').score, 0, 'a frame the report no longer carries is not evidence');
   const without = illuminate({ ...empty, report });
   assert.deepEqual(roomLight(without, 'sampling').checks.map(c => [c.id, c.passed]), [['sampling.frame', true], ['sampling.size', true], ['sampling.reach', false]]);
-  assert.equal(without.blind.find(c => c.id === 'sampling.reach').go, 'analysis', 'collected data is loaded in the analysis room');
+  assert.equal(without.blind.find(c => c.id === 'sampling.reach').go, 'analysis', 'data is loaded and screened in the analysis room');
   assert.equal(roomLight(without, 'analysis').checks.find(c => c.id === 'analysis.results').passed, false, 'a frame is not an analysis');
-  const short = roomLight(illuminate({ ...empty, report, dataset: { name: '回收', rows: 300, simulated: false } }), 'sampling');
-  assert.match(short.checks[2].label, /回收 300 份，未达计划的 400 份/);
-  const reached = roomLight(illuminate({ ...empty, report, dataset: { name: '回收', rows: 452, simulated: false } }), 'sampling');
-  assert.equal(reached.score, 1);
-  assert.equal(roomLight(illuminate({ ...empty, report: reportWith([], [frame('f2', 0)]) }), 'sampling').checks[1].passed, false);
+  const reach = view => roomLight(illuminate({ ...empty, report, ...view }), 'sampling').checks[2];
+  // Raw rows are not responses: the check stays open until quality control has spoken.
+  assert.match(reach({ dataset: { name: '回收', rows: 452, simulated: false } }).label, /回收 452 行，有效份数待质量控制/);
+  assert.equal(reach({ dataset: { name: '回收', rows: 452, simulated: false } }).passed, false);
+  assert.equal(reach({ dataset: { name: '回收', rows: 452, simulated: false, screened: true } }).passed, true);
+  const screened = reportWith([table('f1')], [frame('f1', 400), result('qc', { method: 'quality-control', n: 380, total: 452 })]);
+  const short = roomLight(illuminate({ ...empty, report: screened, dataset: { name: '回收', rows: 452, simulated: false } }), 'sampling').checks[2];
+  assert.equal(short.passed, false);
+  assert.match(short.label, /有效 380 份，未达计划的 400 份/);
+  // A group's plan revised and inserted again replaces the old frame instead of adding to it.
+  const revised = reportWith([table('f1'), table('f2')], [frame('f1', 400), frame('f2', 500)]);
+  assert.match(roomLight(illuminate({ ...empty, report: revised }), 'sampling').summary, /^1 个抽样框 · 计划 500 份/);
+  assert.equal(roomLight(illuminate({ ...empty, report: reportWith([table('f3')], [frame('f3', 0)]) }), 'sampling').checks[1].passed, false);
 });
 
 test('an exhibit traces back through its result, scope, quality control and data file to the questions it asked', () => {

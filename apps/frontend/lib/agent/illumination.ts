@@ -11,7 +11,8 @@ import type { RoomId } from './rooms.ts';
 /** What the shell can see of the project: the shared questionnaire and dataset, and the report once its room has opened. */
 export type ProjectView = {
   design: Questionnaire | null;
-  dataset: { name: string; rows: number; simulated: boolean } | null;
+  /** `screened`: the rows already passed quality control, so they count as effective responses. */
+  dataset: { name: string; rows: number; simulated: boolean; screened?: boolean } | null;
   report: EditorContent | null;
   /** A registered result on its way to the report. */
   resultPending: boolean;
@@ -50,19 +51,31 @@ function designLight(d: Questionnaire | null): RoomLight {
 }
 
 function samplingLight(view: ProjectView): RoomLight {
-  // A plan becomes evidence once it is written into the report as frames; a draft kept in the sampling room is not yet.
-  const frames = (view.report?.quality?.results ?? []).filter(r => r.method === 'sampling-frame');
+  // A plan becomes evidence once the report carries its frame tables; a draft kept in the sampling room is not yet.
+  // Inserting a revised plan registers new frames beside the old ones, so each group counts once, by its latest frame.
+  const results = view.report?.quality?.results ?? [];
+  const placed = new Set((view.report?.report ?? []).flatMap(s => (s.blocks ?? []).map(b => b.evidenceId)));
+  const latest = new Map<string, (typeof results)[number]>();
+  for (const r of results) if (r.method === 'sampling-frame' && placed.has(r.id)) { latest.delete(r.title); latest.set(r.title, r); }
+  const frames = [...latest.values()];
   const check = (id: string, passed: boolean, label: string, detail: string, go: RoomId = 'sampling'): LightCheck => ({ id: `sampling.${id}`, room: 'sampling', go, label, passed, detail });
   if (!frames.length) return { room: 'sampling', score: 0, summary: '方案还没写进报告', checks: [check('frame', false, '抽样方案还没写进报告', '在抽样室定好分阶段方案，一键插入报告的调查方案章节；写进报告的方案才算证据。')] };
   const planned = frames.map(r => r.metrics.find(m => m.label === '计划有效样本')?.value ?? 0);
-  const total = planned.reduce((sum, v) => sum + v, 0), stated = planned.every(v => v > 0), rows = view.dataset?.rows ?? 0;
+  const total = planned.reduce((sum, v) => sum + v, 0), stated = planned.every(v => v > 0);
   const nonProbability = frames.filter(r => r.warnings.some(w => /不是概率样本/u.test(w))).length;
+  // The plan counts effective responses, so reach is judged on answers that survived quality control: the latest
+  // registered screening, or a dataset already screened. Raw rows are not responses yet, and leave the check open.
+  const screening = results.findLast(r => r.method === 'quality-control');
+  const effective = screening ? screening.n : view.dataset?.screened ? view.dataset.rows : null;
+  const reach = effective !== null
+    ? check('reach', stated && effective >= total, effective >= total ? `有效 ${effective} 份，达到计划的 ${total} 份` : `有效 ${effective} 份，未达计划的 ${total} 份`,
+      effective < total ? '补充回收，或在报告中说明样本不足对估计精度的影响。' : screening ? '有效份数取自登记的质量控制结果。' : '有效份数取自已经质量控制的数据。')
+    : view.dataset ? check('reach', false, `回收 ${view.dataset.rows} 行，有效份数待质量控制`, '原始行数不等于有效答卷：在分析室筛除无效答卷并登记质量控制结果后再核对计划。', 'analysis')
+    : check('reach', false, '还没有回收数据可对照计划', '在分析室载入回收数据并完成质量控制后，按有效份数核对计划样本量。', 'analysis');
   const checks = [
     check('frame', true, `报告写入了 ${frames.length} 个抽样框`, frames.map(r => r.title).join('、')),
     check('size', stated, stated ? `计划有效样本共 ${total} 份` : '有抽样框没写计划有效样本量', '样本量决定估计精度，也是回收率与有效率的分母。'),
-    !view.dataset ? check('reach', false, '还没有回收数据可对照计划', '在分析室载入回收数据后，这里核对回收是否达到计划样本量。', 'analysis')
-      : check('reach', stated && rows >= total, rows >= total ? `回收 ${rows} 份，达到计划的 ${total} 份` : `回收 ${rows} 份，未达计划的 ${total} 份`,
-        rows >= total ? '回收份数按分析室载入的数据计；有效率见质量控制。' : '补充回收，或在报告中说明样本不足对估计精度的影响。'),
+    reach,
   ];
   return { room: 'sampling', score: share(checks), checks, summary: `${frames.length} 个抽样框 · 计划 ${total} 份${nonProbability ? ` · ${nonProbability} 个含非概率阶段` : ''}` };
 }
@@ -74,7 +87,7 @@ function analysisLight(view: ProjectView): RoomLight {
   const data = view.dataset;
   const checks: LightCheck[] = [
     { id: 'analysis.data', room: 'analysis', go: 'analysis', passed: !!data, label: data ? `已载入「${data.name}」` : '还没有载入数据',
-      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}` : '在分析室导入回收的问卷数据；没有数据时可用硅基样本生成教学模拟数据。' },
+      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}${data.screened ? ' · 已质量控制' : ''}` : '在分析室导入回收的问卷数据；没有数据时可用硅基样本生成教学模拟数据。' },
     { id: 'analysis.results', room: 'analysis', go: 'analysis', passed: registered > 0, label: registered ? `已登记 ${registered} 项分析结果` : '还没有登记分析结果',
       detail: registered ? '登记的结果带着来源与计算过程进入报告。' : '在分析室完成一项描述、检验或图表，发送到报告即登记。' },
     { id: 'analysis.findings', room: 'analysis', go: 'editor', passed: confirmed > 0, label: confirmed ? `已确认 ${confirmed} 条研究发现` : '还没有确认研究发现',

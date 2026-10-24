@@ -1055,7 +1055,7 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
   const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
   const [report,setReport]=useState<EditorContent|null>(null);
   const dataset=exchange.dataset;
-  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated"}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
+  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
   const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => ({
       overview: <>
       <section className="hero" id="overview" aria-labelledby="hero-title">
