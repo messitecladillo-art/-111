@@ -18,11 +18,13 @@ import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
 import ReportFramePanel from './ReportFramePanel';
+import EvidenceAppendicesPanel from './EvidenceAppendicesPanel';
+import {appendEvidenceAppendixSections} from '@/lib/evidence-appendices';
 import {appendRegisteredResult} from '@/lib/result-registration';
 import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
 import QualityStudio,{QualitySlidePreview,QualityGraphic} from './QualityStudio';
-import {appendQualityResult} from '@/lib/quality-layouts';
+import {appendQualityResult,QUALITY_LAYOUT_LABELS} from '@/lib/quality-layouts';
 import {makeSlideObject,type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
 
@@ -85,7 +87,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;onResultHandled?:()=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;onResultHandled?:()=>void;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -594,14 +596,20 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
     {mode!=='slides'&&<ReportFramePanel key={(content.reportFrame?.id??'none')+':'+(content.reportFrame?.review?.definitionSha256??'draft')} frame={content.reportFrame} visualStyle={content.visualStyle??{schema:'ProjectVisualStyle/v1',paletteId:content.accent==='burgundy'?'plum':content.accent,version:1}} reviewer={hostedSession.session?.user?.id??'local-user'} disabled={locked} onApply={frame=>{if(!canMutate())return;edit(applyReportFrame(current.current,frame));}} onPalette={visualStyle=>{if(!canMutate())return;const next={...current.current,version:3 as const,visualStyle};if(next.reportFrame)next.reportFrame={...next.reportFrame,status:'vector_draft',review:null};edit(parseEditorContent(next));}}/>}
+    {mode==='report'&&<EvidenceAppendicesPanel content={content} projectId={projectBinding?.projectId} aiLedger={aiUsageLedger} onRefreshAi={onRefreshAi} aiLoading={aiLoading} disabled={locked} onApply={(sections,base)=>{
+      if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
+      const next=appendEvidenceAppendixSections(current.current,sections);
+      if(!edit(next))return false;
+      setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
+    }}/>}
     {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>
     <div hidden={mode==='latex'||qualityOpen}>
-    <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
+    <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base,contentVersion)=>{
       if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
-        const next=parseEditorContent({...current.current,slides});
+        const next=parseEditorContent({...current.current,...(contentVersion===3?{version:3}:{}),slides});
         const firstNew=slides.find(s=>!current.current.slides.some(old=>old.id===s.id));
         if(!edit(next))return false;
         setMode('slides');setSlideId(firstNew?.id||slides[0].id);setStoryboardOpen(false);
@@ -630,7 +638,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         </> : <>
           <ReportLinkNotice content={content} slide={slide}/>
           <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>打开报告分镜</button>
-          <div className={styles.designSettings}><label>版式<select value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></select></label>
+          <div className={styles.designSettings}><label>版式<select aria-label="页面版式" disabled={!!slide.objects} value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}>{slide.objects?<option value={slide.layout}>{QUALITY_LAYOUT_LABELS[slide.layout as keyof typeof QUALITY_LAYOUT_LABELS]??"自由对象布局"}</option>:<><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></>}</select></label>{slide.objects&&<button type="button" onClick={()=>setQualityOpen(true)}>打开对象编排</button>}
           <label>强调色<select value={content.accent} onChange={e => edit({ ...content, accent: e.target.value as EditorContent["accent"] })}><option value="teal">深青</option><option value="blue">学术蓝</option><option value="burgundy">酒红</option></select></label></div>
           <label>页面标题<input maxLength={150} value={slide.title} onChange={e => patchSlide({ title: e.target.value })}/></label>
           <label>页面正文<textarea rows={8} maxLength={1800} value={slide.body} onChange={e => patchSlide({ body: e.target.value })}/></label>

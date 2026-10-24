@@ -51,12 +51,26 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     const headingStyle=part==='abstract'||part==='references'?'ReportSpecialHeading':`Heading${reportHeadingLevel(section.title)||1}`;
     const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[...(!options.includeCover&&!sections.length?[title()]:[]),new Paragraph({style:headingStyle,children:[new TextRun({text:section.title||'未命名章节'})]})];
     // A chapter heading followed directly by its first section has no body; do not emit a blank paragraph.
-    if(section.body)section.body.split('\n').forEach(line=>{
-      const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
-      children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',children:[new TextRun({text:line})]}));
-    });
+    const generatedAppendix=part==='appendix'&&!section.blocks?.length&&/^appendix-(?:data|ai|claims)-[a-f0-9]{64}$/.test(section.id);
+    if(generatedAppendix){
+      // A metadata field is a line inside one record, not a separate prose paragraph.
+      // Keep the selected profile's fonts and paragraph spacing between complete records.
+      const records=section.body.split('\n\n');
+      records.forEach((record,index)=>{
+        const runs=record.split('\n').map((line,i)=>new TextRun({text:line,...(i?{break:1}:{})}));
+        if(index===records.length-1&&section.source)runs.push(new TextRun({text:`来源 / 说明：${section.source}`,break:1}));
+        children.push(new Paragraph({style:'ReportReference',children:runs}));
+      });
+    }else{
+      const bodyLines=section.body.split('\n'),lastWritten=bodyLines.findLastIndex(line=>line.trim().length>0);
+      const attachSource=part==='appendix'&&!!section.source&&!section.blocks?.length&&lastWritten>=0&&bodyLines[lastWritten].length<=500;
+      if(section.body)bodyLines.forEach((line,index)=>{
+        const heading=part==='body'&&line.length<=100?reportHeadingLevel(line):null;
+        children.push(new Paragraph({style:heading?`Heading${heading}`:part==='references'?'ReportReference':'Normal',...(attachSource&&index>=lastWritten?{keepNext:true}:{}),children:[new TextRun({text:line})]}));
+      });
+    }
     if(section.blocks?.length)children.push(...await wordBlocks(section.blocks,content,renderSvg));
-    if(section.source)children.push(new Paragraph({style:'ReportReference',children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
+    if(section.source&&!generatedAppendix)children.push(new Paragraph({style:'ReportReference',...(part==='appendix'&&section.source.length<=500?{keepLines:true}:{}),children:[new TextRun({text:`来源 / 说明：${section.source}`})]}));
     if(preliminary){addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;}
     else if(part==='body'&&bodyStarted){const index=sections.length-1;sections[index]={...sections[index],children:[...sections[index].children,...children]};}
     else {addSection(children,'body',bodyStarted?undefined:1);bodyStarted=true;}

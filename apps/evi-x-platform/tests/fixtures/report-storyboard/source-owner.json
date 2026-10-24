@@ -1,0 +1,467 @@
+{
+  "purpose": "Synthetic product-generated two-chapter chart/table contract; aggregate data only, no human approval.",
+  "content": {
+    "version": 3,
+    "title": "我的市场调查研究",
+    "subtitle": "研究报告 · 写作草稿",
+    "accent": "teal",
+    "quality": {
+      "version": 1,
+      "results": [
+        {
+          "id": "eb5ab254-8c39-4d14-8f70-c72d823add97",
+          "title": "独立排版验收",
+          "sourceName": "合成QA",
+          "sourceUrl": "",
+          "sourceHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "resultHash": "c7220c4114c623203e81cea023387a9beb9ef7638b946dbcbd17d6173ac57177",
+          "classification": "simulated",
+          "method": "frequency",
+          "n": 4,
+          "total": 4,
+          "headers": [
+            "类别",
+            "频数",
+            "有效样本占比 (%)",
+            "95% CI 下限 (%)",
+            "95% CI 上限 (%)"
+          ],
+          "rows": [
+            [
+              "类别0",
+              2,
+              50,
+              15.003898915214952,
+              84.99610108478505
+            ],
+            [
+              "类别1",
+              2,
+              50,
+              15.003898915214952,
+              84.99610108478505
+            ]
+          ],
+          "metrics": [
+            {
+              "label": "有效类别数",
+              "value": 2
+            }
+          ],
+          "warnings": [
+            "单列分类题；多选题须先按选项拆列，不能将组合文本当作选项占比。",
+            "未加权、未自动删除重复行、未插补；原因计数可能重叠。没有正式抽样设计，不给出总体代表性结论。"
+          ],
+          "receipt": {
+            "version": 1,
+            "interpretation": "比例的分母是该列非缺失样本。区间为 Wilson 95% 区间，只在随机抽样前提下描述总体比例；便利或配额样本只作参考。",
+            "sample": {
+              "calculationRows": 4,
+              "analysisRows": 4,
+              "excludedRows": 0,
+              "missingRows": 0,
+              "invalidRows": 0,
+              "outOfRangeRows": null
+            },
+            "percentageBasis": "effective-sample"
+          }
+        },
+        {
+          "id": "74f3eeef-ba5c-4117-9983-5458685920f1",
+          "title": "独立排版验收",
+          "sourceName": "合成QA",
+          "sourceUrl": "",
+          "sourceHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "resultHash": "6ec591d5e216d811c3a54091352483363e2011914a3aeaccdbd29e26e0bcc7cd",
+          "classification": "simulated",
+          "method": "frequency",
+          "n": 4,
+          "total": 4,
+          "headers": [
+            "类别",
+            "频数",
+            "有效样本占比 (%)",
+            "95% CI 下限 (%)",
+            "95% CI 上限 (%)"
+          ],
+          "rows": [
+            [
+              "反馈0",
+              2,
+              50,
+              15.003898915214952,
+              84.99610108478505
+            ],
+            [
+              "反馈1",
+              2,
+              50,
+              15.003898915214952,
+              84.99610108478505
+            ]
+          ],
+          "metrics": [
+            {
+              "label": "有效类别数",
+              "value": 2
+            }
+          ],
+          "warnings": [
+            "单列分类题；多选题须先按选项拆列，不能将组合文本当作选项占比。",
+            "未加权、未自动删除重复行、未插补；原因计数可能重叠。没有正式抽样设计，不给出总体代表性结论。"
+          ],
+          "receipt": {
+            "version": 1,
+            "interpretation": "比例的分母是该列非缺失样本。区间为 Wilson 95% 区间，只在随机抽样前提下描述总体比例；便利或配额样本只作参考。",
+            "sample": {
+              "calculationRows": 4,
+              "analysisRows": 4,
+              "excludedRows": 0,
+              "missingRows": 0,
+              "invalidRows": 0,
+              "outOfRangeRows": null
+            },
+            "percentageBasis": "effective-sample"
+          }
+        }
+      ],
+      "findings": []
+    },
+    "visualStyle": {
+      "schema": "ProjectVisualStyle/v1",
+      "paletteId": "blue",
+      "version": 1
+    },
+    "figures": [
+      {
+        "schema": "ReportFigure/v1",
+        "id": "figure-A",
+        "resultId": "eb5ab254-8c39-4d14-8f70-c72d823add97",
+        "resultHash": "c7220c4114c623203e81cea023387a9beb9ef7638b946dbcbd17d6173ac57177",
+        "kind": "bar",
+        "title": "独立排版验收",
+        "xLabel": "类别",
+        "yLabel": "频数",
+        "note": "",
+        "n": 4,
+        "labels": [
+          "类别0",
+          "类别1"
+        ],
+        "series": [
+          {
+            "name": "频数",
+            "values": [
+              2,
+              2
+            ]
+          }
+        ],
+        "bins": [],
+        "boxes": [],
+        "table": {
+          "headers": [
+            "类别",
+            "频数",
+            "有效样本占比 (%)",
+            "95% CI 下限 (%)",
+            "95% CI 上限 (%)"
+          ],
+          "rows": [
+            [
+              "类别0",
+              2,
+              50,
+              15.003898915214952,
+              84.99610108478505
+            ],
+            [
+              "类别1",
+              2,
+              50,
+              15.003898915214952,
+              84.99610108478505
+            ]
+          ]
+        },
+        "style": {
+          "decimals": 2,
+          "showLabels": true,
+          "showGrid": true,
+          "showBorder": false
+        }
+      },
+      {
+        "schema": "ReportFigure/v1",
+        "id": "figure-B",
+        "resultId": "74f3eeef-ba5c-4117-9983-5458685920f1",
+        "resultHash": "6ec591d5e216d811c3a54091352483363e2011914a3aeaccdbd29e26e0bcc7cd",
+        "kind": "table",
+        "title": "独立排版验收",
+        "xLabel": "类别",
+        "yLabel": "频数",
+        "note": "",
+        "n": 4,
+        "labels": [],
+        "series": [],
+        "bins": [],
+        "boxes": [],
+        "table": {
+          "headers": [
+            "类别",
+            "频数"
+          ],
+          "rows": [
+            [
+              "反馈0",
+              2
+            ],
+            [
+              "反馈1",
+              2
+            ]
+          ]
+        },
+        "style": {
+          "decimals": 2,
+          "showLabels": true,
+          "showGrid": true,
+          "showBorder": false
+        }
+      }
+    ],
+    "report": [
+      {
+        "id": "A",
+        "title": "参与",
+        "body": "样本参与分布用于解释。",
+        "source": "来源A完整尾部",
+        "blocks": [
+          {
+            "id": "shared-block",
+            "kind": "chart",
+            "text": "参与",
+            "evidenceId": "eb5ab254-8c39-4d14-8f70-c72d823add97",
+            "valueColumn": 1,
+            "figureId": "figure-A"
+          },
+          {
+            "id": "para",
+            "kind": "paragraph",
+            "text": "选中的跨章段落。",
+            "evidenceId": "",
+            "valueColumn": 1
+          }
+        ]
+      },
+      {
+        "id": "B",
+        "title": "反馈",
+        "body": "反馈用于后续核验。",
+        "source": "来源B完整尾部",
+        "blocks": [
+          {
+            "id": "shared-block",
+            "kind": "table",
+            "text": "反馈",
+            "evidenceId": "74f3eeef-ba5c-4117-9983-5458685920f1",
+            "valueColumn": 1,
+            "figureId": "figure-B"
+          }
+        ]
+      }
+    ],
+    "slides": [
+      {
+        "id": "916d059b-5b11-4f6f-a1b3-feef1b27a0ee",
+        "title": "比较参与与反馈",
+        "body": "【教学模拟，非真实调研】\n样本参与分布用于解释。\n\n意义 / 下一步：继续核对。",
+        "aside": "适用边界\n仅限合成测试。\n\n报告定位\n参与\nQA v1",
+        "notes": "页面任务：呈现发现\n预计讲述：45 秒（自行规划）\n关联章节 ID：A\n来源与说明（完整保留）：\n来源A完整尾部\n\n本页由人工选择与改写，不代表证据已核验。报告关联指纹仅用于检测编辑变化。\n\n报告定位：QA v1\n\n关联章节 ID：B\n反馈\n来源与说明（完整保留）：\n来源B完整尾部\n\n已选内容块（A）：\nshared-block：参与\n共享图形：figure-A\n\n已选内容块（B）：\nshared-block：反馈\n共享图形：figure-B",
+        "layout": "comparison",
+        "reportLink": {
+          "version": 3,
+          "sectionId": "A",
+          "sectionHash": "307df2aec0eeaee44b189e05496965849119311ad970609923b6be539a75d54a",
+          "slideHash": "3c35c4dd3fb875db4671a8e4d20bd62b95aee04c5feb1edd4fb87b864cb05d2f",
+          "sources": [
+            {
+              "sectionId": "A",
+              "sectionHash": "307df2aec0eeaee44b189e05496965849119311ad970609923b6be539a75d54a",
+              "blockIds": [
+                "shared-block"
+              ]
+            },
+            {
+              "sectionId": "B",
+              "sectionHash": "7735063cc45263e6ca04ccb2764b3515904d63046b435784c3bbdbe5e5124787",
+              "blockIds": [
+                "shared-block"
+              ]
+            }
+          ]
+        },
+        "objects": [
+          {
+            "id": "a172a651-f69f-4043-b6a3-a8dbd0db65d5",
+            "kind": "text",
+            "x": 7,
+            "y": 8,
+            "width": 86,
+            "height": 13,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "比较参与与反馈",
+            "fontSize": 32,
+            "color": "#255D87",
+            "align": "left",
+            "evidenceId": "",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "bold": true
+          },
+          {
+            "id": "310d9da4-2209-4c11-a4a0-36bc1120f0f1",
+            "kind": "text",
+            "x": 7,
+            "y": 24,
+            "width": 41,
+            "height": 6,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "参与",
+            "fontSize": 18,
+            "color": "#255D87",
+            "align": "left",
+            "evidenceId": "",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "bold": true
+          },
+          {
+            "id": "c62f0874-0165-4900-a82d-6508d06652e8",
+            "kind": "chart",
+            "x": 7,
+            "y": 32,
+            "width": 41,
+            "height": 42,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "",
+            "fontSize": 18,
+            "color": "#255D87",
+            "align": "left",
+            "evidenceId": "eb5ab254-8c39-4d14-8f70-c72d823add97",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "sourceBlockId": "shared-block",
+            "sourceSectionId": "A",
+            "figureId": "figure-A"
+          },
+          {
+            "id": "c1f717cb-8be7-4ea2-9cdf-b17f21910ccb",
+            "kind": "text",
+            "x": 52,
+            "y": 24,
+            "width": 41,
+            "height": 6,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "反馈",
+            "fontSize": 18,
+            "color": "#255D87",
+            "align": "left",
+            "evidenceId": "",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "bold": true
+          },
+          {
+            "id": "2cff027a-8bc8-4705-be9e-c30b96fa746f",
+            "kind": "table",
+            "x": 52,
+            "y": 32,
+            "width": 41,
+            "height": 42,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "",
+            "fontSize": 18,
+            "color": "#255D87",
+            "align": "left",
+            "evidenceId": "74f3eeef-ba5c-4117-9983-5458685920f1",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "sourceBlockId": "shared-block",
+            "sourceSectionId": "B",
+            "figureId": "figure-B"
+          },
+          {
+            "id": "e7ab3d9c-3f5e-4035-b7e3-bf04e3e69640",
+            "kind": "text",
+            "x": 7,
+            "y": 78,
+            "width": 86,
+            "height": 10,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "【教学模拟，非真实调研】 样本参与分布用于解释。 意义 / 下一步：继续核对。",
+            "fontSize": 18,
+            "color": "#233747",
+            "align": "left",
+            "evidenceId": "",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "bold": false
+          },
+          {
+            "id": "a6170c3d-19a8-4881-9490-0bcd2f6adb1e",
+            "kind": "text",
+            "x": 7,
+            "y": 90,
+            "width": 86,
+            "height": 7,
+            "rotation": 0,
+            "opacity": 1,
+            "locked": false,
+            "groupId": "",
+            "text": "适用边界：仅限合成测试。",
+            "fontSize": 15,
+            "color": "#536677",
+            "align": "left",
+            "evidenceId": "",
+            "valueColumn": 1,
+            "chartType": "bar",
+            "assetId": "",
+            "shape": "rect",
+            "bold": false
+          }
+        ]
+      }
+    ]
+  }
+}
