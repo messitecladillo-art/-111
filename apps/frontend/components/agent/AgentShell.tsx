@@ -303,7 +303,7 @@ export default function AgentShell() {
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
             </div>}
         </div>
-        <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={loadLists}
+        <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
           services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer} onOpen={go} />
       </main>

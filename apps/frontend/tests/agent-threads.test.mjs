@@ -94,7 +94,7 @@ test('two tabs of one account keep each other’s conversations', () => {
   assert.match(local.getItem('evix.agent.threads.v1:gina'), /另一个标签页的对话/, 'and its next save keeps the other tab’s');
   fromAnotherTab('evix.agent.threads.v1:somebody-else', JSON.stringify({ threads: [], active: null }));
   assert.equal(threads.view('gina').threads.length, 2, 'another account’s key is not this tab’s business');
-  fromAnotherTab('evix.agent.threads.v1:gina', JSON.stringify({ threads: [theirs], active: theirs.id }));
+  fromAnotherTab('evix.agent.threads.v1:gina', JSON.stringify({ threads: [theirs], active: theirs.id, removed: [mine] }));
   assert.equal(threads.view('gina').active, null, 'a conversation deleted in the other tab closes here too');
 });
 
@@ -110,4 +110,43 @@ test('the transcript of earlier versions becomes a conversation of the identity 
   threads.bind('jack');
   assert.equal(threads.view('jack').threads.some(t => t.title === '伊万的问题'), false, 'another identity’s transcript is dropped unread');
   assert.equal(session.getItem('evix.agent.transcript.v2'), null);
+});
+
+test('two tabs writing to one conversation before hearing of each other lose nothing, and settle without echoing', () => {
+  threads.bind('kim');
+  const ask = user('第一问');
+  threads.append([ask, agent('第一答')]);
+  const key = 'evix.agent.threads.v1:kim', id = threads.view('kim').active;
+  // The other tab answered in the same conversation, but its save has not reached this tab yet.
+  const stale = JSON.parse(local.getItem(key));
+  stale.threads[0].messages.push(user('另一个标签页的追问'));
+  local.setItem(key, JSON.stringify(stale));
+  threads.append([user('这个标签页的追问')]);
+  const saved = JSON.parse(local.getItem(key)).threads.find(t => t.id === id).messages.map(m => m.text ?? m.turn.lines[0][0].text);
+  assert.deepEqual(saved.slice(0, 2), ['第一问', '第一答']);
+  assert.deepEqual([...saved.slice(2)].sort(), ['另一个标签页的追问', '这个标签页的追问'].sort(), 'both follow-ups are saved');
+  // A later change to a message beats an older copy of it, whichever tab saves last.
+  threads.patch(ask.id, m => ({ ...m, text: '第一问（改）' }));
+  const older = JSON.parse(local.getItem(key));
+  older.threads[0].messages[0] = { ...older.threads[0].messages[0], text: '第一问', rev: 1 };
+  fromAnotherTab(key, JSON.stringify(older));
+  assert.equal(threads.find(ask.id).text, '第一问（改）');
+  assert.equal(JSON.parse(local.getItem(key)).threads[0].messages[0].text, '第一问（改）', 'and is saved back for the other tab');
+  // A save that holds everything this tab has is taken without saving back.
+  let writes = 0;
+  const setItem = local.setItem;
+  local.setItem = (k, v) => { writes++; setItem(k, v); };
+  fromAnotherTab(key, local.getItem(key));
+  local.setItem = setItem;
+  assert.equal(writes, 1, 'only the other tab’s own save; this tab does not echo it');
+});
+
+test('a conversation deleted in one tab does not come back from another tab’s older copy', () => {
+  threads.bind('lee');
+  threads.append([user('要删除的对话')]);
+  const key = 'evix.agent.threads.v1:lee', doomed = threads.view('lee').active, older = local.getItem(key);
+  threads.remove(doomed);
+  fromAnotherTab(key, older);
+  assert.equal(threads.view('lee').threads.some(t => t.id === doomed), false);
+  assert.deepEqual(JSON.parse(local.getItem(key)).removed, [doomed], 'the deletion is saved back so the other tab drops it too');
 });

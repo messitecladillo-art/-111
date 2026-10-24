@@ -33,7 +33,8 @@ export type Generation = {
   /** The service the composer's model chip points at; the consent card starts from it. */
   preferredService: string;
   prefer: (serviceId: string) => void;
-  load: () => void;
+  /** Reads the account's projects and services once. After a failure only a retry, asked for by the user, reads again. */
+  load: (retry?: boolean) => void;
   start: (brief: string) => AgentTurn;
   submit: (messageId: string, input: { brief: string; projectId: string; serviceId: string }) => void;
   cancel: (messageId: string) => void;
@@ -81,15 +82,21 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const release = useCallback(() => { lock.current = false; setBusy(false); }, []);
   const transport = useMemo(() => ({ read: hostedRequest, mutate }), [mutate]);
 
-  const load = useCallback(() => {
-    if (!owner || lists.state === 'loading' || lists.state === 'ready') return;
+  // Effects call this whenever it changes, and it changes with the state; so it starts only from idle, or from an
+  // error when the user asks, and a failing request is never retried in a loop. Calls made before the state catches
+  // up (two effects in one commit) share the read already under way.
+  const reading = useRef(false);
+  const load = useCallback((retry = false) => {
+    if (!owner || reading.current || !(lists.state === 'idle' || (retry && lists.state === 'error'))) return;
     const epoch = identityEpoch, current = () => isCurrentAccount(owner, epoch);
+    reading.current = true;
     setLists(value => ({ ...value, state: 'loading', error: '' }));
     Promise.all([hostedRequest('/api/projects'), hostedRequest('/api/services')])
       .then(([projects, services]) => {
         if (current()) setLists({ state: 'ready', projects: parseCollection(projects, 'projects', parseProject), services: parseCollection(services, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire')), error: '' });
       })
-      .catch(failure => { if (current()) setLists(value => ({ ...value, state: 'error', error: reason(failure) })); });
+      .catch(failure => { if (current()) setLists(value => ({ ...value, state: 'error', error: reason(failure) })); })
+      .finally(() => { reading.current = false; });
   }, [owner, identityEpoch, isCurrentAccount, lists.state]);
 
   const start = useCallback((brief: string): AgentTurn => account === 'guest'
@@ -206,7 +213,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
         <small>{brief.length} / {BRIEF_LIMIT}</small>
       </label>
       {g.account !== 'ready' ? <p className={styles.fieldNote}>正在核对登录状态…</p>
-        : g.lists.state === 'error' ? <p className={styles.fieldError}>读取项目与模型服务失败：{g.lists.error} <button type="button" className={styles.chip} onClick={g.load}>重试</button></p>
+        : g.lists.state === 'error' ? <p className={styles.fieldError}>读取项目与模型服务失败：{g.lists.error} <button type="button" className={styles.chip} onClick={() => g.load(true)}>重试</button></p>
         : g.lists.state !== 'ready' ? <p className={styles.fieldNote}>正在读取你的项目与模型服务…</p>
         : <>
           <label className={styles.field}><span>保存到项目</span>
