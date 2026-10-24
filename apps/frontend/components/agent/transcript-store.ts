@@ -39,6 +39,13 @@ const notify = () => { for (const listener of listeners) listener(); };
  */
 export const transcript = {
   subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
+  /**
+   * What identity `id` may see: its own transcript only. Before any identity is known (`null` on both sides) that is
+   * what was typed on this page; a list still bound to someone else reads as empty, so it never reaches the screen,
+   * not even for the render before `bind` runs.
+   */
+  view: (id: string | null) => id === owner ? messages : EMPTY,
+  /** The list whatever its identity, for the shell's own bookkeeping; never render it. */
   snapshot: () => messages,
   serverSnapshot: () => EMPTY,
   /** `id` is the signed-in user's ID, or "guest". What was typed while it was still unknown stays with it. */

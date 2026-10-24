@@ -21,6 +21,10 @@ test('the transcript belongs to one identity: another account starts empty and t
   say('alice 的研究需求');
   transcript.bind('alice');
   assert.equal(texts().length, 2, 'binding the same identity again changes nothing');
+  // A shell mounted after the account changed renders before bind runs: what it reads must already be empty.
+  assert.equal(transcript.view('alice').length, 2);
+  assert.deepEqual(transcript.view('bob'), [], 'another account sees nothing of alice, even before binding');
+  assert.deepEqual(transcript.view(null), [], 'nor does a session still being checked');
   transcript.bind('bob');
   assert.deepEqual(texts(), [], 'another account starts empty');
   assert.doesNotMatch(storage.get(KEY), /alice/, "and the previous account's transcript is gone from storage");

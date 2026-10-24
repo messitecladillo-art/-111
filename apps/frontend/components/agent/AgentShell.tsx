@@ -61,7 +61,7 @@ export default function AgentShell() {
   const room = useSyncExternalStore(subscribeHash, currentRoom, () => 'overview' as RoomId);
   const width = useSyncExternalStore(subscribeMedia, viewport, () => 'wide' as const), narrow = width === 'narrow';
   const overlay = width === 'medium' && room !== 'overview';
-  const messages = useSyncExternalStore(transcript.subscribe, transcript.snapshot, transcript.serverSnapshot);
+  const messages = useSyncExternalStore(transcript.subscribe, () => transcript.view(owner), transcript.serverSnapshot);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
