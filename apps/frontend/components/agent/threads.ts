@@ -44,7 +44,21 @@ function persist() {
   const threads = book.threads.map(t => ({ ...t, messages: t.messages.filter(m => m.role !== 'pending') }));
   try { storage(owner)?.setItem(PREFIX + owner, JSON.stringify({ threads, active: book.active })); } catch { /* Without storage the conversations stay in memory only. */ }
 }
-function commit(next: Book) { book = next; persist(); for (const listener of listeners) listener(); }
+function notify() { for (const listener of listeners) listener(); }
+function commit(next: Book) { book = next; persist(); notify(); }
+/**
+ * Another tab of the same account saved its conversations. This tab takes them, so its next save does not drop what
+ * the other one added. It keeps its own open conversation, draft and unfinished lookups, and does not save back, so
+ * two tabs never echo each other.
+ */
+function adopt(event: StorageEvent) {
+  if (owner === null || owner === 'guest' || event.key !== PREFIX + owner) return;
+  const stored = load(owner), waiting = new Map(book.threads.map(t => [t.id, t.messages.filter(m => m.role === 'pending')]));
+  const threads = stored.threads.map(t => { const pending = waiting.get(t.id); return pending?.length ? { ...t, messages: [...t.messages, ...pending] } : t; });
+  book = { threads, active: threads.some(t => t.id === book.active) ? book.active : null, draftProject: book.draftProject };
+  notify();
+}
+let listening = false;
 const titleOf = (messages: Message[]) => {
   const first = messages.find(m => m.role === 'user');
   return first && first.role === 'user' ? first.text.replace(/\s+/gu, ' ').trim().slice(0, 30) || '新对话' : '新对话';
@@ -67,6 +81,7 @@ export const threads = {
   serverSnapshot: () => EMPTY,
   /** `id` is the signed-in user's ID, or "guest". Conversations begun while it was unknown stay with it. */
   bind(id: string) {
+    if (!listening) { window.addEventListener('storage', adopt); listening = true; }
     if (owner === id) return;
     const restored = load(id), unbound = owner === null ? book : EMPTY;
     owner = id;

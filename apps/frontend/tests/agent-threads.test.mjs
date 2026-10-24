@@ -3,8 +3,10 @@ import { test } from 'node:test';
 
 // The thread store reads the browser's storage; maps stand in for it.
 const fake = () => { const map = new Map(); return { map, getItem: k => map.get(k) ?? null, setItem: (k, v) => map.set(k, String(v)), removeItem: k => map.delete(k) }; };
-const local = fake(), session = fake();
-globalThis.window = { localStorage: local, sessionStorage: session };
+const local = fake(), session = fake(), handlers = [];
+globalThis.window = { localStorage: local, sessionStorage: session, addEventListener: (type, fn) => { if (type === 'storage') handlers.push(fn); } };
+// What the browser does when another tab saves: the value changes, then every other tab hears of the key.
+const fromAnotherTab = (key, value) => { local.setItem(key, value); for (const fn of handlers) fn({ key }); };
 const { stamp, threads } = await import('../components/agent/threads.ts');
 const user = text => ({ ...stamp(), role: 'user', text });
 const agent = text => ({ ...stamp(), role: 'agent', turn: { lines: [[{ text }]] } });
@@ -76,4 +78,22 @@ test('confirming a draft into a project files an unfiled conversation there, and
   assert.equal(threads.projectOf(ask.id), 'project-a');
   threads.file(ask.id, 'project-b');
   assert.equal(threads.projectOf(ask.id), 'project-a', 'a conversation already filed stays where the user put it');
+});
+
+test('two tabs of one account keep each other’s conversations', () => {
+  threads.bind('gina');
+  threads.append([user('这个标签页的对话')]);
+  const mine = threads.view('gina').active;
+  // The other tab adds a conversation of its own and saves everything it has.
+  const saved = JSON.parse(local.getItem('evix.agent.threads.v1:gina'));
+  const theirs = { id: 'other-tab-thread', title: '另一个标签页的对话', projectId: null, createdAt: 1, updatedAt: 2, messages: [user('另一个标签页的对话')] };
+  fromAnotherTab('evix.agent.threads.v1:gina', JSON.stringify({ threads: [theirs, ...saved.threads], active: theirs.id }));
+  assert.deepEqual(threads.view('gina').threads.map(t => t.title).sort(), ['另一个标签页的对话', '这个标签页的对话'].sort());
+  assert.equal(threads.view('gina').active, mine, 'this tab keeps its own open conversation');
+  threads.append([agent('好的')]);
+  assert.match(local.getItem('evix.agent.threads.v1:gina'), /另一个标签页的对话/, 'and its next save keeps the other tab’s');
+  fromAnotherTab('evix.agent.threads.v1:somebody-else', JSON.stringify({ threads: [], active: null }));
+  assert.equal(threads.view('gina').threads.length, 2, 'another account’s key is not this tab’s business');
+  fromAnotherTab('evix.agent.threads.v1:gina', JSON.stringify({ threads: [theirs], active: theirs.id }));
+  assert.equal(threads.view('gina').active, null, 'a conversation deleted in the other tab closes here too');
 });
