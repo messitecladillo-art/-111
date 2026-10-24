@@ -216,6 +216,7 @@ export default function AgentShell() {
           <NavIcon kind={theme === 'dark' ? 'sun' : 'moon'} />
         </button>
         <Link className={`${styles.barButton} ${styles.hideNarrow}`} href={`/workspace#${room}`}>经典工作台</Link>
+        <Link className={styles.barButton} href="/agent/workspace" title="打开对话与问卷提案工作区">对话工作区</Link>
         <div className={styles.account}><AccountStatus /></div>
       </header>
 
