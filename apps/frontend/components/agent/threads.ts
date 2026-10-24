@@ -13,7 +13,8 @@ export type Thread = { id: string; title: string; projectId: string | null; crea
 /** One identity's conversations, the open one (null while a new one is still a draft), and the draft's project. */
 export type Book = { threads: Thread[]; active: string | null; draftProject: string | null };
 
-const PREFIX = 'evix.agent.threads.v1:', LEGACY = ['evix.agent.transcript.v1', 'evix.agent.transcript.v2'];
+/** Earlier versions kept one transcript per tab: v2 recorded its owner and is carried over; v1 did not and is dropped. */
+const PREFIX = 'evix.agent.threads.v1:', TRANSCRIPT = 'evix.agent.transcript.v2', LEGACY = ['evix.agent.transcript.v1', TRANSCRIPT];
 const MESSAGE_LIMIT = 160, THREAD_LIMIT = 60;
 const EMPTY: Book = { threads: [], active: null, draftProject: null };
 let owner: string | null = null;
@@ -63,6 +64,15 @@ const titleOf = (messages: Message[]) => {
   const first = messages.find(m => m.role === 'user');
   return first && first.role === 'user' ? first.text.replace(/\s+/gu, ' ').trim().slice(0, 30) || '新对话' : '新对话';
 };
+/** This tab's transcript from before conversations were threads, if it belongs to `id`. */
+function carriedOver(id: string): Thread | null {
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(TRANSCRIPT) ?? 'null') as { owner?: unknown; messages?: unknown } | null;
+    const messages = value?.owner === id && Array.isArray(value.messages) ? value.messages.filter(validMessage).slice(-MESSAGE_LIMIT) : [];
+    if (!messages.length) return null;
+    return { id: crypto.randomUUID(), title: titleOf(messages), projectId: null, createdAt: messages[0].at, updatedAt: messages[messages.length - 1].at, messages };
+  } catch { return null; }
+}
 function inThread(messageId: string) { return book.threads.find(t => t.messages.some(m => m.id === messageId)); }
 function withThread(thread: Thread, messages: Message[]): Book {
   const next = { ...thread, messages: messages.slice(-MESSAGE_LIMIT), updatedAt: Date.now() };
@@ -83,10 +93,12 @@ export const threads = {
   bind(id: string) {
     if (!listening) { window.addEventListener('storage', adopt); listening = true; }
     if (owner === id) return;
-    const restored = load(id), unbound = owner === null ? book : EMPTY;
+    const restored = load(id), unbound = owner === null ? book : EMPTY, earlier = carriedOver(id);
     owner = id;
+    // Another identity's transcript is dropped unread, as it always was.
     for (const key of LEGACY) { try { window.sessionStorage.removeItem(key); } catch { /* Nothing to remove without storage. */ } }
-    commit({ threads: [...unbound.threads, ...restored.threads].slice(0, THREAD_LIMIT), active: unbound.active ?? restored.active, draftProject: null });
+    const threads = [...unbound.threads, ...(earlier ? [earlier] : []), ...restored.threads].slice(0, THREAD_LIMIT);
+    commit({ threads, active: unbound.active ?? earlier?.id ?? restored.active, draftProject: null });
   },
   /** Opens a new, empty conversation; it becomes a thread with its first message. */
   draft(projectId: string | null = null) { commit({ ...book, active: null, draftProject: projectId }); },

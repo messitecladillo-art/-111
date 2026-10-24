@@ -11,6 +11,11 @@ type Props = {
   projects: { id: string; label: string }[];
   account: 'loading' | 'guest' | 'ready';
   email: string;
+  /** The account service could not be reached; the footer offers to reconnect, as the classic frame does. */
+  failed: boolean;
+  onRetry: () => void;
+  /** Why the last sign-out or reconnection failed. */
+  notice: string;
   onNew: (projectId: string | null) => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
@@ -22,7 +27,7 @@ type Props = {
  * them, then the rest by recency. Deleting asks once more in place; it removes the conversation only, never project
  * work.
  */
-export default function Sidebar({ book, projects, account, email, onNew, onSelect, onRemove, onCollapse }: Props) {
+export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onCollapse }: Props) {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -71,10 +76,17 @@ export default function Sidebar({ book, projects, account, email, onNew, onSelec
       {loose.map(t => row(t))}
       {!recent.length && <p className={styles.sideEmpty}>{wanted ? '没有匹配的对话。' : '还没有对话。'}</p>}
     </nav>
+    {notice && <p className={styles.sideNotice} role="alert">{notice}</p>}
     <div className={styles.sideFoot}>
-      {account === 'ready' ? <span title={email}>{email}</span> : <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>}
-      <span className={styles.spacer} />
-      {account === 'guest' ? <Link href="/login">登录</Link> : <Link href="/workspace">经典工作台 ↗</Link>}
+      {failed && account !== 'ready' ? <>
+        <span role="alert">账号服务暂未就绪</span>
+        <span className={styles.spacer} />
+        <button type="button" onClick={onRetry}>重新连接</button>
+      </> : <>
+        {account === 'ready' ? <span title={email}>{email}</span> : <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>}
+        <span className={styles.spacer} />
+        {account === 'guest' ? <Link href="/login">登录</Link> : <Link href="/workspace">经典工作台 ↗</Link>}
+      </>}
     </div>
   </aside>;
 }

@@ -72,11 +72,11 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const owner = session?.authenticated ? session.user?.id ?? '' : '';
   const account: Generation['account'] = loading ? 'loading' : owner ? 'ready' : 'guest';
   const [lists, setLists] = useState<Lists>(EMPTY);
-  // Another account never sees the previous account's projects or services.
-  const [listsFor, setListsFor] = useState(`${owner}:${identityEpoch}`);
-  if (listsFor !== `${owner}:${identityEpoch}`) { setListsFor(`${owner}:${identityEpoch}`); setLists(EMPTY); }
-  const [busy, setBusy] = useState(false);
   const [preferredService, prefer] = useState('');
+  // Another account never sees the previous account's projects or services, nor its choice of service.
+  const [listsFor, setListsFor] = useState(`${owner}:${identityEpoch}`);
+  if (listsFor !== `${owner}:${identityEpoch}`) { setListsFor(`${owner}:${identityEpoch}`); setLists(EMPTY); prefer(''); }
+  const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const release = useCallback(() => { lock.current = false; setBusy(false); }, []);
   const transport = useMemo(() => ({ read: hostedRequest, mutate }), [mutate]);

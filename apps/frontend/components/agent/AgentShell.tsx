@@ -7,6 +7,7 @@ import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
+import { errorMessage } from '@/components/hosted/api-client';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -61,7 +62,8 @@ export default function AgentShell() {
   const { panels, view, publishProposal } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
-  const { session: account, loading: accountLoading, logout } = useHostedSession();
+  const { session: account, loading: accountLoading, error: sessionError, logout, refresh } = useHostedSession();
+  const [accountNotice, setAccountNotice] = useState('');
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
   useEffect(() => { if (owner) threads.bind(owner); }, [owner]);
@@ -266,7 +268,7 @@ export default function AgentShell() {
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('services'); setRailMenu(null); }}>模型服务</button>
           <Link role="menuitem" className={styles.menuItem} href="/workspace">经典工作台 ↗</Link>
           {/* Signing out asks first when this tab still holds unsaved drafts. */}
-          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); void logout(); }}>退出登录</button>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}>退出登录</button>
         </div>}
         {railMenu === 'modules' && <div className={styles.menu} role="menu" aria-label="模块" style={{ left: 50, top: 40, zIndex: 60, maxHeight: 'calc(100dvh - 56px)' }}>
           {GROUPS.map(group => <div key={group} role="group" aria-label={ROOM_GROUPS[group]}>
@@ -281,7 +283,8 @@ export default function AgentShell() {
         </div>}
       </nav>
 
-      <Sidebar book={book} projects={projects} account={generationAccount} email={email} onNew={id => { threads.draft(id); focusInput(); }}
+      <Sidebar book={book} projects={projects} account={generationAccount} email={email} notice={accountNotice}
+        failed={!!sessionError} onRetry={() => { setAccountNotice(''); refresh().catch(error => setAccountNotice(errorMessage(error))); }} onNew={id => { threads.draft(id); focusInput(); }}
         onSelect={threads.select} onRemove={threads.remove} onCollapse={() => setSideOpen(false)} />
 
       <main className={styles.main} aria-label="对话" data-dialog-background>
@@ -302,7 +305,7 @@ export default function AgentShell() {
         </div>
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={loadLists}
           projects={projects} projectId={projectId} onProject={threads.setProject}
-          services={services} serviceId={preferredService || services[0]?.id || ''} onService={prefer} onOpen={go} />
+          services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer} onOpen={go} />
       </main>
 
       <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background

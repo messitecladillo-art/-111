@@ -125,6 +125,10 @@
 .sideFoot a { color: var(--c-dim); text-decoration: none; }
 .sideFoot a:hover { color: var(--c-fg); }
 .sideFoot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sideFoot [role="alert"] { color: var(--c-err); }
+.sideFoot button { flex: none; padding: 2px 8px; border: 1px solid var(--c-line-strong); border-radius: 7px; background: var(--c-raise); color: var(--c-fg); font-size: 12px; cursor: pointer; }
+.sideFoot button:hover { background: var(--c-hover); }
+.sideNotice { margin: 0 12px 8px; color: var(--c-err); font-size: 12px; overflow-wrap: anywhere; }
 
 /* ——— Conversation ——— */
 .main { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--c-bg); }

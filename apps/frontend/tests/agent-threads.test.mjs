@@ -97,3 +97,17 @@ test('two tabs of one account keep each other’s conversations', () => {
   fromAnotherTab('evix.agent.threads.v1:gina', JSON.stringify({ threads: [theirs], active: theirs.id }));
   assert.equal(threads.view('gina').active, null, 'a conversation deleted in the other tab closes here too');
 });
+
+test('the transcript of earlier versions becomes a conversation of the identity it recorded, never of another', () => {
+  const earlier = [user('升级前问的问题'), agent('升级前的回答')];
+  session.setItem('evix.agent.transcript.v2', JSON.stringify({ owner: 'hana', messages: earlier }));
+  threads.bind('hana');
+  const book = threads.view('hana'), carried = book.threads.find(t => t.id === book.active);
+  assert.equal(carried?.title, '升级前问的问题', 'it opens as a conversation titled by its first question');
+  assert.deepEqual(carried.messages.map(m => m.id), earlier.map(m => m.id));
+  assert.equal(session.getItem('evix.agent.transcript.v2'), null, 'and the old key is gone once it is carried over');
+  session.setItem('evix.agent.transcript.v2', JSON.stringify({ owner: 'ivan', messages: [user('伊万的问题')] }));
+  threads.bind('jack');
+  assert.equal(threads.view('jack').threads.some(t => t.title === '伊万的问题'), false, 'another identity’s transcript is dropped unread');
+  assert.equal(session.getItem('evix.agent.transcript.v2'), null);
+});
