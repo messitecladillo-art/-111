@@ -24,6 +24,7 @@ export default function DefenseStudio(){
   const [versionAcknowledged,setVersionAcknowledged]=useState(false);
   const fileInput=useRef<HTMLInputElement>(null),importButton=useRef<HTMLButtonElement>(null),preview=useRef<HTMLElement>(null);
   const readToken=useRef(0),contentRevision=useRef(0);
+  const workspaceRef=useRef<HTMLDivElement>(null),timingRef=useRef<HTMLElement>(null),actionRef=useRef<HTMLDivElement>(null),rehearsalRef=useRef<HTMLDivElement>(null);
   const restoreImportFocus=useRef(false);
   useEffect(()=>()=>{readToken.current++;},[]);
   useEffect(()=>{if(pending)preview.current?.focus();},[pending]);
@@ -79,12 +80,17 @@ export default function DefenseStudio(){
   const reviewReveal=useContentReveal<HTMLDivElement>({token:JSON.stringify([check.status,check.missing,check.warnings])});
   return <section className={styles.studio} id="defense" aria-labelledby="defense-title">
     <header className={styles.heading}>
-      <div><span className={styles.eyebrow}>演练 · 定位 · 修订</span><h2 id="defense-title">路演与答辩</h2><p>选择问题，记录回答与证据，再分段彩排。</p></div>
+      <div><h2 id="defense-title">答辩练习</h2></div>
       <div className={styles.export}><span>{filled} / {corpus.cards.length} 题已记笔记</span><button ref={importButton} className={styles.secondary} type="button" onClick={()=>fileInput.current?.click()} disabled={reading}>导入练习笔记</button><button type="button" onClick={exportNotes} disabled={!filled||!!planError}>导出练习笔记</button></div>
     </header>
+    <div className={styles.workspaceTools}>
+      <nav className={styles.jumpNav} aria-label="答辩工作区导航">
+        {[{label:'问题练习',target:workspaceRef},{label:'时间编排',target:timingRef},{label:'计时彩排',target:rehearsalRef},{label:'行动证据',target:actionRef}].map(({label,target})=><button key={label} type="button" onClick={()=>{const element=target.current;element?.scrollIntoView({block:'start'});element?.focus({preventScroll:true});}}>{label}</button>)}
+      </nav>
+      <span className={styles.localNotice}>本页草稿 · 下载后保留</span>
+    </div>
     <ResearchMaterialLibrary context="defense"/>
     <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择答辩练习 JSON 文件" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readImport(file);}}/>
-    <p className={styles.localNotice}>练习笔记在本页编辑；离开前下载保存，下次导入继续。</p>
     {reading&&<div className={styles.reading}><p role="status">正在本地检查文件，尚未更改任何笔记…</p><button type="button" onClick={cancelImport}>取消读取</button></div>}
     {importError&&<p className={styles.error} role="alert">{importError} 当前笔记与时间设置未变。</p>}
     {pending&&<section ref={preview} tabIndex={-1} className={styles.importPreview} aria-labelledby="defense-import-title">
@@ -97,35 +103,36 @@ export default function DefenseStudio(){
       <div className={styles.importActions}><button type="button" className={styles.secondary} onClick={cancelImport}>取消，保留当前内容</button><button type="button" onClick={confirmImport} disabled={pending.data.corpusMismatch&&!versionAcknowledged}>{replaced.length?`确认导入并替换 ${replaced.length} 题`:`确认导入 ${pending.data.cardIds.length} 题`}</button></div>
     </section>}
     <p className={styles.feedback} role="status">{feedback}</p>
-    <div className={styles.workspace}>
+    <div ref={workspaceRef} tabIndex={-1} className={styles.workspace} aria-label="问题练习区">
       <aside className={styles.bank} aria-label="答辩练习题库">
-        <div className={styles.bankHeader}><strong>选择一个薄弱环节</strong><label>主题筛选<select value={category} onChange={e=>{setCategory(e.target.value);setFeedback('');}}>{['全部主题',...new Set(corpus.cards.map(c=>c.category))].map(value=><option key={value}>{value}</option>)}</select></label></div>
+        <div className={styles.bankHeader}><strong>问题目录 <span>{cards.length} 题</span></strong><label>主题筛选<select value={category} onChange={e=>{setCategory(e.target.value);setFeedback('');}}>{['全部主题',...new Set(corpus.cards.map(c=>c.category))].map(value=><option key={value}>{value}</option>)}</select></label></div>
         <div ref={bankMotion} className={styles.cards}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{cards.map((item,index)=><button key={item.id} data-motion-id={item.id} type="button" aria-pressed={card.id===item.id} onClick={()=>{setSelected(item.id);setFeedback('');}}><span>{String(index+1).padStart(2,'0')} · {item.category}</span><strong>{item.title}</strong><small>{hasDefenseDraftChanges(drafts[item.id])?'已记笔记 · 未核验':'待练习'}</small></button>)}</div>
       </aside>
       <article className={styles.practice} aria-label="当前问题与回答">
-        <div ref={questionReveal} className={styles.question}><span>{card.category}</span><h3>{card.question}</h3><p>{card.followUp}</p></div>
-        <div className={styles.evidenceChecklist}><h4>回答前，先找这三类证据</h4><ul>{card.evidencePrompts.map(prompt=><li key={prompt}>{prompt}</li>)}</ul></div>
-        <div className={styles.pitfall}><strong>不要这样回答</strong><p>{card.pitfall}</p></div>
+        <div ref={questionReveal} className={styles.question}><span>{card.category}</span><h3>{card.question}</h3></div>
         <div className={styles.form}>
-          <label>当前依据状态<select value={draft.evidenceState} onChange={e=>patch({evidenceState:e.target.value as EvidenceState})}><option value="missing">缺少证据，暂不能确认</option><option value="documented">有记录可定位，尚待人工核验</option><option value="proposed">仅为计划，尚未执行</option></select></label>
-          <div ref={scaffoldReveal} className={styles.scaffold} aria-label="按依据状态组织回答">
-            <strong>{scaffold.title}</strong><ol>{scaffold.steps.map(step=><li key={step}>{step}</li>)}</ol>
-            <p>切换状态只调整提示，笔记保留；证据需人工核验。</p>
-          </div>
-          {DEFENSE_FIELDS.map((field,index)=><label key={field.id}><span><i>{index+1}</i>{field.label}</span>{field.id==='owner'?<input maxLength={120} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>:<textarea rows={field.id==='answer'?4:2} maxLength={1800} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>}</label>)}
+          <label className={styles.evidenceState}>当前依据状态<select value={draft.evidenceState} onChange={e=>patch({evidenceState:e.target.value as EvidenceState})}><option value="missing">缺少证据，暂不能确认</option><option value="documented">有记录可定位，尚待人工核验</option><option value="proposed">仅为计划，尚未执行</option></select></label>
+          {DEFENSE_FIELDS.map(field=><label className={field.id==='answer'?styles.answerField:undefined} key={field.id}><span>{field.label}</span>{field.id==='owner'?<input maxLength={120} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>:<textarea rows={field.id==='answer'?5:3} maxLength={1800} value={draft[field.id]} placeholder={field.placeholder} onChange={e=>patch({[field.id]:e.target.value})}/>}</label>)}
         </div>
+        <details className={styles.answerHelp}>
+          <summary>回答提示与证据清单</summary>
+          <p className={styles.followUp}><strong>继续追问</strong>{card.followUp}</p>
+          <div className={styles.evidenceChecklist}><h4>查找证据</h4><ul>{card.evidencePrompts.map(prompt=><li key={prompt}>{prompt}</li>)}</ul></div>
+          <div ref={scaffoldReveal} className={styles.scaffold} aria-label="按依据状态组织回答"><strong>{scaffold.title}</strong><ol>{scaffold.steps.map(step=><li key={step}>{step}</li>)}</ol><p>切换状态只调整提示，笔记保留；证据需人工核验。</p></div>
+          <div className={styles.pitfall}><strong>常见误区</strong><p>{card.pitfall}</p></div>
+        </details>
         <div ref={reviewReveal} className={styles.review} aria-label="回答结构检查"><strong>{check.status==='incomplete'?'还有信息需要补齐':'结构已填写，证据待复核'}</strong>{check.missing.length>0&&<p>待补：{check.missing.join('、')}。</p>}{check.warnings.length>0&&<ul>{check.warnings.map(w=><li key={w}>{w}</li>)}</ul>}</div>
         <details className={styles.sources}><summary>参考资料</summary>{card.sourceRefs.map(ref=>{const source=corpus.sources.find(s=>s.id===ref.id)!;return <p key={ref.id}>{source.label} · 第 {ref.pages.join('、')} 页</p>;})}</details>
       </article>
     </div>
-    <ActionEvidence/>
-    <section className={styles.timing} aria-labelledby="pitch-timing-title">
+    <div ref={actionRef} tabIndex={-1} className={styles.sectionTarget} aria-label="行动证据区"><ActionEvidence/></div>
+    <section ref={timingRef} tabIndex={-1} className={styles.timing} aria-labelledby="pitch-timing-title">
       <div className={styles.timingHeading}><div><span className={styles.eyebrow}>自由编排</span><h3 id="pitch-timing-title">分配讲述时间</h3><p>练习时长可调整；赛事时限请核对适用通知。</p></div><a href="#rules">核对赛事规则</a></div>
       <div className={styles.timeInputs}><label>练习总时长（秒）<input type="number" min={120} max={1800} step={1} value={total} onChange={e=>{invalidateImport();setTotal(e.target.value);}}/></label><label>预留时间（秒）<input type="number" min={0} max={90} step={1} value={reserve} onChange={e=>{invalidateImport();setReserve(e.target.value);}}/></label><p>初始比例只是编排起点。重点可以改变，关键证据和限制不能被压掉。</p></div>
       {planError&&<p className={styles.error} role="alert">{planError}</p>}
       <div className={styles.timeline}>{PITCH_BLOCKS.map((block,i)=><div key={block.id}><span>0{i+1}</span><h4>{block.label}</h4><p>{block.prompt}</p><label>相对权重<input aria-label={`${block.label}权重`} type="number" min={1} max={100} value={weights[i]} onChange={e=>{invalidateImport();setWeights(values=>values.map((value,j)=>j===i?e.target.value:value));}}/></label><strong>{plan[i]?formatDuration(plan[i].seconds):'—'}</strong><small>{plan[i]?`${formatDuration(plan[i].start)} 至 ${formatDuration(plan[i].end)}`:'等待有效设置'}</small></div>)}</div>
       {!planError&&<p className={styles.timeTotal}>讲述 {formatDuration(Number(total)-Number(reserve))} + 预留 {formatDuration(Number(reserve))} = 总时长 {formatDuration(Number(total))}</p>}
     </section>
-    <PitchRehearsal total={total.trim()?Number(total):NaN} reserve={reserve.trim()?Number(reserve):NaN} weights={weights.map(w=>w.trim()?Number(w):NaN)} corpusVersion={corpus.version} planError={planError}/>
+    <div ref={rehearsalRef} tabIndex={-1} className={styles.sectionTarget} aria-label="计时彩排区"><PitchRehearsal total={total.trim()?Number(total):NaN} reserve={reserve.trim()?Number(reserve):NaN} weights={weights.map(w=>w.trim()?Number(w):NaN)} corpusVersion={corpus.version} planError={planError}/></div>
   </section>;
 }

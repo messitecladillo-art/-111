@@ -82,7 +82,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const abort = useRef<AbortController | null>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
   const theatreRef = useRef<HTMLElement>(null), barRef = useRef<HTMLDivElement>(null);
-  const navigationRef = useKeyedListMotion<HTMLElement>({ ids: STEPS.map(s => s.id), activeId: step });
+  const navigationRef = useKeyedListMotion<HTMLElement>({ ids: STEPS.map(s => s.id), activeId: step, markerAxis: 'horizontal' });
   useEffect(() => {
     const bar = barRef.current, theatre = theatreRef.current;
     if (!bar || !theatre) return;
@@ -236,6 +236,11 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const showFlat = flat || !webgl;
 
   return <section className={styles.lab} aria-labelledby="sx-title" data-self-styled>
+      <nav ref={navigationRef} className={styles.stepper} aria-label="硅基样本流程"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
+        {STEPS.map((s, i) => <button type="button" key={s.id} data-motion-id={s.id} aria-current={step === s.id ? 'step' : undefined} data-done={doneSteps[s.id]} disabled={s.id === 'results' && !run} onClick={() => gotoStep(s.id)}>
+          <span className={styles.stepIndex}>{doneSteps[s.id] && step !== s.id ? '✓' : `0${i + 1}`}</span><span><strong>{s.label}</strong><small>{s.hint}</small></span>
+        </button>)}
+      </nav>
     <header ref={theatreRef} className={styles.theatre} data-layout={showFlat || narrow ? 'stacked' : 'overlay'} data-flat={showFlat} data-received={!!reveal}>
       <div className={styles.stage}>
         {showFlat ? <FlatStage figures={figures} groups={groups} personas={personas} selectedId={selectedId} onSelect={setSelectedId}/> :
@@ -243,11 +248,12 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       </div>
       <div className={styles.theatreTop}>
         <div className={styles.theatreTitle}>
-          <span className={styles.eyebrow}>SILICON SAMPLE LAB · 硅基样本</span>
-          <h2 id="sx-title">让硅基受访者，<em>先替你答一遍</em></h2>
-          <p>给 AI 设定身份与情境，在真人作答前找出问卷里的表述、选项与跳转问题。</p>
+          <span className={styles.eyebrow}>硅基样本 · 问卷预测试</span>
+          <h2 id="sx-title">让问题，<em>先被看见</em></h2>
+          <p>设定画像与情境，检查表述、选项和跳转。</p>
+          <button type="button" className={styles.stageShortcut} onClick={() => gotoStep(step === 'results' ? 'results' : 'panel')}>{step === 'results' ? '查看本轮结果' : '配置画像'} <span aria-hidden="true">↗</span></button>
         </div>
-        <span className={styles.simChip}><i aria-hidden="true"/>模拟 ≠ 调查</span>
+        <span className={styles.simChip}><i aria-hidden="true"/>模拟回答 · 与真实调查分开</span>
       </div>
       <div ref={barRef} className={styles.theatreBar}>
         <label className={styles.stageSelect}><span>舞台分组</span><select value={groupChoice} onChange={e => setStageGroup(e.target.value)}>{groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
@@ -264,18 +270,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       {selected && <PersonaInspector persona={selected} attributes={panelAttributes} run={run} runDesign={runDesign} response={responseOf(selected.id) ?? null} sharedBackground={config.background} onClose={() => setSelectedId(null)} onEdit={patch => editPersona(selected.id, patch)} onReset={() => { const { [selected.id]: _removed, ...rest } = config.overrides; void _removed; update({ overrides: rest }); }}/>}
     </header>
 
-    <ul className={styles.tiers} aria-label="硅基样本的适用边界">
-      <li data-tier="ok"><span>推荐用途</span><strong>预测试</strong><small>检查表述、选项与跳转，估计作答时长，演练分析流程。</small></li>
-      <li data-tier="caution"><span>仅供参考</span><strong>模拟难触达人群</strong><small>模拟回答须与真实数据分开，不得填补、扩充或替代真实样本。</small></li>
-      <li data-tier="limit"><span>须单独论证</span><strong>机制建模</strong><small>贝叶斯先验、ABM 初始化、压力测试等用途需另行说明假设与局限。</small></li>
-    </ul>
-
     <div className={styles.workflow} ref={stepsRef}>
-      <nav ref={navigationRef} className={styles.stepper} aria-label="硅基样本流程"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
-        {STEPS.map((s, i) => <button type="button" key={s.id} data-motion-id={s.id} aria-current={step === s.id ? 'step' : undefined} data-done={doneSteps[s.id]} disabled={s.id === 'results' && !run} onClick={() => gotoStep(s.id)}>
-          <span className={styles.stepIndex}>{doneSteps[s.id] && step !== s.id ? '✓' : `0${i + 1}`}</span><span><strong>{s.label}</strong><small>{s.hint}</small></span>
-        </button>)}
-      </nav>
       <div className={styles.stepBody}>
         <div hidden={step !== 'panel'}><PanelDesigner config={config} update={update} personas={personas} selectedId={selectedId} onSelect={id => { setSelectedId(id); window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' }); }}/></div>
         <div hidden={step !== 'survey'}><SurveySetup config={config} update={update} design={design} studioDesign={studioDesign} studioPending={!!designSnapshot?.pending}/></div>
@@ -288,6 +283,13 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
         </div>
       </div>
     </div>
+    <details className={styles.usageDetails}><summary>用途与适用边界<span>预测试 · 模拟人群 · 机制建模</span></summary>
+    <ul className={styles.tiers} aria-label="硅基样本的适用边界">
+      <li data-tier="ok"><span>推荐用途</span><strong>预测试</strong><small>检查表述、选项与跳转，估计作答时长，演练分析流程。</small></li>
+      <li data-tier="caution"><span>仅供参考</span><strong>模拟难触达人群</strong><small>模拟回答须与真实数据分开，不得填补、扩充或替代真实样本。</small></li>
+      <li data-tier="limit"><span>须单独论证</span><strong>机制建模</strong><small>贝叶斯先验、ABM 初始化、压力测试等用途需另行说明假设与局限。</small></li>
+    </ul>
+    </details>
   </section>;
 }
 

@@ -59,7 +59,9 @@ function distribution(variable: string, label: string, values: number[]): ChartD
   return {
     key: categoryKey(variable, label), label, values: [...values], summary,
     bins: histogram(sorted),
-    box: { low: inside[0], q1: summary.q1, median: summary.median, q3: summary.q3, high: inside[inside.length - 1], outliers: sorted.filter(value => value < lowerFence || value > upperFence) },
+    // Interpolated Type-7 quartiles can sit beyond the last in-fence observation
+    // for small samples. A whisker ends at its quartile in that case, not inside the box.
+    box: { low: Math.min(summary.q1,inside[0]??summary.q1), q1: summary.q1, median: summary.median, q3: summary.q3, high: Math.max(summary.q3,inside.at(-1)??summary.q3), outliers: sorted.filter(value => value < lowerFence || value > upperFence) },
     density: density(sorted, summary), ecdf,
   };
 }
@@ -117,13 +119,13 @@ export function buildChartSnapshot(table: SurveyTable, node: PlanNode, result: P
       const label = textCell(row[0]), values = groups.get(label); check(values !== undefined && values.length === numberCell(row[1]));
       const d = distribution(table.headers[x], label, values!); return d ? [d] : [];
     });
-    snapshot.statistics = ['各组只使用当前配对范围内的有效数值；误差线为样本标准差。', '四分位数：Type 7；箱线须：Tukey 1.5 IQR 范围内的最远观测值。', '直方图：Sturges 等宽箱；KDE：Gaussian / Silverman robust；ECDF：并列值合并。'];
+    snapshot.statistics = ['各组只使用当前配对范围内的有效数值；误差线为样本标准差。', '四分位数：Type 7；箱线须：Tukey 1.5 IQR 范围内的最远观测值；若小样本插值四分位超出该观测值，须端止于相应四分位。', '直方图：Sturges 等宽箱；KDE：Gaussian / Silverman robust；ECDF：并列值合并。'];
   } else if (node.method === 'numeric') {
     const x = column(node.x), values = table.rows.flatMap(row => { if (isMissing(row[x], missingCodes)) return []; const value = finiteNumber(row[x]); return value === null ? [] : [value]; });
     check(values.length === result.n);
     const d = distribution(table.headers[x], table.headers[x], values); snapshot.distributions = d ? [d] : [];
     snapshot.yLabel = '频数';
-    snapshot.statistics = ['四分位数：Type 7；箱线须：Tukey 1.5 IQR 范围内的最远观测值。', '直方图：Sturges 等宽箱，左闭右开，末箱右闭；常量单箱。', 'KDE：Gaussian / Silverman robust；ECDF：并列值合并。'];
+    snapshot.statistics = ['四分位数：Type 7；箱线须：Tukey 1.5 IQR 范围内的最远观测值；若小样本插值四分位超出该观测值，须端止于相应四分位。', '直方图：Sturges 等宽箱，左闭右开，末箱右闭；常量单箱。', 'KDE：Gaussian / Silverman robust；ECDF：并列值合并。'];
   } else {
     check(node.method === 'pearson' || node.method === 'spearman');
     const x = column(node.x), y = column(node.y), values: [number, number][] = [];

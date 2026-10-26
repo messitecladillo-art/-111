@@ -11,14 +11,13 @@ export type CountyEvidencePanelProps = { profile: TopicProfile; published: reado
 /** Only displays verified publications supplied by the host. No model calls, adoption or release actions. */
 export default function CountyEvidencePanel({ profile, published }: CountyEvidencePanelProps) {
   const selected = selectCountyEvidence(profile, published);
-  if (selected.status !== 'ready') return <section className={styles.root} data-self-styled data-county-state={selected.status} aria-label="县域资料">
-    <p className={styles.eyebrow}>县域资料</p>
-    <div className={styles.empty} role="status"><h4>{selected.title}</h4>{selected.geography && <p className={styles.geography}>{selected.geography}</p>}<p>{selected.detail}</p></div>
+  if (selected.status !== 'ready') return <section className={`${styles.root} ${styles.compact}`} data-self-styled data-county-state={selected.status} aria-label="县域资料">
+    <div className={styles.empty} role="status"><h4>县域资料 · {selected.title}</h4>{selected.geography && <p className={styles.geography}>{selected.geography}</p>}<p>{selected.detail}</p></div>
   </section>;
   const { publication, geography, regionRef } = selected, county = publication.profile;
   return <section className={styles.root} data-self-styled data-county-state="ready" data-publication-contract="evix-topic-publication-ui/1" aria-label={`${county.displayName}县域资料`}>
     <header className={styles.header}>
-      <div><p className={styles.eyebrow}>LOCAL EVIDENCE / 县域资料</p><h4>{county.displayName}<span>从历史记录，提出下一步问题。</span></h4><p className={styles.geography} data-evidence-field="geography">{geography}<span className={styles.code}>{regionRef.code}</span></p></div>
+      <div><p className={styles.eyebrow}>县域资料</p><h4>{county.displayName}</h4><p className={styles.geography} data-evidence-field="geography">{geography}<span className={styles.code}>{regionRef.code}</span></p></div>
       <p className={styles.publication} data-evidence-field="status"><span>已发布资料</span><small>内容版本 {publication.contentVersion}</small></p>
     </header>
     <section className={styles.facts} data-evidence-field="fact" aria-label="历史事实">

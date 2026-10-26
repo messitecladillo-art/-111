@@ -27,7 +27,7 @@ export default function RunDrawer({ doc, states, events, issues, open, tab, onTa
     : '尚未运行';
   return <section className={styles.drawer} data-open={open || undefined} aria-label="运行状态">
     <button type="button" className={styles.drawerBar} aria-expanded={open} onClick={onToggle}>
-      <span className={styles.drawerDot} data-state={running ? 'running' : counts.get('failed') ? 'failed' : counts.get('waiting') ? 'waiting' : states.size ? 'done' : 'idle'} aria-hidden="true" />
+      <span className={styles.drawerDot} data-state={running ? 'running' : counts.get('failed') ? 'failed' : counts.get('blocked') || counts.get('waiting') ? 'waiting' : counts.get('done') ? 'done' : 'idle'} aria-hidden="true" />
       <strong>{summary}</strong>
       {issues && <span>{errors ? `检查发现 ${errors} 个问题` : '检查通过'}</span>}
       <span className={styles.drawerToggle}>{open ? '收起' : '日志与结果'}</span>

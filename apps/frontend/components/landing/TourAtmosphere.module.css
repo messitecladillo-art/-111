@@ -1,0 +1,101 @@
+.atmosphere {
+  overflow: visible;
+  isolation: isolate;
+}
+
+.glints {
+  opacity: .8;
+}
+
+.goldWeave,
+.tealWeave,
+.blueWeave,
+.orbitalField,
+.bloom,
+.prism {
+  transform-box: view-box;
+  transform-origin: 60% 50%;
+}
+
+.goldWeave {
+  animation: goldDrift 34s ease-in-out infinite alternate;
+}
+
+.tealWeave {
+  animation: tealDrift 39s ease-in-out -11s infinite alternate;
+}
+
+.blueWeave {
+  animation: blueDrift 43s ease-in-out -17s infinite alternate;
+}
+
+.orbitalField {
+  animation: orbitDrift 48s ease-in-out -9s infinite alternate;
+}
+
+.bloom {
+  animation: bloomDrift 36s ease-in-out -13s infinite alternate;
+}
+
+.prism {
+  animation: prismDrift 41s ease-in-out -7s infinite alternate;
+}
+
+.threadTrace,
+.threadTraceReverse,
+.orbitalTrace {
+  animation: threadTravel 58s linear infinite;
+}
+
+.threadTraceReverse {
+  animation-duration: 69s;
+  animation-direction: reverse;
+}
+
+.orbitalTrace {
+  animation-duration: 92s;
+  animation-direction: reverse;
+}
+
+@keyframes goldDrift {
+  to { transform: translate(-7px, -13px) rotate(-1.1deg); }
+}
+
+@keyframes tealDrift {
+  to { transform: translate(8px, 15px) rotate(1.2deg); }
+}
+
+@keyframes blueDrift {
+  to { transform: translate(-12px, -8px) rotate(.8deg); }
+}
+
+@keyframes orbitDrift {
+  to { transform: translate(5px, -9px) rotate(2deg); }
+}
+
+@keyframes bloomDrift {
+  to { transform: translate(-9px, 11px) scale(1.04); opacity: .78; }
+}
+
+@keyframes prismDrift {
+  to { transform: translate(6px, -10px) rotate(-1deg); opacity: .7; }
+}
+
+@keyframes threadTravel {
+  to { stroke-dashoffset: -1000; }
+}
+
+/* The landing page owns visibility and its global pause control. */
+:global([data-motion="off"]) .atmosphere *,
+:global([data-paused="true"]) .atmosphere *,
+:global([data-motion-visible="false"]) .atmosphere *,
+:global([hidden]) .atmosphere *,
+.atmosphere[data-motion-visible="false"] * {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere * {
+    animation: none !important;
+  }
+}

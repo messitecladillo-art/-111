@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BENCHMARK_DIMENSIONS, BENCHMARK_RULES, benchmarkReport, isCaption, writtenLines } from '../lib/report-benchmark.ts';
+import { BENCHMARK_DIMENSIONS, BENCHMARK_TARGETS, benchmarkReport, isCaption, writtenLines } from '../lib/report-benchmark.ts';
 import { blueprintSections, reportType } from '../lib/report-blueprint.ts';
 import { createEditorContent } from '../lib/editor-model.ts';
 import { newProjectReport } from '../lib/project-report.ts';
@@ -18,31 +18,31 @@ test('old guidance blocks are skipped, and captions are told apart from sentence
   assert.ok(!isCaption('图3呈现了各群体的分布，城区居民占比更高。'));
 });
 
-test('the generic template scores low and its structural gaps point to blueprint sections', () => {
+test('guidance is not completed writing, and the blueprint is optional', () => {
   const report = benchmarkReport(createEditorContent());
-  assert.ok(report.score < 35, String(report.score));
+  assert.ok(report.score < 50, String(report.score));
   assert.deepEqual(report.dimensions.map(d => d.label), Object.values(BENCHMARK_DIMENSIONS));
   for (const c of report.checks) {
     assert.ok(c.score >= 0 && c.score <= 1, c.id);
     assert.ok(c.detail.length > 4, c.id);
     if (c.status === 'pass' || c.status === 'na') assert.deepEqual(c.fixes, [], c.id);
   }
-  assert.ok(check(report, 'chapters').fixes.some(f => f.insert === 'intro'));
+  assert.equal(check(report, 'chapters').status, 'na');
   assert.equal(check(report, 'abstract').status, 'fail', 'the old abstract hint is not counted as writing');
   assert.ok(report.checks.length >= 35);
 });
 
 test('the blueprint skeleton is structurally complete but does not earn credit for its own guidance', () => {
   const skeleton = benchmarkReport(newProjectReport('骨架'));
-  assert.equal(check(skeleton, 'chapters').status, 'pass');
+  assert.equal(check(skeleton, 'chapters').status, 'na');
   assert.equal(check(skeleton, 'unwritten').status, 'fail');
   assert.match(check(skeleton, 'unwritten').detail, /\d+ 节尚未撰写/);
   for (const id of ['questionnaire', 'aiDisclosure', 'reproducible']) {
     assert.equal(check(skeleton, id).status, 'partial', id);
     assert.match(check(skeleton, id).detail, /尚未填写/);
   }
-  for (const id of ['abstract', 'references', 'sampling', 'tests']) assert.equal(check(skeleton, id).status, 'fail', id);
-  for (const id of ['models', 'reliability', 'validity', 'formulas']) assert.equal(check(skeleton, id).status, 'na', `${id} applies only once the report needs it`);
+  for (const id of ['abstract', 'sampling']) assert.equal(check(skeleton, id).status, 'fail', id);
+  for (const id of ['references', 'tests', 'models']) assert.equal(check(skeleton, id).status, 'na', id);
   assert.ok(skeleton.score < 15, `headings alone earn little: ${skeleton.score}`);
 });
 
@@ -75,13 +75,36 @@ test('a report that shows its evidence passes the checks built for it', () => {
     section('ap1', '附录1 调查问卷', '卷首语与全部题目。'), section('ap2', '附录2 数据与处理说明', '变量编码表。'), section('ap3', '附录3 人工智能工具使用说明', '使用某大模型润色第四章文字，人工核验全部数字。'),
   ];
   const report = benchmarkReport(content);
-  for (const id of ['abstract', 'keywords', 'chapters', 'objectives', 'sampling', 'sampleSize', 'validRate', 'pilot', 'qualityControl', 'cleaning', 'reliability', 'validity',
-    'tests', 'models', 'diagnostics', 'findings', 'findingActions', 'executable', 'limitations', 'causal', 'questionnaire', 'aiDisclosure', 'referenceFormat', 'reproducible', 'captions', 'unwritten']) {
+  for (const id of ['abstract', 'keywords', 'objectives', 'sampling', 'sampleSize', 'validRate', 'pilot', 'qualityControl',
+    'findings', 'findingActions', 'executable', 'limitations', 'causal', 'questionnaire', 'aiDisclosure', 'referenceFormat', 'reproducible', 'captions', 'unwritten', 'traceable']) {
     assert.equal(check(report, id).status, 'pass', `${id}: ${check(report, id).detail}`);
   }
+  for (const id of ['chapters','cleaning','reliability','validity','models','formulas','figureCount','tableCount']) assert.equal(check(report,id).status,'na',id);
+  for (const id of ['tests','denominators','methods','diagnostics']) assert.equal(check(report,id).status,'fail',`${id}: legacy summary alone has no execution receipt`);
   assert.equal(check(report, 'simulated').status, 'na', 'the simulated result is registered but not used');
   assert.match(check(report, 'figureReferences').detail, /引用图表 2 次/);
   assert.ok(report.score > benchmarkReport(newProjectReport('骨架')).score);
+});
+
+test('adding methods, figures, tables or formulas cannot improve completeness by itself',()=>{
+  const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1')],findings:[]}};
+  content.report=[section('s','分析','当前样本的结构如下，见图1。',{blocks:[{id:'c',kind:'chart',text:'图1 分布',evidenceId:'r1',valueColumn:1}]})];
+  const before=benchmarkReport(content);
+  content.report[0].body+='\n参考方法包括回归、聚类、IPA、结构方程、Pearson 和方差分析。';
+  for(let i=0;i<20;i++)content.report[0].blocks.push({id:'more'+i,kind:i%2?'table':'chart',text:'重复展示',evidenceId:'r1',valueColumn:1},{id:'formula'+i,kind:'formula',text:'x=y',evidenceId:'',valueColumn:0});
+  const after=benchmarkReport(content);
+  assert.equal(after.score,before.score);
+  for(const id of ['models','formulas','figureCount','tableCount','length','numeric'])assert.equal(check(after,id).status,'na',id);
+  assert.match(check(after,'models').detail,/方法名不证明运行/);
+});
+
+test('a method name or alpha title is never evidence of execution, and stale findings need review',()=>{
+  const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1',{method:'frequency',title:'KMO 信度 α 回归'})],findings:[finding('f1','行动')]}};
+  content.quality.findings[0].confirmedHashes.r1='c'.repeat(64);
+  content.report=[section('s','回归与信度','这里介绍一种可选方法。',{blocks:[{id:'c',kind:'chart',text:'结果',evidenceId:'r1',valueColumn:1}]})];
+  const report=benchmarkReport(content);
+  assert.equal(check(report,'reliability').status,'na');assert.equal(check(report,'models').status,'na');
+  assert.equal(check(report,'methods').status,'fail');assert.equal(check(report,'findings').status,'fail');
 });
 
 test('correlation written as causation and undeclared simulated data are both flagged', () => {
@@ -98,33 +121,23 @@ test('correlation written as causation and undeclared simulated data are both fl
   assert.equal(check(report, 'simulated').status, 'pass');
 });
 
-test('a summary section that cites exhibits shown elsewhere counts as backed by evidence', () => {
-  const content = createEditorContent();
-  content.version = 2;
-  content.quality = { version: 1, results: [result('r1')], findings: [] };
-  content.report = [section('c', '五、群体差异与关联分析'), section('t', '（一）差异检验与相关分析', '卡方检验显示差异显著（χ²=8.2，p=0.004），见[[图:f]]。', { blocks: [{ id: 'f', kind: 'chart', text: '分布', evidenceId: 'r1', valueColumn: 1 }] }),
-    section('d', '六、评价与问题诊断'), section('p', '（一）现存问题归纳', '综合[[图:f]]，可归纳出两个问题。')];
-  assert.equal(check(benchmarkReport(content), 'coverage').status, 'pass');
-  content.report[3].body = '可归纳出两个问题。';
-  assert.match(check(benchmarkReport(content), 'coverage').detail, /既没有图表，也没有引用图表/);
-  // A reference that reaches no exhibit is not evidence.
-  for (const body of ['综合图 9-9，可归纳出两个问题。', '综合[[图:nope]]，可归纳出两个问题。', '综合[[表:f]]，可归纳出两个问题。']) {
-    content.report[3].body = body;
-    assert.equal(check(benchmarkReport(content), 'coverage').status, 'partial', body);
-  }
-  content.report[3].body = '综合图 1－1，可归纳出两个问题。';
-  assert.equal(check(benchmarkReport(content), 'coverage').status, 'pass', 'a typed number reaches the numbered chart');
+test('summary references resolve to actual exhibits without requiring an exhibit in every section',()=>{
+ const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1')],findings:[]}};
+ content.report=[section('s','一、分析','根据[[图:f]]组织判断。',{blocks:[{id:'f',kind:'chart',text:'分布',evidenceId:'r1',valueColumn:1}]}),section('d','二、讨论','综合[[图:f]]，提出待验证解释。')];
+ assert.match(check(benchmarkReport(content),'figureReferences').detail,/引用图表 2 次/);
+ content.report[1].body='综合[[图:nope]]，提出待验证解释。';
+ assert.match(check(benchmarkReport(content),'figureReferences').detail,/引用图表 1 次/);
 });
 
 test('screening rules are recognised in the platform\'s own names and from a screening table in the report', () => {
   const content = createEditorContent();
   content.version = 2;
   content.report = [section('c', '三、调查数据处理及检验'), section('s', '（二）正式调查数据处理', '共回收问卷 452 份，作答过快 9 份，答案完全重复 2 份，均予剔除。')];
-  assert.equal(check(benchmarkReport(content), 'cleaning').status, 'pass');
+  assert.equal(check(benchmarkReport(content), 'cleaning').status, 'na');
   const qc = result('qc', { method: 'quality-control', headers: ['规则', '判定标准', '标记份数', '处理'], rows: [['注意力题未通过', '第 9 题', 12, '剔除'], ['同一 IP 重复提交', '两次以上', 4, '仅标记']] });
   content.quality = { version: 1, results: [qc], findings: [] };
   content.report[1] = section('s', '（二）正式调查数据处理', '共回收问卷 452 份，剔除 12 份，有效率 97.3%。', { blocks: [{ id: 't', kind: 'table', text: '问卷有效性筛查', evidenceId: 'qc', valueColumn: 1 }] });
-  assert.equal(check(benchmarkReport(content), 'cleaning').status, 'pass', check(benchmarkReport(content), 'cleaning').detail);
+  assert.equal(check(benchmarkReport(content), 'cleaning').status, 'na', 'wording alone never proves execution');
 });
 
 test('citation coverage counts the distinct references cited, ranges included', () => {
@@ -152,11 +165,12 @@ test('floats kept only in the LaTeX body can be cited by their sequential or per
 });
 
 test('the rules are general norms; nothing counts figures, tables or formulas against one report', () => {
-  for (const key of ['figures', 'tables', 'formulas', 'methods', 'bodyChars']) assert.ok(!(key in BENCHMARK_RULES), key);
+  for (const key of ['figures', 'tables', 'formulas', 'methods', 'bodyChars']) assert.ok(!(key in BENCHMARK_TARGETS), key);
   // Formulas follow the methods a report uses, not a fixed number.
   const content = createEditorContent();
   content.report = [section('s', '一、分析', '卡方检验表明两组差异显著（χ²=8.2，p=0.004）。')];
-  assert.match(check(benchmarkReport(content), 'formulas').detail, /用到 1 种检验或模型方法，独立公式 0 个/);
+  assert.equal(check(benchmarkReport(content),'formulas').status,'na');
+  assert.match(check(benchmarkReport(content),'formulas').detail,/已排版 0 个独立公式/);
 });
 
 test('a report of another type is judged on its own modules, without the exemplar\'s models or scales', () => {
@@ -167,25 +181,16 @@ test('a report of another type is judged on its own modules, without the exempla
     s.id === 'bp-demand.preference' ? { ...s, body: '受访者最看重价格（选择率 61.2%）与便利性（48.5%），其次是品牌（22.0%）。如[[图:p]]所示，青年更看重便利。', blocks: [{ id: 'p', kind: 'chart', text: '需求排序', evidenceId: 'r1', valueColumn: 1 }] }
       : s.id === 'bp-compare.tests' ? { ...s, body: '卡方检验显示不同年龄组的偏好存在差异（χ²=12.4，p=0.006），见[[表:t]]。', blocks: [{ id: 't', kind: 'table', text: '检验结果', evidenceId: 'r2', valueColumn: 1 }] } : s);
   const report = benchmarkReport(content);
-  assert.equal(check(report, 'chapters').status, 'pass', check(report, 'chapters').detail);
-  assert.match(check(report, 'chapters').detail, /需求与意愿分析/);
+  assert.equal(check(report, 'chapters').status, 'na', check(report, 'chapters').detail);
+  assert.match(check(report, 'chapters').detail, /研究问题和用户选择/);
   for (const id of ['reliability', 'validity']) assert.equal(check(report, id).status, 'na', 'no scale, no reliability or validity check');
   // The preference section asks a modelling question (structure of preferences) only once written.
   assert.notEqual(check(report, 'models').status, 'pass');
-  assert.equal(check(report, 'coverage').status, 'pass', check(report, 'coverage').detail);
-  assert.equal(check(report, 'redundancy').status, 'pass');
+  assert.equal(check(report, 'methods').status, 'fail', 'legacy summaries do not carry calculation parameters');
 });
 
-test('exhibits are balanced against their reading, shown once, and the expected length follows the analysis', () => {
-  const content = createEditorContent();
-  content.version = 2;
-  content.quality = { version: 1, results: [result('r1'), result('r2'), result('r3')], findings: [] };
-  const charts = ['r1', 'r2', 'r3'].flatMap((r, i) => [{ id: 'c' + i, kind: 'chart', text: '图' + i, evidenceId: r, valueColumn: 1 }, { id: 't' + i, kind: 'table', text: '表' + i, evidenceId: r, valueColumn: 1 }]);
-  content.report = [section('c', '四、样本特征与描述性分析'), section('s', '（二）描述性统计分析', '各题分布见图表。', { blocks: charts })];
-  const stacked = benchmarkReport(content);
-  assert.equal(check(stacked, 'balance').status, 'partial', check(stacked, 'balance').detail);
-  assert.match(check(stacked, 'balance').detail, /图表偏多而解读偏少/);
-  assert.equal(check(stacked, 'redundancy').status, 'partial');
-  assert.match(check(stacked, 'redundancy').detail, /3 个结果同时用图和表呈现/);
-  assert.match(check(stacked, 'length').detail, /按本报告 6 个分析图表估计，宜不少于 9,600 字/);
+test('figure and table counts remain descriptive regardless of page length or repeated views',()=>{
+ const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1')],findings:[]}};
+ content.report=[section('s','一、分析','当前结果需继续解释。',{blocks:[{id:'c',kind:'chart',text:'分布',evidenceId:'r1',valueColumn:1},{id:'t',kind:'table',text:'明细',evidenceId:'r1',valueColumn:1}]})];
+ const checks=benchmarkReport(content);for(const id of ['length','figureCount','tableCount','numeric','paragraphs'])assert.equal(check(checks,id).status,'na',id);
 });

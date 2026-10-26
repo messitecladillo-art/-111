@@ -27,7 +27,9 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // Stateless corpus/rule/diagnosis handlers remain local during P0.
     // Every hosted identity, project, model and version request goes to FastAPI.
-    return { beforeFiles: [], afterFiles: [{ source: "/api/:path*", destination: `${parsed.origin}/api/:path*` }], fallback: [] };
+    // afterFiles runs before dynamic app routes. Keep case detail reads in the
+    // same local corpus as the case list, while hosted requests still use FastAPI.
+    return { beforeFiles: [], afterFiles: [{ source: "/api/:path((?!cases(?:/|$)).*)", destination: `${parsed.origin}/api/:path` }], fallback: [] };
   },
 };
 

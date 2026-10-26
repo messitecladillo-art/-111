@@ -62,7 +62,7 @@ export default function DesignBuilder({ onReportInsert }: { onReportInsert?: (in
     finally { setSending(false); }
   }
   return <div className={styles.builder}>
-    <div className={styles.callout}>按“目标总体 → 各阶段抽样单元 → 入样单位”逐级填写。表格与方法段落会实时更新；示例中的地名与学校均为占位，请替换为你的实际抽样框。</div>
+    <div className={styles.builderStart}><span className={styles.badge} data-tone="warn">方案草稿</span><details className={styles.help}><summary>如何填写</summary><p>按“目标总体 → 各阶段抽样单元 → 入样单位”逐级填写，表格与方法段落会实时更新。初始示例中的地名与学校均为占位，请填写实际抽样框。</p></details></div>
     <div className={styles.row}><Field label="各群体样本比例（可选）" value={groups.quota} onChange={quota => setGroups({ ...groups, quota })} inputMode="text" placeholder="如 1:1" /></div>
     {groups.list.map((g, gi) => { const group = built[gi], probability = groupIsProbability(group), inclusion = equalProbabilityInclusion(group); return <section key={g.id} className={styles.groupCard}>
       <header className={styles.row}>

@@ -19,6 +19,7 @@ import { useHostedSession } from './HostedSession';
 import HostedMembers from './HostedMembers';
 import ResearchViewHost from '../research-view/ResearchViewHost';
 import { createSiliconRunner, parseSiliconLimits, serviceNames } from './silicon-runner';
+import {normalizeResultRegistration} from '@/lib/result-registration';
 import type { ReportSection } from '@/lib/editor-model';
 import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/workbench/useWorkbenchHandoffs';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
@@ -46,6 +47,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
     JSON.stringify(['project', auth.session?.user?.id ?? null, auth.identityEpoch, projectId]),
   );
+  const registration=normalizeResultRegistration(exchange.pending.result?.payload);
   const consumeResult = useHandoffAcknowledgement(handoffs, 'result', exchange.pending.result?.deliveryId);
   const consumeReportProposal = useHandoffAcknowledgement(handoffs, 'report', exchange.pending.report?.deliveryId);
   const cacheKey=`project:${projectId}`;
@@ -338,8 +340,8 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     </div>
     {siliconOpened && <div hidden={tab !== 'silicon'}><SiliconLab designSnapshot={snapshot} runner={siliconRunner} storageKey={`evix.silicon-lab.v1:${projectId}`} onSendToAnalysis={handoff => { handoffs.publish('dataset',handoff); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
     {collectionOpened && <div hidden={tab !== 'collection'}><SurveyCollection projectId={projectId} savedRevision={revision} canPublish={!dirty && !saving && !saveUncertain && !conflict} writable={writable} onAnalyze={value => { handoffs.publish('dataset',value); setAnalysisOpened(true); setTab('analysis'); }}/></div>}
-    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab onResultSnapshot={writable?result=>{handoffs.publish('result',result);setReportOpened(true);setTab("report");}:undefined} designSnapshot={snapshot} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
-    {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={exchange.pending.result?.payload} onResultHandled={consumeResult} questionnaire={snapshot?.design ?? head?.design ?? initial ?? null} projectId={projectId} title={project.title} writable={writable} proposal={exchange.pending.report?.payload??null} onProposalConsumed={consumeReportProposal}/></div>}
+    {analysisOpened && <div hidden={tab !== 'analysis'}><SurveyLab onResultSnapshot={writable?(result,figures,visualStyle)=>{handoffs.publish('result',{result,figures,visualStyle});setReportOpened(true);setTab("report");}:undefined} designSnapshot={snapshot} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onEvidenceProposal={writable?proposeEvidence:undefined}/></div>}
+    {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={consumeResult} questionnaire={snapshot?.design ?? head?.design ?? initial ?? null} projectId={projectId} title={project.title} writable={writable} proposal={exchange.pending.report?.payload??null} onProposalConsumed={consumeReportProposal}/></div>}
     {defenseOpened && <div hidden={tab !== 'defense'}><HostedDefense projectId={projectId} onOpenReport={() => { setReportOpened(true); setTab('report'); }}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
   </div></ResearchViewHost>;

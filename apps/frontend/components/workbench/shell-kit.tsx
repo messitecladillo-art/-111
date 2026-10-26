@@ -12,7 +12,7 @@ export type Theme = "light" | "dark";
 export const NAV_ITEMS: Array<{ id: Section; title: string; description: string; icon: string; group: string }> = [
   { id: "overview", title: "概览", description: "从真实问题出发，把研究一步步做扎实。", icon: "grid", group: "我的工作台" },
   { id: "exam", title: "网赛刷题", description: "按章节练习，重做错题，用模拟自测掌握调查方法。", icon: "book", group: "网赛备考" },
-  { id: "cases", title: "获奖案例库", description: "检索真实案例，分清公告核验与材料分析。", icon: "book", group: "研究与证据" },
+  { id: "cases", title: "报告案例库", description: "阅读完整原报告，查看研究设计与分析方法。", icon: "book", group: "研究与证据" },
   { id: "diagnose", title: "选题与诊断", description: "结合热点、地区与团队资源筛选选题，检查研究准备度。", icon: "spark", group: "研究与证据" },
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },
   { id: "sampling", title: "抽样设计", description: "多阶段方案、样本量、抽取、估计与加权；方法手册含全部公式与计算器。", icon: "target", group: "研究与证据" },
@@ -157,24 +157,19 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
       </div>)}
     </nav>
     <div className="wb-sidebar-footer">
-      <div className="wb-evidence-path" aria-label="问题、数据、洞察、行动"><span>Q</span><i/><span>D</span><i/><span>I</span><i/><span>A</span></div>
       <Link className="wb-nav-link" href="/knowledge" aria-current={active === 'knowledge' ? 'page' : undefined}><NavIcon kind="search"/><span>知识索引</span></Link>
-      <strong>问有据，见有策。</strong>
-      <span className="wb-sidebar-version">EVI-X RESEARCH WORKSPACE</span>
     </div>
   </aside>;
 }
 
 export function WorkbenchFooter() {
-  return <footer className="wb-footer"><span>证见 EVI-X · 循证研究，稳步前行</span></footer>;
+  return null;
 }
 
-export function PageHeading({ group, title, description, headingRef, actions }: { group: string; title: string; description: string; headingRef?: RefObject<HTMLHeadingElement | null>; actions: ReactNode }) {
+export function PageHeading({ title, headingRef, actions }: { group: string; title: string; description: string; headingRef?: RefObject<HTMLHeadingElement | null>; actions: ReactNode }) {
   return <header className="workbench-topbar">
     <div className="wb-page-heading" key={title}>
-      <span className="wb-breadcrumb">研究空间<i aria-hidden="true"/>{group}</span>
       <h1 className="wb-page-title" ref={headingRef} tabIndex={-1}>{title}</h1>
-      <p className="wb-page-description">{description}</p>
     </div>
     <div className="wb-top-actions">{actions}</div>
   </header>;

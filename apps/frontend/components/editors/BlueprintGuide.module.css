@@ -1,10 +1,11 @@
-.guide { border: 1px solid var(--wb-line); border-left: 3px solid var(--wb-accent); border-radius: 8px; background: var(--wb-accent-soft); color: var(--wb-text); }
-.guide summary { display: flex; align-items: baseline; gap: 10px; padding: 11px 14px; cursor: pointer; list-style: none; }
+.guide { border: 1px solid var(--wb-line); border-radius: 7px; background: var(--wb-solid); color: var(--wb-text); }
+.guide[open] { background: var(--wb-accent-soft); }
+.guide summary { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none; }
 .guide summary::-webkit-details-marker { display: none; }
 .guide summary::after { content: '收起'; margin-left: auto; flex-shrink: 0; font-size: 12px; color: var(--wb-muted); }
 .guide:not([open]) summary::after { content: '展开'; }
-.kicker { flex-shrink: 0; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--wb-accent-text); background: var(--wb-accent); }
-.purpose { font-size: 14px; font-weight: 600; line-height: 1.6; }
+.kicker { flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--wb-accent); }
+.purpose { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.75; }
 .body { display: grid; gap: 10px; padding: 0 14px 13px 14px; }
 .moves { margin: 0; padding: 0; list-style: none; counter-reset: move; display: grid; gap: 5px; }
 .moves li { counter-increment: move; display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; font-size: 13px; line-height: 1.65; color: var(--wb-text); }

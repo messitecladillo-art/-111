@@ -117,21 +117,20 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
   if (!corpus || !records.length) return <div className={styles.lab}>
     {hiddenInput}
     <div className={styles.intro}>
-      <div className={styles.introText}>
-        <span className={styles.eyebrowSmall}>词云与选题</span>
-        <h3>先读懂一个领域，再决定研究什么</h3>
-        <p>导入从数据库导出的文献，证见在你的浏览器里画出关键词词云、共现与聚类图谱、突现前沿、文献网络与时间脉络，并用统计检验找出“各自热门、却很少被一起研究”的组合，再为候选题目生成逐项可追溯的证据画像。</p>
-        <ol className={styles.steps}><li><b>1</b>从知网或 Web of Science 导出</li><li><b>2</b>拖入或选择文件</li><li><b>3</b>看图找方向，评估候选题目</li></ol>
-      </div>
       <div className={`${styles.dropZone} ${dragging ? styles.dropActive : ''}`} onDragOver={e => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={onDrop}>
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 31V11m0 0-8 8m8-8 8 8M10 30v7h28v-7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        <strong>把导出文件拖到这里</strong>
-        <span>支持 Web of Science 纯文本、RIS、BibTeX、RefWorks、EndNote；可一次选多个文件，自动去重</span>
-        <button type="button" className={styles.primaryButton} onClick={() => fileInput.current?.click()} disabled={!!busy}>{busy || '选择文件'}</button>
-        <button type="button" className={styles.linkButton} onClick={loadLibrary}>先用内置获奖题目索引体验（{awardCases.length} 项真实题名）</button>
-        <small>文件只在当前浏览器中解析，不会上传；刷新页面后需重新导入。</small>
+        <h3>导入文献</h3><span>拖入数据库导出的文件，或从本地选择</span>
+        <span>Web of Science 纯文本 · RIS · BibTeX · RefWorks · EndNote</span>
+        <button type="button" className={styles.primaryButton} onClick={() => fileInput.current?.click()} disabled={!!busy}>{busy || '选择文献文件'}</button>
+        <button type="button" className={styles.linkButton} onClick={loadLibrary}>试用内置题名索引（{awardCases.length} 项）</button>
+        <small>仅在本浏览器解析；刷新后需重新导入。</small>
         {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
         {corpus && !records.length && <p className={styles.errorLine} role="alert">没有读到有效记录：{corpus.files.map(f => `${f.name}（${f.warnings[0] ?? '0 条'}）`).join('；')}</p>}
+      </div>
+      <div className={styles.introText}>
+        <h4>从文献到候选题目</h4>
+        <ol className={styles.steps}><li><b>1</b><span>导入文献记录</span></li><li><b>2</b><span>查看主题、关联与趋势</span></li><li><b>3</b><span>加入选题篮，评估候选方向</span></li></ol>
+        <p>图谱只描述导入记录，研究价值仍需结合实际问题判断。</p>
       </div>
     </div>
     <ExportGuide />
@@ -208,8 +207,8 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
 }
 
 function ExportGuide() {
-  return <div className={styles.guide}>
-    <h4>如何导出文献</h4>
+  return <details className={styles.guide}>
+    <summary>如何导出文献</summary>
     <div className={styles.guideGrid}>
       <article>
         <h5>Web of Science（推荐，信息最全）</h5>
@@ -227,7 +226,7 @@ function ExportGuide() {
         <p className={styles.muted}>检索式决定了你看到的“领域”。建议在方法部分写明数据库、检索式、时间范围与导出日期。</p>
       </article>
     </div>
-  </div>;
+  </details>;
 }
 
 function MethodNotes() {

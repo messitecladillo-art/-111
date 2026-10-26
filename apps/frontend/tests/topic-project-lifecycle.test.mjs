@@ -7,6 +7,7 @@ import * as project from '../lib/topic-project.ts';
 import * as topic from '../lib/topic-advisor/index.ts';
 import {parseTopicBundle} from '../lib/topic-advisor/parse.ts';
 import * as geography from '../lib/topic-advisor/geography.ts';
+import {TOPIC_SOURCE_VERSIONS} from '../lib/topic-proposal.ts';
 
 // Production handlers and effects; this harness does not prove native focus/IME/layout.
 const ts=createRequire(import.meta.url)('typescript');
@@ -37,7 +38,7 @@ function make({owner='account-a',projectId='project-a',drafts=new Map(),server=i
   const guarded={...project};for(const name of ['parseTopicHead','parseTopicHistory','parseTopicProjectDocument','parseTopicVersionResponse','parseTopicDecision'])guarded[name]=value=>project[name](plain(value));
   guarded.prepareTopicSave=(value,revision,key)=>project.prepareTopicSave(plain(value),revision,key);guarded.topicDocumentsEqual=(a,b)=>project.topicDocumentsEqual(plain(a),plain(b));
   guarded.withTopicProfile=(value,profile)=>project.withTopicProfile(plain(value),plain(profile));
-  const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'../topic-advisor/TopicAdvisor':{default:'TopicAdvisor'},'./HostedSession':{useHostedSession:()=>auth},'../workbench/shell-kit':{useWorkbenchTheme:()=> 'light'},'@/lib/topic-advisor/client-bundle':{TOPIC_BUNDLE:bundle},'@/lib/topic-advisor':topic,'@/lib/topic-project':guarded,'@/lib/topic-advisor/geography':{...geography,profileRegionStatus:value=>geography.profileRegionStatus(plain(value))},'./HostedTopic.module.css':{default:{}},'./api-client':{HostedApiError,errorMessage:e=>e.message,hostedRequest:async path=>{reads.push(path);if(path.includes('/versions?'))return{versions:state.head?[state.head]:[],nextBefore:null};if(path.includes('/versions/'))return{version:state.head,document:state.document,decision:state.decision};return structuredClone(state);}}};
+  const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'../topic-advisor/TopicAdvisor':{default:'TopicAdvisor'},'./HostedSession':{useHostedSession:()=>auth},'../workbench/shell-kit':{useWorkbenchTheme:()=> 'light'},'@/lib/topic-advisor/client-bundle':{TOPIC_BUNDLE:bundle},'@/lib/topic-advisor':topic,'@/lib/topic-project':guarded,'@/lib/topic-proposal':{TOPIC_SOURCE_VERSIONS},'@/lib/topic-advisor/geography':{...geography,profileRegionStatus:value=>geography.profileRegionStatus(plain(value))},'./HostedTopic.module.css':{default:{}},'./api-client':{HostedApiError,errorMessage:e=>e.message,hostedRequest:async path=>{reads.push(path);if(path.includes('/versions?'))return{versions:state.head?[state.head]:[],nextBefore:null};if(path.includes('/versions/'))return{version:state.head,document:state.document,decision:state.decision};return structuredClone(state);}}};
   const box={exports:{},require:name=>{assert.ok(name in imports,`Unexpected import ${name}`);return imports[name];},JSON,Date,Intl,crypto,structuredClone,TextEncoder,console,HTMLElement:class {},document:{activeElement:null},window:{confirm:message=>{confirmations.push(message);return confirmChoice;}},setTimeout};vm.runInNewContext(compiled,box);
   const s={
     async settle(){for(let n=0;n<40;n++){index=0;dirty=false;tree=box.exports.default(props);const queue=effects;effects=[];queue.forEach(fn=>fn());await tick();if(!dirty&&!effects.length)return;}throw Error('Unstable effects');},
@@ -94,7 +95,30 @@ test('pending decision can be reconciled after remount even when the cloud head 
   const b=make({drafts:a.drafts,server:newer});await b.settle();assert.ok(label(b.tree).includes('操作结果待核对'));button(b,'核对原确认操作').props.onClick();await b.settle();assert.equal(b.calls.length,1);assert.equal(JSON.stringify(b.calls[0].body),original);b.resolveDecision(0,{revision:1,status:'draft',versionId:null,contentHash:null});await b.until(()=>label(b.tree).includes('云端研究简报已有新版本'));assert.equal(field(b,'研究题目').props.value,'已保存研究');button(b,'核对云端版本').props.onClick();await b.settle();assert.equal(button(b,'确认载入').props.disabled,false);b.unmount();
 });
 test('adoption asks before replacing handwritten questions or verification even if the title is blank',async()=>{
-  for(const content of['question','verification']){const server=readyServer();server.document.brief.title='';if(content==='verification'){server.document.brief.questions=[];server.document.verification=[{id:'t',title:'我的记录',status:'inconclusive',note:'渠道尚未确认',sourceRefs:[],recordedAt:null}];}const s=make({server});await s.settle();s.confirm=false;const item=topic.recommendTopics(server.document.profile,bundle,6).items[0];s.choosePattern(item);await s.settle();assert.equal(s.confirmations.length,1);assert.equal(field(s,'研究题目').props.value,'');const candidate={...structuredClone(topic.EMPTY_TOPIC_CANDIDATE),title:'新题目'};s.chooseCandidate(candidate,topic.evaluateCandidate(candidate,server.document.profile,bundle));await s.settle();assert.equal(s.confirmations.length,2);assert.equal(field(s,'研究题目').props.value,'');s.unmount();}
+  for(const content of['question','verification']){
+    const server=readyServer();server.document.brief.title='';
+    if(content==='verification'){server.document.brief.questions=[];server.document.verification=[{id:'t',title:'我的记录',status:'inconclusive',note:'渠道尚未确认',sourceRefs:[],recordedAt:null}];}
+    const s=make({server});await s.settle();
+    const hasPreview=()=>label(nodes(s.tree).find(n=>n.type==='dialog')).includes('拟采用题目');
+    assert.equal(hasPreview(),false);
+    const item=topic.recommendTopics(server.document.profile,bundle,6).items[0];s.choosePattern(item);await s.settle();
+    assert.equal(hasPreview(),true);
+    assert.equal(field(s,'研究题目').props.value,'');
+    assert.equal(s.confirmations.length,0,'adoption must not block on native window.confirm');
+    button(s,'取消，保留当前内容').props.onClick();await s.settle();
+    assert.equal(hasPreview(),false);
+    assert.equal(field(s,'研究题目').props.value,'');
+    const candidate={...structuredClone(topic.EMPTY_TOPIC_CANDIDATE),title:'新题目'};
+    s.chooseCandidate(candidate,topic.evaluateCandidate(candidate,server.document.profile,bundle));await s.settle();
+    assert.equal(hasPreview(),true);
+    assert.equal(field(s,'研究题目').props.value,'');
+    button(s,'取消，保留当前内容').props.onClick();await s.settle();
+    assert.equal(hasPreview(),false);
+    const cached=[...s.drafts.values()][0]?.document??server.document;
+    assert.deepEqual(plain(cached.brief.questions),plain(server.document.brief.questions));
+    assert.deepEqual(plain(cached.verification),plain(server.document.verification));
+    s.unmount();
+  }
 });
 test('a wrong save receipt leaves the exact pending request unresolved instead of reporting success',async()=>{
   const s=make();await editBrief(s,'我的保存');button(s,'保存新版本').props.onClick();await s.settle();const fake=readyServer();s.calls[0].resolve({version:fake.head,document:fake.document,decision:fake.decision});await s.until(()=>label(s.tree).includes('保存回执与本次提交不一致'));assert.equal(field(s,'研究题目').props.value,'我的保存');assert.ok(button(s,'核对并重试原保存'));s.unmount();

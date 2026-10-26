@@ -100,7 +100,6 @@ export default function WorkbenchShell({ panels }: { panels: Record<Panel, React
           <button type="button" className="wb-search-toggle" onPointerDown={event => event.preventDefault()} onClick={showCommands} title="全局搜索（Ctrl / ⌘ K）"><NavIcon kind="search"/><span>全局搜索</span><kbd>⌘ K</kbd></button>
           <AccountStatus/>
           <ThemeToggle theme={theme}/>
-          {!["editor", "design", "silicon", "analysis"].includes(section) && <a className="wb-top-cta" href="#diagnose"><NavIcon kind="plus"/>开始诊断</a>}
         </>}/>}
         <div className="workbench-content"><main id="top" tabIndex={-1}>
           {(Object.keys(panels) as Panel[]).filter(panel => visited.includes(panel) || activePanel === panel).map(panel => <div key={panel} className="wb-panel" data-workbench-panel={panel} hidden={activePanel !== panel}>{panels[panel]}</div>)}

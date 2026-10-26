@@ -1,0 +1,506 @@
+{
+  "version": "2026-10-18.1",
+  "capturedAt": "2026-10-18T01:27:30+00:00",
+  "cases": [
+    {
+      "id": "report-camping-chongqing",
+      "title": "“露”出本心，“营”造自然",
+      "subtitle": "重庆市主城区短途露营市场现状与消费偏好分析",
+      "filename": "“露”出本心，“营”造自然——重庆市主城区短途露营市场现状与消费偏好分析-参赛报告 (2)-公众号：学生竞赛库.pdf",
+      "sha256": "1613fd14d8581c08b1272933f907eb11119dc4fd8a0315eeece196406b73a3a7",
+      "pages": 85,
+      "bytes": 18021279,
+      "year": null,
+      "edition": null,
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "重庆"
+      ],
+      "topic": [
+        "露营旅游",
+        "消费偏好"
+      ],
+      "summary": "围绕重庆主城区短途露营，梳理市场环境、参与意愿和消费偏好，并讨论人群细分与营地服务改进。",
+      "methods": [
+        "多阶段 PPS 抽样",
+        "二元 Logistic 回归",
+        "K-means 聚类"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 12,
+          "note": "从短途露营的市场背景进入研究问题。"
+        },
+        {
+          "label": "调查设计",
+          "page": 17,
+          "note": "问卷、访谈与抽样设计；PPS 抽样步骤续见第 18—19 页。"
+        },
+        {
+          "label": "参与意愿分析",
+          "page": 49,
+          "note": "二元 Logit 模型的变量、估计思路与结果。"
+        },
+        {
+          "label": "消费者分群",
+          "page": 55,
+          "note": "比较聚类数量，阅读 K-means 聚类中心与人群划分。"
+        },
+        {
+          "label": "经营建议",
+          "page": 67,
+          "note": "按露营产业链梳理营销与服务改进建议。"
+        }
+      ],
+      "sourceCollection": "本地完整报告收藏"
+    },
+    {
+      "id": "report-lottery-chongqing",
+      "title": "认真生活，偶尔快乐",
+      "subtitle": "重庆市居民对福利彩票购买意愿的市场调查研究",
+      "filename": "“认真生活，偶尔快乐”——重庆市居民对福利彩票购买意愿的市场调查研究-公众号：学生竞赛库.pdf",
+      "sha256": "1b3071abdb06a8829a7b6be655235085981ab2bf15570e19c3c3bdcf876c49a5",
+      "pages": 86,
+      "bytes": 18610663,
+      "year": null,
+      "edition": null,
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "重庆"
+      ],
+      "topic": [
+        "福利彩票",
+        "购买意愿"
+      ],
+      "summary": "以重庆居民为对象，分析福利彩票购买意愿、消费动机与人群差异，提出产品沟通和渠道服务建议。",
+      "methods": [
+        "多阶段 PPS 抽样",
+        "二元 Logistic 回归",
+        "K-means 聚类"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 10,
+          "note": "了解福利彩票消费场景与调查背景。"
+        },
+        {
+          "label": "调查设计",
+          "page": 16,
+          "note": "调查方法与对象范围；抽样实施续见第 17—18 页。"
+        },
+        {
+          "label": "购买意愿分析",
+          "page": 40,
+          "note": "进入二元 Logit 模型及影响因素分析。"
+        },
+        {
+          "label": "消费者分群",
+          "page": 49,
+          "note": "阅读四类购买者的聚类中心与特征。"
+        },
+        {
+          "label": "运营建议",
+          "page": 56,
+          "note": "从研究结论转入福利彩票产品与运营建议。"
+        }
+      ],
+      "sourceCollection": "本地完整报告收藏"
+    },
+    {
+      "id": "report-mugwort-chongqing",
+      "title": "清馨艾叶添，舒身亦延年",
+      "subtitle": "重庆主城区居民对艾草产品的认知及其消费特性的调查",
+      "filename": "“清馨艾叶添，舒身亦延年”——重庆主城区居民对艾草产品的认知及其消费特性的调查 报告-公众号：学生竞赛库.pdf",
+      "sha256": "ac3cf18b967f8aa7e3f7827cfae404855191ce9112e0eb30511a847b218ca730",
+      "pages": 106,
+      "bytes": 20580585,
+      "year": null,
+      "edition": null,
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "重庆"
+      ],
+      "topic": [
+        "艾草产品",
+        "健康消费"
+      ],
+      "summary": "调查重庆主城区居民对艾草产品的认知、使用和购买特征，结合人群细分讨论产品定位与消费推广。",
+      "methods": [
+        "多阶段 PPS 抽样",
+        "列联分析",
+        "TwoStep 聚类"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 14,
+          "note": "从艾草产品的应用与消费背景理解选题。"
+        },
+        {
+          "label": "调查设计",
+          "page": 21,
+          "note": "抽样区域与分阶段设计；抽样表见第 22 页。"
+        },
+        {
+          "label": "认知差异分析",
+          "page": 47,
+          "note": "查看人口特征与产品认知的列联分析表。"
+        },
+        {
+          "label": "消费者分群",
+          "page": 52,
+          "note": "阅读 TwoStep 聚类的变量、模型与人群划分。"
+        },
+        {
+          "label": "产品与推广建议",
+          "page": 70,
+          "note": "从调查结论进入艾草产品发展建议。"
+        }
+      ],
+      "sourceCollection": "本地完整报告收藏"
+    },
+    {
+      "id": "report-solitude-chongqing",
+      "title": "“孤”芳自赏，“独”乐无穷",
+      "subtitle": "重庆市孤独经济发展现状及孤独人群消费偏好调查",
+      "filename": "“孤”芳自赏，“独”乐无穷——重庆市孤独经济发展现状及孤独人群消费偏好调查+报告 (1)-公众号：学生竞赛库.pdf",
+      "sha256": "54058b9a601ef397b82caf5ab06a537b246e2b38121832bf0ad8d56163166732",
+      "pages": 92,
+      "bytes": 15241825,
+      "year": null,
+      "edition": null,
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "重庆"
+      ],
+      "topic": [
+        "孤独经济",
+        "消费偏好"
+      ],
+      "summary": "围绕重庆孤独经济，结合问卷、访谈和消费模型研究参与意愿与人群偏好，并提出商家服务改进建议。",
+      "methods": [
+        "深度访谈",
+        "Heckman 两阶段模型",
+        "K-means 聚类"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 11,
+          "note": "了解孤独经济的定义、背景与研究切入点。"
+        },
+        {
+          "label": "调查设计",
+          "page": 18,
+          "note": "阅读问卷、文本挖掘、访谈与抽样安排。"
+        },
+        {
+          "label": "消费意愿分析",
+          "page": 58,
+          "note": "查看 Heckman 两阶段模型及样本选择处理。"
+        },
+        {
+          "label": "消费者分群",
+          "page": 60,
+          "note": "比较聚类方案，理解消费需求的人群差异。"
+        },
+        {
+          "label": "商家服务建议",
+          "page": 70,
+          "note": "阅读面向产品、场景、服务与渠道的建议。"
+        }
+      ],
+      "sourceCollection": "本地完整报告收藏"
+    },
+    {
+      "id": "report-frozen-food-nanjing",
+      "title": "冰消“冻”释，“食”遇新春",
+      "subtitle": "基于南京市主城区冷冻速食产品市场调查及消费者特征研究",
+      "filename": "冰消“冻”释，“食”遇新春—基于南京市主城区冷冻速食产品市场调查及消费者特征研究 报告 (1)-公众号：学生竞赛库.pdf",
+      "sha256": "c62cc3247b63421fae4b8e5c647c09be6c331ce07b32a029c70cfa8fd3029e94",
+      "pages": 78,
+      "bytes": 13804714,
+      "year": null,
+      "edition": null,
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "南京"
+      ],
+      "topic": [
+        "冷冻速食",
+        "消费者画像"
+      ],
+      "summary": "调查南京主城区冷冻速食市场，提取消费者特征并划分人群，分析购买驱动与品牌表现，提出市场定位建议。",
+      "methods": [
+        "因子分析",
+        "K-means 聚类",
+        "有序 Logistic 回归",
+        "TOPSIS 综合评价"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 11,
+          "note": "从冷冻速食行业背景进入研究主题。"
+        },
+        {
+          "label": "调查设计",
+          "page": 23,
+          "note": "查看研究目的与问卷模块设计。"
+        },
+        {
+          "label": "消费者特征",
+          "page": 43,
+          "note": "阅读因子分析变量、适用性检验与因子提取。"
+        },
+        {
+          "label": "购买驱动分析",
+          "page": 50,
+          "note": "查看有序 Logistic 模型的变量与设定。"
+        },
+        {
+          "label": "市场策略建议",
+          "page": 59,
+          "note": "阅读市场定位、品牌沟通与产品开发建议。"
+        }
+      ],
+      "sourceCollection": "本地完整报告收藏"
+    },
+    {
+      "id": "report-2024-parent-education",
+      "title": "读书破万卷？实减出真知！",
+      "subtitle": "后“双减”时代家长教育内卷多元化影响因素及行为迁移调查研究",
+      "filename": "24国三-破卷小分队-公众号：学生竞赛库.pdf",
+      "sha256": "822fc747632634ed8839e992d7ade10b4f3a4444def4eed14429e43072c998b0",
+      "pages": 67,
+      "bytes": 10182788,
+      "year": 2024,
+      "edition": null,
+      "institution": null,
+      "group": "本科组",
+      "award": null,
+      "region": [
+        "山东"
+      ],
+      "topic": [
+        "家庭教育",
+        "双减政策"
+      ],
+      "summary": "以义务教育阶段学生家长为对象，研究“双减”后教育内卷的行为变化与影响因素，提出政府、学校和家庭协同建议。",
+      "methods": [
+        "探索性因子分析",
+        "二元 Logistic 回归",
+        "多元线性回归",
+        "结构方程模型"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 5,
+          "note": "理解“双减”政策背景下家长教育内卷的研究问题。"
+        },
+        {
+          "label": "调查设计",
+          "page": 13,
+          "note": "查看调查目的、对象和范围。"
+        },
+        {
+          "label": "行为特征提取",
+          "page": 24,
+          "note": "从信效度检验进入探索性因子分析。"
+        },
+        {
+          "label": "影响机制分析",
+          "page": 32,
+          "note": "进入结构方程模型及影响因素维度划分。"
+        },
+        {
+          "label": "协同治理建议",
+          "page": 40,
+          "note": "阅读政府、学校与家长层面的对策建议。"
+        }
+      ],
+      "sourceCollection": "本地完整报告收藏"
+    },
+    {
+      "id": "report-live-entertainment",
+      "title": "“娱”你相遇，因为心动",
+      "subtitle": "Z世代线下观演类娱乐的消费态度、行为和体验研究",
+      "filename": "“娱”你相遇，因为心动--Z世代线下观演类娱乐的消费态度、行为和体验研究+报告.pdf",
+      "sha256": "20bc459f9b2e45c3f33019fe2ad9ef3b007bd8733107e535316291c7cd55f75f",
+      "pages": 65,
+      "bytes": 4512522,
+      "year": null,
+      "edition": "第十六届",
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "全国"
+      ],
+      "topic": [
+        "现场娱乐",
+        "Z世代消费"
+      ],
+      "summary": "围绕 Z 世代线下观演消费，分析参与障碍、消费画像与现场体验，讨论面向不同人群的服务和营销改进。",
+      "methods": [
+        "配额抽样",
+        "K-means 聚类",
+        "卡方检验",
+        "体验属性分类与损害测算"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 5,
+          "note": "了解线下观演娱乐的范围与 Z 世代消费背景。"
+        },
+        {
+          "label": "调查设计",
+          "page": 14,
+          "note": "查看便利预调查和配额正式调查的样本设计。"
+        },
+        {
+          "label": "消费者分群",
+          "page": 39,
+          "note": "查看消费差异检验及聚类分析的变量设定。"
+        },
+        {
+          "label": "体验影响分析",
+          "page": 46,
+          "note": "阅读报告的 KANO 体验分类与复购意愿差异分析。"
+        },
+        {
+          "label": "服务与营销建议",
+          "page": 63,
+          "note": "阅读按消费画像细分的服务和营销建议。"
+        }
+      ],
+      "sourceCollection": "用户提供的完整报告"
+    },
+    {
+      "id": "report-football-wuhan",
+      "title": "“足”梦前行，绝不“蒜鸟”",
+      "subtitle": "武汉城市足球超级联赛城区-高校双轨赛道赛事反馈与优化路径",
+      "filename": "“足”梦前行，绝不“蒜鸟”——武汉城市足球超级联赛城区-高校双轨赛道赛事反馈与优化路径 报告完整版.pdf",
+      "sha256": "60032d20ee8e752d17508b793427760d892a0ea4c59272332670c8c31876248d",
+      "pages": 308,
+      "bytes": 37909200,
+      "year": null,
+      "edition": "第十六届",
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "武汉"
+      ],
+      "topic": [
+        "城市足球",
+        "赛事体验"
+      ],
+      "summary": "研究武汉城市足球超级联赛的观赛行为、潜在观众和体验评价，讨论城区与高校双轨赛道的赛事优化路径。",
+      "methods": [
+        "多分类 Logistic 回归",
+        "K-means 聚类",
+        "经典与隐 IPA 分析"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 8,
+          "note": "理解城区与高校双轨赛道的研究背景。"
+        },
+        {
+          "label": "调查设计",
+          "page": 12,
+          "note": "查看研究目的、调查对象及问卷内容。"
+        },
+        {
+          "label": "观赛行为分析",
+          "page": 28,
+          "note": "阅读面向不同群体的多分类 Logistic 模型。"
+        },
+        {
+          "label": "赛事体验评价",
+          "page": 43,
+          "note": "从隐 IPA 模型理解满意度与改进优先级。"
+        },
+        {
+          "label": "赛事发展建议",
+          "page": 63,
+          "note": "查看宣传合作、场地、赛制和赛中体验策略。"
+        }
+      ],
+      "sourceCollection": "用户提供的完整报告"
+    },
+    {
+      "id": "report-new-blue-collar",
+      "title": "脱下“长衫”之后",
+      "subtitle": "武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究",
+      "filename": "脱下“长衫”之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究（国赛).pdf",
+      "sha256": "fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300",
+      "pages": 95,
+      "bytes": 4000478,
+      "year": null,
+      "edition": "第十六届",
+      "institution": null,
+      "group": null,
+      "award": null,
+      "region": [
+        "武汉"
+      ],
+      "topic": [
+        "高校毕业生就业",
+        "新蓝领"
+      ],
+      "summary": "研究武汉高校毕业生新蓝领的就业选择、工作需求与群体分化，结合机制和文本分析提出分类成长支持建议。",
+      "methods": [
+        "KANO 模型",
+        "LPA 潜在剖面分析",
+        "结构方程模型",
+        "LDA 主题模型",
+        "BERTopic 主题分析"
+      ],
+      "readingGuide": [
+        {
+          "label": "问题与背景",
+          "page": 7,
+          "note": "从毕业生就业结构变化进入研究问题。"
+        },
+        {
+          "label": "调查设计",
+          "page": 18,
+          "note": "查看新蓝领群体的纳入条件与调查范围。"
+        },
+        {
+          "label": "工作需求分析",
+          "page": 33,
+          "note": "阅读 KANO 分类表与 Better-Worse 系数。"
+        },
+        {
+          "label": "群体画像分析",
+          "page": 42,
+          "note": "查看 LPA 剖面中心、三类画像与差异比较。"
+        },
+        {
+          "label": "成长支持建议",
+          "page": 62,
+          "note": "从需求与画像结果进入分类支持建议。"
+        }
+      ],
+      "sourceCollection": "用户提供的完整报告"
+    }
+  ]
+}

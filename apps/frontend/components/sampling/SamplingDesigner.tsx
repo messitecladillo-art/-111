@@ -62,7 +62,7 @@ export default function SamplingDesigner({ embedded = false, onReportInsert }: {
       {TABS.map(t => <button type="button" role="tab" key={t.id} data-motion-id={t.id} aria-selected={tab === t.id} onClick={() => setTab(t.id)}><strong>{t.label}</strong><small>{t.hint}</small></button>)}
     </div>
 
-    {tab === 'size' && <div className={styles.split}>
+    <div className={styles.split} hidden={tab !== 'size'}>
       <form className={styles.form} onSubmit={e => e.preventDefault()}>
         <label className={styles.wide}>目标总体<input value={state.population} maxLength={80} placeholder="例如：武汉市在校本科生" onChange={e => set('population', e.target.value)} /></label>
         <label className={styles.wide}>抽样框<input value={state.frame} maxLength={120} placeholder="例如：各校学生名册；覆盖不到的人群也写明" onChange={e => set('frame', e.target.value)} /></label>
@@ -91,9 +91,9 @@ export default function SamplingDesigner({ embedded = false, onReportInsert }: {
           <div className={styles.statement}><div><span>方法部分草稿</span>{onReportInsert && <button type="button" title="把方法段落和逐步计算公式写入报告的「抽样设计」一节" onClick={() => onReportInsert(sampleSizeInsert(plan, result, statement))}>写入报告</button>}<button type="button" onClick={() => void copy()}>{copied ? '已复制' : '复制'}</button></div><p>{statement}</p><small>只依据上方输入生成；括号内的空项请补全，实际回收后按真实样本更新。</small></div>
         </>}
       </div>
-    </div>}
+    </div>
 
-    {tab === 'allocation' && <div className={styles.allocation}>
+    <div className={styles.allocation} hidden={tab !== 'allocation'}>
       <div className={styles.allocTools}>
         <fieldset className={styles.segment}><legend>分配方式</legend>
           {([['proportional', '比例分配', '各层样本与层规模成比例，自加权'], ['neyman', 'Neyman 分配', '变异大的层多抽，需各层标准差'], ['optimal', '费用最优分配', '变异大、调查便宜的层多抽，需各层标准差与单位费用'], ['equal', '等额分配', '各层同样多，便于层间比较']] as const).map(([id, label, hint]) => <label key={id} title={hint}><input type="radio" name="method" checked={state.method === id} onChange={() => set('method', id)} />{label}</label>)}
@@ -119,9 +119,9 @@ export default function SamplingDesigner({ embedded = false, onReportInsert }: {
         <li>层规模应来自统计年鉴、普查或名册，并在报告中注明来源与年份。</li>
         {!meta.probability && <li>当前为非概率抽样：此表即配额表，层内并非随机抽取，权数只用于把样本结构调回总体结构，不能据此计算抽样误差。</li>}
       </ul>}
-    </div>}
+    </div>
 
-    {tab === 'precision' && <div className={styles.split}>
+    <div className={styles.split} hidden={tab !== 'precision'}>
       <form className={styles.form} onSubmit={e => e.preventDefault()}>
         <label>实际有效样本<input inputMode="numeric" defaultValue={state.achieved} onChange={e => set('achieved', num(e.target.value))} /></label>
         <p className={styles.reuse}>置信水平、{plan.target === 'proportion' ? '预估比例' : '标准差'}、总体规模和设计效应沿用“样本量”中的设置。</p>
@@ -132,8 +132,8 @@ export default function SamplingDesigner({ embedded = false, onReportInsert }: {
             : <div className={styles.headline}><div><span>{plan.target === 'proportion' ? '比例' : '均值'}估计的抽样误差</span><strong>±{plan.target === 'proportion' ? fmt(margin * 100) : fmt(margin, 3)}<small>{plan.target === 'proportion' ? ' 个百分点' : '（与结果同单位）'}</small></strong><em>{Number(plan.confidence) * 100}% 置信水平，按 {plan.target === 'proportion' ? `p = ${pct(plan.proportion)}` : `σ = ${plan.sd}`}{plan.designEffect !== 1 ? `、deff = ${plan.designEffect}` : ''}</em></div></div>}
         {meta.probability && margin !== null && <p className={styles.reuse}>这是抽样误差的上限估计，不包含无应答、覆盖不足和测量误差；回收率低时应在报告中说明无应答偏差的可能方向。</p>}
       </div>
-    </div>}
+    </div>
 
-    <footer className={styles.sources}>公式依据：Cochran, W. G. (1977). <i>Sampling Techniques</i>（样本量与有限总体校正、比例与 Neyman 分配）；Kish, L. (1965). <i>Survey Sampling</i>（设计效应）；AAPOR 关于非概率样本的透明披露要求。</footer>
+    <details className={styles.sources}><summary>公式与参考来源</summary><p>公式依据：Cochran, W. G. (1977). <i>Sampling Techniques</i>（样本量与有限总体校正、比例与 Neyman 分配）；Kish, L. (1965). <i>Survey Sampling</i>（设计效应）；AAPOR 关于非概率样本的透明披露要求。</p></details>
   </section>;
 }

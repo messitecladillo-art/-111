@@ -5,7 +5,7 @@ import {withQuality} from '../lib/quality-layouts.ts';
 import {snapshotRecipe,chartData} from '../lib/research-quality.ts';
 import {bindReportSlide,buildReportBlockSlide,reportFigureCoverage,reportLinkState} from '../lib/report-storyboard.ts';
 async function fixture(){
-  const r=await snapshotRecipe({method:'frequency',n:8,total:8,headers:['类别','频数'],rows:[['甲',3],['乙',5]],metrics:[],warnings:[]},{title:'类别分布',sourceName:'公开样本',sourceUrl:'https://example.org/data',sourceHash:'a'.repeat(64),classification:'public'},'r');
+  const r=await snapshotRecipe({method:'frequency',n:8,total:8,excluded:0,missingRows:0,invalidRows:0,interpretation:'仅描述当前8行合成参考的类别分布。',headers:['类别','频数'],rows:[['甲',3],['乙',5]],metrics:[],warnings:[]},{title:'类别分布',sourceName:'公开样本',sourceUrl:'https://example.org/data',sourceHash:'a'.repeat(64),classification:'public'},'r');
   const c=withQuality(createEditorContent());c.quality.results=[r];c.report=[{id:'s',title:'调查发现',body:'乙为5，甲为3。需结合样本范围理解。',source:'公开样本8条',blocks:[{id:'b',kind:'chart',text:'图1 类别分布',evidenceId:'r',valueColumn:1}]}];return c;
 }
 test('report block becomes editable vector page with exact selected data and source',async()=>{

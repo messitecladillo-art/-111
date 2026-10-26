@@ -309,10 +309,11 @@
 .segmented button[aria-selected="true"], .segmented button[aria-pressed="true"] { background: var(--wb-solid); color: var(--wb-text) !important; box-shadow: 0 1px 2px rgba(10, 31, 51, .12); }
 
 /* "+" morphs into "×" while the library is open. */
-.addButton { position: absolute; z-index: 21; top: 66px; left: 16px; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--cv-chrome-line); border-radius: 12px; background: var(--wb-accent); color: var(--wb-accent-text) !important; box-shadow: var(--cv-shadow); cursor: pointer; transition: transform var(--t-press-out) var(--cv-ease), background-color var(--t-morph) ease, color var(--t-morph) ease, border-radius var(--t-morph) var(--cv-ease); }
+.addButton { position: absolute; z-index: 21; top: 66px; left: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 108px; padding: 0 14px; height: 40px; border: 1px solid var(--cv-chrome-line); border-radius: 10px; background: var(--wb-accent); color: var(--wb-accent-text) !important; box-shadow: var(--cv-shadow); cursor: pointer; transition: transform var(--t-press-out) var(--cv-ease), background-color var(--t-morph) ease, color var(--t-morph) ease, border-radius var(--t-morph) var(--cv-ease); }
+.addButton b { font-size: 13px; font-weight: 600; }
 .addButton span { display: block; font-size: 24px; line-height: 1; transition: transform var(--t-morph) var(--cv-ease); }
 .addButton:active { transform: scale(calc(1 - .06 * var(--cv-lift))); transition-duration: var(--t-press-in); }
-.addButton[data-open] { background: var(--cv-chrome); color: var(--wb-text) !important; border-radius: 50%; }
+.addButton[data-open] { background: var(--cv-chrome); color: var(--wb-text) !important; }
 .addButton[data-open] span { transform: rotate(45deg); }
 
 /* ───────── side panels ───────── */
@@ -422,7 +423,7 @@
 .chartFrame { min-height: 220px; overflow: hidden; border: 1px solid var(--wb-line); border-radius: 10px; background: var(--wb-solid); animation: cv-fade-in var(--t-morph) ease both; }
 
 /* ───────── run drawer ───────── */
-.drawer { position: absolute; z-index: 18; right: var(--cv-right); bottom: 14px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 8px; width: min(600px, calc(100% - var(--cv-right) - 340px)); pointer-events: none; transition: right var(--t-morph) var(--cv-ease); }
+.drawer { position: absolute; z-index: 18; right: var(--cv-right); bottom: 90px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 8px; width: min(600px, calc(100% - var(--cv-right) - 340px)); pointer-events: none; transition: right var(--t-morph) var(--cv-ease); }
 .drawerBar { display: flex; align-items: center; gap: 10px; max-width: 100%; height: 38px; padding: 0 6px 0 12px; border: 1px solid var(--cv-chrome-line); border-radius: 12px; background: var(--cv-chrome); box-shadow: var(--cv-shadow); font-size: 12.5px !important; white-space: nowrap; cursor: pointer; pointer-events: auto; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); transition: border-color var(--t-hover) ease; }
 .drawerBar:hover { border-color: var(--wb-accent); }
 .drawerBar strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
@@ -450,14 +451,21 @@
 .levelTag { padding: 0 6px; border-radius: 4px; background: color-mix(in srgb, var(--wb-text) 7%, transparent); color: var(--wb-muted); font-size: 11px; white-space: nowrap; }
 
 /* ───────── empty state, hints, toast ───────── */
-.empty { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 80px 24px; pointer-events: none; }
-.emptyCard { width: min(560px, 100%); padding: 26px 26px 22px; border: 1px solid var(--cv-chrome-line); border-radius: 18px; background: var(--cv-chrome); box-shadow: var(--cv-shadow-lift); pointer-events: auto; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); animation: cv-node-in calc(var(--t-reveal) + 80ms) var(--cv-ease-out) both; }
+.empty { position: absolute; inset: 0; z-index: 10; display: grid; grid-template-rows: minmax(0, 1fr); place-items: center; padding: 80px 24px; pointer-events: none; }
+.emptyCard { width: min(580px, 100%); max-height: 100%; overflow: auto; padding: 26px 28px; border: 1px solid var(--cv-chrome-line); border-radius: 18px; background: var(--cv-chrome); box-shadow: var(--cv-shadow-lift); pointer-events: auto; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); animation: cv-node-in calc(var(--t-reveal) + 80ms) var(--cv-ease-out) both; }
 .canvas[data-motion="reduced"] .emptyCard { animation-name: cv-fade-in; }
 .emptyEyebrow { color: var(--wb-accent); font-size: 12px; font-weight: 650; letter-spacing: .16em; }
-.emptyCard h3 { margin: 6px 0 8px; font: 700 22px/1.4 var(--wb-serif); letter-spacing: .02em; }
+.emptyCard h3 { margin: 6px 0 8px; font: 600 25px/1.45 var(--wb-sans); letter-spacing: -.035em; }
+.emptyDiagram { position: relative; display: flex; justify-content: space-between; margin: 18px 0 24px; }
+.emptyDiagram svg { position: absolute; inset: 0; width: 100%; height: 50px; fill: none; stroke: var(--wb-gold-line); stroke-width: 1.5; }
+.emptyDiagram>span { position: relative; display: grid; justify-items: center; gap: 6px; width: 62px; }
+.emptyDiagram i { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--wb-line-strong); border-radius: 13px; background: var(--wb-solid); color: var(--wb-accent); font: 500 22px/1 var(--wb-sans); box-shadow: var(--cv-shadow); }
+.emptyDiagram>span:first-of-type i,.emptyDiagram>span:last-child i { border-color: var(--wb-gold-line); color: var(--wb-gold-text); }
+.emptyDiagram b { color: var(--wb-muted); font-size: 12px; font-weight: 500; }
 .emptyCard > p { margin: 0; color: var(--wb-muted); font-size: 13.5px; line-height: 1.75; }
-.emptyActions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
-.emptyAction { display: grid; align-content: start; gap: 4px; min-height: 92px; padding: 12px; border: 1px solid var(--wb-line-strong); border-radius: 12px; background: var(--wb-solid); text-align: left; cursor: pointer; transition: border-color var(--t-hover) ease, transform var(--t-press-out) var(--cv-ease), box-shadow var(--t-hover) ease; }
+.emptyActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+.emptyAction { display: grid; align-content: start; gap: 5px; min-height: 76px; padding: 12px 14px; border: 1px solid var(--wb-line-strong); border-radius: 10px; background: var(--wb-solid); text-align: left; cursor: pointer; transition: border-color var(--t-hover) ease, transform var(--t-press-out) var(--cv-ease), box-shadow var(--t-hover) ease; }
+.emptyAction:first-child { border-color: var(--wb-accent); background: var(--wb-accent-soft); }
 .emptyAction:hover:not(:disabled) { border-color: var(--wb-accent); box-shadow: var(--cv-shadow); }
 .emptyAction:active:not(:disabled) { transform: scale(calc(1 - .02 * var(--cv-lift))); transition-duration: var(--t-press-in); }
 .emptyAction:disabled { opacity: .6; }

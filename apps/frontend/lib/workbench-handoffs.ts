@@ -4,6 +4,7 @@ import type { DiagnosisBriefSource } from './diagnosis-actions.ts';
 import type { ReportProposal } from './project-report.ts';
 import type { DesignSnapshot, DesignTransfer } from './questionnaire-mapping.ts';
 import type { ResultSnapshot } from './research-quality.ts';
+import type { ResultRegistration } from './result-registration.ts';
 import type { DatasetTransfer } from './survey-collection.ts';
 
 /** Delivery identity is independent of any business ID inside the payload. */
@@ -13,7 +14,7 @@ export type WorkbenchPayloads = {
   dataset: DatasetTransfer;
   brief: DiagnosisBriefSource;
   questionnaire: AgentQuestionnaireProposal;
-  result: ResultSnapshot;
+  result: ResultSnapshot | ResultRegistration;
   report: ReportProposal;
 };
 export type WorkbenchChannel = keyof WorkbenchPayloads;

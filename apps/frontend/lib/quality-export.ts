@@ -1,10 +1,11 @@
 import {chartData, resultFor, verifyResearchQuality, findingNeedsReview, findingSignature, type ReportBlock, type ResultSnapshot, type SlideObject} from './research-quality.ts';
 import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
-import {assertTrueVector} from './svg-safety.ts';
+import {assertTrueVector} from './vector-svg.ts';
 import {blockLabel, numberedCaption, referenceSegments, resolveReferences, type BlockLabel} from './report-numbering.ts';
 import {columnWeights, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
 import {splitInlineMath} from './inline-math.ts';
+import {figureFor,reportFigureSVG,assertFormalFigureCapacity,projectPalette,defaultProjectVisualStyle,percentSeries,type ReportFigure} from './report-figure.ts';
 import type PptxGenJS from 'pptxgenjs';
 export {assertTrueVector};
 export const evidenceLabel=(r:ResultSnapshot)=>r.method==='sampling-frame'?`来源：本研究抽样设计${r.warnings.length?'；'+r.warnings.join('；'):''}`:`来源：${r.sourceName}${r.sourceUrl?' · '+r.sourceUrl:''}；有效样本 n=${r.n} / ${r.total}；${r.classification==='simulated'?'模拟数据':r.classification==='public'?'公开数据':'用户提供数据'}${r.warnings.length?'；'+r.warnings.join('；'):''}`;
@@ -12,7 +13,8 @@ export const valueText=(v:string|number|null)=>v===null?'—':typeof v==='number
 export const chartNumberFormat=(values:number[])=>values.every(Number.isInteger)?'0':'0.000';
 export function assertTableRows(r:ResultSnapshot){if(!r.rows.length)throw Error(`表格“${r.title}”没有数据行，请调整筛选或共同应答范围后重新计算，或移除该表格。`);}
 export function assertFindingReferences(c:EditorContent){for(const section of c.report)for(const id of section.findingIds??[]){const finding=c.quality?.findings.find(f=>f.id===id);if(!finding)throw Error('章节引用的研究发现不存在：'+id);if(!c.quality||findingNeedsReview(finding,c.quality))throw Error('章节引用的研究发现待复核：'+id);if(section.findingSnapshots?.[id]!==findingSignature(finding))throw Error('发现内容已更新，请核对章节并更新关联。');}}
-export async function validateQuality(c:EditorContent){if(c.quality)await verifyResearchQuality(c.quality);}
+export async function validateQuality(c:EditorContent){if(c.quality)await verifyResearchQuality(c.quality);for(const figure of c.figures??[])figureFor(c,figure.id);}
+const figureCell=(value:string|number|null,figure?:ReportFigure|null)=>typeof value==='number'&&figure?String(Number(value.toFixed(figure.style.decimals))):valueText(value);
 const xml=(v:string)=>v.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'})[c]!);
 const b64=(bytes:Uint8Array)=>btoa(Array.from(bytes,v=>String.fromCharCode(v)).join(''));
 export const svgURI=(svg:string)=>`data:image/svg+xml;base64,${b64(new TextEncoder().encode(assertTrueVector(svg)))}`;
@@ -104,20 +106,22 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    continue;
   }
   if(b.kind!=='chart'&&b.kind!=='table'){out.push(new Paragraph({style:b.kind==='citation'?'ReportReference':'Normal',children:await richRuns(b.text,ctx)}));continue;}
-  const r=resultFor(c.quality,b.evidenceId);
+  const r=resultFor(c.quality,b.evidenceId),figure=b.figureId?figureFor(c,b.figureId,b.evidenceId):null;
+  if(figure&&((b.kind==='table')!==(figure.kind==='table')))throw Error('图形与内容块类型不一致，请重新选择。');
+  if(figure)assertFormalFigureCapacity(figure);
   if(!used.includes(r))used.push(r);
   // A chart and a table of the same result share one source line, placed after the second.
   const next=blocks[index+1],source=!(next&&(next.kind==='chart'||next.kind==='table')&&next.evidenceId===b.evidenceId);
   const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where,ctx.citations));
   if(b.kind==='chart'){
-   const svg=await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
+   const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
    // Figures share one width and size their height to the content; Word keeps the same proportions.
    const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
    out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:textRuns(TextRun,caption)}));
   }else{
-   assertTableRows(r);
-   const table=presentResult(r);
+   const table=figure?{headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>figureCell(cell,figure))),note:figure.note}:presentResult(r);
+   assertTableRows({...r,rows:table.rows});
    if(table.headers.length>10)throw Error('表格超过 10 列，请分拆后导出 Word。');
    const weights=columnWeights(table),total=weights.reduce((a,v)=>a+v,0);
    const widths=weights.map(w=>Math.round(TEXT_WIDTH.twips*w/total));
@@ -126,11 +130,12 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
    const small=all.length<=16,follows=source||!!table.note;
    // A parent unit repeated on its children's rows (a sampling frame) is one vertically merged cell; covered cells stay empty.
-   const spans=tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
-   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,cell,{bold:i===0})})]}))}));
+   const spans=figure?null:tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
+   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',alignment:AlignmentType.CENTER,keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,cell,{bold:i===0})})]}))}));
    out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
    if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,table.note)}));
   }
+  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,figure.note)}));
   if(source)out.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,sourceLine(r))}));
  }
  const notes=sectionNotes(used);
@@ -140,8 +145,19 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
 /** One line of at most the width a box holds, shortened with an ellipsis; CJK characters take a full em, others about half. */
 export function oneLine(text:string,w:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));let used=0,out='';for(const c of text){const width=/[\u3000-\uffff]/.test(c)?1:.55;if(used+width>slots-1){return out+'…';}used+=width;out+=c;}return out;}
 function fitText(text:string,w:number,h:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));const lines=text.split(/\r?\n/).reduce((n,l)=>n+Math.max(1,Math.ceil(Array.from(l).reduce((a,c)=>a+(/[\u3000-\uffff]/.test(c)?1:.55),0)/slots)),0);if(lines*fs*1.22>h*72)throw Error('文本超出对象尺寸，请扩大对象或分拆幻灯片。');}
-export function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:SlideObject[],c:EditorContent){
+async function addSvgFigure(slide:PptxGenJS.Slide,svg:string,box:{x:number;y:number;w:number;h:number;objectName:string},renderSvg:SvgPreviewRenderer){
+ const png=await renderSvg(svg);if(png.length<8||![137,80,78,71,13,10,26,10].every((v,i)=>png[i]===v))throw Error('SVG 兼容预览不是有效 PNG。');
+ // PptxGenJS4's Node path otherwise substitutes IMG_BROKEN. Patch only the
+ // newly created preview relation, retaining its authoritative SVG relation.
+ const media=(slide as unknown as {_relsMedia?:{isSvgPng?:boolean;type?:string;data?:string}[]})._relsMedia;
+ if(!media)throw Error('PPT SVG 兼容层不可用。');const offset=media.length;
+ slide.addImage({...box,data:svgURI(svg)});
+ const fallback=media.slice(offset).find(rel=>rel.isSvgPng&&rel.type==='image/png');
+ if(!fallback)throw Error('PPT SVG 兼容层未生成预览关系。');fallback.data=`data:image/png;base64,${b64(png)}`;fallback.isSvgPng=false;
+}
+export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:SlideObject[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview){
  const evidence=new Map<string,ResultSnapshot>();
+ const figureNotes=new Set<string>();
  for(const o of objects){const box={x:o.x/100*13.333333,y:o.y/100*7.5,w:o.width/100*13.333333,h:o.height/100*7.5,rotate:o.rotation,objectName:o.id};
   if(o.kind==='text'){fitText(o.text,box.w,box.h,o.fontSize);slide.addText(o.text,{...box,fontFace:'Microsoft YaHei',lang:'zh-CN',fontSize:o.fontSize,color:o.color.slice(1),align:o.align,bold:o.bold??false,valign:'top',margin:0,transparency:(1-o.opacity)*100});}
   else if(o.kind==='shape')slide.addShape(pptx.ShapeType[o.shape],{...box,line:{color:o.color.slice(1),transparency:(1-o.opacity)*100,width:1},fill:{color:o.color.slice(1),transparency:(1-o.opacity)*100}});
@@ -154,12 +170,20 @@ export function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:S
     slide.addShape(pptx.ShapeType[p.shape],{x:x-w/2,y:y-h/2,w,h,rotate:((o.rotation+(p.rotation??0))%360+360)%360,flipH:p.width<0,flipV:p.height<0,objectName:o.id+'.'+i,...(p.shape==='roundRect'?{rectRadius:7*scale}:{}),fill:p.fill?{color:p.fill.slice(1),transparency}:{color:'FFFFFF',transparency:100},line:p.stroke?{color:p.stroke.slice(1),width:(p.lineWidth??1)*scale*72,transparency}:{color:'FFFFFF',width:0,transparency:100}});
    });
   }
-  else{if(o.rotation!==0||o.opacity!==1)throw Error('原生图表和表格暂不支持旋转或透明度，请恢复为 0° 和完全不透明。');const r=resultFor(c.quality,o.evidenceId);evidence.set(r.id,r);
-   if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
-   else{assertTableRows(r);const rows=[r.headers,...r.rows],fs=Math.max(14,o.fontSize),rowH=fs*1.45/72;if(rows.length>15||r.headers.length>8||rows.length*rowH>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');const none={type:'solid' as const,pt:0,color:'FFFFFF'};const cells=rows.map((row,i)=>row.map(cell=>{fitText(valueText(cell),box.w/r.headers.length-.1,rowH,fs);return{text:valueText(cell),options:{bold:i===0,align:'center' as const,border:[i===0?{type:'solid' as const,pt:1.5,color:'000000'}:none,none,i===0?{type:'solid' as const,pt:.75,color:'000000'}:i===rows.length-1?{type:'solid' as const,pt:1.5,color:'000000'}:none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}};}));slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});}
-   // The caption keeps one line: a long group or source name is shortened rather than blocking the export.
+  else{if(o.rotation!==0||o.opacity!==1)throw Error('原生图表和表格暂不支持旋转或透明度，请恢复为 0° 和完全不透明。');const sourceResult=resultFor(c.quality,o.evidenceId),figure=o.figureId?figureFor(c,o.figureId,o.evidenceId):null;const r=figure?.kind==='table'?{...sourceResult,...figure.table}:sourceResult;evidence.set(sourceResult.id,sourceResult);
+   if(figure&&((o.kind==='table')!==(figure.kind==='table')))throw Error('图形与对象类型不一致，请重新选择。');if(figure?.note)figureNotes.add(`${figure.title}：${figure.note}`);
+   if(figure)assertFormalFigureCapacity(figure);
+   if(o.kind==='chart'&&figure){
+    if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');
+    const palette=projectPalette(c.visualStyle??defaultProjectVisualStyle()),native=['bar','horizontal_bar','grouped_bar','percent_stacked'].includes(figure.kind)&&figure.series.every(s=>s.values.every(v=>v!==null));
+    if(native){const series=figure.kind==='percent_stacked'?percentSeries(figure):figure.series;const format=figure.kind==='percent_stacked'?'0'+(figure.style.decimals?'.'+'0'.repeat(figure.style.decimals):'')+'"%"':'0'+(figure.style.decimals?'.'+'0'.repeat(figure.style.decimals):'');
+     slide.addChart(pptx.ChartType.bar,series.map(s=>({name:s.name,labels:figure.labels,values:s.values as number[]})),{...box,h:box.h-.4,barDir:figure.kind==='horizontal_bar'?'bar':'col',barGrouping:figure.kind==='percent_stacked'?'stacked':'clustered',showLegend:series.length>1,showValue:figure.style.showLabels,showTitle:false,chartColors:palette.colors.map(color=>color.slice(1)),catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:16,valAxisLabelFontSize:16,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:'263D4D',legendFontSize:16,dataLabelFormatCode:format,dataLabelPosition:figure.kind==='percent_stacked'?'ctr':'outEnd',catAxisLabelPos:'low',valAxisLabelFormatCode:figure.kind==='percent_stacked'?'0"%"':undefined,valAxisMinVal:figure.kind==='percent_stacked'?0:undefined,valAxisMaxVal:figure.kind==='percent_stacked'?100:undefined,catAxisTitle:figure.xLabel,valAxisTitle:figure.yLabel,catAxisLineShow:figure.style.showBorder,valAxisLineShow:figure.style.showBorder,valGridLine:{style:figure.style.showGrid?'solid':'none',color:'E4E9EC',size:1}});
+    }else await addSvgFigure(slide,reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()),{...box,h:box.h-.4},renderSvg);
+   }
+   else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
+   else{assertTableRows(r);const rows=[r.headers,...r.rows],fs=Math.max(14,o.fontSize),rowH=fs*1.45/72;if(rows.length>15||r.headers.length>8||rows.length*rowH>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');const none={type:'solid' as const,pt:0,color:'FFFFFF'};const cells=rows.map((row,i)=>row.map(cell=>{fitText(figureCell(cell,figure),box.w/r.headers.length-.1,rowH,fs);return{text:figureCell(cell,figure),options:{bold:i===0,align:'center' as const,border:[i===0?{type:'solid' as const,pt:1.5,color:'000000'}:none,none,i===0?{type:'solid' as const,pt:.75,color:'000000'}:i===rows.length-1?{type:'solid' as const,pt:1.5,color:'000000'}:none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}};}));slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});}
    const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
    slide.addText(caption,{x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
   }
- }return [...evidence.values()].map(evidenceLabel).join('\n');
+ }return [...[...evidence.values()].map(evidenceLabel),...figureNotes].join('\n');
 }

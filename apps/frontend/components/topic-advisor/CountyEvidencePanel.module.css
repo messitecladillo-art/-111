@@ -67,3 +67,9 @@
 @keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 600px) { .root { padding: 18px 15px; } .header { flex-direction: column; gap: 12px; } .publication { text-align: left; max-width: 100%; } .publication > small { display: inline; margin-left: 8px; } .factGrid, .decision { grid-template-columns: minmax(0, 1fr); } .directionBody { padding-left: 0; } .direction > summary { gap: 8px; } }
 @media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; } }
+
+.compact { margin: 18px 0 0; padding: 13px 16px; background: var(--ta-paper, var(--wb-well)); }
+.compact .empty { padding: 0; }
+.compact .empty h4 { margin: 0; font-size: 13px; }
+.compact .empty > p:last-child { margin-top: 5px; font-size: 12px; line-height: 1.6; }
+.compact .geography { margin-top: 5px; }

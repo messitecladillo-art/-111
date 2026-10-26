@@ -61,6 +61,13 @@ jobs:
         working-directory: apps/backend
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Locked dependencies for TypeScript contract fixtures
+        working-directory: .
+        run: npm ci --ignore-scripts
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"

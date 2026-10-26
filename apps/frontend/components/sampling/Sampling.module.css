@@ -2,10 +2,12 @@
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ── Workbench shell ── */
-.workbench { display: grid; gap: 18px; min-width: 0; color: var(--wb-text); }
+.workbench { display: grid; gap: 16px; min-width: 0; color: var(--wb-text); font-family: var(--wb-sans); }
+.workbench [hidden] { display: none !important; }
+.pagePanel { display: grid; gap: 18px; min-width: 0; align-content: start; }
 .lede { margin: 0; max-width: 78ch; font-size: 14px; line-height: 1.8; color: var(--wb-muted); }
 .eyebrow { display: block; margin-bottom: 6px; font-size: 10px; font-weight: 650; letter-spacing: .18em; color: var(--wb-accent); }
-.layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 22px; align-items: start; }
+.layout { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 20px; align-items: start; }
 .rail { position: sticky; top: 12px; display: grid; gap: 14px; max-height: calc(100vh - 24px); overflow-y: auto; padding: 4px 6px 12px 0; scrollbar-width: thin; }
 .railGroup { position: relative; display: grid; gap: 2px; }
 .railGroup > span { padding: 0 10px 4px; font-size: 10.5px; font-weight: 650; letter-spacing: .14em; color: var(--wb-muted); }
@@ -26,11 +28,11 @@
 /* ── Handbook pages ── */
 .chapterHead { display: grid; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--wb-line); }
 .chapterHead .number { font: 600 11px var(--wb-mono); letter-spacing: .16em; color: var(--wb-accent); }
-.chapterHead h3 { margin: 0; font: 650 26px/1.25 var(--wb-serif); letter-spacing: .01em; }
+.chapterHead h3 { margin: 0; font: 650 23px/1.35 var(--wb-sans); letter-spacing: .01em; }
 .chapterHead p { margin: 0; max-width: 76ch; font-size: 14px; line-height: 1.85; color: var(--wb-muted); }
 .method { display: grid; gap: 14px; padding: 20px 22px; border: 1px solid var(--wb-line); border-radius: 14px; background: var(--wb-solid); scroll-margin-top: 16px; }
 .methodHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
-.methodHead h4 { margin: 0; font: 650 19px/1.35 var(--wb-serif); }
+.methodHead h4 { margin: 0; font: 650 18px/1.4 var(--wb-sans); }
 .methodHead small { font: 500 11.5px var(--wb-mono); color: var(--wb-muted); letter-spacing: .02em; }
 .methodSummary { margin: 0; font-size: 14px; line-height: 1.85; }
 .methodGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
@@ -51,7 +53,7 @@
 
 /* ── Calculators ── */
 .calc { display: grid; gap: 12px; container-type: inline-size; }
-.calc > header h4 { margin: 0; font: 650 16px var(--wb-serif); }
+.calc > header h4 { margin: 0; font: 650 16px var(--wb-sans); }
 .calc > header p { margin: 4px 0 0; font-size: 13px; line-height: 1.75; color: var(--wb-muted); }
 .calcGrid { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
 .inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; padding: 16px; border: 1px solid var(--wb-line); border-radius: 12px; background: var(--wb-surface); align-content: start; }
@@ -76,7 +78,7 @@
 .metrics { display: flex; flex-wrap: wrap; gap: 14px 30px; }
 .metric { display: grid; gap: 2px; min-width: 0; }
 .metric > span { font-size: 12px; color: var(--wb-muted); }
-.metric strong { font: 650 30px/1.15 var(--wb-serif); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.metric strong { font: 650 30px/1.15 var(--wb-sans); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .metric[data-accent] strong { color: var(--wb-accent); }
 .metric strong small { font: 400 13px var(--wb-sans); color: var(--wb-muted); }
 .metric em { font-style: normal; font-size: 12px; color: var(--wb-muted); }
@@ -140,7 +142,7 @@
 
 /* ── Shared bits used by pages ── */
 .pageHead { display: grid; gap: 6px; }
-.pageHead h3 { margin: 0; font: 650 24px/1.3 var(--wb-serif); }
+.pageHead h3 { margin: 0; font: 650 21px/1.4 var(--wb-sans); }
 .pageHead p { margin: 0; max-width: 76ch; font-size: 13.5px; line-height: 1.8; color: var(--wb-muted); }
 .stack { display: grid; gap: 22px; }
 .muted { color: var(--wb-muted); font-size: 12.5px; }
@@ -159,7 +161,7 @@
 /* ── Design builder ── */
 .builder { display: grid; gap: 16px; }
 .groupCard { display: grid; gap: 14px; padding: 18px 20px; border: 1px solid var(--wb-line); border-radius: 14px; background: var(--wb-solid); }
-.groupName { flex: 1 1 180px; min-width: 0; padding: 4px 0; border: 0; border-bottom: 1px dashed var(--wb-line-strong); background: transparent; color: var(--wb-text); font: 650 19px var(--wb-serif); }
+.groupName { flex: 1 1 180px; min-width: 0; padding: 4px 0; border: 0; border-bottom: 1px dashed var(--wb-line-strong); background: transparent; color: var(--wb-text); font: 650 18px var(--wb-sans); }
 .groupName:focus-visible { outline: none; border-bottom-color: var(--wb-accent); }
 .stageList { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: stage; }
 .stageList > li { position: relative; display: grid; gap: 8px; padding: 12px 14px 12px 18px; border-radius: 10px; background: var(--wb-well); }
@@ -183,7 +185,7 @@
 .questions button { padding: 4px 14px; border: 1px solid var(--wb-line-strong); border-radius: 999px; background: transparent; color: var(--wb-muted); font: inherit; font-size: 12.5px; cursor: pointer; transition: color var(--motion-fast) var(--ease-arrive), border-color var(--motion-fast) var(--ease-arrive), background var(--motion-fast) var(--ease-arrive); }
 .questions button[aria-checked=true] { color: var(--wb-text); border-color: var(--wb-accent); background: var(--wb-accent-soft); font-weight: 600; }
 .advice { position: sticky; top: 12px; display: grid; gap: 10px; padding: 16px 18px; border: 1px solid var(--wb-line); border-radius: 12px; background: var(--wb-solid); }
-.advice h4 { margin: 0; font: 650 16px var(--wb-serif); }
+.advice h4 { margin: 0; font: 650 16px var(--wb-sans); }
 .advice ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.75; }
 
 /* ── Sampling lab ── */
@@ -191,7 +193,7 @@
 .labGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .labCard { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--wb-line); border-radius: 12px; background: var(--wb-solid); }
 .labCard header { display: grid; gap: 2px; }
-.labCard header strong { font: 650 15px var(--wb-serif); }
+.labCard header strong { font: 650 15px var(--wb-sans); }
 .labCard header small { font-size: 11.5px; line-height: 1.5; color: var(--wb-muted); }
 .labCard dl { display: grid; gap: 3px; margin: 0; }
 .labCard dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
@@ -223,3 +225,13 @@
   .inputs { grid-template-columns: 1fr; }
   .labGrid { grid-template-columns: 1fr; }
 }
+
+/* Contextual help stays available without competing with the editable plan. */
+.builderStart { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.help { max-width: 68ch; font-size: 13px; color: var(--wb-muted); }
+.help summary { cursor: pointer; color: var(--wb-accent); font-weight: 600; }
+.help p { margin: 8px 0 0; line-height: 1.8; }
+.pageHead { padding: 0 0 14px; border-bottom: 1px solid var(--wb-line); gap: 5px; }
+.railGroup + .railGroup { margin-top: 13px; }
+.railList button { min-height: 36px; }
+@media (min-width: 1081px) { .rail { max-height: calc(100dvh - 110px); top: 90px; } }

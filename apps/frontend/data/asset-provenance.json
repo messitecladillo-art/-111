@@ -197,156 +197,6 @@
       }
     },
     {
-      "path": "public/landing/case-abstract-1240.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 2 = report page 1",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "42b5c83c0eeeaf0f1a2a1322218d08310e740efe877117b2fd376c105b1a634f",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-abstract-560.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 2 = report page 1",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "951fca89676f62e3bc476a54026a7c609f79562973667e5478a0714a79681468",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-chain-1240.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 17 = report page 16",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "968f9c637d1d5d6337ae322eff66abcac444003b75c41ad7cf83931b84ab5d6b",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-chain-560.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 17 = report page 16",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "2848af3f65ff4f446006c33a40229b1a0b0bb07566c296bd8df8f604ce3f4bb2",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-paths-1240.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 63 = report page 62",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "c2b1e03532e78c001e61f3966280c44e4d338986b10901ff91939c4a719dd929",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-paths-560.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 63 = report page 62",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "1430c306625afd40f4bc29e3d7180c591f12b7f23dc8b04f9147cb1fa4eed05b",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-personas-1240.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 42 = report page 41",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "cd1f6558158ee29c5b482e3982b9c056fc3aa5e9b7addde9692e0b93871afebc",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-personas-560.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 42 = report page 41",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "0866f53c364afd0fb8b80ab66a18a54a084d8f8ccba3e254760cbeee27c0823e",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-sampling-1240.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 23 = report page 22",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "64505cb1d37c170822af8d12f2c223beb7802b03f62d6d80f3cb8ce88a36ed46",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
-      "path": "public/landing/case-sampling-560.webp",
-      "role": "landing_case_page",
-      "visualMode": "public_promo",
-      "origin": "User-supplied PDF of 脱下“长衫”之后（国赛） (corpus CASE-NEW-BLUE-COLLAR frozen_report, sha256 fa3c4291924fb68ea16a550c4c2cd8463fb8b1892346382d8c076eba3aae6300), PDF page 23 = report page 22",
-      "derivation": "pdftoppm 150 dpi, Pillow LANCZOS resize, WebP quality 82; whole page, no repainting",
-      "sha256": "b5d7aaa3d241a31d2a06194d6806e7842c01e7053015c31d8bb7e8f3a18292e7",
-      "review": {
-        "awardStatus": "user_attested",
-        "officialMarkSafety": "pass: cover with the competition mark and team name excluded",
-        "personalData": "none on selected pages",
-        "rights": "supplied by the user for landing use on 2026-10-10; author permission not independently confirmed",
-        "labelOnPage": "用户提供的第十六届参赛报告，奖项为用户陈述，尚未与官方公告核对"
-      }
-    },
-    {
       "path": "public/landing/app-cases-960.webp",
       "role": "landing_product_screenshot",
       "visualMode": "public_promo",
@@ -372,6 +222,71 @@
         "realRespondentData": "none",
         "officialMarkSafety": "pass",
         "labelOnPage": "真实界面 · 示例数据"
+      }
+    },
+    {
+      "path": "public/landing/structure-camping-question.svg",
+      "role": "landing_case_structure",
+      "visualMode": "public_promo",
+      "origin": "Original code-drawn structure guide created in this repository; no report-page image reused",
+      "derivation": "Original SVG rectangles, connecting arrows and generic research-organization labels; case title and page locator only refer to the supplied library record",
+      "sha256": "1debc43ec43635c99fc45a4507b0ec6112d99993b8344bf45703a6f4a9af06e7",
+      "review": {
+        "rights": "Original in-project schematic; no third-party page pixels, figures or numerical results embedded",
+        "labelOnPage": "结构导览 · 非报告原页",
+        "statisticalResult": "not_a_statistical_result"
+      }
+    },
+    {
+      "path": "public/landing/structure-camping-method.svg",
+      "role": "landing_case_structure",
+      "visualMode": "public_promo",
+      "origin": "Original code-drawn structure guide created in this repository; no report-page image reused",
+      "derivation": "Original SVG rectangles, connecting arrows and generic research-organization labels; case title and page locator only refer to the supplied library record",
+      "sha256": "fc8e48a49fc12424c35320f265d23815f590d575ccc2416becf29d8d2c1e6add",
+      "review": {
+        "rights": "Original in-project schematic; no third-party page pixels, figures or numerical results embedded",
+        "labelOnPage": "结构导览 · 非报告原页",
+        "statisticalResult": "not_a_statistical_result"
+      }
+    },
+    {
+      "path": "public/landing/structure-camping-data.svg",
+      "role": "landing_case_structure",
+      "visualMode": "public_promo",
+      "origin": "Original code-drawn structure guide created in this repository; no report-page image reused",
+      "derivation": "Original SVG rectangles, connecting arrows and generic research-organization labels; case title and page locator only refer to the supplied library record",
+      "sha256": "d78eba0a23c3cd8c0c4d23930b69e801ffe76d47d300ba15ae6482308409a698",
+      "review": {
+        "rights": "Original in-project schematic; no third-party page pixels, figures or numerical results embedded",
+        "labelOnPage": "结构导览 · 非报告原页",
+        "statisticalResult": "not_a_statistical_result"
+      }
+    },
+    {
+      "path": "public/landing/structure-camping-insight.svg",
+      "role": "landing_case_structure",
+      "visualMode": "public_promo",
+      "origin": "Original code-drawn structure guide created in this repository; no report-page image reused",
+      "derivation": "Original SVG rectangles, connecting arrows and generic research-organization labels; case title and page locator only refer to the supplied library record",
+      "sha256": "a18610f1e290a0fade083c01763d22d3d4585a54b099446f0ee615becffb2c9c",
+      "review": {
+        "rights": "Original in-project schematic; no third-party page pixels, figures or numerical results embedded",
+        "labelOnPage": "结构导览 · 非报告原页",
+        "statisticalResult": "not_a_statistical_result"
+      }
+    },
+    {
+      "path": "public/landing/structure-camping-action.svg",
+      "role": "landing_case_structure",
+      "visualMode": "public_promo",
+      "origin": "Original code-drawn structure guide created in this repository; no report-page image reused",
+      "derivation": "Original SVG rectangles, connecting arrows and generic research-organization labels; case title and page locator only refer to the supplied library record",
+      "sha256": "c83f1fe78b029bd6bd0e7954f5c5c6ff9762e026e7ead04e83a5be45e4ca2a49",
+      "review": {
+        "rights": "Original in-project schematic; no third-party page pixels, figures or numerical results embedded",
+        "labelOnPage": "结构导览 · 非报告原页",
+        "statisticalResult": "not_a_statistical_result"
       }
     }
   ]

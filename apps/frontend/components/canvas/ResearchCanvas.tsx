@@ -728,7 +728,7 @@ function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: d
         </div>
       </div>
 
-      <button ref={addButton} type="button" className={styles.addButton} data-open={libraryOpen || undefined} aria-expanded={libraryOpen} aria-label={libraryOpen ? '关闭节点库' : '打开节点库'} onClick={() => setLibraryOpen(v => !v)}><span aria-hidden="true">+</span></button>
+      <button ref={addButton} type="button" className={styles.addButton} data-open={libraryOpen || undefined} aria-expanded={libraryOpen} aria-label={libraryOpen ? '关闭节点库' : '打开节点库'} onClick={() => setLibraryOpen(v => !v)}><span aria-hidden="true">+</span><b>节点库</b></button>
       {libraryOpen && <NodeLibrary onAdd={k => addNode(k)} onTemplate={insertTemplate} onClose={() => { setLibraryOpen(false); addButton.current?.focus(); }} />}
 
       {(selected.length > 0 || selectedEdges.length > 0) && <div className={`${styles.floatBar} ${styles.selectionBar}`} role="group" aria-label="所选对象操作">
@@ -850,16 +850,16 @@ function EmptyState({ design, dataset, onAdd, onTemplate, onAdopt }: { design: D
   const [chosen, setChosen] = useState<NodeKind[]>(() => found.map(f => f.kind));
   return <div className={styles.empty}>
     <div className={styles.emptyCard}>
-      <span className={styles.emptyEyebrow}>研究画布</span>
-      <h3>把研究的每一步摆在一张图上</h3>
-      <p>问卷、数据、统计、图表和成果共用工作台里的同一份内容。连线决定数据怎么流动，运行结果与「数据分析」完全一致。</p>
+      <span className={styles.emptyEyebrow}>从一个问题开始</span>
+      <div className={styles.emptyDiagram} aria-hidden="true"><svg viewBox="0 0 480 60" preserveAspectRatio="none"><path d="M40 30H440"/></svg>{[['Q','问题'],['D','数据'],['I','洞察'],['A','行动']].map(([letter,label])=><span key={letter}><i>{letter}</i><b>{label}</b></span>)}</div>
+      <h3>把研究思路，连成一张图。</h3>
+      <p>自由添加与连接节点，按自己的思路组织分析和成果。</p>
       <div className={styles.emptyActions}>
         <button type="button" className={styles.emptyAction} onClick={onAdd}><strong>添加节点</strong><small>从节点库挑选，或拖到画布上</small></button>
         <button type="button" className={styles.emptyAction} onClick={onTemplate}><strong>使用参考流程</strong><small>插入后每一步都可修改</small></button>
-        <button type="button" className={styles.emptyAction} disabled aria-describedby="cv-ai-reason"><strong>让 AI 提出方案</strong><small id="cv-ai-reason">需要在「我的项目」中接入模型服务；本地工作台不调用模型</small></button>
       </div>
       {found.length > 0 && <div className={styles.adopt}>
-        <p>发现现有成果，可以建立为节点引用（不会自动猜测执行关系）：</p>
+        <p>引用已有内容，连线关系由你决定：</p>
         {found.map(f => <label key={f.kind}><input type="checkbox" checked={chosen.includes(f.kind)} onChange={e => setChosen(c => e.target.checked ? [...c, f.kind] : c.filter(k => k !== f.kind))} />{f.label}</label>)}
         <button type="button" className={styles.secondary} disabled={!chosen.length} onClick={() => onAdopt(chosen)}>建立引用</button>
       </div>}

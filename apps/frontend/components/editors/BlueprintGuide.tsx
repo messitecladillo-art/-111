@@ -14,15 +14,15 @@ export default function BlueprintGuide({ node, written, open, onToggle, onNaviga
   return <details className={styles.guide} open={open} onToggle={event => onToggle(event.currentTarget.open)}>
     <summary>
       <span className={styles.kicker}>{node.kind === 'chapter' ? '本章任务' : '写作指引'}</span>
-      <span className={styles.purpose}>{node.purpose}</span>
     </summary>
-    {(node.moves.length > 0 || node.length || node.needs.length > 0) && <div className={styles.body}>
+    <div className={styles.body}>
+      <p className={styles.purpose}>{node.purpose}</p>
       {node.moves.length > 0 && <ol className={styles.moves}>{node.moves.map(move => <li key={move}>{move}</li>)}</ol>}
       <div className={styles.meta}>
         {node.length && <span className={styles.length} data-state={lengthState}>{written.toLocaleString('zh-CN')}<small> / {low.toLocaleString('zh-CN')}–{high.toLocaleString('zh-CN')} 字</small></span>}
         {node.needs.map(need => <span key={need.label} className={styles.need}><b>{ELEMENT_LABELS[need.element]}</b>{need.label}</span>)}
         {node.module && onNavigate && <button type="button" className={styles.module} onClick={() => onNavigate(node.module!)}>去{BLUEPRINT_MODULE_LABELS[node.module]}取素材</button>}
       </div>
-    </div>}
+    </div>
   </details>;
 }

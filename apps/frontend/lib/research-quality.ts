@@ -1,4 +1,5 @@
 import type { RecipeResult } from './analysis-recipes.ts';
+import { parseAnalysisResultReceipt, resultReceipt, type AnalysisCalculationReceipt, type AnalysisResultReceipt } from './analysis-result-receipt.ts';
 
 export type ResultSnapshot = {
   id: string; title: string; sourceName: string; sourceUrl: string; sourceHash: string; resultHash: string;
@@ -7,6 +8,8 @@ export type ResultSnapshot = {
   warnings: string[];
   /** Names of the analysed variables (question labels), when known; captions and reading paragraphs use them. */
   variables?: string[];
+  /** Absent on legacy versions; never synthesize provenance when loading history. */
+  receipt?: AnalysisResultReceipt;
 };
 export type ResearchFinding = {
   id: string; title: string; question: string; evidenceIds: string[]; interpretation: string;
@@ -16,7 +19,7 @@ export type ResearchFinding = {
 export type ResearchQuality = { version: 1; results: ResultSnapshot[]; findings: ResearchFinding[] };
 export type ReportBlock = {
   id: string; kind: 'paragraph' | 'chart' | 'table' | 'formula' | 'citation' | 'callout';
-  text: string; evidenceId: string; valueColumn: number;
+  text: string; evidenceId: string; valueColumn: number; figureId?: string;
 };
 export const QUALITY_LAYOUTS = ['cover', 'problem', 'chart', 'comparison', 'segments', 'insight', 'action', 'closing'] as const;
 export type QualityLayout = typeof QUALITY_LAYOUTS[number];
@@ -25,7 +28,7 @@ export type SlideObject = {
   x: number; y: number; width: number; height: number; rotation: number; opacity: number;
   locked: boolean; groupId: string;
   text: string; fontSize: number; color: string; align: 'left' | 'center' | 'right';
-  bold?:boolean; sourceBlockId?:string;
+  bold?:boolean; sourceBlockId?:string; sourceSectionId?:string; figureId?:string;
   evidenceId: string; valueColumn: number; chartType: 'bar' | 'line' | 'pie';
   assetId: string; shape: 'rect' | 'ellipse' | 'line';
 };
@@ -56,7 +59,7 @@ function unique<T extends { id: string }>(items: T[]): T[] { if (new Set(items.m
 const cell = (value: unknown): string | number | null => value === null ? null : typeof value === 'number' ? finite(value, -1e100, 1e100) : qualityText(value, 2000);
 
 export function parseResultSnapshot(value: unknown): ResultSnapshot {
-  const x = qualityRecord(value, ['id','title','sourceName','sourceUrl','sourceHash','resultHash','classification','method','n','total','headers','rows','metrics','warnings','variables']);
+  const x = qualityRecord(value, ['id','title','sourceName','sourceUrl','sourceHash','resultHash','classification','method','n','total','headers','rows','metrics','warnings','variables','receipt']);
   const headers = list(x.headers, 30, v => qualityText(v, 160, true));
   if (!headers.length || !['public','user_provided','simulated'].includes(x.classification as string)) return fail();
   const rows = list(x.rows, 400, v => { const row = list(v, headers.length, cell); if (row.length !== headers.length) return fail(); return row; });
@@ -68,7 +71,8 @@ export function parseResultSnapshot(value: unknown): ResultSnapshot {
     metrics:list(x.metrics,40,v=>{const m=qualityRecord(v,['label','value']);return {label:qualityText(m.label,160,true),value:m.value===null?null:finite(m.value,-1e100,1e100)};}),
     warnings:list(x.warnings,30,v=>qualityText(v,1000)),
     // Optional and last, so results registered before variables existed keep their fingerprints.
-    ...(Object.hasOwn(x,'variables')?{variables:list(x.variables,4,v=>qualityText(v,160,true))}:{}) };
+    ...(Object.hasOwn(x,'variables')?{variables:list(x.variables,4,v=>qualityText(v,160,true))}:{}),
+    ...(Object.hasOwn(x,'receipt') ? {receipt:parseAnalysisResultReceipt(x.receipt,{method:x.method as string,n,total})} : {}) };
 }
 export function parseResearchQuality(value: unknown): ResearchQuality {
   const x=qualityRecord(value,['version','results','findings']); if(x.version!==1)return fail();
@@ -87,14 +91,17 @@ export function parseResearchQuality(value: unknown): ResearchQuality {
   return {version:1,results,findings};
 }
 export function parseReportBlock(value:unknown):ReportBlock {
-  const b=qualityRecord(value,['id','kind','text','evidenceId','valueColumn']);
+  const b=qualityRecord(value,['id','kind','text','evidenceId','valueColumn','figureId']);
   if(!['paragraph','chart','table','formula','citation','callout'].includes(b.kind as string))return fail();
-  return {id:qualityText(b.id,80,true),kind:b.kind as ReportBlock['kind'],text:qualityText(b.text,12000),evidenceId:qualityText(b.evidenceId,80),valueColumn:finite(b.valueColumn,0,29,true)};
+  if(Object.hasOwn(b,'figureId')&&!['chart','table'].includes(b.kind as string))return fail();
+  return {id:qualityText(b.id,80,true),kind:b.kind as ReportBlock['kind'],text:qualityText(b.text,12000),evidenceId:qualityText(b.evidenceId,80),valueColumn:finite(b.valueColumn,0,29,true),...(Object.hasOwn(b,'figureId')?{figureId:qualityText(b.figureId,80,true)}:{})};
 }
 export function parseSlideObject(value:unknown):SlideObject {
-  const o=qualityRecord(value,['id','kind','x','y','width','height','rotation','opacity','locked','groupId','text','fontSize','color','align','evidenceId','valueColumn','chartType','assetId','shape','bold','sourceBlockId']);
+  const o=qualityRecord(value,['id','kind','x','y','width','height','rotation','opacity','locked','groupId','text','fontSize','color','align','evidenceId','valueColumn','chartType','assetId','shape','bold','sourceBlockId','sourceSectionId','figureId']);
   if(Object.hasOwn(o,'bold')&&typeof o.bold!=='boolean')return fail();
-  const optional={...(Object.hasOwn(o,'bold')?{bold:o.bold as boolean}:{}),...(Object.hasOwn(o,'sourceBlockId')?{sourceBlockId:qualityText(o.sourceBlockId,80,true)}:{})};
+  if(Object.hasOwn(o,'figureId')&&!['chart','table'].includes(o.kind as string))return fail();
+  if(Object.hasOwn(o,'sourceSectionId')&&(!Object.hasOwn(o,'sourceBlockId')||!['chart','table'].includes(o.kind as string)))return fail();
+  const optional={...(Object.hasOwn(o,'bold')?{bold:o.bold as boolean}:{}),...(Object.hasOwn(o,'sourceBlockId')?{sourceBlockId:qualityText(o.sourceBlockId,80,true)}:{}),...(Object.hasOwn(o,'sourceSectionId')?{sourceSectionId:qualityText(o.sourceSectionId,80,true)}:{}),...(Object.hasOwn(o,'figureId')?{figureId:qualityText(o.figureId,80,true)}:{})};
   if(!['text','chart','table','vector','shape'].includes(o.kind as string)||typeof o.locked!=='boolean'||!['left','center','right'].includes(o.align as string)||!['bar','line','pie'].includes(o.chartType as string)||!['rect','ellipse','line'].includes(o.shape as string)||typeof o.color!=='string'||!/^#[a-fA-F0-9]{6}$/.test(o.color))return fail();
   if((o.kind==='vector'||o.assetId!=='')&&!['mosaic-edge','focus-loop','path-ribbon'].includes(o.assetId as string))return fail();
   const x=finite(o.x,0,100),y=finite(o.y,0,100),width=finite(o.width,.1,100),height=finite(o.height,.1,100);
@@ -110,9 +117,11 @@ export function resultPayload(result:ResultSnapshot) {
 export async function digestText(value:string):Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-export async function snapshotRecipe(result:Omit<RecipeResult,'method'> & {method:string},source:Pick<ResultSnapshot,'title'|'sourceName'|'sourceUrl'|'sourceHash'|'classification'>&{variables?:string[]},id=crypto.randomUUID()):Promise<ResultSnapshot> {
+export async function snapshotRecipe(result:Omit<RecipeResult,'method'> & {method:string;reliability?:import('./analysis-plan.ts').PlanResult['reliability']},source:Pick<ResultSnapshot,'title'|'sourceName'|'sourceUrl'|'sourceHash'|'classification'>&{variables?:string[]},id=crypto.randomUUID(),calculation?:AnalysisCalculationReceipt):Promise<ResultSnapshot> {
   const {variables,...origin}=source;
-  const candidate=parseResultSnapshot({id,...origin,resultHash:'0'.repeat(64),method:result.method,n:result.n,total:result.total,headers:result.headers,rows:result.rows,metrics:result.metrics,warnings:result.warnings,...(variables?.length?{variables}:{})});
+  const computed=['frequency','numeric','groups','crosstab','pearson','spearman','alpha'].includes(result.method);
+  if(calculation&&!computed)throw Error('此类结果不支持统计计算凭据。');
+  const candidate=parseResultSnapshot({id,...origin,resultHash:'0'.repeat(64),method:result.method,n:result.n,total:result.total,headers:result.headers,rows:result.rows,metrics:result.metrics,warnings:result.warnings,...(computed?{receipt:resultReceipt(result,calculation)}:{}),...(variables?.length?{variables}:{})});
   return {...candidate,resultHash:await digestText(JSON.stringify(resultPayload(candidate)))};
 }
 export async function verifyResearchQuality(quality:ResearchQuality):Promise<void> {

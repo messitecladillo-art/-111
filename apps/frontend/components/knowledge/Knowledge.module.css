@@ -37,13 +37,13 @@
 .eyebrow { display: flex; justify-content: space-between; font-size: 10px; color: var(--km-accent); letter-spacing: .03em; }
 .mirrorFooter { flex-shrink: 0; display: flex; justify-content: space-between; padding: 12px 18px; font-size: 11px; border-top: 1px solid var(--km-line); color: var(--km-muted); }
 .mirrorFooter a { text-decoration: none; color: var(--km-accent); }
-.entry h2 { font-size: 27px; line-height: 1.3; letter-spacing: -.03em; margin: 14px 0 4px; font-weight: 600; }
+.entry h2 { font-family: inherit; font-size: 25px; line-height: 1.4; letter-spacing: -.025em; margin: 12px 0 4px; font-weight: 650; }
 .english { margin: 0; font-size: 12px; color: var(--km-muted); }
 .aliases { font-size: 11px; line-height: 1.8; color: var(--km-muted); margin: 12px 0; }
 .tabs { margin: 22px 0 16px; display: flex; border-bottom: 1px solid var(--km-line); }
 .tabs button { background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 10px 8px; font-size: 11px; white-space: nowrap; }
 .tabs button[aria-selected=true] { border-color: var(--km-accent); color: var(--km-accent); }
-.reading p { font-size: 13px; line-height: 1.95; margin: 12px 0; }
+.reading p { font-size: 14px; line-height: 1.9; margin: 12px 0; }
 .reading h3, .related h3 { font-size: 12px; margin: 24px 0 8px; color: var(--km-accent); }
 .definition { font-size: 15px !important; line-height: 1.9 !important; }
 .reading summary { font-size: 12px; cursor: pointer; padding: 10px 0; }
@@ -73,29 +73,42 @@
 .commandResults strong { font-weight: 550; font-size: 14px; }
 .commandResults small { font-size: 11px; color: var(--km-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 .command footer { padding: 12px 20px; border-top: 1px solid var(--km-line); font-size: 11px; color: var(--km-muted); }
-.index { --km-bg: var(--wb-surface, #fffdf8); --km-paper: var(--wb-well, #f4f2ea); --km-text: var(--wb-text, #0a1f33); --km-muted: var(--wb-muted, #55687a); --km-line: var(--wb-line, #d7dfd9); --km-accent: var(--wb-accent, #00796f); --km-selected: var(--wb-accent-soft, #e8f3ef); color: var(--km-text); padding: 8px 0 48px; font-family:var(--wb-sans); }
-.indexHeader { display:grid;grid-template-columns:1fr minmax(320px, .95fr);column-gap:36px;align-items:center;padding-bottom:26px; }
-.indexHeader .eyebrow { grid-column:1/-1;font-size:11px;letter-spacing:.08em; }
-.indexHeader h2 { font-size: 30px; line-height: 1.45; letter-spacing: -.02em; font-weight: 600; margin: 18px 0 6px; }
-.indexHeader p { color: var(--km-muted); line-height: 1.9; font-size: 14px; }
-.indexHeader p { margin:0;font-size:13px; }
-.indexHeader .searchBox { grid-column:2;grid-row:2 / span 2;margin: 20px 0; background: var(--km-bg);box-shadow:0 4px 18px #09253205;padding:8px 12px; }
+.index { --km-bg: var(--wb-surface, #fffdf8); --km-paper: var(--wb-well, #f4f2ea); --km-text: var(--wb-text, #0a1f33); --km-muted: var(--wb-muted, #55687a); --km-line: var(--wb-line, #d7dfd9); --km-accent: var(--wb-accent, #00796f); --km-selected: var(--wb-accent-soft, #e8f3ef); color: var(--km-text); padding: 4px 0 24px; font-family:var(--wb-sans,system-ui,sans-serif); font-size:14px; line-height:1.65; }
+.indexHeader { display:grid;grid-template-columns:1fr minmax(320px, .95fr);column-gap:32px;align-items:center;padding-bottom:20px; }
+.indexHeader h2 { font:650 24px/1.45 var(--wb-sans,system-ui,sans-serif); letter-spacing:-.025em; margin:4px 0 0; }
+.indexHeader .indexCaption { margin:0;color:var(--km-muted);font-size:12px; }
+.indexHeader .searchBox { margin:0; background:var(--km-bg);padding:6px 12px; }
 .indexHeader .searchBox input { font-size:14px; }
-.indexBody { display: grid; grid-template-columns: minmax(260px, .68fr) minmax(400px, 1.32fr); gap: 28px; align-items: start; }
-.domainFilters { display: flex; flex-wrap: wrap; gap: 7px; padding-bottom: 24px; }
-.domainFilters button { padding: 8px 12px; font-size: 11px; background: transparent; border: 1px solid var(--km-line); border-radius: 20px; }
+.indexHeader .searchBox button:disabled { visibility:hidden; }
+.indexBody { display:grid;grid-template-columns:minmax(260px,.64fr) minmax(380px,1.36fr);height:max(440px,calc(100dvh - 310px));border:1px solid var(--km-line);border-radius:12px;overflow:hidden;background:var(--km-bg); }
+.domainFilters { display:flex;flex-wrap:wrap;gap:6px;padding-bottom:14px; }
+.domainFilters button { padding:7px 11px;font-size:12px;background:transparent;border:1px solid var(--km-line);border-radius:7px;transition:background 180ms,border-color 180ms,color 180ms; }
 .domainFilters button[aria-pressed=true] { background: var(--km-selected); border-color: var(--km-accent); color: var(--km-accent); }
-.indexDetail { border: 1px solid var(--km-line); border-radius: 12px; padding: 32px 36px; background: var(--km-bg); position: sticky; top: 30px; max-height: calc(100vh - 60px); overflow: auto; box-shadow:0 8px 32px #09253203; }
-.indexList { padding: 0; border-top: 1px solid var(--km-line); }
-.indexList .result { padding:20px 18px;text-align:left;border-radius:0;background:transparent;font-weight:400;min-width:0; }
-.indexList .result strong { font-size:17px;font-weight:600;line-height:1.55;letter-spacing:0; }
-.indexList .result p { font-size:12px;line-height:1.9; }
-.indexList .result[aria-pressed=true] { background:var(--km-selected);box-shadow:inset 2px 0 var(--km-accent); }
-.indexDetail .entry h2 { font-size:28px;line-height:1.4;font-weight:600; }
+.favoriteFilter { margin-left:auto; }
+.indexSummary { display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;color:var(--km-muted);font-size:12px; }
+.indexSummary button { border:0;background:none;padding:4px 0;color:var(--km-accent);font-size:12px; }
+.indexDetail { min-width:0;padding:26px 30px;background:var(--km-bg);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin; }
+.indexList { min-width:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;border-right:1px solid var(--km-line); }
+.indexList .result { padding:17px 20px;text-align:left;border-radius:0;background:transparent;font-weight:400;min-width:0;transition:background 180ms; }
+.indexList .result strong { font-size:16px;font-weight:650;line-height:1.55;letter-spacing:0; }
+.indexList .result p { font-size:13px;line-height:1.8; }
+.indexList .result:hover { background:var(--km-paper); }
+.indexList .result[aria-pressed=true] { background:var(--km-selected);box-shadow:inset 3px 0 var(--km-accent); }
+.indexList .result:focus-visible { outline-offset:-3px; }
+.indexList .empty { margin:16px;font-size:13px; }
+.indexDetail .entry h2 { font-size:26px;line-height:1.4;font-weight:650; }
+.indexDetail .reading { max-width:70ch; }
 .indexDetail .reading p { font-size:14px;line-height:1.95; }
-.indexDetail .reading h3 { font-size:13px;letter-spacing:.03em; }
-.indexDetail .tabs button { font-size:13px;padding:12px 15px; }
+.indexDetail .reading h3 { font-size:14px;font-weight:650;letter-spacing:0; }
+.indexDetail .tabs { position:sticky;top:0;z-index:1;background:var(--km-bg);padding-top:8px; }
+.indexDetail .tabs button { flex:1;font-size:13px;padding:11px 9px; }
 .indexDetail .entryActions button,.indexDetail .related button,.indexDetail .tools a { font-size:12px; }
+.detailEmpty { display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:24px;color:var(--km-muted); }
+.detailEmpty>span { display:grid;place-items:center;width:54px;height:54px;border-radius:14px;background:var(--km-selected);color:var(--km-accent);font-size:30px; }
+.detailEmpty h3 { margin:18px 0 8px;color:var(--km-text);font-size:18px;font-weight:600; }
+.detailEmpty p { margin:0;font-size:13px; }
+.detailEmpty button { border:1px solid var(--km-line);background:var(--km-bg);color:var(--km-accent);border-radius:7px;padding:8px 13px;margin-top:20px; }
+@media (min-width:1600px) { .indexBody { grid-template-columns:minmax(300px,.55fr) minmax(480px,1.45fr); }.indexDetail { padding:30px 44px; } }
 .recognition { border-top:1px solid var(--km-line);padding-top:16px;margin-top:20px;font-size:13px;line-height:1.8; }
 .recognition summary { cursor:pointer;color:var(--km-accent);font-weight:600;padding:6px 0; }
 .recognition label { display:block;margin-top:14px;font-size:12px;color:var(--km-muted); }

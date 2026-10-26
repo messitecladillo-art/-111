@@ -38,7 +38,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
 
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-template">
-      <div className={styles.blockHead}><h3 id="sx-template">选择画像模板</h3><p>按研究对象调整画像属性与配额。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-template">画像模板</h3></div>
       <div ref={templateRef} className={styles.templateRow} role="radiogroup" aria-label="画像模板"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
         {Object.entries(PANEL_TEMPLATES).map(([key, t]) => <button type="button" key={key} data-motion-id={key} role="radio" aria-checked={config.template === key} className={styles.templateCard} onClick={() => applyTemplate(key)}>
           <strong>{t.label}</strong><small>{t.description}</small><span>{t.attributes.map(a => a.label).join(' · ')}</span>
@@ -47,7 +47,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
     </section>
 
     <section className={styles.block} aria-labelledby="sx-size">
-      <div className={styles.blockHead}><h3 id="sx-size">样本规模与分配</h3><p>从少量画像开始，检查题目与作答流程。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-size">规模与分配</h3></div>
       <div className={styles.sizeRow}>
         <label className={styles.sizeField}><span>硅基受访者人数</span>
           <span className={styles.sizeControl}><input type="range" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Number(e.target.value) })} aria-describedby="sx-size-hint"/><input type="number" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Math.max(1, Math.min(SILICON_LIMITS.personas, Number(e.target.value) || 1)) })} aria-label="人数"/></span>
@@ -57,13 +57,13 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
           <label><input type="radio" name="sx-allocation" checked={config.allocation === 'quota'} onChange={() => update({ allocation: 'quota' })}/><span>精确配额<small>每个属性的边际比例严格对齐</small></span></label>
           <label><input type="radio" name="sx-allocation" checked={config.allocation === 'random'} onChange={() => update({ allocation: 'random' })}/><span>独立抽取<small>按比例随机，会有波动</small></span></label>
         </fieldset>
-        <div className={styles.seedBox}><span>随机种子 <code>{config.seed}</code></span><button type="button" onClick={() => update({ seed: Math.floor(Math.random() * 2 ** 31) })}>换一批画像</button><small>相同设定与种子可复现同一批画像。</small></div>
+        <div className={styles.seedBox}><span>随机种子 <code>{config.seed}</code></span><button type="button" onClick={() => update({ seed: Math.floor(Math.random() * 2 ** 31) })}>换一批画像</button></div>
       </div>
       <label className={styles.wideField}><span>共同背景（可选）</span><textarea rows={2} maxLength={SILICON_LIMITS.background} value={config.background} onChange={e => update({ background: e.target.value })} placeholder="例如：就读于华东某综合性大学，住在校内宿舍。会写进每位硅基受访者的设定。"/></label>
     </section>
 
     <section className={styles.block} aria-labelledby="sx-attrs">
-      <div className={styles.blockHead}><h3 id="sx-attrs">画像属性与配额</h3><p>最多 {SILICON_LIMITS.attributes} 个属性、每个 {SILICON_LIMITS.levels} 个取值。比例填相对权重，0 表示不出现。</p></div>
+      <div className={styles.blockHead}><h3 id="sx-attrs">属性与配额</h3><p>填写相对权重，0 表示不出现；最多 {SILICON_LIMITS.attributes} 个属性、每项 {SILICON_LIMITS.levels} 个取值。</p></div>
       <div className={styles.attrGrid}>
         {config.attributes.map((a, ai) => {
           const counts = quotaCounts(a.levels.map(l => l.weight), config.size);

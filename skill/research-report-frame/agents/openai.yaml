@@ -1,0 +1,4 @@
+interface:
+  display_name: "报告主题页框"
+  short_description: "按研究主题与统一配色制作清晰页框，并验证版心、透明度、分页与真实文档输出"
+  default_prompt: "使用 $research-report-frame，根据研究主题、项目配色和实际版心制作清晰页框，按修改需求选择 PNG、SVG 或原生对象并检查实际排版。"

@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import * as shared from '../../../packages/evi-x-shared/src/index.ts';
 import * as questionnaireLibrary from '../lib/questionnaire-library.ts';
+import * as resultRegistration from '../lib/result-registration.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
 import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test-harness.mjs';
 import { questionnaireRepositoryModule, questionnairePersistence } from './helpers/questionnaire-repository.mjs';
@@ -56,6 +57,7 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
   hooks.useSyncExternalStore = externalStoreHook(hooks, () => { if (alive) dirty = true; });
   const jsx = (type, values, key) => ({ type, props: values ?? {}, key });
   const imports = {
+    '@/lib/result-registration': resultRegistration,
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'next/link': moduleStub('Link'),
     'next/dynamic': { __esModule: true, default: loader => {
@@ -149,11 +151,15 @@ test('local host keeps a newer result when a retained acknowledgement arrives, i
   panels.analysis.props.onResultSnapshot(result()); await screen.settle();
   const acknowledgeA = screen.tree.props.panels.editor.props.onResultHandled;
   const sent = result('same-business-id', '第二次发送');
-  screen.tree.props.panels.analysis.props.onResultSnapshot(sent); await screen.settle();
+  const figures=[{id:'shared-figure',series:[{values:[2]}]}],visualStyle={schema:'ProjectVisualStyle/v1',paletteId:'forest',version:3};
+  screen.tree.props.panels.analysis.props.onResultSnapshot(sent,figures,visualStyle); await screen.settle();
   acknowledgeA(); await screen.settle();
   panels = screen.tree.props.panels;
   assert.equal(panels.editor.props.resultProposal.title, '第二次发送');
   assert.equal(screen.window.location.hash, 'editor');
+  assert.deepEqual(panels.editor.props.resultFigures,figures);assert.deepEqual(panels.editor.props.resultVisualStyle,visualStyle);
+  figures[0].series[0].values[0]=99;visualStyle.paletteId='blue';
+  assert.equal(panels.editor.props.resultFigures[0].series[0].values[0],2);assert.equal(panels.editor.props.resultVisualStyle.paletteId,'forest');
   sent.rows[0][1] = 99;
   assert.equal(panels.editor.props.resultProposal.rows[0][1], 2);
   panels.editor.props.onResultHandled(); await screen.settle();
