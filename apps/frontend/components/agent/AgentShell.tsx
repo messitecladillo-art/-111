@@ -466,7 +466,7 @@ export default function AgentShell() {
               return <button key={r.id} type="button" className={styles.step} aria-current={panel === r.id ? 'true' : undefined} onClick={() => { go(r.id); setRailMenu(null); }}>
                 <span className={styles.glyph} aria-hidden="true">{r.glyph}</span>
                 <b><small>{String(i + 1).padStart(2, '0')}</small>{r.name}</b>
-                <span className={styles.stepLight}>{panel === r.id ? <em>已打开</em> : !!lightOf?.score && <><LightBar score={lightOf.score} />照度 {percent(lightOf.score)}</>}</span>
+                <span className={styles.stepLight}>{panel === r.id ? <em>已打开</em> : lightOf && (lightOf.score > 0 ? <><LightBar score={lightOf.score} />照度 {percent(lightOf.score)}</> : <i>尚无证据</i>)}</span>
                 <span className={styles.stepLine}>{r.line}</span>
               </button>;
             })}
