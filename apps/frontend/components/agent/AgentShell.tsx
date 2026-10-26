@@ -17,6 +17,7 @@ import { traceExhibits } from '@/lib/agent/provenance';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type Span } from '@/lib/agent/router';
 import { readChatTurn, sendChatTurn } from './chat-client';
+import { conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
@@ -24,7 +25,7 @@ import { Icon } from './icons';
 import Lobby from './Lobby';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
-import { stamp, threads, type Message } from './threads';
+import { stamp, threads, type Message, type ModelCall } from './threads';
 import type { Service } from '@evix/shared';
 
 /**
@@ -250,18 +251,22 @@ export default function AgentShell() {
       const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(said.flatMap(chatLine)),
         context: chatContext(panel, light, traces), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true,
         ...(next ? { step: next.step, toolResults: next.results } : {}) };
-      const waiting: Message = { ...stamp(), role: 'agent', turn: { lines: next
+      const waiting: Message = { ...stamp(), role: 'agent', model: { service: chatService.label, step: next?.step ?? 1, status: 'running' }, turn: { lines: next
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
       const seen = next?.seen ?? new Set<string>();
       sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
     };
+    // How a model call ended, on the message that holds it; the service and step stay those it was sent with.
+    const mark = (messageId: string, status: NonNullable<ModelCall['status']>, service?: string, step?: number) =>
+      threads.patch(messageId, m => m.role === 'agent' && m.model ? { ...m, model: { ...m.model, ...(service ? { service } : {}), ...(step ? { step } : {}), status } } : m);
     const replace = (messageId: string, next: AgentTurn) => threads.patch(messageId, m => m.role === 'agent' ? { ...m, turn: next } : m);
     // A receipt in place of the waiting line: the reply, marked as unverified, then each tool it asked for, run here.
     // A receipt read back by 核对回执 has no chain to continue: it settles, and the user can ask again from there.
     const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>(), service?: Service) => {
       if (receipt.status === 'ready' && receipt.reply) {
+        mark(messageId, 'ready', label, receipt.step);
         replace(messageId, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
         const asked = receipt.message;
         if (receipt.droppedActions) threads.appendAfter(messageId, { ...stamp(), role: 'agent', turn: { lines: [[span(`模型还请求了 ${receipt.droppedActions} 个不在清单里的操作，没有执行。`, 'dim')]] } });
@@ -272,23 +277,29 @@ export default function AgentShell() {
           if (results.length && asked && service && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen, service, after: messageId });
         });
       } else if (receipt.status === 'failed') {
+        mark(messageId, 'failed', label, receipt.step);
         replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
       } else {
+        mark(messageId, 'unknown', label, receipt.step);
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span('这一轮已记下；核对只读取回执，不会再次调用模型。')]], chips: [{ label: '核对回执', action: { type: 'check', turn: receipt.id, message: messageId }, primary: true }] });
       }
     };
     const fail = (messageId: string, failure: unknown, turnId: string, text: string) => {
       if (failure instanceof HostedApiError && isDefiniteChatRejection(failure.status, failure.code)) {
+        mark(messageId, 'refused');
         replace(messageId, { lines: [[span('这一轮没有发出：', 'error'), span(CHAT_ERRORS[failure.code] ?? errorMessage(failure))]], chips: [{ label: '再问一次', action: { type: 'say', text } }] });
       } else {
+        mark(messageId, 'unknown');
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span(`${errorMessage(failure)} 这一轮可能已经记下；核对只读取回执，不会再次调用模型。`)]], chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: messageId }, primary: true }] });
       }
     };
     const check = (turnId: string, messageId: string) => {
       replace(messageId, { lines: [[span('正在核对回执…', 'dim')]] });
-      readChatTurn(turnId).then(receipt => settle(messageId, receipt, latest.current.chatService?.label ?? '模型'),
+      const sent = threads.find(messageId);
+      const label = (sent?.role === 'agent' ? sent.model?.service : undefined) ?? latest.current.chatService?.label ?? '模型';
+      readChatTurn(turnId).then(receipt => settle(messageId, receipt, label),
         failure => failure instanceof HostedApiError && failure.status === 404
-          ? replace(messageId, { lines: [[span('这一轮没有发出，', 'error'), span('没有产生费用，可以再问一次。')]] })
+          ? (mark(messageId, 'refused'), replace(messageId, { lines: [[span('这一轮没有发出，', 'error'), span('没有产生费用，可以再问一次。')]] }))
           : fail(messageId, failure, turnId, ''));
     };
     // The knowledge index loads once per visit; a lookup in the loop waits for it a little rather than going unanswered.
@@ -449,6 +460,8 @@ export default function AgentShell() {
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
           <span className={styles.topTitle}>{thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
           <span className={styles.spacer} />
+          {thread && messages.length > 0 && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
+            onClick={() => download(recordName(thread, Date.now()), conversationMarkdown(thread, Date.now()))}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
         <div ref={scrollRef} className={styles.scroll}>
@@ -507,4 +520,12 @@ function chatLine(message: Message): ChatLine[] {
   if (message.role !== 'agent' || message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
   const text = message.turn.lines.map(line => line.map(spanText).join('')).join('\n').trim();
   return text ? [{ role: 'agent', text }] : [];
+}
+
+/** Saves text as a file the user downloads; nothing leaves the browser. */
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+  const link = Object.assign(document.createElement('a'), { href: url, download: name });
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

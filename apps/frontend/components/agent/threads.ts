@@ -8,10 +8,15 @@ import type { AgentTurn } from '@/lib/agent/router';
  */
 export type Message = (
   | { id: string; at: number; role: 'user'; text: string }
-  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled' }
+  /**
+   * `model`: a model call through this service, at this step of its sentence, recorded when it is sent and kept as it
+   * settles (refused means the service turned it away before any model ran). Without it the answer was given by rule.
+   */
+  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: ModelCall }
   /** A knowledge lookup waiting for the search index; never stored, since it could not finish after a reload. */
   | { id: string; at: number; role: 'pending'; query: string; explicit: boolean }
 ) & { rev?: number };
+export type ModelCall = { service: string; step: number; status?: 'running' | 'ready' | 'failed' | 'unknown' | 'refused' };
 /** A conversation, optionally filed under a hosted project; `filedAt` dates the filing for the same reason. */
 export type Thread = { id: string; title: string; projectId: string | null; filedAt?: number; createdAt: number; updatedAt: number; messages: Message[] };
 /** One identity's conversations, the open one (null while a new one is still a draft), and the draft's project. */

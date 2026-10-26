@@ -41,8 +41,11 @@ export type AgentCard =
   | { kind: 'trace'; reference: string; title: string; steps: TraceStep[] }
   /** The double frame before a model call: the research need as sent, the project it is saved to, the service that runs it. */
   | { kind: 'consent'; brief: string; state: 'open' | 'submitted' | 'cancelled'; projectId?: string; projectTitle?: string; serviceId?: string; serviceLabel?: string }
-  /** A model call. `request` is kept while its outcome is unknown, so a check replays it exactly and costs nothing new. */
-  | { kind: 'job'; status: 'running' | 'done' | 'failed' | 'unknown'; detail: string; projectId: string; serviceLabel: string; model: string; request?: QuestionnaireGenerationRequest }
+  /**
+   * A model call. `request` is kept while its outcome is unknown, so a check replays it exactly and costs nothing new.
+   * `noCall`: it failed before any model ran (refused by the service, or stopped before the request was sent).
+   */
+  | { kind: 'job'; status: 'running' | 'done' | 'failed' | 'unknown'; detail: string; projectId: string; serviceLabel: string; model: string; request?: QuestionnaireGenerationRequest; noCall?: true }
   /** A questionnaire the model proposed: generated and not yet reviewed, so it is shown as such until 问卷设计 applies it. */
   | { kind: 'proposal'; projectId: string; proposalId: string; serviceId: string; serviceRevision: number; serviceLabel: string; model: string; inputRevision: number; design: Questionnaire };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };

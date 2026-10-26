@@ -59,6 +59,15 @@ function setJob(messageId: string, status: Job['status'], detail: string, reques
   patchCard(messageId, 'job', card => {
     const next: Job = { ...card, status, detail };
     if (request) next.request = request; else delete next.request;
+    delete next.noCall;
+    return next;
+  });
+}
+/** A draft that ended before any model ran; the conversation record does not count it as a model call. */
+function notStarted(messageId: string, detail: string) {
+  patchCard(messageId, 'job', card => {
+    const next: Job = { ...card, status: 'failed', detail, noCall: true };
+    delete next.request;
     return next;
   });
 }
@@ -127,7 +136,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
       if (current() && proposal) finish(jobId, projectId, proposal, request, service);
     } catch (failure) {
       if (!current()) return;
-      if (definite(failure)) setJob(jobId, 'failed', `本次起草没有启动：${reason(failure)}`);
+      if (definite(failure)) notStarted(jobId, `本次起草没有启动：${reason(failure)}`);
       else setJob(jobId, 'unknown', `调用结果尚未明确：${reason(failure)} 原请求已保留；核对只重放同一请求，不会产生新的模型费用。`, request);
     } finally { release(); }
   }, [transport, finish, release]);
@@ -149,13 +158,13 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
         if (head === undefined || !current()) { release(); return; }
         revision = head?.revision ?? 0;
       } catch (failure) {
-        if (current()) setJob(job.id, 'failed', `无法读取项目当前的问卷版本，本次没有调用模型：${reason(failure)}`);
+        if (current()) notStarted(job.id, `无法读取项目当前的问卷版本，本次没有调用模型：${reason(failure)}`);
         release();
         return;
       }
       let request: QuestionnaireGenerationRequest;
       try { request = prepareQuestionnaireGeneration(service, brief, revision, true); }
-      catch (failure) { if (current()) setJob(job.id, 'failed', reason(failure)); release(); return; }
+      catch (failure) { if (current()) notStarted(job.id, reason(failure)); release(); return; }
       setJob(job.id, 'running', '正在调用模型起草问卷…', request);
       await run(job.id, project.id, request, { label: service.label, model: service.model }, current);
     })();
