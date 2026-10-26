@@ -10,6 +10,7 @@ export type ChatAction =
   | { tool: 'light' | 'blind'; args: { room?: RoomId } }
   | { tool: 'trace'; args: { reference: string } }
   | { tool: 'results'; args: { query?: string } }
+  | { tool: 'place'; args: Record<string, never> }
   | { tool: 'open'; args: { room: RoomId } }
   | { tool: 'lookup'; args: { query: string } }
   | { tool: 'draft'; args: { brief: string } };
@@ -85,6 +86,7 @@ function action(value: unknown): ChatAction | null {
   const room = typeof row.args.room === 'string' && isRoomId(row.args.room) ? row.args.room : row.args.room === undefined ? undefined : null;
   switch (row.tool) {
     case 'next': return { tool: 'next', args: {} };
+    case 'place': return { tool: 'place', args: {} };
     case 'light': case 'blind': return room === undefined ? { tool: row.tool, args: {} } : room ? { tool: row.tool, args: { room } } : null;
     case 'open': return room ? { tool: 'open', args: { room } } : null;
     case 'results': {

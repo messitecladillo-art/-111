@@ -14,6 +14,7 @@ import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section
 import { percent } from '@/lib/agent/glyphs';
 import { illuminate, roomLight } from '@/lib/agent/illumination';
 import { traceExhibits } from '@/lib/agent/provenance';
+import { resultPlaced } from '@/lib/report-placement';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type ResultsView, type Span } from '@/lib/agent/router';
 import { readChatTurn, sendChatTurn } from './chat-client';
@@ -87,7 +88,7 @@ function savedPanelWidth(): number | null {
  * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
-  const { panels, view, publishProposal } = useWorkbenchModules(true);
+  const { panels, view, publishProposal, sendToReport } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
   const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate } = useHostedSession();
@@ -104,7 +105,10 @@ export default function AgentShell() {
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
-  const held = useMemo<ResultsView>(() => deferredView.report ? { results: deferredView.report.quality?.results ?? [], findings: deferredView.report.quality?.findings ?? [], pending: deferredView.resultPending } : null, [deferredView]);
+  const held = useMemo<ResultsView>(() => {
+    const report = deferredView.report, results = report?.quality?.results ?? [];
+    return report ? { results, findings: report.quality?.findings ?? [], pending: deferredView.resultPending, placed: results.filter(r => resultPlaced(report, r)).map(r => r.id) } : null;
+  }, [deferredView]);
 
   const [visited, setVisited] = useState<RoomId[]>([]);
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
@@ -362,6 +366,12 @@ export default function AgentShell() {
           break;
         }
         case 'check': check(action.turn, action.message); break;
+        // The report applies it as one undoable step once its editor is open, as it does for the sampling module.
+        case 'place':
+          sendToReport({ id: crypto.randomUUID(), node: '', source: '证见 Agent', items: action.results.map(resultId => ({ kind: 'result', resultId })) });
+          go('editor');
+          say([span('已交给右侧的报告与 PPT 写入；写了哪些内容会显示在编辑器顶部，可以撤销。', 'dim')]);
+          break;
       }
     };
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
@@ -370,7 +380,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, focusInput]);
+  }, [go, focusInput, sendToReport]);
 
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);

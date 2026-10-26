@@ -179,3 +179,9 @@ def test_registered_results_can_be_read_and_sent_back():
     data = {**continuation(), "toolResults": [{"tool": "results", "text": "已登记的分析结果 2 项。"}]}
     assert chat.request_input(data) == data
     assert "results（" in chat.agent_prompt(data)
+
+
+def test_writing_results_into_the_report_is_a_tool_the_browser_confirms_first():
+    raw = json.dumps({"reply": "我把结果写进报告。", "actions": [{"tool": "place", "args": {}}, {"tool": "place", "args": {"all": True}}]}, ensure_ascii=False)
+    assert chat.parse_reply(raw) == {"reply": "我把结果写进报告。", "droppedActions": 1, "actions": [{"tool": "place", "args": {}}]}
+    assert "place（" in chat.agent_prompt(request()) and "place" not in chat.RESULT_TOOLS

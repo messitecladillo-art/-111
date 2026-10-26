@@ -7,7 +7,7 @@ import type { EditorContent } from './editor-model.ts';
 import { texProblem } from './omml.ts';
 import { appendQualityResult, withQuality } from './quality-layouts.ts';
 import { digestText, snapshotRecipe, type ReportBlock, type ResultSnapshot } from './research-quality.ts';
-import { appendBlocks, block, targetSection } from './report-placement.ts';
+import { appendBlocks, block, placeResult, resultPlaced, targetSection } from './report-placement.ts';
 import { captionText, literalText } from './report-templates.ts';
 import type { SizePlan, SizeResult } from './sampling.ts';
 import { texNum } from './sampling-core.ts';
@@ -16,7 +16,9 @@ import { equalProbabilityInclusion, frameTable, groupIsProbability, type PlanGro
 export type InsertItem =
   | { kind: 'paragraph'; text: string }
   | { kind: 'formula'; tex: string }
-  | { kind: 'table'; result: ResultSnapshot; caption: string };
+  | { kind: 'table'; result: ResultSnapshot; caption: string }
+  /** A result the report has registered, written into its own blueprint section as the editor's placement writes it. */
+  | { kind: 'result'; resultId: string };
 /** `source` names the module in the confirmation message; `id` lets the editor apply each insert once. */
 export type ReportInsert = { id: string; node: string; source: string; items: InsertItem[] };
 export type AppliedInsert = { content: EditorContent; sectionId: string; created: string[]; blocks: ReportBlock[] };
@@ -24,6 +26,7 @@ export type AppliedInsert = { content: EditorContent; sectionId: string; created
 /** The report with an insert applied: its tables registered as results, its blocks appended to the target section. */
 export function applyReportInsert(content: EditorContent, insert: ReportInsert, sectionId?: string): AppliedInsert {
   if (!insert.items.length) throw Error('没有可写入的内容。');
+  if (insert.items.some(item => item.kind === 'result')) return placeResults(content, insert);
   let next = withQuality(content);
   for (const item of insert.items) {
     if (item.kind === 'formula' && texProblem(item.tex)) throw Error(`公式无法排版：${texProblem(item.tex)}`);
@@ -31,10 +34,32 @@ export function applyReportInsert(content: EditorContent, insert: ReportInsert, 
     if (item.kind === 'table') next = appendQualityResult(next, item.result);
   }
   const target = targetSection(next, insert.node, sectionId);
-  const blocks = insert.items.map(item => item.kind === 'paragraph' ? block('paragraph', item.text)
-    : item.kind === 'formula' ? block('formula', item.tex)
-      : block('table', item.caption, item.result.id, 1));
+  const blocks = insert.items.flatMap(item => item.kind === 'paragraph' ? [block('paragraph', item.text)]
+    : item.kind === 'formula' ? [block('formula', item.tex)]
+      : item.kind === 'table' ? [block('table', item.caption, item.result.id, 1)] : []);
   return { content: appendBlocks(target.content, target.sectionId, blocks), sectionId: target.sectionId, created: target.created, blocks };
+}
+
+/**
+ * Registered results, each into its own blueprint section with its method paragraph, formulas, exhibit and reading,
+ * as one step. A result the report already shows is skipped, so an insert sent twice writes nothing twice.
+ */
+function placeResults(content: EditorContent, insert: ReportInsert): AppliedInsert {
+  if (insert.items.some(item => item.kind !== 'result')) throw Error('登记结果需要单独写入。');
+  let next = withQuality(content), last = '';
+  const blocks: ReportBlock[] = [], created: string[] = [];
+  for (const item of insert.items) {
+    // A card confirmed late may name a result removed since; it is skipped, not allowed to stop the others.
+    const result = item.kind === 'result' ? next.quality?.results.find(r => r.id === item.resultId) : undefined;
+    if (!result || resultPlaced(next, result)) continue;
+    const placed = placeResult(next, result.id);
+    ({ content: next } = placed);
+    blocks.push(...placed.blocks);
+    created.push(...placed.created);
+    last = placed.sectionId;
+  }
+  if (!blocks.length) throw Error('这些结果已经写进报告了。');
+  return { content: next, sectionId: last, created, blocks };
 }
 
 /** One summary line per kind, for the editor's confirmation message: "段落 3 段、表 2 张、公式 1 个". */

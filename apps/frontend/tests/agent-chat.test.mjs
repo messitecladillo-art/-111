@@ -96,7 +96,7 @@ const held = {
   results: [result('各年级满意度', '卡方检验'), result('通勤时间与满意度', 'Pearson 相关', { classification: 'simulated', variables: ['通勤时间'], warnings: ['样本量偏小'] })],
   findings: [{ id: 'f1', title: '高年级满意度更低', status: 'confirmed', interpretation: '差异显著。', evidenceIds: ['各年级满意度'], confirmedHashes: { 各年级满意度: 'r' } },
     { id: 'f2', title: '草稿', status: 'draft', interpretation: '', evidenceIds: [], confirmedHashes: {} }],
-  pending: false,
+  pending: false, placed: [],
 };
 const withResults = (results = held) => ({ ...ctx(), results });
 
@@ -105,7 +105,7 @@ test('registered results are read with their method, effective sample and statis
   assert.match(text(turn), /已登记的分析结果 2 项，其中 1 项来自教学模拟数据。/);
   assert.equal(card.title, '读取 · 已登记结果');
   const rows = card.lines.map(line => line.map(s => s.text).join(''));
-  assert.equal(rows[0], '通勤时间与满意度　Pearson 相关 · 有效样本 212 / 240 · 教学模拟', 'the latest first');
+  assert.equal(rows[0], '通勤时间与满意度　Pearson 相关 · 有效样本 212 / 240 · 教学模拟 · 未写进报告', 'the latest first');
   assert.equal(rows[1], '　χ² 12.35；p 0.000123；df 4', 'a missing statistic is left out, not shown as zero');
   assert.equal(rows[2], '　提醒：样本量偏小。');
   assert.ok(card.lines[1].some(s => s.text === '12.35' && s.mark === 'gold'));
@@ -120,7 +120,7 @@ test('results are narrowed by title, method or variable; nothing is invented whe
   const none = route('/结果 回归', withResults()).turn;
   assert.match(text(none), /登记的结果里没有「回归」/);
   assert.deepEqual(none.chips.map(c => c.action.text), ['/结果 通勤时间与满意度', '/结果 各年级满意度']);
-  assert.match(text(route('/结果', withResults({ results: [], findings: [], pending: true })).turn), /正在送往报告/);
+  assert.match(text(route('/结果', withResults({ results: [], findings: [], pending: true, placed: [] })).turn), /正在送往报告/);
   const unseen = route('/结果', withResults(null)).turn;
   assert.match(text(unseen), /还没有打开报告与 PPT/);
   assert.equal(unseen.cards, undefined);
@@ -138,7 +138,7 @@ test('the model may ask for registered results, and is told how many there are w
 
 test('a sampling frame in the report is listed as a plan, never as an analysis with an empty sample', () => {
   const frame = result('城区居民抽样框', 'sampling-frame', { n: 0, total: 0, metrics: [{ label: '计划有效样本', value: 300 }] });
-  const plans = route('/结果', withResults({ results: [frame], findings: [], pending: false })).turn;
+  const plans = route('/结果', withResults({ results: [frame], findings: [], pending: false, placed: [] })).turn;
   assert.match(text(plans), /还没有分析结果，只有写进报告的抽样框 1 份。/);
   assert.equal(plans.cards.length, 1);
   assert.equal(plans.cards[0].title, '已写进报告的抽样框（计划，不是分析结果）');
@@ -153,12 +153,12 @@ test('a sampling frame in the report is listed as a plan, never as an analysis w
 
 test('a method goes by the name the report gives it, and warnings read as sentences', () => {
   const counted = result('本次样本由哪些人群组成？', 'frequency', { n: 12, total: 12, metrics: [{ label: '有效类别数', value: 2 }], warnings: ['单列分类题。', '未加权、未插补。'] });
-  const turn = route('/结果 频数', withResults({ results: [counted], findings: [], pending: false })).turn;
+  const turn = route('/结果 频数', withResults({ results: [counted], findings: [], pending: false, placed: [] })).turn;
   const rows = turn.cards[0].lines.map(line => line.map(s => s.text).join(''));
-  assert.equal(rows[0], '本次样本由哪些人群组成？　频数分析 · 有效样本 12 / 12');
+  assert.equal(rows[0], '本次样本由哪些人群组成？　频数分析 · 有效样本 12 / 12 · 未写进报告');
   assert.equal(rows[2], '　提醒：单列分类题；未加权、未插补。');
-  const odd = route('/结果', withResults({ results: [result('自定义', 'toString')], findings: [], pending: false })).turn;
-  assert.equal(odd.cards[0].lines[0].map(s => s.text).join(''), '自定义　toString · 有效样本 212 / 240', 'a method without a label keeps its own name');
+  const odd = route('/结果', withResults({ results: [result('自定义', 'toString')], findings: [], pending: false, placed: [] })).turn;
+  assert.equal(odd.cards[0].lines[0].map(s => s.text).join(''), '自定义　toString · 有效样本 212 / 240 · 未写进报告', 'a method without a label keeps its own name');
 });
 
 test('a finding whose result changed after it was confirmed is not presented as confirmed', () => {
@@ -170,4 +170,25 @@ test('a finding whose result changed after it was confirmed is not presented as 
   assert.equal(chatContext(null, illuminate(empty), [], view).results.confirmedFindings, 1);
   const frame = result('城区居民抽样框', 'sampling-frame', { n: 0, total: 0, metrics: [] });
   assert.match(text(route('/结果 抽样设计', withResults({ ...held, results: [frame] })).turn), /抽样框 1 份/, 'a frame is found by the method name it is shown with');
+});
+
+test('writing results into the report is offered on a confirmation card that says what goes where', () => {
+  const turn = route('/写入', withResults()).turn, card = turn.cards[0];
+  assert.match(text(turn), /把 2 项还没写进报告的登记结果按蓝图写入之前，请确认/);
+  assert.equal(card.kind, 'confirm');
+  const rows = card.lines.map(line => line.map(s => s.text).join(''));
+  assert.ok(rows.some(row => /^「描述性统计分析」　/.test(row) && row.includes('各年级满意度') && row.includes('通勤时间与满意度')), rows.join('\n'));
+  assert.ok(rows.some(row => /1 项来自教学模拟数据/.test(row)));
+  assert.deepEqual(card.confirm.action, { type: 'place', results: ['各年级满意度', '通勤时间与满意度'] });
+  assert.deepEqual(route('把结果写进报告', withResults()), route('/写入', withResults()), 'the everyday phrasing');
+  assert.deepEqual(toolTurn({ tool: 'place', args: {} }, withResults()), route('/写入', withResults()), 'the model asks; the card still waits for the user');
+  const some = route('/写入', withResults({ ...held, placed: ['各年级满意度'] })).turn;
+  assert.deepEqual(some.cards[0].confirm.action.results, ['通勤时间与满意度'], 'only what is not yet in the report');
+  assert.match(text(route('/写入', withResults({ ...held, placed: ['各年级满意度', '通勤时间与满意度'] })).turn), /都已写进报告/);
+  assert.match(text(route('/写入', withResults(null)).turn), /还没有打开报告与 PPT/);
+  assert.match(text(route('/写入', withResults({ results: [], findings: [], pending: false, placed: [] })).turn), /还没有登记的结果可写/);
+  assert.deepEqual(parseChatReceipt({ id: 'x', status: 'ready', reply: '好', actions: [{ tool: 'place', args: {} }] }).actions, [{ tool: 'place', args: {} }]);
+  const listed = route('/结果', withResults({ ...held, placed: ['各年级满意度'] })).turn;
+  assert.ok(text({ lines: listed.cards[0].lines }).includes('各年级满意度　卡方检验 · 有效样本 212 / 240 · 已写进报告'));
+  assert.equal(listed.chips[0].action.text, '/写入', 'the list recommends writing what is still missing');
 });

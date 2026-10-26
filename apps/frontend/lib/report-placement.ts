@@ -101,6 +101,15 @@ export function placeResult(content: EditorContent, resultId: string, options: {
   return { content: appendBlocks(next, sectionId, blocks), sectionId, created, blocks };
 }
 
+/**
+ * Whether the report already shows this result: an exhibit of it, or, for a result written only in words, its
+ * reading paragraph as placement wrote it. A paragraph the author has since rewritten no longer counts.
+ */
+export function resultPlaced(content: EditorContent, r: ResultSnapshot): boolean {
+  const blocks = content.report.flatMap(s => s.blocks ?? []), words = readingParagraph(r);
+  return blocks.some(b => ((b.kind === 'chart' || b.kind === 'table') && b.evidenceId === r.id) || (b.kind === 'paragraph' && b.text === words));
+}
+
 /** Method names as the result catalogue shows them. */
 export const METHOD_LABELS: Record<string, string> = {
   frequency: '频数分析', crosstab: '交叉分析与卡方检验', groups: '分组均值比较', numeric: '数值描述', pearson: 'Pearson 相关', spearman: 'Spearman 相关',

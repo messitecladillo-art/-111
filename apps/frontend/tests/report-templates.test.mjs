@@ -187,3 +187,22 @@ test('placed results export to Word with their method formulas, figure and resol
   assert.doesNotMatch(xml, /\[\[|§§OMML/);
   assert.equal(Object.keys(zip.files).filter(name => /^word\/media\/.*\.svg$/.test(name)).length, 5, 'one figure per result');
 });
+
+test('registered results sent by the agent land in their own sections once; one already shown or since removed is skipped', async () => {
+  const { applyReportInsert } = await import('../lib/report-insert.ts');
+  const { resultPlaced } = await import('../lib/report-placement.ts');
+  const base = parseEditorContent({ ...createEditorContent(), version: 2, report: blueprintSections({ includeOptional: false }), quality: { version: 1, results: Object.values(r), findings: [] } });
+  const insert = ids => ({ id: 'agent', node: '', source: '证见 Agent', items: ids.map(resultId => ({ kind: 'result', resultId })) });
+  assert.ok(!resultPlaced(base, r.cross) && !resultPlaced(base, r.corr));
+  const once = applyReportInsert(base, insert(['cross', 'corr', 'gone']));
+  assert.ok(resultPlaced(once.content, r.cross), 'a result with a figure is known by its figure');
+  assert.ok(resultPlaced(once.content, r.corr), 'a result written only in words is known by its reading paragraph');
+  assert.equal(once.blocks.filter(b => b.kind === 'chart').length, 1);
+  assert.ok(once.blocks.some(b => b.kind === 'formula'), 'each method brings its formulas');
+  assert.deepEqual(danglingReferences(once.content), []);
+  assert.throws(() => applyReportInsert(once.content, insert(['cross', 'corr'])), /已经写进报告/);
+  const partly = applyReportInsert(once.content, insert(['cross', 'kind']));
+  assert.ok(partly.blocks.length > 0 && resultPlaced(partly.content, r.kind));
+  assert.equal(partly.content.report.flatMap(s => s.blocks ?? []).filter(b => b.kind === 'chart' && b.evidenceId === 'cross').length, 1, 'nothing is written twice');
+  assert.throws(() => applyReportInsert(base, { ...insert([]), items: [{ kind: 'result', resultId: 'cross' }, { kind: 'paragraph', text: '另一段' }] }), /单独写入/);
+});

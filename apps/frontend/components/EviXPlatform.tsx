@@ -568,9 +568,11 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
 /**
  * Every workbench module, wired to the shared handoff store, and what the agent shell may read of the project:
  * the shared questionnaire and dataset, and, when observeReport is set, the report once its room has been opened.
+ * `sendToReport` hands the editor content to apply as one undoable step, as the sampling module does; the editor
+ * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void } {
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void } {
   const { session, identityEpoch } = useHostedSession();
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
     JSON.stringify(['workspace', session?.user?.id ?? null, identityEpoch]),
@@ -635,7 +637,7 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
   }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport]);
-  return { panels, view, publishProposal };
+  return { panels, view, publishProposal, sendToReport: setReportInsert };
 }
 
 export default function EviXPlatform() {
