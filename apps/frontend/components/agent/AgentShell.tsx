@@ -139,6 +139,14 @@ export default function AgentShell() {
 
   const inputRef = useRef<HTMLTextAreaElement>(null), scrollRef = useRef<HTMLDivElement>(null), headingRef = useRef<HTMLHeadingElement>(null);
   const railRef = useRef<HTMLElement>(null), launcherRef = useRef<HTMLDivElement>(null), modulesRef = useRef<HTMLButtonElement>(null);
+  // A module picked from the launcher takes focus at its heading once the launcher has closed, the open one included,
+  // so the keyboard goes on into it rather than losing its place.
+  const focusPicked = useRef(false);
+  useEffect(() => {
+    if (railMenu || !focusPicked.current || !panel) return;
+    focusPicked.current = false;
+    headingRef.current?.focus();
+  }, [railMenu, panel]);
   // The launcher takes focus when it opens, on the module already open or else the first, so the keyboard starts there.
   useEffect(() => {
     const launcher = launcherRef.current;
@@ -159,6 +167,7 @@ export default function AgentShell() {
   }, []);
   const go = useCallback((id: RoomId) => { if (currentPanel() !== id) window.location.hash = id; }, []);
   const closePanel = useCallback(() => { window.location.hash = ''; }, []);
+  const pick = (id: RoomId) => { focusPicked.current = true; setRailMenu(null); go(id); };
   const generation = useGeneration(publishProposal, go);
   const { account: generationAccount, load: loadLists, lists, preferredService, prefer } = generation;
   // Projects and services fill the sidebar and the composer's menus as soon as an account is known.
@@ -463,7 +472,7 @@ export default function AgentShell() {
             {ROOMS.filter(r => r.group === 'path').map((r, i) => {
               const lightOf = roomLight(light, r.id);
               // The visible text is the name, so voice control can say what it sees: number, module, state, purpose.
-              return <button key={r.id} type="button" className={styles.step} aria-current={panel === r.id ? 'true' : undefined} onClick={() => { go(r.id); setRailMenu(null); }}>
+              return <button key={r.id} type="button" className={styles.step} aria-current={panel === r.id ? 'true' : undefined} onClick={() => pick(r.id)}>
                 <span className={styles.glyph} aria-hidden="true">{r.glyph}</span>
                 <b><small>{String(i + 1).padStart(2, '0')}</small>{r.name}</b>
                 <span className={styles.stepLight}>{panel === r.id ? <em>已打开</em> : lightOf && (lightOf.score > 0 ? <><LightBar score={lightOf.score} />照度 {percent(lightOf.score)}</> : <i>尚无证据</i>)}</span>
@@ -475,7 +484,7 @@ export default function AgentShell() {
             <p className={styles.launcherLabel}>{ROOM_GROUPS[group]}</p>
             <div className={styles.extras}>
               {ROOMS.filter(r => r.group === group).map(r => <button key={r.id} type="button" className={styles.extra} aria-current={panel === r.id ? 'true' : undefined} title={r.line}
-                onClick={() => { go(r.id); setRailMenu(null); }}>
+                onClick={() => pick(r.id)}>
                 <span className={styles.glyph} aria-hidden="true">{r.glyph}</span>{r.name}
               </button>)}
             </div>
