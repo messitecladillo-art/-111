@@ -22,7 +22,8 @@ const OUTCOME = { ready: '已完成', failed: '失败', running: '结果尚不�
 // How a chat call that did not end in a reply opened its message, before calls were recorded on messages.
 const LEGACY_ENDS = new Map<string, CallStatus>([['这一轮没有完成：', 'failed'], ['这一轮没有发出：', 'refused'], ['这一轮没有发出，', 'refused'], ['结果尚未明确：', 'unknown']]);
 const LEGACY_WAITS = ['正在根据工具结果接着回答…', '正在核对回执…'];
-const UNRECORDED = '未记录的服务';
+/** The service of a model call stored before calls were recorded on their messages, when nothing names it. */
+export const UNRECORDED_SERVICE = '未记录的服务';
 
 /** The file name for a conversation's record, safe on every system. */
 export function recordName(thread: Pick<RecordThread, 'title'>, now: number): string {
@@ -35,9 +36,12 @@ export function recordName(thread: Pick<RecordThread, 'title'>, now: number): st
  * recorded, read from its closing "unverified" note or the words it opened with; for questionnaire drafting, read from
  * its job card. A call the service turned away, or one never sent, is kept as refused: shown, but not counted.
  */
-function callOf(m: Said): (Call & { kind: 'chat' | 'draft' }) | null {
+function callOf(m: Said): (Call & { kind: 'chat' | 'draft' | 'proposal' }) | null {
   if (m.role !== 'agent') return null;
   if (m.model) return { ...m.model, kind: 'chat' };
+  // A finished draft is counted through the proposal it produced, which outlives the job when old messages are dropped.
+  const proposal = m.turn.cards?.find((c): c is Extract<AgentCard, { kind: 'proposal' }> => c.kind === 'proposal');
+  if (proposal) return { service: `${proposal.serviceLabel}（${proposal.model}）`, step: 1, status: 'ready', kind: 'proposal' };
   const job = m.turn.cards?.find((c): c is Extract<AgentCard, { kind: 'job' }> => c.kind === 'job');
   if (job) {
     // A draft still reading the project's questionnaire has sent nothing yet; older records say so only in words.
@@ -51,11 +55,12 @@ function callOf(m: Said): (Call & { kind: 'chat' | 'draft' }) | null {
   const [first, named] = m.turn.lines[0] ?? [];
   const ended = first && (first.mark === 'error' ? LEGACY_ENDS.get(first.text) : first.text === '正在请' ? 'running' : LEGACY_WAITS.includes(first.text) ? 'unknown' : undefined);
   if (!ended) return null;
-  return { service: first.text === '正在请' && named ? named.text.replace(/^「|」$/gu, '') : UNRECORDED, step: 1, status: ended, kind: 'chat' };
+  return { service: first.text === '正在请' && named ? named.text.replace(/^「|」$/gu, '') : UNRECORDED_SERVICE, step: 1, status: ended, kind: 'chat' };
 }
 
 const heading = (m: Said, call: ReturnType<typeof callOf>) => {
   if (m.role === 'user') return '你';
+  if (call?.kind === 'proposal') return `证见 · 模型拟议的问卷（${call.service}，未经核实）`;
   if (call?.kind === 'draft') return call.status === 'refused' ? `证见 · 模型起草问卷未启动（${call.service}，未调用模型）` : `证见 · 模型起草问卷（${call.service}，${OUTCOME[call.status ?? 'unknown']}）`;
   if (call) {
     const where = `${call.service}${call.step > 1 ? `，第 ${call.step} 步` : ''}`;
@@ -91,7 +96,7 @@ function cardsText(m: Extract<Said, { role: 'agent' }>): string[] {
  */
 export function conversationMarkdown(thread: RecordThread, now: number): string {
   const said = thread.messages.filter((m): m is Said => m.role !== 'pending');
-  const calls = said.map(callOf).filter((c): c is NonNullable<ReturnType<typeof callOf>> => !!c && c.status !== 'refused');
+  const calls = said.map(callOf).filter((c): c is NonNullable<ReturnType<typeof callOf>> => !!c && c.status !== 'refused' && !(c.kind === 'draft' && c.status === 'ready'));
   const services = [...new Set(calls.map(c => c.service))], unclear = calls.filter(c => c.status === 'running' || c.status === 'unknown').length;
   const lines = [
     `# 证见 Agent 对话记录：${thread.title}`, '',

@@ -99,7 +99,11 @@ test('questionnaire drafting: consent, the call and the proposed questions are p
   assert.match(md, /调用生成式模型 1 次，服务：服务乙（deepseek-chat）。/);
   assert.match(md, /## 证见 · 确认[^\n]*\n\n可以。\n需要确认：调用模型起草问卷（研究需求：大学生通勤方式；服务：服务乙；项目：通勤）—— 已确认/);
   assert.match(md, /## 证见 · 模型起草问卷（服务乙（deepseek-chat），已完成）[^\n]*\n\n开始起草。\n已起草「通勤调查」/);
-  assert.match(md, /模型拟议的问卷（未经核实[^\n]*：通勤调查\n1\. 你每天通勤多久？（single）\n2\. 你用什么交通方式？（multiple）/);
+  assert.match(md, /## 证见 · 模型拟议的问卷（服务乙（deepseek-chat），未经核实）[^\n]*\n\n模型拟了 2 道题。\n模型拟议的问卷（未经核实[^\n]*：通勤调查\n1\. 你每天通勤多久？（single）\n2\. 你用什么交通方式？（multiple）/);
+  // The oldest messages are dropped first, so a long conversation can keep the proposal without the job that made it.
+  const kept = conversationMarkdown({ title: '起草', createdAt: at, messages: [said([[{ text: '模型拟了 2 道题。' }]], [{ kind: 'proposal', projectId: 'p', proposalId: 'x', serviceId: 's', serviceRevision: 1, serviceLabel: '服务乙', model: 'deepseek-chat', inputRevision: 0, design: { title: '', questions: [] } }])] }, at);
+  assert.match(kept, /调用生成式模型 1 次，服务：服务乙（deepseek-chat）。/);
+  assert.match(kept, /：未命名问卷/);
 });
 
 test('a draft that never reached a model is shown but not counted, however old the record', () => {

@@ -17,7 +17,7 @@ import { traceExhibits } from '@/lib/agent/provenance';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type Span } from '@/lib/agent/router';
 import { readChatTurn, sendChatTurn } from './chat-client';
-import { conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
+import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
@@ -294,9 +294,12 @@ export default function AgentShell() {
       }
     };
     const check = (turnId: string, messageId: string) => {
-      replace(messageId, { lines: [[span('正在核对回执…', 'dim')]] });
+      // The call is credited to the service it went to. A message from before calls were recorded does not name one, so
+      // it is recorded as unknown rather than credited to whichever service is chosen now.
       const sent = threads.find(messageId);
-      const label = (sent?.role === 'agent' ? sent.model?.service : undefined) ?? latest.current.chatService?.label ?? '模型';
+      const label = sent?.role === 'agent' && sent.model ? sent.model.service : UNRECORDED_SERVICE;
+      if (sent?.role === 'agent' && !sent.model) threads.patch(messageId, m => m.role === 'agent' ? { ...m, model: { service: label, step: 1, status: 'unknown' } } : m);
+      replace(messageId, { lines: [[span('正在核对回执…', 'dim')]] });
       readChatTurn(turnId).then(receipt => settle(messageId, receipt, label),
         failure => failure instanceof HostedApiError && failure.status === 404
           ? (mark(messageId, 'refused'), replace(messageId, { lines: [[span('这一轮没有发出，', 'error'), span('没有产生费用，可以再问一次。')]] }))
