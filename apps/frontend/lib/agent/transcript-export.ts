@@ -1,7 +1,7 @@
 // A conversation as a Markdown record, for the AI-use statement a 正大杯 entry needs: who said what, which answers a
 // model wrote (with its service, step and how the call ended), and which the platform gave by rule without a model.
 import { turnText } from './chat.ts';
-import type { AgentCard, AgentTurn } from './router.ts';
+import type { AgentCard, AgentTurn, Line } from './router.ts';
 
 type CallStatus = 'running' | 'ready' | 'failed' | 'unknown' | 'refused';
 type Call = { service: string; step: number; status?: CallStatus };
@@ -58,6 +58,10 @@ const heading = (m: Said, call: ReturnType<typeof callOf>) => {
   return m.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent') ? '证见 · 确认' : '证见 · 指令模式';
 };
 
+/** Emphasis as Markdown: a run of emphasised spans becomes one **…**. */
+const bold = (line: Line): Line => line.map((span, i) => span.mark !== 'strong' ? span
+  : { text: `${line[i - 1]?.mark === 'strong' ? '' : '**'}${span.text}${line[i + 1]?.mark === 'strong' ? '' : '**'}` });
+
 /** What the record shows of cards the conversation's own text leaves out: questions put to the user, drafted questionnaires. */
 function cardsText(m: Extract<Said, { role: 'agent' }>): string[] {
   return (m.turn.cards ?? []).flatMap(card => {
@@ -90,8 +94,8 @@ export function conversationMarkdown(thread: RecordThread, now: number): string 
   for (const m of said) {
     const call = callOf(m);
     // A model's answer carries a closing note that it is unverified; the heading says so already.
-    const turn = m.role === 'agent' && call?.kind === 'chat' ? { ...m.turn, lines: m.turn.lines.filter(line => !(line[0]?.mark === 'cyan' && line[0].text.trim() === '◆')) } : null;
-    const body = m.role === 'user' ? m.text : [turnText(turn ?? m.turn, Infinity), ...cardsText(m)].filter(Boolean).join('\n');
+    const shown = m.role === 'agent' && call?.kind === 'chat' ? m.turn.lines.filter(line => !(line[0]?.mark === 'cyan' && line[0].text.trim() === '◆')) : m.role === 'agent' ? m.turn.lines : [];
+    const body = m.role === 'user' ? m.text : [turnText({ ...m.turn, lines: shown.map(bold) }, Infinity), ...cardsText(m)].filter(Boolean).join('\n');
     if (body.trim()) lines.push(`## ${heading(m, call)} · ${stamp(m.at)}`, '', body.trim(), '');
   }
   return lines.join('\n');

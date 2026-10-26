@@ -65,6 +65,13 @@ test('a reply stored before calls were recorded is still credited to its service
   assert.match(md, /## 证见 · 模型回答（服务甲，未经核实）[^\n]*\n\n回答。\n/);
 });
 
+test('emphasis stays Markdown emphasis, one pair of marks for a run of emphasised text', () => {
+  const md = conversationMarkdown({ title: '强调', createdAt: at, messages: [
+    agent({ model: { service: '服务甲', step: 1, status: 'ready' } }, [[{ text: '有效', mark: 'strong' }, { text: '样本量', mark: 'strong' }, { text: '是 ' }, { text: 'n', mark: 'tex' }, { text: '。' }]]),
+  ] }, at);
+  assert.ok(md.includes('**有效样本量**是 $n$。'));
+});
+
 test('questionnaire drafting: consent, the call and the proposed questions are part of the record', () => {
   const md = conversationMarkdown({ title: '起草', createdAt: at, messages: [
     said([[{ text: '可以。' }]], [{ kind: 'consent', brief: '大学生通勤方式', state: 'submitted', serviceLabel: '服务乙', projectTitle: '通勤' }]),
