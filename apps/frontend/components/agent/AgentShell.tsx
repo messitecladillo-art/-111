@@ -371,7 +371,8 @@ export default function AgentShell() {
           lines: [[span(`「${title}」拟稿 `), span(String(receipt.paragraphs.length), 'gold'), span(' 段：')], ...receipt.paragraphs.map(p => draftLine(p, facts)),
             ...(receipt.droppedParagraphs ? [[span(`模型另写了 ${receipt.droppedParagraphs} 段自造数字或引用了不存在的事实，已丢弃。`, 'dim')]] : []),
             [span('◆ ', 'cyan'), span(`${label} 的拟稿，未经核实；金色数字由登记结果填入。`, 'dim')]],
-          chips: [{ label: `写进「${title}」`.slice(0, 26), action: { type: 'adopt', node: nodeId, paragraphs: receipt.paragraphs.map(p => draftText(p, facts)) }, primary: true }, again],
+          chips: [{ label: `写进「${title}」`.slice(0, 26), action: { type: 'adopt', node: nodeId, paragraphs: receipt.paragraphs.map(p => draftText(p, facts)),
+            cited: [...new Set(receipt.paragraphs.flatMap(p => p.facts))].flatMap(id => facts.filter(f => f.id === id).map(f => f.text)) }, primary: true }, again],
         });
       } else if (receipt.status === 'failed' || receipt.status === 'ready') {
         mark(messageId, 'failed', label, 1);
@@ -453,6 +454,13 @@ export default function AgentShell() {
           try { title = blueprintNode(action.node).title; } catch { break; }
           const paragraphs = action.paragraphs.filter(p => typeof p === 'string' && p.trim()).slice(0, 8).map(p => p.slice(0, 2000));
           if (!paragraphs.length) break;
+          // A draft's numbers stand only while the facts it cites are still the project's facts, word for word.
+          const { held } = latest.current, current = held ? new Set(draftFacts(held, action.node).map(f => f.text)) : null;
+          if (!current || !Array.isArray(action.cited) || action.cited.some(text => typeof text !== 'string' || !current.has(text))) {
+            say([span(current ? '登记结果在起草之后变了，拟稿里的数字可能已经过时，没有写入。' : '要先读到报告与登记结果才能核对拟稿里的数字；打开报告与 PPT 后再写入。', 'error')],
+              [current ? { label: '重新起草', action: { type: 'say', text: `/起草 ${title}` }, primary: true } : { label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]);
+            break;
+          }
           sendToReport({ id: crypto.randomUUID(), node: action.node, source: '证见 Agent 拟稿', items: paragraphs.map(text => ({ kind: 'paragraph', text })) });
           go('editor');
           say([span(`已把拟稿交给报告与 PPT，写进「${title}」；可以在编辑器里修改或撤销。`, 'dim')]);
@@ -524,7 +532,7 @@ export default function AgentShell() {
   };
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
-  const services = lists.services.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草'].filter(Boolean).join(' · ') }));
+  const services = lists.services.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
   const projectId = thread ? thread.projectId : book.draftProject;
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';

@@ -40,8 +40,11 @@ export type AgentAction =
   | { type: 'place'; results: string[] }
   /** Asks the user's model service to draft this blueprint section; offered only on a confirmation card. */
   | { type: 'draft'; node: string }
-  /** Writes a draft's paragraphs, numbers already filled from the facts, into this blueprint section. */
-  | { type: 'adopt'; node: string; paragraphs: string[] }
+  /**
+   * Writes a draft's paragraphs, numbers already filled from the facts, into this blueprint section. `cited` holds the
+   * statements of the facts they cite, checked against the project's current facts before anything is written.
+   */
+  | { type: 'adopt'; node: string; paragraphs: string[]; cited: string[] }
   /** Reads the receipt of a draft whose outcome was unclear, filling it from the facts it was sent with; never calls the model again. */
   | { type: 'checkDraft'; draft: string; message: string; node: string; facts: { id: string; text: string; value: string }[] };
 /** A primary link is the one step the agent recommends; a turn has at most one. */

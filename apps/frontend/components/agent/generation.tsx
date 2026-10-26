@@ -102,7 +102,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     setLists(value => ({ ...value, state: 'loading', error: '' }));
     Promise.all([hostedRequest('/api/projects'), hostedRequest('/api/services')])
       .then(([projects, services]) => {
-        if (current()) setLists({ state: 'ready', projects: parseCollection(projects, 'projects', parseProject), services: parseCollection(services, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire') || s.capabilities.includes('research')), error: '' });
+        if (current()) setLists({ state: 'ready', projects: parseCollection(projects, 'projects', parseProject), services: parseCollection(services, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire') || s.capabilities.includes('research') || s.capabilities.includes('report')), error: '' });
       })
       .catch(failure => { if (current()) setLists(value => ({ ...value, state: 'error', error: reason(failure) })); })
       .finally(() => { reading.current = false; });
