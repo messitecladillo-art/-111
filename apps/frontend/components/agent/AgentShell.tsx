@@ -191,7 +191,10 @@ export default function AgentShell() {
   const setChatMode = useCallback((mode: ChatMode) => { setModeHere({ owner, mode }); writeMode(owner, mode); }, [owner]);
   const consented = useRef(new Set<string>());
   // The chat uses the service the model menu shows as chosen, never another one behind it.
-  const chosenService = lists.services.some(s => s.id === preferredService) ? preferredService : lists.services[0]?.id ?? '';
+  // The composer's picker offers services to talk with or to draft questionnaires with; one that only writes reports is
+  // never chosen there, so it cannot leave the conversation without a model. Drafting a section finds it below.
+  const pickable = useMemo(() => lists.services.filter(s => s.capabilities.includes('research') || s.capabilities.includes('questionnaire')), [lists.services]);
+  const chosenService = pickable.some(s => s.id === preferredService) ? preferredService : pickable[0]?.id ?? '';
   const chatService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
   // Drafting a report section asks a service with the 报告 capability: the chosen one when it has it, else the first that does.
   const reportService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('report')) ?? lists.services.find(s => s.capabilities.includes('report')) ?? null;
@@ -218,9 +221,9 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
-  const report = deferredView.report, design = deferredView.design;
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate }; });
+  const report = deferredView.report, design = deferredView.design, liveReport = view.report;
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate }; });
   const agent = useMemo(() => {
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
@@ -455,7 +458,8 @@ export default function AgentShell() {
           const paragraphs = action.paragraphs.filter(p => typeof p === 'string' && p.trim()).slice(0, 8).map(p => p.slice(0, 2000));
           if (!paragraphs.length) break;
           // A draft's numbers stand only while the facts it cites are still the project's facts, word for word.
-          const { held } = latest.current, current = held ? new Set(draftFacts(held, action.node).map(f => f.text)) : null;
+          const { liveReport } = latest.current;
+          const current = liveReport ? new Set(draftFacts({ results: liveReport.quality?.results ?? [], findings: [], pending: false, placed: [] }, action.node).map(f => f.text)) : null;
           if (!current || !Array.isArray(action.cited) || action.cited.some(text => typeof text !== 'string' || !current.has(text))) {
             say([span(current ? '登记结果在起草之后变了，拟稿里的数字可能已经过时，没有写入。' : '要先读到报告与登记结果才能核对拟稿里的数字；打开报告与 PPT 后再写入。', 'error')],
               [current ? { label: '重新起草', action: { type: 'say', text: `/起草 ${title}` }, primary: true } : { label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]);
@@ -532,7 +536,7 @@ export default function AgentShell() {
   };
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
-  const services = lists.services.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
+  const services = pickable.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
   const projectId = thread ? thread.projectId : book.draftProject;
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
