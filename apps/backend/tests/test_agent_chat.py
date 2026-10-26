@@ -168,3 +168,14 @@ def test_the_last_step_runs_no_tools_whatever_the_model_asks():
 def test_the_prompt_asks_for_formulas_in_latex_so_the_browser_can_typeset_them():
     prompt = chat.agent_prompt(request())
     assert "LaTeX" in prompt and "$$" in prompt
+
+
+def test_registered_results_can_be_read_and_sent_back():
+    raw = json.dumps({"reply": "先看已登记的结果。", "actions": [
+        {"tool": "results", "args": {}}, {"tool": "results", "args": {"query": "满意度"}},
+        {"tool": "results", "args": {"query": "长" * 41}}]}, ensure_ascii=False)
+    assert chat.parse_reply(raw) == {"reply": "先看已登记的结果。", "droppedActions": 1,
+                                     "actions": [{"tool": "results", "args": {}}, {"tool": "results", "args": {"query": "满意度"}}]}
+    data = {**continuation(), "toolResults": [{"tool": "results", "text": "已登记的分析结果 2 项。"}]}
+    assert chat.request_input(data) == data
+    assert "results（" in chat.agent_prompt(data)

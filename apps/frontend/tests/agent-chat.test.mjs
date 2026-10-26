@@ -89,3 +89,71 @@ test('a reply’s formulas are typeset, never shown as TeX, and its emphasis is 
   assert.deepEqual(replyLines(String.raw`\[` + '\n' + 'a=b' + '\n' + String.raw`\]`), [[{ text: 'a=b', mark: 'math' }]]);
   assert.equal(line.map(spanText).join(''), String.raw`设计效应 $\text{DEFF}=1+(m-1)\rho$，很重要。`, 'history keeps the formula’s delimiters');
 });
+
+const result = (title, method, more = {}) => ({ id: title, title, sourceName: 's.csv', sourceUrl: '', sourceHash: 'h', resultHash: 'r', classification: 'user_provided', method, n: 212, total: 240,
+  headers: [], rows: [], metrics: [{ label: 'χ²', value: 12.3456 }, { label: 'p', value: 0.000123 }, { label: 'Cramér V', value: null }, { label: 'df', value: 4 }], warnings: [], ...more });
+const held = {
+  results: [result('各年级满意度', '卡方检验'), result('通勤时间与满意度', 'Pearson 相关', { classification: 'simulated', variables: ['通勤时间'], warnings: ['样本量偏小'] })],
+  findings: [{ id: 'f1', title: '高年级满意度更低', status: 'confirmed', interpretation: '差异显著。' }, { id: 'f2', title: '草稿', status: 'draft', interpretation: '' }],
+  pending: false,
+};
+const withResults = (results = held) => ({ ...ctx(), results });
+
+test('registered results are read with their method, effective sample and statistics, numbers marked as having an origin', () => {
+  const turn = route('/结果', withResults()).turn, card = turn.cards[0];
+  assert.match(text(turn), /已登记的分析结果 2 项，其中 1 项来自教学模拟数据。/);
+  assert.equal(card.title, '读取 · 已登记结果');
+  const rows = card.lines.map(line => line.map(s => s.text).join(''));
+  assert.equal(rows[0], '通勤时间与满意度　Pearson 相关 · 有效样本 212 / 240 · 教学模拟', 'the latest first');
+  assert.equal(rows[1], '　χ² 12.35；p 0.000123；df 4', 'a missing statistic is left out, not shown as zero');
+  assert.equal(rows[2], '　提醒：样本量偏小。');
+  assert.ok(card.lines[1].some(s => s.text === '12.35' && s.mark === 'gold'));
+  assert.deepEqual(turn.cards[1].lines.map(line => line[0].text), ['高年级满意度更低'], 'only confirmed findings');
+  assert.deepEqual(route('登记了哪些结果', withResults()), route('/结果', withResults()), 'the everyday phrasing runs the command');
+  assert.deepEqual(toolTurn({ tool: 'results', args: {} }, withResults()), route('/结果', withResults()), 'and so does the tool the model asks for');
+});
+
+test('results are narrowed by title, method or variable; nothing is invented when there are none or the report is unseen', () => {
+  assert.match(text(route('/结果 通勤', withResults()).turn), /与「通勤」有关的已登记的分析结果 1 项/);
+  assert.match(text(toolTurn({ tool: 'results', args: { query: '卡方' } }, withResults()).turn), /有关的已登记的分析结果 1 项。/);
+  const none = route('/结果 回归', withResults()).turn;
+  assert.match(text(none), /登记的结果里没有「回归」/);
+  assert.deepEqual(none.chips.map(c => c.action.text), ['/结果 通勤时间与满意度', '/结果 各年级满意度']);
+  assert.match(text(route('/结果', withResults({ results: [], findings: [], pending: true })).turn), /正在送往报告/);
+  const unseen = route('/结果', withResults(null)).turn;
+  assert.match(text(unseen), /还没有打开报告与 PPT/);
+  assert.equal(unseen.cards, undefined);
+});
+
+test('the model may ask for registered results, and is told how many there are without being sent them', () => {
+  const receipt = parseChatReceipt({ id: 'x', status: 'ready', reply: '好', actions: [
+    { tool: 'results', args: {} }, { tool: 'results', args: { query: '满意度' } }, { tool: 'results', args: { query: '长'.repeat(41) } }] });
+  assert.deepEqual(receipt.actions, [{ tool: 'results', args: {} }, { tool: 'results', args: { query: '满意度' } }]);
+  const context = chatContext(null, illuminate(empty), [], held);
+  assert.deepEqual(context.results, { registered: 2, simulated: 1, frames: 0, confirmedFindings: 1 });
+  assert.equal(chatContext(null, illuminate(empty), []).results, null);
+  assert.ok(!JSON.stringify(context).includes('12.3456'), 'the statistics go only when the model asks');
+});
+
+test('a sampling frame in the report is listed as a plan, never as an analysis with an empty sample', () => {
+  const frame = result('城区居民抽样框', 'sampling-frame', { n: 0, total: 0, metrics: [{ label: '计划有效样本', value: 300 }] });
+  const plans = route('/结果', withResults({ results: [frame], findings: [], pending: false })).turn;
+  assert.match(text(plans), /还没有分析结果，只有写进报告的抽样框 1 份。/);
+  assert.equal(plans.cards.length, 1);
+  assert.equal(plans.cards[0].title, '已写进报告的抽样框（计划，不是分析结果）');
+  assert.deepEqual(plans.cards[0].lines.map(line => line.map(s => s.text).join('')), ['城区居民抽样框', '　计划有效样本 300']);
+  assert.ok(!JSON.stringify(plans).includes('有效样本 0'));
+  const both = route('/结果', withResults({ ...held, results: [...held.results, frame] })).turn;
+  assert.match(text(both), /已登记的分析结果 2 项/);
+  assert.deepEqual(both.cards.map(c => c.title), ['读取 · 已登记结果', '已写进报告的抽样框（计划，不是分析结果）', '已确认的研究发现']);
+  assert.match(text(route('/结果 抽样框', withResults({ ...held, results: [...held.results, frame] })).turn), /只有写进报告的抽样框 1 份/);
+  assert.deepEqual(chatContext(null, illuminate(empty), [], { ...held, results: [...held.results, frame] }).results, { registered: 2, simulated: 1, frames: 1, confirmedFindings: 1 });
+});
+
+test('a method goes by the name the report gives it, and warnings read as sentences', () => {
+  const counted = result('本次样本由哪些人群组成？', 'frequency', { n: 12, total: 12, metrics: [{ label: '有效类别数', value: 2 }], warnings: ['单列分类题。', '未加权、未插补。'] });
+  const turn = route('/结果 频数', withResults({ results: [counted], findings: [], pending: false })).turn;
+  const rows = turn.cards[0].lines.map(line => line.map(s => s.text).join(''));
+  assert.equal(rows[0], '本次样本由哪些人群组成？　频数分析 · 有效样本 12 / 12');
+  assert.equal(rows[2], '　提醒：单列分类题；未加权、未插补。');
+});

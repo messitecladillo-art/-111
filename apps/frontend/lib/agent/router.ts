@@ -9,6 +9,8 @@ import { exhibitKey, type Trace, type TraceStep } from './provenance.ts';
 import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
 import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
+import { METHOD_LABELS } from '../report-placement.ts';
+import type { ResearchFinding, ResultSnapshot } from '../research-quality.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
 
 /**
@@ -51,7 +53,9 @@ export type AgentCard =
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
 /** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
 /** `room` is the module open in the side panel, or null while only the conversation shows. */
-export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[] };
+/** What the report holds of registered work, or null before the report has been seen in this visit. */
+export type ResultsView = { results: readonly ResultSnapshot[]; findings: readonly ResearchFinding[]; pending: boolean } | null;
+export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[]; results?: ResultsView };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
 export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
   /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
@@ -64,6 +68,7 @@ export const COMMANDS: readonly Command[] = [
   { name: '照度', line: '各模块的证据完整度', words: ['status'] },
   { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
   { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
+  { name: '结果', args: '标题或方法', line: '已登记的分析结果：方法、有效样本与主要统计量', words: ['results'] },
   { name: '生成', args: '研究需求', line: '用你的模型服务起草问卷，确认后才调用', words: ['generate', 'draft'] },
   { name: '查', args: '概念或方法', line: '在知识镜中查定义、公式与出处', words: ['lookup', 'search'] },
   ...ROOM_COMMANDS,
@@ -99,7 +104,7 @@ function help(): AgentTurn {
     cards: [
       { kind: 'tool', title: '命令', columns: true, lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(c.line, 'dim')]) },
       { kind: 'tool', title: '模块', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
-      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开数据分析', '图 1-1 的数字从哪来', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
+      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开数据分析', '图 1-1 的数字从哪来', '登记了哪些结果', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
     ],
     chips: [recommend(say('下一步做什么')), say('/照度')],
   };
@@ -171,6 +176,65 @@ function trace(ctx: RouterContext, arg = ''): AgentTurn {
   };
 }
 
+/** A statistic as the record shows it: whole numbers as they are, others to four significant digits. */
+const figure = (value: number) => Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(Math.abs(value) >= 1000 ? 7 : 4)));
+
+/** A sampling frame inserted from 抽样设计 is registered like a result, but it is a plan, not an analysis. */
+export const isFrame = (result: ResultSnapshot) => result.method === 'sampling-frame';
+const method = (r: ResultSnapshot) => METHOD_LABELS[r.method] ?? r.method;
+// Each warning is its own sentence; joined, they keep one stop between them.
+const warned = (r: ResultSnapshot) => `　提醒：${r.warnings.slice(0, 2).map(w => w.trim().replace(/[。；;.\s]+$/u, '')).join('；')}。`;
+const known = (r: ResultSnapshot) => r.metrics.filter((m): m is { label: string; value: number } => m.value !== null && Number.isFinite(m.value));
+const statistics = (r: ResultSnapshot, limit: number): Line[] => {
+  const metrics = known(r).slice(0, limit);
+  return metrics.length ? [metrics.flatMap((m, i) => [t(i ? '；' : '　'), t(`${m.label} `), t(figure(m.value), 'gold')])] : [];
+};
+
+/**
+ * Registered results as the report holds them: each analysis with its method, effective sample and leading statistics,
+ * numbers in gold, data from the teaching simulation marked as such; then the sampling frames, which are plans; then
+ * the confirmed findings. A query narrows them by title, method or variable and shows more of each.
+ */
+function results(ctx: RouterContext, query = ''): AgentTurn {
+  const held = ctx.results;
+  if (!held) return {
+    lines: [[t('登记的结果存在报告里；这次访问还没有打开报告与 PPT，所以我还读不到。')], [t('打开一次报告与 PPT，再问一遍。', 'dim')]],
+    chips: [recommend(say('/报告'))],
+  };
+  const all = [...held.results].reverse(), wanted = query.trim().toLowerCase();
+  if (!all.length) return {
+    lines: [[t('还没有登记的分析结果。')], [t(held.pending ? '有一项结果正在送往报告，在报告与 PPT 里收下后就能读到。' : '在数据分析里完成一项分析并登记，结果会带着方法与有效样本进入报告。', 'dim')]],
+    chips: [recommend(say(held.pending ? '/报告' : '/分析'))],
+  };
+  const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? '抽样框' : `${r.method} ${method(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
+  if (!chosen.length) return {
+    lines: [[t('登记的结果里没有'), t(`「${query.trim()}」`, 'strong'), t('，现有的是：')]],
+    chips: all.slice(0, 6).map(r => say(r.title.slice(0, 20), `/结果 ${r.title.slice(0, 20)}`)),
+  };
+  const analyses = chosen.filter(r => !isFrame(r)), frames = chosen.filter(isFrame);
+  const shown = analyses.slice(0, wanted ? 4 : 8), simulated = analyses.filter(r => r.classification === 'simulated').length;
+  const confirmed = wanted ? [] : held.findings.filter(f => f.status === 'confirmed');
+  const about = wanted ? `与「${query.trim()}」有关的` : '';
+  return {
+    lines: [
+      analyses.length
+        ? [t(`${about}已登记的分析结果 `), t(String(analyses.length), 'gold'), t(' 项'), ...(simulated ? [t(`，其中 ${simulated} 项来自教学模拟数据`, 'dim')] : []), t('。')]
+        : [t(`${about ? `${about}登记里` : ''}还没有分析结果`), t(`，只有写进报告的抽样框 ${frames.length} 份。`)],
+      ...(analyses.length > shown.length ? [[t(`这里列出最近的 ${shown.length} 项；在问题里写出标题或方法可以找到其余的。`, 'dim')]] : []),
+    ],
+    cards: [
+      ...(shown.length ? [{ kind: 'tool' as const, title: '读取 · 已登记结果', lines: shown.flatMap(r => [
+        [t(r.title, 'strong'), t(`　${method(r)} · 有效样本 `, 'dim'), t(String(r.n), 'gold'), t(` / ${r.total}`, 'dim'), ...(r.classification === 'simulated' ? [t(' · 教学模拟', 'dim')] : [])],
+        ...statistics(r, wanted ? 8 : 4),
+        ...(r.warnings.length ? [[t(warned(r), 'dim')]] : []),
+      ]) }] : []),
+      ...(frames.length ? [{ kind: 'tool' as const, title: '已写进报告的抽样框（计划，不是分析结果）', lines: frames.slice(0, 6).flatMap(r => [[t(r.title, 'strong')], ...statistics(r, 4)]) }] : []),
+      ...(confirmed.length ? [{ kind: 'tool' as const, title: '已确认的研究发现', lines: confirmed.slice(0, 6).map(f => [t(f.title, 'strong'), t(`　${f.interpretation}`, 'dim')]) }] : []),
+    ],
+    chips: analyses.length ? [say('/来处'), say('/报告')] : [recommend(say('/分析')), say('/报告')],
+  };
+}
+
 function open(room: Room, ctx: RouterContext): AgentTurn {
   if (room.id === ctx.room) return { lines: [[t(room.name, 'strong'), t('已经在右侧打开。')], [t(room.line, 'dim')]] };
   return {
@@ -207,6 +271,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '照度': return { turn: status(ctx, scope) };
     case '盲区': return { turn: blindSpots(ctx, scope) };
     case '来处': return { turn: trace(ctx, arg) };
+    case '结果': return { turn: results(ctx, arg) };
     case '生成': return { generate: arg };
     case '查': return arg ? { lookup: arg, explicit: true }
       : { turn: { lines: [[t('查什么？例如 '), t('/查 设计效应', 'teal'), t('。')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] } };
@@ -228,6 +293,7 @@ const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|�
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
 const WHERE = /^(我在哪|这是哪|当前模块|打开的是什么|我在哪里)/u;
 const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
+const RESULTS = /结果清单|(登记|已有|现有)(了|的)?(哪些)?(分析|统计)?结果|有哪些(分析|统计|检验)?结果|(分析|统计|检验)结果(是什么|是多少|怎么样|如何|有哪些)/u;
 const EXHIBIT = /([图表])\s*([0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?)/u;
 const LOOKUP = [/^(?:什么是|何为|啥是|解释一下|解释|查一下|查查|查|搜一下|搜索|搜)\s*(.+)$/u, /^(.+?)(?:是什么意思|是什么|是啥|什么意思|怎么算|怎么计算|的公式|的定义|指的是什么)$/u];
 const OPEN = /^(?:打开|去|进入|走进|切到|切换到|带我去|回到|前往|看看|到)\s*(.+)$/u;
@@ -247,6 +313,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
   if (TRACE.test(input)) { const m = EXHIBIT.exec(input); return { turn: trace(ctx, m ? m[1] + m[2] : '') }; }
+  if (RESULTS.test(input)) return { turn: results(ctx) };
   if (WHERE.test(input)) {
     if (!ctx.room) return { turn: { lines: [[t('右侧没有打开模块，现在只显示对话。')]], chips: [say('打开项目全景', '/全景')] } };
     const room = roomById(ctx.room);
@@ -277,6 +344,7 @@ export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
     case 'light': return { turn: status(ctx, action.args.room && lit(action.args.room) ? action.args.room : undefined) };
     case 'blind': return { turn: blindSpots(ctx, action.args.room && lit(action.args.room) ? action.args.room : undefined) };
     case 'trace': { const m = EXHIBIT.exec(action.args.reference); return { turn: trace(ctx, m ? m[1] + m[2] : action.args.reference) }; }
+    case 'results': return { turn: results(ctx, action.args.query) };
     case 'open': return { turn: open(roomById(action.args.room), ctx) };
     case 'lookup': return { lookup: action.args.query, explicit: true };
     case 'draft': return { generate: action.args.brief };

@@ -2,26 +2,29 @@
 // rows), what comes back (a reply and at most three tool requests from a fixed list), and what each failure means.
 // The backend holds the same list and limits (apps/backend …/agent_chat.py); the browser checks them again.
 import type { Illumination } from './illumination.ts';
-import type { AgentTurn, Line, Span } from './router.ts';
+import { isFrame, type AgentTurn, type Line, type ResultsView, type Span } from './router.ts';
 import { isRoomId, roomById, type RoomId } from './rooms.ts';
 
 export type ChatAction =
   | { tool: 'next'; args: Record<string, never> }
   | { tool: 'light' | 'blind'; args: { room?: RoomId } }
   | { tool: 'trace'; args: { reference: string } }
+  | { tool: 'results'; args: { query?: string } }
   | { tool: 'open'; args: { room: RoomId } }
   | { tool: 'lookup'; args: { query: string } }
   | { tool: 'draft'; args: { brief: string } };
 export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null };
 /** What a read-only tool found, sent back so the model can go on from it. */
-export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup'; text: string };
+export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup' | 'results'; text: string };
 export type ChatLine = { role: 'user' | 'agent'; text: string };
 export type ChatContext = {
   room: RoomId | null;
   overall: number;
   rooms: { room: RoomId; name: string; score: number; summary: string; blind: string[] }[];
   traces: { reference: string; title: string }[];
+  /** How much registered work the report holds; null before the report has been seen in this visit. */
+  results: { registered: number; simulated: number; frames: number; confirmedFindings: number } | null;
 };
 export type ChatRequest = {
   schemaVersion: 1; idempotencyKey: string; message: string; history: ChatLine[]; context: ChatContext;
@@ -32,7 +35,7 @@ export type ChatRequest = {
 
 /** One sentence is answered in at most this many calls; the backend lets the last ask for no tools. */
 export const MAX_STEPS = 3;
-const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup']);
+const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup', 'results']);
 export const isResultTool = (tool: ChatAction['tool']): tool is ToolResult['tool'] => RESULT_TOOLS.has(tool);
 
 /** A span as the model should read it: a formula keeps its TeX delimiters. */
@@ -54,14 +57,19 @@ export const HISTORY_LIMIT = 12, TEXT_LIMIT = 1200;
 const clip = (value: string, limit: number) => value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
 const round = (value: number) => Math.round(value * 100) / 100;
 
-/** What the model may see of the project: each module's light, its failing checks and the report's traceable figures. */
-export function chatContext(room: RoomId | null, light: Illumination, traces: readonly { reference: string; title: string }[]): ChatContext {
+/**
+ * What the model may see of the project: each module's light, its failing checks, the report's traceable figures and
+ * how many results and findings are registered. The results themselves are read only when the model asks for them.
+ */
+export function chatContext(room: RoomId | null, light: Illumination, traces: readonly { reference: string; title: string }[], held: ResultsView = null): ChatContext {
   return {
     room,
     overall: round(light.overall),
     rooms: light.rooms.map(r => ({ room: r.room, name: roomById(r.room).name, score: round(r.score), summary: clip(r.summary, 80),
       blind: r.checks.filter(c => !c.passed).slice(0, 6).map(c => clip(c.label, 80)) })),
     traces: traces.slice(0, 20).map(t => ({ reference: clip(t.reference, 20), title: clip(t.title, 80) })),
+    results: held && { registered: held.results.filter(r => !isFrame(r)).length, simulated: held.results.filter(r => !isFrame(r) && r.classification === 'simulated').length,
+      frames: held.results.filter(isFrame).length, confirmedFindings: held.findings.filter(f => f.status === 'confirmed').length },
   };
 }
 
@@ -79,6 +87,11 @@ function action(value: unknown): ChatAction | null {
     case 'next': return { tool: 'next', args: {} };
     case 'light': case 'blind': return room === undefined ? { tool: row.tool, args: {} } : room ? { tool: row.tool, args: { room } } : null;
     case 'open': return room ? { tool: 'open', args: { room } } : null;
+    case 'results': {
+      const given = row.args.query;
+      if (given === undefined) return { tool: 'results', args: {} };
+      return typeof given === 'string' && given.trim() && given.length <= 40 ? { tool: 'results', args: { query: given.trim() } } : null;
+    }
     case 'trace': case 'lookup': case 'draft': {
       const [name, limit] = TEXT_ARGS[row.tool], given = row.args[name];
       if (typeof given !== 'string' || !given.trim() || given.length > limit) return null;

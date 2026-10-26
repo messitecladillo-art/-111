@@ -15,7 +15,7 @@ import { percent } from '@/lib/agent/glyphs';
 import { illuminate, roomLight } from '@/lib/agent/illumination';
 import { traceExhibits } from '@/lib/agent/provenance';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
-import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type Span } from '@/lib/agent/router';
+import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type ResultsView, type Span } from '@/lib/agent/router';
 import { readChatTurn, sendChatTurn } from './chat-client';
 import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
@@ -104,6 +104,7 @@ export default function AgentShell() {
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
+  const held = useMemo<ResultsView>(() => deferredView.report ? { results: deferredView.report.quality?.results ?? [], findings: deferredView.report.quality?.findings ?? [], pending: deferredView.resultPending } : null, [deferredView]);
 
   const [visited, setVisited] = useState<RoomId[]>([]);
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
@@ -191,8 +192,8 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
-  const latest = useRef({ panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate }; });
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate }; });
   const agent = useMemo(() => {
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
@@ -202,9 +203,9 @@ export default function AgentShell() {
       else local(text);
     };
     const local = (text: string) => {
-      const { panel, light, theme, traces, generation } = latest.current;
+      const { panel, light, theme, traces, held, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room: panel, light, theme, traces });
+      const routed = route(text, { room: panel, light, theme, traces, results: held });
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
       if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
@@ -225,7 +226,7 @@ export default function AgentShell() {
       const thread = threads.view(owner).active;
       if (thread && consented.current.has(`${thread}:${chatService.id}`)) { turn(text); return; }
       threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('发给模型之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${chatService.label}」回答`,
-        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，以及项目照度、盲区与可回溯图表的摘要。')],
+        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，项目照度、盲区、可回溯图表与已登记结果数量的摘要；模型请求时，还有已登记结果的方法、有效样本与主要统计量。')],
           [span('不发送：问卷、数据与报告的原文。模型看不到原始数据，也不能改动项目；它请求的操作由这里执行，改动前仍会问你。', 'dim')],
           [span(`模型读完工具结果后可能接着回答，一句话最多调用 ${MAX_STEPS} 次；费用按你的服务商计。这段对话之后的句子不再询问。`, 'dim')]],
         confirm: { label: '发送', action: { type: 'chat', text } }, cancel: '不发送' }] } }]);
@@ -235,7 +236,7 @@ export default function AgentShell() {
     // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new. A
     // continuation keeps the service the sentence began with, the one the user agreed to, even if the menu has moved on.
     const turn = (text: string, next?: Chain) => {
-      const { panel, light, traces, owner, mutate } = latest.current;
+      const { panel, light, traces, held, owner, mutate } = latest.current;
       const chatService = next?.service ?? latest.current.chatService;
       if (!chatService) return;
       // A later step stays in the sentence's own conversation, whichever one is open now, and stops if it was deleted.
@@ -249,7 +250,7 @@ export default function AgentShell() {
       // A continuation sees the whole sentence so far: the reply and the tools' cards come after the question.
       const said = (next ? messages : messages.slice(0, asked < 0 ? messages.length : asked)).filter((_, i) => !declined.has(i));
       const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(said.flatMap(chatLine)),
-        context: chatContext(panel, light, traces), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true,
+        context: chatContext(panel, light, traces, held), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true,
         ...(next ? { step: next.step, toolResults: next.results } : {}) };
       const waiting: Message = { ...stamp(), role: 'agent', model: { service: chatService.label, step: next?.step ?? 1, status: 'running' }, turn: { lines: next
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
@@ -313,8 +314,8 @@ export default function AgentShell() {
     // A tool the model asked for, run as the matching command runs; drafting still begins with its own consent card.
     // A read-only tool's finding is returned so it can go back to the model.
     const run = async (afterId: string, action: ChatAction): Promise<ToolResult | null> => {
-      const { panel, light, theme, traces, generation, knowledge } = latest.current;
-      const routed = toolTurn(action, { room: panel, light, theme, traces });
+      const { panel, light, theme, traces, held, generation, knowledge } = latest.current;
+      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held });
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
       if ('lookup' in routed) {
         let found: AgentTurn;
