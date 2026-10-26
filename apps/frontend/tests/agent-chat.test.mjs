@@ -82,6 +82,8 @@ test('a reply’s formulas are typeset, never shown as TeX, and its emphasis is 
   assert.equal(replyLines('第一段\n\n\n第二段').length, 2);
   assert.deepEqual(replyLines(String.raw`看**设计效应 $\text{DEFF}$ 很大**。`), [[{ text: '看' }, { text: '设计效应 ', mark: 'strong' },
     { text: String.raw`\text{DEFF}`, mark: 'tex' }, { text: ' 很大', mark: 'strong' }, { text: '。' }]], 'a formula inside emphasis is typeset too');
+  assert.deepEqual(replyLines(String.raw`**设计效应 $$\text{DEFF}=1+(m-1)\rho$$ 越大越要加样本**`), [[{ text: '设计效应', mark: 'strong' }],
+    [{ text: String.raw`\text{DEFF}=1+(m-1)\rho`, mark: 'math' }], [{ text: '越大越要加样本', mark: 'strong' }]], 'a display formula leaves the emphasis around it intact');
   assert.deepEqual(replyLines('样本量：\n$$\n' + String.raw`n = \frac{z^2 p(1-p)}` + '\n' + String.raw`{e^2}` + '\n$$\n然后回收。'),
     [[{ text: '样本量：' }], [{ text: String.raw`n = \frac{z^2 p(1-p)} {e^2}`, mark: 'math' }], [{ text: '然后回收。' }]], 'a display formula over several lines is one formula');
   assert.deepEqual(replyLines(String.raw`\[` + '\n' + 'a=b' + '\n' + String.raw`\]`), [[{ text: 'a=b', mark: 'math' }]]);

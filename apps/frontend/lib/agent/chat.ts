@@ -118,14 +118,20 @@ export const CHAT_ERRORS: Record<string, string> = {
 // $$…$$ or \[…\] for a display formula, $…$ or \(…\) inline, **…** for emphasis. A lone $ stays text.
 const MARKUP = /\$\$([^$]+?)\$\$|\\\[([\s\S]+?)\\\]|\$([^$\n]+?)\$|\\\(([\s\S]+?)\\\)|\*\*([^*\n]+?)\*\*/gu;
 const TEX_LIMIT = 400;
+// A display formula, captured whole so splitting around it keeps it.
+const DISPLAY = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\])/u;
 /**
  * A model's reply as lines to render: a paragraph per line, its formulas typeset with KaTeX (trust off) instead of
  * shown as TeX, its emphasis in bold. A formula on a line of its own stands as a display equation; one too long to
  * be a formula stays text.
  */
 export function replyLines(reply: string): Line[] {
+  // A display formula inside emphasis is lifted out of it: the text on either side stays emphasised.
+  const lifted = reply.replace(/\*\*([\s\S]+?)\*\*/gu, (whole, inner: string) => DISPLAY.test(inner)
+    ? inner.split(DISPLAY).map((part, i) => i % 2 ? part : part.trim() ? `**${part.trim()}**` : '').join('')
+    : whole);
   // A display formula written over several lines is one formula: it is folded onto a line of its own first.
-  const folded = reply.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/gu, (_, dollars?: string, bracket?: string) =>
+  const folded = lifted.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/gu, (_, dollars?: string, bracket?: string) =>
     `\n$$${(dollars ?? bracket ?? '').replace(/\s*\n\s*/gu, ' ').trim()}$$\n`);
   return folded.split(/\n+/u).map(p => p.trim()).filter(Boolean).map(paragraph => markup(paragraph, false));
 }
