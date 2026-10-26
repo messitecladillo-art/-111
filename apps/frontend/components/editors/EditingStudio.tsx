@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
-import { ACCENTS, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { ACCENTS, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
 import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
@@ -17,11 +17,16 @@ import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-rec
 import { useHostedSession } from '../hosted/HostedSession';
 import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
+import ReportFramePanel from './ReportFramePanel';
+import EvidenceAppendicesPanel from './EvidenceAppendicesPanel';
+import {appendEvidenceAppendixSections} from '@/lib/evidence-appendices';
+import {appendRegisteredResult} from '@/lib/result-registration';
+import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
 import QualityStudio,{QualitySlidePreview} from './QualityStudio';
 import PaperBlocks,{PaperText} from './PaperBlocks';
 import { reportLabels, referenceToken } from '@/lib/report-numbering';
-import {appendQualityResult} from '@/lib/quality-layouts';
+import {appendQualityResult,QUALITY_LAYOUT_LABELS} from '@/lib/quality-layouts';
 import {type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
 import { applyReportInsert, insertSummary, type ReportInsert } from '@/lib/report-insert';
@@ -82,7 +87,7 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,onResultHandled,reportInsert,onReportInsertHandled,questionnaire=null,onContentChange}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,questionnaire=null,onContentChange}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -102,10 +107,12 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   useLayoutEffect(()=>{if(canMutate())onSnapshot?.(content);},[content,onSnapshot,canMutate]);
   const [mode, setMode] = useState<"report" | "slides" | "latex">("report");
   const [qualityOpen,setQualityOpen]=useState(false);
+  const qualityToggleRef = useRef<HTMLButtonElement>(null);
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [blankReportConfirm, setBlankReportConfirm] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [storyboardGeneration, setStoryboardGeneration] = useState(0);
   const [identityFrozen, setIdentityFrozen] = useState(false);
   const identityTransition = useRef(false);
@@ -307,13 +314,13 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if(!alive.current||identityTransition.current||!canMutate())return;
     const currentContent=current.current;
     if(busy.current||versionOperation.current)return;
-    try{current.current=appendQualityResult(currentContent,resultProposal);}
+    try{current.current=appendRegisteredResult(currentContent,{result:resultProposal,figures:resultFigures,visualStyle:resultVisualStyle});}
     catch(error){setMessage((error as Error).message);onResultHandled?.();return;}
     if(current.current===currentContent){onResultHandled?.();return;}
     setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(current.current);if(!blocked.current)setPhase('ready');setQualityOpen(true);onResultHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
-  },[resultProposal,onResultHandled,phase,identityFrozen,canMutate]);
+  },[resultProposal,resultFigures,resultVisualStyle,onResultHandled,phase,identityFrozen,canMutate]);
   // Content sent from a workbench module (sampling design, sample size) lands in its blueprint section as one undoable step.
   useEffect(()=>{
     if(!canMutate()||!reportInsert||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
@@ -584,20 +591,19 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   const versionMotion = useKeyedListMotion<HTMLDivElement>({ ids: versions.map(v=>v.id), enabled: !localOnly && libraryOpen });
 
   return <section className={styles.studio} id="editor" ref={studioRef} data-view={view} data-outline={outlineOpen} aria-label="报告与 PPT 实时编辑工作区">
-    <div className={styles.documentBar} aria-label="选择文档工作区">
+    {!localOnly&&<div className={styles.documentBar} aria-label="选择文档工作区">
       <div className={styles.modeGroup}>
         <button type="button" aria-pressed={!fileLibraryOpen} onClick={() => setFileLibraryOpen(false)}>文本草稿</button>
         {!localOnly&&<button type="button" aria-pressed={fileLibraryOpen} onClick={() => setFileLibraryOpen(true)}>Office 原文件</button>}
       </div>
-      {localOnly&&<div className={styles.backupActions}><button type="button" onClick={()=>void exportFile('json')}>下载 JSON 备份</button><button type="button" disabled={readOnly} onClick={()=>importInput.current?.click()}>恢复备份</button></div>}
-    </div>
+    </div>}
     {!localOnly&&<EditorRecovery onBeforeRestore={beforeRestore}/>}
     {identityFrozen && <div className={styles.notice} role="alert"><span>身份切换保护已开启：当前页不再读写服务器作品。请先导出未保存内容，再手动刷新；页面不会自动丢弃正文。</span><button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载当前正文备份</button></div>}
     {!localOnly&&fileLibraryOpen&&<div><OfficeFileLibrary/></div>}
     <div hidden={fileLibraryOpen}>
     <div className={styles.documentBar}>
-      <div className={styles.identity}><label><span>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} readOnly={readOnly} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
-      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
+      <div className={styles.identity}><label><span className={styles.srOnly}>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} readOnly={readOnly} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
+      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{localOnly&&<><button type="button" disabled={exporting} onClick={()=>void exportFile('json')}>下载备份</button><button type="button" disabled={readOnly} onClick={()=>importInput.current?.click()}>恢复备份</button></>}{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
     </div>
     <div className={styles.libraryPanel} id="editor-library" hidden={localOnly||!libraryOpen}>
     <div className={styles.libraryBar}>
@@ -617,22 +623,33 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     </div></div>
     {message && <div className={styles.notice} role={phase === "error" || phase === "conflict" ? "alert" : "status"}><span>{message}</span>{phase === "conflict" && <button type="button" disabled={locked} onClick={() => void save(true)}>保留当前内容为副本</button>}<button type="button" aria-label="关闭提示" onClick={() => setMessage("")}>×</button></div>}
     <div className={styles.toolbar}>
-      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告书</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX 工作台</button></div>
+      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX</button></div>
       <div className={styles.history}><button type="button" onClick={undo} disabled={readOnly || !past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={readOnly || !future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
-      <button type="button" aria-pressed={qualityOpen} onClick={()=>setQualityOpen(value=>!value)}>发现与矢量编排</button>
-      {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{mode==='report'&&<><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
+      <button type="button" className={styles.toolsToggle} aria-expanded={toolsOpen} aria-controls="editor-tools" onClick={()=>setToolsOpen(value=>!value)}>{mode==='slides'?'创作工具':'报告工具'}<span aria-hidden="true">{toolsOpen?'−':'+'}</span></button>
+      <button ref={qualityToggleRef} type="button" aria-pressed={qualityOpen} aria-controls="editor-quality" onClick={()=>setQualityOpen(value=>!value)}>发现与矢量编排</button>
+      {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
     </div>
-    <ResearchMaterialLibrary context="report"/>
-    <div hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
+    <div id="editor-tools" className={styles.toolsPanel} hidden={!toolsOpen} aria-label="报告辅助工具">
+      {mode==='report'&&<div className={styles.toolActions}><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></div>}
+      <ResearchMaterialLibrary context="report"/>
+    {mode!=='slides'&&<ReportFramePanel key={(content.reportFrame?.id??'none')+':'+(content.reportFrame?.review?.definitionSha256??'draft')} frame={content.reportFrame} visualStyle={content.visualStyle??{schema:'ProjectVisualStyle/v1',paletteId:content.accent==='burgundy'?'plum':content.accent,version:1}} reviewer={hostedSession.session?.user?.id??'local-user'} disabled={locked} onApply={frame=>{if(!canMutate())return;edit(applyReportFrame(current.current,frame));}} onPalette={visualStyle=>{if(!canMutate())return;const next={...current.current,version:3 as const,visualStyle};if(next.reportFrame)next.reportFrame={...next.reportFrame,status:'vector_draft',review:null};edit(parseEditorContent(next));}}/>}
+    {mode==='report'&&<EvidenceAppendicesPanel content={content} projectId={projectBinding?.projectId} aiLedger={aiUsageLedger} onRefreshAi={onRefreshAi} aiLoading={aiLoading} disabled={locked} onApply={(sections,base)=>{
+      if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
+      const next=appendEvidenceAppendixSections(current.current,sections);
+      if(!edit(next))return false;
+      setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
+    }}/>}
     {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
-    {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>setQualityOpen(true)}/>}
+    {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>{setQualityOpen(true);setToolsOpen(false);qualityToggleRef.current?.focus();}}/>}
+    </div>
+    <div id="editor-quality" hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>
     <div hidden={mode==='latex'||qualityOpen}>
-    <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base)=>{
+    <div hidden={!storyboardOpen}><ReportStoryboard key={storyboardGeneration} content={content} disabled={locked} onClose={()=>setStoryboardOpen(false)} onApply={(slides,base,contentVersion)=>{
       if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||JSON.stringify(current.current)!==base)return false;
       try {
-        const next=parseEditorContent({...current.current,slides});
+        const next=parseEditorContent({...current.current,...(contentVersion===3?{version:3}:{}),slides});
         const firstNew=slides.find(s=>!current.current.slides.some(old=>old.id===s.id));
         if(!edit(next))return false;
         setMode('slides');setSlideId(firstNew?.id||slides[0].id);setStoryboardOpen(false);
@@ -660,15 +677,15 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
             onChange={(next: ReferenceEntry[]) => edit({ ...content, references: next })}
             onImport={(entries: ReferenceEntry[]) => { if (edit({ ...content, references: [...(content.references ?? []), ...entries], report: content.report.map(s => s.id === section.id ? { ...s, body: '' } : s) })) setMessage(`已把 ${entries.length} 条手写文献转为文献条目，并清空本节正文，可撤销。`); }}/>}
           <div className={styles.bodyTools}><select aria-label="插入图表、公式或文献引用" value="" disabled={!referable.length && !cited.order.length} onChange={e => { const value = e.target.value; if (value.startsWith('ref:')) { insertReference(citationToken(value.slice(4))); return; } const target = referable.find(r => r.id === value); if (target) insertReference(referenceToken(target.label.kind, target.id)); }}><option value="">{referable.length || cited.order.length ? "插入引用…" : "暂无可引用的图表、公式或文献"}</option>{referable.length > 0 && <optgroup label="图、表与公式">{referable.map(r => <option key={r.id} value={r.id}>{r.label.reference}{r.title ? `  ${r.title}` : ""}</option>)}</optgroup>}{cited.order.length > 0 && <optgroup label="参考文献">{cited.order.map(entry => <option key={entry.id} value={`ref:${entry.id}`}>[{citations.get(entry.id)}] {formatReference(entry).slice(0, 60)}</option>)}</optgroup>}</select><span>行内公式写作 <code>$…$</code>，例如 <code>$n_0$</code></span></div>
-          <label>正文<textarea ref={bodyRef} className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder={guide ? (guide.kind === "chapter" ? "本章导语（可选），一两句说明本章回答什么问题。" : "按上方写作指引撰写本节，每次换行形成一个段落。") : "写下本章内容，每次换行形成一个段落。"}/></label>
+          <label>正文<textarea ref={bodyRef} className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder={guide ? (guide.kind === "chapter" ? "本章导语（可选）" : "写下本节内容…") : "写下本章内容…"}/></label>
           <span className={styles.counter}>{section.body.length.toLocaleString()} / 12,000 字</span>
           <label>来源与说明<textarea rows={3} maxLength={1500} value={section.source} onChange={e => patchSection({ source: e.target.value })} placeholder="文献、报告页码、访谈编号或尚待核实的依据"/></label>
           <details className={styles.coverSettings}><summary>封面设置</summary><label>报告副标题<input maxLength={240} value={content.subtitle} onChange={e => edit({ ...content, subtitle: e.target.value })}/></label></details>
-          <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>报告分镜：选择证据并制作 PPT</button>
+          <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>从报告制作 PPT</button>
         </> : <>
           <ReportLinkNotice content={content} slide={slide}/>
           <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>打开报告分镜</button>
-          <div className={styles.designSettings}><label>版式<select value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></select></label>
+          <div className={styles.designSettings}><label>版式<select aria-label="页面版式" disabled={!!slide.objects} value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}>{slide.objects?<option value={slide.layout}>{QUALITY_LAYOUT_LABELS[slide.layout as keyof typeof QUALITY_LAYOUT_LABELS]??"自由对象布局"}</option>:<><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></>}</select></label>{slide.objects&&<button type="button" onClick={()=>setQualityOpen(true)}>打开对象编排</button>}
           <label>强调色<select value={content.accent} onChange={e => edit({ ...content, accent: e.target.value as EditorContent["accent"] })}><option value="teal">深青</option><option value="blue">学术蓝</option><option value="burgundy">酒红</option></select></label></div>
           <label>页面标题<input maxLength={150} value={slide.title} onChange={e => patchSlide({ title: e.target.value })}/></label>
           <label>页面正文<textarea rows={8} maxLength={1800} value={slide.body} onChange={e => patchSlide({ body: e.target.value })}/></label>
@@ -678,25 +695,25 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
         </>}
       </fieldset>
       <div className={styles.previewPane}>
-        <div className={styles.previewHeading}><strong>实时预览</strong><span>{mode === "report" ? "正文连续预览 · 导出为 A4" : "16:9 · 原生文字可编辑"}</span></div>
+        <div className={styles.previewHeading}><div><strong>实时预览</strong><span>{mode === "report" ? "连续正文 · A4 导出" : "16:9 · 可编辑文字"}</span></div>{mode === "report" && <button type="button" onClick={()=>{const box=previewRef.current;const target=box&&[...box.querySelectorAll<HTMLElement>('[data-report-section]')].find(element=>element.dataset.reportSection===section.id);if(box&&target)box.scrollTo({top:box.scrollTop+target.getBoundingClientRect().top-box.getBoundingClientRect().top-24,behavior:'instant'});}}>定位当前章节</button>}</div>
         <div className={styles.previewScroll} ref={previewRef} tabIndex={0} role="region" aria-label="实时预览（可滚动）">
-          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => { const kind = outlineKind(s.title), empty = kind !== "chapter" && !sectionWritten(s) && !/写作提示】/.test(s.body) && !(reportPart(s.title) === "references" && cited.order.length > 0); return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === "blank" ? <p key={i} className={styles.blank} aria-hidden="true"/> : line.kind === "keywords" ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p> : <p key={i} className={line.kind === "hintStart" ? styles.hintStart : line.kind === "hint" ? styles.hintLine : undefined}>{line.kind === "p" ? <PaperText text={line.text} labels={labels} citations={citations}/> : line.text}</p>)}{reportPart(s.title) === 'references' && cited.order.length > 0 && <ol className={styles.referenceList}>{cited.order.map(entry => <li key={entry.id} data-uncited={uncited.has(entry.id) || undefined}><span>[{citations.get(entry.id)}]</span>{unfinishedReference(entry) ? <em className={styles.pending}>尚未填写题名</em> : formatReference(entry)}</li>)}</ol>}<PaperBlocks section={s} content={content} labels={labels} citations={citations}/>{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>; })}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality}/>}
+          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => { const kind = outlineKind(s.title), empty = kind !== "chapter" && !sectionWritten(s) && !/写作提示】/.test(s.body) && !(reportPart(s.title) === "references" && cited.order.length > 0); return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === "blank" ? <p key={i} className={styles.blank} aria-hidden="true"/> : line.kind === "keywords" ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p> : <p key={i} className={line.kind === "hintStart" ? styles.hintStart : line.kind === "hint" ? styles.hintLine : undefined}>{line.kind === "p" ? <PaperText text={line.text} labels={labels} citations={citations}/> : line.text}</p>)}{reportPart(s.title) === 'references' && cited.order.length > 0 && <ol className={styles.referenceList}>{cited.order.map(entry => <li key={entry.id} data-uncited={uncited.has(entry.id) || undefined}><span>[{citations.get(entry.id)}]</span>{unfinishedReference(entry) ? <em className={styles.pending}>尚未填写题名</em> : formatReference(entry)}</li>)}</ol>}<PaperBlocks section={s} content={content} labels={labels} citations={citations}/>{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>; })}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/>}
         </div>
-        <div className={styles.previewFoot}><span>{mode === "report" ? `${content.report.reduce((n, s) => n + s.body.length, 0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span><span>预览为版式参考 · 导出后复核分页与字体</span></div>
+        <div className={styles.previewFoot}><span>导出后请复核分页与字体</span></div>
       </div>
     </div>
     <dialog ref={presentRef} className={styles.presentation} aria-label="幻灯片演示预览" onCancel={() => setPresenting(false)} onKeyDown={event => {
       if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }
       if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); setPresentIndex(i => Math.max(0,i-1)); }
-    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
+    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
     </div>
     </div>
   </section>;
 }
 
-function SlidePreview({ slide, accent, index, label,quality }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string;quality?:EditorContent['quality'] }) {
+function SlidePreview({ slide, accent, index, label,quality,figures,visualStyle }: { slide: Slide; accent: EditorContent["accent"]; index: number; label: string;quality?:EditorContent['quality'];figures?:ReportFigure[];visualStyle?:ProjectVisualStyle }) {
   const reveal = useContentReveal<HTMLDivElement>({ token: slide.id });
-  if(slide.objects)return <QualitySlidePreview slide={slide} quality={quality} label={label}/>;
+  if(slide.objects)return <QualitySlidePreview slide={slide} quality={quality} figures={figures} visualStyle={visualStyle} label={label}/>;
   return <div ref={reveal} className={styles.slideCanvas} data-layout={slide.layout} style={{ "--slide-accent": `#${ACCENTS[accent]}` } as React.CSSProperties} aria-label={label}><h2>{slide.title}</h2><div className={styles.slideBody}><p>{slide.body}</p>{slide.layout === "two-column" && <aside>{slide.aside}</aside>}</div><span className={styles.slideNumber}>{String(index + 1).padStart(2,"0")}</span></div>;
 }

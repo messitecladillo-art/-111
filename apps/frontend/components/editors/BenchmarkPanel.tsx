@@ -20,7 +20,7 @@ type Props = {
 const PRIORITY = 6;
 const level = (score: number | null) => score === null ? 'na' : score >= 0.85 ? 'strong' : score >= 0.6 ? 'fair' : 'weak';
 
-/** Rule-based check against general survey-report criteria; every gap links to the place that fills it. */
+/** Observable evidence completeness; optional writing references do not become score thresholds. */
 export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlueprint, onNavigate, onOpenFindings }: Props) {
   const id = useId();
   const deferred = useDeferredValue(content);
@@ -46,9 +46,9 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
 
   return <details className={styles.panel}>
     <summary className={styles.summary}>
-      <span className={styles.title}>报告体检</span>
-      <span className={styles.score} data-level={level(result.score / 100)}><b>{result.score}</b>分</span>
-      <span className={styles.meta}>{passed} / {applicable.length} 项达标<span aria-hidden="true"> · </span>{gaps.length} 项待补</span>
+      <span className={styles.title}>证据完整度</span>
+      <span className={styles.score} data-level={level(result.score / 100)}><b>{result.score}</b>%</span>
+      <span className={styles.meta}>{passed} / {applicable.length} 项完成<span aria-hidden="true"> · </span>{gaps.length} 项待补</span>
     </summary>
     <div className={styles.content}>
       <div className={styles.tiles} role="group" aria-label="按维度查看待补项">
@@ -58,7 +58,7 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
             <span className={styles.tileLabel}>{d.label}</span>
             <span className={styles.tileScore}>{d.score === null ? '—' : Math.round(d.score * 100)}</span>
             <span className={styles.track} aria-hidden="true"><span data-level={level(d.score)} style={{ inlineSize: `${d.score === null ? 0 : Math.max(2, Math.round(d.score * 100))}%` }}/></span>
-            <span className={styles.tileMeta}>{d.score === null ? '尚不适用' : open ? `${open} 项待补` : '已达标'}</span>
+            <span className={styles.tileMeta}>{d.score === null ? '尚不适用' : open ? `${open} 项待补` : '已记录完整'}</span>
           </button>;
         })}
       </div>
@@ -84,9 +84,9 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
             </div>}
           </li>;
         })}
-      </ul> : <p className={styles.done}>{focus ? '这一维度已全部达标。' : '全部检查项均已达标。'}</p>}
+      </ul> : <p className={styles.done}>{focus ? '这一维度的适用记录已完整。' : '当前适用记录已完整。'}</p>}
       <div className={styles.footer}>
-        <p className={styles.note}>体检按调查报告的通用规范检查结构与证据的呈现，不评判研究结论本身；只检查适用于本报告的项目，数量要求随本报告的分析规模变化，不以任何一篇报告为模板。</p>
+        <p className={styles.note}>按已使用的证据检查数据版本、计算口径、发现确认与成果引用。章节、图表和方法由研究需要决定。</p>
         {confirming
           ? <div className={styles.confirm} role="region" aria-label="重建骨架确认">
             <p>选择与研究问题相符的报告类型，将当前 {content.report.length} 个章节替换为对应骨架（{replacement.length} 节）？PPT、LaTeX 与研究发现保留，替换后可撤销；之后仍可从体检或写作指引中增删分析模块。

@@ -4,13 +4,18 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
 import { useHostedSession } from '@/components/hosted/HostedSession';
-import { awardCaseLibraryStats, awardCases } from '@/data/award-cases';
+import { REPORT_CASES, REPORT_LIBRARY_STATS } from '@/lib/report-case-catalog';
+import { LANDING_CASE_STUDY } from '@/data/landing-case-study';
 import { calendarFor, CALENDAR_GROUPS, EDITION17_CALENDAR, type CalendarGroup } from '@/data/edition17-calendar';
 import { ANALYSIS_BLOCKS } from '@/lib/analysis-recipes';
 import { legacyLandingDestination } from '@/lib/landing-navigation';
 import { SILICON_LIMITS } from '@/lib/silicon/persona';
 import { CATEGORICAL_DARK } from '@/lib/silicon/palette';
 import styles from './LandingPage.module.css';
+import HeroAtmosphere from './HeroAtmosphere';
+import TourAtmosphere from './TourAtmosphere';
+import CaseEvidence, { type EvidencePage } from './CaseEvidence';
+import HeroShowcase from './HeroShowcase';
 
 const HEADLINE = ['让每个问题，', '都循证抵达行动'] as const;
 
@@ -18,7 +23,7 @@ const STATS = [
   { value: 12, unit: '个阶段', label: '从立项到提交的项目工作流' },
   { value: 9, unit: '道门禁', label: '逐步检查研究与成果质量' },
   { value: SILICON_LIMITS.personas, unit: '位', label: '单次运行的硅基受访者上限' },
-  { value: awardCaseLibraryStats.total, unit: '条', label: '获奖案例索引，来源逐条标注' },
+  { value: REPORT_LIBRARY_STATS.total, unit: '份', label: '完整报告案例，原文逐页阅读' },
 ] as const;
 
 const METHODS = [['问卷设计', '跳转与答案传递', '变量字典', '硅基预测试', '多模型交叉检验', '数据质量检查', '规则锁定', '九道质量门禁'], ['频数与比例', '分组描述', '交叉表与 Cramér V', 'Pearson 相关', 'Spearman 秩相关', '报告分镜', 'Word 与 PPTX 导出', '答辩追问演练']] as const;
@@ -29,7 +34,7 @@ const TOUR = [
   { id: 'analysis', no: '02', label: '数据分析', title: '先查数据，再下结论', text: '读取 CSV 后先做体检：记录数、变量、缺失代码与完全重复行逐项列出，再进入分析。', facts: ANALYSIS_BLOCKS.map(block => block.title), chips: true, href: '/workspace#analysis', caption: '12 行模拟数据的读取检查', alt: '证见数据分析界面：模拟数据的读取检查，显示已读取记录、变量列、缺失比例与重复行。' },
   { id: 'editor', no: '03', label: '报告与 PPT', title: '边写边看，分镜直接成稿', text: '章节目录、正文编辑与 A4 实时预览在一屏；从报告分镜挑选证据，编排成幻灯片。', facts: ['章节编辑与 A4 实时预览', '报告分镜：选择证据并制作 PPT', '导出 Word 报告正文与 PPTX'], href: '/workspace#editor', caption: '默认报告模板', alt: '证见报告编辑界面：章节目录、章节编辑区和 A4 实时预览。' },
   { id: 'defense', no: '04', label: '路演答辩', title: '把追问，练到有据可答', text: '按主题演练评委可能的追问：先答问题，再定位证据，最后计时彩排。', facts: ['13 个追问主题', '练习笔记与成果卡可导入导出', '按段落设置时间检查点'], href: '/workspace#defense', caption: '追问主题与回答要点', alt: '证见路演与答辩界面：左侧追问主题列表，右侧当前主题的回答要点。' },
-  { id: 'cases', no: '05', label: '案例与规则', title: '规则先锁定，案例可回查', text: '按届次、组别、赛区、赛道与阶段匹配规则；获奖案例只呈现公告可以核验的字段。', facts: ['每条规则附来源与核验日期', `${awardCaseLibraryStats.total} 条案例索引`, '官方核验与用户陈述分开标注'], href: '/workspace#cases', caption: '获奖案例库', alt: '证见获奖案例库界面：收录边界说明、检索筛选与案例卡片。' },
+  { id: 'cases', no: '05', label: '案例与规则', title: '规则先锁定，案例可回查', text: '按届次、组别、赛区、赛道与阶段匹配规则；完整案例提供原报告、研究方法与逐页阅读线索。', facts: ['每条规则附来源与核验日期', `${REPORT_LIBRARY_STATS.total} 份完整原报告`, '从研究设计直接读到分析与建议'], href: '/workspace#cases', caption: '报告案例库', alt: '证见报告案例库界面：完整报告、研究主题与阅读入口。' },
 ] as const;
 
 const QDIA = [
@@ -48,22 +53,14 @@ const SILICON_FACTS = [
   ['4', '项保真度检验', '按 Argyle 等人提出的四项标准，逐项检验模拟回答像不像。'],
 ] as const;
 
-/** Pages from a user-supplied 第十六届 report (corpus CASE-NEW-BLUE-COLLAR); its award is user-attested. The cover is left out. */
-const CASE_REPORT = '脱下“长衫”之后——武汉市高校毕业生新蓝领群体就业选择、分层画像与成长支持路径研究';
-const CASE_PAGES = [
-  { id: 'abstract', step: 'Q', name: '问题', page: 1, title: '摘要', text: '先划清人群边界：武汉市毕业五年内、从事新蓝领工作的高校毕业生。', alt: '报告摘要页：研究背景、研究对象、研究设计与主要发现。' },
-  { id: 'chain', step: '链', name: '方法', page: 16, title: '表 2 递进式证据链', text: '特征识别、需求诊断、群体分层、机制解释、文本验证，每一环写明方法、要回答的问题与输出。', alt: '报告第 16 页：表 2 递进式证据链分析说明，列出每个证据环节的方法组合、解决的问题和输出。' },
-  { id: 'sampling', step: 'D', name: '数据', page: 22, title: '抽样方案设计', text: '以分层配额抽样为主，区域样本量按自建的潜在规模指数分配；最终 821 份有效问卷，另有 12 名个案访谈。', alt: '报告第 22 页：问卷修改记录与抽样方法的选择。' },
-  { id: 'personas', step: 'I', name: '洞察', page: 41, title: 'LPA 剖面图人物画像', text: '三类潜在剖面：生存挣扎型 53.5%、积极进取型 35.8%、佛系过渡型 10.7%。', alt: '报告第 41 页：LPA 三大潜在剖面中心表与三类人物画像图。' },
-  { id: 'paths', step: 'A', name: '行动', page: 62, title: '分类支持路径', text: '三类人群各对应一套支持路径，再落到市级统筹、区级落地与平台参与。', alt: '报告第 62 页：高校毕业生新蓝领分类支持路径图与对策建议。' },
-] as const;
-type CasePage = typeof CASE_PAGES[number];
+const CASE_REPORT = LANDING_CASE_STUDY.title;
+const CASE_PAGES = LANDING_CASE_STUDY.pages;
 
 const ORIGINS = [
   { era: '商 · 甲骨', glyph: '卜', title: '先问，后验。', text: '卜辞的最后一部分「验辞」记下事情是否应验：问题与结果刻在同一片甲骨上。', now: '先写清决策问题和待验证的判断，结论出来后回到原问题逐条核对。' },
   { era: '春秋 ·《论语》', glyph: '徵', title: '文献不足，不下断语。', text: '孔子能讲夏、殷之礼，却因杞、宋的典籍与贤人不足为证而不下定论。', now: '把待补资料列入项目清单，补齐依据后再推进结论。' },
   { era: '东汉 ·《说文》', glyph: '灋', title: '平之如水，触不直者去之。', text: '古文「法」从水、从廌、从去：传说獬豸能辨曲直，以角触理亏的一方。', now: '质量检查贯穿研究流程，让问题、数据与结论彼此对应。' },
-  { era: '清 · 考据学', glyph: '證', title: '凡立一义，必凭证据。', text: '乾嘉学者一字一义都要找到出处；梁启超把这种学风归纳为几条研究规范。', now: '每条结论登记进证据台账，规则与案例附官方来源，可逐条回查。' },
+  { era: '清 · 考据学', glyph: '證', title: '凡立一义，必凭证据。', text: '乾嘉学者一字一义都要找到出处；梁启超把这种学风归纳为几条研究规范。', now: '每条结论登记进证据台账，规则附官方来源，案例可读原报告，可逐条回查。' },
 ] as const;
 
 const PRINCIPLES = [
@@ -73,7 +70,7 @@ const PRINCIPLES = [
   ['规则可回查', '赛程与规则关联官方通知，并记录核验日期。'],
 ] as const;
 
-const verifiedCases = awardCases.filter(item => item.verification === 'official_verified');
+const verifiedCases = REPORT_CASES;
 const caseRows = [verifiedCases.filter((_, i) => i % 2 === 0), verifiedCases.filter((_, i) => i % 2 === 1)];
 
 const subscribeNothing = () => () => {};
@@ -93,133 +90,49 @@ function subscribeReducedMotion(listener: () => void) {
   return () => media.removeEventListener('change', listener);
 }
 const reducedMotionSnapshot = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function subscribeVisibility(listener: () => void) {
+  document.addEventListener('visibilitychange', listener);
+  return () => document.removeEventListener('visibilitychange', listener);
+}
+const pageVisibleSnapshot = () => !document.hidden;
 
-/** Counts up once when first visible; the final value is what renders without scripts. */
+/** Counts once on entry; interrupting a decorative count settles the real final value. */
 function CountUp({ value, animate }: { value: number; animate: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const playedValue = useRef<number | null>(null);
   useEffect(() => {
     const node = ref.current;
-    if (!node || !animate || typeof IntersectionObserver === 'undefined') return;
-    let raf = 0;
+    if (!node) return;
+    node.textContent = String(value);
+    if (playedValue.current === value || typeof IntersectionObserver === 'undefined') return;
+    let raf = 0, disposed = false;
+    const settle = () => { cancelAnimationFrame(raf); raf = 0; node.textContent = String(value); };
     const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      observer.disconnect();
+      if (disposed) return;
+      if (!entry.isIntersecting) {
+        if (playedValue.current === value) { settle(); observer.unobserve(node); }
+        return;
+      }
+      if (playedValue.current === value) return;
+      playedValue.current = value;
+      if (!animate) { settle(); observer.unobserve(node); return; }
       const start = performance.now();
       const tick = (now: number) => {
+        raf = 0;
+        if (disposed) return;
         const t = Math.min(1, (now - start) / 1600);
         node.textContent = String(Math.round(value * (1 - Math.pow(1 - t, 4))));
         if (t < 1) raf = requestAnimationFrame(tick);
+        else observer.unobserve(node);
       };
       raf = requestAnimationFrame(tick);
     }, { threshold: 0.5 });
     observer.observe(node);
-    return () => { observer.disconnect(); cancelAnimationFrame(raf); node.textContent = String(value); };
+    return () => { disposed = true; observer.disconnect(); settle(); };
   }, [value, animate]);
   return <span ref={ref}>{value}</span>;
 }
 
-/**
- * Gold and teal motes stream off the eclipse rim; near a fine pointer they part and link up.
- * Decorative only. One static frame is drawn when motion is off; the loop stops off-screen.
- */
-function HeroField({ running, eclipseRef }: { running: boolean; eclipseRef: RefObject<HTMLDivElement | null> }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current, ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    const sprite = (rgb: string) => {
-      const c = document.createElement('canvas'); c.width = c.height = 32;
-      const g = c.getContext('2d')!, grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-      grad.addColorStop(0, `rgba(${rgb},1)`); grad.addColorStop(0.22, `rgba(${rgb},.6)`); grad.addColorStop(1, `rgba(${rgb},0)`);
-      g.fillStyle = grad; g.fillRect(0, 0, 32, 32); return c;
-    };
-    const sprites = [sprite('255,212,132'), sprite('110,228,212'), sprite('255,248,230')];
-    type Mote = { x: number; y: number; vx: number; vy: number; size: number; age: number; life: number; kind: number };
-    let motes: Mote[] = [], stars: Array<{ x: number; y: number; s: number; p: number }> = [];
-    let w = 0, h = 0, cx = 0, cy = 0, R = 1, raf = 0, visible = true, t = 0;
-    const mouse = { x: -9999, y: -9999 };
-    const rand = Math.random;
-    const spawn = (m: Mote, initial: boolean) => {
-      const span = Math.min(1.25, (w * 0.6) / R);
-      const a = -Math.PI / 2 + (rand() * 2 - 1) * span * Math.pow(rand(), 0.6);
-      const nx = Math.cos(a), ny = Math.sin(a), speed = 0.1 + rand() * 0.5;
-      m.x = cx + nx * (R + 1); m.y = cy + ny * (R + 1);
-      m.vx = nx * speed + (rand() - 0.5) * 0.12; m.vy = ny * speed - rand() * 0.12;
-      m.size = 3 + Math.pow(rand(), 3) * 16; m.life = 260 + rand() * 560; m.kind = rand() < 0.6 ? 0 : rand() < 0.75 ? 1 : 2;
-      m.age = initial ? rand() * m.life : 0;
-      if (initial) { m.x += m.vx * m.age; m.y += m.vy * m.age; }
-    };
-    const measure = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
-      const rect = canvas.getBoundingClientRect();
-      w = rect.width; h = rect.height;
-      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const e = eclipseRef.current?.getBoundingClientRect();
-      if (e) { cx = e.left + e.width / 2 - rect.left; cy = e.top + e.height / 2 - rect.top; R = e.width / 2; }
-      else { cx = w / 2; cy = h * 1.6; R = h; }
-      const count = Math.round(Math.max(90, Math.min(360, (w * h) / 4000)));
-      motes = Array.from({ length: count }, () => { const m = {} as Mote; spawn(m, true); return m; });
-      stars = Array.from({ length: Math.round(count * 0.45) }, () => ({ x: rand() * w, y: rand() * h * 0.8, s: 0.4 + rand() * 1.1, p: rand() * Math.PI * 2 }));
-    };
-    const frame = (advance: boolean) => {
-      if (advance) t += 1;
-      ctx.clearRect(0, 0, w, h);
-      ctx.globalCompositeOperation = 'source-over';
-      for (const s of stars) {
-        const dx = s.x - cx, dy = s.y - cy;
-        if (dx * dx + dy * dy < R * R) continue;
-        ctx.globalAlpha = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 0.02 + s.p));
-        ctx.fillStyle = '#e9eef4';
-        ctx.fillRect(s.x, s.y, s.s, s.s);
-      }
-      ctx.globalCompositeOperation = 'lighter';
-      const near: Mote[] = [];
-      for (const m of motes) {
-        if (advance) {
-          m.x += m.vx; m.y += m.vy; m.age += 1;
-          if (m.age > m.life || m.y < -20 || m.x < -20 || m.x > w + 20) spawn(m, false);
-        }
-        let x = m.x, y = m.y;
-        const dx = x - mouse.x, dy = y - mouse.y, d = Math.hypot(dx, dy);
-        if (d < 150 && d > 0.01) { const push = (1 - d / 150) * 26; x += (dx / d) * push; y += (dy / d) * push; if (d < 190) near.push(m); }
-        else if (d < 190) near.push(m);
-        const life = Math.sin(Math.PI * Math.min(1, m.age / m.life));
-        ctx.globalAlpha = Math.pow(life, 1.3) * (m.kind === 2 ? 0.95 : 0.8);
-        ctx.drawImage(sprites[m.kind], x - m.size / 2, y - m.size / 2, m.size, m.size);
-      }
-      if (near.length > 1) {
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.lineWidth = 0.7;
-        for (let i = 0; i < near.length; i++) for (let j = i + 1; j < near.length; j++) {
-          const a = near[i], b = near[j], d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d > 90) continue;
-          ctx.globalAlpha = (1 - d / 90) * 0.5;
-          ctx.strokeStyle = (i + j) % 3 ? '#ffd27a' : '#6fe4d4';
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-        }
-      }
-      ctx.globalAlpha = 1;
-    };
-    const loop = () => { raf = 0; frame(true); if (running && visible) raf = requestAnimationFrame(loop); };
-    const start = () => { if (!raf && running && visible) raf = requestAnimationFrame(loop); };
-    measure(); frame(false);
-    const resize = new ResizeObserver(() => { measure(); frame(false); });
-    resize.observe(canvas);
-    const seen = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; start(); });
-    seen.observe(canvas);
-    const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const move = (event: PointerEvent) => { const rect = canvas.getBoundingClientRect(); mouse.x = event.clientX - rect.left; mouse.y = event.clientY - rect.top; };
-    const leave = () => { mouse.x = mouse.y = -9999; };
-    if (fine && running) { window.addEventListener('pointermove', move, { passive: true }); document.documentElement.addEventListener('pointerleave', leave); }
-    start();
-    return () => {
-      cancelAnimationFrame(raf); resize.disconnect(); seen.disconnect();
-      window.removeEventListener('pointermove', move); document.documentElement.removeEventListener('pointerleave', leave);
-    };
-  }, [running, eclipseRef]);
-  return <canvas ref={ref} className={styles.heroCanvas} aria-hidden="true"/>;
-}
 
 function Persona({ hue }: { hue: string }) {
   return <svg viewBox="0 0 28 40" aria-hidden="true">
@@ -272,7 +185,7 @@ function Tour() {
     return () => observer.disconnect();
   }, []);
   const current = TOUR[active];
-  return <div className={styles.tour} style={{ '--progress': (active + 1) / TOUR.length } as CSSProperties}>
+  return <div className={styles.tour} data-scene={current.id} style={{ '--progress': (active + 1) / TOUR.length } as CSSProperties}>
     <ol ref={listRef} className={styles.tourSteps}>
       {TOUR.map((step, index) => <li key={step.id} data-step={index} data-active={active === index} className={styles.tourStep}>
         <span className={styles.tourNo} aria-hidden="true">{step.no}</span>
@@ -289,6 +202,7 @@ function Tour() {
       </li>)}
     </ol>
     <div className={styles.tourStage} aria-hidden="true">
+      <TourAtmosphere className={styles.tourAtlas}/>
       <div className={styles.tourGlow} data-step={current.id}/>
       <div className={styles.tourWindow}>
         <div className={styles.windowBar}><i/><i/><i/><span>证见工作台 · {current.label}</span></div>
@@ -376,16 +290,16 @@ function Calendar() {
 
 function CaseCard({ item }: { item: typeof verifiedCases[number] }) {
   return <article className={styles.caseCard}>
-    <span className={styles.caseAward}>{item.award}</span>
+    <span className={styles.caseAward}>{item.topic[0]} · {item.pages} 页</span>
     <h3>{item.title}</h3>
-    <p>{item.institution} · {item.edition} · {item.group}</p>
-    <span className={styles.caseSource}>官方来源已核验</span>
+    <p>{item.summary}</p>
+    <span className={styles.caseSource}>完整原报告 · 阅读线索</span>
   </article>;
 }
 
-function CaseStudy() {
+function CaseStudy({ motion }: { motion: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [open, setOpen] = useState<CasePage | null>(null);
+  const [open, setOpen] = useState<EvidencePage | null>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog || !open) return;
@@ -395,23 +309,12 @@ function CaseStudy() {
     return () => dialog.removeEventListener('close', close);
   }, [open]);
   return <>
-    <ol className={styles.casePages} data-reveal>
-      {CASE_PAGES.map((page, index) => <li key={page.id} style={{ '--i': index } as CSSProperties}>
-        <button type="button" className={styles.casePage} onClick={() => setOpen(page)}>
-          <span className={styles.caseStep} data-step={page.step}>{page.step}<small>{page.name}</small></span>
-          <span className={styles.srOnly}>放大查看第 {page.page} 页：{page.title}</span>
-          {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized page renders */}
-          <img src={`/landing/case-${page.id}-560.webp`} width={560} height={791} alt="" loading="lazy" decoding="async"/>
-        </button>
-        <p className={styles.casePageMeta}>第 {page.page} 页 · {page.title}</p>
-        <p className={styles.casePageText}>{page.text}</p>
-      </li>)}
-    </ol>
-    <dialog ref={dialogRef} className={styles.caseDialog} aria-label={open ? `第 ${open.page} 页：${open.title}` : '报告页面'} onClick={event => { if (event.target === event.currentTarget) dialogRef.current?.close(); }}>
+    <CaseEvidence pages={CASE_PAGES} onOpen={setOpen} motion={motion}/>
+    <dialog ref={dialogRef} className={styles.caseDialog} aria-label={open ? `结构导览：${open.name}；原文定位第 ${open.page} 页` : '报告结构导览'} onClick={event => { if (event.target === event.currentTarget) dialogRef.current?.close(); }}>
       {open && <figure>
-        {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized page render */}
-        <img src={`/landing/case-${open.id}-1240.webp`} width={1240} height={1753} alt={open.alt}/>
-        <figcaption><b>{open.step} · {open.name}</b>第 {open.page} 页 · {open.title}<button type="button" onClick={() => dialogRef.current?.close()}>关闭</button></figcaption>
+        {/* eslint-disable-next-line @next/next/no-img-element -- original, pre-sized schematic SVG */}
+        <img src={`${open.imageBase}.svg`} width={560} height={792} alt={open.alt}/>
+        <figcaption><b>{open.step} · {open.name}</b>结构导览 · 非报告原页<button type="button" onClick={() => dialogRef.current?.close()}>关闭</button></figcaption>
       </figure>}
     </dialog>
   </>;
@@ -426,11 +329,38 @@ export default function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null), eclipseRef = useRef<HTMLDivElement>(null), windowRef = useRef<HTMLElement>(null);
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => false);
   const mounted = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  const pageVisible = useSyncExternalStore(subscribeVisibility, pageVisibleSnapshot, () => true);
   const [paused, setPaused] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const motion = mounted && !reducedMotion && !paused;
+  const motion = mounted && !reducedMotion && !paused && pageVisible;
   const signedIn = !!auth.session?.authenticated;
   const loginHref = signedIn ? '/projects' : '/login';
+
+  useEffect(() => {
+    // Entry content must stay visible after pausing, including a pause before its delay expires.
+    if (paused || reducedMotion || !pageVisible) rootRef.current?.setAttribute('data-entry-settled', 'true');
+  }, [paused, reducedMotion, pageVisible]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !mounted || typeof IntersectionObserver === 'undefined') return;
+    const scopes = Array.from(root.querySelectorAll<HTMLElement>('main > section'));
+    let disposed = false;
+    const observer = new IntersectionObserver(entries => {
+      if (disposed) return;
+      for (const entry of entries) (entry.target as HTMLElement).dataset.motionVisible = String(entry.isIntersecting);
+    });
+    for (const scope of scopes) {
+      const rect = scope.getBoundingClientRect();
+      scope.dataset.motionVisible = String(rect.bottom > 0 && rect.top < window.innerHeight);
+      observer.observe(scope);
+    }
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      for (const scope of scopes) delete scope.dataset.motionVisible;
+    };
+  }, [mounted]);
 
   useEffect(() => {
     const go = () => { const destination = legacyLandingDestination(window.location.hash); if (destination) window.location.replace(destination); };
@@ -474,7 +404,7 @@ export default function LandingPage() {
   useEffect(() => {
     // A soft spotlight follows fine pointers across cards.
     const root = rootRef.current;
-    if (!root || !mounted || reducedMotion || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    if (!root || !motion || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     const move = (event: PointerEvent) => {
       const card = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-spot]') : null;
       if (!card) return;
@@ -484,7 +414,48 @@ export default function LandingPage() {
     };
     root.addEventListener('pointermove', move, { passive: true });
     return () => root.removeEventListener('pointermove', move);
-  }, [mounted, reducedMotion]);
+  }, [motion]);
+
+  useEffect(() => {
+    const node = windowRef.current;
+    if (!node) return;
+    const reset = () => {
+      node.style.setProperty('--tilt-x', '0deg');
+      node.style.setProperty('--tilt-y', '0deg');
+      node.style.setProperty('--light-x', '50%');
+      node.style.setProperty('--light-y', '0%');
+    };
+    reset();
+    if (!motion || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    let frame = 0, pointerX = 0, pointerY = 0;
+    const paint = () => {
+      frame = 0;
+      if (document.hidden) return;
+      const rect = node.getBoundingClientRect();
+      const x = Math.min(1, Math.max(0, (pointerX - rect.left) / Math.max(1, rect.width)));
+      const y = Math.min(1, Math.max(0, (pointerY - rect.top) / Math.max(1, rect.height)));
+      node.style.setProperty('--tilt-x', `${((.5 - y) * 3).toFixed(2)}deg`);
+      node.style.setProperty('--tilt-y', `${((x - .5) * 4).toFixed(2)}deg`);
+      node.style.setProperty('--light-x', `${(x * 100).toFixed(1)}%`);
+      node.style.setProperty('--light-y', `${(y * 100).toFixed(1)}%`);
+    };
+    const move = (event: PointerEvent) => {
+      pointerX = event.clientX; pointerY = event.clientY;
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+    const leave = () => { cancelAnimationFrame(frame); frame = 0; reset(); };
+    node.addEventListener('pointermove', move, { passive: true });
+    node.addEventListener('pointerleave', leave);
+    window.addEventListener('blur', leave);
+    document.addEventListener('visibilitychange', leave);
+    return () => {
+      leave();
+      node.removeEventListener('pointermove', move);
+      node.removeEventListener('pointerleave', leave);
+      window.removeEventListener('blur', leave);
+      document.removeEventListener('visibilitychange', leave);
+    };
+  }, [motion]);
 
   return <div ref={rootRef} className={styles.landing} data-landing="product" data-reveal={mounted && !reducedMotion ? 'on' : 'off'} data-motion={motion ? 'on' : 'off'} data-paused={paused} data-scrolled={scrolled}>
     <a className={styles.skip} href="#features">跳到产品介绍</a>
@@ -511,7 +482,13 @@ export default function LandingPage() {
       <section className={styles.hero} aria-labelledby="hero-title">
         <div className={styles.heroStage}>
           <div className={styles.heroSky} aria-hidden="true"><span className={styles.heroGrid}/><i className={styles.auroraA}/><i className={styles.auroraB}/></div>
-          <HeroField running={motion} eclipseRef={eclipseRef}/>
+          <HeroAtmosphere running={motion} eclipseRef={eclipseRef} className={styles.heroCanvas}/>
+          <div className={styles.heroCoordinates} aria-hidden="true">
+            <span data-station="q"><i/>Q <b>问题</b><small>ASK</small></span>
+            <span data-station="d"><i/>D <b>数据</b><small>OBSERVE</small></span>
+            <span data-station="i"><i/>I <b>洞察</b><small>UNDERSTAND</small></span>
+            <span data-station="a"><i/>A <b>行动</b><small>ACT</small></span>
+          </div>
           <Eclipse refEl={eclipseRef} variant="hero"/>
           <div className={styles.heroCopy}>
             <a href="#calendar" className={styles.badge}><span className={styles.badgeDot} aria-hidden="true"/>第十七届赛程已同步<span className={styles.badgeSep} aria-hidden="true"/>{EDITION17_CALENDAR.source.documentNumber}<span aria-hidden="true">→</span></a>
@@ -529,14 +506,12 @@ export default function LandingPage() {
         <div className={styles.heroWindowWrap}>
           <div className={styles.heroBeam} aria-hidden="true"/>
           <figure ref={windowRef} className={styles.heroWindow}>
-            <div className={styles.windowBar} aria-hidden="true"><i/><i/><i/><span>证见工作台 · 硅基样本</span></div>
-            {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized screenshot with responsive sources */}
-            <img src="/landing/app-silicon-1600.webp" srcSet="/landing/app-silicon-960.webp 960w, /landing/app-silicon-1600.webp 1600w" sizes="(max-width: 1240px) 94vw, 1180px" width={1600} height={1000} alt="证见硅基样本界面：三维舞台上的虚构受访者按回答分组站成几圈，附图例与分组选择。" fetchPriority="high" decoding="async"/>
-            <figcaption><span className={styles.realTag}>真实界面 · 示例数据</span>离线演示引擎：24 位虚构画像 × 2 个情境，按「等待时长」一题的回答分组站位。</figcaption>
+            <HeroShowcase motion={motion}/>
           </figure>
           <div className={`${styles.float} ${styles.floatA}`} aria-hidden="true"><b>Q → D → I → A</b><span>每条结论都能回到原问题</span></div>
-          <div className={`${styles.float} ${styles.floatB}`} aria-hidden="true"><b><i className={styles.dotGold}/>模拟 ≠ 调查</b><span>硅基回答一律标记为模拟数据</span></div>
+          <div className={`${styles.float} ${styles.floatB}`} aria-hidden="true"><b><i className={styles.dotGold}/>五个研究场景</b><span>上下滚动，探索真实界面</span></div>
           <div className={`${styles.float} ${styles.floatC}`} aria-hidden="true"><b>9 道门禁</b><span className={styles.gateDots}>{GATES.map(([seal]) => <i key={seal}>{seal}</i>)}</span></div>
+          <a href="#features" className={styles.heroExplore}>探索完整研究流程<span aria-hidden="true">↓</span></a>
         </div>
       </section>
 
@@ -550,11 +525,11 @@ export default function LandingPage() {
       <section className={styles.numbers} aria-label="关键数字">
         <dl>{STATS.map((stat, index) => <div key={stat.label} data-reveal style={{ '--i': index } as CSSProperties}>
           <dt>{stat.label}</dt>
-          <dd><span className={styles.bigNumber}><CountUp value={stat.value} animate={mounted && !reducedMotion}/></span><small>{stat.unit}</small></dd>
+          <dd><span className={styles.bigNumber}><CountUp value={stat.value} animate={motion}/></span><small>{stat.unit}</small></dd>
         </div>)}</dl>
       </section>
 
-      <section id="features" className={styles.section} aria-labelledby="features-title">
+      <section id="features" className={`${styles.section} ${styles.featureSection}`} aria-labelledby="features-title">
         <div className={styles.sectionHead} data-reveal>
           <p className={styles.kicker}>功能</p>
           <h2 id="features-title">从选题到答辩，<br/><span className={styles.foil}>一个工作台就够</span></h2>
@@ -623,9 +598,9 @@ export default function LandingPage() {
 
       <section id="awards" className={styles.section} aria-labelledby="awards-title">
         <div className={styles.sectionHead} data-reveal>
-          <p className={styles.kicker}>获奖案例</p>
-          <h2 id="awards-title">从获奖案例中，<br/><span className={styles.foil}>找到研究的启发</span></h2>
-          <p>{awardCaseLibraryStats.officialVerified} 条案例已由主办方或高校官网公告核验，按题名、学校、组别、奖项和届次检索。</p>
+          <p className={styles.kicker}>报告案例</p>
+          <h2 id="awards-title">从完整报告中，<br/><span className={styles.foil}>找到研究的启发</span></h2>
+          <p>{REPORT_LIBRARY_STATS.total} 份完整报告，按选题、地区与研究方法检索，从原文中寻找研究的思路。</p>
         </div>
         <div className={styles.caseMarquee} data-reveal>
           {caseRows.map((row, ri) => <div key={ri} className={styles.caseRow} data-reverse={ri === 1}>
@@ -633,17 +608,17 @@ export default function LandingPage() {
             <ul aria-hidden="true" inert>{row.map(item => <li key={item.id}><CaseCard item={item}/></li>)}</ul>
           </div>)}
         </div>
-        <p className={styles.sectionFoot} data-reveal><Link href="/workspace#cases">打开获奖案例库 ↗</Link></p>
+        <p className={styles.sectionFoot} data-reveal><Link href="/workspace#cases">打开报告案例库 ↗</Link></p>
       </section>
 
-      <section id="deep-read" className={styles.section} aria-labelledby="deep-read-title">
+      <section id="deep-read" className={`${styles.section} ${styles.deepReadSection}`} aria-labelledby="deep-read-title">
         <div className={styles.sectionHead} data-reveal>
           <p className={styles.kicker}>案例深读</p>
           <h2 id="deep-read-title">一份报告，<br/><span className={styles.foil}>怎样把证据链走完</span></h2>
-          <p>《{CASE_REPORT}》：五页参赛报告，沿 Q → D → I → A 看研究如何组织证据。</p>
-          <p className={styles.sectionFoot}>用户提供报告 · 奖项待核验</p>
+          <p>《{CASE_REPORT}》：沿五处阅读定位，看问题、方法与行动怎样连接。画面为原创结构导览，原文可在案例库本地阅读。</p>
+          <p className={styles.sectionFoot}>{LANDING_CASE_STUDY.label}</p>
         </div>
-        <CaseStudy/>
+        <CaseStudy motion={motion}/>
       </section>
 
       <section id="origins" className={styles.paper} aria-labelledby="origins-title">

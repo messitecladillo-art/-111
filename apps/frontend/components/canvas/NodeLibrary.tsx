@@ -40,14 +40,14 @@ export default function NodeLibrary({ onAdd, onTemplate, onClose }: { onAdd: (ki
                 onDragStart={e => { e.dataTransfer.setData(DRAG_MIME, d.kind); e.dataTransfer.effectAllowed = 'copy'; }}
                 onClick={() => onAdd(d.kind)}>
                 <span className={styles.glyph} aria-hidden="true">{CATEGORY_GLYPH[d.category]}</span>
-                <span><strong>{d.title}</strong><small>{d.summary}</small>{d.capability !== 'run' && <em>{d.capability === 'reference' ? '引用：在原编辑器中修改' : '注释：不参与运行'}</em>}</span>
+                <span><strong>{d.title}</strong><small>{d.summary}</small>{d.capability !== 'run' && <em>{d.capability === 'reference' ? '编辑器引用' : '说明节点'}</em>}</span>
               </button>
             </li>)}</ul>
           </section>;
         })}
         {!results.length && <p className={styles.muted}>没有匹配的节点。</p>}
       </div>
-      <p className={styles.libraryHint}>点击添加到视图中央，或拖到画布上的指定位置。</p>
+      <p className={styles.libraryHint}>点击添加 · 拖到指定位置</p>
     </> : <div className={styles.libraryList}>
       <p className={styles.muted}>插入后每个节点都可修改、删除或重新连接，不规定论文结构。</p>
       <ul>{FLOW_TEMPLATES.map(t => <li key={t.id}><button type="button" className={styles.libraryItem} onClick={() => onTemplate(t.id)}>

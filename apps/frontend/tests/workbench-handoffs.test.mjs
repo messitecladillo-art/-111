@@ -292,3 +292,13 @@ test('the default ID factory generates distinct delivery IDs without changing bu
   assert.notEqual(first, second);
   assert.equal(handoffs.getSnapshot().pending.brief.payload.id, payload.id);
 });
+
+test('registered result, portable figures and visual style share one immutable acknowledged delivery',()=>{
+ const handoffs=store(),result=channelPayloads().result,style={schema:'ProjectVisualStyle/v1',paletteId:'blue',version:1},figures=[{id:'f',resultId:result.id,series:[{values:[2,1]}]}];
+ const old=handoffs.publish('result',result),latest=handoffs.publish('result',{result,figures,visualStyle:style});
+ assert.equal(handoffs.acknowledge('result',old),false);
+ const registered=handoffs.getSnapshot().pending.result.payload;assertDeepFrozen(registered);
+ figures[0].series[0].values[0]=999;style.paletteId='forest';result.rows[0][1]=999;
+ assert.equal(registered.figures[0].series[0].values[0],2);assert.equal(registered.visualStyle.paletteId,'blue');assert.equal(registered.result.rows[0][1],2);
+ assert.equal(handoffs.acknowledge('result',latest),true);assert.equal(handoffs.getSnapshot().pending.result,null);
+});

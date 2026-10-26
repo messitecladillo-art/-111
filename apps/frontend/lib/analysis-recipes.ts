@@ -12,7 +12,7 @@ export const ANALYSIS_BLOCKS = [
 export type AnalysisMethod = typeof ANALYSIS_BLOCKS[number]['id'];
 export type Recipe = {id:string;method:AnalysisMethod;x:number|null;y:number|null;question:string};
 /** One reported test: a ready-to-cite line plus the numbers behind it. */
-export type TestReport = { name:string; line:string; p:number|null; effect?:{name:string;value:number|null;interval?:Interval|null}; statistic?:{label:string;value:number;df:number[]} };
+export type TestReport = { name:string; line:string; p:number|null; effect?:{name:string;value:number|null;interval?:Interval|null}; statistic?:{label:string;value:number;df?:number[]} };
 export type PairwiseComparison = { a:string; b:string; difference:number; t:number; df:number; p:number; adjusted:number };
 export type Inference = { primary:TestReport; robustness:TestReport[]; comparisons?:PairwiseComparison[]; notes:string[] };
 export type RecipeResult = {
@@ -110,7 +110,7 @@ export function runRecipe(table:SurveyTable,recipe:Recipe,missingCodes:string[])
       const inference=groupInference([...groups]);
       if(inference){result.inference=inference;result.metrics.push({label:inference.primary.name.startsWith('Welch t')?'p 值（Welch t）':'p 值（Welch F）',value:inference.primary.p});if(inference.primary.effect)result.metrics.push({label:inference.primary.effect.name,value:inference.primary.effect.value});
         // The statistic and its degrees of freedom travel with the result, so a report can state the full test.
-        const statistic=inference.primary.statistic;if(statistic)result.metrics.push({label:statistic.label,value:statistic.value},...(statistic.df.length===1?[{label:'自由度',value:statistic.df[0]}]:[{label:'分子自由度',value:statistic.df[0]},{label:'分母自由度',value:statistic.df[1]}]));}
+        const statistic=inference.primary.statistic;if(statistic)result.metrics.push({label:statistic.label,value:statistic.value},...(statistic.df?.length===1?[{label:'自由度',value:statistic.df[0]}]:statistic.df?.length===2?[{label:'分子自由度',value:statistic.df[0]},{label:'分母自由度',value:statistic.df[1]}]:[]));}
     }else if(recipe.method==='crosstab'){
       const rowLabels=[...new Set(pairs.map(p=>p[0]))],colLabels=[...new Set(pairs.map(p=>p[1]))];
       if(rowLabels.length>MAX_LEVELS||colLabels.length>MAX_LEVELS)throw new Error('交叉表每侧最多 20 类，请先按研究依据重新编码。');

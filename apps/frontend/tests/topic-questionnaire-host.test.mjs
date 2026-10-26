@@ -10,6 +10,7 @@ import * as mapping from '../lib/questionnaire-mapping.ts';
 import * as revision from '../lib/questionnaire-revision.ts';
 import * as core from '../lib/topic-questionnaire.ts';
 import * as contract from '../lib/topic-questionnaire-api.ts';
+import * as resultRegistration from '../lib/result-registration.ts';
 import {emptyTopicBrief} from '../lib/topic-project.ts';
 import {externalStoreHook,workbenchHookModule} from './helpers/workbench-test-harness.mjs';
 import {questionnaireRepositoryModule,questionnairePersistence} from './helpers/questionnaire-repository.mjs';
@@ -31,7 +32,7 @@ function mount(relative,imports,initialProps,internal){
   let props=initialProps,cells=[],index=0,effects=[],dirty=true,tree,alive=true,writesAfterUnmount=0;
   const hooks={useState(init){const at=index++;if(!cells[at])cells[at]={value:typeof init==='function'?init():init};return[cells[at].value,next=>{if(!alive){writesAfterUnmount++;return;}next=typeof next==='function'?next(cells[at].value):next;if(!Object.is(next,cells[at].value)){cells[at].value=next;dirty=true;}}];},useRef(init){const at=index++;return cells[at]??={current:init};},useMemo(fn,deps){const at=index++;if(!cells[at]||!sameDeps(cells[at].deps,deps))cells[at]={value:fn(),deps};return cells[at].value;},useCallback(fn,deps){return hooks.useMemo(()=>fn,deps);},useEffect(fn,deps){const at=index++;if(!cells[at]||!sameDeps(cells[at].deps,deps)){const old=cells[at];cells[at]={deps};effects.push(()=>{old?.cleanup?.();cells[at].cleanup=fn();});}}};hooks.useLayoutEffect=hooks.useEffect;
   hooks.useSyncExternalStore=externalStoreHook(hooks,()=>{dirty=true;});
-  const jsx=(type,props,key)=>({type,props,key}),mocks={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/workbench/useWorkbenchHandoffs':workbenchHookModule(hooks),...imports};
+  const jsx=(type,props,key)=>({type,props,key}),mocks={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/workbench/useWorkbenchHandoffs':workbenchHookModule(hooks),'@/lib/result-registration':resultRegistration,...imports};
   if(relative.endsWith('/HostedProject.tsx')){mocks['./questionnaire-repository']=questionnaireRepositoryModule({contract:mocks['@/lib/topic-questionnaire-api']});mocks['@/lib/questionnaire-persistence']=questionnairePersistence;mocks['./questionnaire-proposal-repository']=questionnaireProposalRepositoryModule();mocks['@/lib/questionnaire-proposals']=questionnaireProposalContract;}
   const compiled=ts.transpileModule(fs.readFileSync(new URL(relative,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   class Element{}

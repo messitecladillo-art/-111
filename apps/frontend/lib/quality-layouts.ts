@@ -1,11 +1,13 @@
 import {parseEditorContent, type EditorContent, type Slide} from './editor-model.ts';
 import { makeSlideObject, QUALITY_LIMITS, type QualityLayout, type ResearchQuality, type SlideObject } from './research-quality.ts';
+import {projectPalette,type ProjectVisualStyle} from './report-figure.ts';
 
 export const QUALITY_LAYOUT_LABELS:Record<QualityLayout,string>={cover:'封面',problem:'问题与研究路线',chart:'主图发现',comparison:'并列比较',segments:'人群分层',insight:'综合洞察',action:'行动建议',closing:'结论页'};
 /** Layouts are editable starting positions, never a forced chapter or evidence order. */
-export function composeQualitySlide(slide:Slide,layout:QualityLayout,quality:ResearchQuality,evidenceId=quality.results[0]?.id??'',navigationStep?:0|1|2|3):Slide {
+export function composeQualitySlide(slide:Slide,layout:QualityLayout,quality:ResearchQuality,evidenceId=quality.results[0]?.id??'',navigationStep?:0|1|2|3,visualStyle?:ProjectVisualStyle):Slide {
   const objects:SlideObject[]=[];
-  const ink='#0A1F33',teal='#00796F',gold='#F4B942',muted='#536677',pale='#E7EEF3';
+  const palette=visualStyle?projectPalette(visualStyle).colors:null;
+  const ink='#0A1F33',teal=palette?.[0]??'#00796F',gold=palette?.[2]??'#F4B942',muted='#536677',pale=palette?.at(-1)??'#E7EEF3';
   const text=(value:string,x:number,y:number,width:number,height:number,fontSize:number,color=ink,bold=false,align:SlideObject['align']='left')=>makeSlideObject('text',{text:value,x,y,width,height,fontSize,color,bold,align});
   const shape=(kind:SlideObject['shape'],x:number,y:number,width:number,height:number,color:string,opacity=1)=>makeSlideObject('shape',{shape:kind,x,y,width,height,color,opacity});
   const addText=(...args:Parameters<typeof text>)=>objects.push(text(...args));
@@ -90,7 +92,7 @@ export function composeQualitySlide(slide:Slide,layout:QualityLayout,quality:Res
   return {...slide,layout,objects};
 }
 export function withQuality(content:EditorContent):EditorContent {
-  return {...content,version:2,quality:content.quality??{version:1,results:[],findings:[]}};
+  return {...content,version:content.version===1?2:content.version,quality:content.quality??{version:1,results:[],findings:[]}};
 }
 export function appendQualityResult(content:EditorContent,result:ResearchQuality['results'][number]):EditorContent {
   const next=withQuality(content),q=next.quality!,existing=q.results.find(r=>r.id===result.id);

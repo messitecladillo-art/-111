@@ -4,6 +4,8 @@ const renderSvg=async svg=>new Uint8Array(await sharp(Buffer.from(svg)).png().to
 import path from 'node:path';
 import {parseSurveyCsv} from '../lib/survey-analysis.ts';
 import {runRecipe} from '../lib/analysis-recipes.ts';
+import {calculationReceipt} from '../lib/analysis-result-receipt.ts';
+import {datasetIdentity} from '../lib/questionnaire-mapping.ts';
 import {createEditorContent,parseEditorContent} from '../lib/editor-model.ts';
 import {snapshotRecipe,digestText,defaultFinding,confirmFinding,findingSignature,makeSlideObject,verifyResearchQuality} from '../lib/research-quality.ts';
 import {composeQualitySlide,withQuality} from '../lib/quality-layouts.ts';
@@ -26,7 +28,17 @@ const recipes=[
 const source={sourceName,sourceUrl,sourceHash,classification:'public'};
 const chinese={yes:'已订阅',no:'未订阅',unknown:'未记录历史结果',nonexistent:'无既往联络记录',failure:'既往未成功',success:'既往成功',other:'其他既往结果'};
 const results=[];
-for(const recipe of recipes){const computed=runRecipe(table,recipe,[]);computed.rows=computed.rows.map(row=>row.map(cell=>typeof cell==='string'?chinese[cell]??cell:cell));computed.warnings=[recipe.method==='crosstab'?'χ²无连续性校正，不提供p值；稀疏表另行检验。':recipe.method==='groups'?'分组描述，未作总体差异检验。':'按单列订阅状态计算频数与比例。','未加权、去重或插补；公开历史记录不作总体外推。'];results.push(await snapshotRecipe(computed,{...source,title:recipe.question},recipe.id));}
+const identity=await datasetIdentity(sourceHash,'utf-8',table);
+for(const recipe of recipes){
+  const computed=runRecipe(table,recipe,[]);
+  computed.rows=computed.rows.map(row=>row.map(cell=>typeof cell==='string'?chinese[cell]??cell:cell));
+  if(computed.inference?.comparisons)computed.inference.comparisons=computed.inference.comparisons.map(pair=>({...pair,a:chinese[pair.a]??pair.a,b:chinese[pair.b]??pair.b}));
+  computed.warnings=[...computed.warnings,'公开历史记录不作总体外推。'];
+  const node={...recipe,branch:'全部记录',filter:null,scale:null};
+  const sample={totalRows:table.rows.length,branchRows:table.rows.length,excludedRows:0,missingRows:0,filterColumn:null,values:[]};
+  const calculation=calculationReceipt(node,table.headers,[],identity.interpretationHash,null,sample,computed.total,null,null);
+  results.push(await snapshotRecipe(computed,{...source,title:recipe.question},recipe.id,calculation));
+}
 const yes=results[0].rows.find(row=>row[0]==='已订阅'),yesCount=yes[1],rate=yes[2];
 const history=results[1];
 const success=history.rows.find(row=>row[0]==='既往成功'&&row[1]==='已订阅');
@@ -39,7 +51,7 @@ const quality={version:1,results,findings:[]};
 const findingInputs=[
   {result:results[0],title:`订阅比例为 ${pct(rate)}%`,question:recipes[0].question,interpretation:`${table.rows.length.toLocaleString('zh-CN')} 条记录中，${yesCount} 条订阅了定期存款，占 ${pct(rate)}%。评价触达时应同时关注成功结果和联络投入。`,alternatives:'订阅结果同时受产品、客户需求、联络时机等因素影响。',scope:'适用于这批历史记录的描述，不代表当前市场比例。',action:'试点评价同时记录订阅率与每次有效订阅的触达成本。'},
   {result:history,title:'既往联络状态值得分层比较',question:recipes[1].question,interpretation:`既往成功组的订阅比例为 ${pct(success[3])}%，${comparisonLabel}组为 ${pct(unknown[3])}%。两组的差异提示可以设计分层试点。`,alternatives:'客户需求、此前筛选和联络安排可能共同影响这种差异。',scope:'组间描述差异不等于再次联络的增量效果。',action:'设置分层对照试点，比较新增订阅及触达成本，再决定推广。'},
-  {result:age,title:'年龄分布可帮助描述客户差异',question:recipes[2].question,interpretation:`订阅组平均年龄 ${mean(subAge[2])} 岁，未订阅组 ${mean(notAge[2])} 岁。均值需要结合组内离散程度及样本规模一起阅读。`,alternatives:'就业状态、资产需求等可能与年龄和订阅共同相关。',scope:'这里使用分组描述，没有作总体差异显著性或因果判断。',action:'试点分层时同时观察需求与联络历史，避免单凭年龄划分资源。'},
+  {result:age,title:'年龄分布可帮助描述客户差异',question:recipes[2].question,interpretation:`订阅组平均年龄 ${mean(subAge[2])} 岁，未订阅组 ${mean(notAge[2])} 岁。均值需要结合组内离散程度及样本规模一起阅读。`,alternatives:'就业状态、资产需求等可能与年龄和订阅共同相关。',scope:'分组描述与差异检验均保存在计算记录中；结果只用于理解当前历史记录，不据此作总体外推或因果判断。',action:'试点分层时同时观察需求与联络历史，避免单凭年龄划分资源。'},
 ];
 for(const input of findingInputs){const {result,...fields}=input;quality.findings.push(confirmFinding({...defaultFinding(result),...fields},quality));}
 let content=withQuality(createEditorContent());content.title='客户差异与定期存款触达策略';content.subtitle='公开历史营销数据研究样板';content.accent='blue';content.quality=quality;

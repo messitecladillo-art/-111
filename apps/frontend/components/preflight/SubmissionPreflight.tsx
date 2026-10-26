@@ -110,6 +110,9 @@ export default function SubmissionPreflight({ standalone = false }: { standalone
   const remove = (target: FileRow) => { cancel(target.id); setRows(value => value.filter(item => item.id !== target.id)); if (selected === target.id) setSelected(null); };
   const drop = (event: DragEvent) => { event.preventDefault(); setDragOver(false); if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files); };
   const issueCount = report?.findings.length || 0;
+  const errorCount = report?.findings.filter(item => item.level === 'error').length || 0;
+  const warningCount = report?.findings.filter(item => item.level === 'warning').length || 0;
+  const manualCount = report?.coverage.filter(item => item.status !== 'checked').length || 0;
   return <div className={styles.root + (standalone ? ' ' + styles.standalone : '')} data-theme={theme}>
     {standalone && <header className={styles.siteNav}><Link className={styles.brand} href="/">证见 <span>EVI-X</span></Link><nav><Link href="/workspace">研究工作台 ↗</Link><ThemeToggle theme={theme}/></nav></header>}
     {standalone && <div className={styles.intro}><div><p className={styles.eyebrow}>提交准备 / FILE CHECK</p><h1>提交前体检<span>。</span></h1><p className={styles.subtitle}>检查作者信息、批注、隐藏页与身份残留，定位到文件部件。</p></div><div className={styles.introTag}><span aria-hidden="true">↗</span> 本地检查 · 免费使用</div></div>}
@@ -129,24 +132,25 @@ export default function SubmissionPreflight({ standalone = false }: { standalone
           </div>)}</div>
         </section>
         <section className={styles.card}><div className={styles.cardHeading}><h2>身份词检查</h2><span>可选</span></div><label className={styles.label} htmlFor="preflight-terms">学校、成员、教师或团队名称</label>
-          <textarea id="preflight-terms" value={termsInput} rows={4} maxLength={9000} placeholder={'每行一个，例如：\n学校全称\n指导教师姓名'} onChange={event => { setTermsInput(event.target.value); setConfirmation(null); }}/>
+          <textarea id="preflight-terms" value={termsInput} rows={3} maxLength={9000} placeholder={'每行一个，例如：\n学校全称、指导教师姓名'} onChange={event => { setTermsInput(event.target.value); setConfirmation(null); }}/>
           {termsError && <p className={styles.error} role="alert">{termsError}</p>}
-          <div className={styles.termTools}><span className={termsTooLong ? styles.error : ''}>{terms.length} / 128 个词 · {termsTooLong ? '超过配置上限' : '最多 4 KiB'}</span><button type="button" onClick={() => setTermsInput(value => [value, '证见', 'EVI-X', '獬见'].filter(Boolean).join('\n'))}>加入工具品牌词</button></div>
+          <div className={styles.termTools}><span className={termsTooLong ? styles.error : ''}>{terms.length} / 128 个词{termsTooLong ? ' · 超过配置上限' : ''}</span><button type="button" onClick={() => setTermsInput(value => [value, '证见', 'EVI-X', '獬见'].filter(Boolean).join('\n'))}>加入工具品牌词</button></div>
         </section>
-        <div className={styles.localNote}><span aria-hidden="true">◉</span><p>本地检查在当前浏览器完成。完整检查由你确认后临时上传，回执包含文件清理记录。</p></div>
+        <details className={styles.localNote}><summary>本地与完整检查</summary><p>本地检查在当前浏览器完成。完整检查由你确认后临时上传，回执包含文件清理记录。</p></details>
       </aside>
       <main className={styles.results}>
-        {!row ? <section className={styles.empty}><div className={styles.emptyOrbit} aria-hidden="true"><span>文</span><span>页</span><span>注</span><i>检</i></div><p className={styles.eyebrow}>最后一步，也有据可查</p><h2>选一份文件，开始检查。</h2><p>结果按文件保存，可逐项定位、重新检查并下载记录。</p><div className={styles.emptyChecks}><span>作者与修改者</span><span>批注与修订</span><span>隐藏页与备注</span><span>身份词残留</span></div></section> :
+        {!row ? <section className={styles.empty}><div className={styles.emptyOrbit} aria-hidden="true"><span>文</span><span>页</span><span>注</span><i>检</i></div><h2>提交之前，检查一遍。</h2><p>选择一份报告或答辩文件，开始本地检查。</p><div className={styles.emptyChecks}><span>作者与修改者</span><span>批注与修订</span><span>隐藏页与备注</span><span>身份词残留</span></div></section> :
           <><section className={styles.resultHeader}><div><p className={styles.eyebrow}>{preflightFormat(row.file.name).toUpperCase()} / {(row.file.size / 1024).toFixed(1)} KiB</p><h2>{row.file.name}</h2></div><div className={styles.actions}>
             {busy ? <button className={styles.secondary} type="button" onClick={() => cancel(row.id)}>取消检查</button> : <button className={styles.primary} type="button" disabled={termsTooLong} onClick={() => void run(row, 'local')}>本地检查</button>}
             <button className={styles.secondary} type="button" disabled={busy || termsTooLong} onClick={event => { dialogReturn.current = event.currentTarget; setConfirmation(row.id); }}>完整文件检查</button>
           </div></section>
-          {busy && <div className={styles.running} role="status"><span className={styles.activity} aria-hidden="true"/>{phaseLabels[row.phase] || '正在检查文件'}<small>完成后显示真实回执</small></div>}
+          {busy && <div className={styles.running} role="status"><span className={styles.activity} aria-hidden="true"/>{phaseLabels[row.phase] || '正在检查文件'}</div>}
           {row.error && <div className={styles.failure} role="alert"><strong>检查未完成</strong><p>{row.error}</p><button type="button" onClick={() => void run(row, 'local')}>重新本地检查 ↗</button></div>}
           {row.phase === 'cancelled' && !row.report && <p className={styles.softStatus} role="status">已取消本次检查。文件保留，可重新开始。</p>}
           {stale && <p className={styles.stale} role="status">身份词已修改。请重新检查，以生成当前配置的记录。</p>}
           {report && <div className={styles.report + (stale ? ' ' + styles.staleReport : '')}>
             <section className={styles.summary}><div><span className={styles.summaryIcon} aria-hidden="true">{report.status === 'incomplete' ? '…' : issueCount ? '!' : '✓'}</span><div><p className={styles.eyebrow}>{report.scope === 'local-initial' ? '本地初检' : '完整文件检查'}</p><h3>{report.status === 'incomplete' ? '有待完成的检查' : issueCount ? '发现 ' + issueCount + ' 个待处理项' : '已检查范围未发现问题'}</h3></div></div><button type="button" disabled={stale || busy} className={styles.secondary} onClick={() => saveReport(report)}>下载检查记录</button></section>
+            <div className={styles.resultStats} aria-label="检查结果概览"><span><strong>{errorCount}</strong>需处理</span><span><strong>{warningCount}</strong>需要核对</span><span><strong>{manualCount}</strong>人工或待检查项</span></div>
             <section className={styles.issues}><div className={styles.sectionTitle}><h3>问题定位</h3><div className={styles.filters}>{(['all', 'error', 'warning'] as const).map(value => <button type="button" key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value === 'all' ? '全部' : value === 'error' ? '需处理' : '核对'}</button>)}</div></div>
               {report.findings.filter(item => filter === 'all' || item.level === filter).map((item, index) => <article className={styles.issue} key={item.code + item.location + index}><span className={item.level === 'error' ? styles.errorBadge : styles.warningBadge}>{item.level === 'error' ? '需处理' : '核对'}</span><div><h4>{item.message}</h4><code>{item.location}</code>{item.field && <small>字段：{item.field}</small>}</div></article>)}
               {!report.findings.filter(item => filter === 'all' || item.level === filter).length && <p className={styles.noIssues}>当前筛选下没有问题记录。</p>}

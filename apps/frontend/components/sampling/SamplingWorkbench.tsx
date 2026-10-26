@@ -57,10 +57,10 @@ function calculator(ref: { id: CalculatorId; mode?: string }): ReactNode {
 }
 
 function TryIt({ calc, onOpen }: { calc: CalcRef; onOpen: (page: Page) => void }) {
-  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const page = PAGE_LINK[calc.id];
   if (page) return <div className={styles.tryIt}><button type="button" className={styles.linkButton} onClick={() => onOpen(page)}>{calc.label} →</button></div>;
-  return <details className={styles.tryIt} onToggle={e => setOpen(e.currentTarget.open)}><summary>试算：{calc.label}</summary>{open && <div>{calculator(calc)}</div>}</details>;
+  return <details className={styles.tryIt} onToggle={e => { if (e.currentTarget.open) setMounted(true); }}><summary>试算：{calc.label}</summary>{mounted && <div>{calculator(calc)}</div>}</details>;
 }
 
 function ChapterView({ chapter, onOpen }: { chapter: HandbookChapter; onOpen: (page: Page) => void }) {
@@ -127,11 +127,14 @@ const PAGE_TITLES: Partial<Record<Page, { title: string; intro: string }>> = {
 
 export default function SamplingWorkbench({ dataset, onReportInsert }: { dataset: DatasetValue | null; onReportInsert?: (insert: ReportInsert) => void }) {
   const [page, setPageState] = useState<Page>(() => { try { const p = window.localStorage.getItem('evix.sampling.page') as Page | null; return p && ALL_PAGES.includes(p) ? p : 'builder'; } catch { return 'builder'; } });
+  const [visitedPages, setVisitedPages] = useState<Page[]>([page]);
+  const [visitedEstimators, setVisitedEstimators] = useState<string[]>(['srs']);
   const [query, setQuery] = useState('');
   const [estimator, setEstimator] = useState<string>('srs');
   const [raked, setRaked] = useState<SharedWeights | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   function setPage(next: Page, method: string | null = null) {
+    setVisitedPages(previous => previous.includes(next) ? previous : [...previous, next]);
     setPageState(next); setFocus(method);
     try { window.localStorage.setItem('evix.sampling.page', next); } catch { /* convenience only */ }
   }
@@ -144,10 +147,8 @@ export default function SamplingWorkbench({ dataset, onReportInsert }: { dataset
     if (!q) return [];
     return HANDBOOK.flatMap(c => c.methods.filter(m => [m.title, m.english ?? '', m.summary, ...m.formulas.map(f => f.label)].join(' ').toLowerCase().includes(q)).map(m => ({ chapter: c, method: m }))).slice(0, 12);
   }, [query]);
-  const chapter = page.startsWith('ch-') ? HANDBOOK.find(c => `ch-${c.id}` === page) ?? null : null;
-  const meta = PAGE_TITLES[page];
+
   return <section className={styles.workbench} data-self-styled aria-label="抽样设计">
-    <p className={styles.lede}><span className={styles.eyebrow}>SAMPLING DESIGN</span>从抽样框与样本量，到抽取、估计、加权与报告写法；方法手册覆盖抽样技术的主要方法，所有公式均以标准数学排版呈现，可复制 LaTeX 源码用于报告。</p>
     <div className={styles.layout}>
       <nav className={styles.rail} aria-label="抽样设计导航">
         <div className={styles.railSearch}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="m10.5 10.5 3.2 3.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg><input type="search" aria-label="搜索方法" placeholder="搜索方法，如 比率、PPS、Neyman" value={query} onChange={e => setQuery(e.target.value)} /></div>
@@ -159,20 +160,26 @@ export default function SamplingWorkbench({ dataset, onReportInsert }: { dataset
       </nav>
       <div className={styles.content}>
         <label className={styles.railSelect}>页面<select value={page} onChange={e => setPage(e.target.value as Page)}>{NAV.map(g => <optgroup key={g.label} label={g.label}>{g.items.map(i => <option key={i.id} value={i.id}>{i.number ? `${i.number}. ` : ''}{i.label}</option>)}</optgroup>)}</select></label>
+        {visitedPages.map(panel => {
+          const chapter = panel.startsWith('ch-') ? HANDBOOK.find(c => `ch-${c.id}` === panel) ?? null : null;
+          const meta = PAGE_TITLES[panel];
+          return <div key={panel} className={styles.pagePanel} hidden={page !== panel} data-sampling-page={panel}>
         {meta && <header className={styles.pageHead}><h3>{meta.title}</h3><p>{meta.intro}</p></header>}
-        {page === 'guide' && <DecisionGuide onOpen={setPage} />}
-        {page === 'builder' && <DesignBuilder onReportInsert={onReportInsert} />}
-        {page === 'size' && <SamplingDesigner embedded onReportInsert={onReportInsert} />}
-        {page === 'selection' && <div className={styles.stack}><SelectionCalc /><SystematicCalc mode="select" /><PpsCalc mode="select" /></div>}
-        {page === 'estimate' && <div className={styles.stack}>
-          <div className={styles.choice}><div role="tablist" aria-label="估计方法">{ESTIMATORS.map(([id, label]) => <button type="button" role="tab" key={id} aria-selected={estimator === id} onClick={() => setEstimator(id)}>{label}</button>)}</div></div>
-          <div key={estimator}>{calculator({ id: estimator as CalculatorId, mode: ESTIMATOR_MODE[estimator] })}</div>
+        {panel === 'guide' && <DecisionGuide onOpen={setPage} />}
+        {panel === 'builder' && <DesignBuilder onReportInsert={onReportInsert} />}
+        {panel === 'size' && <SamplingDesigner embedded onReportInsert={onReportInsert} />}
+        {panel === 'selection' && <div className={styles.stack}><SelectionCalc /><SystematicCalc mode="select" /><PpsCalc mode="select" /></div>}
+        {panel === 'estimate' && <div className={styles.stack}>
+          <div className={styles.choice}><div role="tablist" aria-label="估计方法">{ESTIMATORS.map(([id, label]) => <button type="button" role="tab" key={id} aria-selected={estimator === id} onClick={() => { setVisitedEstimators(previous => previous.includes(id) ? previous : [...previous, id]); setEstimator(id); }}>{label}</button>)}</div></div>
+          {visitedEstimators.map(id => <div key={id} hidden={estimator !== id}>{calculator({ id: id as CalculatorId, mode: ESTIMATOR_MODE[id] })}</div>)}
         </div>}
-        {page === 'complex' && <ComplexCalc dataset={dataset} raked={raked} />}
-        {page === 'weighting' && <WeightingCalc dataset={dataset} shared={raked} onWeights={setRaked} />}
-        {page === 'lab' && <SamplingLab />}
-        {page === 'refs' && <div className={styles.refs}><ol>{HANDBOOK_REFERENCES.map(r => <li key={r}>{r}</li>)}</ol></div>}
+        {panel === 'complex' && <ComplexCalc dataset={dataset} raked={raked} />}
+        {panel === 'weighting' && <WeightingCalc dataset={dataset} shared={raked} onWeights={setRaked} />}
+        {panel === 'lab' && <SamplingLab />}
+        {panel === 'refs' && <div className={styles.refs}><ol>{HANDBOOK_REFERENCES.map(r => <li key={r}>{r}</li>)}</ol></div>}
         {chapter && <ChapterView chapter={chapter} onOpen={setPage} />}
+          </div>;
+        })}
       </div>
     </div>
   </section>;

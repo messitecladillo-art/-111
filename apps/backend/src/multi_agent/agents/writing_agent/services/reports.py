@@ -1,9 +1,11 @@
 """Project-owned immutable structured report versions, independent of native Office files."""
+from .report_visuals import validate_report_visuals
 import re
 import math
 from datetime import timezone
 from shared.errors import ApiError
 from shared.contracts import object_fields, text, canonical
+from .result_receipts import result_receipt
 
 
 
@@ -97,7 +99,7 @@ def quality_content(value):
         raise ApiError()
     results = quality_list(x["results"], MAX_RESULTS)
     for result in results:
-        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"), ("variables",))
+        r = object_fields(result, ("id", "title", "sourceName", "sourceUrl", "sourceHash", "resultHash", "classification", "method", "n", "total", "headers", "rows", "metrics", "warnings"), ("variables", "receipt"))
         for variable in quality_list(r.get("variables", []), 4):
             quality_text(variable, 160, True)
         for key, maximum in (("id", 80), ("title", 150), ("sourceName", 240), ("method", 80)):
@@ -133,6 +135,8 @@ def quality_content(value):
                 bounded_number(m["value"], -1e100, 1e100)
         for warning in quality_list(r["warnings"], 30):
             quality_text(warning, 1000)
+        if "receipt" in r:
+            result_receipt(r["receipt"], r)
     unique_quality(results)
     result_ids = {r["id"] for r in results}
     findings = quality_list(x["findings"], 40)
@@ -159,7 +163,7 @@ def quality_content(value):
 
 
 def report_block(value):
-    b = object_fields(value, ("id", "kind", "text", "evidenceId", "valueColumn"))
+    b = object_fields(value, ("id", "kind", "text", "evidenceId", "valueColumn"), ("figureId",))
     if b["kind"] not in ("paragraph", "chart", "table", "formula", "citation", "callout"):
         raise ApiError()
     quality_text(b["id"], 80, True); quality_text(b["text"], 12000); quality_text(b["evidenceId"], 80)
@@ -167,11 +171,15 @@ def report_block(value):
 
 
 def slide_object(value):
-    o = object_fields(value, ("id", "kind", "x", "y", "width", "height", "rotation", "opacity", "locked", "groupId", "text", "fontSize", "color", "align", "evidenceId", "valueColumn", "chartType", "assetId", "shape"), ("bold", "sourceBlockId"))
+    o = object_fields(value, ("id", "kind", "x", "y", "width", "height", "rotation", "opacity", "locked", "groupId", "text", "fontSize", "color", "align", "evidenceId", "valueColumn", "chartType", "assetId", "shape"), ("bold", "sourceBlockId", "sourceSectionId", "figureId"))
     if "bold" in o and type(o["bold"]) is not bool:
         raise ApiError()
     if "sourceBlockId" in o:
         composition_reference(o["sourceBlockId"])
+    if "sourceSectionId" in o:
+        composition_reference(o["sourceSectionId"])
+        if "sourceBlockId" not in o or o["kind"] not in ("chart", "table"):
+            raise ApiError()
     if o["kind"] not in ("text", "chart", "table", "vector", "shape") or type(o["locked"]) is not bool or o["align"] not in ("left", "center", "right") or o["chartType"] not in ("bar", "line", "pie") or o["shape"] not in ("rect", "ellipse", "line"):
         raise ApiError()
     if not isinstance(o["color"], str) or not re.fullmatch(r"#[a-fA-F0-9]{6}", o["color"]):
@@ -216,10 +224,10 @@ def references_content(value):
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references"))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references", "visualStyle", "figures", "reportFrame"))
     if "references" in x:
         references_content(x["references"])
-    if type(x["version"]) is not int or x["version"] not in (1, 2) or x["accent"] not in ("teal", "blue", "burgundy"):
+    if type(x["version"]) is not int or x["version"] not in (1, 2, 3) or x["accent"] not in ("teal", "blue", "burgundy"):
         raise ApiError()
     if x["version"] == 1 and "quality" in x:
         raise ApiError()
@@ -240,7 +248,7 @@ def report_content(value):
         ids = set()
         for item in x[key]:
             required = ("id", "title", "body", "source") if key == "report" else ("id", "title", "body", "aside", "notes", "layout")
-            object_fields(item, required, (("blocks", "findingIds", "findingSnapshots") if x["version"] == 2 else ()) if key == "report" else (("reportLink", "objects") if x["version"] == 2 else ("reportLink",)))
+            object_fields(item, required, (("blocks", "findingIds", "findingSnapshots") if x["version"] != 1 else ()) if key == "report" else (("reportLink", "objects") if x["version"] != 1 else ("reportLink",)))
             nonblank(item["id"], 80)
             if item["id"] in ids:
                 raise ApiError()
@@ -269,24 +277,46 @@ def report_content(value):
             else:
                 text(item["aside"], 1800)
                 text(item["notes"], 6000)
-                if item["layout"] not in (("cover", "content", "two-column") + (QUALITY_LAYOUTS if x["version"] == 2 else ())):
+                if item["layout"] not in (("cover", "content", "two-column") + (QUALITY_LAYOUTS if x["version"] != 1 else ())):
                     raise ApiError()
                 if "reportLink" in item:
-                    link = object_fields(item["reportLink"], ("version", "sectionId", "sectionHash", "slideHash"))
-                    if type(link["version"]) is not int or link["version"] not in ((1, 2) if x["version"] == 2 else (1,)):
+                    link = object_fields(item["reportLink"], ("version", "sectionId", "sectionHash", "slideHash"), ("sources",))
+                    if type(link["version"]) is not int or link["version"] not in ((1, 2, 3) if x["version"] == 3 else (1, 2) if x["version"] == 2 else (1,)):
                         raise ApiError()
                     composition_reference(link["sectionId"], single_line=True)
                     for field in ("sectionHash", "slideHash"):
                         if not isinstance(link[field], str) or not re.fullmatch(r"[a-f0-9]{64}", link[field]):
                             raise ApiError()
+                    if link["version"] == 3:
+                        sources = quality_list(link.get("sources"), 12)
+                        if not sources:
+                            raise ApiError()
+                        seen = set()
+                        for source in sources:
+                            object_fields(source, ("sectionId", "sectionHash", "blockIds"))
+                            composition_reference(source["sectionId"])
+                            quality_hash(source["sectionHash"])
+                            refs = quality_list(source["blockIds"], 60)
+                            for ref in refs:
+                                composition_reference(ref)
+                            if len(set(refs)) != len(refs) or source["sectionId"] in seen:
+                                raise ApiError()
+                            seen.add(source["sectionId"])
+                        if sources[0]["sectionId"] != link["sectionId"] or sources[0]["sectionHash"] != link["sectionHash"]:
+                            raise ApiError()
+                    elif "sources" in link:
+                        raise ApiError()
             structured = "blocks" if key == "report" else "objects"
             if structured in item:
                 pieces = quality_list(item[structured], 60)
                 for piece in pieces:
                     (report_block if key == "report" else slide_object)(piece)
+                    if key == "slides" and "sourceSectionId" in piece and x["version"] != 3:
+                        raise ApiError()
                     if piece["kind"] in ("chart", "table") and piece["evidenceId"] not in result_ids:
                         raise ApiError()
                 unique_quality(pieces)
+    validate_report_visuals(x)
     if len(canonical(x).encode("utf-8")) > MAX_CONTENT_BYTES:
         raise ApiError(413, "payload_too_large", "草稿超过 2 MB，请拆分作品。")
     return x

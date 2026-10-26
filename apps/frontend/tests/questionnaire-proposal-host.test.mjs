@@ -16,6 +16,7 @@ const library = await import(pathToFileURL(path.join(frontend, 'lib/questionnair
 const contract = await import(pathToFileURL(path.join(frontend, 'lib/topic-questionnaire-api.ts')));
 const persistence = await import(pathToFileURL(path.join(frontend, 'lib/questionnaire-persistence.ts')));
 const core = await import(pathToFileURL(path.join(frontend, 'lib/topic-questionnaire.ts')));
+const resultRegistration = await import(pathToFileURL(path.join(frontend, 'lib/result-registration.ts')));
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const same = (a,b) => a && b && a.length === b.length && a.every((v,i) => Object.is(v,b[i]));
 const plain = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
@@ -42,7 +43,7 @@ function mount(imports) {
   };
   hooks.useLayoutEffect=hooks.useEffect;
   const jsx=(type,props,key)=>({type,props,key});
-  const mocks={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},...imports};
+  const mocks={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/result-registration':resultRegistration,...imports};
   const modules=new Map();
   function compile(filename,host=false){
     if(modules.has(filename))return modules.get(filename);

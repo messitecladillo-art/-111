@@ -29,9 +29,9 @@ test("renders workbench panels and unbiased native evidence choices", async () =
     assert.match(input, /\brequired=""/);
     assert.doesNotMatch(input, /\bchecked(?:=|\s|>)/);
   }
-  const sourceInputs = [...html.matchAll(/<input\b[^>]*name="case-source"[^>]*>/g)].map(match => match[0]);
-  assert.equal(sourceInputs.length, 3);
-  assert.equal(sourceInputs.filter(input => /\bchecked=""/.test(input)).length, 1);
+  assert.match(html, /aria-label="报告案例库"/);
+  assert.match(html, /aria-label="选择原报告 PDF"/);
+  assert.match(html, /aria-label="检索报告"/);
   assert.match(html, /路演与答辩/);
   assert.match(html, /证据定位/);
   assert.match(html, /不是官方时限/);
@@ -159,7 +159,7 @@ test("server-renders the finished EVI-X product shell", async () => {
   const html = await response.text();
   assert.match(html, /<title>证见 EVI-X｜正大杯冠军 Agent<\/title>/);
   assert.match(html, /让每个问题/);
-  assert.match(html, /获奖案例证据库/);
+  assert.match(html, /报告案例库/);
   assert.match(html, /Agent 诊断/);
   assert.match(html, /项目控制门户/);
   assert.match(html, /生命周期作战室/);
@@ -198,49 +198,25 @@ test("publishes the hash-locked canonical control contract and fail-closed capab
   assert.equal(body.capabilities.reason, "control_plane_unavailable");
 });
 
-test("serves a 32-case provenance-aware award library", async () => {
+test("serves only cases with complete original report metadata", async () => {
   const { response, body } = await jsonRequest("/api/cases");
   assert.equal(response.status, 200);
-  assert.equal(body.total, 32);
-  assert.equal(body.library.total, 32);
-  assert.equal(body.library.officialVerified, 29);
-  assert.equal(body.library.userAttested, 3);
-  assert.match(body.notice.title, /非全量榜单/);
-  assert.match(body.notice.coverage, /不能据此推断选题偏好、评审因果或获奖概率/);
-  assert.equal(body.notice.capturedAt, "2026-08-04");
-  assert.ok(body.facets.editions.some((item) => item.value === "第十四届"));
-  assert.ok(body.facets.editions.some((item) => item.value === "第十五届"));
-  assert.equal(new Set(body.cases.map((item) => item.id)).size, 32);
-
-  const official = body.cases.filter((item) => item.verification === "official_verified");
-  const attested = body.cases.filter((item) => item.verification === "user_attested");
-  assert.equal(official.length, 29);
-  assert.equal(attested.length, 3);
-  assert.ok(official.every((item) => item.caseDepth === "listing_only"));
-  assert.ok(official.every((item) => item.methods === undefined));
-  assert.ok(official.every((item) => item.summary === undefined));
-  assert.ok(official.every((item) => item.topic.length > 0));
-  assert.ok(official.every((item) => item.sourceRefs.some((source) => /^https:\/\//.test(source.url ?? ""))));
-  assert.ok(attested.every((item) => item.award.includes("具体未知")));
-  assert.ok(body.cases.every((item) => item.verification === item.verificationStatus));
-
-  const filtered = await jsonRequest("/api/cases?q=安徽大学&group=研究生组");
+  assert.equal(body.total, 9);
+  assert.equal(body.library.fullReports, body.total);
+  assert.ok(body.cases.every(item => /^[a-f0-9]{64}$/.test(item.sha256) && item.pages > 0));
+  assert.ok(body.cases.every(item => item.readingGuide.length >= 3));
+  assert.ok(body.cases.every(item => item.award === null));
+  assert.equal(new Set(body.cases.map(item => item.id)).size, body.total);
+  const filtered = await jsonRequest("/api/cases?q=露营");
   assert.equal(filtered.response.status, 200);
-  assert.ok(filtered.body.total >= 1);
-  assert.ok(filtered.body.cases.every((item) => item.group === "研究生组"));
-
-  const editionFiltered = await jsonRequest("/api/cases?edition=第十四届");
-  assert.equal(editionFiltered.response.status, 200);
-  assert.equal(editionFiltered.body.total, 15);
-  assert.ok(editionFiltered.body.cases.every((item) => item.edition === "第十四届"));
-
-  const first = official[0];
+  assert.equal(filtered.body.total, 1);
+  const first = body.cases[0];
   const detail = await jsonRequest(`/api/cases/${first.id}`);
   assert.equal(detail.response.status, 200);
-  assert.equal(detail.body.case.id, first.id);
-  assert.equal(detail.body.case.verification, "official_verified");
+  assert.equal(detail.body.case.sha256, first.sha256);
+  const removed = await jsonRequest('/api/cases/15-grad-first-001-anhui-university-rural-toilet');
+  assert.equal(removed.response.status, 404);
 });
-
 test("returns bounded Q-D-I-A readiness without echoing raw project text", async () => {
   const marker = "UNIQUE-RAW-PROBLEM-DO-NOT-PERSIST";
   const { response, body } = await jsonRequest("/api/diagnose", {
@@ -535,14 +511,52 @@ test("caps persistent project creation per owner", async () => {
   assert.equal(blocked.response.headers.get("retry-after"), "3600");
 });
 
+test("connects complete original reports, verified file identities, and bounded reading locations", async () => {
+  const [platformSource, caseLibrarySource, reportCatalogRaw] = await Promise.all([
+    readFile(new URL("../components/EviXPlatform.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/cases/ReportCaseLibrary.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../data/report-cases.json", import.meta.url), "utf8"),
+  ]);
+  assert.match(platformSource, /import CaseLibrary from ['"]@\/components\/cases\/ReportCaseLibrary['"]/);
+  assert.match(platformSource, /cases:\s*<CaseLibrary\s*\/>/);
+  assert.match(caseLibrarySource, /<CaseReportLibraryTools\s+reports=\{REPORT_CASES\}\s+onAvailabilityChange=\{setAvailableIds\}/);
+  assert.match(caseLibrarySource, /<CaseReportCover\s+report=\{report\}\s+available=\{availableIds\.includes\(report\.id\)\}/);
+  assert.match(caseLibrarySource, /<CaseReportReader\b[^>]*report=\{selected\}[^>]*initialPage=\{page\}[^>]*onPageChange=\{setPage\}/);
+  assert.match(caseLibrarySource, /selected\.readingGuide\.map\(/);
+  assert.match(caseLibrarySource, /onClick=\{\(\) => setPage\(entry\.page\)\}/);
+  assert.match(caseLibrarySource, /filterReportCases\(\{ q: query, region, method \}\)/);
+  assert.match(caseLibrarySource, /学校及奖项未独立核验/);
+  assert.match(caseLibrarySource, /selected\.sourceCollection/);
+  assert.match(caseLibrarySource, /selected\.sha256/);
+  assert.match(caseLibrarySource, /createPortal\(/);
+  assert.match(caseLibrarySource, /data-dialog-background/);
+  assert.match(caseLibrarySource, /role="dialog" aria-modal="true" aria-labelledby="report-reading-title"/);
+  const reportCatalog = JSON.parse(reportCatalogRaw);
+  assert.ok(reportCatalog.cases.length > 0, 'the reading library needs complete original reports');
+  assert.equal(new Set(reportCatalog.cases.map(report => report.id)).size, reportCatalog.cases.length);
+  assert.equal(new Set(reportCatalog.cases.map(report => report.sha256)).size, reportCatalog.cases.length);
+  for (const report of reportCatalog.cases) {
+    assert.match(report.filename, /\.pdf$/i);
+    assert.match(report.sha256, /^[a-f0-9]{64}$/);
+    assert.ok(Number.isSafeInteger(report.pages) && report.pages > 0);
+    assert.ok(Number.isSafeInteger(report.bytes) && report.bytes > 0);
+    assert.ok(report.sourceCollection.trim(), `${report.id}: original source is identified`);
+    assert.ok(report.readingGuide.length > 0, `${report.id}: has reading locations`);
+    for (const entry of report.readingGuide) assert.ok(Number.isSafeInteger(entry.page) && entry.page >= 1 && entry.page <= report.pages, `${report.id}: guide stays inside the original PDF`);
+  }
+  assert.ok(caseLibrarySource.includes('aria-label={`阅读原报告：${report.title}`}'));
+});
+
 test("keeps migration, local-read boundary, and visual assets auditable", async () => {
-  const [migration, canonicalMigration, provenanceRaw, image, styles, platformSource, lifecycleSource, bridgeSource] = await Promise.all([
+  const [migration, canonicalMigration, provenanceRaw, image, platformSource, recoverySource, projectsSource, capabilitiesSource, lifecycleSource, bridgeSource] = await Promise.all([
     readFile(new URL("../drizzle/0000_hot_quasimodo.sql", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0001_overjoyed_robin_chapel.sql", import.meta.url), "utf8"),
     readFile(new URL("../data/asset-provenance.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../components/EviXPlatform.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/editors/EditorRecovery.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/hosted/HostedProjects.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../data/control-portal.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/LifecycleWarRoom.tsx", import.meta.url), "utf8"),
     readFile(new URL("../local-bridge/agentctl_read_bridge.py", import.meta.url), "utf8"),
   ]);
@@ -556,26 +570,27 @@ test("keeps migration, local-read boundary, and visual assets auditable", async 
   assert.match(canonicalMigration, /legacy_unverified/);
   assert.match(canonicalMigration, /needs_revalidation/);
   assert.match(canonicalMigration, /legacy_web_v1_migrated_to_canonical_v1/);
-  assert.match(styles, /\.case-grid, \.loading-grid \{[^}]*repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(styles, /\.case-meta \{[^}]*repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(platformSource, /caseGroupLabel\(item\.group\)/);
-  assert.match(platformSource, /caseGroupLabel\(selected\.group\)/);
-  assert.match(platformSource, /用户陈述奖项｜未独立核验/);
-  assert.match(platformSource, /研究设计启发/);
-  assert.match(platformSource, /证据来源与核验字段/);
-  assert.match(platformSource, /params\.set\("edition", edition\)/);
-  assert.match(platformSource, /createPortal\(/);
-  assert.match(platformSource, /data-dialog-background/);
-  assert.match(platformSource, /client-key-status/);
-  assert.match(platformSource, /复制密钥/);
-  assert.match(platformSource, /navigator\.clipboard\.writeText\(clientKey\)/);
-  assert.match(platformSource, /默认拒绝/);
-  assert.match(platformSource, /读取本机权威状态/);
-  assert.match(platformSource, /portalProject=\{selected\}/);
-  assert.match(platformSource, /通过 \{passCount\} · 警告 \{warningCount\}/);
-  assert.ok(platformSource.includes('aria-label={`查看案例证据卡片：${item.title}`}'));
+  // Recovery credentials and project selection now live in their dedicated views.
+  assert.match(recoverySource, /aria-label="编辑文件访问恢复" aria-busy=\{Boolean\(busy\)\}/);
+  assert.match(recoverySource, /candidate\.state === "saved" \? "已登记，请保管备份" : "仅保留在本页内存"/);
+  assert.match(recoverySource, /type=\{visible \? "text" : "password"\} value=\{candidate\.key\} readOnly autoComplete="off"/);
+  assert.match(recoverySource, /onClick=\{\(\) => void copyKey\(\)\}>复制密钥/);
+  assert.match(recoverySource, /navigator\.clipboard\.writeText\(value\.key\)/);
+  assert.match(projectsSource, /<LoginRequired><ProjectList\s*\/><\/LoginRequired>/);
+  assert.ok(projectsSource.includes('href={`/projects/${p.id}`}'));
+  assert.match(projectsSource, /aria-busy=\{loading\}/);
+  assert.match(platformSource, /href="\/projects"/);
+  for (const capability of ["evaluateGate", "advanceControlStatus", "handoff", "executorConnected"]) {
+    assert.match(capabilitiesSource, new RegExp(`${capability}: false`));
+  }
+  assert.match(capabilitiesSource, /reason: "control_plane_unavailable"/);
+  assert.match(lifecycleSource, /pageAccess !== "allowed" \|\| !isAllowedPageHost\(\)/);
+  assert.match(lifecycleSource, /<GateGrid gates=\{portalGateList\}/);
+  assert.match(lifecycleSource, /<GateGrid gates=\{snapshot\.status\.gates\}/);
+  assert.match(lifecycleSource, /gate\.status === "pass"/);
+  assert.match(lifecycleSource, /gate\.status === "warning"/);
+  assert.match(lifecycleSource, /GATE_STATUS_LABELS\[gate\.status\]/);
   assert.ok(platformSource.includes("aria-busy={submitting}"));
-  assert.ok(platformSource.includes("aria-pressed={project.id === selected?.id}"));
   assert.doesNotMatch(platformSource, /\["takeaways", "lessons", "insights", "highlights", "tags"\]/);
   assert.match(lifecycleSource, /http:\/\/127\.0\.0\.1:8765/);
   assert.match(lifecycleSource, /Authorization: `Bearer \$\{token\}`/);

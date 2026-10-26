@@ -1,0 +1,58 @@
+[
+  {
+    "id": "frame-blue-geometric",
+    "prompt": "Use case: productivity-visual. Asset: original report-page frame CONCEPT, not a finished statistical figure. Create one flat straight-on A4 portrait transparent page overlay, aspect 210:297, inspired by public banking research and urban financial access. Direction A: precise geometric ribbons, tiny modular connection marks and subtle interrupted corner lines; editorial and exceptionally elegant, no bank logo, no currency sign. Palette only deep blue #244D70, muted blue #6589A6, pale blue #DAE6ED and very restrained gold #B59A65. The large central area x=28.8 to181.2mm,y=22.4 to274.6mm must remain entirely transparent, no texture or faint motif there. Frame ornaments live only in narrow outer margins and corners, line weight about0.3mm, incomplete open frame, strongest bottom-left/top-right. Footer center x80..130mm,y278..290mm left empty for page number. No text, no letters, no numbers, no charts, no flags, no map, no logos, no raster paper background, no watermark, no shadows, no photorealism. Beautiful refined vector-like line art suited to a serious research report. Transparent background including center.",
+    "method": "built-in imagegen",
+    "classification": "conceptual",
+    "status": "concept",
+    "humanReview": "pending",
+    "formalAsset": false,
+    "file": "blue-geometric-v1.png",
+    "sha256": "2f0ebfd5a8a63e5552d4aadcabb2459e362fb91141d6f4521b0459b8237d671f",
+    "generationReceipt": "exec-0f25c579-b174-4ba6-91d4-95a4811e300a",
+    "generatedAt": "2026-10-17",
+    "use": "Concept reference only; rebuild as controlled vectors; no bitmap embedding in formal frames."
+  },
+  {
+    "id": "frame-blue-contour",
+    "prompt": "Use case: productivity-visual. One original A4 portrait report frame concept with genuinely transparent center and background, straight-on flat. Finance and urban service access research, Direction B: restrained city-river contour silhouette, two overlapping line contours in the lower LEFT outer margin, subtle stepped architectural rhythm in top RIGHT. NOT a real skyline/map. Use #244D70 deep blue #6589A6 muted blue #DAE6ED pale blue #B59A65 restrained gold. Central protected rectangle x28.8..181.2mm, y22.4..274.6mm must be completely empty transparent. Keep decorative frame only outside that rectangle, strong elements in tiny corner patches ≤16mm; sides thin and interrupted not closed thick border. Lower center x80..130mm y278..290mm empty. High-end scholarly publication ornament, elegant measured composition, few curves, clean vector-like strokes. No text, letters, numbers, chart, logo, people, currency symbol, texture, shadow or paper fill. Need generous writable rectangle, not poster artwork.",
+    "method": "built-in imagegen",
+    "classification": "conceptual",
+    "status": "concept",
+    "humanReview": "pending",
+    "formalAsset": false,
+    "file": "blue-contour-v1.png",
+    "sha256": "3b7ccb6a29db93121e22b15d77dca3c6c8041e5069284998f7a2cb8da7948a74",
+    "generationReceipt": "exec-8b2d9de7-c897-4e63-b093-cb0e661d4a60",
+    "generatedAt": "2026-10-17",
+    "use": "Concept reference only; rebuild as controlled vectors; no bitmap embedding in formal frames."
+  },
+  {
+    "id": "frame-green-geometric",
+    "prompt": "Use case: productivity-visual. Original report-page FRAME concept, A4 portrait 210:297 straight-on, transparent background and large empty transparent center. Theme: local city football and community sports research in Wuhan, no actual team or organization marks. Direction A: elegant athletic geometric language, narrow parallel running-track strokes turning around two corners, tiny field-line fragments and a restrained modular check pattern, refined high-end scholarly report not a sporting poster. Palette #2D6356 dark forest green #6D9585 sage #DCE8E1 pale sage #B59A65 restrained gold. Central x28.8..181.2mm y22.4..274.6mm entirely empty, ornaments ONLY outer margin outside this area; top-right and lower-left marks each maximum16mm; thin strokes not thick filled bands. Footer central x80..130 y278..290mm empty for editable page number. No words, letters, numbers, chart, trophy, logo, school, shield, human, ball photograph, paper texture, shadows, gradient. Keep genuinely transparent center, clean vector-like linework.",
+    "method": "built-in imagegen",
+    "classification": "conceptual",
+    "status": "concept",
+    "humanReview": "pending",
+    "formalAsset": false,
+    "file": "green-geometric-v1.png",
+    "sha256": "a443f9f60d4f365ed82870e02c6863f8f5578eece2e53063cccf901acd02f8fa",
+    "generationReceipt": "exec-c9de1d2b-9ddd-4ede-a40f-b5bee02f7060",
+    "generatedAt": "2026-10-17",
+    "use": "Concept reference only; rebuild as controlled vectors; no bitmap embedding in formal frames."
+  },
+  {
+    "id": "frame-green-contour",
+    "prompt": "Use case: productivity-visual. Original A4 portrait report-page frame concept with real transparent background, no paper fill. Theme local community football and city sports, Direction B simplified place-and-motion contours: a flowing river contour gently echoes running tracks at bottom LEFT; a clean open field-corner outline and sparse architectural step near top RIGHT. Abstract Wuhan inspiration, NOT a real geographic map or skyline; no bridge portrait, no logos. Palette #2D6356 forest #6D9585 sage #DCE8E1 pale sage #B59A65 muted gold. All ornament confined to outer margins, central protected x28.8..181.2mm,y22.4..274.6mm entirely transparent. Footer center x80..130 y278..290mm entirely empty. Thin elegant 0.3mm linework, generous whitespace, corners max16mm, quiet side rules with open gaps. Serious elegant academic report, no text, numbers, chart, badge, trophy, school, people, photo, texture, shadows. Flat clean graphic design, exactly one full page overlay.",
+    "method": "built-in imagegen",
+    "classification": "conceptual",
+    "status": "concept",
+    "humanReview": "pending",
+    "formalAsset": false,
+    "file": "green-contour-v1.png",
+    "sha256": "e01dcd19187d22b59d050494876d776ae158599c424bfec5f95d5b38b34ae0b8",
+    "generationReceipt": "exec-4dc50790-9061-4e50-ac8f-19f143e247e4",
+    "generatedAt": "2026-10-17",
+    "use": "Concept reference only; rebuild as controlled vectors; no bitmap embedding in formal frames."
+  }
+]

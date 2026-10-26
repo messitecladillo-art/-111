@@ -9,5 +9,6 @@ def register_latex(app, *, settings, auth, db, owned_project):
     @app.post('/api/projects/{project_id}/report/latex/compile')
     async def compile_report(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
         owned_project(session, user, project_id)
-        data = await body(request, ('title', 'subtitle', 'body', 'options'), limit=520000)
+        data = await body(request, ('title', 'subtitle', 'body', 'options'),
+                          ('frame', 'figures', 'visualStyle'), limit=2_500_000)
         return await service.compile_report(project_id=project_id, user=user, session=session, check_session=lambda session, **kwargs: auth(request, session, **kwargs), data=data)

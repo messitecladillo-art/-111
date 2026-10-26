@@ -1,3 +1,5 @@
+from ..services.report_frame_template import checked_frame, frame_tex_preamble
+from ..services.report_figure_template import figure_tex_preamble
 """Bounded project-scoped XeLaTeX export of a closed, body-only TeX subset."""
 import base64
 from decimal import Decimal, ROUND_HALF_UP, localcontext
@@ -34,7 +36,7 @@ COMMANDS = frozenset((
     "to mapsto rightarrow leftarrow leftrightarrow Rightarrow Leftarrow Leftrightarrow iff implies uparrow downarrow "
     "ldots cdots vdots ddots dots langle rangle lvert rvert lVert rVert vert Vert lceil rceil lfloor rfloor "
     "quad qquad enspace thinspace negthinspace displaystyle textstyle scriptstyle scriptscriptstyle limits nolimits underbrace overbrace underset overset binom dbinom tbinom not hbar ell Re Im angle triangle square degree "
-    "begin end addplot definecolor"
+    "begin end addplot definecolor ResearchFigure"
 ).split())
 SYMBOLS = frozenset("\\%&#_${},;:!()[] ")
 
@@ -56,8 +58,9 @@ def normalize_body(content):
     return content.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def build_source(title, subtitle, content, settings):
+def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
     """Keep byte-identical with the frontend generator; source is always returned by API."""
+    frame = checked_frame(frame, visual_style)
     lines = [
         r"\documentclass[UTF8,a4paper,zihao=-4]{ctexart}",
         r"\usepackage[top=25.4mm,bottom=25.4mm,left=31.8mm,right=31.8mm]{geometry}",
@@ -77,12 +80,26 @@ def build_source(title, subtitle, content, settings):
     ]
     if r"\begin{tikzpicture}" in content:
         lines[3:3] = [r"\usepackage{pgfplots}", r"\pgfplotsset{compat=1.18}"]
+    if figures:
+        lines[3:3] = [r"\usepackage{tikz}"]
+        lines[-2:-2] = figure_tex_preamble(figures, visual_style)
+    if frame and frame['layout'] != 'none':
+        lines[-2:-2] = frame_tex_preamble(frame)
+        if 'cover' in frame['appliesTo']:
+            lines.append(r"\ReportFrameActivetrue")
     if settings["includeCover"]:
         lines += [r"\begin{titlepage}", r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
+    if frame and frame['layout'] != 'none':
+        lines.append(r"\ReportFrameActivefalse")
     if settings["includeToc"]:
         lines += [r"\pagenumbering{Roman}", r"\tableofcontents", r"\clearpage", r"\pagenumbering{arabic}"]
+    if frame and frame['layout'] != 'none' and ('appendix' if settings['part'] == 'appendix' else 'body') in frame['appliesTo']:
+        lines.append(r"\ReportFrameActivetrue")
     lines += ["% BODY START", normalize_body(content), "% BODY END", r"\end{document}", ""]
-    return "\n".join(lines)
+    source = "\n".join(lines)
+    if len(source.encode('utf-8')) > 2_000_000:
+        raise ApiError(413, 'latex_source_too_large', '排版源码超过 2 MB，请拆分图形或文档。')
+    return source
 
 
 class UnsafeBody(Exception):
@@ -104,7 +121,7 @@ def chart_display_number(value):
     return format(rounded, "f").rstrip("0").rstrip(".")
 
 
-def validate_body(content):
+def validate_body(content, figure_count=0):
     text(content, MAX_BODY)
     content = normalize_body(content)
     def fail(message, position):
@@ -249,6 +266,10 @@ def validate_body(content):
                 i, count = plot_coordinates(i)
                 stack[-1]["plots"] += 1
                 if count != stack[-1]["ticks"] or stack[-1]["plots"] > 1: fail("图表类别与数值坐标不匹配。", start)
+            elif command == "ResearchFigure":
+                value, i = argument(i, r"(?:0|[1-9][0-9]{0,2})", "图形引用须为已登记编号。")
+                if not 0 <= int(value) < figure_count:
+                    fail("图形引用不在本次图形版本中。", start)
             elif command in ("toprule", "midrule", "bottomrule"):
                 if not stack or stack[-1]["name"] != "tabular": fail("三线表横线须放在 tabular 环境内。", start)
                 if next_token(i) == "[":
@@ -382,10 +403,10 @@ class LatexCompiler:
         self.settings = settings
         self.slots = threading.BoundedSemaphore(settings.latex_concurrency)
 
-    def compile(self, title, subtitle, content, settings):
-        source = build_source(title, subtitle, content, settings)
+    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
+        source = build_source(title, subtitle, content, settings, frame, figures, visual_style)
         result = {"status": "error", "source": source, "sourceHash": hashlib.sha256(source.encode("utf-8")).hexdigest(), "pdfBase64": None, "diagnostics": [], "engine": None}
-        try: validate_body(content)
+        try: validate_body(content, len(figures or []))
         except UnsafeBody as error:
             result["diagnostics"] = [diagnostic(error.message, error.line)]; return result
         executable = self.settings.latex_compiler
