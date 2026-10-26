@@ -24,6 +24,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Locked Python runtime for report cross-language contracts
+        working-directory: apps/backend
+        run: uv sync --locked
       - name: Unit and contract tests
         working-directory: apps/frontend
         run: npm run test:unit
