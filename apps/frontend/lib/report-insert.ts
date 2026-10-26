@@ -52,13 +52,15 @@ function placeResults(content: EditorContent, insert: ReportInsert): AppliedInse
     // A card confirmed late may name a result removed since; it is skipped, not allowed to stop the others.
     const result = item.kind === 'result' ? next.quality?.results.find(r => r.id === item.resultId) : undefined;
     if (!result || resultPlaced(next, result)) continue;
-    const placed = placeResult(next, result.id);
+    // One result that cannot be placed (a stored snapshot without rows) is skipped; the others still go in.
+    let placed: ReturnType<typeof placeResult>;
+    try { placed = placeResult(next, result.id); } catch { continue; }
     ({ content: next } = placed);
     blocks.push(...placed.blocks);
     created.push(...placed.created);
     last = placed.sectionId;
   }
-  if (!blocks.length) throw Error('这些结果已经写进报告了。');
+  if (!blocks.length) throw Error('这些结果已经写进报告了，或者没有可写的内容。');
   return { content: next, sectionId: last, created, blocks };
 }
 

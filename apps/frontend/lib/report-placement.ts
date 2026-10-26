@@ -81,6 +81,10 @@ export function appendBlocks(content: EditorContent, sectionId: string, blocks: 
  * The report with a result written into it. Without a section, the result goes to its blueprint section, which is
  * created (with its chapter) when the report has none. Throws with a reason when the target cannot take it.
  */
+/** The declaration a section carries when it shows numbers from the teaching simulation (lib/research-flow.ts writes the same). */
+export const SIMULATED_MARK = '【教学模拟数据，不能作为实际调查结果】';
+const SIMULATED = /【教学模拟数据/u;
+
 export function placeResult(content: EditorContent, resultId: string, options: { sectionId?: string; exhibits?: ExhibitKind[] } = {}): Placement {
   const r = resultFor(content.quality, resultId);
   // A sampling frame is only legible as a table of its stages and units.
@@ -98,7 +102,10 @@ export function placeResult(content: EditorContent, resultId: string, options: {
     refs[kind === 'chart' ? 'figure' : 'table'] = exhibit.id;
   }
   blocks.push(block('paragraph', readingParagraph(r, refs)));
-  return { content: appendBlocks(next, sectionId, blocks), sectionId, created, blocks };
+  // Numbers from the teaching simulation are declared in the section that shows them, as the analysis flow declares them.
+  const declared = r.classification !== 'simulated' || next.report.some(s => s.id === sectionId && SIMULATED.test(s.body + s.source));
+  const marked = declared ? next : { ...next, report: next.report.map(s => s.id === sectionId ? { ...s, body: s.body.trim() ? `${SIMULATED_MARK}\n${s.body}` : SIMULATED_MARK } : s) };
+  return { content: appendBlocks(marked, sectionId, blocks), sectionId, created, blocks };
 }
 
 /**
@@ -106,7 +113,10 @@ export function placeResult(content: EditorContent, resultId: string, options: {
  * reading paragraph as placement wrote it. A paragraph the author has since rewritten no longer counts.
  */
 export function resultPlaced(content: EditorContent, r: ResultSnapshot): boolean {
-  const blocks = content.report.flatMap(s => s.blocks ?? []), words = readingParagraph(r);
+  const blocks = content.report.flatMap(s => s.blocks ?? []);
+  // A result whose reading cannot be written (a stored snapshot without rows) is known by its exhibits alone.
+  let words: string | null;
+  try { words = readingParagraph(r); } catch { words = null; }
   return blocks.some(b => ((b.kind === 'chart' || b.kind === 'table') && b.evidenceId === r.id) || (b.kind === 'paragraph' && b.text === words));
 }
 

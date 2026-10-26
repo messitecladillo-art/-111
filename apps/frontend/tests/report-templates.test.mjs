@@ -206,3 +206,20 @@ test('registered results sent by the agent land in their own sections once; one 
   assert.equal(partly.content.report.flatMap(s => s.blocks ?? []).filter(b => b.kind === 'chart' && b.evidenceId === 'cross').length, 1, 'nothing is written twice');
   assert.throws(() => applyReportInsert(base, { ...insert([]), items: [{ kind: 'result', resultId: 'cross' }, { kind: 'paragraph', text: '另一段' }] }), /单独写入/);
 });
+
+test('a result from the teaching simulation is declared where it is placed, once; a stored result without rows is skipped, not fatal', async () => {
+  const { applyReportInsert } = await import('../lib/report-insert.ts');
+  const { resultPlaced, SIMULATED_MARK } = await import('../lib/report-placement.ts');
+  const simulated = { ...r.cross, id: 'sim', classification: 'simulated' }, empty = { ...r.kind, id: 'empty', rows: [] };
+  const base = parseEditorContent({ ...createEditorContent(), version: 2, report: blueprintSections({ includeOptional: false }), quality: { version: 1, results: [...Object.values(r), simulated, empty], findings: [] } });
+  const once = placeResult(base, 'sim');
+  const section = once.content.report.find(s => s.id === once.sectionId);
+  assert.ok(section.body.startsWith(SIMULATED_MARK), 'the section says its numbers are simulated');
+  const twice = placeResult(once.content, 'sim', { exhibits: ['table'] });
+  assert.equal(twice.content.report.find(s => s.id === twice.sectionId).body.split(SIMULATED_MARK).length, 2, 'declared once');
+  const real = placeResult(parseEditorContent({ ...createEditorContent(), version: 2, report: blueprintSections({ includeOptional: false }), quality: { version: 1, results: [{ ...r.cross, classification: 'user_provided' }], findings: [] } }), 'cross');
+  assert.ok(!real.content.report.find(s => s.id === real.sectionId).body.includes(SIMULATED_MARK), 'user-provided data carries no such mark');
+  assert.equal(resultPlaced(base, empty), false, 'a result without rows is checked without throwing');
+  const batch = applyReportInsert(base, { id: 'agent', node: '', source: '证见 Agent', items: [{ kind: 'result', resultId: 'empty' }, { kind: 'result', resultId: 'cross' }] });
+  assert.ok(resultPlaced(batch.content, r.cross), 'the others still go in');
+});
