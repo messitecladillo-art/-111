@@ -181,7 +181,7 @@ const figure = (value: number) => Number.isInteger(value) ? String(value) : Stri
 
 /** A sampling frame inserted from 抽样设计 is registered like a result, but it is a plan, not an analysis. */
 export const isFrame = (result: ResultSnapshot) => result.method === 'sampling-frame';
-const method = (r: ResultSnapshot) => METHOD_LABELS[r.method] ?? r.method;
+const method = (r: ResultSnapshot) => Object.hasOwn(METHOD_LABELS, r.method) ? METHOD_LABELS[r.method] : r.method;
 /** Findings that still stand: confirmed, and every result they rest on unchanged since. */
 export const standingFindings = (held: NonNullable<ResultsView>) =>
   held.findings.filter(f => !findingNeedsReview(f, { version: 1, results: [...held.results], findings: [...held.findings] }));

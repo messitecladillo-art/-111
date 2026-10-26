@@ -157,6 +157,8 @@ test('a method goes by the name the report gives it, and warnings read as senten
   const rows = turn.cards[0].lines.map(line => line.map(s => s.text).join(''));
   assert.equal(rows[0], '本次样本由哪些人群组成？　频数分析 · 有效样本 12 / 12');
   assert.equal(rows[2], '　提醒：单列分类题；未加权、未插补。');
+  const odd = route('/结果', withResults({ results: [result('自定义', 'toString')], findings: [], pending: false })).turn;
+  assert.equal(odd.cards[0].lines[0].map(s => s.text).join(''), '自定义　toString · 有效样本 212 / 240', 'a method without a label keeps its own name');
 });
 
 test('a finding whose result changed after it was confirmed is not presented as confirmed', () => {
