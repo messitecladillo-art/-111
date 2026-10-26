@@ -22,6 +22,7 @@ const PATHS: Record<string, ReactNode> = {
   moon: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />,
   sidebar: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M9.5 4.5v15" /></>,
   panel: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M14.5 4.5v15" /></>,
+  download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
   expand: <path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" />,
   shrink: <path d="M4 14h6v6M20 10h-6V4M20 4l-6 6M4 20l6-6" />,
   more: <><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></>,

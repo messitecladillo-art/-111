@@ -8,7 +8,8 @@ import type { AgentTurn } from '@/lib/agent/router';
  */
 export type Message = (
   | { id: string; at: number; role: 'user'; text: string }
-  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled' }
+  /** `model`: written by a model through this service, at this step of its sentence; otherwise given by rule. */
+  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: { service: string; step: number } }
   /** A knowledge lookup waiting for the search index; never stored, since it could not finish after a reload. */
   | { id: string; at: number; role: 'pending'; query: string; explicit: boolean }
 ) & { rev?: number };

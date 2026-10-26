@@ -39,7 +39,7 @@ export const isResultTool = (tool: ChatAction['tool']): tool is ToolResult['tool
 export const spanText = (span: Span): string => span.mark === 'tex' ? `$${span.text}$` : span.mark === 'math' ? `$$${span.text}$$` : span.text;
 
 /** A turn as plain text for the model, its cards' contents included, within the backend's limit. */
-export function turnText(turn: AgentTurn): string {
+export function turnText(turn: AgentTurn, limit = TEXT_LIMIT): string {
   const join = (line: readonly Span[]) => line.map(spanText).join('');
   const parts = turn.lines.map(join);
   for (const card of turn.cards ?? []) {
@@ -47,7 +47,7 @@ export function turnText(turn: AgentTurn): string {
     if (card.kind === 'entry') parts.push(`${card.name}：${card.definition}`, ...card.sources.map(s => `出处：${s}`));
     if (card.kind === 'trace') parts.push(`${card.reference} ${card.title}`, ...card.steps.map(s => `${s.text} ${s.detail}`));
   }
-  return clip(parts.filter(p => p.trim()).join('\n'), TEXT_LIMIT);
+  return clip(parts.filter(p => p.trim()).join('\n'), limit);
 }
 
 export const HISTORY_LIMIT = 12, TEXT_LIMIT = 1200;

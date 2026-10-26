@@ -17,6 +17,7 @@ import { traceExhibits } from '@/lib/agent/provenance';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type Span } from '@/lib/agent/router';
 import { readChatTurn, sendChatTurn } from './chat-client';
+import { conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
@@ -262,6 +263,7 @@ export default function AgentShell() {
     // A receipt read back by 核对回执 has no chain to continue: it settles, and the user can ask again from there.
     const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>(), service?: Service) => {
       if (receipt.status === 'ready' && receipt.reply) {
+        threads.patch(messageId, m => m.role === 'agent' ? { ...m, model: { service: label, step: receipt.step } } : m);
         replace(messageId, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
         const asked = receipt.message;
         if (receipt.droppedActions) threads.appendAfter(messageId, { ...stamp(), role: 'agent', turn: { lines: [[span(`模型还请求了 ${receipt.droppedActions} 个不在清单里的操作，没有执行。`, 'dim')]] } });
@@ -449,6 +451,8 @@ export default function AgentShell() {
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
           <span className={styles.topTitle}>{thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
           <span className={styles.spacer} />
+          {thread && messages.length > 0 && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
+            onClick={() => download(recordName(thread, Date.now()), conversationMarkdown(thread, Date.now()))}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
         <div ref={scrollRef} className={styles.scroll}>
@@ -507,4 +511,12 @@ function chatLine(message: Message): ChatLine[] {
   if (message.role !== 'agent' || message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
   const text = message.turn.lines.map(line => line.map(spanText).join('')).join('\n').trim();
   return text ? [{ role: 'agent', text }] : [];
+}
+
+/** Saves text as a file the user downloads; nothing leaves the browser. */
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+  const link = Object.assign(document.createElement('a'), { href: url, download: name });
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
