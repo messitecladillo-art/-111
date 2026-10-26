@@ -194,3 +194,24 @@ test('a later step finds the conversation its sentence was asked in, and nothing
   threads.remove(home);
   assert.equal(threads.threadOf(asked.id), undefined);
 });
+
+test('a conversation keeps the name the user gave it; between two tabs the later name holds', () => {
+  threads.bind('mia');
+  threads.append([user('整群抽样的设计效应怎么估计')]);
+  const key = 'evix.agent.threads.v1:mia', id = threads.view('mia').active, older = local.getItem(key);
+  threads.rename(id, '  设计效应   估计 ');
+  assert.equal(threads.view('mia').threads[0].title, '设计效应 估计', 'spaces are tidied');
+  threads.rename(id, '   ');
+  assert.equal(threads.view('mia').threads[0].title, '设计效应 估计', 'an empty name changes nothing');
+  // Another tab that has not heard of the rename saves its older copy: the name stays.
+  fromAnotherTab(key, older);
+  assert.equal(threads.view('mia').threads[0].title, '设计效应 估计');
+  assert.equal(JSON.parse(local.getItem(key)).threads[0].title, '设计效应 估计', 'and is saved back for the other tab');
+  // A name given later in the other tab wins here.
+  const later = JSON.parse(local.getItem(key));
+  later.threads[0] = { ...later.threads[0], title: '另一个标签页起的名字', titledAt: Date.now() + 1000 };
+  fromAnotherTab(key, JSON.stringify(later));
+  assert.equal(threads.view('mia').threads[0].title, '另一个标签页起的名字');
+  threads.append([user('追问')]);
+  assert.equal(threads.view('mia').threads[0].title, '另一个标签页起的名字', 'new messages leave the name alone');
+});

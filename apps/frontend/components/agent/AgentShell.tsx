@@ -456,7 +456,7 @@ export default function AgentShell() {
 
       <Sidebar book={book} projects={projects} account={generationAccount} email={email} notice={accountNotice}
         failed={!!sessionError} onRetry={() => { setAccountNotice(''); refresh().catch(error => setAccountNotice(errorMessage(error))); }} onNew={id => { threads.draft(id); focusInput(); }}
-        onSelect={threads.select} onRemove={threads.remove} onCollapse={() => setSideOpen(false)} />
+        onSelect={threads.select} onRemove={threads.remove} onRename={threads.rename} onCollapse={() => setSideOpen(false)} />
 
       <main className={styles.main} aria-label="对话" data-dialog-background>
         <header className={styles.top}>

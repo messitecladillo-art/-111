@@ -17,8 +17,11 @@ export type Message = (
   | { id: string; at: number; role: 'pending'; query: string; explicit: boolean }
 ) & { rev?: number };
 export type ModelCall = { service: string; step: number; status?: 'running' | 'ready' | 'failed' | 'unknown' | 'refused' };
-/** A conversation, optionally filed under a hosted project; `filedAt` dates the filing for the same reason. */
-export type Thread = { id: string; title: string; projectId: string | null; filedAt?: number; createdAt: number; updatedAt: number; messages: Message[] };
+/**
+ * A conversation, optionally filed under a hosted project; `filedAt` dates the filing for the same reason. `titledAt`
+ * dates a name the user gave it; without one the title is its first words.
+ */
+export type Thread = { id: string; title: string; titledAt?: number; projectId: string | null; filedAt?: number; createdAt: number; updatedAt: number; messages: Message[] };
 /** One identity's conversations, the open one (null while a new one is still a draft), and the draft's project. */
 export type Book = { threads: Thread[]; active: string | null; draftProject: string | null };
 /** What one identity keeps in storage: its conversations, the last open one, and those deleted, so none comes back. */
@@ -38,7 +41,7 @@ const validMessage = (m: unknown): m is Message => !!m && typeof m === 'object' 
 function validThread(t: unknown): Thread | null {
   const v = t as Partial<Thread> | null;
   if (!v || typeof v.id !== 'string' || typeof v.title !== 'string' || !Array.isArray(v.messages) || typeof v.createdAt !== 'number' || typeof v.updatedAt !== 'number') return null;
-  return { id: v.id, title: v.title.slice(0, 80), projectId: typeof v.projectId === 'string' ? v.projectId : null, ...(typeof v.filedAt === 'number' ? { filedAt: v.filedAt } : {}),
+  return { id: v.id, title: v.title.slice(0, 80), ...(typeof v.titledAt === 'number' ? { titledAt: v.titledAt } : {}), projectId: typeof v.projectId === 'string' ? v.projectId : null, ...(typeof v.filedAt === 'number' ? { filedAt: v.filedAt } : {}),
     createdAt: v.createdAt, updatedAt: v.updatedAt, messages: v.messages.filter(validMessage).slice(-MESSAGE_LIMIT) };
 }
 /** Accounts keep their conversations in this browser; a guest's last only as long as the tab. */
@@ -79,8 +82,8 @@ function mergeThread(mine: Thread, theirs: Thread): Thread {
     messages.splice(slot, 0, m);
     after = slot;
   }
-  const filed = (theirs.filedAt ?? 0) > (mine.filedAt ?? 0) ? theirs : mine;
-  return { ...mine, projectId: filed.projectId, ...(filed.filedAt !== undefined ? { filedAt: filed.filedAt } : {}), createdAt: Math.min(mine.createdAt, theirs.createdAt),
+  const filed = (theirs.filedAt ?? 0) > (mine.filedAt ?? 0) ? theirs : mine, titled = (theirs.titledAt ?? 0) > (mine.titledAt ?? 0) ? theirs : mine;
+  return { ...mine, title: titled.title, ...(titled.titledAt !== undefined ? { titledAt: titled.titledAt } : {}), projectId: filed.projectId, ...(filed.filedAt !== undefined ? { filedAt: filed.filedAt } : {}), createdAt: Math.min(mine.createdAt, theirs.createdAt),
     updatedAt: Math.max(mine.updatedAt, theirs.updatedAt), messages: messages.slice(-MESSAGE_LIMIT) };
 }
 /** This tab's conversations with the stored ones: nothing either side holds is lost, and nothing either deleted returns. */
@@ -92,14 +95,14 @@ function reconcile(mine: Book, stored: Stored): { book: Book; removed: string[] 
   ].sort((a, b) => b.createdAt - a.createdAt).slice(0, THREAD_LIMIT);
   return { book: { threads, active: threads.some(t => t.id === mine.active) ? mine.active : null, draftProject: mine.draftProject }, removed: [...gone].slice(-REMOVED_LIMIT) };
 }
-/** Whether this tab holds anything the stored copy lacks: a conversation, a later message or filing, or a deletion. */
+/** Whether this tab holds anything the stored copy lacks: a conversation, a later message, filing or name, or a deletion. */
 function holdsMore(stored: Stored): boolean {
   if (removed.some(id => !stored.removed.includes(id))) return true;
   const theirs = new Map(stored.threads.map(t => [t.id, t]));
   return book.threads.some(t => {
     const other = theirs.get(t.id);
     if (!other) return true;
-    if ((t.filedAt ?? 0) > (other.filedAt ?? 0)) return true;
+    if ((t.filedAt ?? 0) > (other.filedAt ?? 0) || (t.titledAt ?? 0) > (other.titledAt ?? 0)) return true;
     const versions = new Map(other.messages.map(m => [m.id, version(m)]));
     return kept(t).messages.some(m => !versions.has(m.id) || version(m) > versions.get(m.id)!);
   });
@@ -181,6 +184,11 @@ export const threads = {
   remove(id: string) {
     removed = [...removed.filter(r => r !== id), id].slice(-REMOVED_LIMIT);
     commit({ ...book, threads: book.threads.filter(t => t.id !== id), active: book.active === id ? null : book.active });
+  },
+  /** Names a conversation; when two tabs name it, the later name holds. An empty name changes nothing. */
+  rename(id: string, title: string) {
+    const name = title.replace(/\s+/gu, ' ').trim().slice(0, 80);
+    if (name && book.threads.some(t => t.id === id && t.title !== name)) commit({ ...book, threads: book.threads.map(t => t.id === id ? { ...t, title: name, titledAt: Date.now() } : t) });
   },
   /** Files the open conversation (or the draft) under a project. */
   setProject(projectId: string | null) {
