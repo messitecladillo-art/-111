@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { turnText } from '@/lib/agent/chat';
 import { Icon } from './icons';
-import type { Book, Thread } from './threads';
+import { tidyTitle as tidy, type Book, type Thread } from './threads';
 import styles from './AgentShell.module.css';
 
 type Props = {
@@ -48,8 +48,9 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [confirming, setConfirming] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
-  // The name being edited; cleared once it is saved or abandoned, so the field's blur does not save it again.
-  const editing = useRef<string | null>(null);
+  // The conversation being renamed and its name when editing began; cleared once saved or abandoned, so the field's
+  // blur does not save it again.
+  const editing = useRef<{ id: string; from: string } | null>(null);
   const wanted = query.trim();
   // What the search found: a conversation whose title matches, or else an excerpt of where its words do.
   const found = useMemo(() => {
@@ -62,12 +63,15 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
     return hits;
   }, [book.threads, wanted]);
   const recent = [...book.threads].sort((a, b) => b.updatedAt - a.updatedAt).filter(t => !found || found.has(t.id));
-  const startRename = (id: string) => { setConfirming(null); editing.current = id; setRenaming(id); };
+  const startRename = (thread: Thread) => { setConfirming(null); editing.current = { id: thread.id, from: thread.title }; setRenaming(thread.id); };
+  // Only a name the user changed is saved: leaving the field untouched must not put back the name it opened with over
+  // one another tab has given since.
   const finishRename = (id: string, title: string | null) => {
-    if (editing.current !== id) return;
+    const edit = editing.current;
+    if (edit?.id !== id) return;
     editing.current = null;
     setRenaming(null);
-    if (title !== null) onRename(id, title);
+    if (title !== null && tidy(title) !== tidy(edit.from)) onRename(id, title);
   };
   // A conversation shows once: under its project when that project is listed, otherwise among the recent ones.
   const listed = account === 'ready' ? new Set(projects.map(p => p.id)) : new Set<string>();
@@ -82,7 +86,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
               if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); finishRename(thread.id, event.currentTarget.value); }
               if (event.key === 'Escape') { event.preventDefault(); finishRename(thread.id, null); }
             }} />
-        : <button type="button" onClick={() => onSelect(thread.id)} onDoubleClick={() => startRename(thread.id)} aria-current={thread.id === book.active ? 'true' : undefined} title={thread.title}>
+        : <button type="button" onClick={() => onSelect(thread.id)} onDoubleClick={() => startRename(thread)} aria-current={thread.id === book.active ? 'true' : undefined} title={thread.title}>
             {thread.title}{words && <small>{words}</small>}
           </button>}
       {renaming !== thread.id && <span className={styles.threadMenu} data-confirming={confirming === thread.id}>
@@ -90,7 +94,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
           <button type="button" data-danger="true" onClick={() => { onRemove(thread.id); setConfirming(null); }}>确认删除</button>
           <button type="button" onClick={() => setConfirming(null)}>取消</button>
         </> : <>
-          <button type="button" aria-label={`重命名对话「${thread.title}」`} onClick={() => startRename(thread.id)}>重命名</button>
+          <button type="button" aria-label={`重命名对话「${thread.title}」`} onClick={() => startRename(thread)}>重命名</button>
           <button type="button" aria-label={`删除对话「${thread.title}」`} onClick={() => setConfirming(thread.id)}>删除</button>
         </>}
       </span>}

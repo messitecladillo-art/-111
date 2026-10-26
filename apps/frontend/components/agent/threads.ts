@@ -187,7 +187,7 @@ export const threads = {
   },
   /** Names a conversation; when two tabs name it, the later name holds. An empty name changes nothing. */
   rename(id: string, title: string) {
-    const name = title.replace(/\s+/gu, ' ').trim().slice(0, 80);
+    const name = tidyTitle(title);
     if (name && book.threads.some(t => t.id === id && t.title !== name)) commit({ ...book, threads: book.threads.map(t => t.id === id ? { ...t, title: name, titledAt: Date.now() } : t) });
   },
   /** Files the open conversation (or the draft) under a project. */
@@ -223,6 +223,9 @@ export const threads = {
     if (thread && !thread.projectId) commit({ ...book, threads: book.threads.map(t => t.id === thread.id ? filing(t, projectId) : t) });
   },
 };
+
+/** A name as it is kept: one space between words, at most 80 characters. */
+export const tidyTitle = (title: string) => title.replace(/\s+/gu, ' ').trim().slice(0, 80);
 
 /** A fresh identity and timestamp for a new conversation entry. */
 export const stamp = () => ({ id: crypto.randomUUID(), at: Date.now() });
