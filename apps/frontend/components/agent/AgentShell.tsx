@@ -138,7 +138,12 @@ export default function AgentShell() {
   }
 
   const inputRef = useRef<HTMLTextAreaElement>(null), scrollRef = useRef<HTMLDivElement>(null), headingRef = useRef<HTMLHeadingElement>(null);
-  const railRef = useRef<HTMLElement>(null);
+  const railRef = useRef<HTMLElement>(null), launcherRef = useRef<HTMLDivElement>(null), modulesRef = useRef<HTMLButtonElement>(null);
+  // The launcher takes focus when it opens, on the module already open or else the first, so the keyboard starts there.
+  useEffect(() => {
+    const launcher = launcherRef.current;
+    if (railMenu === 'modules') (launcher?.querySelector<HTMLButtonElement>('button[aria-current="true"]') ?? launcher?.querySelector<HTMLButtonElement>('button'))?.focus();
+  }, [railMenu]);
   // The rail's menus close on a click outside the rail, as the composer's menus do.
   useEffect(() => {
     if (!railMenu) return;
@@ -424,7 +429,7 @@ export default function AgentShell() {
           if (!expanded) closePanel();
           focusInput();
         }}><Icon name="chat" /></button>
-        <button type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="menu" aria-expanded={railMenu === 'modules'} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setRailMenu(railMenu === 'modules' ? null : 'modules')}><Icon name="grid" /></button>
+        <button ref={modulesRef} type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="dialog" aria-expanded={railMenu === 'modules'} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setRailMenu(railMenu === 'modules' ? null : 'modules')}><Icon name="grid" /></button>
         <button type="button" className={styles.railButton} aria-label="项目全景" title="项目全景" aria-pressed={panel === 'overview'} onClick={() => panel === 'overview' ? closePanel() : go('overview')}><Icon name="lamp" /></button>
         <button type="button" className={styles.railButton} aria-label={`知识镜搜索（${shortcut}）`} title={`知识镜搜索（${shortcut}）`} onClick={knowledge.openSearch}><Icon name="book" /></button>
         <span className={styles.spacer} />
@@ -442,15 +447,38 @@ export default function AgentShell() {
           {/* Signing out asks first when this tab still holds unsaved drafts. */}
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}>退出登录</button>
         </div>}
-        {railMenu === 'modules' && <div className={styles.menu} role="menu" aria-label="模块" style={{ left: 50, top: 40, zIndex: 60, maxHeight: 'calc(100dvh - 56px)' }}>
-          {GROUPS.map(group => <div key={group} role="group" aria-label={ROOM_GROUPS[group]}>
-            <p className={styles.menuLabel} aria-hidden="true">{ROOM_GROUPS[group]}</p>
-            {ROOMS.filter(r => r.group === group).map(r => {
+        {railMenu === 'modules' && <div ref={launcherRef} className={styles.launcher} role="dialog" aria-label="模块" onKeyDown={event => {
+          // Arrow keys walk the modules in order; Esc closes and gives focus back to the rail.
+          if (event.key === 'Escape') { event.preventDefault(); setRailMenu(null); modulesRef.current?.focus(); return; }
+          const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+          if (!step) return;
+          const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')], at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+          event.preventDefault();
+          buttons[(at + step + buttons.length) % buttons.length]?.focus();
+        }}>
+          <div className={styles.launcherHead}><b>模块</b><small>在右侧面板打开；也可以在输入框里输入 <kbd>/</kbd> 加模块名，例如 /问卷</small></div>
+          {/* The research path in working order: what each step is for, and how much evidence it holds where that is measured. */}
+          <p className={styles.launcherLabel}>{ROOM_GROUPS.path}</p>
+          <div className={styles.steps}>
+            {ROOMS.filter(r => r.group === 'path').map((r, i) => {
               const lightOf = roomLight(light, r.id);
-              return <button key={r.id} type="button" role="menuitemradio" className={styles.menuItem} aria-checked={panel === r.id} onClick={() => { go(r.id); setRailMenu(null); }}>
-                {r.name}{lightOf && <small>{percent(lightOf.score)}</small>}
+              // The visible text is the name, so voice control can say what it sees: number, module, state, purpose.
+              return <button key={r.id} type="button" className={styles.step} aria-current={panel === r.id ? 'true' : undefined} onClick={() => { go(r.id); setRailMenu(null); }}>
+                <span className={styles.glyph} aria-hidden="true">{r.glyph}</span>
+                <b><small>{String(i + 1).padStart(2, '0')}</small>{r.name}</b>
+                <span className={styles.stepLight}>{panel === r.id ? <em>已打开</em> : !!lightOf?.score && <><LightBar score={lightOf.score} />照度 {percent(lightOf.score)}</>}</span>
+                <span className={styles.stepLine}>{r.line}</span>
               </button>;
             })}
+          </div>
+          {GROUPS.filter(group => group !== 'path').map(group => <div key={group}>
+            <p className={styles.launcherLabel}>{ROOM_GROUPS[group]}</p>
+            <div className={styles.extras}>
+              {ROOMS.filter(r => r.group === group).map(r => <button key={r.id} type="button" className={styles.extra} aria-current={panel === r.id ? 'true' : undefined} title={r.line}
+                onClick={() => { go(r.id); setRailMenu(null); }}>
+                <span className={styles.glyph} aria-hidden="true">{r.glyph}</span>{r.name}
+              </button>)}
+            </div>
           </div>)}
         </div>}
       </nav>
