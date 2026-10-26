@@ -158,10 +158,11 @@ export default function AgentShell() {
   useEffect(() => { if (generationAccount === 'ready') loadLists(); }, [generationAccount, loadLists]);
   // Talking with a model is the user's choice, for this visit; every conversation asks once before its first sentence goes.
   // Without storage the choice is still kept for this page, in memory.
-  const [modeHere, setModeHere] = useState<ChatMode | null>(null);
+  // It belongs to the identity that chose it; another identity reads its own.
+  const [modeHere, setModeHere] = useState<{ owner: string | null; mode: ChatMode } | null>(null);
   const storedMode = useSyncExternalStore(subscribeMode, () => readMode(owner), () => 'command' as ChatMode);
-  const chatMode = modeHere ?? storedMode;
-  const setChatMode = useCallback((mode: ChatMode) => { setModeHere(mode); writeMode(owner, mode); }, [owner]);
+  const chatMode = modeHere && modeHere.owner === owner ? modeHere.mode : storedMode;
+  const setChatMode = useCallback((mode: ChatMode) => { setModeHere({ owner, mode }); writeMode(owner, mode); }, [owner]);
   const consented = useRef(new Set<string>());
   // The chat uses the service the model menu shows as chosen, never another one behind it.
   const chosenService = lists.services.some(s => s.id === preferredService) ? preferredService : lists.services[0]?.id ?? '';

@@ -127,21 +127,24 @@ export function replyLines(reply: string): Line[] {
   // A display formula written over several lines is one formula: it is folded onto a line of its own first.
   const folded = reply.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]/gu, (_, dollars?: string, bracket?: string) =>
     `\n$$${(dollars ?? bracket ?? '').replace(/\s*\n\s*/gu, ' ').trim()}$$\n`);
-  return folded.split(/\n+/u).map(p => p.trim()).filter(Boolean).map(paragraph => {
-    const line: Line = [];
-    let last = 0;
-    for (const m of paragraph.matchAll(MARKUP)) {
-      const [whole, display, bracket, inline, paren, strong] = m;
-      const tex = (display ?? bracket ?? inline ?? paren)?.trim();
-      if (m.index > last) line.push({ text: paragraph.slice(last, m.index) });
-      if (strong !== undefined) line.push({ text: strong, mark: 'strong' });
-      else if (tex && tex.length <= TEX_LIMIT) line.push({ text: tex, mark: display !== undefined || bracket !== undefined ? 'math' : 'tex' });
-      else line.push({ text: whole });
-      last = m.index + whole.length;
-    }
-    if (last < paragraph.length) line.push({ text: paragraph.slice(last) });
-    return line;
-  });
+  return folded.split(/\n+/u).map(p => p.trim()).filter(Boolean).map(paragraph => markup(paragraph, false));
+}
+
+/** One paragraph's spans. Inside emphasis the text is read again, so a formula there is typeset too. */
+function markup(text: string, strong: boolean): Line {
+  const line: Line = [], plain = (value: string) => line.push(strong ? { text: value, mark: 'strong' } : { text: value });
+  let last = 0;
+  for (const m of text.matchAll(MARKUP)) {
+    const [whole, display, bracket, inline, paren, emphasis] = m;
+    const tex = (display ?? bracket ?? inline ?? paren)?.trim();
+    if (m.index > last) plain(text.slice(last, m.index));
+    if (emphasis !== undefined) line.push(...(strong ? [{ text: emphasis, mark: 'strong' as const }] : markup(emphasis, true)));
+    else if (tex && tex.length <= TEX_LIMIT) line.push({ text: tex, mark: display !== undefined || bracket !== undefined ? 'math' : 'tex' });
+    else plain(whole);
+    last = m.index + whole.length;
+  }
+  if (last < text.length) plain(text.slice(last));
+  return line;
 }
 
 /** A refusal before any call: nothing was billed, so sending again is safe. */
