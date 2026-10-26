@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": ["apps/frontend", "packages/evi-x-shared"],
   "scripts": {
+    "check:layout": "python -X utf8 scripts/check-repo-layout.py",
     "dev:web": "npm run dev --workspace evi-x-zhengda-champion-platform",
     "build:web": "npm run build --workspace evi-x-zhengda-champion-platform",
     "typecheck:web": "npm run typecheck --workspace evi-x-zhengda-champion-platform",

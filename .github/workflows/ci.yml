@@ -13,8 +13,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  layout:
+    name: Repository layout
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Current application roots and workspace configuration
+        run: python -X utf8 scripts/check-repo-layout.py
+      - name: Layout rejection and compatibility cases
+        env:
+          EVIX_LAYOUT_TEST_ROOT: ${{ github.workspace }}
+        run: python -X utf8 -m unittest discover -s tests -p test_repo_layout.py
+
   web:
     name: Web · tests, types, lint, build
+    needs: layout
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -49,6 +63,7 @@ jobs:
 
   api:
     name: API · pytest on PostgreSQL 16
+    needs: layout
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:

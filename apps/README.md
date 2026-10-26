@@ -27,8 +27,12 @@ apps/
 │   └── native-shell/               # 本机桌面/服务壳
 │
 ├── backend/                        # FastAPI 后端
-│   ├── src/evix_api/               # 对外 FastAPI 接口
-│   └── src/multi_agent/            # Agent 角色、共享基础服务与编排
+│   ├── src/evix_api/               # 对外 FastAPI 接口与授权适配
+│   ├── src/application/            # 业务用例、事务、版本与权限策略
+│   ├── src/multi_agent/            # 五个 Agent 的角色能力与工作流
+│   ├── src/infrastructure/         # 数据库、邮件、模型连接等设施
+│   ├── src/features/               # 网考等独立功能
+│   ├── src/shared/                 # 纯契约与校验
 │   ├── migrations/                 # Alembic 数据库迁移
 │   ├── tests/                      # 后端测试
 │   ├── pyproject.toml              # Python 项目与依赖定义
@@ -58,7 +62,7 @@ docs/p0-running.md                  # 当前启动方式和迁移边界；位于
 
 - 改网页路由或页面布局：从 `frontend/app/` 找对应 `page.tsx` / `layout.tsx`。
 - 改页面交互或功能面板：从 `frontend/components/` 找功能组件。
-- 改外部 HTTP 接口：从 `backend/src/evix_api/app.py` 开始；改共享服务或角色业务：查看 `backend/src/multi_agent/`；表结构变更同时检查 `backend/migrations/`。
+- 改外部 HTTP 接口：从 `backend/src/evix_api/routes/` 和应用装配 `app.py` 开始；业务用例/事务看 `backend/src/application/`，角色能力看 `backend/src/multi_agent/`，技术设施看 `backend/src/infrastructure/`，纯契约看 `backend/src/shared/`；表结构变更同时检查 `backend/migrations/`。
 - 改前后端共享请求/响应契约：检查仓库根目录 `packages/evi-x-shared/`，并同步验证两侧调用。
 - 改动本地报告/PPT 编辑器存储：先确认是否属于 Next 侧 `db/` 与 `drizzle/`，不要误改 FastAPI 的 PostgreSQL 模型。
 - 改 API 地址或启动行为：查看 `frontend/next.config.ts`、根目录 `scripts/start-p0-api.ps1` 和 `docs/p0-running.md`。
@@ -66,3 +70,5 @@ docs/p0-running.md                  # 当前启动方式和迁移边界；位于
 ## 运行入口
 
 以仓库根目录的 [运行说明](../docs/p0-running.md) 为准：前端通过根目录 npm 脚本启动，后端通过 `scripts/start-p0-api.ps1` 启动。Next tracing root、npm workspace、CI 和后端启动脚本均已对应到 `apps/frontend` / `apps/backend`。
+
+协作边界与共享文件的单写整合见 [开发流程](../docs/development-workflow.md)，总体模块图见 [项目框架](../PROJECT_FRAMEWORK.md)。
