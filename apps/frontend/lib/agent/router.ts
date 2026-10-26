@@ -10,7 +10,7 @@ import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
 import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { METHOD_LABELS } from '../report-placement.ts';
-import type { ResearchFinding, ResultSnapshot } from '../research-quality.ts';
+import { findingNeedsReview, type ResearchFinding, type ResultSnapshot } from '../research-quality.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
 
 /**
@@ -182,6 +182,9 @@ const figure = (value: number) => Number.isInteger(value) ? String(value) : Stri
 /** A sampling frame inserted from 抽样设计 is registered like a result, but it is a plan, not an analysis. */
 export const isFrame = (result: ResultSnapshot) => result.method === 'sampling-frame';
 const method = (r: ResultSnapshot) => METHOD_LABELS[r.method] ?? r.method;
+/** Findings that still stand: confirmed, and every result they rest on unchanged since. */
+export const standingFindings = (held: NonNullable<ResultsView>) =>
+  held.findings.filter(f => !findingNeedsReview(f, { version: 1, results: [...held.results], findings: [...held.findings] }));
 // Each warning is its own sentence; joined, they keep one stop between them.
 const warned = (r: ResultSnapshot) => `　提醒：${r.warnings.slice(0, 2).map(w => w.trim().replace(/[。；;.\s]+$/u, '')).join('；')}。`;
 const known = (r: ResultSnapshot) => r.metrics.filter((m): m is { label: string; value: number } => m.value !== null && Number.isFinite(m.value));
@@ -206,14 +209,15 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
     lines: [[t('还没有登记的分析结果。')], [t(held.pending ? '有一项结果正在送往报告，在报告与 PPT 里收下后就能读到。' : '在数据分析里完成一项分析并登记，结果会带着方法与有效样本进入报告。', 'dim')]],
     chips: [recommend(say(held.pending ? '/报告' : '/分析'))],
   };
-  const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? '抽样框' : `${r.method} ${method(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
+  const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? `抽样框 ${method(r)}` : `${r.method} ${method(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
   if (!chosen.length) return {
     lines: [[t('登记的结果里没有'), t(`「${query.trim()}」`, 'strong'), t('，现有的是：')]],
     chips: all.slice(0, 6).map(r => say(r.title.slice(0, 20), `/结果 ${r.title.slice(0, 20)}`)),
   };
   const analyses = chosen.filter(r => !isFrame(r)), frames = chosen.filter(isFrame);
   const shown = analyses.slice(0, wanted ? 4 : 8), simulated = analyses.filter(r => r.classification === 'simulated').length;
-  const confirmed = wanted ? [] : held.findings.filter(f => f.status === 'confirmed');
+  // A finding whose results changed after it was confirmed is not shown as confirmed; the user re-confirms it first.
+  const confirmed = wanted ? [] : standingFindings(held), stale = wanted ? 0 : held.findings.filter(f => f.status === 'confirmed').length - confirmed.length;
   const about = wanted ? `与「${query.trim()}」有关的` : '';
   return {
     lines: [
@@ -221,6 +225,7 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
         ? [t(`${about}已登记的分析结果 `), t(String(analyses.length), 'gold'), t(' 项'), ...(simulated ? [t(`，其中 ${simulated} 项来自教学模拟数据`, 'dim')] : []), t('。')]
         : [t(`${about ? `${about}登记里` : ''}还没有分析结果`), t(`，只有写进报告的抽样框 ${frames.length} 份。`)],
       ...(analyses.length > shown.length ? [[t(`这里列出最近的 ${shown.length} 项；在问题里写出标题或方法可以找到其余的。`, 'dim')]] : []),
+      ...(stale ? [[t(`另有 ${stale} 条研究发现所依据的结果在确认后变了，需要在报告与 PPT 里重新确认，这里不列出。`, 'dim')]] : []),
     ],
     cards: [
       ...(shown.length ? [{ kind: 'tool' as const, title: '读取 · 已登记结果', lines: shown.flatMap(r => [

@@ -94,7 +94,8 @@ const result = (title, method, more = {}) => ({ id: title, title, sourceName: 's
   headers: [], rows: [], metrics: [{ label: 'χ²', value: 12.3456 }, { label: 'p', value: 0.000123 }, { label: 'Cramér V', value: null }, { label: 'df', value: 4 }], warnings: [], ...more });
 const held = {
   results: [result('各年级满意度', '卡方检验'), result('通勤时间与满意度', 'Pearson 相关', { classification: 'simulated', variables: ['通勤时间'], warnings: ['样本量偏小'] })],
-  findings: [{ id: 'f1', title: '高年级满意度更低', status: 'confirmed', interpretation: '差异显著。' }, { id: 'f2', title: '草稿', status: 'draft', interpretation: '' }],
+  findings: [{ id: 'f1', title: '高年级满意度更低', status: 'confirmed', interpretation: '差异显著。', evidenceIds: ['各年级满意度'], confirmedHashes: { 各年级满意度: 'r' } },
+    { id: 'f2', title: '草稿', status: 'draft', interpretation: '', evidenceIds: [], confirmedHashes: {} }],
   pending: false,
 };
 const withResults = (results = held) => ({ ...ctx(), results });
@@ -156,4 +157,15 @@ test('a method goes by the name the report gives it, and warnings read as senten
   const rows = turn.cards[0].lines.map(line => line.map(s => s.text).join(''));
   assert.equal(rows[0], '本次样本由哪些人群组成？　频数分析 · 有效样本 12 / 12');
   assert.equal(rows[2], '　提醒：单列分类题；未加权、未插补。');
+});
+
+test('a finding whose result changed after it was confirmed is not presented as confirmed', () => {
+  const stale = { id: 'f3', title: '通勤越久越不满意', status: 'confirmed', interpretation: '负相关。', evidenceIds: ['通勤时间与满意度'], confirmedHashes: { 通勤时间与满意度: 'an older result' } };
+  const view = { ...held, findings: [...held.findings, stale] };
+  const turn = route('/结果', withResults(view)).turn;
+  assert.deepEqual(turn.cards.at(-1).lines.map(line => line[0].text), ['高年级满意度更低']);
+  assert.match(text(turn), /另有 1 条研究发现所依据的结果在确认后变了，需要在报告与 PPT 里重新确认/);
+  assert.equal(chatContext(null, illuminate(empty), [], view).results.confirmedFindings, 1);
+  const frame = result('城区居民抽样框', 'sampling-frame', { n: 0, total: 0, metrics: [] });
+  assert.match(text(route('/结果 抽样设计', withResults({ ...held, results: [frame] })).turn), /抽样框 1 份/, 'a frame is found by the method name it is shown with');
 });

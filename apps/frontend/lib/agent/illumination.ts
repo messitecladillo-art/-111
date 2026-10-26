@@ -5,6 +5,7 @@
  */
 import { createEditorContent, type EditorContent } from '../editor-model.ts';
 import { questionIsMapped, questionnaireIssues, type Questionnaire } from '../questionnaire.ts';
+import { findingNeedsReview } from '../research-quality.ts';
 import { benchmarkReport, type BenchmarkResult } from '../report-benchmark.ts';
 import { frameGroup } from '../report-insert.ts';
 import type { RoomId } from './rooms.ts';
@@ -94,7 +95,9 @@ function samplingLight(view: ProjectView): RoomLight {
 
 function analysisLight(view: ProjectView): RoomLight {
   // Sampling frames are registered as results too, but they are the sampling room's evidence, not an analysis.
-  const results = (view.report?.quality?.results ?? []).filter(r => r.method !== 'sampling-frame'), confirmed = (view.report?.quality?.findings ?? []).filter(f => f.status === 'confirmed').length;
+  // A finding counts while it stands: confirmed, and every result it rests on unchanged since.
+  const quality = view.report?.quality, results = (quality?.results ?? []).filter(r => r.method !== 'sampling-frame');
+  const confirmed = quality ? quality.findings.filter(f => !findingNeedsReview(f, quality)).length : 0;
   const registered = results.length + (view.resultPending ? 1 : 0);
   const data = view.dataset;
   const checks: LightCheck[] = [

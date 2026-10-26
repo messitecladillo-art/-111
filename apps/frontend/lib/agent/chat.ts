@@ -2,7 +2,7 @@
 // rows), what comes back (a reply and at most three tool requests from a fixed list), and what each failure means.
 // The backend holds the same list and limits (apps/backend …/agent_chat.py); the browser checks them again.
 import type { Illumination } from './illumination.ts';
-import { isFrame, type AgentTurn, type Line, type ResultsView, type Span } from './router.ts';
+import { isFrame, standingFindings, type AgentTurn, type Line, type ResultsView, type Span } from './router.ts';
 import { isRoomId, roomById, type RoomId } from './rooms.ts';
 
 export type ChatAction =
@@ -69,7 +69,7 @@ export function chatContext(room: RoomId | null, light: Illumination, traces: re
       blind: r.checks.filter(c => !c.passed).slice(0, 6).map(c => clip(c.label, 80)) })),
     traces: traces.slice(0, 20).map(t => ({ reference: clip(t.reference, 20), title: clip(t.title, 80) })),
     results: held && { registered: held.results.filter(r => !isFrame(r)).length, simulated: held.results.filter(r => !isFrame(r) && r.classification === 'simulated').length,
-      frames: held.results.filter(isFrame).length, confirmedFindings: held.findings.filter(f => f.status === 'confirmed').length },
+      frames: held.results.filter(isFrame).length, confirmedFindings: standingFindings(held).length },
   };
 }
 
