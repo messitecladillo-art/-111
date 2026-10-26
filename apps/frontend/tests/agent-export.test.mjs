@@ -65,6 +65,23 @@ test('a reply stored before calls were recorded is still credited to its service
   assert.match(md, /## 证见 · 模型回答（服务甲，未经核实）[^\n]*\n\n回答。\n/);
 });
 
+test('older calls that ended without a reply are still counted as model calls, or shown as never sent', () => {
+  const md = conversationMarkdown({ title: '旧失败', createdAt: at, messages: [
+    agent({}, [[{ text: '正在请' }, { text: '「服务甲」', mark: 'strong' }, { text: '回答…', mark: 'dim' }]]),
+    agent({}, [[{ text: '这一轮没有完成：', mark: 'error' }, { text: '模型服务出错了。' }]]),
+    agent({}, [[{ text: '结果尚未明确：', mark: 'error' }, { text: '这一轮已记下；核对只读取回执，不会再次调用模型。' }]]),
+    agent({}, [[{ text: '正在根据工具结果接着回答…', mark: 'dim' }]]),
+    agent({}, [[{ text: '这一轮没有发出：', mark: 'error' }, { text: '每小时最多 30 次对话模型调用，请稍后再试。' }]]),
+    agent({}, [[{ text: '这一轮没有发出，', mark: 'error' }, { text: '没有产生费用，可以再问一次。' }]]),
+    agent({}, [[{ text: 'constructor', mark: 'error' }]]),
+  ] }, at);
+  assert.match(md, /本段对话调用生成式模型 4 次（其中 3 次结果尚不明确），服务：服务甲、未记录的服务。/);
+  assert.match(md, /## 证见 · 模型调用结果尚不明确（服务甲）/);
+  assert.match(md, /## 证见 · 模型调用失败（未记录的服务）/);
+  assert.equal(md.match(/## 证见 · 模型调用未发出（未记录的服务，未调用模型）/g)?.length, 2);
+  assert.match(md, /## 证见 · 指令模式[^\n]*\n\nconstructor/);
+});
+
 test('emphasis stays Markdown emphasis, one pair of marks for a run of emphasised text', () => {
   const md = conversationMarkdown({ title: '强调', createdAt: at, messages: [
     agent({ model: { service: '服务甲', step: 1, status: 'ready' } }, [[{ text: '有效', mark: 'strong' }, { text: '样本量', mark: 'strong' }, { text: '是 ' }, { text: 'n', mark: 'tex' }, { text: '。' }]]),

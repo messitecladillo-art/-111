@@ -19,6 +19,10 @@ const FOOTER = /^(.+?) 的回答，未经核实/u;
 const JOB_STATUS = { running: 'running', done: 'ready', failed: 'failed', unknown: 'unknown' } as const;
 const NOT_STARTED = /^本次起草没有启动|本次没有调用模型/u;
 const OUTCOME = { ready: '已完成', failed: '失败', running: '结果尚不明确', unknown: '结果尚不明确' } as const;
+// How a chat call that did not end in a reply opened its message, before calls were recorded on messages.
+const LEGACY_ENDS = new Map<string, CallStatus>([['这一轮没有完成：', 'failed'], ['这一轮没有发出：', 'refused'], ['这一轮没有发出，', 'refused'], ['结果尚未明确：', 'unknown']]);
+const LEGACY_WAITS = ['正在根据工具结果接着回答…', '正在核对回执…'];
+const UNRECORDED = '未记录的服务';
 
 /** The file name for a conversation's record, safe on every system. */
 export function recordName(thread: Pick<RecordThread, 'title'>, now: number): string {
@@ -27,9 +31,9 @@ export function recordName(thread: Pick<RecordThread, 'title'>, now: number): st
 }
 
 /**
- * The model call a message holds, if any: recorded on it when it was sent; for a reply stored before calls were
- * recorded, read from its closing "unverified" note; for questionnaire drafting, read from its job card. A call the
- * service turned away, or one never sent, is kept as refused: shown, but not counted.
+ * The model call a message holds, if any: recorded on it when it was sent; for a message stored before calls were
+ * recorded, read from its closing "unverified" note or the words it opened with; for questionnaire drafting, read from
+ * its job card. A call the service turned away, or one never sent, is kept as refused: shown, but not counted.
  */
 function callOf(m: Said): (Call & { kind: 'chat' | 'draft' }) | null {
   if (m.role !== 'agent') return null;
@@ -42,7 +46,12 @@ function callOf(m: Said): (Call & { kind: 'chat' | 'draft' }) | null {
   }
   const note = m.turn.lines.find(line => line[0]?.mark === 'cyan' && line[0].text.trim() === '◆');
   const service = note && FOOTER.exec(note.slice(1).map(s => s.text).join(''))?.[1];
-  return service ? { service, step: 1, status: 'ready', kind: 'chat' } : null;
+  if (service) return { service, step: 1, status: 'ready', kind: 'chat' };
+  // Older calls that did not end in a reply are known by their first words; only the waiting line names the service.
+  const [first, named] = m.turn.lines[0] ?? [];
+  const ended = first && (first.mark === 'error' ? LEGACY_ENDS.get(first.text) : first.text === '正在请' ? 'running' : LEGACY_WAITS.includes(first.text) ? 'unknown' : undefined);
+  if (!ended) return null;
+  return { service: first.text === '正在请' && named ? named.text.replace(/^「|」$/gu, '') : UNRECORDED, step: 1, status: ended, kind: 'chat' };
 }
 
 const heading = (m: Said, call: ReturnType<typeof callOf>) => {
