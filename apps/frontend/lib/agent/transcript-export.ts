@@ -1,6 +1,6 @@
 // A conversation as a Markdown record, for the AI-use statement a 正大杯 entry needs: who said what, which answers a
 // model wrote (with its service, step and how the call ended), and which the platform gave by rule without a model.
-import { turnText } from './chat.ts';
+import { spanText, turnText } from './chat.ts';
 import type { AgentCard, AgentTurn, Line } from './router.ts';
 
 type CallStatus = 'running' | 'ready' | 'failed' | 'unknown' | 'refused';
@@ -74,7 +74,9 @@ const bold = (line: Line): Line => line.map((span, i) => span.mark !== 'strong' 
 /** What the record shows of cards the conversation's own text leaves out: questions put to the user, drafted questionnaires. */
 function cardsText(m: Extract<Said, { role: 'agent' }>): string[] {
   return (m.turn.cards ?? []).flatMap(card => {
-    if (card.kind === 'confirm') return [`需要确认：${card.title} —— ${m.answered === 'confirmed' ? '已确认' : m.answered === 'cancelled' ? '已取消' : '未回答'}`];
+    // What was asked, word for word: for a model call, what it sends, what it does not, and who pays.
+    if (card.kind === 'confirm') return [`需要确认：${card.title} —— ${m.answered === 'confirmed' ? '已确认' : m.answered === 'cancelled' ? '已取消' : '未回答'}`,
+      ...card.lines.map(line => bold(line).map(spanText).join('')).filter(text => text.trim())];
     if (card.kind === 'consent') return [`需要确认：调用模型起草问卷（研究需求：${card.brief}${card.serviceLabel ? `；服务：${card.serviceLabel}` : ''}${card.projectTitle ? `；项目：${card.projectTitle}` : ''}）—— ${card.state === 'submitted' ? '已确认' : card.state === 'cancelled' ? '已取消' : '未回答'}`];
     if (card.kind === 'job') return [card.detail];
     if (card.kind === 'proposal') return [`模型拟议的问卷（未经核实，带入问卷设计确认后才成为设计）：${card.design.title || '未命名问卷'}`,
