@@ -1,5 +1,7 @@
 # 证见 EVI-X｜正大杯循证研策 Agent
 
+开发维护先读：[项目框架](PROJECT_FRAMEWORK.md) · [协作开发与交接](docs/development-workflow.md) · [前端](apps/frontend/README.md) · [后端](apps/backend/README.md)。Codex 与 Claude 共用根 `AGENTS.md`，Claude 由 `CLAUDE.md` 进入同一份规则。
+
 证见是一套面向“正大杯”全国大学生市场调查与分析大赛的垂直 Agent：从规则锁定、选题、研究设计、问卷、抽样、数据审计、方法选择，到报告、答辩、视觉交付和赛前红队审查，始终维护同一条可追溯证据链。
 
 > 证见 EVI-X 为独立研究辅助工具，非“正大杯”赛事官方产品，与赛事主办方、承办方及冠名单位无隶属、授权或合作关系。
