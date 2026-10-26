@@ -10,6 +10,8 @@ import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
 import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { blueprintNode } from '../report-blueprint.ts';
+import { draftableNode } from './draft.ts';
+import { sectionState, type ReportPlan } from './report-plan.ts';
 import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
 import { findingNeedsReview, type ResearchFinding, type ResultSnapshot } from '../research-quality.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
@@ -35,7 +37,13 @@ export type AgentAction =
   /** Reads the receipt of a model turn whose outcome was unclear; never calls the model again. */
   | { type: 'check'; turn: string; message: string }
   /** Writes these registered results into the report's blueprint sections; offered only on a confirmation card. */
-  | { type: 'place'; results: string[] };
+  | { type: 'place'; results: string[] }
+  /** Asks the user's model service to draft this blueprint section; offered only on a confirmation card. */
+  | { type: 'draft'; node: string }
+  /** Writes a draft's paragraphs, numbers already filled from the facts, into this blueprint section. */
+  | { type: 'adopt'; node: string; paragraphs: string[] }
+  /** Reads the receipt of a draft whose outcome was unclear, filling it from the facts it was sent with; never calls the model again. */
+  | { type: 'checkDraft'; draft: string; message: string; node: string; facts: { id: string; text: string; value: string }[] };
 /** A primary link is the one step the agent recommends; a turn has at most one. */
 export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
@@ -60,11 +68,15 @@ export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[
 export type ResultsView = { results: readonly ResultSnapshot[]; findings: readonly ResearchFinding[]; pending: boolean;
   /** The results the report already shows. */
   placed: readonly string[] } | null;
-export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[]; results?: ResultsView };
+export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[]; results?: ResultsView;
+  /** The report as a plan of work; null before the report has been seen in this visit. */
+  plan?: ReportPlan | null };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
 export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
   /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
-  | { generate: string };
+  | { generate: string }
+  /** A request to draft a report section (a blueprint node) with the user's model service; consent comes first too. */
+  | { draft: string };
 
 export type Command = { name: string; args?: string; line: string; words: readonly string[] };
 const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打开${r.name}`, words: [r.id] }));
@@ -75,6 +87,8 @@ export const COMMANDS: readonly Command[] = [
   { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
   { name: '结果', args: '标题或方法', line: '已登记的分析结果：方法、有效样本与主要统计量', words: ['results'] },
   { name: '写入', line: '把还没写进报告的登记结果按蓝图写进对应章节，改动前确认', words: ['place'] },
+  { name: '写报告', line: '按蓝图逐节看报告写到哪、缺什么，下一步做什么', words: ['plan'] },
+  { name: '起草', args: '章节', line: '用你的模型服务按本项目的事实起草一节，数字只从登记结果填入', words: ['write'] },
   { name: '生成', args: '研究需求', line: '用你的模型服务起草问卷，确认后才调用', words: ['generate', 'draft'] },
   { name: '查', args: '概念或方法', line: '在知识镜中查定义、公式与出处', words: ['lookup', 'search'] },
   ...ROOM_COMMANDS,
@@ -110,7 +124,7 @@ function help(): AgentTurn {
     cards: [
       { kind: 'tool', title: '命令', columns: true, lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(c.line, 'dim')]) },
       { kind: 'tool', title: '模块', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
-      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开数据分析', '图 1-1 的数字从哪来', '登记了哪些结果', '把结果写进报告', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
+      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开数据分析', '图 1-1 的数字从哪来', '登记了哪些结果', '把结果写进报告', '写报告', '帮我写研究背景', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
     ],
     chips: [recommend(say('下一步做什么')), say('/照度')],
   };
@@ -183,11 +197,11 @@ function trace(ctx: RouterContext, arg = ''): AgentTurn {
 }
 
 /** A statistic as the record shows it: whole numbers as they are, others to four significant digits. */
-const figure = (value: number) => Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(Math.abs(value) >= 1000 ? 7 : 4)));
+export const figure = (value: number) => Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(Math.abs(value) >= 1000 ? 7 : 4)));
 
 /** A sampling frame inserted from 抽样设计 is registered like a result, but it is a plan, not an analysis. */
 export const isFrame = (result: ResultSnapshot) => result.method === 'sampling-frame';
-const method = (r: ResultSnapshot) => Object.hasOwn(METHOD_LABELS, r.method) ? METHOD_LABELS[r.method] : r.method;
+export const methodName = (r: ResultSnapshot) => Object.hasOwn(METHOD_LABELS, r.method) ? METHOD_LABELS[r.method] : r.method;
 /** Findings that still stand: confirmed, and every result they rest on unchanged since. */
 export const standingFindings = (held: NonNullable<ResultsView>) =>
   held.findings.filter(f => !findingNeedsReview(f, { version: 1, results: [...held.results], findings: [...held.findings] }));
@@ -215,7 +229,7 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
     lines: [[t('还没有登记的分析结果。')], [t(held.pending ? '有一项结果正在送往报告，在报告与 PPT 里收下后就能读到。' : '在数据分析里完成一项分析并登记，结果会带着方法与有效样本进入报告。', 'dim')]],
     chips: [recommend(say(held.pending ? '/报告' : '/分析'))],
   };
-  const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? `抽样框 ${method(r)}` : `${r.method} ${method(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
+  const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? `抽样框 ${methodName(r)}` : `${r.method} ${methodName(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
   if (!chosen.length) return {
     lines: [[t('登记的结果里没有'), t(`「${query.trim()}」`, 'strong'), t('，现有的是：')]],
     chips: all.slice(0, 6).map(r => say(r.title.slice(0, 20), `/结果 ${r.title.slice(0, 20)}`)),
@@ -235,7 +249,7 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
     ],
     cards: [
       ...(shown.length ? [{ kind: 'tool' as const, title: '读取 · 已登记结果', lines: shown.flatMap(r => [
-        [t(r.title, 'strong'), t(`　${method(r)} · 有效样本 `, 'dim'), t(String(r.n), 'gold'), t(` / ${r.total}`, 'dim'), ...(r.classification === 'simulated' ? [t(' · 教学模拟', 'dim')] : []),
+        [t(r.title, 'strong'), t(`　${methodName(r)} · 有效样本 `, 'dim'), t(String(r.n), 'gold'), t(` / ${r.total}`, 'dim'), ...(r.classification === 'simulated' ? [t(' · 教学模拟', 'dim')] : []),
           t(held.placed.includes(r.id) ? ' · 已写进报告' : ' · 未写进报告', 'dim')],
         ...statistics(r, wanted ? 8 : 4),
         ...(r.warnings.length ? [[t(warned(r), 'dim')]] : []),
@@ -276,6 +290,54 @@ function place(ctx: RouterContext): AgentTurn {
   };
 }
 
+const STATE_GLYPH = { missing: '＋', empty: '○', partial: '◐', done: '●' } as const;
+/**
+ * The report as a plan of work, section by section in the blueprint's order: what is written against the suggested
+ * length, which needed elements are in place, then the benchmark's gaps. It ends with the step to take next: write in
+ * the registered results, or draft the first empty section.
+ */
+function writePlan(ctx: RouterContext): AgentTurn {
+  const plan = ctx.plan;
+  if (!plan) return {
+    lines: [[t('写报告要先读到报告；这次访问还没有打开报告与 PPT。')], [t('打开一次报告与 PPT，再说“写报告”。', 'dim')]],
+    chips: [recommend(say('/报告'))],
+  };
+  if (!plan.sections.length) return { lines: [[t('报告里还没有按蓝图组织的章节。')], [t('在报告与 PPT 里按报告类型建立蓝图骨架，再回来逐节写。', 'dim')]], chips: [recommend(say('/报告'))] };
+  const unplaced = ctx.results ? ctx.results.results.filter(r => !ctx.results!.placed.includes(r.id)).length : 0;
+  const empty = plan.sections.filter(s => s.draftable && ['missing', 'empty'].includes(sectionState(s)));
+  // Chapters are headings; each section says where it stands: not yet in the report, empty, under way, or in place.
+  const rows = plan.sections.map(s => {
+    if (s.kind === 'chapter') return [t(s.title, 'strong')];
+    const state = sectionState(s), missing = s.needs.filter(n => !n.met).map(n => n.label);
+    return [t(`　${STATE_GLYPH[state]} `, state === 'done' ? 'gold' : 'dim'), t(s.title),
+      t(state === 'missing' ? '　未建' : `　已写 ${s.written} 字${s.length ? `（建议 ${s.length[0]}–${s.length[1]}）` : ''}${missing.length ? ` · 还缺：${missing.join('、')}` : ''}`, 'dim')];
+  });
+  const next = unplaced ? recommend(say('/写入')) : empty.length ? recommend(say(`起草「${empty[0].title}」`.slice(0, 26), `/起草 ${empty[0].title}`)) : recommend(say('/盲区 报告'));
+  return {
+    lines: [
+      plan.score === null ? [t('按蓝图逐节看报告：')] : [t('报告体检 '), t(String(Math.round(plan.score)), 'gold'), t(` 分，适用的 ${plan.total} 项检查通过 ${plan.passed} 项。按蓝图逐节看：`)],
+      [t(unplaced ? `还有 ${unplaced} 项登记结果没写进报告，先把它们写进对应章节；` : '', 'dim'),
+        t(empty.length ? `${empty.length} 节还没有内容，可以用你的模型服务按本项目的事实起草，数字只从登记结果填入。` : '每一节都已开始写。', 'dim')],
+    ],
+    cards: [
+      { kind: 'tool', title: '读取 · 报告逐节进度', lines: rows },
+      ...(plan.gaps.length ? [{ kind: 'tool' as const, title: '体检里最该补的', lines: plan.gaps.map(g => [t(g.label, 'strong'), t(`　${g.detail}`, 'dim')]) }] : []),
+    ],
+    chips: [next, ...empty.slice(unplaced ? 0 : 1, unplaced ? 2 : 3).map(s => say(`起草「${s.title}」`.slice(0, 26), `/起草 ${s.title}`))],
+  };
+}
+
+/** A section to draft, named by its title or the words that recognise it; without one, the empty sections to choose from. */
+function draftTarget(ctx: RouterContext, arg: string): Routed {
+  const node = arg ? draftableNode(arg) : null;
+  if (node) return { draft: node.id };
+  const empty = ctx.plan?.sections.filter(s => s.draftable && sectionState(s) !== 'done') ?? [];
+  return { turn: {
+    lines: arg ? [[t('报告蓝图里没有'), t(`「${arg}」`, 'strong'), t('这一节。')]] : [[t('起草哪一节？')]],
+    chips: empty.length ? empty.slice(0, 6).map(s => say(s.title.slice(0, 20), `/起草 ${s.title}`)) : [say('/写报告')],
+  } };
+}
+
 function open(room: Room, ctx: RouterContext): AgentTurn {
   if (room.id === ctx.room) return { lines: [[t(room.name, 'strong'), t('已经在右侧打开。')], [t(room.line, 'dim')]] };
   return {
@@ -314,6 +376,8 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '来处': return { turn: trace(ctx, arg) };
     case '结果': return { turn: results(ctx, arg) };
     case '写入': return { turn: place(ctx) };
+    case '写报告': return { turn: writePlan(ctx) };
+    case '起草': return draftTarget(ctx, arg);
     case '生成': return { generate: arg };
     case '查': return arg ? { lookup: arg, explicit: true }
       : { turn: { lines: [[t('查什么？例如 '), t('/查 设计效应', 'teal'), t('。')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] } };
@@ -335,6 +399,8 @@ const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|�
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
 const WHERE = /^(我在哪|这是哪|当前模块|打开的是什么|我在哪里)/u;
 const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
+const PLAN = /^(帮我|我要|开始)?(写|撰写|完成)(一份|整份|这份)?报告$|报告(怎么写|还缺什么|写到哪|写得怎么样)/u;
+const DRAFT = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[「“"]?(.{2,24}?)[」”"]?(?:这一?节|一节|部分|这一?章)?$/u;
 const PLACE = /(把|将)?[^。]{0,10}结果[^。]{0,4}(写|放|加)(进|入|到)报告|写入报告/u;
 const RESULTS = /结果清单|(登记|已有|现有)(了|的)?(哪些)?(分析|统计)?结果|有哪些(分析|统计|检验)?结果|(分析|统计|检验)结果(是什么|是多少|怎么样|如何|有哪些)/u;
 const EXHIBIT = /([图表])\s*([0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?)/u;
@@ -356,6 +422,8 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
   if (TRACE.test(input)) { const m = EXHIBIT.exec(input); return { turn: trace(ctx, m ? m[1] + m[2] : '') }; }
+  if (PLAN.test(input)) return { turn: writePlan(ctx) };
+  { const m = DRAFT.exec(input); const node = m && draftableNode(m[1]); if (node) return { draft: node.id }; }
   if (PLACE.test(input)) return { turn: place(ctx) };
   if (RESULTS.test(input)) return { turn: results(ctx) };
   if (WHERE.test(input)) {

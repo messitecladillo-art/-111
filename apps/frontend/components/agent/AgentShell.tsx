@@ -14,9 +14,13 @@ import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section
 import { percent } from '@/lib/agent/glyphs';
 import { illuminate, roomLight } from '@/lib/agent/illumination';
 import { traceExhibits } from '@/lib/agent/provenance';
-import { resultPlaced } from '@/lib/report-placement';
+import { resultPlaced, suggestedNode } from '@/lib/report-placement';
+import { blueprintNode } from '@/lib/report-blueprint';
+import { draftFacts, draftLine, draftRequest, draftText, sectionText, type DraftReceipt, type Fact } from '@/lib/agent/draft';
+import { reportPlan } from '@/lib/agent/report-plan';
+import { readDraft, sendDraft } from './draft-client';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
-import { lookupTurn, route, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type ResultsView, type Span } from '@/lib/agent/router';
+import { lookupTurn, route, standingFindings, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type ResultsView, type Span } from '@/lib/agent/router';
 import { readChatTurn, sendChatTurn } from './chat-client';
 import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
@@ -105,6 +109,8 @@ export default function AgentShell() {
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
+  // The plan makes room for the sections the registered results belong in.
+  const plan = useMemo(() => deferredView.report ? reportPlan(deferredView.report, light.benchmark, (deferredView.report.quality?.results ?? []).map(suggestedNode)) : null, [deferredView, light]);
   const held = useMemo<ResultsView>(() => {
     const report = deferredView.report, results = report?.quality?.results ?? [];
     return report ? { results, findings: report.quality?.findings ?? [], pending: deferredView.resultPending, placed: results.filter(r => resultPlaced(report, r)).map(r => r.id) } : null;
@@ -187,6 +193,8 @@ export default function AgentShell() {
   // The chat uses the service the model menu shows as chosen, never another one behind it.
   const chosenService = lists.services.some(s => s.id === preferredService) ? preferredService : lists.services[0]?.id ?? '';
   const chatService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
+  // Drafting a report section asks a service with the 报告 capability: the chosen one when it has it, else the first that does.
+  const reportService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('report')) ?? lists.services.find(s => s.capabilities.includes('report')) ?? null;
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
@@ -210,8 +218,9 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, generation, owner, lastPanel, toggleSide, chatMode, chatService, mutate }; });
+  const report = deferredView.report, design = deferredView.design;
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate }; });
   const agent = useMemo(() => {
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
@@ -221,9 +230,10 @@ export default function AgentShell() {
       else local(text);
     };
     const local = (text: string) => {
-      const { panel, light, theme, traces, held, generation } = latest.current;
+      const { panel, light, theme, traces, held, plan, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room: panel, light, theme, traces, results: held });
+      const routed = route(text, { room: panel, light, theme, traces, results: held, plan });
+      if ('draft' in routed) { threads.append([user]); askDraft(routed.draft); return; }
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
       if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
@@ -324,6 +334,74 @@ export default function AgentShell() {
           ? (mark(messageId, 'refused'), replace(messageId, { lines: [[span('这一轮没有发出，', 'error'), span('没有产生费用，可以再问一次。')]] }))
           : fail(messageId, failure, turnId, ''));
     };
+
+    // Drafting a report section: consent first, every time, naming what goes to the service and the number rule.
+    const askDraft = (nodeId: string) => {
+      const { generation, reportService, held, report } = latest.current;
+      const title = blueprintNode(nodeId).title;
+      if (generation.account !== 'ready') { say([span('起草要调用你自己的模型服务，需要先登录。', 'dim')], [{ label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true }]); return; }
+      if (!held || !report) { say([span(`起草「${title}」要先读到报告与登记结果；这次访问还没有打开报告与 PPT。`, 'dim')], [{ label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]); return; }
+      if (!reportService) { say([span('起草需要一个启用了「报告」能力的模型服务（在模型服务里勾选）。', 'dim')], [{ label: '/模型', action: { type: 'say', text: '/模型' }, primary: true }]); return; }
+      const facts = draftFacts(held, nodeId).length, findings = standingFindings(held).length, existing = sectionText(report, nodeId).length;
+      threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('起草之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${reportService.label}」起草「${title}」`,
+        lines: [
+          [span('发送：这一节在报告蓝图里的写作要求（目的、步骤、需要的元素）、课题名称与目的、'), span(String(facts), 'gold'),
+            span(' 条事实（已登记结果的方法、有效样本、统计量与表中数字）、'), span(String(findings), 'gold'), span(` 条已确认研究发现的标题与解释${existing ? `、本节已有的 ${existing} 字正文` : ''}。`)],
+          [span('不发送：问卷题目、原始数据与报告其他章节的正文。', 'dim')],
+          [span('模型只能用事实编号引用数字，自己写了数字的段落整段丢弃；数字由这里按登记结果填入。拟稿未经核实，你确认后才写进报告。费用按你的服务商计。', 'dim')],
+        ], confirm: { label: '起草', action: { type: 'draft', node: nodeId } }, cancel: '不起草' }] } }]);
+    };
+    const draftNow = (nodeId: string) => {
+      const { reportService, held, report, design, mutate } = latest.current;
+      if (!reportService || !held || !report) { askDraft(nodeId); return; }
+      const title = blueprintNode(nodeId).title;
+      const { request, facts } = draftRequest({ nodeId, held, content: report, design, service: reportService });
+      const waiting: Message = { ...stamp(), role: 'agent', model: { service: reportService.label, step: 1, status: 'running' },
+        turn: { lines: [[span('正在请'), span(`「${reportService.label}」`, 'strong'), span(`起草「${title}」…`, 'dim')]] } };
+      threads.append([waiting]);
+      sendDraft(mutate, request).then(receipt => settleDraft(waiting.id, receipt, reportService.label, nodeId, facts), failure => failDraft(waiting.id, failure, request.idempotencyKey, nodeId, facts));
+    };
+    const draftError = (code: string | null) => code === 'capability_unavailable' ? '这个模型服务没有启用「报告」能力。' : CHAT_ERRORS[code ?? ''] ?? '模型服务出错了。';
+    // A draft in place of the waiting line: its paragraphs with each fact's value in gold, marked unverified, ready to adopt.
+    const settleDraft = (messageId: string, receipt: DraftReceipt, label: string, nodeId: string, facts: Fact[]) => {
+      const title = blueprintNode(nodeId).title, again = { label: '重新起草', action: { type: 'say' as const, text: `/起草 ${title}` } };
+      if (receipt.status === 'ready' && receipt.paragraphs.length) {
+        mark(messageId, 'ready', label, 1);
+        replace(messageId, {
+          lines: [[span(`「${title}」拟稿 `), span(String(receipt.paragraphs.length), 'gold'), span(' 段：')], ...receipt.paragraphs.map(p => draftLine(p, facts)),
+            ...(receipt.droppedParagraphs ? [[span(`模型另写了 ${receipt.droppedParagraphs} 段自造数字或引用了不存在的事实，已丢弃。`, 'dim')]] : []),
+            [span('◆ ', 'cyan'), span(`${label} 的拟稿，未经核实；金色数字由登记结果填入。`, 'dim')]],
+          chips: [{ label: `写进「${title}」`.slice(0, 26), action: { type: 'adopt', node: nodeId, paragraphs: receipt.paragraphs.map(p => draftText(p, facts)) }, primary: true }, again],
+        });
+      } else if (receipt.status === 'failed' || receipt.status === 'ready') {
+        mark(messageId, 'failed', label, 1);
+        replace(messageId, { lines: [[span('这次起草没有完成：', 'error'), span(draftError(receipt.errorCode))]], chips: [again] });
+      } else {
+        mark(messageId, 'unknown', label, 1);
+        replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span('这次起草已记下；核对只读取回执，不会再次调用模型。')]],
+          chips: [{ label: '核对回执', action: { type: 'checkDraft', draft: receipt.id, message: messageId, node: nodeId, facts }, primary: true }] });
+      }
+    };
+    const failDraft = (messageId: string, failure: unknown, draftId: string, nodeId: string, facts: Fact[]) => {
+      const again = { label: '重新起草', action: { type: 'say' as const, text: `/起草 ${blueprintNode(nodeId).title}` } };
+      if (failure instanceof HostedApiError && isDefiniteChatRejection(failure.status, failure.code)) {
+        mark(messageId, 'refused');
+        replace(messageId, { lines: [[span('这次起草没有发出：', 'error'), span(failure.code === 'capability_unavailable' ? draftError(failure.code) : CHAT_ERRORS[failure.code] ?? errorMessage(failure))]], chips: [again] });
+      } else {
+        mark(messageId, 'unknown');
+        replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span(`${errorMessage(failure)} 这次起草可能已经记下；核对只读取回执，不会再次调用模型。`)]],
+          chips: [{ label: '核对回执', action: { type: 'checkDraft', draft: draftId, message: messageId, node: nodeId, facts }, primary: true }] });
+      }
+    };
+    const checkDraft = (draftId: string, messageId: string, nodeId: string, facts: Fact[]) => {
+      const sent = threads.find(messageId);
+      const label = sent?.role === 'agent' && sent.model ? sent.model.service : UNRECORDED_SERVICE;
+      replace(messageId, { lines: [[span('正在核对回执…', 'dim')]] });
+      readDraft(draftId, new Set(facts.map(f => f.id))).then(receipt => settleDraft(messageId, receipt, label, nodeId, facts),
+        failure => failure instanceof HostedApiError && failure.status === 404
+          ? (mark(messageId, 'refused'), replace(messageId, { lines: [[span('这次起草没有发出，', 'error'), span('没有产生费用，可以重新起草。')]] }))
+          : failDraft(messageId, failure, draftId, nodeId, facts));
+    };
     // The knowledge index loads once per visit; a lookup in the loop waits for it a little rather than going unanswered.
     const knowledgeReady = async (limit = 10_000) => {
       for (const started = Date.now(); !latest.current.knowledge.ready && Date.now() - started < limit;) await new Promise(resolve => setTimeout(resolve, 250));
@@ -332,8 +410,9 @@ export default function AgentShell() {
     // A tool the model asked for, run as the matching command runs; drafting still begins with its own consent card.
     // A read-only tool's finding is returned so it can go back to the model.
     const run = async (afterId: string, action: ChatAction): Promise<ToolResult | null> => {
-      const { panel, light, theme, traces, held, generation, knowledge } = latest.current;
-      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held });
+      const { panel, light, theme, traces, held, plan, generation, knowledge } = latest.current;
+      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan });
+      if ('draft' in routed) return null;
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
       if ('lookup' in routed) {
         let found: AgentTurn;
@@ -366,6 +445,19 @@ export default function AgentShell() {
           break;
         }
         case 'check': check(action.turn, action.message); break;
+        case 'draft': draftNow(action.node); break;
+        case 'checkDraft': checkDraft(action.draft, action.message, action.node, action.facts); break;
+        // A draft adopted from a stored conversation is checked again: a blueprint section, a few paragraphs of text.
+        case 'adopt': {
+          let title: string;
+          try { title = blueprintNode(action.node).title; } catch { break; }
+          const paragraphs = action.paragraphs.filter(p => typeof p === 'string' && p.trim()).slice(0, 8).map(p => p.slice(0, 2000));
+          if (!paragraphs.length) break;
+          sendToReport({ id: crypto.randomUUID(), node: action.node, source: '证见 Agent 拟稿', items: paragraphs.map(text => ({ kind: 'paragraph', text })) });
+          go('editor');
+          say([span(`已把拟稿交给报告与 PPT，写进「${title}」；可以在编辑器里修改或撤销。`, 'dim')]);
+          break;
+        }
         // The report applies it as one undoable step once its editor is open, as it does for the sampling module.
         case 'place':
           sendToReport({ id: crypto.randomUUID(), node: '', source: '证见 Agent', items: action.results.map(resultId => ({ kind: 'result', resultId })) });

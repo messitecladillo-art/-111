@@ -21,6 +21,10 @@ class LiveProvider(ChatCompletionClient):
         """One turn of the 证见 Agent conversation; the prompt itself stays within agent_chat.PROMPT_BYTES."""
         return await self.complete(config, key, message, 65536)
 
+    async def section_draft(self, config, key, message):
+        """One report section drafted by the 证见 Agent; the prompt itself stays within section_draft.PROMPT_BYTES."""
+        return await self.complete(config, key, message, 65536)
+
 
 class FixtureProvider:
     def __init__(self):
@@ -53,6 +57,12 @@ class FixtureProvider:
         self.calls += 1
         # Conspicuously synthetic: verifies the conversation chain, never a model's advice.
         return json.dumps({"reply": "合成测试回执：只验证对话链，不代表真实模型的建议。", "actions": [{"tool": "next", "args": {}}]}, ensure_ascii=False)
+
+    async def section_draft(self, config, key, message):
+        self.calls += 1
+        # Conspicuously synthetic: verifies the drafting chain and its placeholders, never a model's writing.
+        return json.dumps({"paragraphs": [{"text": "合成测试拟稿：只验证拟稿链，不代表真实模型的写作。"},
+                                          {"text": "合成测试拟稿引用第一条事实：{F1}。"}]}, ensure_ascii=False)
 
     async def answer(self, config, key, message, spec):
         self.calls += 1

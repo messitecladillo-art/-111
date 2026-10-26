@@ -3,10 +3,13 @@ from evix_api.requests import body
 from shared.contracts import uuid_string
 from multi_agent.agents.research_agent.services import agent_chat as domain
 from application.services.agent_chat import AgentChatService
+from application.services.section_draft import SectionDraftService
+from multi_agent.agents.writing_agent.services import section_draft
 
 
 def register_agent_chat(app, settings, db, session_user, lock_user, operation, owned_service, generator):
     service = AgentChatService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator)
+    drafts = SectionDraftService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator)
 
     def auth(request: Request, session=Depends(db)):
         user, _ = session_user(request, session)
@@ -22,3 +25,15 @@ def register_agent_chat(app, settings, db, session_user, lock_user, operation, o
     async def create_turn(request: Request, user=Depends(auth), session=Depends(db)):
         raw_data = await body(request, domain.REQUEST_FIELDS, domain.STEP_FIELDS, limit=60000)
         return await service.create_turn(user=user, session=session, check_session=lambda session, **kwargs: session_user(request, session, **kwargs), raw_data=raw_data)
+
+    # A report section drafted from the project's facts; the browser fills the numbers and the user adopts it.
+    @app.get('/api/agent/drafts/{draft_id}')
+    def draft_receipt(draft_id: str, user=Depends(auth), session=Depends(db)):
+        uuid_string(draft_id)
+        lock_user(session, user)
+        return drafts.receipt(draft_id=draft_id, user=user, session=session)
+
+    @app.post('/api/agent/drafts', status_code=201)
+    async def create_draft(request: Request, user=Depends(auth), session=Depends(db)):
+        raw_data = await body(request, section_draft.REQUEST_FIELDS, limit=60000)
+        return await drafts.create_draft(user=user, session=session, check_session=lambda session, **kwargs: session_user(request, session, **kwargs), raw_data=raw_data)
