@@ -154,21 +154,18 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
             <Icon name="bolt" /><span className={styles.chipText}>{mode === 'model' ? (chatLabel ? `${chatLabel} · 对话` : '用模型对话') : '指令模式'}</span><Icon name="down" />
           </button>
           {menu === 'model' && <div className={styles.menu} data-place="above" role="menu" aria-label="模型服务" aria-describedby="agent-model-note" style={{ right: 0 }}>
-            <p id="agent-model-note" className={styles.menuNote} aria-hidden="true">{mode === 'model'
-              ? '对话由选中的服务回答：每段对话第一次发送前请你确认；它看不到原始数据，也不能改动项目。以 / 开头的命令仍在这里执行。'
-              : '指令模式只听懂命令和常用说法，不调用模型。起草问卷时用选中的服务，并先请你确认。'}</p>
+            <p id="agent-model-note" className={styles.menuLabel} aria-hidden="true">当前对话</p>
             {account !== 'ready' ? <Link role="menuitem" className={styles.menuItem} href="/login">登录后选择模型服务 ↗</Link> : <>
               <div role="group" aria-label="对话方式">
                 <p className={styles.menuLabel} aria-hidden="true">对话方式</p>
                 {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '不调用模型' })}
                 {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力' })}
               </div>
-              <div role="group" aria-label="模型服务">
-                <p className={styles.menuLabel} aria-hidden="true">模型服务</p>
+              <div role="group" aria-label="当前对话模型">
                 {services.map(s => item(s.id, s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail }))}
-                {!services.length && <p className={styles.menuNote}>还没有能对话或起草问卷的模型服务。</p>}
+                {!services.length && <p className={styles.menuNote}>先接入一个研究模型。</p>}
               </div>
-              {item('manage', '接入或管理模型服务', () => onOpen('services'))}
+              {item('manage', '模型设置与任务分工 →', () => onOpen('services'))}
             </>}
           </div>}
         </span>

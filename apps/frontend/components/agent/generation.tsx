@@ -13,6 +13,7 @@ import type { RoomId } from '@/lib/agent/rooms';
 import { QUESTION_TYPES } from '@/lib/questionnaire';
 import { isDefiniteGenerationRejection, prepareQuestionnaireGeneration, type QuestionnaireGenerationRequest } from '@/lib/questionnaire-proposals';
 import { stamp, threads } from './threads';
+import { getModelPreferences, getServerModelPreferences, resolveModelRoute, setModelPreference, subscribeModelPreferences, type ModelPreferences, type ModelTask } from '@/lib/agent/model-routing';
 import styles from './AgentShell.module.css';
 
 /**
@@ -30,9 +31,9 @@ export type Generation = {
   account: 'loading' | 'guest' | 'ready';
   lists: Lists;
   busy: boolean;
-  /** The service the composer's model chip points at; the consent card starts from it. */
-  preferredService: string;
-  prefer: (serviceId: string) => void;
+  /** Separate destinations for each existing model task; stores service references only. */
+  preferences: ModelPreferences;
+  prefer: (task: ModelTask, serviceId: string | null) => void;
   /** Reads the account's projects and services once. After a failure only a retry, asked for by the user, reads again. */
   load: (retry?: boolean) => void;
   start: (brief: string) => AgentTurn;
@@ -82,10 +83,11 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const owner = session?.authenticated ? session.user?.id ?? '' : '';
   const account: Generation['account'] = loading ? 'loading' : owner ? 'ready' : 'guest';
   const [lists, setLists] = useState<Lists>(EMPTY);
-  const [preferredService, prefer] = useState('');
+  const preferences = useSyncExternalStore(subscribeModelPreferences, () => getModelPreferences(owner), getServerModelPreferences);
+  const prefer = useCallback((task: ModelTask, serviceId: string | null) => setModelPreference(owner, task, serviceId), [owner]);
   // Another account never sees the previous account's projects or services, nor its choice of service.
   const [listsFor, setListsFor] = useState(`${owner}:${identityEpoch}`);
-  if (listsFor !== `${owner}:${identityEpoch}`) { setListsFor(`${owner}:${identityEpoch}`); setLists(EMPTY); prefer(''); }
+  if (listsFor !== `${owner}:${identityEpoch}`) { setListsFor(`${owner}:${identityEpoch}`); setLists(EMPTY); }
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const release = useCallback(() => { lock.current = false; setBusy(false); }, []);
@@ -96,7 +98,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   // up (two effects in one commit) share the read already under way.
   const reading = useRef(false);
   const load = useCallback((retry = false) => {
-    if (!owner || reading.current || !(lists.state === 'idle' || (retry && lists.state === 'error'))) return;
+    if (!owner || reading.current || (retry ? lists.state === 'loading' : lists.state !== 'idle')) return;
     const epoch = identityEpoch, current = () => isCurrentAccount(owner, epoch);
     reading.current = true;
     setLists(value => ({ ...value, state: 'loading', error: '' }));
@@ -187,7 +189,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     openRoom('design');
   }, [onProposal, openRoom]);
 
-  return useMemo(() => ({ account, lists, busy, preferredService, prefer, load, start, submit, cancel, reconcile, bring }), [account, lists, busy, preferredService, load, start, submit, cancel, reconcile, bring]);
+  return useMemo(() => ({ account, lists, busy, preferences, prefer, load, start, submit, cancel, reconcile, bring }), [account, lists, busy, preferences, prefer, load, start, submit, cancel, reconcile, bring]);
 }
 
 /** The double frame: what is sent, where it is saved, and which service runs it. Nothing runs until 起草 (y). */
@@ -206,7 +208,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   const { projects } = g.lists, services = g.lists.services.filter(s => s.capabilities.includes('questionnaire'));
   // The conversation's own project comes first, as the preferred service does.
   const project = [projectId, filed].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
-  const service = [serviceId, g.preferredService].find(id => services.some(s => s.id === id)) ?? services[0]?.id ?? '';
+  const service = resolveModelRoute('questionnaire', services, serviceId ? { questionnaire: serviceId } : g.preferences).service?.id ?? '';
   const ready = open && g.account === 'ready' && g.lists.state === 'ready' && !!brief.trim() && brief.length <= BRIEF_LIMIT && !!project && !!service && !g.busy;
   const submit = () => { if (ready) g.submit(messageId, { brief, projectId: project, serviceId: service }); };
   const key = (event: KeyboardEvent) => {
@@ -230,7 +232,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
               : <span className={styles.fieldNote}>还没有项目。<Link href="/projects">新建项目 ↗</Link></span>}
           </label>
           <label className={styles.field}><span>模型服务</span>
-            {services.length ? <select value={service} onChange={event => setServiceId(event.target.value)}>{services.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model}</option>)}</select>
+            {services.length ? <select value={service} onChange={event => { setServiceId(event.target.value); g.prefer('questionnaire', event.target.value); }}><option value="" disabled>请选择问卷起草模型</option>{services.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model} · v{s.revision}</option>)}</select>
               : <span className={styles.fieldNote}>还没有能起草问卷的模型服务。<Link href="/services">接入模型 ↗</Link></span>}
           </label>
         </>}
