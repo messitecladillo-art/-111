@@ -50,6 +50,7 @@ function harness() {
   const home = id => book().threads.find(t => t.messages.some(m => m.id === id));
   const posts = [], drafts = [], tools = [], navigation = [];
   const first = deferred(), receipt = deferred();
+  let storedPreferences = {research:A,questionnaire:A,report:A};
   const current = { owner: ALICE, identityEpoch: 1, generation: { account: 'ready', lists: { state: 'ready', services: [service(A), service(B)] }, start: brief => ({ lines: [[{text: 'questionnaire consent'}]] }) },
     chatService: service(A), reportService: service(A), chatMode: 'model', panel: null, light: { overall: 0, rooms: [] }, traces: [], held: { results: [], findings: [], placed: [], pending: false }, plan: null,
     report: { title: 'Synthetic report', report: [] }, liveReport: { quality: { results: [] } }, design: null,
@@ -63,7 +64,7 @@ function harness() {
     find(id) { return all().find(m => m.id === id); }, threadOf: home,
     remove(id) { book().threads = book().threads.filter(t => t.id !== id); if (book().active === id) book().active = null; },
   };
-  const globals = { ...chat, ...routing, latest, threads, consented: {current: new Set()}, crypto,
+  const globals = { ...chat, ...routing, getModelPreferences: () => storedPreferences, latest, threads, consented: {current: new Set()}, crypto,
     console, setTimeout, clearTimeout, Date, JSON, Promise, Set, Map,
     stamp: () => ({id: `message-${++count}`, at: Date.now()}), focusInput() {}, go: room => navigation.push(room), sendToReport() {},
     HostedApiError: class extends Error {}, errorMessage: error => error.message, UNRECORDED_SERVICE: 'unrecorded',
@@ -83,7 +84,8 @@ function harness() {
   const cards = () => all().flatMap(m => (m.turn?.cards??[]).filter(c => c.kind === 'confirm').map(card => ({message:m,card})));
   const confirm = card => agent.answer(card.message.id, 'confirmed', card.card.confirm.action);
   return { current, latest, posts, drafts, tools, navigation, threads, first, receipt, agent, cards, confirm, all,
-    choose(id, revision=1) { current.chatService = service(id, revision); current.reportService = service(id, revision); current.generation.lists.services = [current.chatService, service(id===A?B:A)]; },
+    chooseStored(id) { storedPreferences = {research:id,questionnaire:id,report:id}; },
+    choose(id, revision=1) { storedPreferences = {research:id,questionnaire:id,report:id}; current.chatService = service(id, revision); current.reportService = service(id, revision); current.generation.lists.services = [current.chatService, service(id===A?B:A)]; },
     switchAccount() { activeOwner = BOB; current.owner = BOB; current.identityEpoch++; },
     async flush() { await tick(); await tick(); },
     readyFirst(actions=[]) { const req=posts[0]; first.resolve({id:req.idempotencyKey,status:'ready',reply:'synthetic reply',step:1,message:req.message,actions,droppedActions:0}); },
@@ -134,4 +136,49 @@ test('a tool waiting for knowledge readiness cannot search a newly signed-in ide
   s.switchAccount(); s.current.knowledge={ready:true,search:async query=>{searched.push(['bob',query]);return[];}};
   await new Promise(resolve=>setTimeout(resolve,300)); await s.flush();
   assert.equal(searched.length,0,'a pending tool must stop rather than search the next account'); assert.equal(s.posts.length,1);
+});
+
+test('actual answer marks a stale chat/report confirmation cancelled while fresh replacement stays open', async () => {
+  for(const kind of ['chat','draft']){
+    const s=harness(); if(kind==='draft'){s.current.chatMode='command';s.agent.send('/report-draft');}else s.agent.send('研究下一步');
+    const old=s.cards().at(-1);s.choose(B);s.confirm(old);await s.flush();
+    assert.equal(s.posts.length+s.drafts.length,0);
+    assert.equal(s.threads.find(old.message.id).answered,'cancelled','the rejected old card must never say sent/drafted');
+    const fresh=s.cards().at(-1);assert.notEqual(fresh.message.id,old.message.id);assert.equal(fresh.message.answered,undefined,'fresh consent remains unanswered');
+  }
+});
+
+test('actual answer confirmation label agrees with dispatch when thread patch synchronously flushes service refs', async () => {
+  for(const kind of ['chat','draft']){
+    const s=harness();if(kind==='draft'){s.current.chatMode='command';s.agent.send('/report-draft');}else s.agent.send('研究下一步');
+    const old=s.cards().at(-1),original=s.threads.patch;let flushed=false;
+    s.threads.patch=(id,change)=>{const result=original(id,change);if(id===old.message.id&&!flushed){flushed=true;s.choose(B);}return result;};
+    s.confirm(old);await s.flush();assert.equal(flushed,true,'race boundary really executed');
+    const dispatched=s.posts.length+s.drafts.length;
+    assert.equal(s.threads.find(old.message.id).answered,dispatched?'confirmed':'cancelled','visual confirmation records the actual dispatch decision');
+    assert.ok(dispatched<=1,'no duplicate dispatch');
+    if(dispatched)assert.equal((s.posts[0]??s.drafts[0]).serviceId,A,'a dispatch preceding the flush stays with its validated service');
+  }
+});
+
+test('actual answer cannot claim report drafting when required material disappears before confirmation', async()=>{
+  const s=harness();s.current.chatMode='command';s.agent.send('/report-draft');const old=s.cards().at(-1);s.current.held=null;
+  s.confirm(old);await s.flush();assert.equal(s.drafts.length,0);assert.equal(s.threads.find(old.message.id).answered,'cancelled');
+});
+
+test('actual answer cannot claim chat sending when current identity check rejects dispatch',async()=>{
+  const s=harness();s.agent.send('研究下一步');const old=s.cards().at(-1);s.current.isCurrentAccount=()=>false;
+  s.confirm(old);await s.flush();assert.equal(s.posts.length,0);assert.equal(s.threads.find(old.message.id).answered,'cancelled');
+});
+
+
+test('actual answer checks synchronous stored choice when passive latest service refs still show the old model',async()=>{
+  for(const kind of ['chat','draft']){
+    const s=harness();if(kind==='draft'){s.current.chatMode='command';s.agent.send('/report-draft');}else s.agent.send('研究下一步');
+    const old=s.cards().at(-1);assert.equal(s.current.chatService.id,A);s.chooseStored(B);assert.equal(s.current.chatService.id,A,'passive ref intentionally stays stale');
+    s.confirm(old);await s.flush();assert.equal(s.posts.length+s.drafts.length,0,'old A consent cannot send after stored selection B');
+    assert.equal(s.threads.find(old.message.id).answered,'cancelled');const fresh=s.cards().at(-1);assert.notEqual(fresh.message.id,old.message.id);
+    assert.equal(fresh.card.confirm.action.modelBinding.serviceId,B);assert.equal(fresh.message.answered,undefined);
+    s.confirm(fresh);await s.flush();assert.equal(s.posts.length+s.drafts.length,1);assert.equal((s.posts[0]??s.drafts[0]).serviceId,B);
+  }
 });

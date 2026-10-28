@@ -8,7 +8,7 @@ export const APPENDIX_BODY_LIMIT=11900;
 const hashPattern=/^[a-f0-9]{64}$/;
 const purposes={planning:'研究规划',questionnaire:'问卷提案','analysis-explanation':'分析解释','report-draft':'报告草稿','slide-draft':'幻灯片草稿','visual-concept':'视觉概念',other:'其他'};
 export type AiUsageRecord={
-  id:string;provider:'openai'|'deepseek'|'qwen'|'anthropic'|'compatible'|'other'|null;model:string|null;purpose:keyof typeof purposes;
+  id:string;provider:'openai'|'deepseek'|'qwen'|'anthropic'|'gemini'|'compatible'|'other'|null;model:string|null;purpose:keyof typeof purposes;
   status:'queued'|'running'|'succeeded'|'failed'|'cancelled'|'unknown';
   requestedAt:string|null;finishedAt:string|null;inputHash:string|null;outputHash:string|null;
   usage:{inputTokens:number|null;outputTokens:number|null;cost:number|null;currency:'USD'|'CNY'|null};
@@ -54,7 +54,7 @@ export function parseAiUsageLedger(value:unknown,projectId?:string):AiUsageLedge
     if(requestedAt&&finishedAt&&Date.parse(finishedAt)<Date.parse(requestedAt))return invalid();
     const u=record(r.usage,['inputTokens','outputTokens','cost','currency']),cost=nullableNumber(u.cost,1e8),currency=u.currency===null?null:choice(u.currency,['USD','CNY'] as const);
     if(cost!==null&&currency===null)return invalid();
-    return {id:token(r.id,100),provider:r.provider===null?null:choice(r.provider,['openai','deepseek','qwen','anthropic','compatible','other'] as const),model:r.model===null?null:token(r.model,120),purpose:choice(r.purpose,Object.keys(purposes) as (keyof typeof purposes)[]),status:choice(r.status,['queued','running','succeeded','failed','cancelled','unknown'] as const),requestedAt,finishedAt,inputHash:nullableHash(r.inputHash),outputHash:nullableHash(r.outputHash),usage:{inputTokens:nullableNumber(u.inputTokens,1e10,true),outputTokens:nullableNumber(u.outputTokens,1e10,true),cost,currency}};
+    return {id:token(r.id,100),provider:r.provider===null?null:choice(r.provider,['openai','deepseek','qwen','anthropic','gemini','compatible','other'] as const),model:r.model===null?null:token(r.model,120),purpose:choice(r.purpose,Object.keys(purposes) as (keyof typeof purposes)[]),status:choice(r.status,['queued','running','succeeded','failed','cancelled','unknown'] as const),requestedAt,finishedAt,inputHash:nullableHash(r.inputHash),outputHash:nullableHash(r.outputHash),usage:{inputTokens:nullableNumber(u.inputTokens,1e10,true),outputTokens:nullableNumber(u.outputTokens,1e10,true),cost,currency}};
   });
   if(new Set(records.map(r=>r.id)).size!==records.length||(coverage==='unavailable'&&records.length)||(scope&&records.some(r=>r.purpose!=='questionnaire')))return invalid();
   return {schema:'AiUsageLedger/v1',coverage,projectId:bound,...(scope?{scope}:{}),records};

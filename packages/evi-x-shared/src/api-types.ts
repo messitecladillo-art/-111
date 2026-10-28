@@ -5,7 +5,7 @@ export type Session = { authenticated: boolean; user?: { id: string; email: stri
 export type Team = { id: string; name: string; role: MembershipRole };
 export type Member = { userId: string; email: string; role: MembershipRole };
 export type Project = { id: string; title: string; teamId: string; revision: number; createdAt: string };
-export type ServiceProvider = 'openai' | 'deepseek' | 'qwen' | 'compatible';
+export type ServiceProvider = 'openai' | 'deepseek' | 'qwen' | 'anthropic' | 'gemini' | 'compatible';
 export type ServiceCapability = 'questionnaire' | 'research' | 'report' | 'defense';
 export type Service = { id: string; label: string; provider: ServiceProvider; baseUrl: string; model: string; maxOutputTokens: number; capabilities: ServiceCapability[]; revision: number };
 export type QuestionnaireHead = { id: string; projectId: string; revision: number; design: Questionnaire; updatedAt: string };
@@ -14,7 +14,7 @@ export type QuestionnaireVersion = Omit<QuestionnaireVersionSummary, 'title'> & 
 export type Proposal = { id: string; projectId: string; serviceId: string; serviceRevision: number; inputRevision: number; status: 'ready' | 'failed' | 'outcome_unknown' | 'running'; design?: Questionnaire; errorCode?: string; createdAt: string };
 export type ProposalSummary = Omit<Proposal, 'design'> & { title: string };
 export type QuestionnaireVersionPage = { versions: QuestionnaireVersionSummary[]; nextBeforeRevision: number | null };
-export const PROVIDER_BASES: Record<Exclude<ServiceProvider, 'compatible'>, string> = { openai: 'https://api.openai.com/v1', deepseek: 'https://api.deepseek.com/v1', qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1' };
+export const PROVIDER_BASES: Record<Exclude<ServiceProvider, 'compatible'>, string> = { openai: 'https://api.openai.com/v1', deepseek: 'https://api.deepseek.com/v1', qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1', anthropic: 'https://api.anthropic.com/v1', gemini: 'https://generativelanguage.googleapis.com/v1beta' };
 export const CAPABILITY_LABELS: Record<ServiceCapability, string> = { questionnaire: '问卷设计', research: '研究规划', report: '报告写作', defense: '答辩准备' };
 export const ROLE_LABELS: Record<MembershipRole, string> = { owner: '负责人', editor: '编辑成员', reviewer: '复核成员', viewer: '只读成员' };
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -49,7 +49,7 @@ export function parseTeam(value: unknown): Team { const r = record(value, ['id',
 export function parseMember(value: unknown): Member { const r = record(value, ['userId', 'email', 'role']); return { userId: id(r.userId), email: string(r.email, 254), role: role(r.role) }; }
 export function parseService(value: unknown): Service {
   const r = record(value, ['id', 'label', 'provider', 'baseUrl', 'model', 'maxOutputTokens', 'capabilities', 'revision']);
-  if (!['openai', 'deepseek', 'qwen', 'compatible'].includes(r.provider as string) || !Array.isArray(r.capabilities) || r.capabilities.length < 1 || r.capabilities.length > 4 || r.capabilities.some(c => !Object.hasOwn(CAPABILITY_LABELS, c)) || new Set(r.capabilities).size !== r.capabilities.length) bad();
+  if (!['openai', 'deepseek', 'qwen', 'anthropic', 'gemini', 'compatible'].includes(r.provider as string) || !Array.isArray(r.capabilities) || r.capabilities.length < 1 || r.capabilities.length > 4 || r.capabilities.some(c => !Object.hasOwn(CAPABILITY_LABELS, c)) || new Set(r.capabilities).size !== r.capabilities.length) bad();
   return { id: id(r.id), label: string(r.label, 80), provider: r.provider as ServiceProvider, baseUrl: string(r.baseUrl, 512), model: string(r.model, 120), maxOutputTokens: integer(r.maxOutputTokens, 128, 4096), capabilities: [...r.capabilities] as ServiceCapability[], revision: integer(r.revision) };
 }
 export function parseQuestionnaireHead(value: unknown): QuestionnaireHead { const r = record(value, ['id', 'projectId', 'revision', 'design', 'updatedAt']); return { id: id(r.id), projectId: id(r.projectId), revision: integer(r.revision), design: parseQuestionnaire(JSON.stringify(r.design)), updatedAt: timestamp(r.updatedAt) }; }

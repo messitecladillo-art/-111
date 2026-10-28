@@ -11,7 +11,7 @@ import re
 
 
 SCOPE = "own-questionnaire-proposals/latest-200"
-PROVIDERS = frozenset(("openai", "deepseek", "qwen", "anthropic", "compatible", "other"))
+PROVIDERS = frozenset(("openai", "deepseek", "qwen", "anthropic", "gemini", "compatible", "other"))
 STATUSES = {"ready": "succeeded", "outcome_unknown": "unknown", "running": "running",
             "queued": "queued", "failed": "failed", "cancelled": "cancelled"}
 

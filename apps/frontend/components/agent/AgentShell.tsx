@@ -32,7 +32,7 @@ import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
 import type { Service } from '@evix/shared';
-import { MODEL_TASKS, eligibleModelServices, matchesModelConsent, resolveModelRoute, type ModelConsentBinding } from '@/lib/agent/model-routing';
+import { eligibleModelServices, getModelPreferences, matchesModelConsent, resolveModelRoute, type ModelConsentBinding, type ModelTask } from '@/lib/agent/model-routing';
 
 /**
  * A sentence's later steps: what the tools found, which ran already, the service the user agreed to, and `after`, the
@@ -220,6 +220,8 @@ export default function AgentShell() {
   const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate });
   useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate }; });
   const agent = useMemo(() => {
+    // Read the store synchronously at dispatch: a selection can change before the next effect updates `latest`.
+    const currentService = (task: ModelTask) => resolveModelRoute(task, latest.current.generation.lists.services, getModelPreferences(latest.current.owner)).service;
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
       const text = raw.trim();
@@ -240,11 +242,12 @@ export default function AgentShell() {
     };
     // The first sentence of a conversation waits for consent: what goes to the service, what never does, who pays.
     const ask = (text: string) => {
-      const { generation, chatService, owner, identityEpoch } = latest.current;
+      const { generation, owner, identityEpoch } = latest.current;
+      const chatService = currentService('research');
       if (generation.account !== 'ready' || !chatService) {
         // Whatever the sentence routes to here, the user learns why the model was not asked.
         local(text);
-        say([span(generation.account === 'ready' ? '请在输入框的模型菜单选择「对话研究」服务，' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
+        say([span(generation.account === 'ready' ? '请在输入框选择当前对话模型，或到模型设置接入服务，' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
         return;
       }
       threads.append([{ ...stamp(), role: 'user', text }]);
@@ -261,15 +264,15 @@ export default function AgentShell() {
     // `next` continues a sentence from what the previous step's tools found; without it, a new sentence starts.
     // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new. A
     // continuation keeps the service the sentence began with, the one the user agreed to, even if the menu has moved on.
-    const turn = (text: string, next?: Chain) => {
+    const turn = (text: string, next?: Chain, selectedService?: Service) => {
       const { panel, light, traces, held, owner, mutate, identityEpoch, isCurrentAccount } = latest.current;
       const callOwner = next?.owner ?? owner, callEpoch = next?.epoch ?? identityEpoch;
-      if (!callOwner || !isCurrentAccount(callOwner, callEpoch)) return;
-      const chatService = next?.service ?? latest.current.chatService;
-      if (!chatService) return;
+      if (!callOwner || !isCurrentAccount(callOwner, callEpoch)) return false;
+      const chatService = next?.service ?? selectedService ?? currentService('research');
+      if (!chatService) return false;
       // A later step stays in the sentence's own conversation, whichever one is open now, and stops if it was deleted.
       const book = threads.view(owner), home = next ? threads.threadOf(next.after) : book.threads.find(t => t.id === book.active);
-      if (next && !home) return;
+      if (next && !home) return false;
       const messages = home?.messages ?? [];
       const asked = messages.map(m => m.role === 'user' && m.text === text).lastIndexOf(true);
       // A sentence whose consent card was declined, or never answered, was not sent and is not sent later either.
@@ -286,6 +289,7 @@ export default function AgentShell() {
       if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
       const seen = next?.seen ?? new Set<string>();
       sendChatTurn(mutate, request).then(receipt => { if (isCurrentAccount(callOwner, callEpoch)) settle(waiting.id, receipt, chatService.label, seen, chatService, callOwner, callEpoch); }, failure => { if (isCurrentAccount(callOwner, callEpoch)) fail(waiting.id, failure, request.idempotencyKey, text); });
+      return true;
     };
     // How a model call ended, on the message that holds it; the service and step stay those it was sent with.
     const mark = (messageId: string, status: NonNullable<ModelCall['status']>, service?: string, step?: number) =>
@@ -342,11 +346,12 @@ export default function AgentShell() {
 
     // Drafting a report section: consent first, every time, naming what goes to the service and the number rule.
     const askDraft = (nodeId: string) => {
-      const { generation, reportService, held, report, owner, identityEpoch } = latest.current;
+      const { generation, held, report, owner, identityEpoch } = latest.current;
+      const reportService = currentService('report');
       const title = blueprintNode(nodeId).title;
       if (generation.account !== 'ready') { say([span('起草要调用你自己的模型服务，需要先登录。', 'dim')], [{ label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true }]); return; }
       if (!held || !report) { say([span(`起草「${title}」要先读到报告与登记结果；这次访问还没有打开报告与 PPT。`, 'dim')], [{ label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]); return; }
-      if (!reportService) { say([span('请在输入框的模型菜单选择「报告拟稿」服务；服务需启用报告能力。', 'dim')], [{ label: '/模型', action: { type: 'say', text: '/模型' }, primary: true }]); return; }
+      if (!reportService) { say([span('请到模型设置的「任务分工」选择报告拟稿服务；服务需启用报告能力。', 'dim')], [{ label: '/模型', action: { type: 'say', text: '/模型' }, primary: true }]); return; }
       const facts = draftFacts(held, nodeId).length, findings = standingFindings(held).length, existing = sectionText(report, nodeId).length;
       threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('起草之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${reportService.label} · ${reportService.model} · v${reportService.revision}」起草「${title}」`,
         lines: [
@@ -357,15 +362,18 @@ export default function AgentShell() {
         ], confirm: { label: '起草', action: { type: 'draft', node: nodeId, modelBinding: { owner: owner!, identityEpoch, serviceId: reportService.id, serviceRevision: reportService.revision } } }, cancel: '不起草' }] } }]);
     };
     const draftNow = (nodeId: string, binding?: ModelConsentBinding) => {
-      const { reportService, held, report, design, mutate, owner, identityEpoch, isCurrentAccount } = latest.current;
-      if (!matchesModelConsent(binding, owner, identityEpoch, reportService)) { say([span('模型配置或登录状态已变化，请重新确认本次拟稿。', 'dim')]); askDraft(nodeId); return; }
-      if (!reportService || !held || !report) { askDraft(nodeId); return; }
+      const { held, report, design, mutate, owner, identityEpoch, isCurrentAccount } = latest.current;
+      if (!owner || !isCurrentAccount(owner, identityEpoch)) return false;
+      const reportService = currentService('report');
+      if (!matchesModelConsent(binding, owner, identityEpoch, reportService)) { say([span('模型配置或登录状态已变化，请重新确认本次拟稿。', 'dim')]); askDraft(nodeId); return false; }
+      if (!reportService || !held || !report) { askDraft(nodeId); return false; }
       const title = blueprintNode(nodeId).title;
       const { request, facts } = draftRequest({ nodeId, held, content: report, design, service: reportService });
       const waiting: Message = { ...stamp(), role: 'agent', model: { service: reportService.label, serviceId: reportService.id, serviceRevision: reportService.revision, provider: reportService.provider, modelName: reportService.model, step: 1, status: 'running' },
         turn: { lines: [[span('正在请'), span(`「${reportService.label}」`, 'strong'), span(`起草「${title}」…`, 'dim')]] } };
       threads.append([waiting]);
       sendDraft(mutate, request).then(receipt => { if (owner && isCurrentAccount(owner, identityEpoch)) settleDraft(waiting.id, receipt, reportService.label, nodeId, facts); }, failure => { if (owner && isCurrentAccount(owner, identityEpoch)) failDraft(waiting.id, failure, request.idempotencyKey, nodeId, facts); });
+      return true;
     };
     const draftError = (code: string | null) => code === 'capability_unavailable' ? '这个模型服务没有启用「报告」能力。' : CHAT_ERRORS[code ?? ''] ?? '模型服务出错了。';
     // A draft in place of the waiting line: its paragraphs with each fact's value in gold, marked unverified, ready to adopt.
@@ -452,14 +460,15 @@ export default function AgentShell() {
         case 'href': if (/^\/(?!\/)/.test(action.href)) window.location.assign(action.href); break;
         case 'say': send(action.text); break;
         case 'chat': {
-          const { owner, chatService, identityEpoch } = latest.current, thread = threads.view(owner).active;
-          if (!matchesModelConsent(action.modelBinding, owner, identityEpoch, chatService)) { say([span('模型配置或登录状态已变化，请重新确认发送。', 'dim')]); ask(action.text); break; }
-          if (thread && chatService) consented.current.add(`${owner}:${identityEpoch}:${thread}:${chatService.id}:${chatService.revision}`);
-          turn(action.text);
-          break;
+          const { owner, identityEpoch } = latest.current, thread = threads.view(owner).active;
+          const chatService = currentService('research');
+          if (!matchesModelConsent(action.modelBinding, owner, identityEpoch, chatService)) { say([span('模型配置或登录状态已变化，请重新确认发送。', 'dim')]); ask(action.text); return false; }
+          const started = turn(action.text, undefined, chatService ?? undefined);
+          if (started && thread && chatService) consented.current.add(`${owner}:${identityEpoch}:${thread}:${chatService.id}:${chatService.revision}`);
+          return started;
         }
         case 'check': check(action.turn, action.message); break;
-        case 'draft': draftNow(action.node, action.modelBinding); break;
+        case 'draft': return draftNow(action.node, action.modelBinding);
         case 'checkDraft': checkDraft(action.draft, action.message, action.node, action.facts); break;
         // A draft adopted from a stored conversation is checked again: a blueprint section, a few paragraphs of text.
         case 'adopt': {
@@ -489,10 +498,12 @@ export default function AgentShell() {
       }
     };
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
-      const { owner, identityEpoch, chatService, reportService } = latest.current;
-      const changed = answered === 'confirmed' && action && (action.type === 'chat' || action.type === 'draft')
-        && !matchesModelConsent(action.modelBinding, owner, identityEpoch, action.type === 'chat' ? chatService : reportService);
-      threads.patch(id, m => m.role === 'agent' ? { ...m, answered: changed ? 'cancelled' : answered } : m);
+      if (answered === 'confirmed' && action && (action.type === 'chat' || action.type === 'draft')) {
+        const accepted = perform(action);
+        threads.patch(id, m => m.role === 'agent' ? { ...m, answered: accepted === false ? 'cancelled' : 'confirmed' } : m);
+        return;
+      }
+      threads.patch(id, m => m.role === 'agent' ? { ...m, answered } : m);
       if (answered === 'confirmed' && action) perform(action);
       else focusInput();
     };
@@ -549,11 +560,7 @@ export default function AgentShell() {
   };
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
-  const modelTasks = MODEL_TASKS.map(task => {
-    const route = resolveModelRoute(task, lists.services, preferences);
-    return { task, label: { research: '对话研究', questionnaire: '问卷起草', report: '报告拟稿' }[task], serviceId: route.service?.id ?? '', stale: route.reason === 'stale_selection',
-      services: eligibleModelServices(task, lists.services).map(s => ({ id: s.id, label: s.label, detail: `${s.model} · v${s.revision}` })) };
-  });
+  const services = eligibleModelServices('research', lists.services).map(s => ({ id: s.id, label: s.label, detail: `${s.model} · v${s.revision}` }));
   const projectId = thread ? thread.projectId : book.draftProject;
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
@@ -649,7 +656,7 @@ export default function AgentShell() {
         </div>
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
-          modelTasks={modelTasks} onService={prefer}
+          services={services} serviceId={chatService?.id ?? ''} onService={id => prefer('research', id)}
           mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
       </main>
 
