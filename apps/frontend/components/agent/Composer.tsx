@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { matchCommands } from '@/lib/agent/router';
 import type { RoomId } from '@/lib/agent/rooms';
+import type { ModelTask } from '@/lib/agent/model-routing';
 import { Icon } from './icons';
 import styles from './AgentShell.module.css';
 
@@ -15,7 +16,8 @@ type Props = {
   /** Opening a menu that needs the account's projects or services asks for them once. */
   onNeedLists: () => void;
   projects: Choice[]; projectId: string | null; onProject: (id: string | null) => void;
-  services: Choice[]; serviceId: string; onService: (id: string) => void;
+  modelTasks: { task: ModelTask; label: string; services: Choice[]; serviceId: string; stale: boolean }[];
+  onService: (task: ModelTask, id: string | null) => void;
   /** 指令模式 answers here; 用模型对话 sends sentences to `chatLabel`, a service that can talk. */
   mode: 'command' | 'model'; onMode: (mode: 'command' | 'model') => void; chatLabel: string;
   onOpen: (room: RoomId) => void;
@@ -28,13 +30,15 @@ type MenuName = 'project' | 'model' | 'attach' | null;
  * method is composing. Above it, the project the conversation is filed under and where its work is kept; below it,
  * what may be attached, how the agent acts, and which model service drafts for it.
  */
-export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen }: Props) {
+export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, modelTasks, onService, mode, onMode, chatLabel, onOpen }: Props) {
   const [value, setValue] = useState('');
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [recall, setRecall] = useState(-1);
   const [menu, setMenu] = useState<MenuName>(null);
+  const [modelTask, setModelTask] = useState<ModelTask>('research');
+  const taskChoice = modelTasks.find(item => item.task === modelTask)!;
   const wrap = useRef<HTMLDivElement>(null);
   const word = /^[/／]\S*$/u.test(value) ? value.slice(1) : null;
   const options = word !== null && dismissed !== value ? matchCommands(word) : [];
@@ -163,10 +167,18 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
                 {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '不调用模型' })}
                 {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力' })}
               </div>
-              <div role="group" aria-label="模型服务">
-                <p className={styles.menuLabel} aria-hidden="true">模型服务</p>
-                {services.map(s => item(s.id, s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail }))}
-                {!services.length && <p className={styles.menuNote}>还没有能对话或起草问卷的模型服务。</p>}
+              <div role="group" aria-label="按任务选择模型">
+                <p className={styles.menuLabel} aria-hidden="true">模型分工</p>
+                {modelTasks.map(task => <button key={task.task} type="button" role="menuitemradio" aria-checked={task.task === modelTask} className={styles.menuItem} onClick={() => setModelTask(task.task)}>
+                  {task.label}<small>{task.services.find(service => service.id === task.serviceId)?.label ?? (task.stale ? '原服务已不可用' : '待选择')}</small>
+                </button>)}
+              </div>
+              <div role="group" aria-label={`${taskChoice.label}模型服务`}>
+                <p className={styles.menuLabel} aria-hidden="true">{taskChoice.label}</p>
+                {taskChoice.stale && <p className={styles.menuNote}>原服务已不可用，请重新选择。</p>}
+                {taskChoice.services.map(s => item(s.id, s.label, () => onService(modelTask, s.id), { checked: s.id === taskChoice.serviceId, note: s.detail }))}
+                {!taskChoice.services.length && <p className={styles.menuNote}>还没有具备这项能力的模型服务。</p>}
+                {taskChoice.serviceId && item('clear-service', '清除这项选择', () => onService(modelTask, null))}
               </div>
               {item('manage', '接入或管理模型服务', () => onOpen('services'))}
             </>}

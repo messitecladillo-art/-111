@@ -15,6 +15,7 @@ import { sectionState, type ReportPlan } from './report-plan.ts';
 import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
 import { findingNeedsReview, type ResearchFinding, type ResultSnapshot } from '../research-quality.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
+import type { ModelConsentBinding } from './model-routing.ts';
 
 /**
  * gold: a number with an origin · cyan: generated, unconfirmed · teal: a method or command · error: failures only.
@@ -33,13 +34,13 @@ export type AgentAction =
   /** Sends a command as if the user had typed it, so every step stays in the transcript. */
   | { type: 'say'; text: string }
   /** Sends a sentence to the model the user has just agreed to, from the consent card. */
-  | { type: 'chat'; text: string }
+  | { type: 'chat'; text: string; modelBinding?: ModelConsentBinding }
   /** Reads the receipt of a model turn whose outcome was unclear; never calls the model again. */
   | { type: 'check'; turn: string; message: string }
   /** Writes these registered results into the report's blueprint sections; offered only on a confirmation card. */
   | { type: 'place'; results: string[] }
   /** Asks the user's model service to draft this blueprint section; offered only on a confirmation card. */
-  | { type: 'draft'; node: string }
+  | { type: 'draft'; node: string; modelBinding?: ModelConsentBinding }
   /**
    * Writes a draft's paragraphs, numbers already filled from the facts, into this blueprint section. `cited` holds the
    * statements of the facts they cite, checked against the project's current facts before anything is written.
