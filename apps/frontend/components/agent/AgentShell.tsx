@@ -255,7 +255,7 @@ export default function AgentShell() {
     }
     const syncKey = JSON.stringify({ title: thread.title, messages: thread.messages, events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null });
     if (lastSync.current.get(thread.id) === syncKey) {
-      setBackup({ busy: false, note: '云端已是最新。' });
+      if (!activeProcess?.auto) setBackup({ busy: false, note: '云端已是最新。' });
       return;
     }
     setBackup({ busy: true, note: '正在备份到项目…' });
@@ -274,6 +274,15 @@ export default function AgentShell() {
       setBackup({ busy: false, note: errorMessage(error) });
     }
   }, [thread, owner, activeProcess]);
+  const exportProcess = useCallback(() => {
+    if (!thread) return;
+    const name = recordName(thread, Date.now()).replace(/\.md$/u, '-过程.json');
+    download(name, JSON.stringify({
+      schemaVersion: 1, threadId: thread.id, title: thread.title, projectId: thread.projectId,
+      exportedAt: new Date().toISOString(), messages: thread.messages,
+      events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null,
+    }, null, 2));
+  }, [thread, activeProcess]);
   const toggleAuto = useCallback(() => {
     if (!thread || !canBackup) return;
     const next = !processJournal.auto(thread.id);
@@ -750,7 +759,7 @@ export default function AgentShell() {
         </header>
         {showProcess && <ProcessTimeline events={activeProcess?.events ?? []} checkpoint={activeProcess?.checkpoint} onClose={() => setShowProcess(false)}
           canBackup={canBackup} backupBusy={backup.busy} backupNote={backup.note} onBackup={() => void backupProcess()}
-          autoBackup={activeProcess?.auto === true} onToggleAuto={toggleAuto} />}
+          autoBackup={activeProcess?.auto === true} onToggleAuto={toggleAuto} onExport={exportProcess} />}
         <div ref={scrollRef} className={styles.scroll}>
           {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>

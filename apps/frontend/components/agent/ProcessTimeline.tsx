@@ -5,7 +5,7 @@ import { eventLabel, eventTime } from '@/lib/agent/process';
 import { Icon } from './icons';
 import styles from './AgentShell.module.css';
 
-export default function ProcessTimeline({ events, checkpoint, onClose, canBackup = false, backupBusy = false, backupLabel, backupNote, onBackup, autoBackup = false, onToggleAuto }: {
+export default function ProcessTimeline({ events, checkpoint, onClose, canBackup = false, backupBusy = false, backupLabel, backupNote, onBackup, autoBackup = false, onToggleAuto, onExport }: {
   events: readonly ProcessEvent[];
   checkpoint?: ProcessCheckpoint;
   onClose: () => void;
@@ -16,10 +16,12 @@ export default function ProcessTimeline({ events, checkpoint, onClose, canBackup
   onBackup?: () => void;
   autoBackup?: boolean;
   onToggleAuto?: () => void;
+  onExport?: () => void;
 }) {
   return <aside className={styles.processDrawer} role="dialog" aria-modal="true" aria-label="对话过程">
     <header className={styles.processHead}>
       <div><b>对话过程</b><small>{events.length} 个步骤 · 只读</small></div>
+      {onExport && <button type="button" className={styles.processButton} onClick={onExport}>导出</button>}
       <button type="button" className={styles.iconButton} onClick={onClose} aria-label="关闭过程"><Icon name="close" /></button>
     </header>
     <div className={styles.processBackup}>
