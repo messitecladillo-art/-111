@@ -24,7 +24,7 @@ import ChoiceGroup from "@/components/ChoiceGroup";
 import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel } from "@/components/WorkbenchShell";
 import type { ReactNode } from "react";
 import type { EditorContent } from "@/lib/editor-model";
-import type { ProjectView } from "@/lib/agent/illumination";
+import type { ProjectView, RuleScopeView } from "@/lib/agent/illumination";
 import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -446,7 +446,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
   );
 }
 
-function RuleWorkbench() {
+function RuleWorkbench({ onResolved }: { onResolved?: (resolution: RuleResolution | null) => void }) {
   const [form, setForm] = useState<RuleScopeInput>({
     edition: RULE_CORPUS_META.snapshot.edition,
     group: RULE_CORPUS_META.snapshot.group,
@@ -457,14 +457,23 @@ function RuleWorkbench() {
   const [result, setResult] = useState<RuleResolution | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const requestEpoch = useRef(0);
 
   function update(dimension: keyof RuleScopeInput, value: string) {
+    requestEpoch.current++;
+    setLoading(false);
+    onResolved?.(null);
+    setResult(null);
+    setError("");
     setForm((current) => ({ ...current, [dimension]: value }));
   }
 
   async function resolveRules(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const epoch = ++requestEpoch.current;
     setLoading(true);
+    setResult(null);
+    onResolved?.(null);
     setError("");
     try {
       const payload = await apiRequest("/api/rules", {
@@ -473,11 +482,16 @@ function RuleWorkbench() {
       });
       const normalized = normalizeRuleResolution(payload);
       if (!normalized) throw new Error("规则服务返回了无法识别的结果");
+      if (epoch !== requestEpoch.current) return;
       setResult(normalized);
+      onResolved?.(normalized);
     } catch (requestError) {
+      if (epoch !== requestEpoch.current) return;
+      setResult(null);
+      onResolved?.(null);
       setError(requestError instanceof Error ? requestError.message : "规则服务暂时不可用");
     } finally {
-      setLoading(false);
+      if (epoch === requestEpoch.current) setLoading(false);
     }
   }
 
@@ -585,8 +599,15 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
   // Paragraphs, tables and formulas a workbench module sends to the report; the editor applies each once.
   const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
   const [report,setReport]=useState<EditorContent|null>(null);
+  const [ruleResolution,setRuleResolution]=useState<RuleScopeView|null>(null);
+  const onRuleResolved=useCallback((resolution:RuleResolution|null)=>{
+    setRuleResolution(resolution?{
+      match:resolution.match,blocking:resolution.blocking,rules:resolution.rules.length,
+      unknowns:resolution.unknowns.length,sources:resolution.sources.length,sourceRawSha256:resolution.sourceRawSha256,
+    }:null);
+  },[]);
   const dataset=exchange.dataset;
-  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
+  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result,rule:ruleResolution}),[exchange.design,dataset,report,exchange.pending.result,ruleResolution]);
   const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => {
     const registration=normalizeResultRegistration(exchange.pending.result?.payload);
     return ({
@@ -634,9 +655,9 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       design: <QuestionnaireStudio localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={handoffs.setDesign} onAnalyze={snapshot=>{handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel onBriefSource={source=>{if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <ProjectPortal />,
-      rules: <RuleWorkbench />,
+      rules: <RuleWorkbench onResolved={onRuleResolved} />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
-  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport]);
+  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, onRuleResolved]);
   return { panels, view, publishProposal, sendToReport: setReportInsert };
 }
 

@@ -11,7 +11,7 @@ const text = turn => turn.lines.flat().map(s => s.text).join('');
 test('the model sees each module’s light and failing checks, the figures that can be traced, and no data rows', () => {
   const context = chatContext('design', illuminate(empty), [{ reference: '图 3-1', title: '各年级满意度' }]);
   assert.equal(context.room, 'design');
-  assert.deepEqual(context.rooms.map(r => r.room), ['design', 'sampling', 'analysis', 'editor']);
+  assert.deepEqual(context.rooms.map(r => r.room), ['rules', 'design', 'sampling', 'analysis', 'editor']);
   assert.ok(context.rooms[0].blind.length >= 1 && context.rooms[0].blind.every(b => b.length <= 80));
   assert.deepEqual(context.traces, [{ reference: '图 3-1', title: '各年级满意度' }]);
   assert.ok(JSON.stringify(context).length < 16000, 'well inside the backend’s limit');

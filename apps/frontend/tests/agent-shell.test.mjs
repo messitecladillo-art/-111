@@ -40,22 +40,37 @@ test('bars and braille draw the score they are given, and only a perfect score i
 test('an empty project is dark everywhere, and its blind spots follow the research path', () => {
   const light = illuminate(empty);
   assert.equal(light.overall, 0);
-  assert.deepEqual(light.rooms.map(r => r.room), ['design', 'sampling', 'analysis', 'editor']);
-  assert.deepEqual(light.blind.map(c => c.id), ['design.questions', 'sampling.frame', 'analysis.data', 'analysis.results', 'analysis.findings', 'report.body']);
+  assert.deepEqual(light.rooms.map(r => r.room), ['rules', 'design', 'sampling', 'analysis', 'editor']);
+  assert.deepEqual(light.blind.map(c => c.id), ['rules.scope', 'design.questions', 'sampling.frame', 'analysis.data', 'analysis.results', 'analysis.findings', 'report.body']);
   assert.equal(light.blind.find(c => c.id === 'analysis.findings').go, 'editor', 'findings are confirmed in the report room');
   assert.equal(light.benchmark, null);
 });
 
+test('the rules room lights only when scope, sources and unknowns are settled', () => {
+  const parsed = { match: 'exact', blocking: false, rules: 10, unknowns: 0, sources: 1, sourceRawSha256: 'a'.repeat(64) };
+  assert.equal(roomLight(illuminate({ ...empty, rule: parsed }), 'rules').score, 1);
+  const missing = illuminate(empty);
+  assert.equal(roomLight(missing, 'rules').score, 0);
+  assert.equal(missing.blind[0].id, 'rules.scope');
+  const unknown = illuminate({ ...empty, rule: { ...parsed, unknowns: 2 } });
+  assert.equal(roomLight(unknown, 'rules').checks.find(c => c.id === 'rules.unknowns').passed, false);
+  const unsourced = illuminate({ ...empty, rule: { ...parsed, sources: 0, sourceRawSha256: '' } });
+  assert.equal(roomLight(unsourced, 'rules').checks.find(c => c.id === 'rules.sources').passed, false);
+  const none = illuminate({ ...empty, rule: { ...parsed, match: 'none', blocking: true, rules: 0, sources: 0, unknowns: 1 } });
+  assert.equal(roomLight(none, 'rules').score, 0);
+  assert.match(text(route('下一步做什么？', ctx({ ...empty, rule: parsed })).turn), /下一步：问卷还没有题目/, 'with rules lit, the next blind spot is the questionnaire');
+});
+
 test('the questionnaire lights its room by its own checks, never by question count alone', () => {
   const design = exampleQuestionnaire(), light = illuminate({ ...empty, design });
-  const room = light.rooms[0];
+  const room = roomLight(light, 'design');
   assert.equal(room.checks.length, 4);
   assert.ok(room.checks[0].passed && room.score > 0 && room.score <= 1);
   assert.match(room.summary, new RegExp(`${design.questions.length} 道题`));
   const blank = { ...design, questions: design.questions.map(q => ({ ...q, text: '' })) };
-  assert.equal(illuminate({ ...empty, design: blank }).rooms[0].score, 0, 'blank stems are a form, not evidence');
+  assert.equal(roomLight(illuminate({ ...empty, design: blank }), 'design').score, 0, 'blank stems are a form, not evidence');
   const unmapped = { ...design, questions: design.questions.map(q => ({ ...q, analysis: 'undecided' })) };
-  assert.equal(illuminate({ ...empty, design: unmapped }).rooms[0].checks.find(c => c.id === 'design.mapped').passed, false);
+  assert.equal(roomLight(illuminate({ ...empty, design: unmapped }), 'design').checks.find(c => c.id === 'design.mapped').passed, false);
 });
 
 test('the report room is dark until the template is written over, then scored by the benchmark', () => {
@@ -92,7 +107,7 @@ test('slash commands, rooms and everyday phrasings route to what they name', () 
   assert.deepEqual(route('/经典', ctx(empty, null)).turn.chips[0].action, { type: 'href', href: '/workspace' });
   assert.deepEqual(route('切换到浅色模式', ctx()).turn.act, { type: 'theme', theme: 'light' });
   assert.deepEqual(route('/夜', ctx()).turn.act, { type: 'theme', theme: 'dark' });
-  assert.match(text(route('下一步做什么？', ctx()).turn), /下一步：问卷还没有题目/);
+  assert.match(text(route('下一步做什么？', ctx()).turn), /下一步：还没有解析适用规则/);
   assert.match(text(route('查一下进度', ctx()).turn), /整体照度 0%/);
   const scoped = route('问卷还缺什么', ctx()).turn;
   assert.match(text(scoped), /问卷设计里光到不了的角落有 1 处/);
