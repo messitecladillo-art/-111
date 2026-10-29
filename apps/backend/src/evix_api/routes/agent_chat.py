@@ -7,8 +7,8 @@ from application.services.section_draft import SectionDraftService
 from multi_agent.agents.writing_agent.services import section_draft
 
 
-def register_agent_chat(app, settings, db, session_user, lock_user, operation, owned_service, generator):
-    service = AgentChatService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator)
+def register_agent_chat(app, settings, db, session_user, lock_user, operation, owned_service, generator, project_memory):
+    service = AgentChatService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator, project_memory=project_memory)
     drafts = SectionDraftService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator)
 
     def auth(request: Request, session=Depends(db)):
@@ -23,7 +23,7 @@ def register_agent_chat(app, settings, db, session_user, lock_user, operation, o
 
     @app.post('/api/agent/turns', status_code=201)
     async def create_turn(request: Request, user=Depends(auth), session=Depends(db)):
-        raw_data = await body(request, domain.REQUEST_FIELDS, domain.STEP_FIELDS, limit=60000)
+        raw_data = await body(request, domain.REQUEST_FIELDS, domain.STEP_FIELDS + domain.PROJECT_FIELDS, limit=60000)
         return await service.create_turn(user=user, session=session, check_session=lambda session, **kwargs: session_user(request, session, **kwargs), raw_data=raw_data)
 
     # A report section drafted from the project's facts; the browser fills the numbers and the user adopts it.

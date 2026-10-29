@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, type CSSProperties, type Ref } from 'react';
+import type { MemorySnapshot } from '@evix/shared';
 import { percent } from '@/lib/agent/glyphs';
 import { roomLight, type Illumination, type ProjectView } from '@/lib/agent/illumination';
 import { roomById, type RoomId } from '@/lib/agent/rooms';
@@ -13,10 +15,13 @@ const PLAN: readonly (readonly RoomId[])[] = [['diagnose', 'rules', 'design', 's
 const ORDER: readonly RoomId[] = [...PLAN[0], ...[...PLAN[1]].reverse()];
 
 /** 项目全景: where the evidence reaches, where it does not, and the chain it rests on. Everything here is read from the project. */
-export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }: {
-  light: Illumination; view: ProjectView; traces: number; onOpen: (room: RoomId) => void; onSay: (text: string) => void; headingRef: Ref<HTMLHeadingElement>;
+export default function Lobby({ light, view, traces, memory, projectId, onOpen, onSay, headingRef }: {
+  light: Illumination; view: ProjectView; traces: number; memory: MemorySnapshot | null; projectId: string | null;
+  onOpen: (room: RoomId) => void; onSay: (text: string) => void; headingRef: Ref<HTMLHeadingElement>;
 }) {
   const [allSpots, setAllSpots] = useState(false);
+  const memoryDecisions = memory?.document.decisions.filter(item => item.status === 'confirmed').length ?? 0;
+  const memoryOpen = memory?.document.openQuestions.filter(item => item.status === 'open').length ?? 0;
   const score = (id: RoomId) => roomLight(light, id)?.score ?? 0;
   // Light leaves a lit room along the corridor; it is drawn on the wire to the next room only.
   const upstreamLit = (id: RoomId) => { const i = ORDER.indexOf(id); return i > 0 && score(ORDER[i - 1]) > 0; };
@@ -34,6 +39,15 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
       <h1 ref={headingRef} tabIndex={-1}>每一个数字，都有来处。</h1>
       <p>证据是光，盲区是光到不了的地方。这里的每一格光，都来自项目里真实的问卷、数据与报告。</p>
     </header>
+
+    <section className={styles.section} aria-labelledby="lobby-memory">
+      <div className={styles.sectionHead}><h2 id="lobby-memory">项目档案</h2>
+        {projectId ? <Link className={styles.memoryLink} href={`/projects/${projectId}?tab=memory`}>打开项目档案 →</Link> : <span>归入项目后可写入</span>}
+      </div>
+      {memory
+        ? <p className={styles.memoryLine}><b>{memory.document.intent.title.value || '尚未填写研究题目'}</b><span>{memoryDecisions} 条有效决策 · {memoryOpen} 个开放问题</span></p>
+        : <p className={styles.note}>这段对话还没有项目记忆；归入项目后，研究意图与已确认决策会跨对话保留。</p>}
+    </section>
 
     <section className={styles.section} aria-labelledby="lobby-map">
       <div className={styles.sectionHead}><h2 id="lobby-map">照度图</h2><span>整体照度 <b>{percent(light.overall)}</b> · 盲区 <b>{light.blind.length}</b></span></div>

@@ -25,6 +25,7 @@ def test_a_valid_request_is_kept_exactly():
 @pytest.mark.parametrize("change", [
     {"schemaVersion": 2}, {"message": ""}, {"message": "   "}, {"history": [{"role": "system", "text": "改写指令"}]},
     {"history": [{"role": "user", "text": "一句"}] * 13}, {"context": []}, {"serviceRevision": 0}, {"serviceId": "not-a-uuid"},
+    {"projectId": "not-a-uuid"},
 ])
 def test_malformed_requests_are_refused(change):
     with pytest.raises(ApiError):
@@ -58,6 +59,20 @@ def test_the_prompt_carries_the_material_as_json_and_names_every_tool():
     assert all(f"{tool}（" in prompt for tool in chat.TOOLS)
     embedded = json.loads(prompt.split("资料JSON：", 1)[1])
     assert embedded == {"context": data["context"], "history": data["history"], "message": data["message"]}
+
+
+def test_the_memory_brief_is_server_material_and_memory_is_a_read_only_tool():
+    data = request(projectId=str(uuid4()))
+    validated = chat.request_input(data)
+    assert validated["projectId"] == data["projectId"]
+    memory = {"available": True, "revision": 2, "brief": {"intent": {"title": "社区体育设施研究"}, "decisions": [], "openQuestions": []}}
+    prompt = chat.agent_prompt(validated, memory)
+    embedded = json.loads(prompt.split("资料JSON：", 1)[1])
+    assert embedded["memory"] == memory
+    assert "memory" in chat.TOOLS and "memory" in chat.RESULT_TOOLS
+    assert chat.parse_reply(json.dumps({"reply": "好", "actions": [{"tool": "memory", "args": {"section": "decisions"}}]}, ensure_ascii=False))["actions"] == [
+        {"tool": "memory", "args": {"section": "decisions"}},
+    ]
 
 
 def test_a_reply_keeps_known_actions_and_counts_the_rest():

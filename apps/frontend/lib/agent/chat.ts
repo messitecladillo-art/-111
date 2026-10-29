@@ -13,11 +13,12 @@ export type ChatAction =
   | { tool: 'place'; args: Record<string, never> }
   | { tool: 'open'; args: { room: RoomId } }
   | { tool: 'lookup'; args: { query: string } }
-  | { tool: 'draft'; args: { brief: string } };
+  | { tool: 'draft'; args: { brief: string } }
+  | { tool: 'memory'; args: { section?: 'intent' | 'decisions' | 'open'; id?: string } };
 export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null };
 /** What a read-only tool found, sent back so the model can go on from it. */
-export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup' | 'results'; text: string };
+export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup' | 'results' | 'memory'; text: string };
 export type ChatLine = { role: 'user' | 'agent'; text: string };
 export type ChatContext = {
   room: RoomId | null;
@@ -30,13 +31,15 @@ export type ChatContext = {
 export type ChatRequest = {
   schemaVersion: 1; idempotencyKey: string; message: string; history: ChatLine[]; context: ChatContext;
   serviceId: string; serviceRevision: number; consent: true;
+  /** The hosted project this conversation is filed under, so the server can attach its confirmed memory. */
+  projectId?: string;
   /** A continuation: the step it is (2 or more) and what the previous step's tools found. */
   step?: number; toolResults?: ToolResult[];
 };
 
 /** One sentence is answered in at most this many calls; the backend lets the last ask for no tools. */
 export const MAX_STEPS = 3;
-const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup', 'results']);
+const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup', 'results', 'memory']);
 export const isResultTool = (tool: ChatAction['tool']): tool is ToolResult['tool'] => RESULT_TOOLS.has(tool);
 
 /** A span as the model should read it: a formula keeps its TeX delimiters. */
@@ -98,6 +101,13 @@ function action(value: unknown): ChatAction | null {
       const [name, limit] = TEXT_ARGS[row.tool], given = row.args[name];
       if (typeof given !== 'string' || !given.trim() || given.length > limit) return null;
       return { tool: row.tool, args: { [name]: given.trim() } } as ChatAction;
+    }
+    case 'memory': {
+      const section = row.args.section, id = row.args.id;
+      if (section !== undefined && !['intent', 'decisions', 'open'].includes(section as string)) return null;
+      if (id !== undefined && (typeof id !== 'string' || !id.trim() || id.length > 64)) return null;
+      if (section === undefined && id === undefined) return null;
+      return { tool: 'memory', args: { ...(section === undefined ? {} : { section: section as 'intent' | 'decisions' | 'open' }), ...(id === undefined ? {} : { id: id as string }) } };
     }
     default: return null;
   }

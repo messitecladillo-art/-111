@@ -9,6 +9,7 @@ import { exhibitKey, type Trace, type TraceStep } from './provenance.ts';
 import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
 import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
+import { INTENT_FIELDS, type MemorySnapshot } from '@evix/shared';
 import { blueprintNode } from '../report-blueprint.ts';
 import { draftableNode } from './draft.ts';
 import { sectionState, type ReportPlan } from './report-plan.ts';
@@ -73,7 +74,9 @@ export type ResultsView = { results: readonly ResultSnapshot[]; findings: readon
   placed: readonly string[] } | null;
 export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[]; results?: ResultsView;
   /** The report as a plan of work; null before the report has been seen in this visit. */
-  plan?: ReportPlan | null };
+  plan?: ReportPlan | null;
+  /** The hosted project's confirmed memory, when this conversation is filed under one. */
+  memory?: MemorySnapshot | null };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
 export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
   /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
@@ -452,6 +455,35 @@ export type KnowledgeHit = {
  * Answers a lookup from knowledge search hits. An explicit question accepts any hit; a bare phrase that might be
  * a term accepts only a name or alias match, so ordinary sentences are not answered with loosely related entries.
  */
+const INTENT_LABELS: Record<string, string> = { title: '题目', researchQuestion: '研究问题', decisionGoal: '决策目标', population: '调查对象', geography: '地区', stage: '阶段' };
+
+/** A read-only view of the current project memory; it never changes the project. */
+function memoryTurn(action: Extract<ChatAction, { tool: 'memory' }>, ctx: RouterContext): AgentTurn {
+  const snapshot = ctx.memory;
+  if (!snapshot) return { lines: [[t('当前项目还没有可读的项目记忆。', 'dim')]] };
+  const { section, id } = action.args;
+  if (id) {
+    const decision = snapshot.document.decisions.find(item => item.id === id);
+    if (decision) return { lines: [[t(decision.statement, 'strong')], [t(decision.rationale, 'dim')]] };
+    const question = snapshot.document.openQuestions.find(item => item.id === id);
+    if (question) return { lines: [[t(question.question, 'strong')], [t(question.why, 'dim')], [t(question.next, 'dim')]] };
+    return { lines: [[t(`项目记忆里没有条目 ${id}。`, 'dim')]] };
+  }
+  if (section === 'intent') {
+    const lines = INTENT_FIELDS.flatMap(field => snapshot.document.intent[field].status === 'confirmed' && snapshot.document.intent[field].value
+      ? [[t(`${INTENT_LABELS[field]}：`), t(snapshot.document.intent[field].value, 'strong')]] : []);
+    return lines.length ? { lines } : { lines: [[t('项目记忆还没有确认的研究意图。', 'dim')]] };
+  }
+  if (section === 'open') {
+    const lines = snapshot.document.openQuestions.filter(item => item.status === 'open').slice(0, 8)
+      .map(item => [t(item.question, 'strong'), t(` · ${item.next}`, 'dim')]);
+    return lines.length ? { lines } : { lines: [[t('项目记忆里没有待解决的开放问题。', 'dim')]] };
+  }
+  const lines = snapshot.document.decisions.filter(item => item.status === 'confirmed').slice(0, 8)
+    .map(item => [t(item.statement, 'strong'), t(`（${item.rationale}）`, 'dim')]);
+  return lines.length ? { lines } : { lines: [[t('项目记忆还没有确认的决策。', 'dim')]] };
+}
+
 /** A tool the model asked for, run exactly as the matching command runs, against the same context. */
 export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
   switch (action.tool) {
@@ -464,6 +496,7 @@ export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
     case 'open': return { turn: open(roomById(action.args.room), ctx) };
     case 'lookup': return { lookup: action.args.query, explicit: true };
     case 'draft': return { generate: action.args.brief };
+    case 'memory': return { turn: memoryTurn(action, ctx) };
   }
 }
 
