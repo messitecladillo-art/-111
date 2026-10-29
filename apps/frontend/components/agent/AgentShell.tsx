@@ -430,7 +430,7 @@ export default function AgentShell() {
           writeCheckpoint(threadId, waiting.id);
           return;
         }
-        sendLocalChatTurn(request, localConfig, memory).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
+        sendLocalChatTurn(request, localConfig, memory).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => failLocal(waiting.id, failure, text));
         return;
       }
       sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
@@ -479,6 +479,19 @@ export default function AgentShell() {
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span(`${errorMessage(failure)} 这一轮可能已经记下；核对只读取回执，不会再次调用模型。`)]], chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: messageId }, primary: true }] });
         record(threadId, 'error', `模型调用结果未明：${errorMessage(failure)}`, { correlationId: messageId, detail: { code: failure instanceof HostedApiError ? failure.code : 'network', status: failure instanceof HostedApiError ? failure.status : 0 } });
       }
+      writeCheckpoint(threadId, messageId);
+    };
+    // A local call leaves no receipt on this server to read back: a refusal before the provider was reached is certain;
+    // anything else may have reached it, so 再问 warns instead of offering a 核对 that could only 404.
+    const failLocal = (messageId: string, failure: unknown, text: string) => {
+      const threadId = threads.threadOf(messageId)?.id;
+      const refused = failure instanceof HostedApiError && failure.status >= 400 && failure.status < 500;
+      const code = failure instanceof HostedApiError ? failure.code : 'network', reason = CHAT_ERRORS[code] ?? errorMessage(failure);
+      mark(messageId, refused ? 'refused' : 'unknown');
+      replace(messageId, { lines: [[span(refused ? '这一轮没有发出：' : '本地这一轮没有拿到回执：', 'error'), span(reason),
+        ...(refused ? [] : [span(' 若服务商侧已经计费，再问会作为新的一轮计费。', 'dim')])]],
+        chips: [{ label: '再问一次', action: { type: 'say', text } }] });
+      record(threadId, 'error', `本地模型调用${refused ? '未发出' : '结果未明'}：${code}`, { correlationId: messageId, detail: { code, status: failure instanceof HostedApiError ? failure.status : 0 } });
       writeCheckpoint(threadId, messageId);
     };
     const check = (turnId: string, messageId: string) => {

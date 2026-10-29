@@ -184,6 +184,6 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
         <button type="submit" className={styles.send} disabled={!value.trim()} aria-label="发送"><Icon name="up" /></button>
       </div>
     </form>
-    {localOpen && <LocalModelDialog onClose={() => setLocalOpen(false)} onSaved={() => { onService('local'); onMode('model'); }} />}
+    {localOpen && <LocalModelDialog onClose={() => setLocalOpen(false)} onSaved={() => { onService('local'); onMode('model'); }} onCleared={() => onMode('command')} />}
   </div>;
 }

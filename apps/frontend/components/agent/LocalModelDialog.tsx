@@ -7,7 +7,7 @@ import styles from './AgentShell.module.css';
 
 const DEFAULTS = { provider: 'deepseek' as const, model: 'deepseek-chat', maxOutputTokens: 2048 };
 
-export default function LocalModelDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+export default function LocalModelDialog({ onClose, onSaved, onCleared }: { onClose: () => void; onSaved: () => void; onCleared: () => void }) {
   const existing = localModel.view();
   const [provider, setProvider] = useState<LocalModelConfig['provider']>(existing?.provider ?? DEFAULTS.provider);
   const [model, setModel] = useState(existing?.model ?? DEFAULTS.model);
@@ -41,7 +41,7 @@ export default function LocalModelDialog({ onClose, onSaved }: { onClose: () => 
       <p className={styles.localBase}>{baseUrl}</p>
       {error && <p className={styles.localError} role="alert">{error}</p>}
       <footer>
-        {existing && <button type="button" className={styles.localClear} onClick={() => { localModel.clear(); onClose(); }}>清除</button>}
+        {existing && <button type="button" className={styles.localClear} onClick={() => { localModel.clear(); onCleared(); onClose(); }}>清除</button>}
         <span className={styles.spacer} />
         <button type="button" className={styles.localCancel} onClick={onClose}>取消</button>
         <button type="button" className={styles.localSave} disabled={!apiKey.trim() || !model.trim()} onClick={save}>保存并使用</button>

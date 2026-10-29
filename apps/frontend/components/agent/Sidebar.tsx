@@ -133,7 +133,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
     {notice && <p className={styles.sideNotice} role="alert">{notice}</p>}
     <div className={styles.sideFoot}>
       {failed && account !== 'ready' ? <>
-        <span role="alert">账号服务暂未就绪</span>
+        <span role="alert">账号服务未连接 · 本地模型仍可用</span>
         <span className={styles.spacer} />
         <button type="button" onClick={onRetry}>重新连接</button>
       </> : <>
