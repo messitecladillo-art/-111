@@ -137,6 +137,7 @@ export const CHAT_ERRORS: Record<string, string> = {
   rate_limited: '模型服务限流了，请稍后再试。',
   invalid_response: '模型的回答不符合约定格式，没有采用。',
   provider_rejected: '模型服务拒绝了这次请求。',
+  provider_unavailable: '模型服务暂时不可用，请稍后再试。',
   interrupted_call: '这一轮调用被中断了。',
 };
 

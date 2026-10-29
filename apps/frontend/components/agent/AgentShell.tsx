@@ -36,6 +36,8 @@ import { stamp, threads, type Message, type ModelCall } from './threads';
 import { makeProcessCheckpoint, makeProcessEvent, type ProcessEventKind } from '@/lib/agent/process';
 import { processJournal } from './process-journal';
 import ProcessTimeline from './ProcessTimeline';
+import { localModel } from './local-model';
+import { sendLocalChatTurn } from './local-chat-client';
 import type { Service } from '@evix/shared';
 
 /**
@@ -207,9 +209,16 @@ export default function AgentShell() {
   // The chat uses the service the model menu shows as chosen, never another one behind it.
   // The composer's picker offers services to talk with or to draft questionnaires with; one that only writes reports is
   // never chosen there, so it cannot leave the conversation without a model. Drafting a section finds it below.
+  const localConfig = useSyncExternalStore(localModel.subscribe, localModel.view, localModel.serverSnapshot);
+  const localService = useMemo<Service | null>(() => localConfig ? {
+    id: 'local', label: localConfig.label, provider: localConfig.provider, baseUrl: localConfig.baseUrl,
+    model: localConfig.model, maxOutputTokens: localConfig.maxOutputTokens, capabilities: ['research'], revision: 1,
+  } : null, [localConfig]);
   const pickable = useMemo(() => lists.services.filter(s => s.capabilities.includes('research') || s.capabilities.includes('questionnaire')), [lists.services]);
-  const chosenService = pickable.some(s => s.id === preferredService) ? preferredService : pickable[0]?.id ?? '';
-  const chatService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
+  const chatServices = useMemo(() => localService ? [localService, ...pickable] : pickable, [localService, pickable]);
+  const chosenService = localService && (preferredService === 'local' || !pickable.some(s => s.id === preferredService))
+    ? 'local' : pickable.some(s => s.id === preferredService) ? preferredService : pickable[0]?.id ?? '';
+  const chatService = chatServices.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
   // Drafting a report section asks a service with the 报告 capability: the chosen one when it has it, else the first that does.
   const reportService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('report')) ?? lists.services.find(s => s.capabilities.includes('report')) ?? null;
 
@@ -238,8 +247,8 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, liveReport = view.report;
   const projectId = thread ? thread.projectId : book.draftProject;
   const projectMemory = useProjectMemory(projectId);
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot }; });
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot, localConfig });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot, localConfig }; });
   // A process event is written before its call, so a reload can say what was attempted even when no reply arrived.
   const record = useCallback((threadId: string | undefined, kind: ProcessEventKind, summary: string, extra: { correlationId?: string; refs?: string[]; detail?: Record<string, string | number | boolean | null> } = {}) => {
     if (!threadId) return false;
@@ -343,10 +352,14 @@ export default function AgentShell() {
     // The first sentence of a conversation waits for consent: what goes to the service, what never does, who pays.
     const ask = (text: string) => {
       const { generation, chatService, owner } = latest.current;
-      if (generation.account !== 'ready' || !chatService) {
+      const localChat = chatService?.id === 'local';
+      if (!chatService || (!localChat && generation.account !== 'ready')) {
         // Whatever the sentence routes to here, the user learns why the model was not asked.
         local(text);
-        say([span(generation.account === 'ready' ? '所选的模型服务没有启用「研究」能力（在模型菜单里换一个，或在模型服务里勾选），' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
+        const reason = !chatService
+          ? '还没有可用的模型服务；在模型菜单里配置本地 API Key，或登录后选择服务。'
+          : '用模型对话需要先登录，或改用模型菜单里的本地模型。';
+        say([span(reason, 'dim'), span('这一句按指令模式回答。', 'dim')]);
         return;
       }
       threads.append([{ ...stamp(), role: 'user', text }]);
@@ -372,7 +385,7 @@ export default function AgentShell() {
     // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new. A
     // continuation keeps the service the sentence began with, the one the user agreed to, even if the menu has moved on.
     const turn = (text: string, next?: Chain) => {
-      const { panel, light, traces, held, owner, mutate, projectId, memory } = latest.current;
+      const { panel, light, traces, held, owner, mutate, projectId, memory, localConfig } = latest.current;
       const chatService = next?.service ?? latest.current.chatService;
       if (!chatService) return;
       // A later step stays in the sentence's own conversation, whichever one is open now, and stops if it was deleted.
@@ -410,6 +423,16 @@ export default function AgentShell() {
         return;
       }
       const seen = next?.seen ?? new Set<string>();
+      if (chatService.id === 'local') {
+        if (!localConfig) {
+          mark(waiting.id, 'failed');
+          replace(waiting.id, { lines: [[span('本地模型还没有配置，请在模型菜单里填写 API Key。', 'error')]] });
+          writeCheckpoint(threadId, waiting.id);
+          return;
+        }
+        sendLocalChatTurn(request, localConfig, memory).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
+        return;
+      }
       sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
     };
     // How a model call ended, on the message that holds it; the service and step stay those it was sent with.
@@ -674,7 +697,7 @@ export default function AgentShell() {
   };
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
-  const services = pickable.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
+  const services = chatServices.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
   const here = panel ? roomById(panel) : null, lit = panel ? roomLight(light, panel) : null;
