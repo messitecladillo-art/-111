@@ -5,7 +5,7 @@ import { eventLabel, eventTime } from '@/lib/agent/process';
 import { Icon } from './icons';
 import styles from './AgentShell.module.css';
 
-export default function ProcessTimeline({ events, checkpoint, onClose, canBackup = false, backupBusy = false, backupLabel, backupNote, onBackup }: {
+export default function ProcessTimeline({ events, checkpoint, onClose, canBackup = false, backupBusy = false, backupLabel, backupNote, onBackup, autoBackup = false, onToggleAuto }: {
   events: readonly ProcessEvent[];
   checkpoint?: ProcessCheckpoint;
   onClose: () => void;
@@ -14,6 +14,8 @@ export default function ProcessTimeline({ events, checkpoint, onClose, canBackup
   backupLabel?: string;
   backupNote?: string;
   onBackup?: () => void;
+  autoBackup?: boolean;
+  onToggleAuto?: () => void;
 }) {
   return <aside className={styles.processDrawer} role="dialog" aria-modal="true" aria-label="对话过程">
     <header className={styles.processHead}>
@@ -21,7 +23,10 @@ export default function ProcessTimeline({ events, checkpoint, onClose, canBackup
       <button type="button" className={styles.iconButton} onClick={onClose} aria-label="关闭过程"><Icon name="close" /></button>
     </header>
     <div className={styles.processBackup}>
-      <button type="button" className={styles.processButton} disabled={!canBackup || backupBusy} onClick={onBackup}>{backupBusy ? '正在备份…' : backupLabel ?? '备份到云端'}</button>
+      <div className={styles.processBackupActions}>
+        <button type="button" className={styles.processButton} disabled={!canBackup || backupBusy} onClick={onBackup}>{backupBusy ? '正在备份…' : backupLabel ?? '备份到云端'}</button>
+        {canBackup && onToggleAuto && <button type="button" className={styles.processButton} onClick={onToggleAuto}>{autoBackup ? '自动备份：开' : '开启自动备份'}</button>}
+      </div>
       <small>{backupNote || (canBackup ? '备份只给你自己看；项目队友看不到对话正文。' : '需要登录并归入项目后才能备份。')}</small>
     </div>
     <div className={styles.processList}>

@@ -2,7 +2,7 @@
 
 import { makeProcessEvent, type ProcessCheckpoint, type ProcessEvent } from '../../lib/agent/process.ts';
 
-type Entry = { events: ProcessEvent[]; checkpoint?: ProcessCheckpoint };
+type Entry = { events: ProcessEvent[]; checkpoint?: ProcessCheckpoint; auto?: boolean };
 type Book = { threads: Record<string, Entry>; gone: Record<string, number> };
 const PREFIX = 'evix.agent.process.v1:', EMPTY: Book = { threads: {}, gone: {} };
 let owner: string | null = null, book: Book = EMPTY, listening = false;
@@ -13,6 +13,7 @@ const clone = (value: Book): Book => ({
   threads: Object.fromEntries(Object.entries(value.threads).map(([key, entry]) => [key, {
     events: [...entry.events],
     ...(entry.checkpoint ? { checkpoint: entry.checkpoint } : {}),
+    ...(entry.auto ? { auto: true } : {}),
   }])),
   gone: { ...value.gone },
 });
@@ -41,6 +42,7 @@ const merge = (mine: Book, theirs: Book): Book => {
     next.threads[threadId] = {
       events: [...byId.values()].sort((a, b) => a.at - b.at || a.id.localeCompare(b.id)),
       ...(checkpoint ? { checkpoint } : {}),
+      ...(current.auto || entry.auto ? { auto: true } : {}),
     };
   }
   return next;
@@ -96,6 +98,17 @@ export const processJournal = {
   },
   events(threadId: string): readonly ProcessEvent[] { return book.threads[threadId]?.events ?? []; },
   checkpoint(threadId: string): ProcessCheckpoint | undefined { return book.threads[threadId]?.checkpoint; },
+  auto(threadId: string): boolean { return book.threads[threadId]?.auto === true; },
+  setAuto(threadId: string, value: boolean): boolean {
+    if (owner === null || book.gone[threadId]) return false;
+    const entry = book.threads[threadId] ?? { events: [] };
+    const next = clone(book);
+    next.threads[threadId] = { ...entry, ...(value ? { auto: true } : { auto: false }) };
+    if (!persist(next)) return false;
+    book = next;
+    notify();
+    return true;
+  },
   saveCheckpoint(threadId: string, checkpoint: ProcessCheckpoint): boolean {
     if (owner === null || book.gone[threadId]) return false;
     const entry = book.threads[threadId] ?? { events: [] };
@@ -121,6 +134,7 @@ export const processJournal = {
     next.threads[threadId] = {
       events: [...byId.values()].sort((a, b) => a.at - b.at || a.id.localeCompare(b.id)),
       ...(nextCheckpoint ? { checkpoint: nextCheckpoint } : {}),
+      ...(entry.auto ? { auto: true } : {}),
     };
     if (!persist(next)) return false;
     book = next;

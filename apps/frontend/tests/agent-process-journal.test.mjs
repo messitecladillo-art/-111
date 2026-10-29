@@ -46,3 +46,16 @@ test('an imported process merges without duplicate events and keeps the later ch
   assert.equal(processJournal.checkpoint('t2').eventId, 'e2', 'an older checkpoint does not replace the newer one');
   assert.equal(processJournal.events('t2').length, 2);
 });
+
+test('the automatic backup flag belongs to its thread and survives a reload', async () => {
+  processJournal.bind('auto-user');
+  assert.equal(processJournal.auto('t-auto'), false);
+  processJournal.append('t-auto', event('e1', 't-auto'));
+  assert.equal(processJournal.setAuto('t-auto', true), true);
+  assert.equal(processJournal.auto('t-auto'), true);
+  const fresh = await import('../components/agent/process-journal.ts?auto');
+  fresh.processJournal.bind('auto-user');
+  assert.equal(fresh.processJournal.auto('t-auto'), true);
+  fresh.processJournal.setAuto('t-auto', false);
+  assert.equal(fresh.processJournal.auto('t-auto'), false);
+});

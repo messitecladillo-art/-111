@@ -38,6 +38,7 @@ export default function CloudProcessBackups({ projectId }: { projectId: string }
       });
       if (!restored) { setNotice('本机已有这段对话，未覆盖。'); return; }
       processJournal.import(snapshot.threadId, snapshot.events, snapshot.checkpoint);
+      processJournal.setAuto(snapshot.threadId, true);
       window.location.assign('/agent');
     } catch (reason) {
       setError(errorMessage(reason));

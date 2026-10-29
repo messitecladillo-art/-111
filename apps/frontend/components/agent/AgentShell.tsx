@@ -132,6 +132,7 @@ export default function AgentShell() {
   const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
   const [showProcess, setShowProcess] = useState(false);
   const [backup, setBackup] = useState({ busy: false, note: '' });
+  const lastSync = useRef(new Map<string, string>());
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
   // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
   const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
@@ -252,6 +253,11 @@ export default function AgentShell() {
       setBackup({ busy: false, note: '需要登录并归入项目后才能备份。' });
       return;
     }
+    const syncKey = JSON.stringify({ title: thread.title, messages: thread.messages, events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null });
+    if (lastSync.current.get(thread.id) === syncKey) {
+      setBackup({ busy: false, note: '云端已是最新。' });
+      return;
+    }
     setBackup({ busy: true, note: '正在备份到项目…' });
     try {
       let cloud: { revision: number } | null = null;
@@ -261,11 +267,24 @@ export default function AgentShell() {
         expectedRevision: cloud?.revision ?? 0, title: thread.title, messages: thread.messages,
         events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null,
       });
-      setBackup({ busy: false, note: `已备份第 ${saved.revision} 版；只有你能看到。` });
+      lastSync.current.set(thread.id, syncKey);
+      processJournal.setAuto(thread.id, true);
+      setBackup({ busy: false, note: `已备份第 ${saved.revision} 版；之后会自动保持最新。` });
     } catch (error) {
       setBackup({ busy: false, note: errorMessage(error) });
     }
   }, [thread, owner, activeProcess]);
+  const toggleAuto = useCallback(() => {
+    if (!thread || !canBackup) return;
+    const next = !processJournal.auto(thread.id);
+    processJournal.setAuto(thread.id, next);
+    setBackup({ busy: false, note: next ? '自动备份已开启。' : '自动备份已关闭。' });
+  }, [thread, canBackup]);
+  useEffect(() => {
+    if (!activeProcess?.auto || !canBackup) return;
+    const timer = setTimeout(() => { void backupProcess(); }, 1200);
+    return () => clearTimeout(timer);
+  }, [activeProcess?.auto, activeProcess?.events, activeProcess?.checkpoint, messages, canBackup, backupProcess]);
   const writeCheckpoint = useCallback((threadId: string | undefined, messageId?: string) => {
     if (!threadId) return;
     const events = processJournal.events(threadId), last = events.at(-1);
@@ -369,7 +388,11 @@ export default function AgentShell() {
       const recorded = record(threadId, 'model.request', `请求「${chatService.label}」回答${next ? `（第 ${next.step} 步）` : ''}`, {
         correlationId: request.idempotencyKey,
         refs: [`project:${projectId ?? 'none'}`, `memory:${memory?.revision ?? 0}`],
-        detail: { service: chatService.id, step: request.step ?? 1, history: request.history.length, projectId: projectId ?? null, memoryRevision: memory?.revision ?? 0 },
+        detail: {
+          service: chatService.id, step: request.step ?? 1, history: request.history.length,
+          projectId: projectId ?? null, memoryRevision: memory?.revision ?? 0,
+          promptVersion: 'agent-chat/v1', contextBytes: JSON.stringify(request.context).length, toolResults: next?.results.length ?? 0,
+        },
       });
       if (!recorded) {
         mark(waiting.id, 'failed');
@@ -534,6 +557,7 @@ export default function AgentShell() {
       }
       threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: routed.turn });
       record(threadId, 'tool.result', `工具结果：${action.tool}`, { correlationId: afterId, detail: { tool: action.tool, result: turnText(routed.turn, 500) } });
+      writeCheckpoint(threadId, afterId);
       if (routed.turn.act) perform(routed.turn.act);
       return isResultTool(action.tool) ? { tool: action.tool, text: turnText(routed.turn) } : null;
     };
@@ -725,7 +749,8 @@ export default function AgentShell() {
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
         {showProcess && <ProcessTimeline events={activeProcess?.events ?? []} checkpoint={activeProcess?.checkpoint} onClose={() => setShowProcess(false)}
-          canBackup={canBackup} backupBusy={backup.busy} backupNote={backup.note} onBackup={() => void backupProcess()} />}
+          canBackup={canBackup} backupBusy={backup.busy} backupNote={backup.note} onBackup={() => void backupProcess()}
+          autoBackup={activeProcess?.auto === true} onToggleAuto={toggleAuto} />}
         <div ref={scrollRef} className={styles.scroll}>
           {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>

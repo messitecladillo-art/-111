@@ -453,3 +453,5 @@
 .processBackup { display: grid; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--c-line); }
 .processBackup .processButton { justify-self: start; }
 .processBackup small { color: var(--c-faint); font-size: 11px; line-height: 1.55; }
+.processBackupActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.processBackupActions .processButton { justify-self: auto; }
