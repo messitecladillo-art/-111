@@ -8,7 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
-import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
+import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, chatLine, isDefiniteChatRejection, isResultTool, replyLines, turnText, type ChatAction, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -24,6 +24,7 @@ import { lookupTurn, route, standingFindings, toolTurn, type AgentAction, type A
 import { readChatTurn, sendChatTurn } from './chat-client';
 import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
+import { NEW_DRAFT, drafts } from './drafts';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
@@ -97,12 +98,25 @@ export default function AgentShell() {
   const theme = useThemePreference('light');
   const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate } = useHostedSession();
   const [accountNotice, setAccountNotice] = useState('');
-  // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
+  // Conversations and their unsent text belong to whoever is signed in; they are bound once the session is known and
+  // never shown to another. A draft of a conversation the identity no longer holds is dropped with it.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
-  useEffect(() => { if (owner) threads.bind(owner); }, [owner]);
+  useEffect(() => {
+    if (!owner) return;
+    threads.bind(owner);
+    drafts.bind(owner);
+    drafts.retain(new Set(threads.view(owner).threads.map(t => t.id)));
+  }, [owner]);
   const book = useSyncExternalStore(threads.subscribe, () => threads.view(owner), threads.serverSnapshot);
+  const draftBook = useSyncExternalStore(drafts.subscribe, () => drafts.view(owner), drafts.serverSnapshot);
   const thread = book.threads.find(t => t.id === book.active) ?? null;
   const messages = thread?.messages ?? EMPTY_MESSAGES;
+  const draftKey = thread?.id ?? NEW_DRAFT;
+  // Read through the store, not the last notification: a conversation switched to within the debounce still shows its
+  // latest text, while the sidebar's markers can follow a beat later.
+  const draftHere = drafts.textFor(owner, draftKey);
+  const draftIds = useMemo(() => new Set(Object.entries(draftBook.entries).filter(([, draft]) => draft.text.trim()).map(([key]) => key)), [draftBook]);
+  const freshDraft = draftIds.has(NEW_DRAFT);
   const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
@@ -149,6 +163,8 @@ export default function AgentShell() {
 
   const inputRef = useRef<HTMLTextAreaElement>(null), scrollRef = useRef<HTMLDivElement>(null), headingRef = useRef<HTMLHeadingElement>(null);
   const railRef = useRef<HTMLElement>(null), launcherRef = useRef<HTMLDivElement>(null), modulesRef = useRef<HTMLButtonElement>(null);
+  // A model call made before this page loaded has no promise to settle it; its receipt is read back once, below.
+  const bootAt = useRef<number | null>(null), recovered = useRef(new Set<string>());
   // A module picked from the launcher takes focus at its heading once the launcher has closed, the open one included,
   // so the keyboard goes on into it rather than losing its place.
   const focusPicked = useRef(false);
@@ -177,6 +193,7 @@ export default function AgentShell() {
   }, []);
   const go = useCallback((id: RoomId) => { if (currentPanel() !== id) window.location.hash = id; }, []);
   const closePanel = useCallback(() => { window.location.hash = ''; }, []);
+  const saveDraft = useCallback((key: string, text: string) => drafts.saveFor(owner, key, text), [owner]);
   const pick = (id: RoomId) => { focusPicked.current = true; setRailMenu(null); go(id); };
   const generation = useGeneration(publishProposal, go);
   const { account: generationAccount, load: loadLists, lists, preferredService, prefer } = generation;
@@ -283,7 +300,7 @@ export default function AgentShell() {
       const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(said.flatMap(chatLine)),
         context: chatContext(panel, light, traces, held), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true,
         ...(next ? { step: next.step, toolResults: next.results } : {}) };
-      const waiting: Message = { ...stamp(), role: 'agent', model: { service: chatService.label, step: next?.step ?? 1, status: 'running' }, turn: { lines: next
+      const waiting: Message = { ...stamp(), role: 'agent', model: { service: chatService.label, step: next?.step ?? 1, status: 'running', turnId: request.idempotencyKey }, turn: { lines: next
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
@@ -359,7 +376,7 @@ export default function AgentShell() {
       if (!reportService || !held || !report) { askDraft(nodeId); return; }
       const title = blueprintNode(nodeId).title;
       const { request, facts } = draftRequest({ nodeId, held, content: report, design, service: reportService });
-      const waiting: Message = { ...stamp(), role: 'agent', model: { service: reportService.label, step: 1, status: 'running' },
+      const waiting: Message = { ...stamp(), role: 'agent', model: { service: reportService.label, step: 1, status: 'running', turnId: request.idempotencyKey }, draftNode: nodeId,
         turn: { lines: [[span('正在请'), span(`「${reportService.label}」`, 'strong'), span(`起草「${title}」…`, 'dim')]] } };
       threads.append([waiting]);
       sendDraft(mutate, request).then(receipt => settleDraft(waiting.id, receipt, reportService.label, nodeId, facts), failure => failDraft(waiting.id, failure, request.idempotencyKey, nodeId, facts));
@@ -438,7 +455,7 @@ export default function AgentShell() {
         case 'theme': saveTheme(action.theme); break;
         case 'search': latest.current.knowledge.openSearch(); break;
         case 'entry': latest.current.knowledge.open(action.id); break;
-        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) threads.remove(active); focusInput(); break; }
+        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) { threads.remove(active); drafts.clear(active); } focusInput(); break; }
         // Only paths of this site; a stored conversation is never trusted to navigate anywhere else.
         case 'href': if (/^\/(?!\/)/.test(action.href)) window.location.assign(action.href); break;
         case 'say': send(action.text); break;
@@ -483,8 +500,83 @@ export default function AgentShell() {
       if (answered === 'confirmed' && action) perform(action);
       else focusInput();
     };
-    return { send, perform, answer };
+    /**
+     * A model call that was still running when this page was put away. Its receipt is read, not re-asked: a completed
+     * one shows the answer as it was, without replaying its tools or continuing to another step. A draft is not
+     * recovered — its fact numbers cannot be checked against the project after a reload — so it offers the section again.
+     */
+    const recover = (message: Extract<Message, { role: 'agent' }>) => {
+      const model = message.model;
+      if (!model || model.status !== 'running') return;
+      const label = model.service;
+      if (message.draftNode) {
+        let title = '';
+        try { title = blueprintNode(message.draftNode).title; } catch { /* A section no longer in the blueprint is not offered again. */ }
+        mark(message.id, 'unknown');
+        replace(message.id, { lines: [[span('这次起草随页面刷新中断了，拟稿没有取回。', 'error'), span('不会自动重发，以免重复计费。', 'dim')]],
+          chips: title ? [{ label: `重新起草「${title}」`.slice(0, 26), action: { type: 'say', text: `/起草 ${title}` }, primary: true }] : undefined });
+        return;
+      }
+      const home = threads.threadOf(message.id);
+      const at = home?.messages.findIndex(m => m.id === message.id) ?? -1;
+      const previous = at > 0 ? [...home!.messages.slice(0, at)].reverse().find(m => m.role === 'user' && m.text.trim()) : undefined;
+      const again = previous && previous.role === 'user' ? [{ label: '再问一次', action: { type: 'say' as const, text: previous.text } }] : undefined;
+      const turnId = model.turnId;
+      if (!turnId) {
+        // Messages from before calls recorded their receipt can only be marked as interrupted, not read back.
+        mark(message.id, 'unknown');
+        replace(message.id, { lines: [[span('这一轮在页面刷新前没有完成，回执编号也没有留下。', 'error'), span('若服务端已经生成，重问会作为新的一轮计费。', 'dim')]], chips: again });
+        return;
+      }
+      replace(message.id, { lines: [[span('上一轮在页面刷新前还在进行，正在取回回执…', 'dim')]] });
+      readChatTurn(turnId).then(receipt => {
+        if (receipt.status === 'ready' && receipt.reply) {
+          mark(message.id, 'ready');
+          const note = receipt.actions.length ? '；这是刷新前的那一轮，只取回了回执，没有重放工具。' : '；这是刷新前的那一轮。';
+          replace(message.id, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实${note}`, 'dim')]] });
+        } else if (receipt.status === 'failed') {
+          mark(message.id, 'failed');
+          replace(message.id, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]],
+            chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : again });
+        } else if (receipt.status === 'running') {
+          // The service is still generating; reading again later never calls the model.
+          replace(message.id, { lines: [[span('这一轮还在生成；稍后可以核对回执。', 'dim')]], chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: message.id } }] });
+        } else {
+          mark(message.id, 'unknown');
+          replace(message.id, { lines: [[span('结果尚未明确：', 'error'), span('这一轮已记下；核对只读取回执，不会再次调用模型。')]],
+            chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: message.id }, primary: true }] });
+        }
+      }, failure => {
+        if (failure instanceof HostedApiError && failure.status === 404) {
+          mark(message.id, 'refused');
+          replace(message.id, { lines: [[span('这次调用没有留下回执，可能没有发出。', 'error')]], chips: again });
+          return;
+        }
+        mark(message.id, 'unknown');
+        replace(message.id, { lines: [[span('没能取回上一轮的回执：', 'error'), span(`${errorMessage(failure)} 核对只读取回执，不会再次调用模型。`)]],
+          chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: message.id }, primary: true }] });
+      });
+    };
+    return { send, perform, answer, recover };
   }, [go, focusInput, sendToReport]);
+
+  // A model call left running by the previous page is read back from its receipt once the identity and its services are
+  // known. Calls made in this page have a promise of their own and are never recovered here.
+  useEffect(() => { recovered.current.clear(); }, [owner]);
+  useEffect(() => {
+    if (!owner) return;
+    // Fixed when the first page looks for receipts: anything earlier was sent by a page that is no longer here.
+    bootAt.current ??= Date.now();
+    const stale = book.threads.flatMap(t => t.messages).filter((m): m is Extract<Message, { role: 'agent' }> =>
+      m.role === 'agent' && m.model?.status === 'running' && m.at <= bootAt.current! && !recovered.current.has(m.id));
+    for (const message of stale) {
+      // Without a receipt ID, or for a report draft, nothing has to be read from the account service; only a call that
+      // does have one waits for that service to be ready.
+      if (message.model?.turnId && !message.draftNode && generationAccount !== 'ready') continue;
+      recovered.current.add(message.id);
+      agent.recover(message);
+    }
+  }, [owner, book, generationAccount, agent]);
 
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
@@ -606,9 +698,9 @@ export default function AgentShell() {
         </div>}
       </nav>
 
-      <Sidebar book={book} projects={projects} account={generationAccount} email={email} notice={accountNotice}
+      <Sidebar book={book} projects={projects} account={generationAccount} email={email} notice={accountNotice} draftIds={draftIds} freshDraft={freshDraft}
         failed={!!sessionError} onRetry={() => { setAccountNotice(''); refresh().catch(error => setAccountNotice(errorMessage(error))); }} onNew={id => { threads.draft(id); focusInput(); }}
-        onSelect={threads.select} onRemove={threads.remove} onRename={threads.rename} onCollapse={() => setSideOpen(false)} />
+        onSelect={id => { threads.select(id); focusInput(); }} onRemove={id => { threads.remove(id); drafts.clear(id); }} onRename={threads.rename} onCollapse={() => setSideOpen(false)} />
 
       <main className={styles.main} aria-label="对话" data-dialog-background>
         <header className={styles.top}>
@@ -633,7 +725,8 @@ export default function AgentShell() {
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
           services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer}
-          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
+          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''}
+          draftScope={owner ?? ''} draftKey={draftKey} draft={draftHere} onDraft={saveDraft} onOpen={go} />
       </main>
 
       <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background
@@ -668,14 +761,6 @@ function subscribeResize(listener: () => void) {
 }
 
 const span = (text: string, mark?: Mark): Span => mark ? { text, mark } : { text };
-/** A conversation entry as plain text for the model: what was said, without cards or buttons. */
-function chatLine(message: Message): ChatLine[] {
-  if (message.role === 'user') return [{ role: 'user', text: message.text }];
-  // A question put to the user (a consent or confirmation) is not part of what was said about the research.
-  if (message.role !== 'agent' || message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
-  const text = message.turn.lines.map(line => line.map(spanText).join('')).join('\n').trim();
-  return text ? [{ role: 'agent', text }] : [];
-}
 
 /** Saves text as a file the user downloads; nothing leaves the browser. */
 function download(name: string, text: string) {

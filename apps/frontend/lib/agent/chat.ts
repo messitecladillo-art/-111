@@ -79,6 +79,25 @@ export function chatHistory(lines: readonly ChatLine[]): ChatLine[] {
   return lines.filter(l => l.text.trim()).slice(-HISTORY_LIMIT).map(l => ({ role: l.role, text: clip(l.text.trim(), TEXT_LIMIT) }));
 }
 
+/** The part of a stored message the model may read; cards and status notes say nothing about the research. */
+export type SpokenMessage =
+  | { role: 'user'; text: string }
+  | { role: 'agent'; turn: AgentTurn; model?: { status?: string } }
+  | { role: 'pending' };
+
+/**
+ * A conversation entry as the model sees it. A question put to the user is not part of what was said, and a model call
+ * that is still running, failed, was refused or ended unknown is a status note, never an answer.
+ */
+export function chatLine(message: SpokenMessage): ChatLine[] {
+  if (message.role === 'user') return [{ role: 'user', text: message.text }];
+  if (message.role !== 'agent') return [];
+  if (message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
+  if (message.model?.status && message.model.status !== 'ready') return [];
+  const text = message.turn.lines.map(line => line.map(spanText).join('')).join('\n').trim();
+  return text ? [{ role: 'agent', text }] : [];
+}
+
 const TEXT_ARGS = { trace: ['reference', 20], lookup: ['query', 60], draft: ['brief', 600] } as const;
 function action(value: unknown): ChatAction | null {
   const row = value as { tool?: unknown; args?: Record<string, unknown> } | null;

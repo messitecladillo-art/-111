@@ -8,7 +8,7 @@ type Call = { service: string; step: number; status?: CallStatus };
 /** The parts of a conversation the record needs; the agent's thread store holds more. */
 export type RecordMessage =
   | { role: 'user'; at: number; text: string }
-  | { role: 'agent'; at: number; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: Call }
+  | { role: 'agent'; at: number; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: Call; draftNode?: string }
   | { role: 'pending'; at: number };
 export type RecordThread = { title: string; createdAt: number; messages: readonly RecordMessage[] };
 type Said = Exclude<RecordMessage, { role: 'pending' }>;
@@ -36,9 +36,9 @@ export function recordName(thread: Pick<RecordThread, 'title'>, now: number): st
  * recorded, read from its closing "unverified" note or the words it opened with; for questionnaire drafting, read from
  * its job card. A call the service turned away, or one never sent, is kept as refused: shown, but not counted.
  */
-function callOf(m: Said): (Call & { kind: 'chat' | 'draft' | 'proposal' }) | null {
+function callOf(m: Said): (Call & { kind: 'chat' | 'draft' | 'proposal' | 'section' }) | null {
   if (m.role !== 'agent') return null;
-  if (m.model) return { ...m.model, kind: 'chat' };
+  if (m.model) return { ...m.model, kind: m.draftNode ? 'section' : 'chat' };
   // A finished draft is counted through the proposal it produced, which outlives the job when old messages are dropped.
   const proposal = m.turn.cards?.find((c): c is Extract<AgentCard, { kind: 'proposal' }> => c.kind === 'proposal');
   if (proposal) return { service: `${proposal.serviceLabel}（${proposal.model}）`, step: 1, status: 'ready', kind: 'proposal' };
@@ -62,6 +62,7 @@ const heading = (m: Said, call: ReturnType<typeof callOf>) => {
   if (m.role === 'user') return '你';
   if (call?.kind === 'proposal') return `证见 · 模型拟议的问卷（${call.service}，未经核实）`;
   if (call?.kind === 'draft') return call.status === 'refused' ? `证见 · 模型起草问卷未启动（${call.service}，未调用模型）` : `证见 · 模型起草问卷（${call.service}，${OUTCOME[call.status ?? 'unknown']}）`;
+  if (call?.kind === 'section') return call.status === 'refused' ? `证见 · 模型起草报告章节未启动（${call.service}，未调用模型）` : `证见 · 模型起草报告章节（${call.service}，${OUTCOME[call.status ?? 'unknown']}）`;
   if (call) {
     const where = `${call.service}${call.step > 1 ? `，第 ${call.step} 步` : ''}`;
     if (call.status === 'refused') return `证见 · 模型调用未发出（${where}，未调用模型）`;

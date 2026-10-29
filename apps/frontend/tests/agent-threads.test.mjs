@@ -215,3 +215,16 @@ test('a conversation keeps the name the user gave it; between two tabs the later
   threads.append([user('追问')]);
   assert.equal(threads.view('mia').threads[0].title, '另一个标签页起的名字', 'new messages leave the name alone');
 });
+
+test('a model call keeps the receipt ID and draft section a reload needs to continue it', async () => {
+  threads.bind('tara');
+  const waiting = { ...stamp(), role: 'agent', model: { service: '示例模型', step: 1, status: 'running', turnId: 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6' },
+    draftNode: 'report.body', turn: { lines: [[{ text: '正在起草…' }]] } };
+  threads.append([waiting]);
+  const fresh = await import('../components/agent/threads.ts?receipt');
+  fresh.threads.bind('tara');
+  const restored = fresh.threads.view('tara').threads[0].messages[0];
+  assert.equal(restored.model.turnId, 'f81d4fae-7dec-11d0-a765-00a0c91e6bf6');
+  assert.equal(restored.draftNode, 'report.body');
+  assert.equal(restored.model.status, 'running');
+});
