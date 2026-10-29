@@ -32,7 +32,7 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
     <header className={styles.lobbyHead}>
       <b>证据完整度</b>
       <h1 ref={headingRef} tabIndex={-1}>每一个数字，都有来处。</h1>
-      <p>证据是光，盲区是光到不了的地方。这里的每一格光，都来自项目里真实的问卷、数据与报告。</p>
+      <p>证据是光，盲区是光到不了的地方。这里的每一格光，都来自项目里真实的规则、问卷、数据与报告。</p>
     </header>
 
     <section className={styles.section} aria-labelledby="lobby-map">
@@ -55,7 +55,7 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
       <p className={styles.legend} aria-label="图例">
         <span><i>·</i> 无证据</span><span><b>░</b> 微弱</span><span><b>▒</b> 部分</span><span><b>▓</b> 充分</span><span><b>█</b> 全部通过</span>
       </p>
-      <p className={styles.note}>照度来自问卷设计、抽样设计、数据分析与报告的检查；虚线框的模块接入后再计算。</p>
+      <p className={styles.note}>照度来自规则门禁、问卷设计、抽样设计、数据分析与报告的检查；规则照度只代表本次解析的范围与来源，刷新后需要重新解析；虚线框的模块接入后再计算。</p>
       <div className={styles.gallery}><span>参考</span>
         <a href="#cases">获奖案例</a><a href="#silicon">硅基样本</a><span className={styles.note}>只作参照，不替你下结论。</span>
       </div>

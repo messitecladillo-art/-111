@@ -18,6 +18,17 @@ export type ProjectView = {
   report: EditorContent | null;
   /** A registered result on its way to the report. */
   resultPending: boolean;
+  /** The five-dimension rule resolution the rules room last returned in this visit; absent until it is parsed. */
+  rule?: RuleScopeView | null;
+};
+/** What the shell can see of a rule resolution: scope match, source ledger and remaining unknowns. */
+export type RuleScopeView = {
+  match: 'exact' | 'none';
+  blocking: boolean;
+  rules: number;
+  unknowns: number;
+  sources: number;
+  sourceRawSha256: string;
 };
 /** One check of one room. `go` is where it can be fixed, which is not always the room it lights. */
 export type LightCheck = { id: string; room: RoomId; go: RoomId; label: string; passed: boolean; detail: string };
@@ -25,7 +36,7 @@ export type RoomLight = { room: RoomId; score: number; checks: LightCheck[]; sum
 export type Illumination = { rooms: RoomLight[]; overall: number; blind: LightCheck[]; benchmark: BenchmarkResult | null };
 
 /** The rooms whose light the shell can measure today, in research order. */
-export const LIT_ROOMS = ['design', 'sampling', 'analysis', 'editor'] as const satisfies readonly RoomId[];
+export const LIT_ROOMS = ['rules', 'design', 'sampling', 'analysis', 'editor'] as const satisfies readonly RoomId[];
 
 const TEMPLATE = createEditorContent().report.map(s => [s.title, s.body] as const);
 /** A report still equal to the starting template has no writing of its own, whatever the benchmark makes of its prompts. */
@@ -35,6 +46,23 @@ export function reportWritten(content: EditorContent): boolean {
 }
 
 const share = (checks: LightCheck[]) => checks.length ? checks.filter(c => c.passed).length / checks.length : 0;
+
+/** Rule scope is a precondition, not a compliance verdict: it lights only when the five dimensions and source ledger are in view. */
+function rulesLight(rule: RuleScopeView | null | undefined): RoomLight {
+  const check = (id: string, passed: boolean, label: string, detail: string): LightCheck => ({ id: `rules.${id}`, room: 'rules', go: 'rules', label, passed, detail });
+  if (!rule) return {
+    room: 'rules', score: 0, summary: '五维范围还没核对',
+    checks: [check('scope', false, '还没有解析适用规则', '在规则门禁里填写届次、组别、赛区、赛道与阶段并解析；只有五维精确匹配的规则才会被采用。')],
+  };
+  const exact = rule.match === 'exact' && !rule.blocking;
+  const checks = [
+    check('scope', exact, exact ? '五维范围已精确匹配' : '没有适用的规则快照', exact ? '届次、组别、赛区、赛道与阶段同时匹配。' : '规则未知，停止套用；回到规则门禁重新核对五维范围。'),
+    check('rules', rule.rules > 0, rule.rules > 0 ? `找到 ${rule.rules} 条有来源的规则` : '没有可用的规则条目', rule.rules > 0 ? '规则原文、严重度与来源随结果保留。' : '当前快照没有匹配的规则条目，不能据此认为没有要求。'),
+    check('sources', rule.sources > 0 && !!rule.sourceRawSha256, rule.sources > 0 && !!rule.sourceRawSha256 ? `来源账本 ${rule.sources} 份` : '来源账本或快照指纹缺失', rule.sources > 0 && !!rule.sourceRawSha256 ? '规则语料快照有指纹，来源可回溯。' : '没有来源账本或快照指纹的规则不能作为证据；重新解析规则。'),
+    check('unknowns', rule.unknowns === 0, rule.unknowns === 0 ? '没有待核验项' : `${rule.unknowns} 项仍需核验`, rule.unknowns === 0 ? '本次解析没有留下未知项。' : '先补齐待核验的规则范围，再推进研究。'),
+  ];
+  return { room: 'rules', score: share(checks), checks, summary: `${exact ? '五维已匹配' : '规则未知'} · ${rule.rules} 条规则${rule.unknowns ? ` · ${rule.unknowns} 项待核验` : ''}` };
+}
 
 function designLight(d: Questionnaire | null): RoomLight {
   // A question counts once it has a stem: the studio opens with a blank one, which is a form, not evidence.
@@ -127,7 +155,7 @@ function reportLight(content: EditorContent | null): [RoomLight, BenchmarkResult
 /** Light for every measurable room, the overall share, and the blind spots in research order. */
 export function illuminate(view: ProjectView): Illumination {
   const [report, benchmark] = reportLight(view.report);
-  const rooms = [designLight(view.design), samplingLight(view), analysisLight(view), report];
+  const rooms = [rulesLight(view.rule), designLight(view.design), samplingLight(view), analysisLight(view), report];
   return {
     rooms, benchmark,
     overall: rooms.reduce((sum, r) => sum + r.score, 0) / rooms.length,
