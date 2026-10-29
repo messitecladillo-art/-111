@@ -3,6 +3,7 @@
 - 状态：Proposed（待审）
 - 日期：2026-10-29
 - 范围：项目记忆 v1（研究意图、已确认决策、证据索引、开放问题）
+- 关系：本文件是[Agent 记忆与过程连续性总体规格](2026-10-29-agent-memory-system-design.md)第 3 层（项目记忆）的实现切片
 - 相关文档：[Agent 对话外壳](../../agent-shell.md)、[项目框架](../../../PROJECT_FRAMEWORK.md)、[选题云端简报](../../topic-cloud-brief.md)
 - 规范性用语：**必须**（must）、**应该**（should）、**可以**（may）
 
