@@ -32,7 +32,7 @@ def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_c
     knowledge.register_knowledge(app, settings, deps.db, deps.session_user, deps.owned_project, deps.lock_user, deps.operation, config=knowledge_config)
     topics.register_topics(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator)
     topic_agent.register_topic_agent(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator, owned_project=deps.owned_project)
-    agent_chat.register_agent_chat(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator)
+    agent_chat.register_agent_chat(app, settings, deps.db, deps.session_user, deps.lock_user, deps.operation, deps.owned_service, runtime.generator, project_memory=memory_service)
     topic_projects.register_topic_projects(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation)
     project_memory.register_memory(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation, service=memory_service)
     reports.register_reports(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation)

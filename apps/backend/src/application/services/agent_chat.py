@@ -15,12 +15,13 @@ CALLS_PER_HOUR = 30
 class AgentChatService:
     """One model turn of the 证见 Agent: recorded before dispatch, replayed by key, reconciled by receipt."""
 
-    def __init__(self, *, settings, lock_user, operation, owned_service, generator):
+    def __init__(self, *, settings, lock_user, operation, owned_service, generator, project_memory):
         self.settings = settings
         self.lock_user = lock_user
         self.operation = operation
         self.owned_service = owned_service
         self.generator = generator
+        self.project_memory = project_memory
 
     def receipt(self, *, turn_id, user, session):
         op = session.get(Operation, (user.id, domain.SCOPE, turn_id))
@@ -39,6 +40,7 @@ class AgentChatService:
             session.commit()
             return op.response
         data = domain.request_input(raw_data)
+        memory = self.project_memory.brief_for_agent(project_id=data.get('projectId'), user=user, session=session)
         service = self.owned_service(session, user, data['serviceId'], lock=True)
         if service.revision != data['serviceRevision']:
             raise ApiError(409, 'revision_conflict', '模型服务已变化，请重新选择。')
@@ -58,8 +60,8 @@ class AgentChatService:
         if session.scalar(select(unknown)):
             raise ApiError(409, 'outcome_unknown', '同样的话有一轮结果尚未明确，请先核对原回执。')
         config, key = (config_view(service), decrypt(self.settings, service))
-        message = domain.agent_prompt(data)
-        if key in message or domain.contains_secret({'message': data['message'], 'history': data['history'], 'context': data['context'], 'toolResults': data.get('toolResults')}, key):
+        message = domain.agent_prompt(data, memory)
+        if key in message or domain.contains_secret({'message': data['message'], 'history': data['history'], 'context': data['context'], 'toolResults': data.get('toolResults'), 'memory': memory}, key):
             raise ApiError(422, 'sensitive_input', '对话包含服务密钥，请移除后重试。')
         session.add(RateEvent(scope=scope))
         op.response = domain.turn_receipt(data, self.settings.provider_mode)
