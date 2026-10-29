@@ -30,8 +30,9 @@ const HostedDefense = dynamic(() => import('@/components/hosted/HostedDefense'),
 const HostedReport = dynamic(() => import('@/components/hosted/HostedReport'), { loading: () => <p role="status">正在打开报告与 PPT…</p> });
 const SurveyCollection = dynamic(() => import('@/components/survey/SurveyCollection'), { loading: () => <p role="status">正在读取发布与回收…</p> });
 const HostedTopic = dynamic(() => import('@/components/hosted/HostedTopic'), { loading: () => <p role="status">正在恢复选题与研究简报…</p> });
+const ProjectMemoryPanel = dynamic(() => import('@/components/hosted/ProjectMemoryPanel'), { loading: () => <p role="status">正在读取项目档案…</p> });
 
-type ProjectTab = 'topic' | 'design' | 'silicon' | 'collection' | 'analysis' | 'report' | 'defense' | 'members';
+type ProjectTab = 'topic' | 'design' | 'silicon' | 'collection' | 'analysis' | 'report' | 'defense' | 'members' | 'memory';
 type SaveRequest = QuestionnaireSaveRequest;
 type PendingTopicApply={application:TopicQuestionnaireApplication;source:TopicQuestionnaireSource;target:TopicQuestionnaireTarget;editRevision:number;expectedBefore:string};
 type TopicReconciliation={versionId:string;beforeBinding:TopicQuestionnaireBinding|null};
@@ -70,6 +71,11 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [generating, setGenerating] = useState(false), [reading, setReading] = useState(false);
   const [saveUncertain, setSaveUncertain] = useState(!!cached?.pendingSave||cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(!!cached?.pendingGeneration||cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<ProjectTab>(cached?.tab || 'design');
+  useEffect(() => {
+    if (!window.location?.search?.includes('tab=memory')) return;
+    const frame = requestAnimationFrame(() => setTab('memory'));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [topicOpened, setTopicOpened] = useState(cached?.tab === 'topic');
   const [defenseOpened, setDefenseOpened] = useState(cached?.tab === 'defense');
   const [collectionOpened, setCollectionOpened] = useState(cached?.tab === 'collection');
@@ -110,7 +116,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const savedFingerprint = head ? fingerprint(head.design) : initial ? fingerprint(initial) : '';
   const dirty = !!snapshot && (snapshot.pending || fingerprint(snapshot.design) !== savedFingerprint||canonical(snapshot.topicBinding??null)!==canonical(headBinding));
   const revision = head?.revision || 0;
-  const tabMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['topic', 'design', 'silicon', 'collection', 'analysis', 'report', 'defense', 'members'], activeId: tab, markerAxis: 'horizontal' });
+  const tabMotion = useKeyedListMotion<HTMLDivElement>({ ids: ['topic', 'design', 'silicon', 'collection', 'analysis', 'report', 'defense', 'members', 'memory'], activeId: tab, markerAxis: 'horizontal' });
   const proposalMotion = useContentReveal<HTMLOListElement>({ token: proposal?.design ? `${proposal.id}:${proposal.status}` : null });
   const saveState = saving ? 'saving' : saveUncertain ? 'uncertain' : conflict ? 'conflict' : dirty ? 'dirty' : revision ? 'saved' : 'empty';
   const topicDisabledReason=saving?'正在等待本次保存回执，请保留当前提案。':saveUncertain?'保存回执尚待核对。请使用原保存请求核对，所选字段仍保留。':reading?'正在读取版本与来源绑定，请稍后继续。':conflict?'云端基础版本需要核对，请先选择保留草稿或载入已保存版本。':!bindingReady?'正在核对来源绑定，请稍后继续。':'';
@@ -323,7 +329,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
   return <ResearchViewHost identityKey={`${auth.identityEpoch}:${projectId}`} projectTitle={project.title} activeSection={tab} onOpenEditor={openResearchEditor}><div data-knowledge-context="active" data-knowledge-module={tab === 'report' ? 'editor' : tab === 'topic' ? 'diagnose' : tab} data-knowledge-tags={tab === 'analysis' ? 'inference' : tab === 'design' ? 'scale' : tab === 'report' ? 'report' : undefined}>
     <div className="hosted-project-heading"><div><Link href="/projects">← 我的项目</Link><h2>{project.title}</h2><span className="hosted-small">{ROLE_LABELS[role]}{tab === 'design' && <> · 问卷 {revision ? `v${revision}` : '尚未保存'}</>}</span></div>{tab === 'design' && <div className="hosted-actions"><button onClick={() => snapshot && downloadQuestionnaire(snapshot.design)} disabled={!snapshot}>下载当前设计</button><button className="hosted-primary" onClick={() => void save()} disabled={!writable || !snapshot || snapshot.pending || saving || reading || conflict || saveUncertain || !dirty}>{saving ? '正在保存…' : '保存新版本'}</button></div>}</div>
-    <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="topic" aria-pressed={tab === 'topic'} onClick={() => { setTopicOpened(true); setTab('topic'); }}>选题与研究简报</button><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="collection" aria-pressed={tab === 'collection'} onClick={() => { setCollectionOpened(true); setTab('collection'); }}>发布与回收</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>数据分析</button><button data-motion-id="report" aria-pressed={tab === 'report'} onClick={() => { setReportOpened(true); setTab('report'); }}>报告与 PPT</button><button data-motion-id="defense" aria-pressed={tab === 'defense'} onClick={() => { setDefenseOpened(true); setTab('defense'); }}>路演与答辩</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
+    <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="topic" aria-pressed={tab === 'topic'} onClick={() => { setTopicOpened(true); setTab('topic'); }}>选题与研究简报</button><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="collection" aria-pressed={tab === 'collection'} onClick={() => { setCollectionOpened(true); setTab('collection'); }}>发布与回收</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>数据分析</button><button data-motion-id="report" aria-pressed={tab === 'report'} onClick={() => { setReportOpened(true); setTab('report'); }}>报告与 PPT</button><button data-motion-id="defense" aria-pressed={tab === 'defense'} onClick={() => { setDefenseOpened(true); setTab('defense'); }}>路演与答辩</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button><button data-motion-id="memory" aria-pressed={tab === 'memory'} onClick={() => setTab('memory')}>项目档案</button></div>
     {error && <p className="hosted-alert" role="alert">{error}</p>}{notice && <p className="hosted-notice" role="status">{notice}</p>}
     {(proposal || generationUncertain) && tab !== 'design' && <p className="hosted-notice"><span>{generationUncertain?'模型调用待核对，原请求已保留。':'模型提案已保留，可返回问卷设计查看。'}</span><button onClick={()=>setTab('design')}>查看生成结果与状态</button></p>}
     {saveUncertain && <div className="hosted-notice"><p>上次保存尚待核对。重试会使用原内容和原请求标识；本页新编辑仍保留。</p><button disabled={saving} onClick={() => void save()}>核对并重试原保存</button></div>}
@@ -344,6 +350,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     {reportOpened && <div hidden={tab !== 'report'}><HostedReport resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={consumeResult} questionnaire={snapshot?.design ?? head?.design ?? initial ?? null} projectId={projectId} title={project.title} writable={writable} proposal={exchange.pending.report?.payload??null} onProposalConsumed={consumeReportProposal}/></div>}
     {defenseOpened && <div hidden={tab !== 'defense'}><HostedDefense projectId={projectId} onOpenReport={() => { setReportOpened(true); setTab('report'); }}/></div>}
     {tab === 'members' && <HostedMembers teamId={project.teamId} role={role}/>}
+    {tab === 'memory' && <ProjectMemoryPanel projectId={projectId} role={role}/>}
   </div></ResearchViewHost>;
 }
 function ReadonlyQuestionnaire({design}:{design:Questionnaire}){

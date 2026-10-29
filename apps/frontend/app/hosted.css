@@ -185,3 +185,18 @@ p.hosted-empty[role=status]{overflow:hidden}
 @media(max-width:900px){.hosted-create,.hosted-service-layout{grid-template-columns:1fr;gap:14px}.hosted-login-card>div{padding:32px}.hosted-project-heading{align-items:start;flex-direction:column}}
 @media(max-width:640px){.hosted-login-card{grid-template-columns:1fr}.hosted-login-intro{padding:28px!important}.hosted-login-intro h2{margin:18px 0 12px}.hosted-steps{grid-auto-flow:column;gap:12px;margin-top:20px;padding-top:18px;font-size:11.5px}.hosted-field-grid{grid-template-columns:1fr;gap:0}.hosted-card{padding:20px}.hosted-check-group{grid-template-columns:1fr}.hosted-history>div{align-items:start}.hosted-inline-form label{min-width:100%}.hosted-auth-bar .wb-brand small,.hosted-ghost-link{display:none}.hosted-empty,.hosted-loading{padding:26px}}
 @media(prefers-reduced-motion:reduce){.hosted-app *,.hosted-app *::before,.hosted-app *::after{animation:none!important;transition:none!important}.hosted-project-card:is(:hover,:focus-visible){transform:none}.hosted-project-card:is(:hover,:focus-visible) strong{transform:none}}
+
+/* Project memory: a project-level document, edited only by owner/editor. */
+.hosted-memory { display: grid; gap: 18px; }
+.hosted-memory-section { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--wb-line, #e7e5df); }
+.hosted-section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.hosted-memory-section h4 { margin: 0; font-size: 14px; }
+.hosted-memory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.hosted-memory-grid label, .hosted-memory-entry label, .hosted-memory-note { display: grid; gap: 4px; min-width: 0; color: var(--wb-muted, #6d6a62); font-size: 12px; }
+.hosted-memory-grid textarea, .hosted-memory-entry input, .hosted-memory-entry textarea, .hosted-memory-entry select, .hosted-memory-note input { width: 100%; min-width: 0; box-sizing: border-box; }
+.hosted-memory-entry { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--wb-line, #e7e5df); border-radius: 10px; background: var(--wb-raised, #fbfaf7); }
+.hosted-memory-row { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.hosted-memory-row label { flex: 1 1 140px; }
+.hosted-memory-row button { min-height: 32px; }
+.hosted-memory-history { margin-top: 4px; }
+@media (max-width: 900px) { .hosted-memory-grid { grid-template-columns: 1fr; } }

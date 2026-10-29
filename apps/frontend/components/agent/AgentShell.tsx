@@ -7,6 +7,7 @@ import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
+import { useProjectMemory } from '@/components/hosted/useProjectMemory';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
 import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
@@ -31,7 +32,7 @@ import Lobby from './Lobby';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
-import type { MemorySnapshot, Service } from '@evix/shared';
+import type { Service } from '@evix/shared';
 
 /**
  * A sentence's later steps: what the tools found, which ran already, the service the user agreed to, and `after`, the
@@ -223,8 +224,9 @@ export default function AgentShell() {
   const toggleSide = () => setSideOpen(!sideOpen);
   const report = deferredView.report, design = deferredView.design, liveReport = view.report;
   const projectId = thread ? thread.projectId : book.draftProject;
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: null as MemorySnapshot | null });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: latest.current.memory }; });
+  const projectMemory = useProjectMemory(projectId);
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot }; });
   const agent = useMemo(() => {
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
@@ -650,7 +652,7 @@ export default function AgentShell() {
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
         </header>}
         <div className={styles.panelBody} data-room={panel ?? undefined}>
-          {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
+          {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} memory={projectMemory.snapshot} projectId={projectId} onOpen={go} onSay={agent.send} headingRef={null} />}
           {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && visited.includes(id)).map(id =>
             <div key={id} className={styles.pane} data-workbench-panel={id} hidden={panel !== id}>{panels[id]}</div>)}
         </div>
