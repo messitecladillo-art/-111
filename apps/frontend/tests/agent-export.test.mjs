@@ -123,3 +123,13 @@ test('a draft that never reached a model is shown but not counted, however old t
   const sent = conversationMarkdown({ title: '在途', createdAt: at, messages: [draft(job('running', { detail: '正在调用模型起草问卷…', request: {} }))] }, at);
   assert.match(sent, /调用生成式模型 1 次（其中 1 次结果尚不明确）/);
 });
+
+test('a report section drafted by a model is recorded as a section, not as a chat answer', () => {
+  const section = { role: 'agent', at, draftNode: 'report.body', model: { service: '服务甲', step: 1, status: 'ready' }, turn: { lines: [[{ text: '拟稿两段。' }]] } };
+  const md = conversationMarkdown({ title: '起草', createdAt: at, messages: [section] }, at);
+  assert.match(md, /## 证见 · 模型起草报告章节（服务甲，已完成）/);
+  assert.match(md, /调用生成式模型 1 次/);
+  const unclear = conversationMarkdown({ title: '中断', createdAt: at, messages: [{ ...section, model: { ...section.model, status: 'unknown' } }] }, at);
+  assert.match(unclear, /模型起草报告章节（服务甲，结果尚不明确）/);
+  assert.match(unclear, /其中 1 次结果尚不明确/);
+});

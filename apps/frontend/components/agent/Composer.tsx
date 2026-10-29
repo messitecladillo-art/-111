@@ -18,6 +18,8 @@ type Props = {
   services: Choice[]; serviceId: string; onService: (id: string) => void;
   /** 指令模式 answers here; 用模型对话 sends sentences to `chatLabel`, a service that can talk. */
   mode: 'command' | 'model'; onMode: (mode: 'command' | 'model') => void; chatLabel: string;
+  /** Unsent text belongs to one conversation (or to the one not started), and is kept per identity. */
+  draftScope: string; draftKey: string; draft: string; onDraft: (key: string, text: string) => void;
   onOpen: (room: RoomId) => void;
 };
 type MenuName = 'project' | 'model' | 'attach' | null;
@@ -28,14 +30,30 @@ type MenuName = 'project' | 'model' | 'attach' | null;
  * method is composing. Above it, the project the conversation is filed under and where its work is kept; below it,
  * what may be attached, how the agent acts, and which model service drafts for it.
  */
-export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen }: Props) {
-  const [value, setValue] = useState('');
+export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, draftScope, draftKey, draft, onDraft, onOpen }: Props) {
+  const [value, setValue] = useState(draft);
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [recall, setRecall] = useState(-1);
   const [menu, setMenu] = useState<MenuName>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  // A draft is loaded when the conversation or the identity changes; late storage fills an empty line, never text
+  // already typed here, and this tab's typing is never replaced by the copy it just saved.
+  const shown = useRef({ scope: draftScope, key: draftKey }), lastDraft = useRef(draft);
+  useLayoutEffect(() => {
+    if (shown.current.scope === draftScope && shown.current.key === draftKey) return;
+    // What was sent belongs to the identity that sent it; another identity starts with an empty recall history.
+    if (shown.current.scope !== draftScope) setHistory([]);
+    shown.current = { scope: draftScope, key: draftKey };
+    setValue(draft);
+    setActive(0); setRecall(-1); setDismissed(''); setMenu(null);
+  }, [draftScope, draftKey, draft]);
+  useLayoutEffect(() => {
+    const appeared = !!draft && draft !== lastDraft.current;
+    lastDraft.current = draft;
+    if (appeared && !value) setValue(draft);
+  }, [draft, value]);
   const word = /^[/／]\S*$/u.test(value) ? value.slice(1) : null;
   const options = word !== null && dismissed !== value ? matchCommands(word) : [];
   const selected = options.length ? Math.min(active, options.length - 1) : -1;
@@ -60,12 +78,14 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
   }, [menu]);
   const toggle = (name: MenuName) => { if (name !== 'attach') onNeedLists(); setMenu(menu === name ? null : name); };
 
-  const change = (next: string) => { setValue(next); setActive(0); setRecall(-1); };
+  const change = (next: string) => { setValue(next); setActive(0); setRecall(-1); onDraft(draftKey, next); };
   const send = (text: string) => {
     if (!text.trim()) return;
+    // The sentence consumes the draft; it must not reappear when this conversation is opened again.
+    onDraft(draftKey, '');
     onSend(text);
     setHistory(list => [...list.filter(item => item !== text), text].slice(-50));
-    change('');
+    setValue(''); setActive(0); setRecall(-1); setDismissed('');
   };
   // Enter runs a command typed in full, even one that can take an argument (/来处 alone lists the exhibits);
   // a partial name, or Tab, completes it and leaves room for the argument.
@@ -94,13 +114,13 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
     if (browsing && history.length && (event.key === 'ArrowUp' || (event.key === 'ArrowDown' && recall >= 0))) {
       event.preventDefault();
       const next = event.key === 'ArrowUp' ? (recall < 0 ? history.length - 1 : Math.max(0, recall - 1)) : recall + 1;
-      if (next >= history.length) { setValue(''); setRecall(-1); } else { setValue(history[next]); setRecall(next); }
+      if (next >= history.length) { setValue(''); setRecall(-1); onDraft(draftKey, ''); } else { setValue(history[next]); setRecall(next); onDraft(draftKey, history[next]); }
     }
   };
   // A choice is a radio item and an action a plain one. Section labels are read through their group, notes through
   // the menu's description, so a menu holds nothing but items and groups.
-  const item = (key: string, label: ReactNode, onClick: () => void, extra: { checked?: boolean; note?: string } = {}) =>
-    <button key={key} type="button" role={extra.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={extra.checked} className={styles.menuItem}
+  const item = (key: string, label: ReactNode, onClick: () => void, extra: { checked?: boolean; note?: string; disabled?: boolean } = {}) =>
+    <button key={key} type="button" role={extra.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={extra.checked} disabled={extra.disabled} className={styles.menuItem}
       onClick={() => { onClick(); setMenu(null); }}>{label}{extra.note && <small>{extra.note}</small>}</button>;
 
   return <div ref={wrap} className={styles.composerWrap}>
@@ -134,7 +154,7 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
         </div>)}
       </div>}
       <textarea ref={inputRef} id="agent-command-line" rows={1} value={value} spellCheck={false} enterKeyHint="send"
-        placeholder="随心输入，或输入 / 调出命令" aria-label="对证见说" aria-autocomplete="list"
+        placeholder="随心输入，或输入 / 调出命令" title="草稿按对话自动保存" aria-label="对证见说" aria-autocomplete="list"
         aria-controls={options.length ? 'agent-commands' : undefined} aria-activedescendant={selected >= 0 ? `agent-command-${selected}` : undefined}
         onChange={event => change(event.target.value)} onKeyDown={key} />
       <div className={styles.toolbar}>
@@ -161,7 +181,7 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
               <div role="group" aria-label="对话方式">
                 <p className={styles.menuLabel} aria-hidden="true">对话方式</p>
                 {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '不调用模型' })}
-                {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力' })}
+                {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力', disabled: !chatLabel })}
               </div>
               <div role="group" aria-label="模型服务">
                 <p className={styles.menuLabel} aria-hidden="true">模型服务</p>

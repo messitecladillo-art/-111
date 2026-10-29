@@ -11,12 +11,13 @@ export type Message = (
   /**
    * `model`: a model call through this service, at this step of its sentence, recorded when it is sent and kept as it
    * settles (refused means the service turned it away before any model ran). Without it the answer was given by rule.
+   * `draftNode` marks a report section draft, so an interrupted one can offer the same section again.
    */
-  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: ModelCall }
+  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: ModelCall; draftNode?: string }
   /** A knowledge lookup waiting for the search index; never stored, since it could not finish after a reload. */
   | { id: string; at: number; role: 'pending'; query: string; explicit: boolean }
 ) & { rev?: number };
-export type ModelCall = { service: string; step: number; status?: 'running' | 'ready' | 'failed' | 'unknown' | 'refused' };
+export type ModelCall = { service: string; step: number; status?: 'running' | 'ready' | 'failed' | 'unknown' | 'refused'; /** The receipt's ID: the request's idempotency key, so a reload can read the outcome without calling the model again. */ turnId?: string };
 /**
  * A conversation, optionally filed under a hosted project; `filedAt` dates the filing for the same reason. `titledAt`
  * dates a name the user gave it; without one the title is its first words.

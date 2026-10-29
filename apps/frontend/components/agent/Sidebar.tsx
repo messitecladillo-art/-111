@@ -17,6 +17,8 @@ type Props = {
   onRetry: () => void;
   /** Why the last sign-out or reconnection failed. */
   notice: string;
+  /** Conversations holding unsent text, and whether the conversation not started yet does. */
+  draftIds: ReadonlySet<string>; freshDraft: boolean;
   onNew: (projectId: string | null) => void;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
@@ -42,7 +44,7 @@ function excerpt(thread: Thread, wanted: string): string | null {
  * them, then the rest by recency. Search reads titles and what was said. A conversation can be renamed in place;
  * deleting asks once more in place and removes the conversation only, never project work.
  */
-export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse }: Props) {
+export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, draftIds, freshDraft, onNew, onSelect, onRemove, onRename, onCollapse }: Props) {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -78,6 +80,9 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
   const loose = recent.filter(t => !t.projectId || !listed.has(t.projectId));
   const row = (thread: Thread, nested = false) => {
     const words = found?.get(thread.id);
+    const hasDraft = draftIds.has(thread.id);
+    const running = thread.messages.some(m => m.role === 'agent' && m.model?.status === 'running');
+    const state = running && hasDraft ? '正在等待回答，有未发送的草稿' : running ? '正在等待回答' : hasDraft ? '有未发送的草稿' : '';
     return <div key={thread.id} className={styles.thread} data-active={thread.id === book.active} data-nested={nested}>
       {renaming === thread.id
         ? <input className={styles.threadRename} autoFocus defaultValue={thread.title} maxLength={80} aria-label={`重命名对话「${thread.title}」：Enter 保存，Esc 取消`}
@@ -86,9 +91,11 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
               if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); finishRename(thread.id, event.currentTarget.value); }
               if (event.key === 'Escape') { event.preventDefault(); finishRename(thread.id, null); }
             }} />
-        : <button type="button" onClick={() => onSelect(thread.id)} onDoubleClick={() => startRename(thread)} aria-current={thread.id === book.active ? 'true' : undefined} title={thread.title}>
+        : <button type="button" onClick={() => onSelect(thread.id)} onDoubleClick={() => startRename(thread)} aria-current={thread.id === book.active ? 'true' : undefined}
+            aria-label={state ? `${thread.title}，${state}` : undefined} title={thread.title}>
             {thread.title}{words && <small>{words}</small>}
           </button>}
+      {renaming !== thread.id && state && <span className={styles.threadState} data-kind={running ? 'running' : 'draft'} title={state} aria-hidden="true"><i /></span>}
       {renaming !== thread.id && <span className={styles.threadMenu} data-confirming={confirming === thread.id}>
         {confirming === thread.id ? <>
           <button type="button" data-danger="true" onClick={() => { onRemove(thread.id); setConfirming(null); }}>确认删除</button>
@@ -110,7 +117,10 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
     </div>
     {searching && <input className={styles.sideSearch} autoFocus value={query} placeholder="搜索对话标题与内容" aria-label="搜索对话标题与内容" onChange={event => setQuery(event.target.value)} />}
     <nav className={styles.sideScroll} aria-label="对话">
-      <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}><Icon name="edit" />新对话</button>
+      <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}
+        aria-label={freshDraft ? '新对话，有未发送的草稿' : undefined}><Icon name="edit" />新对话
+        {freshDraft && <span className={styles.threadState} data-kind="draft" title="有未发送的草稿" aria-hidden="true"><i /></span>}
+      </button>
       {account === 'ready' && projects.length > 0 && <>
         <p className={styles.sideLabel}>项目</p>
         {projects.map(project => {
