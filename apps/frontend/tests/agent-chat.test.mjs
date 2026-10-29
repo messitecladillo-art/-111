@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CHAT_ERRORS, chatContext, chatHistory, isDefiniteChatRejection, parseChatReceipt } from '../lib/agent/chat.ts';
+import { CHAT_ERRORS, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, parseChatReceipt } from '../lib/agent/chat.ts';
 import { illuminate } from '../lib/agent/illumination.ts';
 import { route, toolTurn } from '../lib/agent/router.ts';
 
@@ -191,4 +191,23 @@ test('writing results into the report is offered on a confirmation card that say
   const listed = route('/结果', withResults({ ...held, placed: ['各年级满意度'] })).turn;
   assert.ok(text({ lines: listed.cards[0].lines }).includes('各年级满意度　卡方检验 · 有效样本 212 / 240 · 已写进报告'));
   assert.equal(listed.chips[0].action.text, '/写入', 'the list recommends writing what is still missing');
+});
+
+test('project memory is read-only and its entries can be looked up by section or id', () => {
+  const fields = ['title', 'researchQuestion', 'decisionGoal', 'population', 'geography', 'stage'];
+  const intent = Object.fromEntries(fields.map(field => [field, { value: '', status: 'unknown' }]));
+  intent.title = { value: '社区体育设施研究', status: 'confirmed' };
+  const memory = {
+    schemaVersion: 1, projectId: 'p', revision: 1, contentHash: 'a'.repeat(64),
+    document: { schemaVersion: 1, intent, decisions: [{ id: 'd1', statement: '分层抽样', rationale: '街道差异大', scope: 'sampling', status: 'confirmed' }], openQuestions: [] },
+    permissions: { role: 'editor', canEdit: true }, seed: null,
+  };
+  assert.equal(isResultTool('memory'), true);
+  const bySection = toolTurn({ tool: 'memory', args: { section: 'decisions' } }, { ...ctx(), memory });
+  assert.match(text(bySection.turn), /分层抽样/);
+  const byId = toolTurn({ tool: 'memory', args: { id: 'd1' } }, { ...ctx(), memory });
+  assert.match(text(byId.turn), /街道差异大/);
+  assert.deepEqual(parseChatReceipt({ id: 'x', status: 'ready', reply: '好', actions: [{ tool: 'memory', args: { section: 'intent' } }] }).actions, [{ tool: 'memory', args: { section: 'intent' } }]);
+  assert.equal(parseChatReceipt({ id: 'x', status: 'ready', reply: '好', actions: [{ tool: 'memory', args: {} }] }).actions.length, 0);
+  assert.match(text(toolTurn({ tool: 'memory', args: { section: 'open' } }, ctx()).turn), /还没有可读的项目记忆/);
 });

@@ -69,19 +69,22 @@ const question = (value: unknown): MemoryQuestion => {
   if (row.status !== 'open' && row.status !== 'resolved') fail();
   return {
     id: str(row.id, 64), question: str(row.question, 1200), why: str(row.why, 1000), next: str(row.next, 1000),
-    status: row.status, createdAt: str(row.createdAt, 40),
+    status: row.status as MemoryQuestion['status'], createdAt: str(row.createdAt, 40),
     ...(row.source === undefined ? {} : { source: source(row.source) }),
     ...(row.resolvedBy === undefined ? {} : { resolvedBy: str(row.resolvedBy, 64) }),
   };
 };
 export function parseProjectMemoryDocument(value: unknown): ProjectMemoryDocument {
   const row = record(value, ['schemaVersion', 'intent', 'decisions', 'openQuestions']);
-  if (row.schemaVersion !== 1 || !Array.isArray(row.decisions) || !Array.isArray(row.openQuestions)) fail();
-  return { schemaVersion: 1, intent: intent(row.intent), decisions: row.decisions.map(decision), openQuestions: row.openQuestions.map(question) };
+  const decisions = row.decisions, openQuestions = row.openQuestions;
+  if (row.schemaVersion !== 1) fail();
+  if (!Array.isArray(decisions) || !Array.isArray(openQuestions)) fail();
+  return { schemaVersion: 1, intent: intent(row.intent), decisions: (decisions as unknown[]).map(decision), openQuestions: (openQuestions as unknown[]).map(question) };
 }
 export function parseMemorySnapshot(value: unknown): MemorySnapshot {
   const row = record(value, ['schemaVersion', 'projectId', 'revision', 'contentHash', 'document', 'permissions'], ['seed']);
-  if (row.schemaVersion !== 1 || typeof row.revision !== 'number') fail();
+  const revision = row.revision;
+  if (row.schemaVersion !== 1 || typeof revision !== 'number') fail();
   const permissions = record(row.permissions, ['role', 'canEdit']);
   if (!['owner', 'editor', 'reviewer', 'viewer'].includes(permissions.role as string)) fail();
   const seedValue = row.seed;
@@ -94,7 +97,7 @@ export function parseMemorySnapshot(value: unknown): MemorySnapshot {
     return { intent: clean as Partial<Record<IntentField, string>>, source: source(item.source) };
   })();
   return {
-    schemaVersion: 1, projectId: str(row.projectId, 64), revision: row.revision, contentHash: str(row.contentHash, 64),
+    schemaVersion: 1, projectId: str(row.projectId, 64), revision: revision as number, contentHash: str(row.contentHash, 64),
     document: parseProjectMemoryDocument(row.document),
     permissions: { role: permissions.role as MembershipRole, canEdit: permissions.canEdit === true },
     seed,

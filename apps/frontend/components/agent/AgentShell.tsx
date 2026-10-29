@@ -31,7 +31,7 @@ import Lobby from './Lobby';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
-import type { Service } from '@evix/shared';
+import type { MemorySnapshot, Service } from '@evix/shared';
 
 /**
  * A sentence's later steps: what the tools found, which ran already, the service the user agreed to, and `after`, the
@@ -222,8 +222,9 @@ export default function AgentShell() {
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
   const report = deferredView.report, design = deferredView.design, liveReport = view.report;
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate }; });
+  const projectId = thread ? thread.projectId : book.draftProject;
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: null as MemorySnapshot | null });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: latest.current.memory }; });
   const agent = useMemo(() => {
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
@@ -233,9 +234,9 @@ export default function AgentShell() {
       else local(text);
     };
     const local = (text: string) => {
-      const { panel, light, theme, traces, held, plan, generation } = latest.current;
+      const { panel, light, theme, traces, held, plan, generation, memory } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room: panel, light, theme, traces, results: held, plan });
+      const routed = route(text, { room: panel, light, theme, traces, results: held, plan, memory });
       if ('draft' in routed) { threads.append([user]); askDraft(routed.draft); return; }
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
@@ -267,7 +268,7 @@ export default function AgentShell() {
     // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new. A
     // continuation keeps the service the sentence began with, the one the user agreed to, even if the menu has moved on.
     const turn = (text: string, next?: Chain) => {
-      const { panel, light, traces, held, owner, mutate } = latest.current;
+      const { panel, light, traces, held, owner, mutate, projectId } = latest.current;
       const chatService = next?.service ?? latest.current.chatService;
       if (!chatService) return;
       // A later step stays in the sentence's own conversation, whichever one is open now, and stops if it was deleted.
@@ -282,6 +283,7 @@ export default function AgentShell() {
       const said = (next ? messages : messages.slice(0, asked < 0 ? messages.length : asked)).filter((_, i) => !declined.has(i));
       const request: ChatRequest = { schemaVersion: 1, idempotencyKey: crypto.randomUUID(), message: text, history: chatHistory(said.flatMap(chatLine)),
         context: chatContext(panel, light, traces, held), serviceId: chatService.id, serviceRevision: chatService.revision, consent: true,
+        ...(projectId ? { projectId } : {}),
         ...(next ? { step: next.step, toolResults: next.results } : {}) };
       const waiting: Message = { ...stamp(), role: 'agent', model: { service: chatService.label, step: next?.step ?? 1, status: 'running' }, turn: { lines: next
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
@@ -414,8 +416,8 @@ export default function AgentShell() {
     // A tool the model asked for, run as the matching command runs; drafting still begins with its own consent card.
     // A read-only tool's finding is returned so it can go back to the model.
     const run = async (afterId: string, action: ChatAction): Promise<ToolResult | null> => {
-      const { panel, light, theme, traces, held, plan, generation, knowledge } = latest.current;
-      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan });
+      const { panel, light, theme, traces, held, plan, generation, knowledge, memory } = latest.current;
+      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan, memory });
       if ('draft' in routed) return null;
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
       if ('lookup' in routed) {
@@ -537,7 +539,6 @@ export default function AgentShell() {
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
   const services = pickable.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
-  const projectId = thread ? thread.projectId : book.draftProject;
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
   const here = panel ? roomById(panel) : null, lit = panel ? roomLight(light, panel) : null;
