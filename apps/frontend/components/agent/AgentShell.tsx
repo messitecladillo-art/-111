@@ -216,7 +216,7 @@ export default function AgentShell() {
   } : null, [localConfig]);
   const pickable = useMemo(() => lists.services.filter(s => s.capabilities.includes('research') || s.capabilities.includes('questionnaire')), [lists.services]);
   const chatServices = useMemo(() => localService ? [localService, ...pickable] : pickable, [localService, pickable]);
-  const chosenService = localService && (preferredService === 'local' || !pickable.some(s => s.id === preferredService))
+  const chosenService = localService && (preferredService === 'local' || !pickable.some(s => s.id === preferredService && s.capabilities.includes('research')))
     ? 'local' : pickable.some(s => s.id === preferredService) ? preferredService : pickable[0]?.id ?? '';
   const chatService = chatServices.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
   // Drafting a report section asks a service with the 报告 capability: the chosen one when it has it, else the first that does.
@@ -373,7 +373,7 @@ export default function AgentShell() {
       }
       if (thread && consented.current.has(`${thread}:${chatService.id}`)) { turn(text); return; }
       const consent: Message = { ...stamp(), role: 'agent', turn: { lines: [[span('发给模型之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${chatService.label}」回答`,
-        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，项目照度、盲区、可回溯图表与已登记结果数量的摘要；模型请求时，还有已登记结果的标题、方法、有效样本、主要统计量与提醒，以及已确认研究发现的标题与解释。')],
+        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，项目照度、盲区、可回溯图表、已登记结果数量与项目记忆的摘要；模型请求时，还有已登记结果的标题、方法、有效样本、主要统计量与提醒，以及已确认研究发现的标题与解释。')],
           [span('不发送：问卷、原始数据与报告正文。模型看不到原始数据，也不能改动项目；它请求的操作由这里执行，改动前仍会问你。', 'dim')],
           [span(`模型读完工具结果后可能接着回答，一句话最多调用 ${MAX_STEPS} 次；费用按你的服务商计。这段对话之后的句子不再询问。`, 'dim')]],
         confirm: { label: '发送', action: { type: 'chat', text } }, cancel: '不发送' }] } };

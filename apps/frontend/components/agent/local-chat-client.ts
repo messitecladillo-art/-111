@@ -6,6 +6,19 @@ import type { MemorySnapshot } from '@evix/shared';
 import type { LocalModelConfig } from './local-model';
 
 /** One local-model turn through the browser's own key. No login, no project database, no stored key on the server. */
+function memoryBrief(memory: MemorySnapshot | null) {
+  if (!memory) return null;
+  return {
+    revision: memory.revision,
+    intent: Object.fromEntries(Object.entries(memory.document.intent)
+      .filter(([, value]) => value.status === 'confirmed').map(([field, value]) => [field, value.value])),
+    decisions: memory.document.decisions.filter(item => item.status === 'confirmed').slice(0, 8)
+      .map(item => ({ id: item.id, statement: item.statement, rationale: item.rationale })),
+    openQuestions: memory.document.openQuestions.filter(item => item.status === 'open').slice(0, 5)
+      .map(item => ({ id: item.id, question: item.question, next: item.next })),
+  };
+}
+
 export async function sendLocalChatTurn(request: ChatRequest, config: LocalModelConfig, memory: MemorySnapshot | null): Promise<ChatReceipt> {
   let response: Response;
   try {
@@ -14,7 +27,7 @@ export async function sendLocalChatTurn(request: ChatRequest, config: LocalModel
       headers: { 'content-type': 'application/json', accept: 'application/json' },
       credentials: 'omit',
       cache: 'no-store',
-      body: JSON.stringify({ provider: config.provider, model: config.model, apiKey: config.apiKey, request, memory }),
+      body: JSON.stringify({ provider: config.provider, model: config.model, apiKey: config.apiKey, request, memory: memoryBrief(memory) }),
       signal: AbortSignal.timeout(60_000),
     });
   } catch {
