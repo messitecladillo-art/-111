@@ -67,7 +67,9 @@ export async function POST(request: Request) {
         : response.status >= 500 ? 'provider_unavailable' : 'provider_rejected';
       return receipt(requestBody, 'failed', { errorCode: code, reply: null });
     }
-    const data = await response.json() as { choices?: { message?: { content?: unknown } }[] };
+    const rawResponse = await response.text();
+    if (rawResponse.length > 200_000) return receipt(requestBody, 'failed', { errorCode: 'invalid_response' });
+    const data = JSON.parse(rawResponse) as { choices?: { message?: { content?: unknown } }[] };
     const content = data.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) return receipt(requestBody, 'failed', { errorCode: 'invalid_response' });
     const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/u);
