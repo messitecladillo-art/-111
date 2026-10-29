@@ -35,3 +35,14 @@ test('storage failure is reported instead of silently dropping the event', async
   session.setItem = original;
   assert.equal(ok, false);
 });
+
+test('an imported process merges without duplicate events and keeps the later checkpoint', () => {
+  processJournal.bind('zoe');
+  processJournal.append('t2', event('e1', 't2'));
+  assert.equal(processJournal.import('t2', [event('e2', 't2'), event('e1', 't2')], { id: 'c2', threadId: 't2', at: 5, eventId: 'e2' }), true);
+  assert.deepEqual(processJournal.events('t2').map(item => item.id), ['e1', 'e2']);
+  assert.equal(processJournal.checkpoint('t2').eventId, 'e2');
+  processJournal.import('t2', [event('e2', 't2')], { id: 'c1', threadId: 't2', at: 1, eventId: 'e1' });
+  assert.equal(processJournal.checkpoint('t2').eventId, 'e2', 'an older checkpoint does not replace the newer one');
+  assert.equal(processJournal.events('t2').length, 2);
+});

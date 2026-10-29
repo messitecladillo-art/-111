@@ -106,6 +106,27 @@ export const processJournal = {
     notify();
     return true;
   },
+  import(threadId: string, values: readonly ProcessEvent[], checkpoint?: ProcessCheckpoint | null): boolean {
+    if (owner === null || book.gone[threadId]) return false;
+    const valid: ProcessEvent[] = [];
+    for (const value of values) {
+      try { valid.push(makeProcessEvent(value)); } catch { /* an old or malformed event is skipped */ }
+    }
+    const entry = book.threads[threadId] ?? { events: [] };
+    const byId = new Map(entry.events.map(event => [event.id, event]));
+    for (const event of valid) if (!byId.has(event.id)) byId.set(event.id, event);
+    const next = clone(book);
+    const previous = entry.checkpoint;
+    const nextCheckpoint = checkpoint && (!previous || checkpoint.at > previous.at) ? { ...checkpoint, threadId } : previous;
+    next.threads[threadId] = {
+      events: [...byId.values()].sort((a, b) => a.at - b.at || a.id.localeCompare(b.id)),
+      ...(nextCheckpoint ? { checkpoint: nextCheckpoint } : {}),
+    };
+    if (!persist(next)) return false;
+    book = next;
+    notify();
+    return true;
+  },
   remove(threadId: string): boolean {
     if (owner === null) return false;
     const next = clone(book);

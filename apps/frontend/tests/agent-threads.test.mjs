@@ -215,3 +215,15 @@ test('a conversation keeps the name the user gave it; between two tabs the later
   threads.append([user('追问')]);
   assert.equal(threads.view('mia').threads[0].title, '另一个标签页起的名字', 'new messages leave the name alone');
 });
+
+test('a backed-up conversation restores once and never overwrites a local one', async () => {
+  threads.bind('ivy');
+  const id = 'restored-thread';
+  const messages = [user('云端恢复的问题'), agent('云端恢复的回答')];
+  assert.equal(threads.restore({ id, title: '云端恢复的问题', projectId: 'p', messages, createdAt: 1, updatedAt: 2 }), true);
+  assert.equal(threads.view('ivy').active, id);
+  assert.equal(threads.restore({ id, title: '云端恢复的问题', projectId: 'p', messages, createdAt: 1, updatedAt: 2 }), false, 'a local conversation is never overwritten');
+  const fresh = await import('../components/agent/threads.ts?restore');
+  fresh.threads.bind('ivy');
+  assert.equal(fresh.threads.view('ivy').threads.some(t => t.id === id), true, 'and survives a reload');
+});

@@ -8,6 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { useProjectMemory } from '@/components/hosted/useProjectMemory';
+import { fetchCloudThread, saveCloudThread } from '@/components/hosted/cloud-process-client';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
 import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
@@ -130,6 +131,7 @@ export default function AgentShell() {
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
   const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
   const [showProcess, setShowProcess] = useState(false);
+  const [backup, setBackup] = useState({ busy: false, note: '' });
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
   // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
   const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
@@ -244,6 +246,26 @@ export default function AgentShell() {
       return processJournal.append(threadId, makeProcessEvent({ id: crypto.randomUUID(), threadId, at: Date.now(), kind, summary, ...extra }));
     } catch { return false; }
   }, []);
+  const canBackup = !!thread?.projectId && !!owner && owner !== 'guest';
+  const backupProcess = useCallback(async () => {
+    if (!thread?.projectId || !owner || owner === 'guest') {
+      setBackup({ busy: false, note: '需要登录并归入项目后才能备份。' });
+      return;
+    }
+    setBackup({ busy: true, note: '正在备份到项目…' });
+    try {
+      let cloud: { revision: number } | null = null;
+      try { cloud = await fetchCloudThread(thread.projectId, thread.id); }
+      catch (error) { if (!(error instanceof HostedApiError) || error.status !== 404) throw error; }
+      const saved = await saveCloudThread(thread.projectId, thread.id, {
+        expectedRevision: cloud?.revision ?? 0, title: thread.title, messages: thread.messages,
+        events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null,
+      });
+      setBackup({ busy: false, note: `已备份第 ${saved.revision} 版；只有你能看到。` });
+    } catch (error) {
+      setBackup({ busy: false, note: errorMessage(error) });
+    }
+  }, [thread, owner, activeProcess]);
   const writeCheckpoint = useCallback((threadId: string | undefined, messageId?: string) => {
     if (!threadId) return;
     const events = processJournal.events(threadId), last = events.at(-1);
@@ -702,7 +724,8 @@ export default function AgentShell() {
             onClick={() => download(recordName(thread, Date.now()), conversationMarkdown(thread, Date.now()))}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
-        {showProcess && <ProcessTimeline events={activeProcess?.events ?? []} checkpoint={activeProcess?.checkpoint} onClose={() => setShowProcess(false)} />}
+        {showProcess && <ProcessTimeline events={activeProcess?.events ?? []} checkpoint={activeProcess?.checkpoint} onClose={() => setShowProcess(false)}
+          canBackup={canBackup} backupBusy={backup.busy} backupNote={backup.note} onBackup={() => void backupProcess()} />}
         <div ref={scrollRef} className={styles.scroll}>
           {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>

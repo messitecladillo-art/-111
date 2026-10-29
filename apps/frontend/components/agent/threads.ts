@@ -203,6 +203,19 @@ export const threads = {
     const thread: Thread = { id: crypto.randomUUID(), title: titleOf(messages), projectId: book.draftProject, filedAt: now, createdAt: now, updatedAt: now, messages: messages.slice(-MESSAGE_LIMIT) };
     commit({ threads: [thread, ...book.threads], active: thread.id, draftProject: null });
   },
+  /** Adds a thread backed up elsewhere to this identity; an existing local thread is never overwritten. */
+  restore(thread: { id: string; title: string; projectId: string | null; messages: Message[]; createdAt?: number; updatedAt?: number }): boolean {
+    if (!thread.id || book.threads.some(t => t.id === thread.id) || removed.includes(thread.id)) return false;
+    const messages = thread.messages.filter(validMessage).slice(-MESSAGE_LIMIT);
+    if (!messages.length) return false;
+    const restoredAt = Date.now();
+    const value: Thread = {
+      id: thread.id, title: tidyTitle(thread.title) || titleOf(messages), projectId: thread.projectId ?? null,
+      createdAt: thread.createdAt ?? restoredAt, updatedAt: thread.updatedAt ?? restoredAt, messages,
+    };
+    commit({ threads: [value, ...book.threads].slice(0, THREAD_LIMIT), active: value.id, draftProject: null });
+    return true;
+  },
   /** Adds to the conversation holding `messageId`, wherever the user is now. */
   appendAfter(messageId: string, message: Message) {
     const thread = inThread(messageId);
