@@ -8,7 +8,7 @@ pytestmark = pytest.mark.postgres
 
 def test_memory_version_table_and_rls_exist(pg_engine):
     with pg_engine.connect() as connection:
-        assert connection.execute(text("SELECT to_regclass('public.project_memory_versions')")).scalar()
+        assert connection.execute(text("SELECT to_regclass('project_memory_versions')")).scalar()
         assert connection.execute(text(
             "SELECT relrowsecurity FROM pg_class WHERE relname='project_memory_versions'"
         )).scalar() is True
@@ -16,7 +16,7 @@ def test_memory_version_table_and_rls_exist(pg_engine):
 
 def test_project_memory_starts_empty_and_saves_a_version(harness):
     _, login, _, _ = harness
-    client, _ = login("memory@example.com")
+    client, _ = login()
     item, _ = project(client)
     response = client.get(f"/api/projects/{item['id']}/memory")
     assert response.status_code == 200
@@ -40,8 +40,8 @@ def test_project_memory_starts_empty_and_saves_a_version(harness):
 
 def test_viewer_and_reviewer_read_memory_but_cannot_write(harness):
     _, login, _, _ = harness
-    owner, _ = login("memory-owner@example.com")
-    other, _ = login("memory-reader@example.com")
+    owner, _ = login()
+    other, _ = login("b@example.test")
     item, team = project(owner)
     document = {
         "schemaVersion": 1,
@@ -49,7 +49,7 @@ def test_viewer_and_reviewer_read_memory_but_cannot_write(harness):
         "decisions": [], "openQuestions": [],
     }
     for role in ("viewer", "reviewer"):
-        assert owner.post(f"/api/teams/{team}/members", json={"email": "memory-reader@example.com", "role": role}).status_code == 201
+        assert owner.post(f"/api/teams/{team}/members", json={"email": "b@example.test", "role": role}).status_code == 201
         read = other.get(f"/api/projects/{item['id']}/memory")
         assert read.status_code == 200
         assert read.json()["permissions"]["canEdit"] is False
