@@ -6,6 +6,7 @@ import { applyReportInsert } from '../lib/report-insert.ts';
 import { createEditorContent, parseEditorContent } from '../lib/editor-model.ts';
 import { blueprintSections, matchBlueprintNode } from '../lib/report-blueprint.ts';
 import { danglingReferences } from '../lib/report-numbering.ts';
+import { figurePlan, figureSVG, planSVG } from '../lib/report-figures.ts';
 
 // A seeded teaching-simulation table: two related scales, an outcome, a 0/1 choice and missing codes; no respondents.
 const random = seededRandom('advanced-analysis');
@@ -49,7 +50,7 @@ test('the write-up goes into its blueprint section as one insert whose reading c
   const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
   const insert = await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true });
   assert.equal(insert.node, 'drivers.model');
-  assert.deepEqual(insert.items.map(i => i.kind), ['paragraph', 'formula', 'formula', 'paragraph', 'table', 'paragraph', 'paragraph']);
+  assert.deepEqual(insert.items.map(i => i.kind), ['paragraph', 'formula', 'formula', 'paragraph', 'table', 'paragraph', 'figure', 'paragraph']);
   assert.match(insert.items[5].text, /^注：\$n=\d+\$；\$R\^2=/u, 'the table note prints under the table, typeset');
   assert.deepEqual(insert.items[4].result.warnings, [], 'the note is not repeated as a plain-text caveat');
   assert.equal(insert.items[4].result.method, 'regression');
@@ -57,8 +58,37 @@ test('the write-up goes into its blueprint section as one insert whose reading c
   const applied = applyReportInsert(report(), insert);
   const section = applied.content.report.find(s => s.id === applied.sectionId);
   assert.equal(matchBlueprintNode(section.title).id, 'drivers.model');
-  const tableBlock = applied.blocks.find(b => b.kind === 'table'), reading = applied.blocks.at(-1);
-  assert.ok(reading.text.startsWith(`由[[表:${tableBlock.id}]]可知，`), 'the "@4" placeholder became the table block');
+  const tableBlock = applied.blocks.find(b => b.kind === 'table'), chartBlock = applied.blocks.find(b => b.kind === 'chart'), reading = applied.blocks.at(-1);
+  assert.ok(reading.text.startsWith(`由[[表:${tableBlock.id}]]和[[图:${chartBlock.id}]]可知，`), 'the "@N" placeholders became the table and figure blocks');
+  assert.equal(chartBlock.evidenceId, tableBlock.evidenceId, 'the figure is drawn from the table\'s own result');
+  assert.equal(chartBlock.text, '满意度影响因素的回归系数及其 95% 置信区间');
   assert.deepEqual(danglingReferences(applied.content), []);
   assert.ok(section.body.startsWith('【教学模拟数据，不能作为实际调查结果】'), 'simulated numbers are declared where they land');
+});
+
+test('the report redraws every method figure from its stored result, as the preview drew it', async () => {
+  const runs = [
+    runAdvanced({ method: 'validity', items: [0, 1, 2, 3, 4, 5] }, table, ['99']),
+    runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']),
+    runAdvanced({ method: 'cluster', variables: [0, 1, 2], k: 3 }, table, ['99']),
+  ];
+  for (const run of runs) {
+    assert.ok(!('refused' in run) && run.chart && run.figure, `${run.method} has a figure`);
+    const insert = await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true });
+    const result = insert.items.find(i => i.kind === 'figure').result;
+    // Whatever value column the block holds, the stored result draws the method's own figure.
+    assert.equal(figurePlan(result, 1, '#2F6B4F').kind, run.figure.kind);
+    assert.equal(await figureSVG(result, 1, '#2F6B4F'), await planSVG(run.figure), `${run.method}: the stored result draws the preview's figure`);
+  }
+});
+
+test('the Word export numbers and draws the method figure from the stored result', async () => {
+  const { buildDocx } = await import('../lib/editor-export.ts'), { default: JSZip } = await import('jszip'), { default: sharp } = await import('sharp');
+  const renderSvg = async svg => new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
+  const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
+  const applied = applyReportInsert(report(), await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true }));
+  const zip = await JSZip.loadAsync(await (await buildDocx(applied.content, undefined, renderSvg)).arrayBuffer());
+  const xml = await zip.file('word/document.xml').async('string');
+  assert.match(xml, /满意度影响因素的回归系数及其 95% 置信区间/u);
+  assert.ok(Object.keys(zip.files).some(name => /^word\/media\/.+\.svg$/u.test(name)), 'the figure is embedded as vector SVG');
 });

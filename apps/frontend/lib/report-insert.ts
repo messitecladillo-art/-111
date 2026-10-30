@@ -17,6 +17,8 @@ export type InsertItem =
   | { kind: 'paragraph'; text: string }
   | { kind: 'formula'; tex: string }
   | { kind: 'table'; result: ResultSnapshot; caption: string }
+  /** The figure of a table's result in the same insert: the result carries what the figure plots. */
+  | { kind: 'figure'; result: ResultSnapshot; caption: string }
   /** A result the report has registered, written into its own blueprint section as the editor's placement writes it. */
   | { kind: 'result'; resultId: string };
 /** `source` names the module in the confirmation message; `id` lets the editor apply each insert once. */
@@ -32,11 +34,13 @@ export function applyReportInsert(content: EditorContent, insert: ReportInsert, 
     if (item.kind === 'formula' && texProblem(item.tex)) throw Error(`公式无法排版：${texProblem(item.tex)}`);
     // The same design inserted twice reuses its registered table rather than adding a duplicate.
     if (item.kind === 'table') next = appendQualityResult(next, item.result);
+    if (item.kind === 'figure' && !insert.items.some(other => other.kind === 'table' && other.result.id === item.result.id)) throw Error('图须与其结果表一同写入。');
   }
   const target = targetSection(next, insert.node, sectionId);
   const blocks = insert.items.flatMap(item => item.kind === 'paragraph' ? [block('paragraph', item.text)]
     : item.kind === 'formula' ? [block('formula', item.tex)]
-      : item.kind === 'table' ? [block('table', item.caption, item.result.id, 1)] : []);
+      : item.kind === 'table' ? [block('table', item.caption, item.result.id, 1)]
+        : item.kind === 'figure' ? [block('chart', item.caption, item.result.id, 1)] : []);
   // A paragraph may cite a table or figure of the same insert as "[[表:@N]]", N its item index; the block made for that
   // item takes its place, so the reading cites the table it travels with.
   for (const b of blocks) if (b.kind === 'paragraph') b.text = b.text.replace(/\[\[(表|图):@(\d+)\]\]/gu, (whole, kind: string, index: string) => {

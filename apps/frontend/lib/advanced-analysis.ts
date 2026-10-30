@@ -13,7 +13,7 @@ import { ahp } from './ahp.ts';
 import { ipa } from './ipa.ts';
 import { kmeans, silhouette, standardize } from './kmeans.ts';
 import { ahpWriting, clusterWriting, ipaWriting, logisticWriting, regressionWriting, validityWriting, type MethodWriting } from './method-writing.ts';
-import { clusterProfilePlot, forestPlot, ipaPlot, screePlot } from './method-figures.ts';
+import { figureMetrics, methodFigure, type FigureMetric, type MethodFigureData } from './method-figures.ts';
 import type { FigurePlan } from './report-figures.ts';
 import type { ReportInsert } from './report-insert.ts';
 import { snapshotRecipe } from './research-quality.ts';
@@ -26,7 +26,9 @@ export type AdvancedSpec =
   | { method: 'cluster'; variables: number[]; k: number }
   | { method: 'ahp'; criteria: string[]; matrix: number[][] };
 export type AdvancedMethod = AdvancedSpec['method'];
-export type AdvancedRun = { method: AdvancedMethod; title: string; variables: string[]; n: number; total: number; writing: MethodWriting; figure: FigurePlan | null };
+/** `chart` is what the report figure plots, as the result's metrics; `figure` draws it for the preview. */
+export type AdvancedRun = { method: AdvancedMethod; title: string; variables: string[]; n: number; total: number; writing: MethodWriting;
+  chart: { caption: string; metrics: FigureMetric[] } | null; figure: FigurePlan | null };
 
 export const ADVANCED_METHODS: readonly { id: AdvancedMethod; title: string; use: string; node: string }[] = [
   { id: 'validity', title: '效度：KMO 与因子分析', use: '判断量表题项是否适合因子分析，并给出旋转后的因子结构。', node: 'data.testing' },
@@ -68,7 +70,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
   if (spec.method === 'ahp') {
     const r = ahp(spec.matrix);
     if ('refused' in r) return { refused: refusalText(r.refused) };
-    return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), figure: null };
+    return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null };
   }
   const columns = spec.method === 'validity' ? spec.items : spec.method === 'cluster' ? spec.variables
     : spec.method === 'ipa' ? [...spec.performance, ...(spec.importance ?? []), ...(spec.overall === null ? [] : [spec.overall])] : [spec.outcome, ...spec.predictors];
@@ -81,39 +83,47 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       if ('refused' in adequacy) return { refused: refusalText(adequacy.refused) };
       const solution = exploratoryFactors(data.columns);
       if ('refused' in solution) return { refused: refusalText(solution.refused) };
-      return { method: 'validity', title: '题项旋转后因子载荷', variables: names, n: data.n, total: data.total, writing: validityWriting(adequacy, solution, names), figure: screePlot(solution.eigenvalues, ACCENT) };
+      return withFigure({ method: 'validity', title: '题项旋转后因子载荷', variables: names, n: data.n, total: data.total, writing: validityWriting(adequacy, solution, names) },
+        '题项相关矩阵特征值碎石图', { kind: 'scree', eigenvalues: solution.eigenvalues });
     }
     case 'regression': case 'logistic': {
       const [y, ...xs] = data.columns, predictors = xs.map((values, j) => ({ name: names[j + 1], values }));
       if (spec.method === 'regression') {
         const fit = linearRegression(y, predictors);
         if ('refused' in fit) return { refused: refusalText(fit.refused) };
-        return { method: 'regression', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, writing: regressionWriting(fit, names[0]),
-          figure: forestPlot(fit.coefficients.slice(1).map(c => ({ name: c.name, estimate: c.estimate, low: c.ci[0], high: c.ci[1] })), { axis: '回归系数 B（95% 置信区间）', reference: 0 }, ACCENT) };
+        return withFigure({ method: 'regression', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, writing: regressionWriting(fit, names[0]) },
+          `${names[0]}影响因素的回归系数及其 95% 置信区间`, { kind: 'forest', rows: fit.coefficients.slice(1).map(c => ({ name: c.name, estimate: c.estimate, low: c.ci[0], high: c.ci[1] })) });
       }
       const fit = logisticRegression(y, predictors);
       if ('refused' in fit) return { refused: refusalText(fit.refused) };
-      return { method: 'logistic', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, writing: logisticWriting(fit, names[0], names[0]),
-        figure: forestPlot(fit.coefficients.slice(1).map(c => ({ name: c.name, estimate: c.oddsRatio, low: c.oddsRatioCi[0], high: c.oddsRatioCi[1] })), { axis: '发生比比率 OR（95% 置信区间，对数刻度）', reference: 1 }, ACCENT) };
+      return withFigure({ method: 'logistic', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, writing: logisticWriting(fit, names[0], names[0]) },
+        `${names[0]}影响因素的发生比比率及其 95% 置信区间`, { kind: 'forest', rows: fit.coefficients.slice(1).map(c => ({ name: c.name, estimate: c.oddsRatio, low: c.oddsRatioCi[0], high: c.oddsRatioCi[1] })) });
     }
     case 'ipa': {
       const k = spec.performance.length, performance = data.columns.slice(0, k), importance = spec.importance ? data.columns.slice(k, 2 * k) : null;
       const overall = spec.overall === null ? undefined : data.columns.at(-1)!;
       const result = ipa(performance.map((values, j) => ({ name: names[j], performance: values, ...(importance ? { importance: importance[j] } : {}) })), { overall });
       if ('refused' in result) return { refused: refusalText(result.refused) };
-      return { method: 'ipa', title: '各属性重要性与表现', variables: names.slice(0, k), n: data.n, total: data.total, writing: ipaWriting(result),
-        figure: ipaPlot(result.points, result.lines, ACCENT, result.mode === 'derived' ? '隐性重要性（标准化系数）' : '重要性') };
+      return withFigure({ method: 'ipa', title: '各属性重要性与表现', variables: names.slice(0, k), n: data.n, total: data.total, writing: ipaWriting(result) },
+        '各属性重要性—表现象限图', { kind: 'quadrant', points: result.points, lines: result.lines });
     }
     case 'cluster': {
       const rows = standardize(data.columns[0].map((_, i) => data.columns.map(c => c[i])));
       const fit = kmeans(rows, spec.k, { seed: 'evix-advanced' });
       if ('refused' in fit) return { refused: refusalText(fit.refused) };
-      return { method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, writing: clusterWriting(fit, silhouette(...silhouetteSample(rows, fit.assignments)).mean, names),
-        figure: clusterProfilePlot(fit.centers, fit.sizes, names, ACCENT) };
+      return withFigure({ method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, writing: clusterWriting(fit, silhouette(...silhouetteSample(rows, fit.assignments)).mean, names) },
+        '各类人群标准化中心剖面图', { kind: 'profile', centers: fit.centers, sizes: fit.sizes, variables: names });
     }
   }
 }
 const ACCENT = '#2F6B4F';
+
+/** The run with its figure, drawn from the same metrics the report's figure will be drawn from. */
+function withFigure(run: Omit<AdvancedRun, 'chart' | 'figure'>, caption: string, data: MethodFigureData): AdvancedRun {
+  const metrics = figureMetrics(data);
+  if (!metrics) return { ...run, chart: null, figure: null };
+  return { ...run, chart: { caption, metrics }, figure: methodFigure({ method: run.method, headers: run.writing.table.headers, metrics }, ACCENT) };
+}
 // The silhouette compares every row with every other; past this many rows it is taken on an evenly spaced sample
 // of rows (as sklearn's sample_size does), which keeps a large import from freezing the page.
 const SILHOUETTE_ROWS = 2000;
@@ -130,16 +140,18 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
   const table = run.writing.table;
   const result = await snapshotRecipe({
     method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n, invalidRows: 0,
-    metrics: [], headers: table.headers, rows: table.rows, warnings: [], interpretation: '',
+    metrics: run.chart?.metrics ?? [], headers: table.headers, rows: table.rows, warnings: [], interpretation: '',
   }, { title: table.caption, sourceName: source.name, sourceUrl: '', sourceHash: source.hash, classification: source.simulated ? 'simulated' : 'user_provided', variables: run.variables.slice(0, 4) });
-  const node = ADVANCED_METHODS.find(m => m.id === run.method)!.node;
+  const node = ADVANCED_METHODS.find(m => m.id === run.method)!.node, at = run.writing.formulas.length + 2;
+  const cites = run.chart ? `[[表:@${at}]]和[[图:@${at + 2}]]` : `[[表:@${at}]]`;
   return { id: crypto.randomUUID(), node, source: '数据分析 · 高级方法', items: [
     { kind: 'paragraph', text: run.writing.text },
     ...run.writing.formulas.map(tex => ({ kind: 'formula' as const, tex })),
     { kind: 'paragraph', text: run.writing.where },
     { kind: 'table', result, caption: table.caption },
     { kind: 'paragraph', text: table.note },
-    // The reading cites the table above it: "@N" names the insert's own item N, resolved when the insert is applied.
-    { kind: 'paragraph', text: `由[[表:@${run.writing.formulas.length + 2}]]可知，${run.writing.reading}` },
+    ...(run.chart ? [{ kind: 'figure' as const, result, caption: run.chart.caption }] : []),
+    // The reading cites the table (and figure) above it: "@N" names the insert's own item N, resolved when the insert is applied.
+    { kind: 'paragraph', text: `由${cites}可知，${run.writing.reading}` },
   ] };
 }

@@ -134,3 +134,57 @@ export function clusterProfilePlot(centers: readonly (readonly number[])[], size
     })),
   } };
 }
+
+/**
+ * A method's figure travels in its registered result: the numbers it plots are the result's metrics, labelled
+ * "名称｜量", so the preview, the editor and the Word export redraw the same figure from the stored result alone.
+ * A figure whose numbers do not fit the result's 40 metrics is left out; the table still carries every value.
+ */
+export type FigureMetric = { label: string; value: number };
+export type MethodFigureData =
+  | { kind: 'forest'; rows: readonly { name: string; estimate: number; low: number; high: number }[] }
+  | { kind: 'scree'; eigenvalues: readonly number[] }
+  | { kind: 'quadrant'; points: readonly { name: string; importance: number; performance: number }[]; lines: { importance: number; performance: number } }
+  | { kind: 'profile'; centers: readonly (readonly number[])[]; sizes: readonly number[]; variables: readonly string[] };
+const SEP = '｜', MAX_METRICS = 40;
+const key = (name: string) => name.replace(/\s+/gu, ' ').trim().slice(0, 120) || '未命名';
+
+export function figureMetrics(data: MethodFigureData): FigureMetric[] | null {
+  const metrics: FigureMetric[] = data.kind === 'forest' ? data.rows.flatMap(r => [{ label: `${key(r.name)}${SEP}估计值`, value: r.estimate }, { label: `${key(r.name)}${SEP}下限`, value: r.low }, { label: `${key(r.name)}${SEP}上限`, value: r.high }])
+    : data.kind === 'scree' ? data.eigenvalues.map((value, j) => ({ label: `特征值${SEP}${j + 1}`, value }))
+      : data.kind === 'quadrant' ? [{ label: `分界线${SEP}重要性`, value: data.lines.importance }, { label: `分界线${SEP}表现`, value: data.lines.performance },
+        ...data.points.flatMap(p => [{ label: `${key(p.name)}${SEP}重要性`, value: p.importance }, { label: `${key(p.name)}${SEP}表现`, value: p.performance }])]
+        : data.centers.flatMap((c, j) => [{ label: `第 ${j + 1} 类${SEP}人数`, value: data.sizes[j] }, ...c.map((value, d) => ({ label: `第 ${j + 1} 类${SEP}${key(data.variables[d])}`, value }))]);
+  return metrics.length <= MAX_METRICS && metrics.every(m => Number.isFinite(m.value)) ? metrics : null;
+}
+
+const FIGURE_OF: Record<string, MethodFigureData['kind']> = { regression: 'forest', logistic: 'forest', validity: 'scree', ipa: 'quadrant', cluster: 'profile' };
+
+/** The figure a method's result carries, or null when the result is of another method or carries none. */
+export function methodFigure(r: { method: string; headers: readonly string[]; metrics: readonly { label: string; value: number | null }[] }, accent: string): FigurePlan | null {
+  const kind = FIGURE_OF[r.method], parts = r.metrics.map(m => ({ head: m.label.slice(0, m.label.lastIndexOf(SEP)), field: m.label.slice(m.label.lastIndexOf(SEP) + 1), value: m.value }));
+  if (!kind || !parts.length || r.metrics.some(m => !m.label.includes(SEP)) || parts.some(p => p.value === null || !p.head)) return null;
+  const pick = (head: string, field: string) => parts.find(p => p.head === head && p.field === field)?.value as number;
+  const heads = [...new Set(parts.map(p => p.head))];
+  switch (kind) {
+    case 'forest': {
+      const rows = heads.map(name => ({ name, estimate: pick(name, '估计值'), low: pick(name, '下限'), high: pick(name, '上限') }));
+      return r.method === 'logistic'
+        ? forestPlot(rows, { axis: '发生比比率 OR（95% 置信区间，对数刻度）', reference: 1 }, accent)
+        : forestPlot(rows, { axis: '回归系数 B（95% 置信区间）', reference: 0 }, accent);
+    }
+    case 'scree': return screePlot(parts.map(p => p.value as number), accent);
+    case 'quadrant': {
+      const names = heads.filter(h => h !== '分界线');
+      return ipaPlot(names.map(name => ({ name, importance: pick(name, '重要性'), performance: pick(name, '表现') })), { importance: pick('分界线', '重要性'), performance: pick('分界线', '表现') },
+        accent, r.headers[1]?.startsWith('隐性') ? '隐性重要性（标准化系数）' : '重要性');
+    }
+    case 'profile': {
+      // A cluster's label is "第 j 类｜变量"; the variable is everything after the first separator.
+      const split = r.metrics.map(m => ({ head: m.label.slice(0, m.label.indexOf(SEP)), field: m.label.slice(m.label.indexOf(SEP) + 1), value: m.value as number }));
+      const clusters = [...new Set(split.map(p => p.head))], variables = [...new Set(split.filter(p => p.field !== '人数').map(p => p.field))];
+      const value = (head: string, field: string) => split.find(p => p.head === head && p.field === field)?.value as number;
+      return clusterProfilePlot(clusters.map(c => variables.map(v => value(c, v))), clusters.map(c => value(c, '人数')), variables, accent);
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { planSVG, svgSize } from '../lib/report-figures.ts';
-import { clusterProfilePlot, forestPlot, ipaPlot, niceBounds, niceLogBounds, screePlot } from '../lib/method-figures.ts';
+import { clusterProfilePlot, figureMetrics, forestPlot, ipaPlot, methodFigure, niceBounds, niceLogBounds, screePlot } from '../lib/method-figures.ts';
 
 const accent = '#2F6B4F';
 
@@ -37,4 +37,17 @@ test('a figure is refused when its numbers are incomplete', () => {
   assert.throws(() => screePlot([2], accent), /无法作图/);
   assert.throws(() => ipaPlot([{ name: 'a', importance: 1, performance: 1 }], { importance: 1, performance: 1 }, accent), /至少需要两个属性/);
   assert.throws(() => clusterProfilePlot([[1, 2]], [5], ['x', 'y'], accent), /无法作图/);
+});
+
+test('figure data round-trips through result metrics; what does not fit is left out', async () => {
+  const forest = { kind: 'forest', rows: [{ name: '体验｜清晰', estimate: 0.4, low: 0.1, high: 0.7 }, { name: '价格', estimate: -0.2, low: -0.5, high: 0.1 }] };
+  const metrics = figureMetrics(forest);
+  assert.equal(metrics.length, 6);
+  const plan = methodFigure({ method: 'regression', headers: ['变量', 'B'], metrics }, '#2F6B4F');
+  assert.equal(await planSVG(plan), await planSVG(forestPlot(forest.rows, { axis: '回归系数 B（95% 置信区间）', reference: 0 }, '#2F6B4F')), 'a separator inside a name survives');
+  const profile = { kind: 'profile', centers: [[1, -1], [-1, 1]], sizes: [30, 20], variables: ['甲｜乙', '丙'] };
+  assert.equal(await planSVG(methodFigure({ method: 'cluster', headers: [], metrics: figureMetrics(profile) }, '#2F6B4F')), await planSVG(clusterProfilePlot(profile.centers, profile.sizes, profile.variables, '#2F6B4F')));
+  assert.equal(figureMetrics({ kind: 'scree', eigenvalues: Array.from({ length: 41 }, (_, i) => 41 - i) }), null, 'more than 40 numbers: no figure');
+  assert.equal(methodFigure({ method: 'regression', headers: [], metrics: [{ label: 'R²', value: 0.3 }] }, '#2F6B4F'), null, 'a result without figure metrics draws as before');
+  assert.equal(methodFigure({ method: 'frequency', headers: [], metrics }, '#2F6B4F'), null);
 });
