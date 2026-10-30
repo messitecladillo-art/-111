@@ -24,10 +24,10 @@ const pct = (v: number) => `${sign(v.toFixed(1))}%`;
 const stat = (v: number) => sign(v.toFixed(2));
 const coef = (v: number) => sign(v.toFixed(3));
 const plain = (v: number) => sign(Number.isInteger(v) ? String(v) : v.toFixed(2));
-const tex2 = (v: number) => v.toFixed(2), tex3 = (v: number) => v.toFixed(3);
-const dof = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+export const tex2 = (v: number) => v.toFixed(2), tex3 = (v: number) => v.toFixed(3);
+export const dof = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
 /** A p value as it is set inside an inline formula. */
-const pMath = (p: number) => p < 0.001 ? 'p<0.001' : `p=${p.toFixed(3)}`;
+export const pMath = (p: number) => p < 0.001 ? 'p<0.001' : `p=${p.toFixed(3)}`;
 /**
  * Labels come from survey data and question wording, so they are copied as literal text: a "[[图:…]]" or "$…$"
  * inside a label must not turn into a reference or a formula.
@@ -70,7 +70,7 @@ export function resultCaption(r: ResultSnapshot): string {
 }
 
 /** "由图 4-1 可知，" / "由图 4-1 和表 4-1 可知，" for the blocks placed with the result. */
-function lead(refs: ResultRefs): string {
+export function lead(refs: ResultRefs): string {
   const cited = [refs.figure && referenceToken('figure', refs.figure), refs.table && referenceToken('table', refs.table)].filter(Boolean);
   return cited.length ? `由${cited.join('和')}可知，` : '';
 }
