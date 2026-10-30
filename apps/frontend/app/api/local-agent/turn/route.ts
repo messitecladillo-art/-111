@@ -22,6 +22,24 @@ const receipt = (request: Record<string, unknown>, status: 'ready' | 'failed', e
   reply: null, actions: [], droppedActions: 0, errorCode: null, ...extra,
 }, { status: 200 });
 
+// Providers disagree on the wording, so the known causes are named here and everything else stays "rejected". The
+// provider body is read only to classify it; it is never returned or logged.
+const MODEL_MISSING = /model[_ -]?not[_ -]?(?:found|exist)|invalid[_ -]?model|unknown model|does not exist/iu;
+const NO_QUOTA = /insufficient[_ -]?(?:quota|balance)|exceeded your current quota|余额不足|额度不足/iu;
+const BAD_KEY = /invalid[_ -]?api[_ -]?key|incorrect api key|api key.*(?:invalid|expired)/iu;
+async function failureCode(response: Response): Promise<string> {
+  if (response.status === 401 || response.status === 403) return 'authentication_failed';
+  if (response.status === 404) return 'model_not_found';
+  if (response.status === 429) return 'rate_limited';
+  if (response.status >= 500) return 'provider_unavailable';
+  let text = '';
+  try { text = (await response.text()).slice(0, 8_000); } catch { /* The status still says enough. */ }
+  if (NO_QUOTA.test(text)) return 'insufficient_quota';
+  if (MODEL_MISSING.test(text)) return 'model_not_found';
+  if (BAD_KEY.test(text)) return 'authentication_failed';
+  return 'provider_rejected';
+}
+
 export async function POST(request: Request) {
   let raw: string;
   try { raw = await request.text(); } catch { return failure('invalid_request', '无法读取请求。'); }
@@ -61,12 +79,7 @@ export async function POST(request: Request) {
       redirect: 'error',
       cache: 'no-store',
     });
-    if (!response.ok) {
-      const code = response.status === 401 || response.status === 403 ? 'authentication_failed'
-        : response.status === 429 ? 'rate_limited'
-        : response.status >= 500 ? 'provider_unavailable' : 'provider_rejected';
-      return receipt(requestBody, 'failed', { errorCode: code, reply: null });
-    }
+    if (!response.ok) return receipt(requestBody, 'failed', { errorCode: await failureCode(response), reply: null });
     const rawResponse = await response.text();
     if (rawResponse.length > 200_000) return receipt(requestBody, 'failed', { errorCode: 'invalid_response' });
     const data = JSON.parse(rawResponse) as { choices?: { message?: { content?: unknown } }[] };

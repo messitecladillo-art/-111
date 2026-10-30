@@ -49,3 +49,19 @@ test('a provider failure is a failed receipt, not a fake answer', async () => {
     assert.equal(receipt.reply, null);
   } finally { globalThis.fetch = original; }
 });
+
+test('a missing model and an exhausted quota keep their own names', async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => Response.json({ error: { message: 'Model Not Exist', code: 'model_not_found' } }, { status: 404 });
+    const missing = await (await post(body({ model: 'not-a-model' }))).json();
+    assert.equal(missing.status, 'failed');
+    assert.equal(missing.errorCode, 'model_not_found');
+
+    globalThis.fetch = async () => Response.json({ error: { message: 'insufficient_quota: add funds' } }, { status: 400 });
+    const quota = await (await post(body())).json();
+    assert.equal(quota.status, 'failed');
+    assert.equal(quota.errorCode, 'insufficient_quota');
+    assert.equal(JSON.stringify(quota).includes('add funds'), false);
+  } finally { globalThis.fetch = original; }
+});
