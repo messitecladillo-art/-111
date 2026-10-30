@@ -1,0 +1,33 @@
+/* 高级方法: method tiles, then the setup beside the write-up as the report will print it. */
+.panel { display: grid; gap: 16px; }
+.methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.method { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--wb-line); border-radius: var(--wb-radius, 10px); background: var(--wb-solid); color: var(--wb-text); text-align: left; cursor: pointer; }
+.method b { font-size: 14px; font-weight: 650; }
+.method span { color: var(--wb-muted); font-size: 12.5px; line-height: 1.55; }
+.method:hover { border-color: var(--wb-accent); }
+.method[aria-checked="true"] { border-color: var(--wb-accent); box-shadow: inset 0 0 0 1px var(--wb-accent); }
+.body { display: grid; grid-template-columns: minmax(240px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.setup, .result { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--wb-line); border-radius: var(--wb-radius, 10px); background: var(--wb-solid); }
+.columns, .inline, .matrix { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; max-height: 280px; overflow-y: auto; }
+.columns legend, .inline legend, .matrix legend { margin-bottom: 6px; color: var(--wb-text); font-size: 13px; font-weight: 600; }
+/* Scoped under .panel: the analysis lab lays every label out as a grid. */
+.panel .columns label, .panel .inline label { display: flex; gap: 8px; align-items: center; color: var(--wb-text); font-size: 13px; }
+.panel .columns input, .panel .inline input { flex: none; width: auto; min-height: 0; margin: 0; }
+.matrix label, .field { display: grid; gap: 4px; color: var(--wb-text); font-size: 13px; }
+.field select, .field input, .field textarea, .matrix input { min-height: 32px; padding: 4px 8px; border: 1px solid var(--wb-line); border-radius: 6px; background: var(--wb-solid); color: var(--wb-text); font: inherit; }
+.panel .primary { justify-self: start; min-height: 34px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--wb-accent); color: #fff; font-weight: 600; cursor: pointer; }
+.note, .empty, .where, .tableNote { margin: 0; color: var(--wb-muted); font-size: 12.5px; line-height: 1.7; }
+.result p { margin: 0; color: var(--wb-text); font-size: 14px; line-height: 1.85; }
+.result .where, .result .tableNote { color: var(--wb-muted); font-size: 12.5px; }
+.caption { text-align: center; font-weight: 600; }
+.tableWrap { overflow-x: auto; }
+.tableWrap table { width: 100%; border-collapse: collapse; border-top: 1.5px solid var(--wb-text); border-bottom: 1.5px solid var(--wb-text); font-size: 13px; }
+.tableWrap th { padding: 6px 8px; border-bottom: 1px solid var(--wb-text); font-weight: 600; text-align: center; white-space: nowrap; }
+.tableWrap td { padding: 5px 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.tableWrap td:first-child, .tableWrap th:first-child { text-align: left; }
+.figure { overflow: hidden; border: 1px solid var(--wb-line); border-radius: 8px; background: #fff; }
+.figure svg { display: block; width: 100%; height: auto; }
+.actions { display: flex; gap: 12px; align-items: center; justify-content: space-between; color: var(--wb-muted); font-size: 12.5px; }
+.error { color: var(--wb-danger, #b42318) !important; }
+.notice { color: var(--wb-accent) !important; font-size: 13px !important; }
+@media (max-width: 900px) { .body { grid-template-columns: 1fr; } }

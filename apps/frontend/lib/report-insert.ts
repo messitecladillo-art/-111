@@ -7,7 +7,7 @@ import type { EditorContent } from './editor-model.ts';
 import { texProblem } from './omml.ts';
 import { appendQualityResult, withQuality } from './quality-layouts.ts';
 import { digestText, snapshotRecipe, type ReportBlock, type ResultSnapshot } from './research-quality.ts';
-import { appendBlocks, block, placeResult, resultPlaced, targetSection } from './report-placement.ts';
+import { SIMULATED_MARK, appendBlocks, block, placeResult, resultPlaced, targetSection } from './report-placement.ts';
 import { captionText, literalText } from './report-templates.ts';
 import type { SizePlan, SizeResult } from './sampling.ts';
 import { texNum } from './sampling-core.ts';
@@ -37,7 +37,17 @@ export function applyReportInsert(content: EditorContent, insert: ReportInsert, 
   const blocks = insert.items.flatMap(item => item.kind === 'paragraph' ? [block('paragraph', item.text)]
     : item.kind === 'formula' ? [block('formula', item.tex)]
       : item.kind === 'table' ? [block('table', item.caption, item.result.id, 1)] : []);
-  return { content: appendBlocks(target.content, target.sectionId, blocks), sectionId: target.sectionId, created: target.created, blocks };
+  // A paragraph may cite a table or figure of the same insert as "[[表:@N]]", N its item index; the block made for that
+  // item takes its place, so the reading cites the table it travels with.
+  for (const b of blocks) if (b.kind === 'paragraph') b.text = b.text.replace(/\[\[(表|图):@(\d+)\]\]/gu, (whole, kind: string, index: string) => {
+    const cited = blocks[Number(index)];
+    return cited && cited.kind === (kind === '表' ? 'table' : 'chart') ? `[[${kind}:${cited.id}]]` : whole;
+  });
+  // Numbers from the teaching simulation are declared in the section that shows them, as placing a result does.
+  const simulated = insert.items.some(item => item.kind === 'table' && item.result.classification === 'simulated');
+  const declared = !simulated || target.content.report.some(s => s.id === target.sectionId && /【教学模拟数据/u.test(s.body + s.source));
+  const marked = declared ? target.content : { ...target.content, report: target.content.report.map(s => s.id === target.sectionId ? { ...s, body: s.body.trim() ? `${SIMULATED_MARK}\n${s.body}` : SIMULATED_MARK } : s) };
+  return { content: appendBlocks(marked, target.sectionId, blocks), sectionId: target.sectionId, created: target.created, blocks };
 }
 
 /**
