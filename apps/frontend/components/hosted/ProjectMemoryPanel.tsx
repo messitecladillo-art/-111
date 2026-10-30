@@ -5,6 +5,7 @@ import { DECISION_SCOPES, INTENT_FIELDS, ROLE_LABELS, type DecisionScope, type I
 import { errorMessage } from './api-client';
 import { fetchMemoryVersions, type MemoryVersionHead } from './project-memory-client';
 import { useProjectMemory, type ProjectMemoryState } from './useProjectMemory';
+import CloudProcessBackups from './CloudProcessBackups';
 
 const INTENT_LABELS: Record<IntentField, string> = {
   title: '题目', researchQuestion: '研究问题', decisionGoal: '决策目标', population: '调查对象', geography: '地区', stage: '当前阶段',
@@ -147,6 +148,8 @@ function MemoryEditor({ projectId, role, memory, snapshot: initial }: {
     </section>
 
     {canEdit && <label className="hosted-memory-note"><span>本次修改说明（可选）</span><input maxLength={500} value={note} onChange={event => setNote(event.target.value)} placeholder="例如：补充抽样理由" /></label>}
+
+    <CloudProcessBackups projectId={projectId} />
 
     <details className="hosted-project-tool hosted-memory-history"><summary><span>版本历史</span><small>{versions.length} 个版本</small></summary>
       <div className="hosted-project-tool-body">

@@ -8,6 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { useProjectMemory } from '@/components/hosted/useProjectMemory';
+import { fetchCloudThread, saveCloudThread } from '@/components/hosted/cloud-process-client';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
 import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
@@ -32,6 +33,11 @@ import Lobby from './Lobby';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
+import { makeProcessCheckpoint, makeProcessEvent, type ProcessEventKind } from '@/lib/agent/process';
+import { processJournal } from './process-journal';
+import ProcessTimeline from './ProcessTimeline';
+import { localModel } from './local-model';
+import { sendLocalChatTurn } from './local-chat-client';
 import type { Service } from '@evix/shared';
 
 /**
@@ -100,10 +106,16 @@ export default function AgentShell() {
   const [accountNotice, setAccountNotice] = useState('');
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
-  useEffect(() => { if (owner) threads.bind(owner); }, [owner]);
+  useEffect(() => {
+    if (!owner) return;
+    threads.bind(owner);
+    processJournal.bind(owner);
+  }, [owner]);
   const book = useSyncExternalStore(threads.subscribe, () => threads.view(owner), threads.serverSnapshot);
+  const processBook = useSyncExternalStore(processJournal.subscribe, () => processJournal.view(owner), processJournal.serverSnapshot);
   const thread = book.threads.find(t => t.id === book.active) ?? null;
   const messages = thread?.messages ?? EMPTY_MESSAGES;
+  const activeProcess = thread ? processBook.threads[thread.id] : undefined;
   const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
@@ -120,6 +132,10 @@ export default function AgentShell() {
   const [visited, setVisited] = useState<RoomId[]>([]);
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
   const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
+  const [showProcess, setShowProcess] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+  const [backup, setBackup] = useState({ busy: false, note: '' });
+  const lastSync = useRef(new Map<string, string>());
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
   // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
   const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
@@ -194,9 +210,16 @@ export default function AgentShell() {
   // The chat uses the service the model menu shows as chosen, never another one behind it.
   // The composer's picker offers services to talk with or to draft questionnaires with; one that only writes reports is
   // never chosen there, so it cannot leave the conversation without a model. Drafting a section finds it below.
+  const localConfig = useSyncExternalStore(localModel.subscribe, localModel.view, localModel.serverSnapshot);
+  const localService = useMemo<Service | null>(() => localConfig ? {
+    id: 'local', label: localConfig.label, provider: localConfig.provider, baseUrl: localConfig.baseUrl,
+    model: localConfig.model, maxOutputTokens: localConfig.maxOutputTokens, capabilities: ['research'], revision: 1,
+  } : null, [localConfig]);
   const pickable = useMemo(() => lists.services.filter(s => s.capabilities.includes('research') || s.capabilities.includes('questionnaire')), [lists.services]);
-  const chosenService = pickable.some(s => s.id === preferredService) ? preferredService : pickable[0]?.id ?? '';
-  const chatService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
+  const chatServices = useMemo(() => localService ? [localService, ...pickable] : pickable, [localService, pickable]);
+  const chosenService = localService && (preferredService === 'local' || !pickable.some(s => s.id === preferredService && s.capabilities.includes('research')))
+    ? 'local' : pickable.some(s => s.id === preferredService) ? preferredService : pickable[0]?.id ?? '';
+  const chatService = chatServices.find(s => s.id === chosenService && s.capabilities.includes('research')) ?? null;
   // Drafting a report section asks a service with the 报告 capability: the chosen one when it has it, else the first that does.
   const reportService = lists.services.find(s => s.id === chosenService && s.capabilities.includes('report')) ?? lists.services.find(s => s.capabilities.includes('report')) ?? null;
 
@@ -225,8 +248,71 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, liveReport = view.report;
   const projectId = thread ? thread.projectId : book.draftProject;
   const projectMemory = useProjectMemory(projectId);
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot }; });
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot, localConfig });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, projectId, memory: projectMemory.snapshot, localConfig }; });
+  // A process event is written before its call, so a reload can say what was attempted even when no reply arrived.
+  const record = useCallback((threadId: string | undefined, kind: ProcessEventKind, summary: string, extra: { correlationId?: string; refs?: string[]; detail?: Record<string, string | number | boolean | null> } = {}) => {
+    if (!threadId) return false;
+    try {
+      return processJournal.append(threadId, makeProcessEvent({ id: crypto.randomUUID(), threadId, at: Date.now(), kind, summary, ...extra }));
+    } catch { return false; }
+  }, []);
+  const canBackup = !!thread?.projectId && !!owner && owner !== 'guest';
+  const backupProcess = useCallback(async () => {
+    if (!thread?.projectId || !owner || owner === 'guest') {
+      setBackup({ busy: false, note: '需要登录并归入项目后才能备份。' });
+      return;
+    }
+    const syncKey = JSON.stringify({ title: thread.title, messages: thread.messages, events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null });
+    if (lastSync.current.get(thread.id) === syncKey) {
+      if (!activeProcess?.auto) setBackup({ busy: false, note: '云端已是最新。' });
+      return;
+    }
+    setBackup({ busy: true, note: '正在备份到项目…' });
+    try {
+      let cloud: { revision: number } | null = null;
+      try { cloud = await fetchCloudThread(thread.projectId, thread.id); }
+      catch (error) { if (!(error instanceof HostedApiError) || error.status !== 404) throw error; }
+      const saved = await saveCloudThread(thread.projectId, thread.id, {
+        expectedRevision: cloud?.revision ?? 0, title: thread.title, messages: thread.messages,
+        events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null,
+      });
+      lastSync.current.set(thread.id, syncKey);
+      processJournal.setAuto(thread.id, true);
+      setBackup({ busy: false, note: `已备份第 ${saved.revision} 版；之后会自动保持最新。` });
+    } catch (error) {
+      setBackup({ busy: false, note: errorMessage(error) });
+    }
+  }, [thread, owner, activeProcess]);
+  const exportProcess = useCallback(() => {
+    if (!thread) return;
+    const name = recordName(thread, Date.now()).replace(/\.md$/u, '-过程.json');
+    download(name, JSON.stringify({
+      schemaVersion: 1, threadId: thread.id, title: thread.title, projectId: thread.projectId,
+      exportedAt: new Date().toISOString(), messages: thread.messages,
+      events: activeProcess?.events ?? [], checkpoint: activeProcess?.checkpoint ?? null,
+    }, null, 2));
+  }, [thread, activeProcess]);
+  const toggleAuto = useCallback(() => {
+    if (!thread || !canBackup) return;
+    const next = !processJournal.auto(thread.id);
+    processJournal.setAuto(thread.id, next);
+    setBackup({ busy: false, note: next ? '自动备份已开启。' : '自动备份已关闭。' });
+  }, [thread, canBackup]);
+  useEffect(() => {
+    if (!activeProcess?.auto || !canBackup) return;
+    const timer = setTimeout(() => { void backupProcess(); }, 1200);
+    return () => clearTimeout(timer);
+  }, [activeProcess?.auto, activeProcess?.events, activeProcess?.checkpoint, messages, canBackup, backupProcess]);
+  const writeCheckpoint = useCallback((threadId: string | undefined, messageId?: string) => {
+    if (!threadId) return;
+    const events = processJournal.events(threadId), last = events.at(-1);
+    if (!last) return;
+    processJournal.saveCheckpoint(threadId, makeProcessCheckpoint({
+      id: crypto.randomUUID(), threadId, at: Date.now(), eventId: last.id, messageId,
+      projectId: latest.current.projectId, memoryRevision: latest.current.memory?.revision,
+    }));
+  }, []);
   const agent = useMemo(() => {
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
@@ -236,41 +322,71 @@ export default function AgentShell() {
       else local(text);
     };
     const local = (text: string) => {
-      const { panel, light, theme, traces, held, plan, generation, memory } = latest.current;
+      const { panel, light, theme, traces, held, plan, generation, memory, owner } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
       const routed = route(text, { room: panel, light, theme, traces, results: held, plan, memory });
-      if ('draft' in routed) { threads.append([user]); askDraft(routed.draft); return; }
+      const active = () => threads.view(owner).active ?? undefined;
+      if ('draft' in routed) {
+        threads.append([user]); record(active(), 'user.message', text); askDraft(routed.draft); return;
+      }
       // Drafting with a model always starts with the user's consent, never with a call.
-      if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
-      if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
-      threads.append([user, { ...stamp(), role: 'agent', turn: routed.turn }]);
+      if ('generate' in routed) {
+        const agent: Message = { ...stamp(), role: 'agent', turn: generation.start(routed.generate) };
+        threads.append([user, agent]);
+        record(active(), 'user.message', text);
+        record(active(), 'agent.message', turnText(agent.turn, 120));
+        writeCheckpoint(active(), agent.id);
+        return;
+      }
+      if ('lookup' in routed) {
+        threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]);
+        record(active(), 'user.message', text);
+        return;
+      }
+      const agent: Message = { ...stamp(), role: 'agent', turn: routed.turn };
+      threads.append([user, agent]);
+      record(active(), 'user.message', text);
+      record(active(), 'agent.message', turnText(routed.turn, 120));
+      writeCheckpoint(active(), agent.id);
       if (routed.turn.act) perform(routed.turn.act);
     };
     // The first sentence of a conversation waits for consent: what goes to the service, what never does, who pays.
     const ask = (text: string) => {
       const { generation, chatService, owner } = latest.current;
-      if (generation.account !== 'ready' || !chatService) {
+      const localChat = chatService?.id === 'local';
+      if (!chatService || (!localChat && generation.account !== 'ready')) {
         // Whatever the sentence routes to here, the user learns why the model was not asked.
         local(text);
-        say([span(generation.account === 'ready' ? '所选的模型服务没有启用「研究」能力（在模型菜单里换一个，或在模型服务里勾选），' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
+        const reason = !chatService
+          ? '还没有可用的模型服务；在模型菜单里配置本地 API Key，或登录后选择服务。'
+          : '用模型对话需要先登录，或改用模型菜单里的本地模型。';
+        say([span(reason, 'dim'), span('这一句按指令模式回答。', 'dim')]);
         return;
       }
       threads.append([{ ...stamp(), role: 'user', text }]);
-      if (text.length > TEXT_LIMIT) { say([span(`模型对话一次最多 ${TEXT_LIMIT} 字，这一句有 ${text.length} 字；请分开发送。`, 'error')]); return; }
       const thread = threads.view(owner).active;
+      record(thread ?? undefined, 'user.message', text);
+      if (text.length > TEXT_LIMIT) {
+        record(thread ?? undefined, 'error', `模型对话一次最多 ${TEXT_LIMIT} 字`);
+        writeCheckpoint(thread ?? undefined);
+        say([span(`模型对话一次最多 ${TEXT_LIMIT} 字，这一句有 ${text.length} 字；请分开发送。`, 'error')]);
+        return;
+      }
       if (thread && consented.current.has(`${thread}:${chatService.id}`)) { turn(text); return; }
-      threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('发给模型之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${chatService.label}」回答`,
-        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，项目照度、盲区、可回溯图表与已登记结果数量的摘要；模型请求时，还有已登记结果的标题、方法、有效样本、主要统计量与提醒，以及已确认研究发现的标题与解释。')],
+      const consent: Message = { ...stamp(), role: 'agent', turn: { lines: [[span('发给模型之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${chatService.label}」回答`,
+        lines: [[span('发送：这句话、这段对话最近的 '), span(String(HISTORY_LIMIT), 'gold'), span(' 条，项目照度、盲区、可回溯图表、已登记结果数量与项目记忆的摘要；模型请求时，还有已登记结果的标题、方法、有效样本、主要统计量与提醒，以及已确认研究发现的标题与解释。')],
           [span('不发送：问卷、原始数据与报告正文。模型看不到原始数据，也不能改动项目；它请求的操作由这里执行，改动前仍会问你。', 'dim')],
           [span(`模型读完工具结果后可能接着回答，一句话最多调用 ${MAX_STEPS} 次；费用按你的服务商计。这段对话之后的句子不再询问。`, 'dim')]],
-        confirm: { label: '发送', action: { type: 'chat', text } }, cancel: '不发送' }] } }]);
+        confirm: { label: '发送', action: { type: 'chat', text } }, cancel: '不发送' }] } };
+      threads.append([consent]);
+      record(thread ?? undefined, 'agent.message', '等待你确认发送给模型的内容');
     };
     const say = (line: Line, chips?: AgentTurn['chips']) => threads.append([{ ...stamp(), role: 'agent', turn: { lines: [line], chips } }]);
     // `next` continues a sentence from what the previous step's tools found; without it, a new sentence starts.
     // `seen` holds the tools already run for this sentence: a repeat draws no second card and finds nothing new. A
     // continuation keeps the service the sentence began with, the one the user agreed to, even if the menu has moved on.
     const turn = (text: string, next?: Chain) => {
-      const { panel, light, traces, held, owner, mutate, projectId } = latest.current;
+      const { panel, light, traces, held, owner, mutate, projectId, memory, localConfig } = latest.current;
       const chatService = next?.service ?? latest.current.chatService;
       if (!chatService) return;
       // A later step stays in the sentence's own conversation, whichever one is open now, and stops if it was deleted.
@@ -291,7 +407,33 @@ export default function AgentShell() {
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
+      const threadId = threads.threadOf(waiting.id)?.id;
+      const recorded = record(threadId, 'model.request', `请求「${chatService.label}」回答${next ? `（第 ${next.step} 步）` : ''}`, {
+        correlationId: request.idempotencyKey,
+        refs: [`project:${projectId ?? 'none'}`, `memory:${memory?.revision ?? 0}`],
+        detail: {
+          service: chatService.id, step: request.step ?? 1, history: request.history.length,
+          projectId: projectId ?? null, memoryRevision: memory?.revision ?? 0,
+          promptVersion: 'agent-chat/v1', contextBytes: JSON.stringify(request.context).length, toolResults: next?.results.length ?? 0,
+        },
+      });
+      if (!recorded) {
+        mark(waiting.id, 'failed');
+        replace(waiting.id, { lines: [[span('过程日志没有保存，模型没有调用。', 'error')]] });
+        writeCheckpoint(threadId, waiting.id);
+        return;
+      }
       const seen = next?.seen ?? new Set<string>();
+      if (chatService.id === 'local') {
+        if (!localConfig) {
+          mark(waiting.id, 'failed');
+          replace(waiting.id, { lines: [[span('本地模型还没有配置，请在模型菜单里填写 API Key。', 'error')]] });
+          writeCheckpoint(threadId, waiting.id);
+          return;
+        }
+        sendLocalChatTurn(request, localConfig, memory).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => failLocal(waiting.id, failure, text));
+        return;
+      }
       sendChatTurn(mutate, request).then(receipt => settle(waiting.id, receipt, chatService.label, seen, chatService), failure => fail(waiting.id, failure, request.idempotencyKey, text));
     };
     // How a model call ended, on the message that holds it; the service and step stay those it was sent with.
@@ -301,6 +443,12 @@ export default function AgentShell() {
     // A receipt in place of the waiting line: the reply, marked as unverified, then each tool it asked for, run here.
     // A receipt read back by 核对回执 has no chain to continue: it settles, and the user can ask again from there.
     const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>(), service?: Service) => {
+      const threadId = threads.threadOf(messageId)?.id;
+      record(threadId, 'model.receipt', `模型回执：${receipt.status === 'ready' ? '完成' : receipt.status === 'failed' ? '失败' : '结果未明'}`, {
+        correlationId: messageId,
+        refs: [`receipt:${receipt.id}`],
+        detail: { status: receipt.status, step: receipt.step, errorCode: receipt.errorCode ?? null },
+      });
       if (receipt.status === 'ready' && receipt.reply) {
         mark(messageId, 'ready', label, receipt.step);
         replace(messageId, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
@@ -319,15 +467,33 @@ export default function AgentShell() {
         mark(messageId, 'unknown', label, receipt.step);
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span('这一轮已记下；核对只读取回执，不会再次调用模型。')]], chips: [{ label: '核对回执', action: { type: 'check', turn: receipt.id, message: messageId }, primary: true }] });
       }
+      writeCheckpoint(threadId, messageId);
     };
     const fail = (messageId: string, failure: unknown, turnId: string, text: string) => {
+      const threadId = threads.threadOf(messageId)?.id;
       if (failure instanceof HostedApiError && isDefiniteChatRejection(failure.status, failure.code)) {
         mark(messageId, 'refused');
         replace(messageId, { lines: [[span('这一轮没有发出：', 'error'), span(CHAT_ERRORS[failure.code] ?? errorMessage(failure))]], chips: [{ label: '再问一次', action: { type: 'say', text } }] });
+        record(threadId, 'error', `模型调用未发出：${failure.code}`, { correlationId: messageId, detail: { code: failure.code, status: failure.status } });
       } else {
         mark(messageId, 'unknown');
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span(`${errorMessage(failure)} 这一轮可能已经记下；核对只读取回执，不会再次调用模型。`)]], chips: [{ label: '核对回执', action: { type: 'check', turn: turnId, message: messageId }, primary: true }] });
+        record(threadId, 'error', `模型调用结果未明：${errorMessage(failure)}`, { correlationId: messageId, detail: { code: failure instanceof HostedApiError ? failure.code : 'network', status: failure instanceof HostedApiError ? failure.status : 0 } });
       }
+      writeCheckpoint(threadId, messageId);
+    };
+    // A local call leaves no receipt on this server to read back: a refusal before the provider was reached is certain;
+    // anything else may have reached it, so 再问 warns instead of offering a 核对 that could only 404.
+    const failLocal = (messageId: string, failure: unknown, text: string) => {
+      const threadId = threads.threadOf(messageId)?.id;
+      const refused = failure instanceof HostedApiError && failure.status >= 400 && failure.status < 500;
+      const code = failure instanceof HostedApiError ? failure.code : 'network', reason = CHAT_ERRORS[code] ?? errorMessage(failure);
+      mark(messageId, refused ? 'refused' : 'unknown');
+      replace(messageId, { lines: [[span(refused ? '这一轮没有发出：' : '本地这一轮没有拿到回执：', 'error'), span(reason),
+        ...(refused ? [] : [span(' 若服务商侧已经计费，再问会作为新的一轮计费。', 'dim')])]],
+        chips: [{ label: '再问一次', action: { type: 'say', text } }] });
+      record(threadId, 'error', `本地模型调用${refused ? '未发出' : '结果未明'}：${code}`, { correlationId: messageId, detail: { code, status: failure instanceof HostedApiError ? failure.status : 0 } });
+      writeCheckpoint(threadId, messageId);
     };
     const check = (turnId: string, messageId: string) => {
       // The call is credited to the service it went to. A message from before calls were recorded does not name one, so
@@ -419,6 +585,8 @@ export default function AgentShell() {
     // A read-only tool's finding is returned so it can go back to the model.
     const run = async (afterId: string, action: ChatAction): Promise<ToolResult | null> => {
       const { panel, light, theme, traces, held, plan, generation, knowledge, memory } = latest.current;
+      const threadId = threads.threadOf(afterId)?.id;
+      record(threadId, 'tool.request', `工具：${action.tool}`, { correlationId: afterId, detail: { tool: action.tool, args: JSON.stringify(action.args).slice(0, 500) } });
       const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan, memory });
       if ('draft' in routed) return null;
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
@@ -430,9 +598,12 @@ export default function AgentShell() {
           catch { found = { lines: [[span('知识镜暂时没有回应，请稍后再问。', 'error')]] }; }
         }
         threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: found });
+        record(threadId, 'tool.result', `工具结果：${action.tool}`, { correlationId: afterId, detail: { tool: action.tool, result: turnText(found, 500) } });
         return { tool: 'lookup', text: turnText(found) };
       }
       threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: routed.turn });
+      record(threadId, 'tool.result', `工具结果：${action.tool}`, { correlationId: afterId, detail: { tool: action.tool, result: turnText(routed.turn, 500) } });
+      writeCheckpoint(threadId, afterId);
       if (routed.turn.act) perform(routed.turn.act);
       return isResultTool(action.tool) ? { tool: action.tool, text: turnText(routed.turn) } : null;
     };
@@ -442,7 +613,7 @@ export default function AgentShell() {
         case 'theme': saveTheme(action.theme); break;
         case 'search': latest.current.knowledge.openSearch(); break;
         case 'entry': latest.current.knowledge.open(action.id); break;
-        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) threads.remove(active); focusInput(); break; }
+        case 'clear': { const active = threads.view(latest.current.owner).active; if (active) { threads.remove(active); processJournal.remove(active); } focusInput(); break; }
         // Only paths of this site; a stored conversation is never trusted to navigate anywhere else.
         case 'href': if (/^\/(?!\/)/.test(action.href)) window.location.assign(action.href); break;
         case 'say': send(action.text); break;
@@ -488,7 +659,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, focusInput, sendToReport]);
+  }, [go, focusInput, sendToReport, record, writeCheckpoint]);
 
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
@@ -540,7 +711,7 @@ export default function AgentShell() {
   };
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
-  const services = pickable.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
+  const services = chatServices.map(s => ({ id: s.id, label: s.label, detail: [s.model, s.capabilities.includes('research') && '对话', s.capabilities.includes('questionnaire') && '起草', s.capabilities.includes('report') && '报告'].filter(Boolean).join(' · ') }));
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
   const here = panel ? roomById(panel) : null, lit = panel ? roomLight(light, panel) : null;
@@ -611,17 +782,21 @@ export default function AgentShell() {
 
       <Sidebar book={book} projects={projects} account={generationAccount} email={email} notice={accountNotice}
         failed={!!sessionError} onRetry={() => { setAccountNotice(''); refresh().catch(error => setAccountNotice(errorMessage(error))); }} onNew={id => { threads.draft(id); focusInput(); }}
-        onSelect={threads.select} onRemove={threads.remove} onRename={threads.rename} onCollapse={() => setSideOpen(false)} />
+        onSelect={threads.select} onRemove={id => { threads.remove(id); processJournal.remove(id); }} onRename={threads.rename} onCollapse={() => setSideOpen(false)} />
 
       <main className={styles.main} aria-label="对话" data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
           <span className={styles.topTitle}>{thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
           <span className={styles.spacer} />
+          {thread && <button type="button" className={styles.processButton} onClick={() => setShowProcess(true)}>过程</button>}
           {thread && messages.length > 0 && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
             onClick={() => download(recordName(thread, Date.now()), conversationMarkdown(thread, Date.now()))}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
+        {showProcess && <ProcessTimeline events={activeProcess?.events ?? []} checkpoint={activeProcess?.checkpoint} onClose={() => setShowProcess(false)}
+          canBackup={canBackup} backupBusy={backup.busy} backupNote={backup.note} onBackup={() => void backupProcess()}
+          autoBackup={activeProcess?.auto === true} onToggleAuto={toggleAuto} onExport={exportProcess} />}
         <div ref={scrollRef} className={styles.scroll}>
           {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>
@@ -631,12 +806,21 @@ export default function AgentShell() {
                 ? `对话由「${chatService?.label ?? '模型服务'}」回答：每段对话第一次发送前请你确认；它看不到原始数据，项目里的数字以工具读到的为准。`
                 : '对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。在模型菜单里可以改用你自己的模型服务对话。'}</p>
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
+              {generationAccount !== 'loading' && lists.state !== 'loading' && !localConfig && !chatService && <p className={styles.keyHint}>
+                <button type="button" onClick={() => setLocalOpen(true)}>配置 API Key 开始对话</button>
+                <span>无需登录；Key 只保存在本浏览器</span>
+              </p>}
+              {localConfig && chatMode === 'command' && <p className={styles.keyHint}>
+                <button type="button" onClick={() => setChatMode('model')}>用本地模型对话</button>
+                <span>{localConfig.label}</span>
+              </p>}
             </div>}
         </div>
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
           services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer}
-          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
+          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go}
+          localOpen={localOpen} onLocalOpen={setLocalOpen} />
       </main>
 
       <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background

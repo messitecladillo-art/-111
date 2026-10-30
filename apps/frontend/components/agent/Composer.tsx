@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type 
 import { matchCommands } from '@/lib/agent/router';
 import type { RoomId } from '@/lib/agent/rooms';
 import { Icon } from './icons';
+import LocalModelDialog from './LocalModelDialog';
 import styles from './AgentShell.module.css';
 
 type Choice = { id: string; label: string; detail?: string };
@@ -19,6 +20,8 @@ type Props = {
   /** 指令模式 answers here; 用模型对话 sends sentences to `chatLabel`, a service that can talk. */
   mode: 'command' | 'model'; onMode: (mode: 'command' | 'model') => void; chatLabel: string;
   onOpen: (room: RoomId) => void;
+  /** The local-key dialog is opened from here or from the empty state, so one place owns it. */
+  localOpen: boolean; onLocalOpen: (open: boolean) => void;
 };
 type MenuName = 'project' | 'model' | 'attach' | null;
 
@@ -28,7 +31,7 @@ type MenuName = 'project' | 'model' | 'attach' | null;
  * method is composing. Above it, the project the conversation is filed under and where its work is kept; below it,
  * what may be attached, how the agent acts, and which model service drafts for it.
  */
-export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen }: Props) {
+export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen, localOpen, onLocalOpen }: Props) {
   const [value, setValue] = useState('');
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState('');
@@ -40,6 +43,8 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
   const options = word !== null && dismissed !== value ? matchCommands(word) : [];
   const selected = options.length ? Math.min(active, options.length - 1) : -1;
   const project = projects.find(p => p.id === projectId) ?? null;
+  const local = services.find(service => service.id === 'local') ?? null;
+  const hosted = services.filter(service => service.id !== 'local');
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -99,8 +104,8 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
   };
   // A choice is a radio item and an action a plain one. Section labels are read through their group, notes through
   // the menu's description, so a menu holds nothing but items and groups.
-  const item = (key: string, label: ReactNode, onClick: () => void, extra: { checked?: boolean; note?: string } = {}) =>
-    <button key={key} type="button" role={extra.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={extra.checked} className={styles.menuItem}
+  const item = (key: string, label: ReactNode, onClick: () => void, extra: { checked?: boolean; note?: string; disabled?: boolean } = {}) =>
+    <button key={key} type="button" role={extra.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={extra.checked} disabled={extra.disabled} className={styles.menuItem}
       onClick={() => { onClick(); setMenu(null); }}>{label}{extra.note && <small>{extra.note}</small>}</button>;
 
   return <div ref={wrap} className={styles.composerWrap}>
@@ -157,16 +162,21 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
             <p id="agent-model-note" className={styles.menuNote} aria-hidden="true">{mode === 'model'
               ? '对话由选中的服务回答：每段对话第一次发送前请你确认；它看不到原始数据，也不能改动项目。以 / 开头的命令仍在这里执行。'
               : '指令模式只听懂命令和常用说法，不调用模型。起草问卷时用选中的服务，并先请你确认。'}</p>
-            {account !== 'ready' ? <Link role="menuitem" className={styles.menuItem} href="/login">登录后选择模型服务 ↗</Link> : <>
-              <div role="group" aria-label="对话方式">
-                <p className={styles.menuLabel} aria-hidden="true">对话方式</p>
-                {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '不调用模型' })}
-                {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力' })}
-              </div>
+            <div role="group" aria-label="对话方式">
+              <p className={styles.menuLabel} aria-hidden="true">对话方式</p>
+              {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '不调用模型' })}
+              {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力', disabled: !chatLabel })}
+            </div>
+            <div role="group" aria-label="本地模型">
+              <p className={styles.menuLabel} aria-hidden="true">本地模型 · 无需登录</p>
+              {local && item('local', local.label, () => onService('local'), { checked: serviceId === 'local', note: '仅此浏览器' })}
+              {item('local-config', local ? '更换本地 API Key…' : '配置本地 API Key…', () => onLocalOpen(true))}
+            </div>
+            {account !== 'ready' ? <Link role="menuitem" className={styles.menuItem} href="/login">登录后选择云端模型服务 ↗</Link> : <>
               <div role="group" aria-label="模型服务">
-                <p className={styles.menuLabel} aria-hidden="true">模型服务</p>
-                {services.map(s => item(s.id, s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail }))}
-                {!services.length && <p className={styles.menuNote}>还没有能对话或起草问卷的模型服务。</p>}
+                <p className={styles.menuLabel} aria-hidden="true">云端模型服务</p>
+                {hosted.map(s => item(s.id, s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail }))}
+                {!hosted.length && <p className={styles.menuNote}>还没有能对话或起草问卷的模型服务。</p>}
               </div>
               {item('manage', '接入或管理模型服务', () => onOpen('services'))}
             </>}
@@ -175,5 +185,6 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
         <button type="submit" className={styles.send} disabled={!value.trim()} aria-label="发送"><Icon name="up" /></button>
       </div>
     </form>
+    {localOpen && <LocalModelDialog onClose={() => onLocalOpen(false)} onSaved={() => { onService('local'); onMode('model'); }} onCleared={() => onMode('command')} />}
   </div>;
 }
