@@ -14,10 +14,12 @@ import { categoryOrder, crosstabOrder, groupRows } from './report-tables.ts';
 
 /** Every figure is this wide; at the full text width (14.64 cm) 22 px text prints at about 9.5 pt. */
 export const FIGURE_WIDTH = 960;
-const FONT = 'Times New Roman, SimSun, Songti SC, serif';
-const INK = '#1F2329', AXIS = '#3A4049', GRID = '#E3E6EA';
+export const FONT = 'Times New Roman, SimSun, Songti SC, serif';
+export const INK = '#1F2329', AXIS = '#3A4049', GRID = '#E3E6EA';
 
-export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box' | 'coefficient';
+export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box' | 'coefficient'
+  /** Figures of the advanced methods (lib/method-figures.ts). */
+  | 'forest' | 'scree' | 'quadrant' | 'profile';
 export type FigurePlan = { kind: FigureKind; height: number; option: EChartsOption };
 
 const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -46,32 +48,32 @@ const isPercent = (header: string) => /%|％|百分/.test(header);
 /** Axis titles in report style: "有效样本占比 (%)" → "占比（%）". */
 const axisName = (header: string) => header.replace(/\s*[（(]\s*[%％]\s*[)）]/u, '（%）').replace(/^有效样本占比/u, '占比');
 /** Negative numbers take a true minus sign, as in the text. */
-const minus = (s: string) => s.replace(/^-(?=\d)/, '−');
+export const minus = (s: string) => s.replace(/^-(?=\d)/, '−');
 const format = (v: number, percent: boolean, integer: boolean) => minus(percent ? `${v.toFixed(1)}%` : integer ? String(Math.round(v)) : v.toFixed(2));
 // Axis ticks without thousands commas (four-digit numbers stand unseparated) and free of binary noise such as 0.30000000000000004.
-const tickLabel = (v: number) => minus(String(Number(v.toPrecision(12))));
+export const tickLabel = (v: number) => minus(String(Number(v.toPrecision(12))));
 const clamp = (v: number, low: number, high: number) => Math.min(high, Math.max(low, Math.round(v)));
 const rowsHeight = (rows: number, perRow: number, extra: number) => clamp(extra + perRow * rows, 300, 760);
 
-const text = { color: INK, fontFamily: FONT, fontSize: 22 };
-const small = { ...text, fontSize: 20 };
-const base = (): EChartsOption => ({ animation: false, backgroundColor: '#FFFFFF', textStyle: text, tooltip: { show: false } });
-const grid = (extra: Record<string, unknown> = {}) => ({ left: 24, right: 40, top: 40, bottom: 24, outerBoundsMode: 'same' as const, outerBoundsContain: 'all' as const, ...extra });
-const legend = { top: 0, left: 'center', textStyle: small, itemWidth: 18, itemHeight: 12, itemGap: 20 };
-const valueAxis = (name: string, extra: Record<string, unknown> = {}) => ({
+export const text = { color: INK, fontFamily: FONT, fontSize: 22 };
+export const small = { ...text, fontSize: 20 };
+export const base = (): EChartsOption => ({ animation: false, backgroundColor: '#FFFFFF', textStyle: text, tooltip: { show: false } });
+export const grid = (extra: Record<string, unknown> = {}) => ({ left: 24, right: 40, top: 40, bottom: 24, outerBoundsMode: 'same' as const, outerBoundsContain: 'all' as const, ...extra });
+export const legend = { top: 0, left: 'center', textStyle: small, itemWidth: 18, itemHeight: 12, itemGap: 20 };
+export const valueAxis = (name: string, extra: Record<string, unknown> = {}) => ({
   type: 'value' as const, name, nameTextStyle: { ...small, padding: [0, 0, 4, 0] },
   axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: true, lineStyle: { color: AXIS } },
   axisLabel: { ...small, formatter: tickLabel }, splitLine: { show: true, lineStyle: { color: GRID, type: 'dashed' as const } }, ...extra,
 });
 // Sample sizes in labels read "（n = 97）" with an italic n, spaced like every other "n = …" in the report.
 const italicN = { formatter: (v: string) => v.replace(/（n = /gu, '（{n|n} = '), rich: { n: { ...small, fontStyle: 'italic' as const } } };
-const categoryAxis = (labels: string[], horizontal: boolean) => ({
+export const categoryAxis = (labels: string[], horizontal: boolean) => ({
   type: 'category' as const, data: labels, axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: false },
   axisLabel: { ...small, interval: 0, ...italicN, ...(horizontal ? {} : { overflow: 'break' as const, width: Math.max(80, 820 / Math.max(1, labels.length)) }) },
   ...(horizontal ? { inverse: true } : {}),
 });
 // Horizontal value axes carry their title underneath, clear of the value labels at the bar ends.
-const lowerTitle = { nameLocation: 'middle' as const, nameGap: 36 };
+export const lowerTitle = { nameLocation: 'middle' as const, nameGap: 36 };
 type Label = { value: unknown };
 
 /** One series of bars in the accent; long or many labels lie horizontally so they stay readable. */
@@ -307,7 +309,11 @@ export function svgSize(svg: string): { width: number; height: number } {
 
 /** Server-rendered SVG with ECharts' interaction styles removed, checked against the vector-asset rules. */
 export async function figureSVG(r: ResultSnapshot, column: number, accent: string): Promise<string> {
-  const plan = figurePlan(r, column, accent);
+  return planSVG(figurePlan(r, column, accent));
+}
+
+/** Any figure plan as report SVG, through the same cleaning and vector check as a result's figure. */
+export async function planSVG(plan: FigurePlan): Promise<string> {
   const { engine } = await import('./chart-engine.ts');
   const chart = engine.init(null, undefined, { renderer: 'svg', ssr: true, width: FIGURE_WIDTH, height: plan.height });
   try {
