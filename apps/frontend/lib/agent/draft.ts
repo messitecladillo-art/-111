@@ -2,7 +2,7 @@
 // a short statement carrying its numbers, named F1…Fn, and may write a number only as a placeholder; the browser puts
 // the fact's own value in its place, so every number in an adopted draft comes from a registered result. The backend
 // holds the same contract (apps/backend …/writing_agent/services/section_draft.py) and checks it again.
-import type { EditorContent } from '../editor-model.ts';
+import { createEditorContent, type EditorContent } from '../editor-model.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { writtenLines } from '../report-benchmark.ts';
 import { blueprintNode, matchBlueprintNode, type BlueprintNode } from '../report-blueprint.ts';
@@ -20,6 +20,8 @@ export type DraftRequest = {
   facts: { id: string; text: string }[];
   findings: { title: string; interpretation: string; scope: string; action: string }[];
   existing: string; serviceId: string; serviceRevision: number; consent: true;
+  /** For a section that summarises the report, the other sections' titles and what they say, in report order. */
+  outline?: { title: string; excerpt: string }[];
 };
 export type DraftStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 export type DraftParagraph = { text: string; facts: string[] };
@@ -81,6 +83,24 @@ function rowFacts(r: ResultSnapshot, row: ResultSnapshot['rows'][number], title:
 }
 
 /** What the section already says, so the draft adds to it rather than repeating it. */
+/** Sections that summarise the report: they are drafted from what the other sections already say. */
+// Matched by body alone: inserting blueprint sections renumbers the template's headings.
+const TEMPLATE = new Set(createEditorContent().report.map(s => s.body.trim()).filter(Boolean));
+
+export const SYNTHESIS_NODES: ReadonlySet<string> = new Set(['abstract', 'conclusion.findings', 'conclusion.suggestions', 'conclusion.limits']);
+
+/** The report as the summarising sections read it: every other written section, its title and the start of its text. */
+export function reportOutline(content: EditorContent, nodeId: string): { title: string; excerpt: string }[] {
+  return content.report.flatMap(s => {
+    const node = matchBlueprintNode(s.title);
+    if (node?.id === nodeId || node?.kind === 'references' || node?.kind === 'appendix') return [];
+    // The starting template's prompts are not the author's writing: a body still holding them counts for nothing.
+    const body = TEMPLATE.has(s.body.trim()) ? '' : s.body;
+    const text = [...writtenLines(body), ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').flatMap(b => writtenLines(b.text))].join(' ').replace(/\s+/gu, ' ').trim();
+    return text ? [{ title: clip(tidy(s.title), 80), excerpt: clip(text, 400) }] : [];
+  }).slice(0, 30);
+}
+
 export function sectionText(content: EditorContent, nodeId: string): string {
   const sections = content.report.filter(s => matchBlueprintNode(s.title)?.id === nodeId);
   const lines = sections.flatMap(s => [...writtenLines(s.body), ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').flatMap(b => writtenLines(b.text))]);
@@ -97,6 +117,7 @@ export function draftRequest(input: { nodeId: string; held: NonNullable<ResultsV
       facts: facts.map(({ id, text }) => ({ id, text })),
       findings: standingFindings(input.held).slice(0, 20).map(f => ({ title: clip(tidy(f.title) || '未命名发现', 80), interpretation: clip(tidy(f.interpretation), 600), scope: clip(tidy(f.scope), 300), action: clip(tidy(f.action), 300) })),
       existing: sectionText(input.content, input.nodeId), serviceId: input.service.id, serviceRevision: input.service.revision, consent: true,
+      ...(SYNTHESIS_NODES.has(input.nodeId) ? { outline: reportOutline(input.content, input.nodeId) } : {}),
     },
   };
 }

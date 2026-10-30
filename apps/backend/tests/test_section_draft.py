@@ -90,3 +90,17 @@ def test_a_secret_is_found_in_decoded_text_or_a_property_name():
     assert draft.contains_secret({"facts": [{"id": "F1", "text": "密钥 sk-123"}]}, "sk-123")
     assert draft.contains_secret({"sk-123": 1}, "sk-123")
     assert not draft.contains_secret({"facts": []}, "sk-123")
+
+
+def test_a_summarising_section_carries_an_outline_and_is_told_to_add_nothing_new():
+    outline = [{"title": "样本特征分析", "excerpt": "受访者以高年级学生为主。"}, {"title": "回归模型分析", "excerpt": "课程评价与满意度正相关。"}]
+    data = request(section={**request()["section"], "node": "abstract", "title": "摘要"}, outline=outline)
+    assert draft.request_input(data) == data
+    prompt = draft.draft_prompt(data)
+    assert "只能复述其中已有的方法、发现与建议" in prompt and "摘录里的数字同样不能照抄" in prompt
+    assert json.loads(prompt.split("资料JSON：", 1)[1])["outline"] == outline
+    plain = request()
+    assert "outline" not in draft.draft_prompt(plain) and draft.input_fingerprint(data) != draft.input_fingerprint({**data, "outline": outline[:1]})
+    for bad in ([{"title": "x"}], [{"title": "", "excerpt": "x"}], [{"title": "x", "excerpt": "长" * 401}], [{"title": "x", "excerpt": ""}] * 31, "x"):
+        with pytest.raises(ApiError):
+            draft.request_input(request(outline=bad))

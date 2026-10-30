@@ -16,7 +16,7 @@ import { illuminate, roomLight } from '@/lib/agent/illumination';
 import { traceExhibits } from '@/lib/agent/provenance';
 import { resultPlaced, suggestedNode } from '@/lib/report-placement';
 import { blueprintNode } from '@/lib/report-blueprint';
-import { draftFacts, draftLine, draftRequest, draftText, sectionText, type DraftReceipt, type Fact } from '@/lib/agent/draft';
+import { SYNTHESIS_NODES, draftFacts, draftLine, draftRequest, draftText, reportOutline, sectionText, type DraftReceipt, type Fact } from '@/lib/agent/draft';
 import { reportPlan } from '@/lib/agent/report-plan';
 import { readDraft, sendDraft } from './draft-client';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
@@ -346,11 +346,12 @@ export default function AgentShell() {
       if (!held || !report) { say([span(`起草「${title}」要先读到报告与登记结果；这次访问还没有打开报告与 PPT。`, 'dim')], [{ label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]); return; }
       if (!reportService) { say([span('起草需要一个启用了「报告」能力的模型服务（在模型服务里勾选）。', 'dim')], [{ label: '/模型', action: { type: 'say', text: '/模型' }, primary: true }]); return; }
       const facts = draftFacts(held, nodeId).length, findings = standingFindings(held).length, existing = sectionText(report, nodeId).length;
+      const outline = SYNTHESIS_NODES.has(nodeId) ? reportOutline(report, nodeId).length : 0;
       threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('起草之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${reportService.label}」起草「${title}」`,
         lines: [
           [span('发送：这一节在报告蓝图里的写作要求（目的、步骤、需要的元素）、课题名称与目的、'), span(String(facts), 'gold'),
-            span(' 条事实（已登记结果的方法、有效样本、统计量与表中数字）、'), span(String(findings), 'gold'), span(` 条已确认研究发现的标题与解释${existing ? `、本节已有的 ${existing} 字正文` : ''}。`)],
-          [span('不发送：问卷题目、原始数据与报告其他章节的正文。', 'dim')],
+            span(' 条事实（已登记结果的方法、有效样本、统计量与表中数字）、'), span(String(findings), 'gold'), span(` 条已确认研究发现的标题与解释${existing ? `、本节已有的 ${existing} 字正文` : ''}${outline ? `，以及报告其他 ${outline} 个章节的标题与开头摘录（每节至多 400 字），供这一节概括` : ''}。`)],
+          [span(outline ? '不发送：问卷题目、原始数据，以及其他章节在摘录以外的正文。' : '不发送：问卷题目、原始数据与报告其他章节的正文。', 'dim')],
           [span('模型只能用事实编号引用数字，自己写了数字的段落整段丢弃；数字由这里按登记结果填入。拟稿未经核实，你确认后才写进报告。费用按你的服务商计。', 'dim')],
         ], confirm: { label: '起草', action: { type: 'draft', node: nodeId } }, cancel: '不起草' }] } }]);
     };

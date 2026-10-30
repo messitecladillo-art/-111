@@ -97,3 +97,27 @@ test('/写报告 shows the plan and the next step; /起草 and everyday phrasing
   assert.ok(route('/起草', ctx).turn.chips.length > 0, 'without a section, the sections to choose from');
   assert.match(route('/写报告', { ...ctx, plan: null }).turn.lines.flat().map(s => s.text).join(''), /还没有打开报告与 PPT/);
 });
+
+test('the abstract and the conclusions are drafted from an outline of the rest of the report; other sections are not', async () => {
+  const { reportOutline, SYNTHESIS_NODES } = await import('../lib/agent/draft.ts');
+  const base = { ...createEditorContent(), report: blueprintSections({ nodes: [] }), quality: { version: 1, results: held.results, findings: [] } };
+  const content = { ...base, report: base.report.map(s => s.id === 'bp-intro.background' ? { ...s, body: '研究背景写了一些。'.repeat(80) }
+    : s.id === 'bp-conclusion.findings' ? { ...s, body: '本节自己的结论。' } : s) };
+  const outline = reportOutline(content, 'abstract');
+  assert.equal(outline.length, 2, 'only sections with written text');
+  assert.match(outline[0].title, /研究背景/);
+  assert.ok(outline[0].excerpt.length <= 400 && outline[0].excerpt.endsWith('…'));
+  assert.ok(!reportOutline(content, 'conclusion.findings').some(o => /调查结论/.test(o.title)), 'a section is not its own outline');
+  const service = { id: 's', revision: 1 };
+  assert.deepEqual(draftRequest({ nodeId: 'abstract', held, content, design: null, service }).request.outline, outline);
+  assert.equal('outline' in draftRequest({ nodeId: 'intro.background', held, content, design: null, service }).request, false);
+  assert.deepEqual([...SYNTHESIS_NODES], ['abstract', 'conclusion.findings', 'conclusion.suggestions', 'conclusion.limits']);
+});
+
+test('a section still holding the starting template says nothing yet, so it is not in the outline', async () => {
+  const { reportOutline } = await import('../lib/agent/draft.ts');
+  const template = createEditorContent();
+  assert.deepEqual(reportOutline(template, 'abstract'), []);
+  const written = { ...template, report: template.report.map((s, i) => (i === 1 ? { ...s, body: '作者自己写的一段。' } : s)) };
+  assert.deepEqual(reportOutline(written, 'abstract').map(o => o.excerpt), ['作者自己写的一段。']);
+});
