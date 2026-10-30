@@ -36,4 +36,5 @@
 - 结果表登记时没有计算凭据：`analysis-result-receipt.ts`（单写共享文件）还只认七种基础方法，扩展需指定整合人。
 - LaTeX 导出的段落不排版行内公式（`latex-report.ts#latexLine` 对所有段落都转义 `$`，表注里的统计量因此显示为原文），这是整个 LaTeX 段落渲染的限制，需连同后端编译器的行内数学一起扩展。
 - LaTeX 导出画不了这些方法图：图的位置保留编号与图题，并注明“此图为方法图，在 Word 导出中绘制”，交叉引用照常解析；公式只用 LaTeX 编译器白名单内的命令。PPT 画布与 PPT 导出都画方法自己的图（矢量 SVG）。
+- 多分类 Logistic 回归（`lib/multinomial.ts`：以最小编码为参照类，RRR、似然比检验、McFadden 伪 $R^2$，与 statsmodels MNLogit 对照）已有计算，尚未接入“高级方法”标签、写法与图。
 - 文本挖掘未做（分词词典需先核许可）。
