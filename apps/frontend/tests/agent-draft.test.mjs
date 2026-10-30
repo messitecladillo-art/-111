@@ -114,6 +114,19 @@ test('the abstract and the conclusions are drafted from an outline of the rest o
   assert.deepEqual([...SYNTHESIS_NODES], ['abstract', 'conclusion.findings', 'conclusion.suggestions', 'conclusion.limits']);
 });
 
+test('a full report shares one excerpt budget, so drafting the abstract stays within the prompt limit', async () => {
+  const { reportOutline } = await import('../lib/agent/draft.ts');
+  const base = { ...createEditorContent(), report: blueprintSections({ includeOptional: true }), quality: { version: 1, results: held.results, findings: [] } };
+  const content = { ...base, report: base.report.map(s => ({ ...s, body: '这一节写满了正文内容。'.repeat(60) })) };
+  const outline = reportOutline(content, 'abstract');
+  assert.ok(outline.length >= 20, `a full report: ${outline.length} sections`);
+  assert.ok(outline.every(o => o.excerpt.length <= Math.floor(6000 / outline.length) && o.excerpt.length >= 80));
+  assert.ok(outline.reduce((s, o) => s + o.excerpt.length, 0) <= 6000);
+  const service = { id: 's', revision: 1 };
+  const bytes = new TextEncoder().encode(JSON.stringify(draftRequest({ nodeId: 'abstract', held, content, design: null, service }).request)).length;
+  assert.ok(bytes < 30000, `request ${bytes} bytes leaves room under the 40000-byte prompt limit`);
+});
+
 test('a section still holding the starting template says nothing yet, so it is not in the outline', async () => {
   const { reportOutline } = await import('../lib/agent/draft.ts');
   const template = createEditorContent();

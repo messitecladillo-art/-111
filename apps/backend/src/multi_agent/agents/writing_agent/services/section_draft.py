@@ -110,7 +110,7 @@ def request_input(data):
     if data["consent"] is not True:
         raise ApiError(422, "consent_required", "请先确认发送给模型服务的内容。")
     if encoded_size(draft_prompt(data)) > PROMPT_BYTES:
-        raise ApiError(422, "input_too_large", "这一节的资料太多，请减少事实或已有正文后再试。")
+        raise ApiError(422, "input_too_large", "这一节的资料太多，请减少登记结果、已有正文或其他章节的篇幅后再试。")
     return deepcopy(data)
 
 

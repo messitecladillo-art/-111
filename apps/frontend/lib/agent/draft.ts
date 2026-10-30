@@ -82,24 +82,33 @@ function rowFacts(r: ResultSnapshot, row: ResultSnapshot['rows'][number], title:
   });
 }
 
-/** What the section already says, so the draft adds to it rather than repeating it. */
-/** Sections that summarise the report: they are drafted from what the other sections already say. */
-// Matched by body alone: inserting blueprint sections renumbers the template's headings.
+// The starting template's section bodies, matched by body alone: inserting blueprint sections renumbers its headings.
 const TEMPLATE = new Set(createEditorContent().report.map(s => s.body.trim()).filter(Boolean));
 
+/** Sections that summarise the report: they are drafted from what the other sections already say. */
 export const SYNTHESIS_NODES: ReadonlySet<string> = new Set(['abstract', 'conclusion.findings', 'conclusion.suggestions', 'conclusion.limits']);
 
-/** The report as the summarising sections read it: every other written section, its title and the start of its text. */
+// What all excerpts together may hold: a full report's outline must leave room in the prompt for the facts and findings.
+const OUTLINE_CHARS = 6000, EXCERPT_CHARS = 400, EXCERPT_FLOOR = 80;
+
+/**
+ * The report as the summarising sections read it: every other written section, its title and the start of its text.
+ * Excerpts share one budget, so a long report sends shorter excerpts (never under 80 characters) rather than failing.
+ */
 export function reportOutline(content: EditorContent, nodeId: string): { title: string; excerpt: string }[] {
-  return content.report.flatMap(s => {
+  const written = content.report.flatMap(s => {
     const node = matchBlueprintNode(s.title);
     if (node?.id === nodeId || node?.kind === 'references' || node?.kind === 'appendix') return [];
     // The starting template's prompts are not the author's writing: a body still holding them counts for nothing.
     const body = TEMPLATE.has(s.body.trim()) ? '' : s.body;
     const text = [...writtenLines(body), ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').flatMap(b => writtenLines(b.text))].join(' ').replace(/\s+/gu, ' ').trim();
-    return text ? [{ title: clip(tidy(s.title), 80), excerpt: clip(text, 400) }] : [];
+    return text ? [{ title: clip(tidy(s.title), 80), text }] : [];
   }).slice(0, 30);
+  const limit = Math.max(EXCERPT_FLOOR, Math.min(EXCERPT_CHARS, Math.floor(OUTLINE_CHARS / Math.max(1, written.length))));
+  return written.map(({ title, text }) => ({ title, excerpt: clip(text, limit) }));
 }
+
+/** What the section already says, so the draft adds to it rather than repeating it. */
 
 export function sectionText(content: EditorContent, nodeId: string): string {
   const sections = content.report.filter(s => matchBlueprintNode(s.title)?.id === nodeId);
