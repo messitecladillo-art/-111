@@ -806,7 +806,7 @@ export default function AgentShell() {
                 ? `对话由「${chatService?.label ?? '模型服务'}」回答：每段对话第一次发送前请你确认；它看不到原始数据，项目里的数字以工具读到的为准。`
                 : '对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。在模型菜单里可以改用你自己的模型服务对话。'}</p>
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
-              {!localConfig && !chatService && <p className={styles.keyHint}>
+              {generationAccount !== 'loading' && lists.state !== 'loading' && !localConfig && !chatService && <p className={styles.keyHint}>
                 <button type="button" onClick={() => setLocalOpen(true)}>配置 API Key 开始对话</button>
                 <span>无需登录；Key 只保存在本浏览器</span>
               </p>}
