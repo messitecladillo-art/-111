@@ -3,7 +3,7 @@ import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
 import {assertTrueVector} from './vector-svg.ts';
 import {blockLabel, numberedCaption, referenceSegments, resolveReferences, type BlockLabel} from './report-numbering.ts';
-import {columnWeights, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
+import {columnWeights, isExhibitNote, presentResult, sectionNotes, sourceLine, sourcePlacement, tableSpans} from './report-tables.ts';
 import {splitInlineMath} from './inline-math.ts';
 import {figureFor,reportFigureSVG,assertFormalFigureCapacity,projectPalette,defaultProjectVisualStyle,percentSeries,type ReportFigure} from './report-figure.ts';
 import type PptxGenJS from 'pptxgenjs';
@@ -105,20 +105,27 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    ]})]}));
    continue;
   }
+  if(isExhibitNote(blocks,index)){
+   // The exhibit's note, formulas typeset, then the source line the exhibit left for after it.
+   const exhibit=blocks[index-1],placed=sourcePlacement(blocks,index-1)==='note';
+   out.push(new Paragraph({style:'ReportSource',keepNext:placed?true:undefined,children:await richRuns(b.text,ctx)}));
+   if(placed)out.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,sourceLine(resultFor(c.quality,exhibit.evidenceId)))}));
+   continue;
+  }
   if(b.kind!=='chart'&&b.kind!=='table'){out.push(new Paragraph({style:b.kind==='citation'?'ReportReference':'Normal',children:await richRuns(b.text,ctx)}));continue;}
   const r=resultFor(c.quality,b.evidenceId),figure=b.figureId?figureFor(c,b.figureId,b.evidenceId):null;
   if(figure&&((b.kind==='table')!==(figure.kind==='table')))throw Error('图形与内容块类型不一致，请重新选择。');
   if(figure)assertFormalFigureCapacity(figure);
   if(!used.includes(r))used.push(r);
   // A chart and a table of the same result share one source line, placed after the second.
-  const next=blocks[index+1],source=!(next&&(next.kind==='chart'||next.kind==='table')&&next.evidenceId===b.evidenceId);
+  const placement=sourcePlacement(blocks,index),source=placement==='own',noted=isExhibitNote(blocks,index+1);
   const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where,ctx.citations));
   if(b.kind==='chart'){
    const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
    // Figures share one width and size their height to the content; Word keeps the same proportions.
    const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
-   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:textRuns(TextRun,caption)}));
+   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source||noted,keepLines:true,children:textRuns(TextRun,caption)}));
   }else{
    const table=figure?{headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>figureCell(cell,figure))),note:figure.note}:presentResult(r);
    assertTableRows({...r,rows:table.rows});
@@ -128,14 +135,14 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:textRuns(TextRun,caption)}));
    const all=[table.headers,...table.rows];
    // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
-   const small=all.length<=16,follows=source||!!table.note;
+   const small=all.length<=16,follows=source||noted||!!table.note;
    // A parent unit repeated on its children's rows (a sampling frame) is one vertically merged cell; covered cells stay empty.
    const spans=figure?null:tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
    const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',alignment:AlignmentType.CENTER,keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,cell,{bold:i===0})})]}))}));
    out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
-   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,table.note)}));
+   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source||noted,children:textRuns(TextRun,table.note)}));
   }
-  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,figure.note)}));
+  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:source||noted,children:textRuns(TextRun,figure.note)}));
   if(source)out.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,sourceLine(r))}));
  }
  const notes=sectionNotes(used);

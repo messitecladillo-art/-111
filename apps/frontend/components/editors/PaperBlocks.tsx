@@ -5,7 +5,7 @@ import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { blockLabel, numberedCaption, referenceSegments, type BlockLabel } from '@/lib/report-numbering';
-import { presentResult, sectionNotes, sourceLine, tableSpans } from '@/lib/report-tables';
+import { isExhibitNote, presentResult, sectionNotes, sourceLine, sourcePlacement, tableSpans } from '@/lib/report-tables';
 import { splitInlineMath } from '@/lib/inline-math';
 import { Formula, Tex } from '../math/Tex';
 import styles from './PaperBlocks.module.css';
@@ -61,11 +61,17 @@ export default function PaperBlocks({ section, content, labels, citations }: { s
   const used: ResultSnapshot[] = [];
   const items = blocks.map((block, index) => {
     if (block.kind === 'formula') return <div key={block.id} className={styles.equation}><Formula tex={block.text || '\\text{（空公式）}'} number={blockLabel(labels, section.id, block.id)?.number} copyable={false} compact/></div>;
+    if (isExhibitNote(blocks, index)) {
+      const exhibit = blocks[index - 1], placed = sourcePlacement(blocks, index - 1) === 'note';
+      let line = '';
+      try { if (placed) line = sourceLine(resultFor(content.quality, exhibit.evidenceId)); } catch { line = ''; }
+      return <div key={block.id}><p className={styles.small}><PaperText text={block.text} labels={labels} citations={citations}/></p>{line && <p className={styles.small}>{line}</p>}</div>;
+    }
     if (block.kind !== 'chart' && block.kind !== 'table') return <p key={block.id} className={block.kind === 'callout' ? styles.callout : undefined}><PaperText text={block.text} labels={labels} citations={citations}/></p>;
     let result: ResultSnapshot,figure:ReportFigure|undefined;
     try { result = resultFor(content.quality, block.evidenceId);if(block.figureId){figure=figureFor(content,block.figureId,block.evidenceId);if((block.kind==='table')!==(figure.kind==='table'))throw Error('图形与内容块类型不一致。');} } catch (error) { return <p key={block.id} className={styles.error}>{(error as Error).message}</p>; }
     if (!used.includes(result)) used.push(result);
-    const next = blocks[index + 1], source = !(next && (next.kind === 'chart' || next.kind === 'table') && next.evidenceId === block.evidenceId);
+    const source = sourcePlacement(blocks, index) === 'own';
     const caption = numberedCaption(blockLabel(labels, section.id, block.id), block.text || result.title);
     return <figure key={block.id} className={styles.block}>
       {block.kind === 'table' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}

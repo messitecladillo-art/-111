@@ -91,4 +91,11 @@ test('the Word export numbers and draws the method figure from the stored result
   const xml = await zip.file('word/document.xml').async('string');
   assert.match(xml, /满意度影响因素的回归系数及其 95% 置信区间/u);
   assert.ok(Object.keys(zip.files).some(name => /^word\/media\/.+\.svg$/u.test(name)), 'the figure is embedded as vector SVG');
+  // Table, its note (small, typeset), the figure and its caption, then the one source line they share.
+  // Captions appear first in the lists of tables and figures; the body's are the last.
+  const shown = xml.lastIndexOf('满意度影响因素的回归估计结果'), note = xml.indexOf('>注：', shown), drawn = xml.lastIndexOf('满意度影响因素的回归系数及其 95% 置信区间');
+  assert.ok(shown > 0 && shown < note && note < drawn && drawn < xml.indexOf('资料来源', drawn), 'note between table and figure, source after both');
+  assert.doesNotMatch(xml.slice(shown, drawn), /<w:t[^>]*>资料来源/u, 'no source line between the table and its figure (the image alt text names it)');
+  const paragraph = xml.slice(Math.max(xml.lastIndexOf('<w:p>', note), xml.lastIndexOf('<w:p ', note)), note);
+  assert.match(paragraph, /w:val="ReportSource"/u, 'the note is set in the small source style');
 });
