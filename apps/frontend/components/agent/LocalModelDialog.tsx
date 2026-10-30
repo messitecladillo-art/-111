@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PROVIDER_BASES } from '@evix/shared';
 import { LOCAL_PROVIDERS, localModel, type LocalModelConfig } from './local-model';
 import styles from './AgentShell.module.css';
@@ -14,6 +14,11 @@ export default function LocalModelDialog({ onClose, onSaved, onCleared }: { onCl
   const [apiKey, setApiKey] = useState(existing?.apiKey ?? '');
   const [error, setError] = useState('');
   const baseUrl = PROVIDER_BASES[provider];
+  useEffect(() => {
+    const escape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [onClose]);
   const chooseProvider = (next: LocalModelConfig['provider']) => {
     setProvider(next);
     setModel(LOCAL_PROVIDERS[next].model);
@@ -36,7 +41,8 @@ export default function LocalModelDialog({ onClose, onSaved, onCleared }: { onCl
         {Object.entries(LOCAL_PROVIDERS).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}
       </select></label>
       <label><span>模型</span><input value={model} spellCheck={false} maxLength={160} onChange={event => setModel(event.target.value)} /></label>
-      <label><span>API Key</span><input type="password" value={apiKey} autoComplete="off" spellCheck={false} maxLength={512} placeholder="粘贴服务商 API Key" onChange={event => setApiKey(event.target.value)} /></label>
+      <label><span>API Key</span><input type="password" value={apiKey} autoFocus autoComplete="off" spellCheck={false} maxLength={512} placeholder="粘贴服务商 API Key"
+        onChange={event => setApiKey(event.target.value)} onFocus={event => event.currentTarget.select()} /></label>
       <p className={styles.localNote}>请求经由本地 <code>/api/local-agent</code> 转发给 {LOCAL_PROVIDERS[provider].label}，不会写入对话记录。共用电脑请用完清除；Key 以明文保存在本浏览器。</p>
       <p className={styles.localBase}>{baseUrl}</p>
       {error && <p className={styles.localError} role="alert">{error}</p>}

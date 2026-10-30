@@ -20,6 +20,8 @@ type Props = {
   /** 指令模式 answers here; 用模型对话 sends sentences to `chatLabel`, a service that can talk. */
   mode: 'command' | 'model'; onMode: (mode: 'command' | 'model') => void; chatLabel: string;
   onOpen: (room: RoomId) => void;
+  /** The local-key dialog is opened from here or from the empty state, so one place owns it. */
+  localOpen: boolean; onLocalOpen: (open: boolean) => void;
 };
 type MenuName = 'project' | 'model' | 'attach' | null;
 
@@ -29,14 +31,13 @@ type MenuName = 'project' | 'model' | 'attach' | null;
  * method is composing. Above it, the project the conversation is filed under and where its work is kept; below it,
  * what may be attached, how the agent acts, and which model service drafts for it.
  */
-export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen }: Props) {
+export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen, localOpen, onLocalOpen }: Props) {
   const [value, setValue] = useState('');
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [recall, setRecall] = useState(-1);
   const [menu, setMenu] = useState<MenuName>(null);
-  const [localOpen, setLocalOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const word = /^[/／]\S*$/u.test(value) ? value.slice(1) : null;
   const options = word !== null && dismissed !== value ? matchCommands(word) : [];
@@ -169,7 +170,7 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
             <div role="group" aria-label="本地模型">
               <p className={styles.menuLabel} aria-hidden="true">本地模型 · 无需登录</p>
               {local && item('local', local.label, () => onService('local'), { checked: serviceId === 'local', note: '仅此浏览器' })}
-              {item('local-config', local ? '更换本地 API Key…' : '配置本地 API Key…', () => setLocalOpen(true))}
+              {item('local-config', local ? '更换本地 API Key…' : '配置本地 API Key…', () => onLocalOpen(true))}
             </div>
             {account !== 'ready' ? <Link role="menuitem" className={styles.menuItem} href="/login">登录后选择云端模型服务 ↗</Link> : <>
               <div role="group" aria-label="模型服务">
@@ -184,6 +185,6 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
         <button type="submit" className={styles.send} disabled={!value.trim()} aria-label="发送"><Icon name="up" /></button>
       </div>
     </form>
-    {localOpen && <LocalModelDialog onClose={() => setLocalOpen(false)} onSaved={() => { onService('local'); onMode('model'); }} onCleared={() => onMode('command')} />}
+    {localOpen && <LocalModelDialog onClose={() => onLocalOpen(false)} onSaved={() => { onService('local'); onMode('model'); }} onCleared={() => onMode('command')} />}
   </div>;
 }

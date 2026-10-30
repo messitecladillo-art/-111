@@ -183,6 +183,9 @@
 .suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 620px; }
 .suggestions button { min-height: 32px; padding: 0 12px; border: 1px solid var(--c-line); border-radius: 999px; background: var(--c-raise); color: var(--c-dim); font-size: 13px; cursor: pointer; transition: border-color 140ms, color 140ms; }
 .suggestions button:hover { border-color: var(--c-line-strong); color: var(--c-fg); }
+.keyHint { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 22px 0 0; color: var(--c-dim); font-size: 12.5px; }
+.keyHint button { min-height: 32px; padding: 0 13px; border: 1px solid var(--c-gold-line); border-radius: 999px; background: var(--c-gold-soft); color: var(--c-gold); font-size: 12.5px; cursor: pointer; }
+.keyHint button:hover { color: var(--c-fg); }
 
 /* Cards inside replies: quiet frames; a double gold frame asks for consent. */
 .card { position: relative; margin: 10px 0 6px; padding: 12px 14px; border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-raise); }

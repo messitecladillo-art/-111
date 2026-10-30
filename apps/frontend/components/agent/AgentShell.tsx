@@ -133,6 +133,7 @@ export default function AgentShell() {
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
   const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
   const [showProcess, setShowProcess] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
   const [backup, setBackup] = useState({ busy: false, note: '' });
   const lastSync = useRef(new Map<string, string>());
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
@@ -805,12 +806,21 @@ export default function AgentShell() {
                 ? `对话由「${chatService?.label ?? '模型服务'}」回答：每段对话第一次发送前请你确认；它看不到原始数据，项目里的数字以工具读到的为准。`
                 : '对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。在模型菜单里可以改用你自己的模型服务对话。'}</p>
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
+              {!localConfig && !chatService && <p className={styles.keyHint}>
+                <button type="button" onClick={() => setLocalOpen(true)}>配置 API Key 开始对话</button>
+                <span>无需登录；Key 只保存在本浏览器</span>
+              </p>}
+              {localConfig && chatMode === 'command' && <p className={styles.keyHint}>
+                <button type="button" onClick={() => setChatMode('model')}>用本地模型对话</button>
+                <span>{localConfig.label}</span>
+              </p>}
             </div>}
         </div>
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
           services={services} serviceId={services.some(s => s.id === preferredService) ? preferredService : services[0]?.id ?? ''} onService={prefer}
-          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
+          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go}
+          localOpen={localOpen} onLocalOpen={setLocalOpen} />
       </main>
 
       <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background
