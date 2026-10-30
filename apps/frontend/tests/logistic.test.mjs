@@ -60,3 +60,10 @@ test('it refuses rather than guesses, separation included', () => {
   const xs = Array.from({ length: 40 }, (_, i) => i), split = xs.map(v => (v >= 20 ? 1 : 0));
   assert.deepEqual(logisticRegression(split, [{ name: 'x', values: xs }]), { refused: 'separation' });
 });
+
+test('a predictor in small units is not mistaken for separation', () => {
+  // x1 in thousandths: its coefficient is about 900, the same effect per standard deviation as before.
+  const fit = logisticRegression(y, [{ name: 'x1', values: x1.map(v => v / 1000) }, ...predictors.slice(1)]);
+  assert.ok(!('refused' in fit), 'fitted, not refused');
+  near(fit.coefficients[1].estimate, REF.beta[1] * 1000, 1e-8, 'rescaled slope');
+});

@@ -99,7 +99,6 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
     case 'ipa': {
       const k = spec.performance.length, performance = data.columns.slice(0, k), importance = spec.importance ? data.columns.slice(k, 2 * k) : null;
       const overall = spec.overall === null ? undefined : data.columns.at(-1)!;
-      if (importance && importance.length !== k) return { refused: '每个属性都要有一列重要性评分。' };
       const result = ipa(performance.map((values, j) => ({ name: names[j], performance: values, ...(importance ? { importance: importance[j] } : {}) })), { overall });
       if ('refused' in result) return { refused: refusalText(result.refused) };
       return { method: 'ipa', title: '各属性重要性与表现', variables: names.slice(0, k), n: data.n, total: data.total, writing: ipaWriting(result),
@@ -109,12 +108,19 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       const rows = standardize(data.columns[0].map((_, i) => data.columns.map(c => c[i])));
       const fit = kmeans(rows, spec.k, { seed: 'evix-advanced' });
       if ('refused' in fit) return { refused: refusalText(fit.refused) };
-      return { method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, writing: clusterWriting(fit, silhouette(rows, fit.assignments).mean, names),
+      return { method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, writing: clusterWriting(fit, silhouette(...silhouetteSample(rows, fit.assignments)).mean, names),
         figure: clusterProfilePlot(fit.centers, fit.sizes, names, ACCENT) };
     }
   }
 }
 const ACCENT = '#2F6B4F';
+// The silhouette compares every row with every other; past this many rows it is taken on an evenly spaced sample
+// of rows (as sklearn's sample_size does), which keeps a large import from freezing the page.
+const SILHOUETTE_ROWS = 2000;
+function silhouetteSample<T>(rows: readonly T[], assignments: readonly number[]): [T[], number[]] {
+  const step = Math.max(1, Math.ceil(rows.length / SILHOUETTE_ROWS)), keep = rows.flatMap((_, i) => (i % step ? [] : [i]));
+  return [keep.map(i => rows[i]), keep.map(i => assignments[i])];
+}
 
 /**
  * The insert that writes a run into its blueprint section: method paragraph, formulas, 式中 paragraph, the table
@@ -124,7 +130,7 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
   const table = run.writing.table;
   const result = await snapshotRecipe({
     method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n, invalidRows: 0,
-    metrics: [], headers: table.headers, rows: table.rows, warnings: [table.note.replace(/^注：/u, '').replace(/\$/gu, '')], interpretation: '',
+    metrics: [], headers: table.headers, rows: table.rows, warnings: [], interpretation: '',
   }, { title: table.caption, sourceName: source.name, sourceUrl: '', sourceHash: source.hash, classification: source.simulated ? 'simulated' : 'user_provided', variables: run.variables.slice(0, 4) });
   const node = ADVANCED_METHODS.find(m => m.id === run.method)!.node;
   return { id: crypto.randomUUID(), node, source: '数据分析 · 高级方法', items: [
@@ -132,6 +138,7 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
     ...run.writing.formulas.map(tex => ({ kind: 'formula' as const, tex })),
     { kind: 'paragraph', text: run.writing.where },
     { kind: 'table', result, caption: table.caption },
+    { kind: 'paragraph', text: table.note },
     // The reading cites the table above it: "@N" names the insert's own item N, resolved when the insert is applied.
     { kind: 'paragraph', text: `由[[表:@${run.writing.formulas.length + 2}]]可知，${run.writing.reading}` },
   ] };

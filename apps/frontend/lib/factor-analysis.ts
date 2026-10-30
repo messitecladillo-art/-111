@@ -72,10 +72,15 @@ export function canonical(loadings: readonly (readonly number[])[]): number[][] 
   return loadings.map((_, i) => ordered.map(c => c[i]));
 }
 
-/** Principal-axis factoring of a correlation matrix into `factors` factors, before rotation. */
-export function principalAxis(r: readonly (readonly number[])[], factors: number, tolerance = 1e-12, maxIterations = 5000): { loadings: number[][]; communalities: number[]; iterations: number } | FactorRefusal {
+/**
+ * Principal-axis factoring of a correlation matrix into `factors` factors, before rotation. It iterates to `tolerance`;
+ * a fit still moving when the iterations run out is kept if its last change is below `settled` (the precision SPSS
+ * and psych accept), and refused only when it has not settled at all.
+ */
+export function principalAxis(r: readonly (readonly number[])[], factors: number, tolerance = 1e-12, maxIterations = 5000, settled = 1e-6): { loadings: number[][]; communalities: number[]; iterations: number } | FactorRefusal {
   const p = r.length, inverse = invert(r);
   let h = inverse ? inverse.map((row, i) => 1 - 1 / row[i]) : r.map((row, i) => Math.max(...row.filter((_, j) => j !== i).map(Math.abs)));
+  let last: { loadings: number[][]; change: number } | null = null;
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     const reduced = r.map((row, i) => row.map((v, j) => (i === j ? h[i] : v)));
     const { values, vectors } = symmetricEigen(reduced);
@@ -85,7 +90,9 @@ export function principalAxis(r: readonly (readonly number[])[], factors: number
     const change = Math.max(...next.map((v, i) => Math.abs(v - h[i])));
     h = next;
     if (change < tolerance) return { loadings, communalities: h, iterations: iteration };
+    last = { loadings, change };
   }
+  if (last && last.change < settled) return { loadings: last.loadings, communalities: h, iterations: maxIterations };
   return p ? { refused: 'not-converged' } : { refused: 'too-few-items' };
 }
 

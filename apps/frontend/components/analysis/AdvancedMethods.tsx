@@ -33,7 +33,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
   const [k, setK] = useState(3), [criteria, setCriteria] = useState('安全\n便利\n价格'), [judgements, setJudgements] = useState<Record<string, number>>({});
   const names = criteria.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 15);
   // A result belongs to the settings it was computed from; changing any of them hides it until computed again.
-  const settings = JSON.stringify([method, picked, outcome, importanceMode, importance, overall, k, criteria, judgements, missingCodes, table.rows.length]);
+  const settings = JSON.stringify([method, picked, outcome, importanceMode, importance, overall, k, criteria, judgements, missingCodes, sourceHash, table.rows.length]);
   const [computed, setComputed] = useState<{ settings: string; run: AdvancedRun | { refused: string }; figure: string | null; notice: string } | null>(null);
   const current = computed?.settings === settings ? computed : null, run = current?.run ?? null, figure = current?.figure ?? null, notice = current?.notice ?? '';
 

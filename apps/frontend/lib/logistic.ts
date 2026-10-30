@@ -42,6 +42,8 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
   if (events === 0 || events === n) return { refused: 'one-class' };
   if (n < cols + 2 || predictors.some(p => p.values.length !== n)) return { refused: 'too-few-cases' };
   const x = Array.from({ length: n }, (_, i) => [1, ...predictors.map(p => p.values[i])]);
+  // Separation is judged per standard deviation of the predictor, so a predictor's units cannot trigger it.
+  const spread = predictors.map(p => { const m = p.values.reduce((s, v) => s + v, 0) / n; return Math.sqrt(p.values.reduce((s, v) => s + (v - m) ** 2, 0) / n); });
   let beta = new Array<number>(cols).fill(0), p = new Array<number>(n).fill(0.5), cov: number[][] | null = null, iterations = 0;
   beta[0] = Math.log(events / (n - events));
   for (; iterations < 100; iterations++) {
@@ -53,7 +55,7 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
     const score = Array.from({ length: cols }, (_, a) => x.reduce((s, row, i) => s + row[a] * (y[i] - p[i]), 0));
     const step = cov.map(row => row.reduce((s, v, b) => s + v * score[b], 0));
     beta = beta.map((b, j) => b + step[j]);
-    if (beta.some(b => !Number.isFinite(b) || Math.abs(b) > 50)) return { refused: 'separation' };
+    if (beta.some((b, j) => !Number.isFinite(b) || (j > 0 && Math.abs(b) * spread[j - 1] > 30))) return { refused: 'separation' };
     if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; break; }
   }
   // The covariance at the estimate: refresh p and the information once more after the last step.

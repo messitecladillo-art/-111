@@ -49,7 +49,9 @@ test('the write-up goes into its blueprint section as one insert whose reading c
   const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
   const insert = await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true });
   assert.equal(insert.node, 'drivers.model');
-  assert.deepEqual(insert.items.map(i => i.kind), ['paragraph', 'formula', 'formula', 'paragraph', 'table', 'paragraph']);
+  assert.deepEqual(insert.items.map(i => i.kind), ['paragraph', 'formula', 'formula', 'paragraph', 'table', 'paragraph', 'paragraph']);
+  assert.match(insert.items[5].text, /^注：\$n=\d+\$；\$R\^2=/u, 'the table note prints under the table, typeset');
+  assert.deepEqual(insert.items[4].result.warnings, [], 'the note is not repeated as a plain-text caveat');
   assert.equal(insert.items[4].result.method, 'regression');
   assert.equal(insert.items[4].result.classification, 'simulated');
   const applied = applyReportInsert(report(), insert);

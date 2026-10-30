@@ -21,8 +21,8 @@ const num = (v: unknown): number | null => typeof v === 'number' && Number.isFin
 // Running text sets negative numbers with a true minus sign; inside $…$ TeX does that itself.
 const sign = (s: string) => s.replace(/^-(?=\d)/, '−');
 const pct = (v: number) => `${sign(v.toFixed(1))}%`;
-const stat = (v: number) => sign(v.toFixed(2));
-const coef = (v: number) => sign(v.toFixed(3));
+export const stat = (v: number) => sign(v.toFixed(2));
+export const coef = (v: number) => sign(v.toFixed(3));
 const plain = (v: number) => sign(Number.isInteger(v) ? String(v) : v.toFixed(2));
 export const tex2 = (v: number) => v.toFixed(2), tex3 = (v: number) => v.toFixed(3);
 export const dof = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);

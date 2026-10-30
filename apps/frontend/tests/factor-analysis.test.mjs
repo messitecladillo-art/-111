@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { seededRandom } from '../lib/sampling-core.ts';
-import { canonical, exploratoryFactors, symmetricEigen, varimax } from '../lib/factor-analysis.ts';
+import { canonical, exploratoryFactors, principalAxis, symmetricEigen, varimax } from '../lib/factor-analysis.ts';
+import { correlationMatrix } from '../lib/psychometrics.ts';
 
 // Seeded teaching-simulation items: two factors, three items each, plus a cross-loading item; no respondents.
 const random = seededRandom('efa-test');
@@ -52,4 +53,11 @@ test('it refuses rather than guesses', () => {
   assert.deepEqual(exploratoryFactors([...columns, columns[0].map(() => 1)]), { refused: 'constant-item' });
   assert.deepEqual(exploratoryFactors(columns, 7), { refused: 'bad-factor-count' });
   assert.deepEqual(exploratoryFactors(columns, 0), { refused: 'bad-factor-count' });
+});
+
+test('a fit still creeping when the iterations run out is kept once settled, refused when not', () => {
+  const r = correlationMatrix(columns);
+  const kept = principalAxis(r, 2, 1e-12, 40), strict = principalAxis(r, 2, 1e-12, 3, 0);
+  assert.ok(!('refused' in kept) && kept.iterations === 40, 'stopped at the cap, settled to within 1e-6');
+  assert.deepEqual(strict, { refused: 'not-converged' });
 });

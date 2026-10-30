@@ -13,12 +13,11 @@ import type { Logistic } from './logistic.ts';
 import type { Ahp } from './ahp.ts';
 import type { Ipa } from './ipa.ts';
 import type { Clustering } from './kmeans.ts';
-import { dof, lead, literalText as literal, pMath, tex2, tex3, type ResultRefs } from './report-templates.ts';
+import { coef as f3, dof, lead, literalText as literal, pMath, stat as f2, tex2, tex3, type ResultRefs } from './report-templates.ts';
 
 export type MethodTable = { caption: string; headers: string[]; rows: string[][]; note: string };
 export type MethodWriting = { text: string; formulas: string[]; where: string; table: MethodTable; reading: string };
 
-const f2 = (v: number) => v.toFixed(2).replace(/^-(?=\d)/, '−'), f3 = (v: number) => v.toFixed(3).replace(/^-(?=\d)/, '−');
 const pCell = (p: number) => (p < 0.001 ? '<0.001' : p.toFixed(3));
 const percent = (v: number) => `${(v * 100).toFixed(1)}%`;
 const names = (list: readonly string[]) => list.map(n => `“${literal(n)}”`).join('、');
@@ -48,7 +47,7 @@ export function validityWriting(adequacy: Adequacy, solution: FactorSolution, it
         ['旋转后方差贡献率', ...solution.variance.map(v => percent(v.share)), ''],
         ['累计方差贡献率', ...solution.variance.map(v => percent(v.cumulative)), ''],
       ],
-      note: `注：主轴因子法提取，Kaiser 标准化的最大方差法旋转；KMO = ${f3(adequacy.kmo)}，Bartlett 球形检验 χ²(${adequacy.bartlett.df}) = ${f2(adequacy.bartlett.chi2)}，p ${adequacy.bartlett.p < 0.001 ? '< 0.001' : `= ${adequacy.bartlett.p.toFixed(3)}`}；n = ${adequacy.n}。`,
+      note: `注：主轴因子法提取，Kaiser 标准化的最大方差法旋转；$\\mathrm{KMO}=${tex3(adequacy.kmo)}$，Bartlett 球形检验 $\\chi^2(${adequacy.bartlett.df})=${tex2(adequacy.bartlett.chi2)}$，$${pMath(adequacy.bartlett.p)}$；$n=${adequacy.n}$。`,
     },
     reading: `${lead(refs)}KMO 值为 $${tex3(adequacy.kmo)}$（${kmoBand(adequacy.kmo)}），Bartlett 球形检验 $\\chi^2(${dof(adequacy.bartlett.df)})=${tex2(adequacy.bartlett.chi2)}$，$${pMath(adequacy.bartlett.p)}$，`
       + (fit ? '拒绝相关矩阵为单位矩阵的原假设，题项适合进行因子分析。' : '题项不满足因子分析的前提，以下因子结构仅供参考，需重新审视题项设计。')
@@ -71,7 +70,7 @@ export function regressionWriting(fit: Regression, outcome: string, refs: Result
       caption: `${literal(outcome)}影响因素的回归估计结果`,
       headers: ['变量', '非标准化系数 B', '标准误', '标准化系数 β', 't', 'p', 'VIF'],
       rows: fit.coefficients.map(c => [literal(c.name), f3(c.estimate), f3(c.se), c.standardized === null ? '—' : f3(c.standardized), f2(c.t), pCell(c.p), c.vif === null ? '—' : f2(c.vif)]),
-      note: `注：n = ${fit.n}；$R^2$ = ${f3(fit.r2)}，调整 $R^2$ = ${f3(fit.adjustedR2)}；F(${fit.f.df[0]}, ${fit.f.df[1]}) = ${f2(fit.f.value)}，p ${fit.f.p < 0.001 ? '< 0.001' : `= ${fit.f.p.toFixed(3)}`}。`,
+      note: `注：$n=${fit.n}$；$R^2=${tex3(fit.r2)}$，调整 $R^2=${tex3(fit.adjustedR2)}$；$F(${fit.f.df[0]},${fit.f.df[1]})=${tex2(fit.f.value)}$，$${pMath(fit.f.p)}$。`,
     },
     reading: `${lead(refs)}模型${fit.f.p < 0.05 ? '整体显著' : '整体未达到显著水平'}，$F(${fit.f.df[0]},${fit.f.df[1]})=${tex2(fit.f.value)}$，$${pMath(fit.f.p)}$，调整后 $R^2=${tex3(fit.adjustedR2)}$，自变量共同解释了${literal(outcome)}约 ${percent(fit.adjustedR2)} 的变异。`
       + (significant.length ? `在控制其他变量后，${significant.map(effect).join('；')}。` : '在控制其他变量后，没有自变量与因变量的关联达到 0.05 的显著性水平。')
@@ -94,7 +93,7 @@ export function logisticWriting(fit: Logistic, outcome: string, event: string, r
       caption: `${literal(event)}影响因素的 Logistic 回归估计结果`,
       headers: ['变量', 'B', '标准误', 'Wald z', 'p', 'OR', 'OR 95% CI', '平均边际效应'],
       rows: fit.coefficients.map(c => [literal(c.name), f3(c.estimate), f3(c.se), f2(c.z), pCell(c.p), f3(c.oddsRatio), `[${f3(c.oddsRatioCi[0])}, ${f3(c.oddsRatioCi[1])}]`, c.ame ? f3(c.ame.value) : '—']),
-      note: `注：n = ${fit.n}，${literal(event)} ${fit.events} 例；似然比检验 χ²(${fit.lr.df}) = ${f2(fit.lr.chi2)}，p ${fit.lr.p < 0.001 ? '< 0.001' : `= ${fit.lr.p.toFixed(3)}`}；McFadden 伪 $R^2$ = ${f3(fit.mcFaddenR2)}。`,
+      note: `注：$n=${fit.n}$，${literal(event)} ${fit.events} 例；似然比检验 $\\chi^2(${fit.lr.df})=${tex2(fit.lr.chi2)}$，$${pMath(fit.lr.p)}$；McFadden 伪 $R^2=${tex3(fit.mcFaddenR2)}$。`,
     },
     reading: `${lead(refs)}模型的似然比检验 $\\chi^2(${fit.lr.df})=${tex2(fit.lr.chi2)}$，$${pMath(fit.lr.p)}$，${fit.lr.p < 0.05 ? '模型整体显著' : '模型整体未达到显著水平'}，McFadden 伪 $R^2=${tex3(fit.mcFaddenR2)}$。`
       + (significant.length ? `在控制其他变量后，${significant.map(effect).join('；')}。` : '没有自变量与因变量的关联达到 0.05 的显著性水平。')
@@ -113,7 +112,7 @@ export function ahpWriting(result: Ahp, criteria: readonly string[], refs: Resul
       caption: '评价准则权重与一致性检验',
       headers: ['准则', '权重', '排序'],
       rows: criteria.map((name, i) => [literal(name), f3(result.weights[i]), String(ranked.findIndex(([n]) => n === name) + 1)]),
-      note: `注：$\\lambda_{\\max}$ = ${f3(result.lambdaMax)}，CI = ${f3(result.ci)}，RI = ${result.ri.toFixed(2)}${result.cr === null ? '；两项准则无需一致性检验' : `，CR = ${f3(result.cr)}`}。`,
+      note: `注：$\\lambda_{\\max}=${tex3(result.lambdaMax)}$，$\\mathrm{CI}=${tex3(result.ci)}$，$\\mathrm{RI}=${tex2(result.ri)}$${result.cr === null ? '；两项准则无需一致性检验' : `，$\\mathrm{CR}=${tex3(result.cr)}$`}。`,
     },
     reading: `${lead(refs)}${result.cr === null ? '两项准则无需一致性检验。' : `判断矩阵的一致性比率 $CR=${tex3(result.cr)}$，${result.consistent ? '小于 0.1，判断具有满意的一致性' : '不小于 0.1，判断不一致，应请专家调整后重新计算，以下权重暂不宜采用'}。`}`
       + `各准则按权重从高到低依次为${ranked.map(([n, w]) => `${quote(n)}（$${tex3(w)}$）`).join('、')}，其中${quote(ranked[0][0])}的权重最高。`,
@@ -137,7 +136,7 @@ export function ipaWriting(result: Ipa, refs: ResultRefs = {}): MethodWriting {
       caption: '各属性重要性与表现评分及所属象限',
       headers: ['属性', result.mode === 'derived' ? '隐性重要性 β*' : '重要性均值', '表现均值', '象限'],
       rows: result.points.map(p => [literal(p.name), f3(p.importance), f3(p.performance), p.quadrant]),
-      note: `注：n = ${result.n}；分界线为重要性 ${f3(result.lines.importance)}、表现 ${f3(result.lines.performance)}${result.r2 === null ? '' : `；回归 $R^2$ = ${f3(result.r2)}`}。`,
+      note: `注：$n=${result.n}$；分界线为重要性 $${tex3(result.lines.importance)}$、表现 $${tex3(result.lines.performance)}$${result.r2 === null ? '' : `；回归 $R^2=${tex3(result.r2)}$`}。`,
     },
     reading: `${lead(refs)}${quadrantText}。`
       + (by('重点改进').length ? `其中“重点改进”象限的属性重要但表现欠佳，是优先投入资源的方向。` : '没有属性落在“重点改进”象限。')
@@ -159,7 +158,7 @@ export function clusterWriting(result: Clustering, silhouetteMean: number, varia
       caption: '各类人群在聚类变量上的标准化中心',
       headers: ['类别', '人数', '占比', ...variables.map(literal)],
       rows: result.centers.map((c, j) => [`第 ${j + 1} 类`, String(result.sizes[j]), percent(result.sizes[j] / result.n), ...c.map(f2)]),
-      note: `注：变量已标准化（均值 0、标准差 1），中心值为正表示高于总体平均；k = ${result.k}，平均轮廓系数 = ${f3(silhouetteMean)}，n = ${result.n}。`,
+      note: `注：变量已标准化（均值 0、标准差 1），中心值为正表示高于总体平均；$k=${result.k}$，平均轮廓系数 $\\bar{s}=${tex3(silhouetteMean)}$，$n=${result.n}$。`,
     },
     reading: `${lead(refs)}将受访者分为 ${result.k} 类，平均轮廓系数为 $${tex3(silhouetteMean)}$，${silhouetteMean >= 0.5 ? '聚类结构合理' : silhouetteMean >= 0.25 ? '聚类结构一般，类别边界不够清晰' : '聚类结构不明显，以下画像仅供参考'}。${profile.join('；')}。各类的命名应结合变量含义与调查背景确定。`,
   };
