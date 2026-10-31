@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { FUNCTION_WORDS, answered, cooccurrence, distinctiveTerms, termTable, terms } from '../lib/text-mining.ts';
+import { FUNCTION_WORDS, NO_SEGMENTER, answered, cooccurrence, distinctiveTerms, termTable, terms } from '../lib/text-mining.ts';
 
 // Teaching-simulation open answers written for this test; no respondents.
 const answers = [
@@ -24,7 +24,7 @@ test('segmentation keeps content words and drops function words, numbers and sin
 });
 
 test('non-answers do not count towards mention rates', () => {
-  assert.deepEqual(answered(['无', ' 没有。', '', '不知道', 'N/A', '照明不足']), ['照明不足']);
+  assert.deepEqual(answered(['无', ' 没有。', '', '不知道', 'N/A', 'Ｎ／Ａ', '－', '照明不足']), ['照明不足'], 'full-width markers too');
 });
 
 test('the term table counts answers that mention a term, most-mentioned first', () => {
@@ -67,4 +67,14 @@ test('co-occurrence counts answers that mention both terms', () => {
   assert.deepEqual(pairs.find(p => p.a === '希望' && p.b === '照明'), { a: '希望', b: '照明', answers: 3 });
   assert.ok(pairs.every(p => p.answers >= 2), 'pairs seen once are left out by default');
   assert.ok(!pairs.some(p => p.a === '器材' && p.b === '器材'), 'a word repeated in one answer is not a pair');
+});
+
+test('without a word segmenter the counts are refused in plain words, never approximated', () => {
+  const original = Intl.Segmenter;
+  try {
+    delete Intl.Segmenter;
+    assert.deepEqual(termTable(answers), { refused: 'no-segmenter' });
+    assert.throws(() => terms('照明不足'), new RegExp(NO_SEGMENTER.slice(0, 8)));
+  } finally { Intl.Segmenter = original; }
+  assert.ok(!('refused' in termTable(answers)), 'restored');
 });
