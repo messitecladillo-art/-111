@@ -43,7 +43,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
   const names = criteria.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 15);
   // A result belongs to the settings it was computed from; changing any of them hides it until computed again.
   const settings = JSON.stringify([method, picked, outcome, importanceMode, importance, overall, k, criteria, judgements, missingCodes, sourceHash, table.rows.length, context]);
-  const [computed, setComputed] = useState<{ settings: string; run: AdvancedRun | { refused: string }; figure: string | null; notice: string; scope: string[] } | null>(null);
+  const [computed, setComputed] = useState<{ settings: string; run: AdvancedRun | { refused: string }; figure: string | null; notice: string; scope: string[]; written?: boolean } | null>(null);
   const current = computed?.settings === settings ? computed : null, run = current?.run ?? null, figure = current?.figure ?? null, notice = current?.notice ?? '';
 
   const toggle = (c: number) => setPicked(list => (list.includes(c) ? list.filter(x => x !== c) : [...list, c]));
@@ -83,12 +83,13 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
   useEffect(() => { live.current.settings = settings; }, [settings]);
   useEffect(() => { const current = live.current; current.mounted = true; return () => { current.mounted = false; }; }, []);
   const write = async () => {
-    if (!run || 'refused' in run || !onReportInsert) return;
+    if (!run || 'refused' in run || !onReportInsert || current?.written) return;
     const captured = settings;
     try {
       const insert = await advancedInsert(run, { name: sourceName, hash: sourceHash, simulated }, current?.scope ?? []);
       if (!live.current.mounted || live.current.settings !== captured) return;
-      onReportInsert(insert); setNotice('已交给报告与 PPT，写入对应的蓝图章节；可在编辑器里撤销。');
+      // One result is written once: a second click would register a second result and repeat its table and figure.
+      onReportInsert(insert); setComputed(c => (c ? { ...c, written: true, notice: '已交给报告与 PPT，写入对应的蓝图章节；可在编辑器里撤销。' } : c));
     }
     catch (error) { setNotice(`未能写入：${(error as Error).message}`); }
   };
@@ -140,7 +141,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
               <p><Prose text={`由表可知，${run.writing.reading}`} /></p>
               <div className={styles.actions}>
                 <span>n = {run.n}（共 {run.total}）</span>
-                {onReportInsert && <button type="button" className={styles.primary} onClick={write}>写进报告</button>}
+                {onReportInsert && <button type="button" className={styles.primary} disabled={!!current?.written} onClick={write}>{current?.written ? '已写进报告' : '写进报告'}</button>}
               </div>
               {notice && <p className={styles.notice} role="status">{notice}</p>}
             </>}

@@ -157,8 +157,11 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
   }
 }
 const ACCENT = '#2F6B4F';
-/** The source an AHP result names: the experts' judgement matrix entered for this study. */
-export const AHP_SOURCE = '本研究专家两两比较判断矩阵';
+/**
+ * The source an AHP result names. The matrix is typed in here; nothing shows who judged, so it is never called an
+ * expert panel's: the report says it was entered and that its source is unverified.
+ */
+export const AHP_SOURCE = '用户录入的两两比较判断矩阵（来源未核验）';
 // The widest result table the Word export takes is 10 columns: a cluster table has 3 more than its variables, a
 // factor table 2 more than its factors.
 export const MAX_CLUSTER_VARIABLES = 7, MAX_FACTORS = 8;

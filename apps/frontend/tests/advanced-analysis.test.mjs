@@ -109,6 +109,7 @@ test('an AHP result names the expert judgement matrix, never the loaded survey o
   assert.equal(result.sourceHash, await digestText(JSON.stringify({ criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] })), 'the hash binds the judgement matrix itself');
   assert.equal(result.classification, 'user_provided', 'the judgements are entered, not simulated survey answers');
   assert.equal(sourceLine(result), `资料来源：${AHP_SOURCE}（3 项准则）。`);
+  assert.match(AHP_SOURCE, /来源未核验/, 'never presented as an expert panel the app cannot vouch for');
 });
 
 test('tables the exporters cannot take are refused before anything is written', () => {
