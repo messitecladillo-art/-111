@@ -39,7 +39,9 @@ const segmenter = () => {
  * negate, with any degree word between (不是/很/方便), so 不满意 is never counted as 满意.
  */
 export const NEGATORS: ReadonlySet<string> = new Set(['不', '没', '没有', '未', '无', '非', '别', '不太', '不够', '不要', '不能', '不会', '不是', '不大', '不怎么', '没什么', '并不', '从不', '从没']);
-const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么', '那么', '特别', '非常', '是很']);
+// Words a negation takes into its phrase: degree words (不是/很/方便) and the scope words of 没有任何问题, 未发现问题,
+// 无明显问题, so the 问题 after them is never counted as a problem raised.
+const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么', '那么', '特别', '非常', '是很', '任何', '什么', '明显', '发现', '存在', '其他']);
 // Function words a negation passes through to the word it governs (不觉得方便, 不可以停车). Any other function word,
 // such as the preposition in 没有在这里停车, ends the negation without a guess at what it governed.
 const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实']);
@@ -74,7 +76,9 @@ export function answered(answers: readonly string[]): string[] {
   // not answers either.
   return answers.map(a => a.normalize('NFKC').trim()).filter(a => {
     const bare = a.replace(/[\s\p{P}\p{S}]/gu, '');
-    return bare !== '' && !/^(无|没有|暂无|不知道|不清楚|没|否|na|none|nil)$/iu.test(bare);
+    // "Nothing to report" in its usual forms (没有任何问题, 暂无建议, 未发现问题) says nothing either.
+    return bare !== '' && !/^(无|没有|暂无|不知道|不清楚|没|否|na|none|nil)$/iu.test(bare)
+      && !/^(暂时|目前|暂)?(没有|没|无|暂无|未发现|未见|不存在)(任何|什么|明显的?|其他)?(问题|意见|建议|不满|缺点|要求)了?$/u.test(bare);
   });
 }
 

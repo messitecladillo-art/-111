@@ -24,7 +24,7 @@ test('segmentation keeps content words and drops function words, numbers and sin
 });
 
 test('non-answers do not count towards mention rates', () => {
-  assert.deepEqual(answered(['无', ' 没有。', '', '不知道', 'N/A', 'Ｎ／Ａ', '－', 'N.A.', 'N / A', '...', '???', '照明不足']), ['照明不足'], 'full-width, dotted, spaced and punctuation-only markers too');
+  assert.deepEqual(answered(['无', ' 没有。', '', '不知道', 'N/A', 'Ｎ／Ａ', '－', 'N.A.', 'N / A', '...', '???', '没有任何问题', '暂无建议。', '无明显问题', '未发现问题', '照明不足']), ['照明不足'], 'full-width, dotted, spaced and punctuation-only markers too');
 });
 
 test('the term table counts answers that mention a term, most-mentioned first', () => {
@@ -92,6 +92,9 @@ test('a negated word is counted as negated, never as its opposite', () => {
   assert.deepEqual(terms('不可以停车'), ['不停车']);
   assert.deepEqual(terms('没有在这里停车'), ['这里', '停车'], 'a preposition ends the negation: no 没有这里');
   assert.deepEqual(terms('不能在这里停车'), ['这里', '停车']);
+  assert.deepEqual(terms('照明不错，没有任何问题'), ['照明', '不错', '没有任何问题'], 'the 问题 of 没有任何问题 is no problem raised');
+  assert.deepEqual(terms('未发现问题'), ['未发现问题']);
+  assert.deepEqual(terms('没有什么意见'), ['没有什么意见']);
   assert.deepEqual(terms('停车位不够'), ['停车位', '不够'], 'a negator ending the answer is the complaint');
   assert.deepEqual(terms('时间不够，人太多'), ['时间', '不够', '太多'], 'or ending a clause');
   assert.deepEqual(terms('希望增加，不。'), ['希望', '增加'], 'a negator before punctuation negates nothing counted');
