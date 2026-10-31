@@ -18,6 +18,9 @@ type Props = {
    * The rows a method may read, as the other analyses get them: with a linked questionnaire, the confirmed eligible
    * rows of current, valid columns, or the problems that stop it. Without one, the table as loaded.
    */
+  /** The analysis context `prepare` reads (questionnaire mapping, its confirmation, the skip-logic policy): a result
+   * computed under another context is hidden until computed again. */
+  context?: string;
   prepare?: (columns: number[], scaled: number[]) => { table: SurveyTable; problems: string[]; reverse?: { column: number; min: number; max: number; name: string }[] };
 };
 
@@ -30,7 +33,7 @@ function Prose({ text }: { text: string }) {
  * The advanced methods on the loaded table: choose a method and its variables, compute on complete cases, read the
  * write-up as the report will print it (method, formulas, table, figure, reading), then write it into the report.
  */
-export default function AdvancedMethods({ table, profile, missingCodes, simulated, sourceName, sourceHash, onReportInsert, prepare }: Props) {
+export default function AdvancedMethods({ table, profile, missingCodes, simulated, sourceName, sourceHash, onReportInsert, prepare, context = '' }: Props) {
   const numeric = useMemo(() => profile.columns.filter(c => c.numeric > 0 && !c.likelyIdentifier), [profile]);
   const name = (index: number) => table.columnLabels?.[table.headers[index]] ?? table.headers[index] ?? `第 ${index + 1} 列`;
   const [method, setMethod] = useState<AdvancedMethod>('validity');
@@ -39,7 +42,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
   const [k, setK] = useState(3), [criteria, setCriteria] = useState('安全\n便利\n价格'), [judgements, setJudgements] = useState<Record<string, number>>({});
   const names = criteria.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 15);
   // A result belongs to the settings it was computed from; changing any of them hides it until computed again.
-  const settings = JSON.stringify([method, picked, outcome, importanceMode, importance, overall, k, criteria, judgements, missingCodes, sourceHash, table.rows.length]);
+  const settings = JSON.stringify([method, picked, outcome, importanceMode, importance, overall, k, criteria, judgements, missingCodes, sourceHash, table.rows.length, context]);
   const [computed, setComputed] = useState<{ settings: string; run: AdvancedRun | { refused: string }; figure: string | null; notice: string } | null>(null);
   const current = computed?.settings === settings ? computed : null, run = current?.run ?? null, figure = current?.figure ?? null, notice = current?.notice ?? '';
 
