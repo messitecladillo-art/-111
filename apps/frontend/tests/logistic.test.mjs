@@ -62,8 +62,10 @@ test('it refuses rather than guesses, separation included', () => {
 });
 
 test('a predictor in small units is not mistaken for separation', () => {
-  // x1 in thousandths: its coefficient is about 900, the same effect per standard deviation as before.
-  const fit = logisticRegression(y, [{ name: 'x1', values: x1.map(v => v / 1000) }, ...predictors.slice(1)]);
+  // x1 in tenths: its coefficient is about 9, the same effect per standard deviation as before.
+  const fit = logisticRegression(y, [{ name: 'x1', values: x1.map(v => v / 10) }, ...predictors.slice(1)]);
   assert.ok(!('refused' in fit), 'fitted, not refused');
-  near(fit.coefficients[1].estimate, REF.beta[1] * 1000, 1e-8, 'rescaled slope');
+  near(fit.coefficients[1].estimate, REF.beta[1] * 10, 1e-8, 'rescaled slope');
+  // In thousandths the coefficient is about 900: e^β overflows, and the refusal names the units, not separation.
+  assert.deepEqual(logisticRegression(y, [{ name: 'x1', values: x1.map(v => v / 1000) }, ...predictors.slice(1)]), { refused: 'extreme-units' });
 });

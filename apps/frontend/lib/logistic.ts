@@ -24,7 +24,7 @@ export type Logistic = {
   mcFaddenR2: number;
   iterations: number;
 };
-export type LogisticRefusal = { refused: 'no-predictors' | 'not-binary' | 'one-class' | 'too-few-cases' | 'collinear' | 'separation' | 'no-convergence' };
+export type LogisticRefusal = { refused: 'no-predictors' | 'not-binary' | 'one-class' | 'too-few-cases' | 'collinear' | 'separation' | 'no-convergence' | 'extreme-units' };
 
 const sigmoid = (t: number) => (t >= 0 ? 1 / (1 + Math.exp(-t)) : Math.exp(t) / (1 + Math.exp(t)));
 const logLikelihood = (y: readonly number[], p: readonly number[]) => y.reduce((s, v, i) => s + (v ? Math.log(p[i]) : Math.log(1 - p[i])), 0);
@@ -80,5 +80,7 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
       oddsRatio: Math.exp(b), oddsRatioCi: [Math.exp(b - Z975 * se), Math.exp(b + Z975 * se)], ame };
   });
   const chi2 = 2 * (ll - ll0);
+  // A coefficient per raw unit so large that e^β overflows (a predictor in tiny units) has no reportable odds ratio.
+  if (coefficients.some(c => ![c.oddsRatio, ...c.oddsRatioCi].every(Number.isFinite))) return { refused: 'extreme-units' };
   return { n, predictors: k, events, coefficients, logLikelihood: ll, nullLogLikelihood: ll0, lr: { chi2, df: k, p: chiSquareUpper(chi2, k) }, mcFaddenR2: 1 - ll / ll0, iterations };
 }

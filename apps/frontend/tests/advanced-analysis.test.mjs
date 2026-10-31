@@ -210,3 +210,11 @@ test('calculating before choosing columns is refused in plain words, never a cra
   assert.deepEqual(runAdvanced({ method: 'ipa', performance: [], importance: null, overall: 6 }, table, []), { refused: '至少选择 2 个属性。' });
   assert.deepEqual(runAdvanced({ method: 'regression', outcome: 6, predictors: [] }, table, []), { refused: '请选择因变量和至少一个自变量。' });
 });
+
+test('an AHP matrix of another order than its criteria, or an overflowing odds ratio, is refused', async () => {
+  assert.deepEqual(runAdvanced({ method: 'ahp', criteria: ['a', 'b'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []), { refused: '准则数与判断矩阵的阶数不一致。' });
+  const { logisticRegression } = await import('../lib/logistic.ts');
+  const x = Array.from({ length: 200 }, (_, i) => ((i * 37) % 100) / 100), y = x.map((v, i) => (v + ((i * 53) % 100) / 100 > 1 ? 1 : 0));
+  assert.ok(!('refused' in logisticRegression(y, [{ name: 'x', values: x }])), 'ordinary units fit');
+  assert.deepEqual(logisticRegression(y, [{ name: 'x', values: x.map(v => v * 1e-3) }]), { refused: 'extreme-units' }, 'thousandths of the unit overflow e^β');
+});

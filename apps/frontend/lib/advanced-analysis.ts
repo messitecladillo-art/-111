@@ -53,6 +53,7 @@ const REFUSALS: Record<string, string> = {
   'no-importance': '请为每个属性选择重要性评分，或选择总体满意度以推导重要性。', 'no-cases': '没有完整案例。', 'too-small': '至少需要 2 个准则。', 'too-large': '准则不能超过 15 个。',
   'no-shared-variance': '题项之间几乎没有相关，KMO 无从计算，不适合做因子分析。', 'perfect-fit': '因变量可由自变量精确算出（如总分对其组成题项回归），没有残差，无法检验；请去掉构成因变量的题项。',
   'no-convergence': '迭代未能收敛，估计值不可靠；请检查是否有几乎能区分两类结果的变量，或减少自变量。',
+  'extreme-units': '某个自变量的计量单位过小，发生比比率超出可表示的范围；请换用更大的单位（如以万元计）后再估计。',
   'not-square': '判断矩阵须为方阵。', 'not-positive': '判断矩阵的值须为正数。', 'not-reciprocal': '判断矩阵须满足 aji = 1 / aij。',
 };
 export const refusalText = (code: string) => REFUSALS[code] ?? '无法计算。';
@@ -97,6 +98,7 @@ export function reverseScored(table: SurveyTable, items: readonly { column: numb
 /** One method on the table, written up for the report; a refusal says why in the user's words. */
 export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes: readonly string[]): AdvancedRun | { refused: string } {
   if (spec.method === 'ahp') {
+    if (spec.criteria.length !== spec.matrix.length) return { refused: '准则数与判断矩阵的阶数不一致。' };
     const r = ahp(spec.matrix);
     if ('refused' in r) return { refused: refusalText(r.refused) };
     return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null,
