@@ -43,9 +43,12 @@ export function multinomialRegression(y: readonly number[], predictors: readonly
   const m = (J - 1) * cols;
   if (n < m + J || predictors.some(p => p.values.length !== n)) return { refused: 'too-few-cases' };
   const category = y.map(v => codes.indexOf(v)), counts = codes.map((_, j) => category.filter(c => c === j).length);
-  const x = Array.from({ length: n }, (_, i) => [1, ...predictors.map(p => p.values[i])]);
-  // Separation is judged per standard deviation of the predictor, so a predictor's units cannot trigger it.
-  const spread = predictors.map(p => { const mean = p.values.reduce((s, v) => s + v, 0) / n; return Math.sqrt(p.values.reduce((s, v) => s + (v - mean) ** 2, 0) / n); });
+  // The model is solved on standardized predictors, so a large offset or unit cannot make the information matrix
+  // look singular, and mapped back to the original units afterwards. Separation is then judged per SD.
+  const centre = predictors.map(p => p.values.reduce((s, v) => s + v, 0) / n);
+  const spread = predictors.map((p, a) => Math.sqrt(p.values.reduce((s, v) => s + (v - centre[a]) ** 2, 0) / n));
+  if (spread.some(s => !(s > 0))) return { refused: 'collinear' };
+  const x = Array.from({ length: n }, (_, i) => [1, ...predictors.map((p, a) => (p.values[i] - centre[a]) / spread[a])]);
   // beta[j][a]: equation j (category j + 1 against the reference), predictor a (0 = intercept).
   let beta = Array.from({ length: J - 1 }, (_, j) => Array.from({ length: cols }, (_, a) => (a === 0 ? Math.log(counts[j + 1] / counts[0]) : 0)));
   const probabilities = () => x.map(row => {
@@ -66,7 +69,7 @@ export function multinomialRegression(y: readonly number[], predictors: readonly
     const score = Array.from({ length: m }, (_, r) => { const j = Math.floor(r / cols), a = r % cols; return x.reduce((s, row, i) => s + row[a] * ((category[i] === j + 1 ? 1 : 0) - p[i][j + 1]), 0); });
     const step = cov.map(row => row.reduce((s, v, c) => s + v * score[c], 0));
     beta = beta.map((b, j) => b.map((v, a) => v + step[j * cols + a]));
-    if (beta.some(b => b.some((v, a) => !Number.isFinite(v) || (a > 0 && Math.abs(v) * spread[a - 1] > 30)))) return { refused: 'separation' };
+    if (beta.some(b => b.some((v, a) => !Number.isFinite(v) || (a > 0 && Math.abs(v) > 30)))) return { refused: 'separation' };
     p = probabilities();
     if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; break; }
   }
@@ -74,8 +77,12 @@ export function multinomialRegression(y: readonly number[], predictors: readonly
   const cov = invert(information(p));
   if (!cov) return { refused: 'collinear' };
   const ll = category.reduce((s, c, i) => s + Math.log(p[i][c]), 0), ll0 = counts.reduce((s, c) => s + c * Math.log(c / n), 0);
-  const equations = beta.map((b, j) => ({ code: codes[j + 1], coefficients: b.map((estimate, a): MultinomialCoefficient => {
-    const se = Math.sqrt(cov[j * cols + a][j * cols + a]), z = estimate / se;
+  // Back to the original units: β = T·γ with T₀₀ = 1, T₀ₐ = −mₐ/sₐ, Tₐₐ = 1/sₐ, and each equation's covariance T·C·Tᵀ.
+  const T = Array.from({ length: cols }, (_, r) => Array.from({ length: cols }, (_, c) => (r === 0 ? (c === 0 ? 1 : -centre[c - 1] / spread[c - 1]) : r === c ? 1 / spread[r - 1] : 0)));
+  const original = beta.map(g => T.map(row => row.reduce((s, t, c) => s + t * g[c], 0)));
+  const variance = beta.map((_, j) => T.map(row => row.reduce((s, t, c) => s + t * row.reduce((v, w, d) => v + w * cov[j * cols + c][j * cols + d], 0), 0)));
+  const equations = original.map((b, j) => ({ code: codes[j + 1], coefficients: b.map((estimate, a): MultinomialCoefficient => {
+    const se = Math.sqrt(variance[j][a]), z = estimate / se;
     return { name: a === 0 ? '（截距）' : predictors[a - 1].name, estimate, se, z, p: 2 * normalUpper(Math.abs(z)), ci: [estimate - Z975 * se, estimate + Z975 * se],
       rrr: Math.exp(estimate), rrrCi: [Math.exp(estimate - Z975 * se), Math.exp(estimate + Z975 * se)] };
   }) }));

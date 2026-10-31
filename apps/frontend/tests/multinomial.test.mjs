@@ -60,3 +60,13 @@ test('a predictor in small units is not mistaken for separation', () => {
   assert.ok(!('refused' in fit));
   near(fit.equations[0].coefficients[1].estimate, REF.beta[0][1] * 1000, 1e-8, 'rescaled slope');
 });
+
+test('a predictor with a large offset is solved as well as a centred one, not refused as collinear', () => {
+  const fit = multinomialRegression(y, [predictors[0], { name: 'x2', values: x2.map(v => 1e6 + v) }, predictors[2]]);
+  assert.ok(!('refused' in fit), JSON.stringify(fit));
+  fit.equations.forEach((equation, j) => [1, 2, 3].forEach(a => {
+    near(equation.coefficients[a].estimate, REF.beta[j][a], 1e-6, `β ${j},${a}`);
+    near(equation.coefficients[a].se, REF.se[j][a], 1e-6, `SE ${j},${a}`);
+  }));
+  assert.deepEqual(multinomialRegression(y, [...predictors, { name: 'constant', values: y.map(() => 4) }]), { refused: 'collinear' });
+});
