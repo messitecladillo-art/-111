@@ -30,6 +30,8 @@ export type AdvancedMethod = AdvancedSpec['method'];
 /** `chart` is what the report figure plots, as the result's metrics; `figure` draws it for the preview. */
 export type AdvancedRun = { method: AdvancedMethod; title: string; variables: string[]; n: number; total: number; writing: MethodWriting;
   chart: { caption: string; metrics: FigureMetric[] } | null; figure: FigurePlan | null;
+  /** Rows left out for a value that is neither a number nor a missing code (the rest of total − n were missing). */
+  invalid?: number;
   /** AHP only: the criteria and judgement matrix the experts entered, whose hash identifies the result's source. */
   judgements?: { criteria: string[]; matrix: number[][] } };
 
@@ -50,21 +52,24 @@ const REFUSALS: Record<string, string> = {
   'too-few-distinct': '不同的观测少于聚类数。', 'uneven-rows': '变量长度不一致。', 'too-few-attributes': '至少需要 2 个属性。', 'uneven-columns': '属性评分的长度不一致。',
   'no-importance': '请为每个属性选择重要性评分，或选择总体满意度以推导重要性。', 'no-cases': '没有完整案例。', 'too-small': '至少需要 2 个准则。', 'too-large': '准则不能超过 15 个。',
   'no-shared-variance': '题项之间几乎没有相关，KMO 无从计算，不适合做因子分析。', 'perfect-fit': '因变量可由自变量精确算出（如总分对其组成题项回归），没有残差，无法检验；请去掉构成因变量的题项。',
+  'no-convergence': '迭代未能收敛，估计值不可靠；请检查是否有几乎能区分两类结果的变量，或减少自变量。',
   'not-square': '判断矩阵须为方阵。', 'not-positive': '判断矩阵的值须为正数。', 'not-reciprocal': '判断矩阵须满足 aji = 1 / aij。',
 };
 export const refusalText = (code: string) => REFUSALS[code] ?? '无法计算。';
 
 /** Rows where every chosen column is a finite number and not a missing code; nothing is imputed. */
-export function completeCases(table: SurveyTable, columns: readonly number[], missingCodes: readonly string[]): { columns: number[][]; n: number; total: number } {
+export function completeCases(table: SurveyTable, columns: readonly number[], missingCodes: readonly string[]): { columns: number[][]; n: number; total: number; invalid: number } {
   const missing = new Set(missingCodes.map(c => c.trim())), kept: number[][] = columns.map(() => []);
-  let n = 0;
+  // A row left out for a value that is neither a number nor a missing code is invalid, not missing.
+  let n = 0, invalid = 0;
   for (const row of table.rows) {
-    const values = columns.map(c => { const text = (row[c] ?? '').trim(); return !text || missing.has(text) ? null : finiteNumber(text); });
+    const texts = columns.map(c => (row[c] ?? '').trim()), values = texts.map(text => (!text || missing.has(text) ? null : finiteNumber(text)));
+    if (texts.some((text, j) => text && !missing.has(text) && values[j] === null)) { invalid++; continue; }
     if (values.some(v => v === null)) continue;
     values.forEach((v, j) => kept[j].push(v!));
     n++;
   }
-  return { columns: kept, n, total: table.rows.length };
+  return { columns: kept, n, total: table.rows.length, invalid };
 }
 
 const label = (table: SurveyTable, c: number) => table.columnLabels?.[table.headers[c]] ?? table.headers[c] ?? `第 ${c + 1} 列`;
@@ -108,7 +113,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       const solution = exploratoryFactors(data.columns);
       if ('refused' in solution) return { refused: refusalText(solution.refused) };
       if (solution.factors > MAX_FACTORS) return { refused: `提取出 ${solution.factors} 个因子，超过 ${MAX_FACTORS} 个，载荷表无法排进报告；请按维度分组后分别检验。` };
-      return withFigure({ method: 'validity', title: '题项旋转后因子载荷', variables: names, n: data.n, total: data.total, writing: validityWriting(adequacy, solution, names) },
+      return withFigure({ method: 'validity', title: '题项旋转后因子载荷', variables: names, n: data.n, total: data.total, invalid: data.invalid, writing: validityWriting(adequacy, solution, names) },
         '题项相关矩阵特征值碎石图', { kind: 'scree', eigenvalues: solution.eigenvalues });
     }
     case 'regression': case 'logistic': {
@@ -116,12 +121,12 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       if (spec.method === 'regression') {
         const fit = linearRegression(y, predictors);
         if ('refused' in fit) return { refused: refusalText(fit.refused) };
-        return withFigure({ method: 'regression', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, writing: regressionWriting(fit, names[0]) },
+        return withFigure({ method: 'regression', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, invalid: data.invalid, writing: regressionWriting(fit, names[0]) },
           `${names[0]}影响因素的回归系数及其 95% 置信区间`, { kind: 'forest', rows: fit.coefficients.slice(1).map(c => ({ name: c.name, estimate: c.estimate, low: c.ci[0], high: c.ci[1] })) });
       }
       const fit = logisticRegression(y, predictors);
       if ('refused' in fit) return { refused: refusalText(fit.refused) };
-      return withFigure({ method: 'logistic', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, writing: logisticWriting(fit, names[0], names[0]) },
+      return withFigure({ method: 'logistic', title: `${names[0]}影响因素`, variables: names, n: data.n, total: data.total, invalid: data.invalid, writing: logisticWriting(fit, names[0], names[0]) },
         `${names[0]}影响因素的发生比比率及其 95% 置信区间`, { kind: 'forest', rows: fit.coefficients.slice(1).map(c => ({ name: c.name, estimate: c.oddsRatio, low: c.oddsRatioCi[0], high: c.oddsRatioCi[1] })) });
     }
     case 'ipa': {
@@ -129,7 +134,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       const overall = spec.overall === null ? undefined : data.columns.at(-1)!;
       const result = ipa(performance.map((values, j) => ({ name: names[j], performance: values, ...(importance ? { importance: importance[j] } : {}) })), { overall });
       if ('refused' in result) return { refused: refusalText(result.refused) };
-      return withFigure({ method: 'ipa', title: '各属性重要性与表现', variables: names.slice(0, k), n: data.n, total: data.total, writing: ipaWriting(result) },
+      return withFigure({ method: 'ipa', title: '各属性重要性与表现', variables: names.slice(0, k), n: data.n, total: data.total, invalid: data.invalid, writing: ipaWriting(result) },
         '各属性重要性—表现象限图', { kind: 'quadrant', points: result.points, lines: result.lines });
     }
     case 'cluster': {
@@ -137,7 +142,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       const rows = standardize(data.columns[0].map((_, i) => data.columns.map(c => c[i])));
       const fit = kmeans(rows, spec.k, { seed: 'evix-advanced' });
       if ('refused' in fit) return { refused: refusalText(fit.refused) };
-      return withFigure({ method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, writing: clusterWriting(fit, silhouette(...silhouetteSample(rows, fit.assignments)).mean, names) },
+      return withFigure({ method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, invalid: data.invalid, writing: clusterWriting(fit, silhouette(...silhouetteSample(rows, fit.assignments)).mean, names) },
         '各类人群标准化中心剖面图', { kind: 'profile', centers: fit.centers, sizes: fit.sizes, variables: names });
     }
   }
@@ -174,7 +179,7 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
     ? { sourceName: AHP_SOURCE, sourceHash: await digestText(JSON.stringify(run.judgements ?? [run.variables, table.rows])), classification: 'user_provided' as const }
     : { sourceName: source.name, sourceHash: source.hash, classification: source.simulated ? 'simulated' as const : 'user_provided' as const };
   const result = await snapshotRecipe({
-    method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n, invalidRows: 0,
+    method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n - (run.invalid ?? 0), invalidRows: run.invalid ?? 0,
     metrics: run.chart?.metrics ?? [], headers: table.headers, rows: table.rows, warnings: [], interpretation: '',
   }, { title: table.caption, sourceUrl: '', ...origin, variables: run.variables.slice(0, 4) });
   const node = ADVANCED_METHODS.find(m => m.id === run.method)!.node, at = run.writing.formulas.length + 2;

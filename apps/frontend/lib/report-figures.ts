@@ -10,7 +10,7 @@
 import type { CustomSeriesOption, EChartsOption, SeriesOption } from 'echarts';
 import type { ResultSnapshot } from './research-quality.ts';
 import { assertTrueVector } from './svg-safety.ts';
-import { methodFigure } from './method-figures.ts';
+import { canChart, methodFigure } from './method-figures.ts';
 import { categoryOrder, crosstabOrder, groupRows } from './report-tables.ts';
 
 /** Every figure is this wide; at the full text width (14.64 cm) 22 px text prints at about 9.5 pt. */
@@ -280,6 +280,8 @@ export function figurePlan(r: ResultSnapshot, column: number, accent: string): F
   // An advanced method's result carries its own figure (lib/method-figures.ts), whatever column is picked.
   const method = methodFigure(r, accent);
   if (method) return method;
+  // An advanced result without its own figure (AHP, or one whose figure did not fit) is never drawn as bars of its table.
+  if (!canChart(r)) throw Error(`“${r.title}”没有可画的图，请改用表格。`);
   if (column < 1 || column >= r.headers.length) throw Error('请选择有效数值列。');
   if (!r.rows.length) throw Error(`图“${r.title}”没有数据行，请重新计算或改用表格。`);
   if (r.method === 'pearson' || r.method === 'spearman') return coefficient(r, accent);

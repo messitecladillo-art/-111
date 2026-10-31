@@ -182,3 +182,24 @@ test('a report holding every advanced method still exports to LaTeX: formulas on
   assert.doesNotMatch(body, /\\(?:boldsymbol|fbox|parbox)\b/u);
   if (process.env.EVIX_LATEX_BODY) (await import('node:fs')).writeFileSync(process.env.EVIX_LATEX_BODY, body);
 });
+
+test('a value that is neither a number nor a missing code is counted as invalid, not missing', async () => {
+  const t = { headers: ['a', 'b'], rows: [['1', '2'], ['x', '3'], ['99', '4'], ['', '5'], ['2', 'n/a'], ['3', '1']], skippedBlankLines: 0, delimiter: ',' };
+  const data = completeCases(t, [0, 1], ['99']);
+  assert.deepEqual([data.n, data.total, data.invalid], [2, 6, 2], 'x and n/a are invalid; 99 and the blank are missing');
+});
+
+test('the registered result keeps missing and invalid rows apart', async () => {
+  const rows = table.rows.map((row, i) => (i === 10 ? row.map((cell, c) => (c === 0 ? '无法辨认' : cell)) : row));
+  const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, { ...table, rows }, ['99']);
+  const result = (await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
+  assert.equal(run.invalid, 1);
+  assert.equal(result.n, 158);
+});
+
+test('an AHP result is never drawn as bars of its table', async () => {
+  const { figurePlan } = await import('../lib/report-figures.ts');
+  const run = runAdvanced({ method: 'ahp', criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []);
+  const result = (await advancedInsert(run, { name: 'x', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
+  assert.throws(() => figurePlan(result, 1, '#2F6B4F'), /没有可画的图/);
+});

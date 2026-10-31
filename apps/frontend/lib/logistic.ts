@@ -24,7 +24,7 @@ export type Logistic = {
   mcFaddenR2: number;
   iterations: number;
 };
-export type LogisticRefusal = { refused: 'no-predictors' | 'not-binary' | 'one-class' | 'too-few-cases' | 'collinear' | 'separation' };
+export type LogisticRefusal = { refused: 'no-predictors' | 'not-binary' | 'one-class' | 'too-few-cases' | 'collinear' | 'separation' | 'no-convergence' };
 
 const sigmoid = (t: number) => (t >= 0 ? 1 / (1 + Math.exp(-t)) : Math.exp(t) / (1 + Math.exp(t)));
 const logLikelihood = (y: readonly number[], p: readonly number[]) => y.reduce((s, v, i) => s + (v ? Math.log(p[i]) : Math.log(1 - p[i])), 0);
@@ -44,7 +44,7 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
   const x = Array.from({ length: n }, (_, i) => [1, ...predictors.map(p => p.values[i])]);
   // Separation is judged per standard deviation of the predictor, so a predictor's units cannot trigger it.
   const spread = predictors.map(p => { const m = p.values.reduce((s, v) => s + v, 0) / n; return Math.sqrt(p.values.reduce((s, v) => s + (v - m) ** 2, 0) / n); });
-  let beta = new Array<number>(cols).fill(0), p = new Array<number>(n).fill(0.5), cov: number[][] | null = null, iterations = 0;
+  let beta = new Array<number>(cols).fill(0), p = new Array<number>(n).fill(0.5), cov: number[][] | null = null, iterations = 0, converged = false;
   beta[0] = Math.log(events / (n - events));
   for (; iterations < 100; iterations++) {
     p = x.map(row => sigmoid(row.reduce((s, v, j) => s + v * beta[j], 0)));
@@ -56,8 +56,9 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
     const step = cov.map(row => row.reduce((s, v, b) => s + v * score[b], 0));
     beta = beta.map((b, j) => b + step[j]);
     if (beta.some((b, j) => !Number.isFinite(b) || (j > 0 && Math.abs(b) * spread[j - 1] > 30))) return { refused: 'separation' };
-    if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; break; }
+    if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; converged = true; break; }
   }
+  if (!converged) return { refused: 'no-convergence' };
   // The covariance at the estimate: refresh p and the information once more after the last step.
   p = x.map(row => sigmoid(row.reduce((s, v, j) => s + v * beta[j], 0)));
   const info = Array.from({ length: cols }, (_, a) => Array.from({ length: cols }, (_, b) => x.reduce((s, row, i) => s + row[a] * row[b] * p[i] * (1 - p[i]), 0)));
