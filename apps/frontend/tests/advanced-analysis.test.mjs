@@ -105,7 +105,8 @@ test('an AHP result names the expert judgement matrix, never the loaded survey o
   const run = runAdvanced({ method: 'ahp', criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []);
   const result = (await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
   assert.equal(result.sourceName, AHP_SOURCE);
-  assert.notEqual(result.sourceHash, 'a'.repeat(64));
+  const { digestText } = await import('../lib/research-quality.ts');
+  assert.equal(result.sourceHash, await digestText(JSON.stringify({ criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] })), 'the hash binds the judgement matrix itself');
   assert.equal(result.classification, 'user_provided', 'the judgements are entered, not simulated survey answers');
   assert.equal(sourceLine(result), `资料来源：${AHP_SOURCE}（3 项准则）。`);
 });

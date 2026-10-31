@@ -14,7 +14,7 @@ import {texProblem} from '@/lib/omml';
 import {Formula} from '../math/Tex';
 import ReportFigureStudio from './ReportFigureStudio';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
-import {carriesFigure} from '@/lib/method-figures';
+import {canChart,carriesFigure} from '@/lib/method-figures';
 import {Figure} from './PaperBlocks';
 
 type Props={content:EditorContent;onChange:(content:EditorContent)=>boolean|void;disabled?:boolean};
@@ -58,7 +58,7 @@ export function QualitySlidePreview({slide,quality,figures,visualStyle,label='PP
 /** Where a result goes in the report and which exhibit it brings; the blueprint section is the default. */
 function PlaceResult({result,content,disabled,onPlace}:{result:ResultSnapshot;content:EditorContent;disabled:boolean;onPlace:(sectionId:string|undefined,exhibits:ExhibitKind[])=>void}){
   const [target,setTarget]=useState(''),[exhibits,setExhibits]=useState<ExhibitKind[]>(()=>suggestedExhibits(result));
-  const node=suggestedNode(result),existing=sectionForNode(content,node),chartable=result.method!=='sampling-frame';
+  const node=suggestedNode(result),existing=sectionForNode(content,node),chartable=canChart(result);
   const toggle=(kind:ExhibitKind,on:boolean)=>setExhibits(on?(['chart','table'] as const).filter(k=>k===kind||exhibits.includes(k)):exhibits.filter(k=>k!==kind));
   return <div className={styles.place}>
     <select aria-label={`“${result.title}”写入位置`} disabled={disabled} value={target} onChange={e=>setTarget(e.target.value)}><option value="">{existing?`按蓝图：${existing.title}`:`按蓝图新建：${blueprintNode(node).title}`}</option>{content.report.map(s=><option key={s.id} value={s.id}>{s.title||'未命名章节'}</option>)}</select>

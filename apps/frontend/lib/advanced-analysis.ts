@@ -28,7 +28,9 @@ export type AdvancedSpec =
 export type AdvancedMethod = AdvancedSpec['method'];
 /** `chart` is what the report figure plots, as the result's metrics; `figure` draws it for the preview. */
 export type AdvancedRun = { method: AdvancedMethod; title: string; variables: string[]; n: number; total: number; writing: MethodWriting;
-  chart: { caption: string; metrics: FigureMetric[] } | null; figure: FigurePlan | null };
+  chart: { caption: string; metrics: FigureMetric[] } | null; figure: FigurePlan | null;
+  /** AHP only: the criteria and judgement matrix the experts entered, whose hash identifies the result's source. */
+  judgements?: { criteria: string[]; matrix: number[][] } };
 
 export const ADVANCED_METHODS: readonly { id: AdvancedMethod; title: string; use: string; node: string }[] = [
   { id: 'validity', title: '效度：KMO 与因子分析', use: '判断量表题项是否适合因子分析，并给出旋转后的因子结构。', node: 'data.testing' },
@@ -70,7 +72,8 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
   if (spec.method === 'ahp') {
     const r = ahp(spec.matrix);
     if ('refused' in r) return { refused: refusalText(r.refused) };
-    return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null };
+    return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null,
+      judgements: { criteria: spec.criteria, matrix: spec.matrix } };
   }
   const columns = spec.method === 'validity' ? spec.items : spec.method === 'cluster' ? spec.variables
     : spec.method === 'ipa' ? [...spec.performance, ...(spec.importance ?? []), ...(spec.overall === null ? [] : [spec.overall])] : [spec.outcome, ...spec.predictors];
@@ -147,7 +150,7 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
   const table = run.writing.table;
   // AHP weighs the experts' pairwise judgements, not the survey: its result names that input, never the loaded data.
   const origin = run.method === 'ahp'
-    ? { sourceName: AHP_SOURCE, sourceHash: await digestText(JSON.stringify([run.variables, table.rows])), classification: 'user_provided' as const }
+    ? { sourceName: AHP_SOURCE, sourceHash: await digestText(JSON.stringify(run.judgements ?? [run.variables, table.rows])), classification: 'user_provided' as const }
     : { sourceName: source.name, sourceHash: source.hash, classification: source.simulated ? 'simulated' as const : 'user_provided' as const };
   const result = await snapshotRecipe({
     method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n, invalidRows: 0,

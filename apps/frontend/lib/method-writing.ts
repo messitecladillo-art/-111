@@ -151,7 +151,7 @@ export function clusterWriting(result: Clustering, silhouetteMean: number, varia
     return `第 ${j + 1} 类 ${result.sizes[j]} 人（${percent(result.sizes[j] / result.n)}）${high.length ? `，${names(high)}明显偏高` : ''}${low.length ? `，${names(low)}明显偏低` : ''}${!high.length && !low.length ? '，各变量接近总体平均' : ''}`;
   });
   return {
-    text: '为识别受访者中特征相近的人群，对标准化后的变量进行 K-means 聚类：以 k-means++ 方法选取初始中心，多次随机起点取类内平方和最小的结果，并以轮廓系数比较不同的聚类数：',
+    text: '为识别受访者中特征相近的人群，对标准化后的变量进行 K-means 聚类：以 k-means++ 方法选取初始中心，多次随机起点取类内平方和最小的结果，并以平均轮廓系数评价所选聚类数下的类别结构：',
     formulas: ['\\min\\sum_{j=1}^{k}\\sum_{\\boldsymbol{x}_i\\in C_j}\\lVert\\boldsymbol{x}_i-\\boldsymbol{\\mu}_j\\rVert^{2}', 's(i)=\\frac{b(i)-a(i)}{\\max\\{a(i),\\,b(i)\\}}'],
     where: '式中，$C_j$ 为第 $j$ 类，$\\boldsymbol{\\mu}_j$ 为其中心，$a(i)$ 为个体 $i$ 与同类其他个体的平均距离，$b(i)$ 为其与最近的其他类的平均距离；平均轮廓系数越接近 1，类内越紧密、类间越分离，一般大于 0.5 认为结构合理，小于 0.25 认为聚类结构不明显。',
     table: {

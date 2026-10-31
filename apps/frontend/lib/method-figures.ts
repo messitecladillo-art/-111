@@ -17,10 +17,13 @@ export function niceBounds(low: number, high: number, ticks = 5): { min: number;
   const round = (v: number) => Number(v.toPrecision(12));
   return { min: round(Math.floor(low / step) * step), max: round(Math.ceil(high / step) * step), interval: round(step) };
 }
-/** Bounds of a logarithmic axis on the 1–2–5 sequence, covering both values. */
+/** Bounds of a logarithmic axis on the 1–2–5 sequence, covering both (positive) values whatever their magnitude. */
 export function niceLogBounds(low: number, high: number): { min: number; max: number } {
-  const marks = [-3, -2, -1, 0, 1, 2, 3].flatMap(k => [1, 2, 5].map(m => Number((m * 10 ** k).toPrecision(6))));
-  return { min: [...marks].reverse().find(v => v <= low) ?? marks[0], max: marks.find(v => v >= high) ?? marks.at(-1)! };
+  if (!(low > 0) || !(high >= low)) throw Error('对数轴需要正的取值范围。');
+  const from = Math.floor(Math.log10(low)) - 1, to = Math.ceil(Math.log10(high)) + 1;
+  const marks = Array.from({ length: to - from + 1 }, (_, i) => from + i).flatMap(k => [1, 2, 5].map(m => Number((m * 10 ** k).toPrecision(6))));
+  const min = [...marks].reverse().find(v => v <= low)!, max = marks.find(v => v >= high && v > min)!;
+  return { min, max };
 }
 
 /**
@@ -159,10 +162,16 @@ export function figureMetrics(data: MethodFigureData): FigureMetric[] | null {
 }
 
 const FIGURE_OF: Record<string, MethodFigureData['kind']> = { regression: 'forest', logistic: 'forest', validity: 'scree', ipa: 'quadrant', cluster: 'profile' };
+// Advanced methods whose results are tables of formatted text: they have no figure but their own.
+const ADVANCED = new Set([...Object.keys(FIGURE_OF), 'ahp']);
 
 /** Whether a result carries a method figure: every exporter then draws that figure instead of bars of a column. */
 export const carriesFigure = (r: { method: string; metrics: readonly { label: string }[] }): boolean =>
   !!FIGURE_OF[r.method] && r.metrics.length > 0 && r.metrics.every(m => m.label.includes(SEP));
+
+/** Whether a result can be shown as a figure at all: not a sampling frame, and an advanced method only through its own figure. */
+export const canChart = (r: { method: string; metrics: readonly { label: string }[] }): boolean =>
+  r.method !== 'sampling-frame' && (!ADVANCED.has(r.method) || carriesFigure(r));
 
 /** The figure a method's result carries, or null when the result is of another method or carries none. */
 export function methodFigure(r: { method: string; headers: readonly string[]; metrics: readonly { label: string; value: number | null }[] }, accent: string): FigurePlan | null {

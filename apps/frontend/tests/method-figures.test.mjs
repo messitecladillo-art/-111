@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { planSVG, svgSize } from '../lib/report-figures.ts';
-import { clusterProfilePlot, figureMetrics, forestPlot, ipaPlot, methodFigure, niceBounds, niceLogBounds, screePlot } from '../lib/method-figures.ts';
+import { canChart, clusterProfilePlot, figureMetrics, forestPlot, ipaPlot, methodFigure, niceBounds, niceLogBounds, screePlot } from '../lib/method-figures.ts';
 
 const accent = '#2F6B4F';
 
@@ -29,6 +29,9 @@ test('axes end on round values', () => {
   assert.deepEqual(niceBounds(0, 0), { min: 0, max: 0, interval: 0.2 });
   assert.deepEqual(niceLogBounds(0.7, 3.29), { min: 0.5, max: 5 });
   assert.deepEqual(niceLogBounds(1.12, 1.8), { min: 1, max: 2 });
+  assert.deepEqual(niceLogBounds(0.0004, 12000), { min: 0.0002, max: 20000 }, 'beyond 0.001–5000 the axis still covers the values');
+  assert.deepEqual(niceLogBounds(2, 2), { min: 2, max: 5 }, 'never a zero-width axis');
+  assert.throws(() => niceLogBounds(0, 1));
 });
 
 test('a figure is refused when its numbers are incomplete', () => {
@@ -50,4 +53,12 @@ test('figure data round-trips through result metrics; what does not fit is left 
   assert.equal(figureMetrics({ kind: 'scree', eigenvalues: Array.from({ length: 41 }, (_, i) => 41 - i) }), null, 'more than 40 numbers: no figure');
   assert.equal(methodFigure({ method: 'regression', headers: [], metrics: [{ label: 'R²', value: 0.3 }] }, '#2F6B4F'), null, 'a result without figure metrics draws as before');
   assert.equal(methodFigure({ method: 'frequency', headers: [], metrics }, '#2F6B4F'), null);
+});
+
+test('an advanced result is a figure only through its own figure; a sampling frame never', () => {
+  assert.equal(canChart({ method: 'frequency', metrics: [] }), true);
+  assert.equal(canChart({ method: 'sampling-frame', metrics: [] }), false);
+  assert.equal(canChart({ method: 'ahp', metrics: [] }), false, 'AHP weights are a table');
+  assert.equal(canChart({ method: 'regression', metrics: figureMetrics({ kind: 'scree', eigenvalues: [2, 1] }) }), true);
+  assert.equal(canChart({ method: 'cluster', metrics: [] }), false, 'a result whose figure did not fit');
 });
