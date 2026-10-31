@@ -48,7 +48,9 @@ const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么
 // What the segmenter glues before a negator (我不, 很不, 也没有); a word such as 淹没 is not a negation.
 const LEADERS: ReadonlySet<string> = new Set(['我', '你', '他', '她', '它', '也', '都', '还', '就', '并', '很', '太', '更', '最', '真', '又', '却', '可']);
 const COORDINATORS: ReadonlySet<string> = new Set(['和', '与', '及', '或', '以及', '或者', '跟', '同']);
-const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实', '的', '地', '得', '了']);
+const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实', '的', '地', '得', '了', '一个', '一些', '一点', '一处']);
+// A transparent word glued to a degree word by the segmenter (不/觉得很/方便) passes like the two apart.
+const passes = (word: string) => TRANSPARENT.has(word) || [...TRANSPARENT].some(t => word.startsWith(t) && DEGREE.has(word.slice(t.length)));
 
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
@@ -69,6 +71,7 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
     if (COORDINATORS.has(word)) { inherited = carried; continue; }
     // A function word is not a term, negated or not; a negation carries through a transparent one to the content word
     // it governs (不觉得方便 → 不方便) and is dropped at any other.
+    if (negation && passes(word)) continue;
     if (drop.has(word)) { if (!TRANSPARENT.has(word)) { negation = ''; inherited = ''; } continue; }
     const used = negation || inherited, term = used + word;
     // Only a negation of existence reaches coordinated nouns (没有任何问题和意见); 不满意和方便 negates 满意 alone.
@@ -95,7 +98,7 @@ export function answered(answers: readonly string[]): string[] {
   return answers.map(a => a.normalize('NFKC').trim()).filter(a => {
     const bare = a.replace(/[\s\p{P}\p{S}]/gu, '');
     // "Nothing to report" in its usual forms (没有任何问题, 暂无建议, 未发现问题) says nothing either.
-    return bare !== '' && !/^(无|没有|暂无|不知道|不清楚|没|否|na|none|nil)$/iu.test(bare)
+    return bare !== '' && !/^(?:(?:暂时|目前|暂|还|暂时还|目前还)?(?:无|没有|暂无|没)|不知道|不清楚|否|na|none|nil)$/iu.test(bare)
       && !NOTHING_TO_REPORT.test(bare);
   });
 }
