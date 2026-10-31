@@ -44,11 +44,13 @@ const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
   let negation = '';
+  // At a clause's end a negator with nothing after it is the complaint itself (停车位不够): a word of two or more
+  // characters is counted; a lone 不 negates nothing that is counted.
+  const flush = () => { if ([...negation].length >= 2) out.push(negation); negation = ''; };
   for (const { segment, isWordLike } of segmenter().segment(text.normalize('NFKC'))) {
     const word = segment.trim().toLowerCase();
     if (!word) continue;
-    // Punctuation ends a clause: a negator left before it negates nothing that is counted.
-    if (!isWordLike) { negation = ''; continue; }
+    if (!isWordLike) { flush(); continue; }
     if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; continue; }
     // A function word is not a term, negated or not; its negation carries to the content word it governs (不觉得方便 → 不方便).
     if (drop.has(word)) continue;
@@ -58,6 +60,7 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
     if ([...term].length < 2 || /^[\p{N}.%]+$/u.test(term)) continue;
     out.push(term);
   }
+  flush();
   return out;
 }
 
