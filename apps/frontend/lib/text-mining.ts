@@ -18,7 +18,7 @@ export const FUNCTION_WORDS: ReadonlySet<string> = new Set([
 ]);
 
 export type TermRow = { term: string; count: number; answers: number; share: number };
-export type TextRefusal = { refused: 'no-segmenter' | 'no-answers' | 'too-few-answers' | 'no-terms' };
+export type TextRefusal = { refused: 'no-segmenter' | 'no-answers' | 'too-few-answers' | 'no-terms' | 'too-few-groups' };
 /** Fewer answers than this give mention rates too coarse to report. */
 export const MIN_ANSWERS = 5;
 
@@ -103,12 +103,16 @@ export function termTable(answers: readonly string[], options: { top?: number; d
 export function distinctiveTerms(groups: readonly { name: string; answers: readonly string[] }[], options: { top?: number; drop?: ReadonlySet<string> } = {}): { name: string; n: number; terms: { term: string; tfidf: number; answers: number }[] }[] | TextRefusal {
   if (!segmenterAvailable()) return { refused: 'no-segmenter' };
   const bags = groups.map(g => { const kept = answered(g.answers); return { name: g.name, n: kept.length, docs: kept.map(a => terms(a, options.drop)) }; });
+  // Only groups that say something are compared: an empty group would make every word of the others look distinctive.
+  const compared = bags.filter(bag => bag.docs.some(d => d.length));
+  if (compared.length < 2) return { refused: 'too-few-groups' };
   const df = new Map<string, number>();
-  for (const bag of bags) for (const w of new Set(bag.docs.flat())) df.set(w, (df.get(w) ?? 0) + 1);
+  for (const bag of compared) for (const w of new Set(bag.docs.flat())) df.set(w, (df.get(w) ?? 0) + 1);
   return bags.map(bag => {
+    if (!compared.includes(bag)) return { name: bag.name, n: bag.n, terms: [] };
     const words = bag.docs.flat(), tf = new Map<string, number>();
     for (const w of words) tf.set(w, (tf.get(w) ?? 0) + 1);
-    const scored = [...tf].map(([term, c]) => ({ term, tfidf: (c / words.length) * Math.log(bags.length / df.get(term)!), answers: bag.docs.filter(d => d.includes(term)).length }))
+    const scored = [...tf].map(([term, c]) => ({ term, tfidf: (c / words.length) * Math.log(compared.length / df.get(term)!), answers: bag.docs.filter(d => d.includes(term)).length }))
       .filter(t => t.tfidf > 0)
       .sort((a, b) => b.tfidf - a.tfidf || b.answers - a.answers || (a.term < b.term ? -1 : a.term > b.term ? 1 : 0));
     return { name: bag.name, n: bag.n, terms: scored.slice(0, options.top ?? 10) };
