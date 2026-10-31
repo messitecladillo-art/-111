@@ -99,6 +99,7 @@ export function reverseScored(table: SurveyTable, items: readonly { column: numb
 export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes: readonly string[]): AdvancedRun | { refused: string } {
   if (spec.method === 'ahp') {
     if (spec.criteria.length !== spec.matrix.length) return { refused: '准则数与判断矩阵的阶数不一致。' };
+    if (new Set(spec.criteria).size !== spec.criteria.length) return { refused: '准则名称不能重复。' };
     const r = ahp(spec.matrix);
     if ('refused' in r) return { refused: refusalText(r.refused) };
     return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null,

@@ -160,13 +160,15 @@ test('items the questionnaire scores in reverse are turned before any method rea
 });
 
 test('a result placed again from the catalogue goes to its method section, with its own figure', async () => {
-  const { suggestedNode, suggestedExhibits } = await import('../lib/report-placement.ts');
+  const { suggestedNode, suggestedExhibits, placeResult } = await import('../lib/report-placement.ts');
   const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
   const result = (await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
   assert.equal(suggestedNode(result), 'drivers.model');
   assert.deepEqual(suggestedExhibits(result), ['table', 'chart']);
   const ahp = (await advancedInsert(runAdvanced({ method: 'ahp', criteria: ['a', 'b', 'c'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []), { name: 'x', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
   assert.deepEqual([suggestedNode(ahp), suggestedExhibits(ahp)], ['plan.priority', ['table']]);
+  const placed = applyReportInsert(report(), await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).content;
+  assert.throws(() => placeResult(placed, placed.quality.results[0].id), /高级方法的结果请在/, 'never rewritten from its table alone');
 });
 
 test('a report holding every advanced method still exports to LaTeX: formulas on the allowed list, method figures as captioned notes', async () => {
@@ -217,4 +219,8 @@ test('an AHP matrix of another order than its criteria, or an overflowing odds r
   const x = Array.from({ length: 200 }, (_, i) => ((i * 37) % 100) / 100), y = x.map((v, i) => (v + ((i * 53) % 100) / 100 > 1 ? 1 : 0));
   assert.ok(!('refused' in logisticRegression(y, [{ name: 'x', values: x }])), 'ordinary units fit');
   assert.deepEqual(logisticRegression(y, [{ name: 'x', values: x.map(v => v * 1e-3) }]), { refused: 'extreme-units' }, 'thousandths of the unit overflow e^β');
+});
+
+test('repeated AHP criteria are refused', () => {
+  assert.deepEqual(runAdvanced({ method: 'ahp', criteria: ['器材', '器材', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []), { refused: '准则名称不能重复。' });
 });

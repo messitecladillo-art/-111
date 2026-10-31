@@ -15,6 +15,8 @@ const MAX_BLOCKS = 60;
 
 /** The blueprint section a result belongs in. */
 /** The blueprint section each advanced method writes into (lib/advanced-analysis.ts). */
+/** Why an advanced result is not placed from its table alone: its write-up comes from the calculation. */
+export const ADVANCED_PLACEMENT = '高级方法的结果请在「数据分析 · 高级方法」中写进报告：方法说明、公式与读数来自计算过程，不能只凭结果表重写。';
 export const ADVANCED_NODES: Readonly<Record<string, string>> = { validity: 'data.testing', regression: 'drivers.model', logistic: 'drivers.model', ipa: 'diagnosis.evaluation', cluster: 'segments.cluster', ahp: 'plan.priority' };
 
 export function suggestedNode(r: ResultSnapshot): string {
@@ -93,6 +95,7 @@ const SIMULATED = /【教学模拟数据/u;
 
 export function placeResult(content: EditorContent, resultId: string, options: { sectionId?: string; exhibits?: ExhibitKind[] } = {}): Placement {
   const r = resultFor(content.quality, resultId);
+  if (ADVANCED_NODES[r.method]) throw Error(ADVANCED_PLACEMENT);
   // A sampling frame is only legible as a table of its stages and units.
   if (r.method === 'sampling-frame' && options.exhibits && !options.exhibits.includes('table')) throw Error('抽样框需要以表格呈现，请勾选“表”。');
   const { content: next, sectionId, created } = targetSection(content, suggestedNode(r), options.sectionId);

@@ -3,7 +3,7 @@
 import {useRef,useState,type PointerEvent} from 'react';
 import {EDITOR_LIMITS,type EditorContent,type Slide} from '@/lib/editor-model';
 import {blueprintNode,insertBeforeBackMatter} from '@/lib/report-blueprint';
-import {defaultColumn,METHOD_LABELS,placeResult,sectionForNode,suggestedExhibits,suggestedNode,type ExhibitKind} from '@/lib/report-placement';
+import {ADVANCED_NODES,ADVANCED_PLACEMENT,defaultColumn,METHOD_LABELS,placeResult,sectionForNode,suggestedExhibits,suggestedNode,type ExhibitKind} from '@/lib/report-placement';
 import {chartData,confirmFinding,defaultFinding,findingNeedsReview,findingSignature,findingReportBody,makeSlideObject,QUALITY_LAYOUTS,QUALITY_LIMITS,resultFor,type ResearchFinding,type ResearchQuality,type ResultSnapshot,type SlideObject} from '@/lib/research-quality';
 import {composeQualitySlide,QUALITY_LAYOUT_LABELS,withQuality} from '@/lib/quality-layouts';
 import {getVectorAsset,VECTOR_ASSETS} from '@/lib/vector-assets';
@@ -61,6 +61,7 @@ function PlaceResult({result,content,disabled,onPlace}:{result:ResultSnapshot;co
   const [target,setTarget]=useState(''),[exhibits,setExhibits]=useState<ExhibitKind[]>(()=>suggestedExhibits(result));
   const node=suggestedNode(result),existing=sectionForNode(content,node),chartable=canChart(result);
   const toggle=(kind:ExhibitKind,on:boolean)=>setExhibits(on?(['chart','table'] as const).filter(k=>k===kind||exhibits.includes(k)):exhibits.filter(k=>k!==kind));
+  if(ADVANCED_NODES[result.method])return <p className={styles.place}>{ADVANCED_PLACEMENT}</p>;
   return <div className={styles.place}>
     <select aria-label={`“${result.title}”写入位置`} disabled={disabled} value={target} onChange={e=>setTarget(e.target.value)}><option value="">{existing?`按蓝图：${existing.title}`:`按蓝图新建：${blueprintNode(node).title}`}</option>{content.report.map(s=><option key={s.id} value={s.id}>{s.title||'未命名章节'}</option>)}</select>
     <div>{(['chart','table'] as const).map(kind=><label key={kind} className={styles.check}><input type="checkbox" disabled={disabled||(kind==='chart'&&!chartable)} checked={exhibits.includes(kind)} onChange={e=>toggle(kind,e.target.checked)}/>{kind==='chart'?'图':'表'}</label>)}<button type="button" disabled={disabled} onClick={()=>onPlace(target||undefined,exhibits)}>写入报告</button></div>
