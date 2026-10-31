@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Formula, Tex } from '@/components/math/Tex';
-import { advancedColumns, ADVANCED_METHODS, advancedInsert, runAdvanced, type AdvancedMethod, type AdvancedRun, type AdvancedSpec } from '@/lib/advanced-analysis';
+import { advancedColumns, reverseScored, ADVANCED_METHODS, advancedInsert, runAdvanced, type AdvancedMethod, type AdvancedRun, type AdvancedSpec } from '@/lib/advanced-analysis';
 import { splitInlineMath } from '@/lib/inline-math';
 import { planSVG } from '@/lib/report-figures';
 import type { ReportInsert } from '@/lib/report-insert';
@@ -18,7 +18,7 @@ type Props = {
    * The rows a method may read, as the other analyses get them: with a linked questionnaire, the confirmed eligible
    * rows of current, valid columns, or the problems that stop it. Without one, the table as loaded.
    */
-  prepare?: (columns: number[], scaled: number[]) => { table: SurveyTable; problems: string[]; reversed?: string[] };
+  prepare?: (columns: number[], scaled: number[]) => { table: SurveyTable; problems: string[]; reverse?: { column: number; min: number; max: number; name: string }[] };
 };
 
 /** Text with inline $…$ formulas, as the report preview sets it. */
@@ -59,9 +59,9 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
     const s = spec(), columns = s ? advancedColumns(s) : null;
     // A linked questionnaire decides the rows and checks the columns first; its problems stop the calculation.
     const prepared = s && columns && columns.all.length && prepare ? prepare(columns.all, columns.scaled) : { table, problems: [] };
-    const next = !s ? { refused: '请先完成左侧的设置。' } : prepared.problems.length ? { refused: prepared.problems.join('') } : runAdvanced(s, prepared.table, missingCodes);
-    // Items the questionnaire scores in reverse were turned before the calculation; the table note says which.
-    const reversed = 'reversed' in prepared ? prepared.reversed ?? [] : [];
+    // Items the questionnaire scores in reverse are turned before the calculation; the table note says which.
+    const reverse = 'reverse' in prepared ? prepared.reverse ?? [] : [], reversed = reverse.map(r => r.name);
+    const next = !s ? { refused: '请先完成左侧的设置。' } : prepared.problems.length ? { refused: prepared.problems.join('') } : runAdvanced(s, reverseScored(prepared.table, reverse, missingCodes), missingCodes);
     if (!('refused' in next) && reversed.length) next.writing.table.note = next.writing.table.note.replace(/。$/u, `；${reversed.map(n => `“${literalText(n)}”`).join('、')}已按问卷反向计分。`);
     // The figure is the report's own SVG, already checked to carry no script, reference or raster.
     const svg = 'refused' in next || !next.figure ? null : await planSVG(next.figure).catch(() => null);

@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DatasetValue } from "@/lib/canvas/execute";
 import { Tex } from "@/components/math/Tex";
 import AdvancedMethods from "./AdvancedMethods";
-import { reverseScored } from "@/lib/advanced-analysis";
 import type { ReportInsert } from "@/lib/report-insert";
 import { analyzeReliability, categoryCounts, DEMO_SURVEY_CSV, finiteNumber, parseMissingCodes, parseSurveyCsv, profileSurvey, SURVEY_LIMITS, type Delimiter, type ReliabilityResult, type SurveyTable } from "@/lib/survey-analysis";
 import styles from "./SurveyLab.module.css";
@@ -127,9 +126,9 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     if(!mapping)return {table:dataset.table,problems:[]};
     const rows=prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method:'frequency',columns},routing);
     const kinds=scaled.length?prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method:'spearman',columns:scaled},routing).problems:[];
-    // Items the questionnaire scores in reverse are turned (min + max − value) as the reliability check turns them.
+    // Items the questionnaire scores in reverse, which the method turns (min + max − value) as the reliability check does.
     const reverse=scaled.flatMap(i=>{const a=mapping.assignments.find(x=>x.column===dataset.table.headers[i]);const q=a&&mapping.design.questions.find(x=>x.id===a.questionId);return q?.reverse&&q.min!==null&&q.max!==null?[{column:i,min:q.min,max:q.max,name:q.variable}]:[];});
-    return {table:reverseScored(rows.table,reverse,missing.codes),problems:[...new Set([...rows.problems,...kinds])],reversed:reverse.map(r=>r.name)};
+    return {table:rows.table,problems:[...new Set([...rows.problems,...kinds])],reverse};
   }
   function prepareOverview(index:number,method:'numeric'|'frequency'){
     return dataset?(interpretationPending?{table:{...dataset.table,rows:[]},problems:['先在平台编码中确认缺失值、日期与取值解释。'],eligibility:null}:mapping?prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method,columns:[index]},routing):{table:dataset.table,problems:[],eligibility:null}):null;
