@@ -44,23 +44,32 @@ export const NEGATORS: ReadonlySet<string> = new Set(['不', '没', '没有', '�
 const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么', '那么', '特别', '非常', '是很', '任何', '什么', '明显', '发现', '存在', '其他']);
 // Function words a negation passes through to the word it governs (不觉得方便, 不可以停车). Any other function word,
 // such as the preposition in 没有在这里停车, ends the negation without a guess at what it governed.
+// Coordinators inside one negated phrase: 没有任何问题和意见 negates 意见 as well.
+// What the segmenter glues before a negator (我不, 很不, 也没有); a word such as 淹没 is not a negation.
+const LEADERS: ReadonlySet<string> = new Set(['我', '你', '他', '她', '它', '也', '都', '还', '就', '并', '很', '太', '更', '最', '真', '又', '却', '可']);
+const COORDINATORS: ReadonlySet<string> = new Set(['和', '与', '及', '或', '以及', '或者', '跟', '同']);
 const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实']);
 
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
-  let negation = '';
+  let negation = '', carried = '';
   // At a clause's end a negator with nothing after it is the complaint itself (停车位不够): a word of two or more
   // characters is counted; a lone 不 negates nothing that is counted.
-  const flush = () => { if ([...negation].length >= 2) out.push(negation); negation = ''; };
+  const flush = () => { if ([...negation].length >= 2) out.push(negation); negation = ''; carried = ''; };
   for (const { segment, isWordLike } of segmenter().segment(text.normalize('NFKC'))) {
     const word = segment.trim().toLowerCase();
     if (!word) continue;
     if (!isWordLike) { flush(); continue; }
     if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; continue; }
+    // The segmenter sometimes glues a negator to the word before it (我不/满意, 很不/方便): the negator still counts.
+    const tail = /(没有|不|没)$/u.exec(word), rest = tail ? word.slice(0, -tail[0].length) : '';
+    if (tail && rest && (LEADERS.has(rest) || drop.has(rest) || DEGREE.has(rest))) { negation += tail[0]; continue; }
+    if (COORDINATORS.has(word)) { negation = carried || negation; continue; }
     // A function word is not a term, negated or not; a negation carries through a transparent one to the content word
     // it governs (不觉得方便 → 不方便) and is dropped at any other.
     if (drop.has(word)) { if (!TRANSPARENT.has(word)) negation = ''; continue; }
     const term = negation + word;
+    carried = negation;
     negation = '';
     // A single Han character is almost always a function word or a fragment; numbers belong to the closed questions.
     if ([...term].length < 2 || /^[\p{N}.%]+$/u.test(term)) continue;
@@ -74,7 +83,7 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
 // "Nothing to report" in its usual forms: one or several nouns joined (没有任何问题和意见, 暂无建议或意见), said once
 // or repeated (没有问题，也没有建议), with or without 发现 (没有发现问题). Judged on the answer without punctuation.
 const REPORTABLE = '(?:问题|意见|建议|不满|缺点|要求)';
-const NOTHING_UNIT = `(?:也|并且|而且|同时|另外)?(?:暂时|目前|暂)?(?:没有发现|没发现|没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他)?${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*`;
+const NOTHING_UNIT = `(?:也|并|并且|而且|同时|另外)?(?:暂时|目前|暂)?(?:没有发现|没发现|没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他)?${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*`;
 const NOTHING_TO_REPORT = new RegExp(`^(?:${NOTHING_UNIT})+了?$`, 'u');
 
 export function answered(answers: readonly string[]): string[] {
