@@ -21,7 +21,7 @@ type Props = {
   /** The analysis context `prepare` reads (questionnaire mapping, its confirmation, the skip-logic policy): a result
    * computed under another context is hidden until computed again. */
   context?: string;
-  prepare?: (columns: number[], scaled: number[]) => { table: SurveyTable; problems: string[]; reverse?: { column: number; min: number; max: number; name: string }[] };
+  prepare?: (columns: number[], scaled: number[]) => { table: SurveyTable; problems: string[]; reverse?: { column: number; min: number; max: number; name: string }[]; scope?: string[] };
 };
 
 /** Text with inline $…$ formulas, as the report preview sets it. */
@@ -43,7 +43,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
   const names = criteria.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 15);
   // A result belongs to the settings it was computed from; changing any of them hides it until computed again.
   const settings = JSON.stringify([method, picked, outcome, importanceMode, importance, overall, k, criteria, judgements, missingCodes, sourceHash, table.rows.length, context]);
-  const [computed, setComputed] = useState<{ settings: string; run: AdvancedRun | { refused: string }; figure: string | null; notice: string } | null>(null);
+  const [computed, setComputed] = useState<{ settings: string; run: AdvancedRun | { refused: string }; figure: string | null; notice: string; scope: string[] } | null>(null);
   const current = computed?.settings === settings ? computed : null, run = current?.run ?? null, figure = current?.figure ?? null, notice = current?.notice ?? '';
 
   const toggle = (c: number) => setPicked(list => (list.includes(c) ? list.filter(x => x !== c) : [...list, c]));
@@ -68,7 +68,13 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
     if (!('refused' in next) && reversed.length) next.writing.table.note = next.writing.table.note.replace(/。$/u, `；${reversed.map(n => `“${literalText(n)}”`).join('、')}已按问卷反向计分。`);
     // The figure is the report's own SVG, already checked to carry no script, reference or raster.
     const svg = 'refused' in next || !next.figure ? null : await planSVG(next.figure).catch(() => null);
-    setComputed({ settings, run: next, figure: svg, notice: '' });
+    // The scope the result was computed under travels with it into the report, as the basic analyses' does.
+    const scope = 'refused' in next ? [] : [
+      `原表 ${table.rows.length} 行，共同应答范围 ${prepared.table.rows.length} 行，有效计算 ${next.n} 行${next.invalid ? `（${next.invalid} 行含无效值）` : ''}。`,
+      ...(reversed.length ? [`${reversed.join('、')}已按问卷反向计分。`] : []),
+      ...('scope' in prepared ? prepared.scope ?? [] : [`缺失编码：${missingCodes.join('、') || '空白'}`]),
+    ];
+    setComputed({ settings, run: next, figure: svg, notice: '', scope });
   };
   const setNotice = (text: string) => setComputed(c => (c ? { ...c, notice: text } : c));
   // A write still being prepared when the dataset or a setting changes (the panel remounts per dataset) is dropped,
@@ -80,7 +86,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
     if (!run || 'refused' in run || !onReportInsert) return;
     const captured = settings;
     try {
-      const insert = await advancedInsert(run, { name: sourceName, hash: sourceHash, simulated });
+      const insert = await advancedInsert(run, { name: sourceName, hash: sourceHash, simulated }, current?.scope ?? []);
       if (!live.current.mounted || live.current.settings !== captured) return;
       onReportInsert(insert); setNotice('已交给报告与 PPT，写入对应的蓝图章节；可在编辑器里撤销。');
     }

@@ -123,12 +123,12 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   function prepareAdvanced(columns:number[],scaled:number[]){
     if(!dataset)return {table:{headers:[],rows:[],skippedBlankLines:0,delimiter:',' as const},problems:['请先载入数据。']};
     if(interpretationPending)return {table:{...dataset.table,rows:[]},problems:['先在平台编码中确认缺失值、日期与取值解释。']};
-    if(!mapping)return {table:dataset.table,problems:[]};
+    if(!mapping)return {table:dataset.table,problems:[],scope:[`缺失编码：${missing.codes.join('、')||'空白'}`,...(dataset.quality?[qualityLineageStep(dataset.quality)]:[])]};
     const rows=prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method:'frequency',columns},routing);
     const kinds=scaled.length?prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method:'spearman',columns:scaled},routing).problems:[];
     // Items the questionnaire scores in reverse, which the method turns (min + max − value) as the reliability check does.
     const reverse=scaled.flatMap(i=>{const a=mapping.assignments.find(x=>x.column===dataset.table.headers[i]);const q=a&&mapping.design.questions.find(x=>x.id===a.questionId);return q?.reverse&&q.min!==null&&q.max!==null?[{column:i,min:q.min,max:q.max,name:q.variable}]:[];});
-    return {table:rows.table,problems:[...new Set([...rows.problems,...kinds])],reverse};
+    return {table:rows.table,problems:[...new Set([...rows.problems,...kinds])],reverse,scope:[`缺失编码：${missing.codes.join('、')||'空白'}`,'按已确认的问卷对应与跳题策略取数。',...(dataset.quality?[qualityLineageStep(dataset.quality)]:[])]};
   }
   function prepareOverview(index:number,method:'numeric'|'frequency'){
     return dataset?(interpretationPending?{table:{...dataset.table,rows:[]},problems:['先在平台编码中确认缺失值、日期与取值解释。'],eligibility:null}:mapping?prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method,columns:[index]},routing):{table:dataset.table,problems:[],eligibility:null}):null;

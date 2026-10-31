@@ -224,3 +224,17 @@ test('an AHP matrix of another order than its criteria, or an overflowing odds r
 test('repeated AHP criteria are refused', () => {
   assert.deepEqual(runAdvanced({ method: 'ahp', criteria: ['器材', '器材', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []), { refused: '准则名称不能重复。' });
 });
+
+test('the scope a result was computed under is registered with it', async () => {
+  const scope = ['原表 160 行，共同应答范围 150 行，有效计算 148 行。', '缺失编码：99', '按已确认的问卷对应与跳题策略取数。'];
+  const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
+  const result = (await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true }, scope)).items.find(i => i.kind === 'table').result;
+  assert.deepEqual(result.warnings, scope);
+});
+
+test('tables beyond what the exports take are refused at computation', () => {
+  const wide = { headers: Array.from({ length: 30 }, (_, i) => `x${i}`), rows: table.rows.map(r => Array.from({ length: 30 }, (_, i) => r[i % 6])), skippedBlankLines: 0, delimiter: ',' };
+  assert.match(runAdvanced({ method: 'regression', outcome: 29, predictors: Array.from({ length: 14 }, (_, i) => i) }, wide, []).refused, /至多 13 个/);
+  assert.match(runAdvanced({ method: 'ipa', performance: Array.from({ length: 15 }, (_, i) => i), importance: null, overall: 29 }, wide, []).refused, /至多 14 个/);
+  assert.match(runAdvanced({ method: 'validity', items: Array.from({ length: 25 }, (_, i) => i) }, wide, []).refused, /至多 24 个/);
+});

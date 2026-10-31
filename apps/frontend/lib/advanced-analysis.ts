@@ -106,6 +106,9 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       judgements: { criteria: spec.criteria, matrix: spec.matrix } };
   }
   const columns = advancedColumns(spec).all;
+  if ((spec.method === 'regression' || spec.method === 'logistic') && spec.predictors.length > MAX_PREDICTORS) return { refused: `自变量至多 ${MAX_PREDICTORS} 个，结果表才能放进报告与 PPT；请先按研究问题筛选。` };
+  if (spec.method === 'ipa' && spec.performance.length > MAX_ATTRIBUTES) return { refused: `属性至多 ${MAX_ATTRIBUTES} 个，结果表才能放进报告与 PPT。` };
+  if (spec.method === 'validity' && spec.items.length > MAX_ITEMS) return { refused: `题项至多 ${MAX_ITEMS} 个，载荷表才能放进报告；请按维度分组后分别检验。` };
   // Nothing chosen yet: say so instead of computing on no columns.
   const least = spec.method === 'validity' ? 3 : spec.method === 'cluster' || spec.method === 'ipa' ? 2 : spec.method === 'regression' || spec.method === 'logistic' ? 2 : 1;
   if (columns.length < least) return { refused: spec.method === 'validity' ? refusalText('too-few-items') : spec.method === 'cluster' ? '至少选择 2 个聚类变量。' : spec.method === 'ipa' ? '至少选择 2 个属性。' : '请选择因变量和至少一个自变量。' };
@@ -159,6 +162,8 @@ export const AHP_SOURCE = '本研究专家两两比较判断矩阵';
 // The widest result table the Word export takes is 10 columns: a cluster table has 3 more than its variables, a
 // factor table 2 more than its factors.
 export const MAX_CLUSTER_VARIABLES = 7, MAX_FACTORS = 8;
+// Rows: a PPT table takes 15 with its header, a LaTeX table 25. A regression table adds the intercept to its predictors.
+export const MAX_PREDICTORS = 13, MAX_ATTRIBUTES = 14, MAX_ITEMS = 24;
 
 /** The run with its figure, drawn from the same metrics the report's figure will be drawn from. */
 function withFigure(run: Omit<AdvancedRun, 'chart' | 'figure'>, caption: string, data: MethodFigureData): AdvancedRun {
@@ -178,7 +183,7 @@ function silhouetteSample<T>(rows: readonly T[], assignments: readonly number[])
  * The insert that writes a run into its blueprint section: method paragraph, formulas, 式中 paragraph, the table
  * (registered as a result of this method, without a computation receipt) and the reading that cites it.
  */
-export async function advancedInsert(run: AdvancedRun, source: { name: string; hash: string; simulated: boolean }): Promise<ReportInsert> {
+export async function advancedInsert(run: AdvancedRun, source: { name: string; hash: string; simulated: boolean }, scope: readonly string[] = []): Promise<ReportInsert> {
   const table = run.writing.table;
   // AHP weighs the experts' pairwise judgements, not the survey: its result names that input, never the loaded data.
   const origin = run.method === 'ahp'
@@ -186,7 +191,7 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
     : { sourceName: source.name, sourceHash: source.hash, classification: source.simulated ? 'simulated' as const : 'user_provided' as const };
   const result = await snapshotRecipe({
     method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n - (run.invalid ?? 0), invalidRows: run.invalid ?? 0,
-    metrics: run.chart?.metrics ?? [], headers: table.headers, rows: table.rows, warnings: [], interpretation: '',
+    metrics: run.chart?.metrics ?? [], headers: table.headers, rows: table.rows, warnings: run.method === 'ahp' ? [] : scope.slice(0, 30).map(line => line.slice(0, 1000)), interpretation: '',
   }, { title: table.caption, sourceUrl: '', ...origin, variables: run.variables.slice(0, 4) });
   const node = ADVANCED_METHODS.find(m => m.id === run.method)!.node, at = run.writing.formulas.length + 2;
   const cites = run.chart ? `[[表:@${at}]]和[[图:@${at + 2}]]` : `[[表:@${at}]]`;
