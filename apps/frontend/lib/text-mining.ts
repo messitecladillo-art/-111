@@ -34,21 +34,39 @@ const segmenter = () => {
 };
 
 /** The content words of one answer, in order: word-like segments, function words, numbers and single letters dropped. */
+/**
+ * Negators the segmenter returns as words of their own (不/满意, 没有/照明, 不太/方便). They are joined to the word they
+ * negate, with any degree word between (不是/很/方便), so 不满意 is never counted as 满意.
+ */
+export const NEGATORS: ReadonlySet<string> = new Set(['不', '没', '没有', '未', '无', '非', '别', '不太', '不够', '不要', '不能', '不会', '不是', '不大', '不怎么', '没什么', '并不', '从不', '从没']);
+const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么', '那么', '特别', '非常', '是很']);
+
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
+  let negation = '';
   for (const { segment, isWordLike } of segmenter().segment(text.normalize('NFKC'))) {
     const word = segment.trim().toLowerCase();
+    if (!word) continue;
+    // Punctuation ends a clause: a negator left before it negates nothing that is counted.
+    if (!isWordLike) { negation = ''; continue; }
+    if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; continue; }
+    const term = negation + word;
+    negation = '';
     // A single Han character is almost always a function word or a fragment; numbers belong to the closed questions.
-    if (!isWordLike || [...word].length < 2 || /^[\p{N}.%]+$/u.test(word) || drop.has(word)) continue;
-    out.push(word);
+    if ([...term].length < 2 || /^[\p{N}.%]+$/u.test(term) || drop.has(term)) continue;
+    out.push(term);
   }
   return out;
 }
 
 /** The answers that say something: blank and non-answers (无, 没有, 不知道) do not count towards the mention rates. */
 export function answered(answers: readonly string[]): string[] {
-  // Full-width forms (Ｎ／Ａ, －) are normalised first, as the segmentation does.
-  return answers.map(a => a.normalize('NFKC').trim()).filter(a => a && !/^(无|没有|暂无|不知道|不清楚|没|否|\/|-|—+|n\/?a|none)[。.！!]*$/iu.test(a));
+  // Judged without spaces and punctuation, after full-width forms are normalised: Ｎ／Ａ, N.A., N / A, ... and ??? are
+  // not answers either.
+  return answers.map(a => a.normalize('NFKC').trim()).filter(a => {
+    const bare = a.replace(/[\s\p{P}\p{S}]/gu, '');
+    return bare !== '' && !/^(无|没有|暂无|不知道|不清楚|没|否|na|none|nil)$/iu.test(bare);
+  });
 }
 
 /**
