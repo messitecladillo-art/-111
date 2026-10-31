@@ -20,7 +20,7 @@ SCOPE = "agent-draft/v1"
 REQUEST_FIELDS = ("schemaVersion", "idempotencyKey", "section", "project", "facts", "findings", "existing", "serviceId", "serviceRevision", "consent")
 # The abstract and the conclusions summarise the report: they also carry an outline of the other sections.
 OPTIONAL_FIELDS = ("outline",)
-MAX_OUTLINE = 30
+MAX_OUTLINE = 60  # lib/agent/draft.ts MAX_OUTLINE: the full blueprint has 53 sections
 SECTION_FIELDS = ("node", "title", "purpose", "moves", "needs", "length")
 MAX_FACTS = 80
 MAX_FINDINGS = 20

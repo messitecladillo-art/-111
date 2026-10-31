@@ -127,6 +127,14 @@ test('a full report shares one excerpt budget, so drafting the abstract stays wi
   assert.ok(bytes < 30000, `request ${bytes} bytes leaves room under the 40000-byte prompt limit`);
 });
 
+test('past the cap, the outline keeps the opening sections and the last ones, where findings and suggestions are', async () => {
+  const { reportOutline, MAX_OUTLINE } = await import('../lib/agent/draft.ts');
+  const sections = Array.from({ length: 70 }, (_, i) => ({ id: `s${i}`, title: `第${i + 1}节`, body: `第${i + 1}节的正文。`, source: '', blocks: [] }));
+  const outline = reportOutline({ ...createEditorContent(), report: sections }, 'abstract');
+  assert.equal(outline.length, MAX_OUTLINE);
+  assert.deepEqual([outline[0].title, outline[19].title, outline[20].title, outline.at(-1).title], ['第1节', '第20节', '第31节', '第70节']);
+});
+
 test('a section still holding the starting template says nothing yet, so it is not in the outline', async () => {
   const { reportOutline } = await import('../lib/agent/draft.ts');
   const template = createEditorContent();

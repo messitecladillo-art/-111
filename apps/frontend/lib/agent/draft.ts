@@ -90,6 +90,10 @@ export const SYNTHESIS_NODES: ReadonlySet<string> = new Set(['abstract', 'conclu
 
 // What all excerpts together may hold: a full report's outline must leave room in the prompt for the facts and findings.
 const OUTLINE_CHARS = 6000, EXCERPT_CHARS = 400, EXCERPT_FLOOR = 80;
+// The full blueprint has 53 sections. Past this many, the outline keeps the report's opening sections and its last
+// ones, where the analyses, findings and suggestions a summary must cover are written.
+export const MAX_OUTLINE = 60;
+const OUTLINE_HEAD = 20;
 
 /**
  * The report as the summarising sections read it: every other written section, its title and the start of its text.
@@ -103,9 +107,10 @@ export function reportOutline(content: EditorContent, nodeId: string): { title: 
     const body = TEMPLATE.has(s.body.trim()) ? '' : s.body;
     const text = [...writtenLines(body), ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').flatMap(b => writtenLines(b.text))].join(' ').replace(/\s+/gu, ' ').trim();
     return text ? [{ title: clip(tidy(s.title), 80), text }] : [];
-  }).slice(0, 30);
-  const limit = Math.max(EXCERPT_FLOOR, Math.min(EXCERPT_CHARS, Math.floor(OUTLINE_CHARS / Math.max(1, written.length))));
-  return written.map(({ title, text }) => ({ title, excerpt: clip(text, limit) }));
+  });
+  const kept = written.length > MAX_OUTLINE ? [...written.slice(0, OUTLINE_HEAD), ...written.slice(written.length - (MAX_OUTLINE - OUTLINE_HEAD))] : written;
+  const limit = Math.max(EXCERPT_FLOOR, Math.min(EXCERPT_CHARS, Math.floor(OUTLINE_CHARS / Math.max(1, kept.length))));
+  return kept.map(({ title, text }) => ({ title, excerpt: clip(text, limit) }));
 }
 
 /** What the section already says, so the draft adds to it rather than repeating it. */

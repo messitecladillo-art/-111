@@ -101,6 +101,6 @@ def test_a_summarising_section_carries_an_outline_and_is_told_to_add_nothing_new
     assert json.loads(prompt.split("资料JSON：", 1)[1])["outline"] == outline
     plain = request()
     assert "outline" not in draft.draft_prompt(plain) and draft.input_fingerprint(data) != draft.input_fingerprint({**data, "outline": outline[:1]})
-    for bad in ([{"title": "x"}], [{"title": "", "excerpt": "x"}], [{"title": "x", "excerpt": "长" * 401}], [{"title": "x", "excerpt": ""}] * 31, "x"):
+    for bad in ([{"title": "x"}], [{"title": "", "excerpt": "x"}], [{"title": "x", "excerpt": "长" * 401}], [{"title": "x", "excerpt": ""}] * 61, "x"):
         with pytest.raises(ApiError):
             draft.request_input(request(outline=bad))
