@@ -31,7 +31,7 @@ export default function HostedFrame({ title, subtitle, children, variant = 'app'
     <main id="hosted-content" className="hosted-main hosted-auth-main" tabIndex={-1}><h1 className="hosted-sr-only">{title}</h1>{children}</main>
     <WorkbenchFooter/>
   </div></ThemeProvider>;
-  const active: Section = pathname.startsWith('/services') ? 'services' : 'workspace';
+  const active: Section = pathname.startsWith('/services') || pathname.startsWith('/invites') ? 'services' : 'workspace';
   return <ThemeProvider value={theme}><div className="workbench hosted-app" data-theme={theme} data-section={active} data-page={pathname === '/knowledge' ? 'knowledge' : undefined} data-density={density}>
     <a className="hosted-skip" href="#hosted-content">跳到主要内容</a>
     <WorkbenchSidebar active={pathname === '/knowledge' ? 'knowledge' : active} inWorkspace={false} open={open} setOpen={setOpen} menuRef={menuRef} onSearch={openSearch}/>

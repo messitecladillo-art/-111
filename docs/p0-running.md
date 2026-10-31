@@ -56,6 +56,7 @@ apps/backend/.venv/Scripts/python.exe scripts/setup-local-postgres.py
 - 主账户：`owner@example.test`
 - 队友：`teammate@example.test`
 - 点击发送验证码后，在 `.local/mailbox` 对应 JSON 文件中读取本地验证码。
+- 邀请码注册：用主账户在 `/invites` 生成邀请码，再用任意 `@example.test` 新邮箱在登录页填写邀请码注册（见 `docs/invite-codes.md`）。
 - 模型配置可填模型 ID `synthetic-model`、测试 Key `synthetic-test-key-do-not-use`，选择 OpenAI 地址。
 - 保存配置后，在项目内填写研究需求、确认发送内容、生成拟议问卷，再确认应用。
 - 编辑并保存后刷新；历史载入先进入编辑区，再保存为新版本。旧版本不会被覆盖。
