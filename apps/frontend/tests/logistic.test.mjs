@@ -68,4 +68,8 @@ test('a predictor in small units is not mistaken for separation', () => {
   near(fit.coefficients[1].estimate, REF.beta[1] * 10, 1e-8, 'rescaled slope');
   // In thousandths the coefficient is about 900: e^β overflows, and the refusal names the units, not separation.
   assert.deepEqual(logisticRegression(y, [{ name: 'x1', values: x1.map(v => v / 1000) }, ...predictors.slice(1)]), { refused: 'extreme-units' });
+  // Far from zero, a predictor makes the intercept huge; its e^β has no reading and does not refuse the model.
+  const offset = logisticRegression(y, [{ name: 'x1', values: x1.map(v => v + 1e4) }, ...predictors.slice(1)]);
+  assert.ok(!('refused' in offset), 'fitted');
+  near(offset.coefficients[1].estimate, REF.beta[1], 1e-6, 'slope unchanged by the offset');
 });

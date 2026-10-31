@@ -27,7 +27,7 @@ export type Multinomial = {
   mcFaddenR2: number;
   iterations: number;
 };
-export type MultinomialRefusal = { refused: 'no-predictors' | 'two-classes' | 'too-many-categories' | 'too-few-cases' | 'collinear' | 'separation' };
+export type MultinomialRefusal = { refused: 'no-predictors' | 'two-classes' | 'too-many-categories' | 'too-few-cases' | 'collinear' | 'separation' | 'no-convergence' | 'extreme-units' };
 
 /**
  * The multinomial logit of a categorical outcome (numeric codes) on the named predictors, with an intercept per
@@ -61,7 +61,7 @@ export function multinomialRegression(y: readonly number[], predictors: readonly
     const j = Math.floor(r / cols), a = r % cols, l = Math.floor(c / cols), b = c % cols;
     return x.reduce((s, row, i) => s + row[a] * row[b] * p[i][j + 1] * ((j === l ? 1 : 0) - p[i][l + 1]), 0);
   }));
-  let p = probabilities(), iterations = 0;
+  let p = probabilities(), iterations = 0, converged = false;
   for (; iterations < 100; iterations++) {
     if (iterations > 25 && p.some(row => row.some(v => v < 1e-12))) return { refused: 'separation' };
     const cov = invert(information(p));
@@ -71,8 +71,10 @@ export function multinomialRegression(y: readonly number[], predictors: readonly
     beta = beta.map((b, j) => b.map((v, a) => v + step[j * cols + a]));
     if (beta.some(b => b.some((v, a) => !Number.isFinite(v) || (a > 0 && Math.abs(v) > 30)))) return { refused: 'separation' };
     p = probabilities();
-    if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; break; }
+    if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; converged = true; break; }
   }
+  // A fit still moving after 100 Newton steps is not an estimate: refused, never written.
+  if (!converged) return { refused: 'no-convergence' };
   // The covariance at the estimate.
   const cov = invert(information(p));
   if (!cov) return { refused: 'collinear' };
@@ -87,6 +89,9 @@ export function multinomialRegression(y: readonly number[], predictors: readonly
       rrr: Math.exp(estimate), rrrCi: [Math.exp(estimate - Z975 * se), Math.exp(estimate + Z975 * se)] };
   }) }));
   const chi2 = 2 * (ll - ll0), df = (J - 1) * k;
+  // A coefficient per raw unit so large that e^β overflows (a predictor in tiny units) has no reportable RRR.
+  // The intercept's e^β has no reading and may overflow when a predictor sits far from zero; only slopes are checked.
+  if (equations.some(e => e.coefficients.some((c, a) => a > 0 && ![c.rrr, ...c.rrrCi].every(Number.isFinite)))) return { refused: 'extreme-units' };
   return { n, predictors: k, categories: codes.map((code, j) => ({ code, count: counts[j] })), reference: codes[0], equations,
     logLikelihood: ll, nullLogLikelihood: ll0, lr: { chi2, df, p: chiSquareUpper(chi2, df) }, mcFaddenR2: 1 - ll / ll0, iterations };
 }
