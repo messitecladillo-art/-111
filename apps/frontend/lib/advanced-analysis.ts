@@ -103,6 +103,9 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       judgements: { criteria: spec.criteria, matrix: spec.matrix } };
   }
   const columns = advancedColumns(spec).all;
+  // Nothing chosen yet: say so instead of computing on no columns.
+  const least = spec.method === 'validity' ? 3 : spec.method === 'cluster' || spec.method === 'ipa' ? 2 : spec.method === 'regression' || spec.method === 'logistic' ? 2 : 1;
+  if (columns.length < least) return { refused: spec.method === 'validity' ? refusalText('too-few-items') : spec.method === 'cluster' ? '至少选择 2 个聚类变量。' : spec.method === 'ipa' ? '至少选择 2 个属性。' : '请选择因变量和至少一个自变量。' };
   if (new Set(columns).size !== columns.length) return { refused: '同一列不能同时担任两个角色。' };
   const data = completeCases(table, columns, missingCodes), names = columns.map(c => label(table, c));
   if (!data.n) return { refused: refusalText('no-cases') };

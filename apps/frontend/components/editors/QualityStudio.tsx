@@ -38,6 +38,7 @@ export function QualityGraphic({object,quality,figures,visualStyle,surface='slid
   try{result=resultFor(quality,object.evidenceId);}catch(e){error=(e as Error).message;}
   // An advanced method's result carries its own figure: the canvas draws it as the PPT export will.
   if(result&&object.kind==='chart'&&carriesFigure(result))return <Figure result={result} column={object.valueColumn} accent={/^#[0-9a-fA-F]{6}$/.test(object.color)?object.color:'#2F6B4F'} visualStyle={visualStyle}/>;
+  if(result&&object.kind==='chart'&&!canChart(result))return <p className={styles.error}>{`“${result.title}”没有可画的图，请改用表格。`}</p>;
   try{if(result&&object.kind!=='table')data=chartData(result,object.valueColumn);}catch(e){error=(e as Error).message;}
   if(!result||error)return <p className={styles.error}>{error}</p>;
     if(object.kind==='table')return <div className={styles.tableScroll}><table className={styles.threeLine} style={{fontSize:surface==='report'?'inherit':`${object.fontSize/9.6}cqw`,color:object.color}}><thead><tr>{result.headers.map((header,i)=><th key={i}>{header}</th>)}</tr></thead><tbody>{result.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j}>{number(cell)}</td>)}</tr>)}</tbody></table></div>;

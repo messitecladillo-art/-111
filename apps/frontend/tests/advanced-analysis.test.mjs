@@ -203,3 +203,10 @@ test('an AHP result is never drawn as bars of its table', async () => {
   const result = (await advancedInsert(run, { name: 'x', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
   assert.throws(() => figurePlan(result, 1, '#2F6B4F'), /没有可画的图/);
 });
+
+test('calculating before choosing columns is refused in plain words, never a crash', () => {
+  assert.deepEqual(runAdvanced({ method: 'cluster', variables: [], k: 3 }, table, []), { refused: '至少选择 2 个聚类变量。' });
+  assert.deepEqual(runAdvanced({ method: 'validity', items: [0] }, table, []), { refused: '至少需要 3 个题项。' });
+  assert.deepEqual(runAdvanced({ method: 'ipa', performance: [], importance: null, overall: 6 }, table, []), { refused: '至少选择 2 个属性。' });
+  assert.deepEqual(runAdvanced({ method: 'regression', outcome: 6, predictors: [] }, table, []), { refused: '请选择因变量和至少一个自变量。' });
+});
