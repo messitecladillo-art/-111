@@ -78,7 +78,7 @@ def test_codes_are_issued_only_by_listed_administrators_and_revocation_stops_reg
     assert client.get("/api/teams").status_code == 200, "accounts it already admitted keep their access"
     other, _ = login("b@example.test")
     assert other.post(f"/api/invites/{invite['id']}/revoke").status_code == 404, "an administrator revokes only their own codes"
-    for bad in ({"label": "x", "maxUses": 0, "days": 7}, {"label": "x", "maxUses": 51, "days": 7}, {"label": "x", "maxUses": 1, "days": 31}, {"label": "a\x07b", "maxUses": 1, "days": 1}):
+    for bad in ({"label": "x", "maxUses": 0, "days": 7}, {"label": "x", "maxUses": 51, "days": 7}, {"label": "x", "maxUses": 1, "days": 31}, {"label": "   ", "maxUses": 1, "days": 1}, {"label": "a\x07b", "maxUses": 1, "days": 1}):
         assert admin.post("/api/invites", json=bad).status_code == 422
 
 

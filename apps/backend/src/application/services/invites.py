@@ -10,7 +10,7 @@ from datetime import timedelta
 import re
 import secrets
 import unicodedata
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text as sql_text
 from shared.errors import ApiError
 from shared.contracts import integer, text
 from infrastructure.database.models import InviteCode, RateEvent, now, new_id
@@ -77,10 +77,12 @@ class InviteService:
     def create(self, *, user, session, data):
         self._issuer(user)
         label = text(data["label"], 40).strip()
-        if CONTROL.search(label):
+        if not label or CONTROL.search(label):
             raise ApiError()
         max_uses, days = integer(data["maxUses"], 1, MAX_USES), integer(data["days"], 1, MAX_DAYS)
         scope = keyed(self.settings, "invite-create/v1", user.id)
+        # One issuer's requests in turn: the limits below are checked and recorded under this lock.
+        session.execute(sql_text("SELECT pg_advisory_xact_lock(:key)"), {"key": int(scope[:15], 16)})
         if session.scalar(select(func.count()).select_from(RateEvent).where(RateEvent.scope == scope, RateEvent.created_at > now() - timedelta(hours=1))) >= 30:
             raise ApiError(429, "invite_rate_limit", "邀请码发放过于频繁，请稍后再试。")
         active = session.scalar(select(func.count()).select_from(InviteCode).where(InviteCode.created_by == user.id, InviteCode.revoked_at.is_(None),
