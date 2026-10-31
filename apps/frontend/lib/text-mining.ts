@@ -48,7 +48,7 @@ const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么
 // What the segmenter glues before a negator (我不, 很不, 也没有); a word such as 淹没 is not a negation.
 const LEADERS: ReadonlySet<string> = new Set(['我', '你', '他', '她', '它', '也', '都', '还', '就', '并', '很', '太', '更', '最', '真', '又', '却', '可']);
 const COORDINATORS: ReadonlySet<string> = new Set(['和', '与', '及', '或', '以及', '或者', '跟', '同']);
-const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实']);
+const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实', '的', '地', '得', '了']);
 
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
@@ -86,7 +86,7 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
 // "Nothing to report" in its usual forms: one or several nouns joined (没有任何问题和意见, 暂无建议或意见), said once
 // or repeated (没有问题，也没有建议), with or without 发现 (没有发现问题). Judged on the answer without punctuation.
 const REPORTABLE = '(?:问题|意见|建议|不满|缺点|要求)';
-const NOTHING_UNIT = `(?:也|并|并且|而且|同时|另外)?(?:暂时|目前|暂)?(?:没有发现|没发现|没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他)?${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*`;
+const NOTHING_UNIT = `(?:也|并|并且|而且|同时|另外)?(?:暂时|目前|暂)?(?:没有发现|没发现|没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他|别的)*${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*`;
 const NOTHING_TO_REPORT = new RegExp(`^(?:${NOTHING_UNIT})+了?$`, 'u');
 
 export function answered(answers: readonly string[]): string[] {
