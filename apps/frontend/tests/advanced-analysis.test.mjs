@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { seededRandom } from '../lib/sampling-core.ts';
-import { advancedInsert, completeCases, runAdvanced } from '../lib/advanced-analysis.ts';
+import { advancedColumns, advancedInsert, completeCases, runAdvanced } from '../lib/advanced-analysis.ts';
 import { applyReportInsert } from '../lib/report-insert.ts';
 import { createEditorContent, parseEditorContent } from '../lib/editor-model.ts';
 import { blueprintSections, matchBlueprintNode } from '../lib/report-blueprint.ts';
@@ -129,4 +129,17 @@ test('the PPT draws an advanced method figure as the report does, not bars of a 
   const zip = await JSZip.loadAsync(await (await buildPptx(content, renderSvg)).arrayBuffer());
   assert.ok(Object.keys(zip.files).some(name => /^ppt\/media\/.+\.svg$/u.test(name)), 'the method figure, as vector SVG');
   assert.ok(!Object.keys(zip.files).some(name => /^ppt\/charts\/chart\d*\.xml$/u.test(name)), 'no native bar chart of the table');
+});
+
+test('stated IPA reads each importance rating from the column chosen for it', () => {
+  const t = { headers: ['表现1', '表现2', '重要1', '重要2'], rows: Array.from({ length: 40 }, (_, i) => [String(2 + (i % 4)), String(3 + (i % 3)), String(4 + (i % 2)), String(1 + (i % 3))]), skippedBlankLines: 0, delimiter: ',' };
+  const run = runAdvanced({ method: 'ipa', performance: [0, 1], importance: [2, 3], overall: null }, t, []);
+  assert.ok(!('refused' in run));
+  assert.deepEqual(run.writing.table.rows.map(r => r.slice(0, 3)), [['表现1', '4.500', '3.500'], ['表现2', '1.975', '3.975']], 'importance means of columns 3 and 4');
+});
+
+test('a method names the columns a linked questionnaire must check, the 0/1 outcome apart from the quantities', () => {
+  assert.deepEqual(advancedColumns({ method: 'logistic', outcome: 7, predictors: [0, 3] }), { all: [7, 0, 3], scaled: [0, 3] });
+  assert.deepEqual(advancedColumns({ method: 'ipa', performance: [0, 1], importance: null, overall: 6 }), { all: [0, 1, 6], scaled: [0, 1, 6] });
+  assert.deepEqual(advancedColumns({ method: 'ahp', criteria: ['a', 'b'], matrix: [[1, 2], [0.5, 1]] }), { all: [], scaled: [] }, 'AHP reads no survey column');
 });

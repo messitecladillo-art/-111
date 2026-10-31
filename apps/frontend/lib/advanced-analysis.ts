@@ -67,6 +67,16 @@ export function completeCases(table: SurveyTable, columns: readonly number[], mi
 
 const label = (table: SurveyTable, c: number) => table.columnLabels?.[table.headers[c]] ?? table.headers[c] ?? `第 ${c + 1} 列`;
 
+/**
+ * The columns a method reads: `all` of them, and the `scaled` ones it treats as quantities (every one but a logistic
+ * outcome, which is a 0/1 choice). With a linked questionnaire the scaled ones must be numeric or rating questions.
+ */
+export function advancedColumns(spec: AdvancedSpec): { all: number[]; scaled: number[] } {
+  const all = spec.method === 'ahp' ? [] : spec.method === 'validity' ? spec.items : spec.method === 'cluster' ? spec.variables
+    : spec.method === 'ipa' ? [...spec.performance, ...(spec.importance ?? []), ...(spec.overall === null ? [] : [spec.overall])] : [spec.outcome, ...spec.predictors];
+  return { all, scaled: spec.method === 'logistic' ? all.slice(1) : all };
+}
+
 /** One method on the table, written up for the report; a refusal says why in the user's words. */
 export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes: readonly string[]): AdvancedRun | { refused: string } {
   if (spec.method === 'ahp') {
@@ -75,8 +85,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
     return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null,
       judgements: { criteria: spec.criteria, matrix: spec.matrix } };
   }
-  const columns = spec.method === 'validity' ? spec.items : spec.method === 'cluster' ? spec.variables
-    : spec.method === 'ipa' ? [...spec.performance, ...(spec.importance ?? []), ...(spec.overall === null ? [] : [spec.overall])] : [spec.outcome, ...spec.predictors];
+  const columns = advancedColumns(spec).all;
   if (new Set(columns).size !== columns.length) return { refused: '同一列不能同时担任两个角色。' };
   const data = completeCases(table, columns, missingCodes), names = columns.map(c => label(table, c));
   if (!data.n) return { refused: refusalText('no-cases') };

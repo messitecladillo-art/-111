@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Formula, Tex } from '@/components/math/Tex';
-import { ADVANCED_METHODS, advancedInsert, runAdvanced, type AdvancedMethod, type AdvancedRun, type AdvancedSpec } from '@/lib/advanced-analysis';
+import { advancedColumns, ADVANCED_METHODS, advancedInsert, runAdvanced, type AdvancedMethod, type AdvancedRun, type AdvancedSpec } from '@/lib/advanced-analysis';
 import { splitInlineMath } from '@/lib/inline-math';
 import { planSVG } from '@/lib/report-figures';
 import type { ReportInsert } from '@/lib/report-insert';
@@ -13,6 +13,11 @@ type Props = {
   table: SurveyTable; profile: SurveyProfile; missingCodes: string[]; simulated: boolean; sourceName: string; sourceHash: string;
   /** Hands the write-up to the report, which applies it as one undoable step in the method's blueprint section. */
   onReportInsert?: (insert: ReportInsert) => void;
+  /**
+   * The rows a method may read, as the other analyses get them: with a linked questionnaire, the confirmed eligible
+   * rows of current, valid columns, or the problems that stop it. Without one, the table as loaded.
+   */
+  prepare?: (columns: number[], scaled: number[]) => { table: SurveyTable; problems: string[] };
 };
 
 /** Text with inline $…$ formulas, as the report preview sets it. */
@@ -24,7 +29,7 @@ function Prose({ text }: { text: string }) {
  * The advanced methods on the loaded table: choose a method and its variables, compute on complete cases, read the
  * write-up as the report will print it (method, formulas, table, figure, reading), then write it into the report.
  */
-export default function AdvancedMethods({ table, profile, missingCodes, simulated, sourceName, sourceHash, onReportInsert }: Props) {
+export default function AdvancedMethods({ table, profile, missingCodes, simulated, sourceName, sourceHash, onReportInsert, prepare }: Props) {
   const numeric = useMemo(() => profile.columns.filter(c => c.numeric > 0 && !c.likelyIdentifier), [profile]);
   const name = (index: number) => table.columnLabels?.[table.headers[index]] ?? table.headers[index] ?? `第 ${index + 1} 列`;
   const [method, setMethod] = useState<AdvancedMethod>('validity');
@@ -50,7 +55,10 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
     }
   };
   const compute = async () => {
-    const s = spec(), next = s ? runAdvanced(s, table, missingCodes) : { refused: '请先完成左侧的设置。' };
+    const s = spec(), columns = s ? advancedColumns(s) : null;
+    // A linked questionnaire decides the rows and checks the columns first; its problems stop the calculation.
+    const prepared = s && columns && columns.all.length && prepare ? prepare(columns.all, columns.scaled) : { table, problems: [] };
+    const next = !s ? { refused: '请先完成左侧的设置。' } : prepared.problems.length ? { refused: prepared.problems.join('') } : runAdvanced(s, prepared.table, missingCodes);
     // The figure is the report's own SVG, already checked to carry no script, reference or raster.
     const svg = 'refused' in next || !next.figure ? null : await planSVG(next.figure).catch(() => null);
     setComputed({ settings, run: next, figure: svg, notice: '' });
