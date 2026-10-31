@@ -71,6 +71,10 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
 }
 
 /** The answers that say something: blank and non-answers (无, 没有, 不知道) do not count towards the mention rates. */
+// "Nothing to report" in its usual forms, one or several nouns joined (没有任何问题和意见, 暂无建议或意见).
+const REPORTABLE = '(?:问题|意见|建议|不满|缺点|要求)';
+const NOTHING_TO_REPORT = new RegExp(`^(?:暂时|目前|暂)?(?:没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他)?${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*了?$`, 'u');
+
 export function answered(answers: readonly string[]): string[] {
   // Judged without spaces and punctuation, after full-width forms are normalised: Ｎ／Ａ, N.A., N / A, ... and ??? are
   // not answers either.
@@ -78,7 +82,7 @@ export function answered(answers: readonly string[]): string[] {
     const bare = a.replace(/[\s\p{P}\p{S}]/gu, '');
     // "Nothing to report" in its usual forms (没有任何问题, 暂无建议, 未发现问题) says nothing either.
     return bare !== '' && !/^(无|没有|暂无|不知道|不清楚|没|否|na|none|nil)$/iu.test(bare)
-      && !/^(暂时|目前|暂)?(没有|没|无|暂无|未发现|未见|不存在)(任何|什么|明显的?|其他)?(问题|意见|建议|不满|缺点|要求)了?$/u.test(bare);
+      && !NOTHING_TO_REPORT.test(bare);
   });
 }
 

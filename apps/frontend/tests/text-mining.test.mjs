@@ -24,7 +24,7 @@ test('segmentation keeps content words and drops function words, numbers and sin
 });
 
 test('non-answers do not count towards mention rates', () => {
-  assert.deepEqual(answered(['无', ' 没有。', '', '不知道', 'N/A', 'Ｎ／Ａ', '－', 'N.A.', 'N / A', '...', '???', '没有任何问题', '暂无建议。', '无明显问题', '未发现问题', '照明不足']), ['照明不足'], 'full-width, dotted, spaced and punctuation-only markers too');
+  assert.deepEqual(answered(['无', ' 没有。', '', '不知道', 'N/A', 'Ｎ／Ａ', '－', 'N.A.', 'N / A', '...', '???', '没有任何问题', '暂无建议。', '无明显问题', '未发现问题', '没有任何问题和意见', '暂无建议或意见', '无意见、建议', '照明不足']), ['照明不足'], 'full-width, dotted, spaced and punctuation-only markers too');
 });
 
 test('the term table counts answers that mention a term, most-mentioned first', () => {
