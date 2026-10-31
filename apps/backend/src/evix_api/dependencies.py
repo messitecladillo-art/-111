@@ -29,7 +29,8 @@ def create_dependencies(settings, engine):
                 raise ApiError(401, "session_required", "请先登录。")
             return None, None
         user = session.get(User, row.user_id)
-        if user is None or user.email not in settings.invited_emails:
+        # Admitted: an address on the operator's list, or an account registered by invitation code.
+        if user is None or (user.email not in settings.invited_emails and user.invite_id is None):
             raise ApiError(401, "session_required", "请先登录。")
         session.execute(sql_text("SELECT set_config('evix.user_id', :user_id, true)"), {"user_id": user.id})
         if request.method not in ("GET", "HEAD"):

@@ -28,8 +28,9 @@ class TeamService:
             raise ApiError() from None
         if data['role'] not in ('editor', 'reviewer', 'viewer'):
             raise ApiError()
-        other = session.execute(select(User).where(User.email == email)).scalar_one_or_none() if email in self.settings.invited_emails else None
-        if other is None:
+        other = session.execute(select(User).where(User.email == email)).scalar_one_or_none()
+        # Only admitted accounts join a team: listed addresses, or accounts registered by invitation code.
+        if other is None or (email not in self.settings.invited_emails and other.invite_id is None):
             raise ApiError(404, 'not_found', '账号不可添加。')
         member = session.get(Member, (team_id, other.id))
         if member and member.role == 'owner':
