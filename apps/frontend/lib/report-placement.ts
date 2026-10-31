@@ -14,7 +14,11 @@ const DEMOGRAPHIC = /性别|年龄|年级|学历|受教育|收入|职业|身份|
 const MAX_BLOCKS = 60;
 
 /** The blueprint section a result belongs in. */
+/** The blueprint section each advanced method writes into (lib/advanced-analysis.ts). */
+export const ADVANCED_NODES: Readonly<Record<string, string>> = { validity: 'data.testing', regression: 'drivers.model', logistic: 'drivers.model', ipa: 'diagnosis.evaluation', cluster: 'segments.cluster', ahp: 'plan.priority' };
+
 export function suggestedNode(r: ResultSnapshot): string {
+  if (ADVANCED_NODES[r.method]) return ADVANCED_NODES[r.method];
   switch (r.method) {
     case 'frequency': case 'numeric': return DEMOGRAPHIC.test(r.variables?.[0] ?? '') ? 'sample.profile' : 'sample.descriptive';
     case 'crosstab': case 'groups': case 'pearson': case 'spearman': return 'compare.tests';
@@ -27,6 +31,8 @@ export function suggestedNode(r: ResultSnapshot): string {
 
 /** The exhibit that suits a result: distributions and comparisons as figures, item and rule lists as tables, a single coefficient in the text. */
 export function suggestedExhibits(r: ResultSnapshot): ExhibitKind[] {
+  // An advanced result is its table, and its own figure when the result carries one (lib/method-figures.ts).
+  if (ADVANCED_NODES[r.method]) return r.metrics.length && r.metrics.every(m => m.label.includes('｜')) ? ['table', 'chart'] : ['table'];
   switch (r.method) {
     case 'frequency': case 'crosstab': case 'groups': case 'numeric': return ['chart'];
     case 'pearson': case 'spearman': return [];

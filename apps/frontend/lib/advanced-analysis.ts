@@ -16,6 +16,7 @@ import { ahpWriting, clusterWriting, ipaWriting, logisticWriting, regressionWrit
 import { figureMetrics, methodFigure, type FigureMetric, type MethodFigureData } from './method-figures.ts';
 import type { FigurePlan } from './report-figures.ts';
 import type { ReportInsert } from './report-insert.ts';
+import { ADVANCED_NODES } from './report-placement.ts';
 import { digestText, snapshotRecipe } from './research-quality.ts';
 
 export type AdvancedSpec =
@@ -33,12 +34,12 @@ export type AdvancedRun = { method: AdvancedMethod; title: string; variables: st
   judgements?: { criteria: string[]; matrix: number[][] } };
 
 export const ADVANCED_METHODS: readonly { id: AdvancedMethod; title: string; use: string; node: string }[] = [
-  { id: 'validity', title: '效度：KMO 与因子分析', use: '判断量表题项是否适合因子分析，并给出旋转后的因子结构。', node: 'data.testing' },
-  { id: 'regression', title: '多元线性回归', use: '在控制其他变量后，看哪些因素与一个数值结果相关。', node: 'drivers.model' },
-  { id: 'logistic', title: '二元 Logistic 回归', use: '结果是“是 / 否”时，看哪些因素与其发生概率相关。', node: 'drivers.model' },
-  { id: 'ipa', title: '重要性—表现分析（IPA）', use: '找出重要但表现欠佳、应优先改进的属性。', node: 'diagnosis.evaluation' },
-  { id: 'cluster', title: 'K-means 聚类画像', use: '把受访者分成特征相近的几类人群。', node: 'segments.cluster' },
-  { id: 'ahp', title: '层次分析法（AHP）', use: '由专家两两比较，确定各方案准则的权重。', node: 'plan.priority' },
+  { id: 'validity', title: '效度：KMO 与因子分析', use: '判断量表题项是否适合因子分析，并给出旋转后的因子结构。', node: ADVANCED_NODES.validity },
+  { id: 'regression', title: '多元线性回归', use: '在控制其他变量后，看哪些因素与一个数值结果相关。', node: ADVANCED_NODES.regression },
+  { id: 'logistic', title: '二元 Logistic 回归', use: '结果是“是 / 否”时，看哪些因素与其发生概率相关。', node: ADVANCED_NODES.logistic },
+  { id: 'ipa', title: '重要性—表现分析（IPA）', use: '找出重要但表现欠佳、应优先改进的属性。', node: ADVANCED_NODES.ipa },
+  { id: 'cluster', title: 'K-means 聚类画像', use: '把受访者分成特征相近的几类人群。', node: ADVANCED_NODES.cluster },
+  { id: 'ahp', title: '层次分析法（AHP）', use: '由专家两两比较，确定各方案准则的权重。', node: ADVANCED_NODES.ahp },
 ];
 const REFUSALS: Record<string, string> = {
   'too-few-items': '至少需要 3 个题项。', 'too-few-cases': '完整案例太少，不足以估计。', 'constant-item': '有题项在完整案例中没有变化。',
@@ -48,6 +49,7 @@ const REFUSALS: Record<string, string> = {
   'not-converged': '主轴因子法没有收敛，题项之间缺少共同变异。', 'bad-factor-count': '因子数须小于题项数。', 'too-few-rows': '完整案例太少。', 'bad-k': '聚类数须在 2 到案例数之间。',
   'too-few-distinct': '不同的观测少于聚类数。', 'uneven-rows': '变量长度不一致。', 'too-few-attributes': '至少需要 2 个属性。', 'uneven-columns': '属性评分的长度不一致。',
   'no-importance': '请为每个属性选择重要性评分，或选择总体满意度以推导重要性。', 'no-cases': '没有完整案例。', 'too-small': '至少需要 2 个准则。', 'too-large': '准则不能超过 15 个。',
+  'no-shared-variance': '题项之间几乎没有相关，KMO 无从计算，不适合做因子分析。', 'perfect-fit': '因变量可由自变量精确算出（如总分对其组成题项回归），没有残差，无法检验；请去掉构成因变量的题项。',
   'not-square': '判断矩阵须为方阵。', 'not-positive': '判断矩阵的值须为正数。', 'not-reciprocal': '判断矩阵须满足 aji = 1 / aij。',
 };
 export const refusalText = (code: string) => REFUSALS[code] ?? '无法计算。';
@@ -75,6 +77,16 @@ export function advancedColumns(spec: AdvancedSpec): { all: number[]; scaled: nu
   const all = spec.method === 'ahp' ? [] : spec.method === 'validity' ? spec.items : spec.method === 'cluster' ? spec.variables
     : spec.method === 'ipa' ? [...spec.performance, ...(spec.importance ?? []), ...(spec.overall === null ? [] : [spec.overall])] : [spec.outcome, ...spec.predictors];
   return { all, scaled: spec.method === 'logistic' ? all.slice(1) : all };
+}
+
+/** Reverse-scored items as the questionnaire declares them: min + max − value for every non-missing number. */
+export function reverseScored(table: SurveyTable, items: readonly { column: number; min: number; max: number }[], missingCodes: readonly string[]): SurveyTable {
+  if (!items.length) return table;
+  const missing = new Set(missingCodes.map(c => c.trim()));
+  return { ...table, rows: table.rows.map(row => row.map((cell, c) => {
+    const item = items.find(i => i.column === c), text = (cell ?? '').trim(), value = item && text && !missing.has(text) ? finiteNumber(text) : null;
+    return item && value !== null ? String(item.min + item.max - value) : cell;
+  })) };
 }
 
 /** One method on the table, written up for the report; a refusal says why in the user's words. */

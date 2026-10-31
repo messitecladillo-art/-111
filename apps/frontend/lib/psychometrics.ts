@@ -18,7 +18,7 @@ export type Adequacy = {
   /** ln|R|: near zero means little shared variance, very negative means near-collinear items. */
   logDeterminant: number;
 };
-export type AdequacyRefusal = { refused: 'too-few-items' | 'too-few-cases' | 'constant-item' | 'singular' };
+export type AdequacyRefusal = { refused: 'too-few-items' | 'too-few-cases' | 'constant-item' | 'singular' | 'no-shared-variance' };
 
 /** Pearson correlations of equal-length columns; null when a column has no variance. */
 export function correlationMatrix(columns: readonly (readonly number[])[]): number[][] | null {
@@ -92,6 +92,8 @@ export function samplingAdequacy(columns: readonly (readonly number[])[]): Adequ
     r2 += rr; a2 += aa;
     return rr / (rr + aa);
   });
+  // Items that correlate with nothing leave KMO and every MSA undefined (0 / 0): there is no common variance to factor.
+  if (!(r2 > 0) || msa.some(v => !Number.isFinite(v))) return { refused: 'no-shared-variance' };
   const chi2 = -(n - 1 - (2 * p + 5) / 6) * log, df = p * (p - 1) / 2;
   return { n, items: p, kmo: r2 / (r2 + a2), msa, bartlett: { chi2, df, p: chiSquareUpper(chi2, df) }, logDeterminant: log };
 }

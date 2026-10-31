@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { seededRandom } from '../lib/sampling-core.ts';
-import { advancedColumns, advancedInsert, completeCases, runAdvanced } from '../lib/advanced-analysis.ts';
+import { advancedColumns, advancedInsert, completeCases, reverseScored, runAdvanced } from '../lib/advanced-analysis.ts';
 import { applyReportInsert } from '../lib/report-insert.ts';
 import { createEditorContent, parseEditorContent } from '../lib/editor-model.ts';
 import { blueprintSections, matchBlueprintNode } from '../lib/report-blueprint.ts';
@@ -142,4 +142,29 @@ test('a method names the columns a linked questionnaire must check, the 0/1 outc
   assert.deepEqual(advancedColumns({ method: 'logistic', outcome: 7, predictors: [0, 3] }), { all: [7, 0, 3], scaled: [0, 3] });
   assert.deepEqual(advancedColumns({ method: 'ipa', performance: [0, 1], importance: null, overall: 6 }), { all: [0, 1, 6], scaled: [0, 1, 6] });
   assert.deepEqual(advancedColumns({ method: 'ahp', criteria: ['a', 'b'], matrix: [[1, 2], [0.5, 1]] }), { all: [], scaled: [] }, 'AHP reads no survey column');
+});
+
+test('edge cases are refused in plain words, never written as NaN or Infinity', async () => {
+  const { samplingAdequacy } = await import('../lib/psychometrics.ts'), { linearRegression } = await import('../lib/regression.ts');
+  // Three items that share no variance: a 2³ factorial design repeated, every correlation exactly zero.
+  const design = Array.from({ length: 40 }, (_, i) => [i & 1, (i >> 1) & 1, (i >> 2) & 1]);
+  assert.deepEqual(samplingAdequacy([0, 1, 2].map(j => design.map(r => r[j]))), { refused: 'no-shared-variance' });
+  const a = Array.from({ length: 30 }, (_, i) => (i * 7) % 5), b = Array.from({ length: 30 }, (_, i) => (i * 3) % 4);
+  assert.deepEqual(linearRegression(a.map((v, i) => v + b[i]), [{ name: 'a', values: a }, { name: 'b', values: b }]), { refused: 'perfect-fit' }, 'a total regressed on its own items');
+});
+
+test('items the questionnaire scores in reverse are turned before any method reads them', () => {
+  const t = { headers: ['正向', '反向'], rows: [['1', '5'], ['4', '99'], ['5', ''], ['2', '2']], skippedBlankLines: 0, delimiter: ',' };
+  assert.deepEqual(reverseScored(t, [{ column: 1, min: 1, max: 5 }], ['99']).rows, [['1', '1'], ['4', '99'], ['5', ''], ['2', '4']], 'missing codes and blanks untouched');
+  assert.equal(reverseScored(t, [], []), t);
+});
+
+test('a result placed again from the catalogue goes to its method section, with its own figure', async () => {
+  const { suggestedNode, suggestedExhibits } = await import('../lib/report-placement.ts');
+  const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
+  const result = (await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
+  assert.equal(suggestedNode(result), 'drivers.model');
+  assert.deepEqual(suggestedExhibits(result), ['table', 'chart']);
+  const ahp = (await advancedInsert(runAdvanced({ method: 'ahp', criteria: ['a', 'b', 'c'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []), { name: 'x', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
+  assert.deepEqual([suggestedNode(ahp), suggestedExhibits(ahp)], ['plan.priority', ['table']]);
 });

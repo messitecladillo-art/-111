@@ -26,7 +26,7 @@ export type Regression = {
   residualSe: number;
   breuschPagan: { lm: number; df: number; p: number };
 };
-export type RegressionRefusal = { refused: 'no-predictors' | 'too-few-cases' | 'constant-outcome' | 'constant-predictor' | 'collinear' };
+export type RegressionRefusal = { refused: 'no-predictors' | 'too-few-cases' | 'constant-outcome' | 'constant-predictor' | 'collinear' | 'perfect-fit' };
 
 const mean = (v: readonly number[]) => v.reduce((s, x) => s + x, 0) / v.length;
 
@@ -65,6 +65,9 @@ export function linearRegression(y: readonly number[], predictors: readonly { na
   const xs = predictors.map(p => p.values);
   const m = fit(y, xs);
   if ('refused' in m) return m;
+  // The outcome is an exact function of the predictors (often a total score regressed on its own items): no residual
+  // variance, so no standard error, t or F exists.
+  if (!(m.sse > 1e-12 * m.sst)) return { refused: 'perfect-fit' };
   const df = n - k - 1, sigma2 = m.sse / df, critical = tCritical(0.05, df);
   const sdY = Math.sqrt(m.sst / (n - 1));
   const coefficient = (name: string, estimate: number, variance: number, standardized: number | null, vif: number | null): Coefficient => {
