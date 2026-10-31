@@ -100,6 +100,9 @@ test('a negated word is counted as negated, never as its opposite', () => {
   assert.deepEqual(terms('积水淹没步道'), ['淹没', '步道'], 'a word ending in 没 is not a negation');
   assert.deepEqual(terms('照明不错，没有任何问题和意见'), ['照明', '不错', '没有任何问题', '没有任何意见'], 'the negation reaches every coordinated noun');
   assert.deepEqual(terms('照明和停车'), ['照明', '停车'], 'coordination alone negates nothing');
+  assert.deepEqual(terms('不满意和不方便'), ['不满意', '不方便'], 'an explicit negator replaces, never doubles');
+  assert.deepEqual(terms('不满意和方便'), ['不满意', '方便'], 'a predicate negation does not reach the coordinated word');
+  assert.deepEqual(terms('预算1,000元'), ['预算'], 'comma-formatted numbers are numbers');
   assert.deepEqual(terms('照明不错，也没有什么意见'), ['照明', '不错', '也没有什么意见']);
   assert.deepEqual(terms('停车位不够'), ['停车位', '不够'], 'a negator ending the answer is the complaint');
   assert.deepEqual(terms('时间不够，人太多'), ['时间', '不够', '太多'], 'or ending a clause');

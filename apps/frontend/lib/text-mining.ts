@@ -52,27 +52,30 @@ const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', 
 
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
-  let negation = '', carried = '';
+  // negation: the negator waiting for its word; carried: an existential negation (没有, 无, 未) that a coordinated noun
+  // inherits; inherited: what the next word takes after a coordinator. An explicit negator always replaces it.
+  let negation = '', carried = '', inherited = '';
   // At a clause's end a negator with nothing after it is the complaint itself (停车位不够): a word of two or more
   // characters is counted; a lone 不 negates nothing that is counted.
-  const flush = () => { if ([...negation].length >= 2) out.push(negation); negation = ''; carried = ''; };
+  const flush = () => { if ([...negation].length >= 2) out.push(negation); negation = ''; carried = ''; inherited = ''; };
   for (const { segment, isWordLike } of segmenter().segment(text.normalize('NFKC'))) {
     const word = segment.trim().toLowerCase();
     if (!word) continue;
     if (!isWordLike) { flush(); continue; }
-    if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; continue; }
+    if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; inherited = ''; continue; }
     // The segmenter sometimes glues a negator to the word before it (我不/满意, 很不/方便): the negator still counts.
     const tail = /(没有|不|没)$/u.exec(word), rest = tail ? word.slice(0, -tail[0].length) : '';
-    if (tail && rest && (LEADERS.has(rest) || drop.has(rest) || DEGREE.has(rest))) { negation += tail[0]; continue; }
-    if (COORDINATORS.has(word)) { negation = carried || negation; continue; }
+    if (tail && rest && (LEADERS.has(rest) || drop.has(rest) || DEGREE.has(rest))) { negation += tail[0]; inherited = ''; continue; }
+    if (COORDINATORS.has(word)) { inherited = carried; continue; }
     // A function word is not a term, negated or not; a negation carries through a transparent one to the content word
     // it governs (不觉得方便 → 不方便) and is dropped at any other.
-    if (drop.has(word)) { if (!TRANSPARENT.has(word)) negation = ''; continue; }
-    const term = negation + word;
-    carried = negation;
-    negation = '';
+    if (drop.has(word)) { if (!TRANSPARENT.has(word)) { negation = ''; inherited = ''; } continue; }
+    const used = negation || inherited, term = used + word;
+    // Only a negation of existence reaches coordinated nouns (没有任何问题和意见); 不满意和方便 negates 满意 alone.
+    carried = /^(?:也|并)?(?:没|无|未)/u.test(used) ? used : '';
+    negation = ''; inherited = '';
     // A single Han character is almost always a function word or a fragment; numbers belong to the closed questions.
-    if ([...term].length < 2 || /^[\p{N}.%]+$/u.test(term)) continue;
+    if ([...term].length < 2 || /^[\p{N}.,%]+$/u.test(term)) continue;
     out.push(term);
   }
   flush();
