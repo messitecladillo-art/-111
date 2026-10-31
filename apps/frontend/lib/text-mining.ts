@@ -40,6 +40,9 @@ const segmenter = () => {
  */
 export const NEGATORS: ReadonlySet<string> = new Set(['不', '没', '没有', '未', '无', '非', '别', '不太', '不够', '不要', '不能', '不会', '不是', '不大', '不怎么', '没什么', '并不', '从不', '从没']);
 const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么', '那么', '特别', '非常', '是很']);
+// Function words a negation passes through to the word it governs (不觉得方便, 不可以停车). Any other function word,
+// such as the preposition in 没有在这里停车, ends the negation without a guess at what it governed.
+const TRANSPARENT: ReadonlySet<string> = new Set(['觉得', '感觉', '可以', '能够', '是', '比较', '特别', '非常', '真的', '其实']);
 
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
   const out: string[] = [];
@@ -52,8 +55,9 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
     if (!word) continue;
     if (!isWordLike) { flush(); continue; }
     if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; continue; }
-    // A function word is not a term, negated or not; its negation carries to the content word it governs (不觉得方便 → 不方便).
-    if (drop.has(word)) continue;
+    // A function word is not a term, negated or not; a negation carries through a transparent one to the content word
+    // it governs (不觉得方便 → 不方便) and is dropped at any other.
+    if (drop.has(word)) { if (!TRANSPARENT.has(word)) negation = ''; continue; }
     const term = negation + word;
     negation = '';
     // A single Han character is almost always a function word or a fragment; numbers belong to the closed questions.

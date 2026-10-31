@@ -89,6 +89,9 @@ test('a negated word is counted as negated, never as its opposite', () => {
   assert.deepEqual(terms('服务不好'), ['服务', '不好'], 'a negated single character is a term');
   assert.deepEqual(terms('不觉得方便'), ['不方便'], 'a negated function word is no term; the negation reaches the content word');
   assert.deepEqual(terms('不可以'), [], 'nothing left to negate');
+  assert.deepEqual(terms('不可以停车'), ['不停车']);
+  assert.deepEqual(terms('没有在这里停车'), ['这里', '停车'], 'a preposition ends the negation: no 没有这里');
+  assert.deepEqual(terms('不能在这里停车'), ['这里', '停车']);
   assert.deepEqual(terms('停车位不够'), ['停车位', '不够'], 'a negator ending the answer is the complaint');
   assert.deepEqual(terms('时间不够，人太多'), ['时间', '不够', '太多'], 'or ending a clause');
   assert.deepEqual(terms('希望增加，不。'), ['希望', '增加'], 'a negator before punctuation negates nothing counted');
