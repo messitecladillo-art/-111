@@ -142,3 +142,19 @@ test('a section still holding the starting template says nothing yet, so it is n
   const written = { ...template, report: template.report.map((s, i) => (i === 1 ? { ...s, body: '作者自己写的一段。' } : s)) };
   assert.deepEqual(reportOutline(written, 'abstract').map(o => o.excerpt), ['作者自己写的一段。']);
 });
+
+test('the outline reads callouts and citations, names untitled sections, and yields to heavy facts', async () => {
+  const { reportOutline } = await import('../lib/agent/draft.ts');
+  const sections = [
+    { id: 'a', title: '   ', body: '无标题的一节也写了内容。', source: '', blocks: [] },
+    { id: 'b', title: '现存问题归纳', body: '', source: '', blocks: [{ id: 'c', kind: 'callout', text: '提示框里写的是主要问题。', evidenceId: '', valueColumn: 1 }] },
+  ];
+  assert.deepEqual(reportOutline({ ...createEditorContent(), report: sections }, 'abstract'), [{ title: '未命名章节', excerpt: '无标题的一节也写了内容。' }, { title: '现存问题归纳', excerpt: '提示框里写的是主要问题。' }]);
+  assert.deepEqual(reportOutline({ ...createEditorContent(), report: sections }, 'abstract', 0).map(o => o.excerpt), ['', ''], 'no budget: titles alone');
+  // A full report whose abstract already holds 3000 characters: the outline gives way so the request stays in bounds.
+  const base = { ...createEditorContent(), report: blueprintSections({ includeOptional: true }), quality: { version: 1, results: held.results, findings: [] } };
+  const content = { ...base, report: base.report.map(s => ({ ...s, body: (s.id === 'bp-abstract' ? '摘要已有的正文。' : '这一节写满了正文内容。').repeat(400) })) };
+  const request = draftRequest({ nodeId: 'abstract', held, content, design: null, service: { id: 's', revision: 1 } }).request;
+  assert.ok(new TextEncoder().encode(JSON.stringify(request)).length <= 34000);
+  assert.ok(request.outline.length >= 20 && request.outline.every(o => o.excerpt.length < 400), 'every section kept, excerpts shortened');
+});

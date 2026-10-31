@@ -44,3 +44,16 @@ def test_no_call_without_the_report_capability_a_current_revision_or_consent(har
     unconsented = owner.post(PATH, json=request(serviceId=report["id"], serviceRevision=report["revision"], consent=False))
     assert unconsented.status_code == 422 and unconsented.json()["error"]["code"] == "consent_required"
     assert provider.calls == 0
+
+
+def test_a_key_in_the_outline_is_refused_before_any_call(harness):
+    _, login, _, provider = harness
+    owner, _ = login()
+    # A quote in the key: escaped once in the prompt, so only the check of the decoded outline can find it.
+    key = 'synthetic-"quoted"-private-key'
+    service = owner.post("/api/services", json=service_input(capabilities=["report"], apiKey=key)).json()
+    data = request(section={**request()["section"], "node": "abstract", "title": "摘要"}, serviceId=service["id"], serviceRevision=service["revision"],
+                   outline=[{"title": "样本特征分析", "excerpt": f"误贴的密钥 {key}"}])
+    refused = owner.post(PATH, json=data)
+    assert refused.status_code == 422 and refused.json()["error"]["code"] == "sensitive_input"
+    assert provider.calls == 0
