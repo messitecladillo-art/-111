@@ -168,3 +168,17 @@ test('a result placed again from the catalogue goes to its method section, with 
   const ahp = (await advancedInsert(runAdvanced({ method: 'ahp', criteria: ['a', 'b', 'c'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []), { name: 'x', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
   assert.deepEqual([suggestedNode(ahp), suggestedExhibits(ahp)], ['plan.priority', ['table']]);
 });
+
+test('a report holding every advanced method still exports to LaTeX: formulas on the allowed list, method figures as captioned notes', async () => {
+  const { generateLatexBody } = await import('../lib/latex-report.ts');
+  let content = report();
+  for (const spec of [
+    { method: 'validity', items: [0, 1, 2, 3, 4, 5] }, { method: 'regression', outcome: 6, predictors: [0, 3] },
+    { method: 'logistic', outcome: 7, predictors: [0, 3] }, { method: 'ipa', performance: [0, 1, 3, 4], importance: null, overall: 6 },
+    { method: 'cluster', variables: [0, 3, 6], k: 3 }, { method: 'ahp', criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] },
+  ]) content = applyReportInsert(content, await advancedInsert(runAdvanced(spec, table, ['99']), { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).content;
+  const body = generateLatexBody(content);
+  assert.equal((body.match(/此图为方法图/g) ?? []).length, 5, 'five method figures, each kept as a captioned figure');
+  assert.doesNotMatch(body, /\\(?:boldsymbol|fbox|parbox)\b/u);
+  if (process.env.EVIX_LATEX_BODY) (await import('node:fs')).writeFileSync(process.env.EVIX_LATEX_BODY, body);
+});

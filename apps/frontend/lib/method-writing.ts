@@ -106,8 +106,8 @@ export function ahpWriting(result: Ahp, criteria: readonly string[], refs: Resul
   const ranked = criteria.map((name, i) => [name, result.weights[i]] as const).sort((a, b) => b[1] - a[1]);
   return {
     text: '各评价准则的相对重要性由层次分析法确定：专家对准则两两比较，按 1～9 标度构造判断矩阵，以其最大特征值对应的特征向量（归一化）作为权重，并检验判断的一致性：',
-    formulas: ['A\\boldsymbol{w}=\\lambda_{\\max}\\boldsymbol{w}', 'CI=\\frac{\\lambda_{\\max}-n}{n-1},\\qquad CR=\\frac{CI}{RI}'],
-    where: '式中，$A$ 为判断矩阵，$\\boldsymbol{w}$ 为权重向量，$\\lambda_{\\max}$ 为最大特征值，$n$ 为准则数，$RI$ 为同阶平均随机一致性指标；$CR<0.1$ 时认为判断矩阵具有满意的一致性，否则需调整判断。',
+    formulas: ['A\\mathbf{w}=\\lambda_{\\max}\\mathbf{w}', 'CI=\\frac{\\lambda_{\\max}-n}{n-1},\\qquad CR=\\frac{CI}{RI}'],
+    where: '式中，$A$ 为判断矩阵，$\\mathbf{w}$ 为权重向量，$\\lambda_{\\max}$ 为最大特征值，$n$ 为准则数，$RI$ 为同阶平均随机一致性指标；$CR<0.1$ 时认为判断矩阵具有满意的一致性，否则需调整判断。',
     table: {
       caption: '评价准则权重与一致性检验',
       headers: ['准则', '权重', '排序'],
@@ -152,8 +152,8 @@ export function clusterWriting(result: Clustering, silhouetteMean: number, varia
   });
   return {
     text: '为识别受访者中特征相近的人群，对标准化后的变量进行 K-means 聚类：以 k-means++ 方法选取初始中心，多次随机起点取类内平方和最小的结果，并以平均轮廓系数评价所选聚类数下的类别结构：',
-    formulas: ['\\min\\sum_{j=1}^{k}\\sum_{\\boldsymbol{x}_i\\in C_j}\\lVert\\boldsymbol{x}_i-\\boldsymbol{\\mu}_j\\rVert^{2}', 's(i)=\\frac{b(i)-a(i)}{\\max\\{a(i),\\,b(i)\\}}'],
-    where: '式中，$C_j$ 为第 $j$ 类，$\\boldsymbol{\\mu}_j$ 为其中心，$a(i)$ 为个体 $i$ 与同类其他个体的平均距离，$b(i)$ 为其与最近的其他类的平均距离；平均轮廓系数越接近 1，类内越紧密、类间越分离，一般大于 0.5 认为结构合理，小于 0.25 认为聚类结构不明显。',
+    formulas: ['\\min\\sum_{j=1}^{k}\\sum_{\\mathbf{x}_i\\in C_j}\\lVert\\mathbf{x}_i-\\mu_j\\rVert^{2}', 's(i)=\\frac{b(i)-a(i)}{\\max\\{a(i),\\,b(i)\\}}'],
+    where: '式中，$C_j$ 为第 $j$ 类，$\\mu_j$ 为其中心，$a(i)$ 为个体 $i$ 与同类其他个体的平均距离，$b(i)$ 为其与最近的其他类的平均距离；平均轮廓系数越接近 1，类内越紧密、类间越分离，一般大于 0.5 认为结构合理，小于 0.25 认为聚类结构不明显。',
     table: {
       caption: '各类人群在聚类变量上的标准化中心',
       headers: ['类别', '人数', '占比', ...variables.map(literal)],

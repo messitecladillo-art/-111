@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Formula, Tex } from '@/components/math/Tex';
 import { advancedColumns, reverseScored, ADVANCED_METHODS, advancedInsert, runAdvanced, type AdvancedMethod, type AdvancedRun, type AdvancedSpec } from '@/lib/advanced-analysis';
 import { splitInlineMath } from '@/lib/inline-math';
@@ -71,9 +71,19 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
     setComputed({ settings, run: next, figure: svg, notice: '' });
   };
   const setNotice = (text: string) => setComputed(c => (c ? { ...c, notice: text } : c));
+  // A write still being prepared when the dataset or a setting changes (the panel remounts per dataset) is dropped,
+  // never handed to the report under the new data.
+  const live = useRef({ mounted: false, settings });
+  useEffect(() => { live.current.settings = settings; }, [settings]);
+  useEffect(() => { const current = live.current; current.mounted = true; return () => { current.mounted = false; }; }, []);
   const write = async () => {
     if (!run || 'refused' in run || !onReportInsert) return;
-    try { onReportInsert(await advancedInsert(run, { name: sourceName, hash: sourceHash, simulated })); setNotice('已交给报告与 PPT，写入对应的蓝图章节；可在编辑器里撤销。'); }
+    const captured = settings;
+    try {
+      const insert = await advancedInsert(run, { name: sourceName, hash: sourceHash, simulated });
+      if (!live.current.mounted || live.current.settings !== captured) return;
+      onReportInsert(insert); setNotice('已交给报告与 PPT，写入对应的蓝图章节；可在编辑器里撤销。');
+    }
     catch (error) { setNotice(`未能写入：${(error as Error).message}`); }
   };
   const columnChecks = (label: string, exclude: number | null = null) => <fieldset className={styles.columns}><legend>{label}</legend>
