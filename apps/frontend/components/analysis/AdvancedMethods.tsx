@@ -78,7 +78,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
       <div className={styles.setup}>
         {method === 'validity' && columnChecks('量表题项（至少 3 个）')}
         {(method === 'regression' || method === 'logistic') && <>{columnSelect(method === 'logistic' ? '因变量（0 / 1 编码，1 = 事件发生）' : '因变量', outcome, setOutcome)}{columnChecks('自变量', outcome)}</>}
-        {method === 'cluster' && <>{columnChecks('聚类变量（自动标准化）')}<label className={styles.field}>类别数 k<input type="number" min={2} max={8} value={k} onChange={e => setK(Math.max(2, Math.min(8, Number(e.target.value) || 2)))} /></label></>}
+        {method === 'cluster' && <>{columnChecks('聚类变量（2–7 个，自动标准化）')}<label className={styles.field}>类别数 k<input type="number" min={2} max={8} value={k} onChange={e => setK(Math.max(2, Math.min(8, Number(e.target.value) || 2)))} /></label></>}
         {method === 'ipa' && <>{columnChecks('各属性的表现评分')}
           <fieldset className={styles.inline}><legend>重要性来自</legend>
             <label><input type="radio" checked={importanceMode === 'derived'} onChange={() => setImportanceMode('derived')} />总体满意度推导（隐性）</label>

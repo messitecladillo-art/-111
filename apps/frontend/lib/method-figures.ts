@@ -160,10 +160,14 @@ export function figureMetrics(data: MethodFigureData): FigureMetric[] | null {
 
 const FIGURE_OF: Record<string, MethodFigureData['kind']> = { regression: 'forest', logistic: 'forest', validity: 'scree', ipa: 'quadrant', cluster: 'profile' };
 
+/** Whether a result carries a method figure: every exporter then draws that figure instead of bars of a column. */
+export const carriesFigure = (r: { method: string; metrics: readonly { label: string }[] }): boolean =>
+  !!FIGURE_OF[r.method] && r.metrics.length > 0 && r.metrics.every(m => m.label.includes(SEP));
+
 /** The figure a method's result carries, or null when the result is of another method or carries none. */
 export function methodFigure(r: { method: string; headers: readonly string[]; metrics: readonly { label: string; value: number | null }[] }, accent: string): FigurePlan | null {
   const kind = FIGURE_OF[r.method], parts = r.metrics.map(m => ({ head: m.label.slice(0, m.label.lastIndexOf(SEP)), field: m.label.slice(m.label.lastIndexOf(SEP) + 1), value: m.value }));
-  if (!kind || !parts.length || r.metrics.some(m => !m.label.includes(SEP)) || parts.some(p => p.value === null || !p.head)) return null;
+  if (!carriesFigure(r) || parts.some(p => p.value === null || !p.head)) return null;
   const pick = (head: string, field: string) => parts.find(p => p.head === head && p.field === field)?.value as number;
   const heads = [...new Set(parts.map(p => p.head))];
   switch (kind) {

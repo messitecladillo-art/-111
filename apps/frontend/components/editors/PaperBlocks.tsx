@@ -23,7 +23,7 @@ export function PaperText({ text, labels, citations }: { text: string; labels: L
 }
 
 /** The same server-style SVG figure the Word export embeds. */
-function Figure({ result, column, accent,figure,visualStyle }: { result: ResultSnapshot; column: number; accent: string;figure?:ReportFigure;visualStyle?:ProjectVisualStyle }) {
+export function Figure({ result, column, accent,figure,visualStyle }: { result: ResultSnapshot; column: number; accent: string;figure?:ReportFigure;visualStyle?:ProjectVisualStyle }) {
   const [state, setState] = useState<{ key: string; svg?: string; error?: string }>({ key: '' });
   const key = `${result.resultHash}:${column}:${accent}:${JSON.stringify(figure)}:${JSON.stringify(visualStyle)}`;
   useEffect(() => {

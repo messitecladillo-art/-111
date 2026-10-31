@@ -174,6 +174,8 @@ export function columnWeights(table: PresentedTable): number[] {
 export function sourceLine(r: ResultSnapshot): string {
   // A sampling frame is part of the design, not a sample: no sample size or data class to report.
   if (r.method === 'sampling-frame') return '资料来源：本研究抽样设计。';
+  // AHP weighs experts' judgements: its n is the number of criteria, not a sample.
+  if (r.method === 'ahp') return `资料来源：${r.sourceName}（${r.n} 项准则）。`;
   const kind = r.classification === 'simulated' ? '；模拟数据' : r.classification === 'public' ? '；公开数据' : '；用户提供数据';
   return `资料来源：${r.sourceName}${r.sourceUrl ? `（${r.sourceUrl}）` : ''}；有效样本 n = ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${kind}。`;
 }

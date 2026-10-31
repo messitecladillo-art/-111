@@ -16,7 +16,7 @@ import { ahpWriting, clusterWriting, ipaWriting, logisticWriting, regressionWrit
 import { figureMetrics, methodFigure, type FigureMetric, type MethodFigureData } from './method-figures.ts';
 import type { FigurePlan } from './report-figures.ts';
 import type { ReportInsert } from './report-insert.ts';
-import { snapshotRecipe } from './research-quality.ts';
+import { digestText, snapshotRecipe } from './research-quality.ts';
 
 export type AdvancedSpec =
   | { method: 'validity'; items: number[] }
@@ -83,6 +83,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
       if ('refused' in adequacy) return { refused: refusalText(adequacy.refused) };
       const solution = exploratoryFactors(data.columns);
       if ('refused' in solution) return { refused: refusalText(solution.refused) };
+      if (solution.factors > MAX_FACTORS) return { refused: `提取出 ${solution.factors} 个因子，超过 ${MAX_FACTORS} 个，载荷表无法排进报告；请按维度分组后分别检验。` };
       return withFigure({ method: 'validity', title: '题项旋转后因子载荷', variables: names, n: data.n, total: data.total, writing: validityWriting(adequacy, solution, names) },
         '题项相关矩阵特征值碎石图', { kind: 'scree', eigenvalues: solution.eigenvalues });
     }
@@ -108,6 +109,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
         '各属性重要性—表现象限图', { kind: 'quadrant', points: result.points, lines: result.lines });
     }
     case 'cluster': {
+      if (spec.variables.length > MAX_CLUSTER_VARIABLES) return { refused: `聚类变量至多 ${MAX_CLUSTER_VARIABLES} 个，结果表才能排进报告（不超过 10 列）。` };
       const rows = standardize(data.columns[0].map((_, i) => data.columns.map(c => c[i])));
       const fit = kmeans(rows, spec.k, { seed: 'evix-advanced' });
       if ('refused' in fit) return { refused: refusalText(fit.refused) };
@@ -117,6 +119,11 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
   }
 }
 const ACCENT = '#2F6B4F';
+/** The source an AHP result names: the experts' judgement matrix entered for this study. */
+export const AHP_SOURCE = '本研究专家两两比较判断矩阵';
+// The widest result table the Word export takes is 10 columns: a cluster table has 3 more than its variables, a
+// factor table 2 more than its factors.
+export const MAX_CLUSTER_VARIABLES = 7, MAX_FACTORS = 8;
 
 /** The run with its figure, drawn from the same metrics the report's figure will be drawn from. */
 function withFigure(run: Omit<AdvancedRun, 'chart' | 'figure'>, caption: string, data: MethodFigureData): AdvancedRun {
@@ -138,10 +145,14 @@ function silhouetteSample<T>(rows: readonly T[], assignments: readonly number[])
  */
 export async function advancedInsert(run: AdvancedRun, source: { name: string; hash: string; simulated: boolean }): Promise<ReportInsert> {
   const table = run.writing.table;
+  // AHP weighs the experts' pairwise judgements, not the survey: its result names that input, never the loaded data.
+  const origin = run.method === 'ahp'
+    ? { sourceName: AHP_SOURCE, sourceHash: await digestText(JSON.stringify([run.variables, table.rows])), classification: 'user_provided' as const }
+    : { sourceName: source.name, sourceHash: source.hash, classification: source.simulated ? 'simulated' as const : 'user_provided' as const };
   const result = await snapshotRecipe({
     method: run.method, n: run.n, total: run.total, excluded: run.total - run.n, missingRows: run.total - run.n, invalidRows: 0,
     metrics: run.chart?.metrics ?? [], headers: table.headers, rows: table.rows, warnings: [], interpretation: '',
-  }, { title: table.caption, sourceName: source.name, sourceUrl: '', sourceHash: source.hash, classification: source.simulated ? 'simulated' : 'user_provided', variables: run.variables.slice(0, 4) });
+  }, { title: table.caption, sourceUrl: '', ...origin, variables: run.variables.slice(0, 4) });
   const node = ADVANCED_METHODS.find(m => m.id === run.method)!.node, at = run.writing.formulas.length + 2;
   const cites = run.chart ? `[[表:@${at}]]和[[图:@${at + 2}]]` : `[[表:@${at}]]`;
   return { id: crypto.randomUUID(), node, source: '数据分析 · 高级方法', items: [

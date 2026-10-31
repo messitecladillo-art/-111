@@ -324,7 +324,9 @@ export async function planSVG(plan: FigurePlan): Promise<string> {
     chart.setOption(plan.option);
     const svg = chart.renderToSVGString()
       .replace(/<style\b[\s\S]*?<\/style>/g, '')
-      .replace(/\s(?:class|pointer-events)="[^"]*"/g, '')
+      // Interaction hooks and ECharts' own metadata draw nothing; without them the figure also passes the stricter
+      // vector check of the PPT export (lib/vector-svg.ts).
+      .replace(/\s(?:class|pointer-events|version|baseProfile|xml:space|ecmeta_[a-z_]+)="[^"]*"/g, '')
       // Word's SVG renderer ignores the CSS font shorthand ECharts writes for rich text; spell it out as properties.
       // Only style attributes inside tags change: chart text is escaped, so a label that reads like CSS stays as written.
       .replace(/<[^>]+>/g, tag => tag.replace(/(\sstyle=")([^"]*)"/g, (_s, open: string, css: string) => `${open}${css.replace(/font:\s*([^;"]*?)(\d+(?:\.\d+)?px)\s+([^;"]+)/g, (_m, lead: string, size: string, family: string) => {

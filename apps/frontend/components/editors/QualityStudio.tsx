@@ -14,6 +14,8 @@ import {texProblem} from '@/lib/omml';
 import {Formula} from '../math/Tex';
 import ReportFigureStudio from './ReportFigureStudio';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
+import {carriesFigure} from '@/lib/method-figures';
+import {Figure} from './PaperBlocks';
 
 type Props={content:EditorContent;onChange:(content:EditorContent)=>boolean|void;disabled?:boolean};
 /** Clipboard access is missing on insecure origins and can be refused; report failure instead of throwing. */
@@ -33,7 +35,10 @@ export function QualityGraphic({object,quality,figures,visualStyle,surface='slid
   }
 
   let result:ReturnType<typeof resultFor>|null=null, data:ReturnType<typeof chartData>|null=null,error='';
-  try{result=resultFor(quality,object.evidenceId);if(object.kind!=='table')data=chartData(result,object.valueColumn);}catch(e){error=(e as Error).message;}
+  try{result=resultFor(quality,object.evidenceId);}catch(e){error=(e as Error).message;}
+  // An advanced method's result carries its own figure: the canvas draws it as the PPT export will.
+  if(result&&object.kind==='chart'&&carriesFigure(result))return <Figure result={result} column={object.valueColumn} accent={/^#[0-9a-fA-F]{6}$/.test(object.color)?object.color:'#2F6B4F'} visualStyle={visualStyle}/>;
+  try{if(result&&object.kind!=='table')data=chartData(result,object.valueColumn);}catch(e){error=(e as Error).message;}
   if(!result||error)return <p className={styles.error}>{error}</p>;
     if(object.kind==='table')return <div className={styles.tableScroll}><table className={styles.threeLine} style={{fontSize:surface==='report'?'inherit':`${object.fontSize/9.6}cqw`,color:object.color}}><thead><tr>{result.headers.map((header,i)=><th key={i}>{header}</th>)}</tr></thead><tbody>{result.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j}>{number(cell)}</td>)}</tr>)}</tbody></table></div>;
     const {labels,values}=data!,max=Math.max(0,...values)||1,min=Math.min(0,...values),range=max-min||1;

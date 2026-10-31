@@ -99,3 +99,33 @@ test('the Word export numbers and draws the method figure from the stored result
   const paragraph = xml.slice(Math.max(xml.lastIndexOf('<w:p>', note), xml.lastIndexOf('<w:p ', note)), note);
   assert.match(paragraph, /w:val="ReportSource"/u, 'the note is set in the small source style');
 });
+
+test('an AHP result names the expert judgement matrix, never the loaded survey or its sample size', async () => {
+  const { AHP_SOURCE } = await import('../lib/advanced-analysis.ts'), { sourceLine } = await import('../lib/report-tables.ts');
+  const run = runAdvanced({ method: 'ahp', criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] }, table, []);
+  const result = (await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).items.find(i => i.kind === 'table').result;
+  assert.equal(result.sourceName, AHP_SOURCE);
+  assert.notEqual(result.sourceHash, 'a'.repeat(64));
+  assert.equal(result.classification, 'user_provided', 'the judgements are entered, not simulated survey answers');
+  assert.equal(sourceLine(result), `资料来源：${AHP_SOURCE}（3 项准则）。`);
+});
+
+test('tables the exporters cannot take are refused before anything is written', () => {
+  const wide = runAdvanced({ method: 'cluster', variables: [0, 1, 2, 3, 4, 5, 6, 7], k: 3 }, table, ['99']);
+  assert.match(wide.refused, /至多 7 个/);
+  const fits = runAdvanced({ method: 'cluster', variables: [0, 1, 2, 3, 4, 5, 6], k: 3 }, table, ['99']);
+  assert.ok(!('refused' in fits) && fits.writing.table.headers.length === 10);
+});
+
+test('the PPT draws an advanced method figure as the report does, not bars of a table column', async () => {
+  const { buildPptx } = await import('../lib/editor-export.ts'), { makeSlideObject } = await import('../lib/research-quality.ts');
+  const { default: JSZip } = await import('jszip'), { default: sharp } = await import('sharp');
+  const run = runAdvanced({ method: 'regression', outcome: 6, predictors: [0, 3] }, table, ['99']);
+  const applied = applyReportInsert(report(), await advancedInsert(run, { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true }));
+  const result = applied.content.quality.results[0];
+  const content = { ...applied.content, slides: [{ id: 'slide', title: '回归结果', body: '', aside: '', notes: '', layout: 'chart', objects: [makeSlideObject('chart', { evidenceId: result.id, x: 5, y: 20, width: 60, height: 65 })] }] };
+  const renderSvg = async svg => new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
+  const zip = await JSZip.loadAsync(await (await buildPptx(content, renderSvg)).arrayBuffer());
+  assert.ok(Object.keys(zip.files).some(name => /^ppt\/media\/.+\.svg$/u.test(name)), 'the method figure, as vector SVG');
+  assert.ok(!Object.keys(zip.files).some(name => /^ppt\/charts\/chart\d*\.xml$/u.test(name)), 'no native bar chart of the table');
+});
