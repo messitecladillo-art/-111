@@ -95,3 +95,14 @@ test('a negated word is counted as negated, never as its opposite', () => {
   const table = termTable(['满意', '不满意', '不满意', '很满意', '不满意']);
   assert.deepEqual(table.rows.map(r => [r.term, r.answers]), [['不满意', 3], ['满意', 2]]);
 });
+
+test('a group with nothing to say is left out of the comparison, and one group alone is no comparison', () => {
+  const groups = distinctiveTerms([
+    { name: '低年级', answers: ['希望增加夜间照明', '夜间照明不足'] },
+    { name: '高年级', answers: ['希望增加停车位', '停车位不够'] },
+    { name: '研究生', answers: ['无', '不知道'] },
+  ]);
+  assert.deepEqual(groups[2], { name: '研究生', n: 0, terms: [] });
+  assert.ok(!groups[0].terms.some(t => ['希望', '增加'].includes(t.term)), 'words both answering groups use still score zero');
+  assert.deepEqual(distinctiveTerms([{ name: 'a', answers: ['夜间照明不足'] }, { name: 'b', answers: ['无'] }]), { refused: 'too-few-groups' });
+});
