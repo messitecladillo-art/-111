@@ -74,6 +74,8 @@ test('without a word segmenter the counts are refused in plain words, never appr
   try {
     delete Intl.Segmenter;
     assert.deepEqual(termTable(answers), { refused: 'no-segmenter' });
+    assert.deepEqual(distinctiveTerms([{ name: 'a', answers }]), { refused: 'no-segmenter' });
+    assert.deepEqual(cooccurrence(answers, ['照明']), { refused: 'no-segmenter' });
     assert.throws(() => terms('照明不足'), new RegExp(NO_SEGMENTER.slice(0, 8)));
   } finally { Intl.Segmenter = original; }
   assert.ok(!('refused' in termTable(answers)), 'restored');
@@ -85,6 +87,8 @@ test('a negated word is counted as negated, never as its opposite', () => {
   assert.deepEqual(terms('不太方便'), ['不太方便']);
   assert.deepEqual(terms('器材不够用'), ['器材', '不够用']);
   assert.deepEqual(terms('服务不好'), ['服务', '不好'], 'a negated single character is a term');
+  assert.deepEqual(terms('不觉得方便'), ['不方便'], 'a negated function word is no term; the negation reaches the content word');
+  assert.deepEqual(terms('不可以'), [], 'nothing left to negate');
   assert.deepEqual(terms('希望增加，不。'), ['希望', '增加'], 'a negator before punctuation negates nothing counted');
   const table = termTable(['满意', '不满意', '不满意', '很满意', '不满意']);
   assert.deepEqual(table.rows.map(r => [r.term, r.answers]), [['不满意', 3], ['满意', 2]]);
