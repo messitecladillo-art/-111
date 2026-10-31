@@ -38,7 +38,7 @@ const segmenter = () => {
  * Negators the segmenter returns as words of their own (不/满意, 没有/照明, 不太/方便). They are joined to the word they
  * negate, with any degree word between (不是/很/方便), so 不满意 is never counted as 满意.
  */
-export const NEGATORS: ReadonlySet<string> = new Set(['不', '没', '没有', '未', '无', '非', '别', '不太', '不够', '不要', '不能', '不会', '不是', '不大', '不怎么', '没什么', '并不', '从不', '从没']);
+export const NEGATORS: ReadonlySet<string> = new Set(['不', '没', '没有', '也没有', '也不', '未', '无', '非', '别', '不太', '不够', '不要', '不能', '不会', '不是', '不大', '不怎么', '没什么', '并不', '从不', '从没']);
 // Words a negation takes into its phrase: degree words (不是/很/方便) and the scope words of 没有任何问题, 未发现问题,
 // 无明显问题, so the 问题 after them is never counted as a problem raised.
 const DEGREE: ReadonlySet<string> = new Set(['很', '太', '大', '够', '怎么', '那么', '特别', '非常', '是很', '任何', '什么', '明显', '发现', '存在', '其他']);
@@ -71,9 +71,11 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
 }
 
 /** The answers that say something: blank and non-answers (无, 没有, 不知道) do not count towards the mention rates. */
-// "Nothing to report" in its usual forms, one or several nouns joined (没有任何问题和意见, 暂无建议或意见).
+// "Nothing to report" in its usual forms: one or several nouns joined (没有任何问题和意见, 暂无建议或意见), said once
+// or repeated (没有问题，也没有建议), with or without 发现 (没有发现问题). Judged on the answer without punctuation.
 const REPORTABLE = '(?:问题|意见|建议|不满|缺点|要求)';
-const NOTHING_TO_REPORT = new RegExp(`^(?:暂时|目前|暂)?(?:没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他)?${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*了?$`, 'u');
+const NOTHING_UNIT = `(?:也|并且|而且|同时|另外)?(?:暂时|目前|暂)?(?:没有发现|没发现|没有|没|无|暂无|未发现|未见|不存在)(?:任何|什么|明显的?|其他)?${REPORTABLE}(?:(?:和|或|与|及|或者|以及)?${REPORTABLE})*`;
+const NOTHING_TO_REPORT = new RegExp(`^(?:${NOTHING_UNIT})+了?$`, 'u');
 
 export function answered(answers: readonly string[]): string[] {
   // Judged without spaces and punctuation, after full-width forms are normalised: Ｎ／Ａ, N.A., N / A, ... and ??? are
