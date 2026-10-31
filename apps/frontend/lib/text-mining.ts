@@ -50,10 +50,12 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
     // Punctuation ends a clause: a negator left before it negates nothing that is counted.
     if (!isWordLike) { negation = ''; continue; }
     if (NEGATORS.has(word) || (negation && DEGREE.has(word))) { negation += word; continue; }
+    // A function word is not a term, negated or not; its negation carries to the content word it governs (不觉得方便 → 不方便).
+    if (drop.has(word)) continue;
     const term = negation + word;
     negation = '';
     // A single Han character is almost always a function word or a fragment; numbers belong to the closed questions.
-    if ([...term].length < 2 || /^[\p{N}.%]+$/u.test(term) || drop.has(term)) continue;
+    if ([...term].length < 2 || /^[\p{N}.%]+$/u.test(term)) continue;
     out.push(term);
   }
   return out;
@@ -95,7 +97,8 @@ export function termTable(answers: readonly string[], options: { top?: number; d
  * as one document, tf = the term's share of the group's words, idf = ln(groups / groups using the term). A term every
  * group uses scores zero, so what remains is what this group says and the others do not.
  */
-export function distinctiveTerms(groups: readonly { name: string; answers: readonly string[] }[], options: { top?: number; drop?: ReadonlySet<string> } = {}): { name: string; n: number; terms: { term: string; tfidf: number; answers: number }[] }[] {
+export function distinctiveTerms(groups: readonly { name: string; answers: readonly string[] }[], options: { top?: number; drop?: ReadonlySet<string> } = {}): { name: string; n: number; terms: { term: string; tfidf: number; answers: number }[] }[] | TextRefusal {
+  if (!segmenterAvailable()) return { refused: 'no-segmenter' };
   const bags = groups.map(g => { const kept = answered(g.answers); return { name: g.name, n: kept.length, docs: kept.map(a => terms(a, options.drop)) }; });
   const df = new Map<string, number>();
   for (const bag of bags) for (const w of new Set(bag.docs.flat())) df.set(w, (df.get(w) ?? 0) + 1);
@@ -113,7 +116,8 @@ export function distinctiveTerms(groups: readonly { name: string; answers: reado
  * How many answers mention both of two terms, for the given terms (usually the top of the term table), strongest
  * pairs first. Counted once per answer however often the words repeat.
  */
-export function cooccurrence(answers: readonly string[], vocabulary: readonly string[], options: { drop?: ReadonlySet<string>; minimum?: number } = {}): { a: string; b: string; answers: number }[] {
+export function cooccurrence(answers: readonly string[], vocabulary: readonly string[], options: { drop?: ReadonlySet<string>; minimum?: number } = {}): { a: string; b: string; answers: number }[] | TextRefusal {
+  if (!segmenterAvailable()) return { refused: 'no-segmenter' };
   const index = new Map(vocabulary.map((w, i) => [w, i])), pairs = new Map<string, number>();
   for (const answer of answered(answers)) {
     const present = [...new Set(terms(answer, options.drop))].filter(w => index.has(w)).sort((x, y) => index.get(x)! - index.get(y)!);
