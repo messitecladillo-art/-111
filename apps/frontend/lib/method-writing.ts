@@ -92,7 +92,7 @@ export function logisticWriting(fit: Logistic, outcome: string, event: string, r
     table: {
       caption: `${literal(event)}影响因素的 Logistic 回归估计结果`,
       headers: ['变量', 'B', '标准误', 'Wald z', 'p', 'OR', 'OR 95% CI', '平均边际效应'],
-      rows: fit.coefficients.map(c => [literal(c.name), f3(c.estimate), f3(c.se), f2(c.z), pCell(c.p), f3(c.oddsRatio), `[${f3(c.oddsRatioCi[0])}, ${f3(c.oddsRatioCi[1])}]`, c.ame ? f3(c.ame.value) : '—']),
+      rows: fit.coefficients.map(c => [literal(c.name), f3(c.estimate), f3(c.se), f2(c.z), pCell(c.p), ...([c.oddsRatio, ...c.oddsRatioCi].every(Number.isFinite) ? [f3(c.oddsRatio), `[${f3(c.oddsRatioCi[0])}, ${f3(c.oddsRatioCi[1])}]`] : ['—', '—']), c.ame ? f3(c.ame.value) : '—']),
       note: `注：$n=${fit.n}$，${literal(event)} ${fit.events} 例；似然比检验 $\\chi^2(${fit.lr.df})=${tex2(fit.lr.chi2)}$，$${pMath(fit.lr.p)}$；McFadden 伪 $R^2=${tex3(fit.mcFaddenR2)}$。`,
     },
     reading: `${lead(refs)}模型的似然比检验 $\\chi^2(${fit.lr.df})=${tex2(fit.lr.chi2)}$，$${pMath(fit.lr.p)}$，${fit.lr.p < 0.05 ? '模型整体显著' : '模型整体未达到显著水平'}，McFadden 伪 $R^2=${tex3(fit.mcFaddenR2)}$。`

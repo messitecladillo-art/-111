@@ -56,9 +56,13 @@ test('it refuses rather than guesses', () => {
 });
 
 test('a predictor in small units is not mistaken for separation', () => {
-  const fit = multinomialRegression(y, [{ name: 'x1', values: x1.map(v => v / 1000) }, ...predictors.slice(1)]);
+  const fit = multinomialRegression(y, [{ name: 'x1', values: x1.map(v => v / 10) }, ...predictors.slice(1)]);
   assert.ok(!('refused' in fit));
-  near(fit.equations[0].coefficients[1].estimate, REF.beta[0][1] * 1000, 1e-8, 'rescaled slope');
+  near(fit.equations[0].coefficients[1].estimate, REF.beta[0][1] * 10, 1e-8, 'rescaled slope');
+});
+
+test('a predictor in units so small that e^β overflows is refused for its units', () => {
+  assert.deepEqual(multinomialRegression(y, [{ name: 'x1', values: x1.map(v => v / 1000) }, ...predictors.slice(1)]), { refused: 'extreme-units' });
 });
 
 test('a predictor with a large offset is solved as well as a centred one, not refused as collinear', () => {

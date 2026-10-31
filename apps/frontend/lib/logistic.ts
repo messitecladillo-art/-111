@@ -42,29 +42,35 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
   if (events === 0 || events === n) return { refused: 'one-class' };
   if (n < cols + 2 || predictors.some(p => p.values.length !== n)) return { refused: 'too-few-cases' };
   const x = Array.from({ length: n }, (_, i) => [1, ...predictors.map(p => p.values[i])]);
-  // Separation is judged per standard deviation of the predictor, so a predictor's units cannot trigger it.
-  const spread = predictors.map(p => { const m = p.values.reduce((s, v) => s + v, 0) / n; return Math.sqrt(p.values.reduce((s, v) => s + (v - m) ** 2, 0) / n); });
-  let beta = new Array<number>(cols).fill(0), p = new Array<number>(n).fill(0.5), cov: number[][] | null = null, iterations = 0, converged = false;
-  beta[0] = Math.log(events / (n - events));
+  // The model is solved on standardized predictors, so a predictor far from zero or in odd units cannot make the
+  // information matrix look singular, and mapped back to the original units afterwards. Separation is judged per SD.
+  const centre = predictors.map(p => p.values.reduce((s, v) => s + v, 0) / n);
+  const spread = predictors.map((p, a) => Math.sqrt(p.values.reduce((s, v) => s + (v - centre[a]) ** 2, 0) / n));
+  if (spread.some(s => !(s > 0))) return { refused: 'collinear' };
+  const z = x.map(row => row.map((v, j) => (j === 0 ? 1 : (v - centre[j - 1]) / spread[j - 1])));
+  const information = (q: readonly number[]) => Array.from({ length: cols }, (_, a) => Array.from({ length: cols }, (_, b) => z.reduce((s, row, i) => s + row[a] * row[b] * q[i] * (1 - q[i]), 0)));
+  let gamma = new Array<number>(cols).fill(0), p = new Array<number>(n).fill(0.5), cov: number[][] | null = null, iterations = 0, converged = false;
+  gamma[0] = Math.log(events / (n - events));
   for (; iterations < 100; iterations++) {
-    p = x.map(row => sigmoid(row.reduce((s, v, j) => s + v * beta[j], 0)));
+    p = z.map(row => sigmoid(row.reduce((s, v, j) => s + v * gamma[j], 0)));
     if (p.some(v => v < 1e-12 || v > 1 - 1e-12) && iterations > 25) return { refused: 'separation' };
-    const info = Array.from({ length: cols }, (_, a) => Array.from({ length: cols }, (_, b) => x.reduce((s, row, i) => s + row[a] * row[b] * p[i] * (1 - p[i]), 0)));
-    cov = invert(info);
+    cov = invert(information(p));
     if (!cov) return { refused: 'collinear' };
-    const score = Array.from({ length: cols }, (_, a) => x.reduce((s, row, i) => s + row[a] * (y[i] - p[i]), 0));
+    const score = Array.from({ length: cols }, (_, a) => z.reduce((s, row, i) => s + row[a] * (y[i] - p[i]), 0));
     const step = cov.map(row => row.reduce((s, v, b) => s + v * score[b], 0));
-    beta = beta.map((b, j) => b + step[j]);
-    if (beta.some((b, j) => !Number.isFinite(b) || (j > 0 && Math.abs(b) * spread[j - 1] > 30))) return { refused: 'separation' };
+    gamma = gamma.map((b, j) => b + step[j]);
+    if (gamma.some((b, j) => !Number.isFinite(b) || (j > 0 && Math.abs(b) > 30))) return { refused: 'separation' };
     if (Math.max(...step.map(Math.abs)) < 1e-12) { iterations++; converged = true; break; }
   }
   if (!converged) return { refused: 'no-convergence' };
   // The covariance at the estimate: refresh p and the information once more after the last step.
-  p = x.map(row => sigmoid(row.reduce((s, v, j) => s + v * beta[j], 0)));
-  const info = Array.from({ length: cols }, (_, a) => Array.from({ length: cols }, (_, b) => x.reduce((s, row, i) => s + row[a] * row[b] * p[i] * (1 - p[i]), 0)));
-  cov = invert(info);
+  p = z.map(row => sigmoid(row.reduce((s, v, j) => s + v * gamma[j], 0)));
+  cov = invert(information(p));
   if (!cov) return { refused: 'collinear' };
-  const v = cov;
+  // Back to the original units: β = T·γ with T₀₀ = 1, T₀ⱼ = −mⱼ/sⱼ, Tⱼⱼ = 1/sⱼ, and the covariance T·C·Tᵀ.
+  const T = Array.from({ length: cols }, (_, r) => Array.from({ length: cols }, (_, c) => (r === 0 ? (c === 0 ? 1 : -centre[c - 1] / spread[c - 1]) : r === c ? 1 / spread[r - 1] : 0)));
+  const gcov = cov, beta = T.map(row => row.reduce((s, t, c) => s + t * gamma[c], 0));
+  const v = T.map(row => T.map(other => row.reduce((s, t, c) => s + t * other.reduce((u, w, d) => u + w * gcov[c][d], 0), 0)));
   const ll = logLikelihood(y, p), rate = events / n, ll0 = events * Math.log(rate) + (n - events) * Math.log(1 - rate);
   const slope = p.reduce((s, q) => s + q * (1 - q), 0) / n;
   const coefficients = beta.map((b, j): LogisticCoefficient => {
@@ -81,6 +87,7 @@ export function logisticRegression(y: readonly number[], predictors: readonly { 
   });
   const chi2 = 2 * (ll - ll0);
   // A coefficient per raw unit so large that e^β overflows (a predictor in tiny units) has no reportable odds ratio.
-  if (coefficients.some(c => ![c.oddsRatio, ...c.oddsRatioCi].every(Number.isFinite))) return { refused: 'extreme-units' };
+  // The intercept's e^β has no reading and may overflow when a predictor sits far from zero; only slopes are checked.
+  if (coefficients.some((c, j) => j > 0 && ![c.oddsRatio, ...c.oddsRatioCi].every(Number.isFinite))) return { refused: 'extreme-units' };
   return { n, predictors: k, events, coefficients, logLikelihood: ll, nullLogLikelihood: ll0, lr: { chi2, df: k, p: chiSquareUpper(chi2, k) }, mcFaddenR2: 1 - ll / ll0, iterations };
 }
