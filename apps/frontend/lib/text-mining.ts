@@ -18,11 +18,20 @@ export const FUNCTION_WORDS: ReadonlySet<string> = new Set([
 ]);
 
 export type TermRow = { term: string; count: number; answers: number; share: number };
-export type TextRefusal = { refused: 'no-answers' | 'too-few-answers' | 'no-terms' };
+export type TextRefusal = { refused: 'no-segmenter' | 'no-answers' | 'too-few-answers' | 'no-terms' };
 /** Fewer answers than this give mention rates too coarse to report. */
 export const MIN_ANSWERS = 5;
 
-const segmenter = () => new Intl.Segmenter('zh', { granularity: 'word' });
+/**
+ * Whether this runtime can segment Chinese words. Without it the counts are refused rather than approximated:
+ * character bigrams (the fallback of the knowledge search) would count fragments such as 放时 as mentions.
+ */
+export const segmenterAvailable = (): boolean => typeof Intl !== 'undefined' && typeof (Intl as { Segmenter?: unknown }).Segmenter === 'function';
+export const NO_SEGMENTER = '当前浏览器不支持中文分词（Intl.Segmenter），请更新浏览器后再分析开放题。';
+const segmenter = () => {
+  if (!segmenterAvailable()) throw Error(NO_SEGMENTER);
+  return new Intl.Segmenter('zh', { granularity: 'word' });
+};
 
 /** The content words of one answer, in order: word-like segments, function words, numbers and single letters dropped. */
 export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS): string[] {
@@ -38,7 +47,8 @@ export function terms(text: string, drop: ReadonlySet<string> = FUNCTION_WORDS):
 
 /** The answers that say something: blank and non-answers (无, 没有, 不知道) do not count towards the mention rates. */
 export function answered(answers: readonly string[]): string[] {
-  return answers.map(a => a.trim()).filter(a => a && !/^(无|没有|暂无|不知道|不清楚|没|否|\/|-|—+|n\/?a|none)[。.！!]*$/iu.test(a));
+  // Full-width forms (Ｎ／Ａ, －) are normalised first, as the segmentation does.
+  return answers.map(a => a.normalize('NFKC').trim()).filter(a => a && !/^(无|没有|暂无|不知道|不清楚|没|否|\/|-|—+|n\/?a|none)[。.！!]*$/iu.test(a));
 }
 
 /**
@@ -46,6 +56,7 @@ export function answered(answers: readonly string[]): string[] {
  * answers that say something. Ties are broken by total count, then by the term, so the order is reproducible.
  */
 export function termTable(answers: readonly string[], options: { top?: number; drop?: ReadonlySet<string> } = {}): { n: number; rows: TermRow[] } | TextRefusal {
+  if (!segmenterAvailable()) return { refused: 'no-segmenter' };
   const kept = answered(answers);
   if (!kept.length) return { refused: 'no-answers' };
   if (kept.length < MIN_ANSWERS) return { refused: 'too-few-answers' };
