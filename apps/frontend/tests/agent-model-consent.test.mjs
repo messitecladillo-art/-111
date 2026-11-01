@@ -51,7 +51,7 @@ function harness() {
   const posts = [], drafts = [], tools = [], navigation = [];
   const first = deferred(), receipt = deferred();
   let storedPreferences = {research:A,questionnaire:A,report:A};
-  const current = { owner: ALICE, identityEpoch: 1, generation: { account: 'ready', lists: { state: 'ready', services: [service(A), service(B)] }, start: brief => ({ lines: [[{text: 'questionnaire consent'}]] }) },
+  const current = { owner: ALICE, identityEpoch: 1, generation: { account: 'ready', lists: { state: 'ready', services: [service(A), service(B)] }, start: () => ({ lines: [[{text: 'questionnaire consent'}]] }) },
     chatService: service(A), reportService: service(A), chatMode: 'model', panel: null, light: { overall: 0, rooms: [] }, traces: [], held: { results: [], findings: [], placed: [], pending: false }, plan: null,
     report: { title: 'Synthetic report', report: [] }, liveReport: { quality: { results: [] } }, design: null,
     mutate: () => {}, knowledge: { ready: true, search: async () => [] }, isCurrentAccount: (owner, epoch) => current.owner === owner && current.identityEpoch === epoch };
