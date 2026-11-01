@@ -3,7 +3,7 @@
  * (counts as integers, percentages to one decimal, p values as "<0.001"), and a cross-tabulation laid out as a
  * matrix rather than one row per cell. The registered result itself is never changed.
  */
-import type { ResultSnapshot } from './research-quality.ts';
+import type { ReportBlock, ResultSnapshot } from './research-quality.ts';
 import { mergeSpans } from './sampling-selection.ts';
 
 export type PresentedTable = { headers: string[]; rows: string[][]; note: string };
@@ -142,6 +142,20 @@ function groups(r: ResultSnapshot): PresentedTable | null {
 }
 
 /** The report view of a result. Only the analysis recipes' own layouts are rearranged; anything else keeps every column, only rounded. */
+/** A "注：" paragraph right after a table or figure is that exhibit's note: set small and unindented, before its source line. */
+export const isExhibitNote = (blocks: readonly ReportBlock[], index: number): boolean =>
+  blocks[index]?.kind === 'paragraph' && /^注[：:]/u.test(blocks[index].text) && (blocks[index - 1]?.kind === 'chart' || blocks[index - 1]?.kind === 'table');
+
+/**
+ * Where an exhibit's source line goes: "own" right after it, "note" after its note, "shared" after the next exhibit of
+ * the same result (a table and its figure share one source, the table's note between them).
+ */
+export function sourcePlacement(blocks: readonly ReportBlock[], index: number): 'own' | 'note' | 'shared' {
+  const noted = isExhibitNote(blocks, index + 1), next = blocks[index + (noted ? 2 : 1)];
+  if (next && (next.kind === 'chart' || next.kind === 'table') && next.evidenceId === blocks[index].evidenceId) return 'shared';
+  return noted ? 'note' : 'own';
+}
+
 export function presentResult(r: ResultSnapshot): PresentedTable {
   const h = r.headers;
   const special = r.method === 'frequency' && h[1] === '频数' && /%/.test(h[2] ?? '') ? frequency(r)
@@ -160,6 +174,8 @@ export function columnWeights(table: PresentedTable): number[] {
 export function sourceLine(r: ResultSnapshot): string {
   // A sampling frame is part of the design, not a sample: no sample size or data class to report.
   if (r.method === 'sampling-frame') return '资料来源：本研究抽样设计。';
+  // AHP weighs experts' judgements: its n is the number of criteria, not a sample.
+  if (r.method === 'ahp') return `资料来源：${r.sourceName}（${r.n} 项准则）。`;
   const kind = r.classification === 'simulated' ? '；模拟数据' : r.classification === 'public' ? '；公开数据' : '；用户提供数据';
   return `资料来源：${r.sourceName}${r.sourceUrl ? `（${r.sourceUrl}）` : ''}；有效样本 n = ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${kind}。`;
 }

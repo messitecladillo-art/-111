@@ -35,5 +35,5 @@ def register_agent_chat(app, settings, db, session_user, lock_user, operation, o
 
     @app.post('/api/agent/drafts', status_code=201)
     async def create_draft(request: Request, user=Depends(auth), session=Depends(db)):
-        raw_data = await body(request, section_draft.REQUEST_FIELDS, limit=60000)
+        raw_data = await body(request, section_draft.REQUEST_FIELDS, section_draft.OPTIONAL_FIELDS, limit=80000)
         return await drafts.create_draft(user=user, session=session, check_session=lambda session, **kwargs: session_user(request, session, **kwargs), raw_data=raw_data)

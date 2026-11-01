@@ -3,7 +3,7 @@
 import {useRef,useState,type PointerEvent} from 'react';
 import {EDITOR_LIMITS,type EditorContent,type Slide} from '@/lib/editor-model';
 import {blueprintNode,insertBeforeBackMatter} from '@/lib/report-blueprint';
-import {defaultColumn,METHOD_LABELS,placeResult,sectionForNode,suggestedExhibits,suggestedNode,type ExhibitKind} from '@/lib/report-placement';
+import {ADVANCED_NODES,ADVANCED_PLACEMENT,defaultColumn,METHOD_LABELS,placeResult,sectionForNode,suggestedExhibits,suggestedNode,type ExhibitKind} from '@/lib/report-placement';
 import {chartData,confirmFinding,defaultFinding,findingNeedsReview,findingSignature,findingReportBody,makeSlideObject,QUALITY_LAYOUTS,QUALITY_LIMITS,resultFor,type ResearchFinding,type ResearchQuality,type ResultSnapshot,type SlideObject} from '@/lib/research-quality';
 import {composeQualitySlide,QUALITY_LAYOUT_LABELS,withQuality} from '@/lib/quality-layouts';
 import {getVectorAsset,VECTOR_ASSETS} from '@/lib/vector-assets';
@@ -14,6 +14,8 @@ import {texProblem} from '@/lib/omml';
 import {Formula} from '../math/Tex';
 import ReportFigureStudio from './ReportFigureStudio';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
+import {canChart,carriesFigure} from '@/lib/method-figures';
+import {Figure} from './PaperBlocks';
 
 type Props={content:EditorContent;onChange:(content:EditorContent)=>boolean|void;disabled?:boolean};
 /** Clipboard access is missing on insecure origins and can be refused; report failure instead of throwing. */
@@ -33,7 +35,11 @@ export function QualityGraphic({object,quality,figures,visualStyle,surface='slid
   }
 
   let result:ReturnType<typeof resultFor>|null=null, data:ReturnType<typeof chartData>|null=null,error='';
-  try{result=resultFor(quality,object.evidenceId);if(object.kind!=='table')data=chartData(result,object.valueColumn);}catch(e){error=(e as Error).message;}
+  try{result=resultFor(quality,object.evidenceId);}catch(e){error=(e as Error).message;}
+  // An advanced method's result carries its own figure: the canvas draws it as the PPT export will.
+  if(result&&object.kind==='chart'&&carriesFigure(result))return <Figure result={result} column={object.valueColumn} accent={/^#[0-9a-fA-F]{6}$/.test(object.color)?object.color:'#2F6B4F'} visualStyle={visualStyle}/>;
+  if(result&&object.kind==='chart'&&!canChart(result))return <p className={styles.error}>{`“${result.title}”没有可画的图，请改用表格。`}</p>;
+  try{if(result&&object.kind!=='table')data=chartData(result,object.valueColumn);}catch(e){error=(e as Error).message;}
   if(!result||error)return <p className={styles.error}>{error}</p>;
     if(object.kind==='table')return <div className={styles.tableScroll}><table className={styles.threeLine} style={{fontSize:surface==='report'?'inherit':`${object.fontSize/9.6}cqw`,color:object.color}}><thead><tr>{result.headers.map((header,i)=><th key={i}>{header}</th>)}</tr></thead><tbody>{result.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j}>{number(cell)}</td>)}</tr>)}</tbody></table></div>;
     const {labels,values}=data!,max=Math.max(0,...values)||1,min=Math.min(0,...values),range=max-min||1;
@@ -53,8 +59,9 @@ export function QualitySlidePreview({slide,quality,figures,visualStyle,label='PP
 /** Where a result goes in the report and which exhibit it brings; the blueprint section is the default. */
 function PlaceResult({result,content,disabled,onPlace}:{result:ResultSnapshot;content:EditorContent;disabled:boolean;onPlace:(sectionId:string|undefined,exhibits:ExhibitKind[])=>void}){
   const [target,setTarget]=useState(''),[exhibits,setExhibits]=useState<ExhibitKind[]>(()=>suggestedExhibits(result));
-  const node=suggestedNode(result),existing=sectionForNode(content,node),chartable=result.method!=='sampling-frame';
+  const node=suggestedNode(result),existing=sectionForNode(content,node),chartable=canChart(result);
   const toggle=(kind:ExhibitKind,on:boolean)=>setExhibits(on?(['chart','table'] as const).filter(k=>k===kind||exhibits.includes(k)):exhibits.filter(k=>k!==kind));
+  if(ADVANCED_NODES[result.method])return <p className={styles.place}>{ADVANCED_PLACEMENT}</p>;
   return <div className={styles.place}>
     <select aria-label={`“${result.title}”写入位置`} disabled={disabled} value={target} onChange={e=>setTarget(e.target.value)}><option value="">{existing?`按蓝图：${existing.title}`:`按蓝图新建：${blueprintNode(node).title}`}</option>{content.report.map(s=><option key={s.id} value={s.id}>{s.title||'未命名章节'}</option>)}</select>
     <div>{(['chart','table'] as const).map(kind=><label key={kind} className={styles.check}><input type="checkbox" disabled={disabled||(kind==='chart'&&!chartable)} checked={exhibits.includes(kind)} onChange={e=>toggle(kind,e.target.checked)}/>{kind==='chart'?'图':'表'}</label>)}<button type="button" disabled={disabled} onClick={()=>onPlace(target||undefined,exhibits)}>写入报告</button></div>
