@@ -99,8 +99,13 @@ class InviteService:
 
     def list(self, *, user, session):
         self._issuer(user)
-        rows = session.execute(select(InviteCode).where(InviteCode.created_by == user.id).order_by(InviteCode.created_at.desc()).limit(200)).scalars().all()
-        return {"invites": [view(row) for row in rows]}
+        # Every code that can still admit someone is listed (at most MAX_ACTIVE), so none escapes revocation; of the
+        # spent ones only the latest are kept for reference.
+        usable = (InviteCode.revoked_at.is_(None)) & (InviteCode.expires_at > now()) & (InviteCode.uses < InviteCode.max_uses)
+        mine = select(InviteCode).where(InviteCode.created_by == user.id)
+        active = session.execute(mine.where(usable)).scalars().all()
+        spent = session.execute(mine.where(~usable).order_by(InviteCode.created_at.desc()).limit(100)).scalars().all()
+        return {"invites": [view(row) for row in sorted([*active, *spent], key=lambda row: row.created_at, reverse=True)]}
 
     def revoke(self, *, invite_id, user, session):
         self._issuer(user)

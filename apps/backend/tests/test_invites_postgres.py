@@ -1,4 +1,5 @@
 """Actual PostgreSQL acceptance of registration by invitation code, with synthetic addresses only."""
+from uuid import uuid4
 import pytest
 from sqlalchemy import delete, select, update
 from fastapi.testclient import TestClient
@@ -109,6 +110,20 @@ def test_an_expired_code_and_a_delisted_address_are_not_ways_in(harness, setting
     client, cid = request_code(app, settings, "c@example.test", fresh["code"])
     assert verify(client, settings, cid, deliveries[cid][1]).status_code == 401
     assert admin.get("/api/invites").json()["invites"][0]["uses"] == 0, "the code was not spent on a delisted account"
+
+
+def test_every_usable_code_is_listed_however_many_were_spent(harness, settings, pg_engine):
+    app, login, deliveries, _ = harness
+    admin, me = login()
+    old = issue(admin, label="早先发放")
+    # 150 spent codes issued after it: the old usable one must still be listed for revocation.
+    with pg_engine.begin() as connection:
+        later = now()
+        connection.execute(InviteCode.__table__.insert(), [{"id": str(uuid4()), "code_hash": f"{i:064x}", "created_by": me["user"]["id"], "label": f"旧{i}",
+                                                           "max_uses": 1, "uses": 1, "expires_at": later, "revoked_at": None, "created_at": later} for i in range(150)])
+    listed = admin.get("/api/invites").json()["invites"]
+    assert any(row["id"] == old["id"] and row["status"] == "active" for row in listed)
+    assert len(listed) == 101, "the usable code and the latest 100 spent ones"
 
 
 def test_team_owners_can_add_accounts_registered_by_code(harness, settings):
