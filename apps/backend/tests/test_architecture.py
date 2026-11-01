@@ -99,7 +99,7 @@ def test_composed_http_boundary_preserves_session_and_authorization(settings, tm
     with TestClient(create_app(local)) as client:
         response = client.get("/api/session")
         assert response.status_code == 200
-        assert response.json() == {"authenticated": False, "mode": "local_test"}
+        assert response.json() == {"authenticated": False, "mode": "local_test", "providerMode": "fixture"}
         response = client.get("/api/projects")
         assert response.status_code == 401
         assert response.json()["error"]["code"] == "session_required"

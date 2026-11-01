@@ -76,7 +76,12 @@ def test_operator_exact_allowlist_and_production_fixture_fail_closed(settings):
                  "https://api.openai.com/v1?", "https://api.openai.com/v1#", "https://api.openai.com/v1/", "https://api.openai.com\\v1"):
         with pytest.raises(ValueError):
             validate_base("openai", base)
-    for overrides in ({"mode": "production"}, {"provider_mode": "live"}, {"mail_mode": "resend"},
+    for overrides in ({"mode": "production"}, {"mail_mode": "resend"}, {"mail_mode": "resend", "provider_mode": "live"},
                       {"auth_secret": next(iter(settings.keyring.values()))}, {"database_url": "sqlite://"}):
         with pytest.raises(ValueError):
             Settings(**(settings.model_dump() | overrides))
+    # A real model service may be tried locally only by explicit choice; mail stays synthetic and origins loopback.
+    live = Settings(**(settings.model_dump() | {"provider_mode": "live"}))
+    assert (live.mode, live.mail_mode, live.provider_mode) == ("local_test", "fixture", "live")
+    with pytest.raises(ValueError):
+        Settings(**(settings.model_dump() | {"provider_mode": "live", "allowed_origins": ["https://evix.example.org"]}))

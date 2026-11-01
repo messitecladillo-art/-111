@@ -49,6 +49,10 @@ apps/backend/.venv/Scripts/python.exe scripts/setup-local-postgres.py
 
 原生启动需要能够创建子进程的 Windows 用户会话。本批的沙箱限制了 PostgreSQL 创建受限令牌，已通过授权的项目专用本机进程完成运行验证。临时目录不是正式数据库存放位置。
 
+## 用真实模型联调（如 DeepSeek）
+
+默认的本地测试用合成模型，不产生费用。要在本机试真实模型：启动 API 前设置 `EVIX_P0_LIVE_MODEL=1`（等同 `EVIX_PROVIDER_MODE=live`），再登录后在“模型设置”里自己填入服务商与 API Key（如 DeepSeek，地址 `https://api.deepseek.com/v1`）。验证码邮件仍写在本地邮箱目录，访问仍限本机地址；每次调用照常先出确认卡，费用按你的服务商计。会话的 `providerMode` 为 `live` 时，页面不再标注“合成模型”。
+
 ## 本地体验账户
 
 当前 `local_test` 环境仅接受合成邮箱，邮件与模型都是明确标识的本地测试适配器，不会发信或产生模型账单。

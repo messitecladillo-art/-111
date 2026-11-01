@@ -95,7 +95,7 @@ class AuthenticationService:
         token, csrf = (random_token(), random_token())
         session.add(Session(token_hash=keyed(self.settings, 'session/v1', token), user_id=user.id, csrf=csrf, expires_at=now() + timedelta(days=30)))
         session.commit()
-        return ({'authenticated': True, 'user': {'id': user.id, 'email': user.email}, 'csrfToken': csrf, 'mode': self.settings.mode}, token)
+        return ({'authenticated': True, 'user': {'id': user.id, 'email': user.email}, 'csrfToken': csrf, 'mode': self.settings.mode, 'providerMode': self.settings.provider_mode}, token)
 
     def logout(self, *, user, session, row):
         row.revoked_at = now()

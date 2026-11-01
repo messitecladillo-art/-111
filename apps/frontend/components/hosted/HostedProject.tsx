@@ -100,7 +100,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const questionnaireServices = useMemo(() => services.filter(s => s.capabilities.includes('questionnaire')), [services]);
   const questionnaireNames = useMemo(() => serviceNames(questionnaireServices), [questionnaireServices]);
   // Model-backed runs are a write action on the project; viewers can still rehearse with the offline engine.
-  const siliconRunner = useMemo(() => writable ? createSiliconRunner({ projectId, services, localTest: auth.session?.mode === 'local_test', mutate: auth.mutate, maxCalls: siliconMaxCalls }) : null, [writable, projectId, services, auth.session?.mode, auth.mutate, siliconMaxCalls]);
+  const siliconRunner = useMemo(() => writable ? createSiliconRunner({ projectId, services, localTest: auth.session?.mode === 'local_test' && auth.session?.providerMode !== 'live', mutate: auth.mutate, maxCalls: siliconMaxCalls }) : null, [writable, projectId, services, auth.session?.mode, auth.session?.providerMode, auth.mutate, siliconMaxCalls]);
   useEffect(() => {
     if (!siliconOpened || !writable) return;
     let live = true;

@@ -17,8 +17,8 @@ def register_routes(app, *, settings, db, auth, session_user):
     def get_session(request: Request, session=Depends(db)):
         user, row = session_user(request, session, required=False)
         if user is None:
-            return {"authenticated": False, "mode": settings.mode}
-        return {"authenticated": True, "user": {"id": user.id, "email": user.email}, "csrfToken": row.csrf, "mode": settings.mode}
+            return {"authenticated": False, "mode": settings.mode, "providerMode": settings.provider_mode}
+        return {"authenticated": True, "user": {"id": user.id, "email": user.email}, "csrfToken": row.csrf, "mode": settings.mode, "providerMode": settings.provider_mode}
 
     @app.get("/api/net-exam/bank")
     def net_exam_bank(user=Depends(auth)):

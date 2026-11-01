@@ -30,5 +30,7 @@ if (-not (Test-Path -LiteralPath $evixConfig)) {
 }
 $evixValues = Get-Content -Raw -LiteralPath $evixConfig -Encoding UTF8 | ConvertFrom-Json
 foreach ($evixEntry in $evixValues.PSObject.Properties) { [Environment]::SetEnvironmentVariable($evixEntry.Name, [string]$evixEntry.Value, 'Process') }
+# Opt-in only: call the real model services users configure (their own keys, per-call consent). Mail stays local.
+if ($env:EVIX_P0_LIVE_MODEL -eq '1') { $env:EVIX_PROVIDER_MODE = 'live' }
 $env:UV_CACHE_DIR = Join-Path $evixLocal 'uv-cache'
 $env:NEXT_TELEMETRY_DISABLED = '1'

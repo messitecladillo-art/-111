@@ -90,8 +90,11 @@ class Settings(BaseSettings):
         self.invited_emails = list(dict.fromkeys(normalize_email(v) for v in self.invited_emails))
         if self.mode == "production" and (self.mail_mode != "resend" or self.provider_mode != "live"):
             raise ValueError("Production rejects all fixture modes")
-        if self.mode == "local_test" and (self.mail_mode != "fixture" or self.provider_mode != "fixture"):
-            raise ValueError("Local-test mode requires both synthetic mail and provider")
+        # Local test always uses synthetic mail and loopback origins. Its model calls are synthetic unless the operator
+        # explicitly sets EVIX_PROVIDER_MODE=live to try a real model service locally; the session then says so, and
+        # every call still goes through the same consent card and the user's own key.
+        if self.mode == "local_test" and self.mail_mode != "fixture":
+            raise ValueError("Local-test mode requires synthetic mail")
         if self.mail_mode == "fixture" and any(not v.endswith("@example.test") for v in self.invited_emails):
             raise ValueError("Fixture invitations must use example.test")
         if self.mail_mode == "resend" and (not re.fullmatch(r"[!-~]{8,512}", self.mail_api_key) or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", self.mail_from)):

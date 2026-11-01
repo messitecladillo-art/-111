@@ -1,7 +1,8 @@
 import { parseQuestionnaire, type Questionnaire } from './questionnaire.ts';
 
 export type MembershipRole = 'owner' | 'editor' | 'reviewer' | 'viewer';
-export type Session = { authenticated: boolean; user?: { id: string; email: string }; csrfToken?: string; mode: 'local_test' | 'production' };
+/** `providerMode` says whether model calls are synthetic or real; absent from older servers, which only run fixtures locally. */
+export type Session = { authenticated: boolean; user?: { id: string; email: string }; csrfToken?: string; mode: 'local_test' | 'production'; providerMode?: 'fixture' | 'live' };
 export type Team = { id: string; name: string; role: MembershipRole };
 export type Member = { userId: string; email: string; role: MembershipRole };
 export type Project = { id: string; title: string; teamId: string; revision: number; createdAt: string };
@@ -37,12 +38,14 @@ function timestamp(value: unknown): string {
 }
 function role(value: unknown): MembershipRole { if (!['owner', 'editor', 'reviewer', 'viewer'].includes(value as string)) bad(); return value as MembershipRole; }
 export function parseSession(value: unknown): Session {
-  const r = record(value, ['authenticated', 'mode'], ['user', 'csrfToken']);
+  const r = record(value, ['authenticated', 'mode'], ['user', 'csrfToken', 'providerMode']);
   if (typeof r.authenticated !== 'boolean' || !['local_test', 'production'].includes(r.mode as string)) bad();
-  if (!r.authenticated) { if (r.user !== undefined || r.csrfToken !== undefined) bad(); return { authenticated: false, mode: r.mode as Session['mode'] }; }
+  if (r.providerMode !== undefined && !['fixture', 'live'].includes(r.providerMode as string)) bad();
+  const provider = r.providerMode === undefined ? {} : { providerMode: r.providerMode as NonNullable<Session['providerMode']> };
+  if (!r.authenticated) { if (r.user !== undefined || r.csrfToken !== undefined) bad(); return { authenticated: false, mode: r.mode as Session['mode'], ...provider }; }
   const user = record(r.user, ['id', 'email']), csrf = string(r.csrfToken, 256);
   if (!csrf) bad();
-  return { authenticated: true, user: { id: id(user.id), email: string(user.email, 254) }, csrfToken: csrf, mode: r.mode as Session['mode'] };
+  return { authenticated: true, user: { id: id(user.id), email: string(user.email, 254) }, csrfToken: csrf, mode: r.mode as Session['mode'], ...provider };
 }
 export function parseProject(value: unknown): Project { const r = record(value, ['id', 'title', 'teamId', 'revision', 'createdAt']); return { id: id(r.id), title: string(r.title, 160), teamId: id(r.teamId), revision: integer(r.revision), createdAt: timestamp(r.createdAt) }; }
 export function parseTeam(value: unknown): Team { const r = record(value, ['id', 'name', 'role']); return { id: id(r.id), name: string(r.name, 160), role: role(r.role) }; }

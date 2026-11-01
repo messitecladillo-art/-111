@@ -34,6 +34,8 @@ test('version pages validate bounded descending rows and exact continuation',()=
 });
 test('session rejects identity material on logged-out receipts and requires token on login',()=>{
   assert.deepEqual(parseSession({authenticated:false,mode:'local_test'}),{authenticated:false,mode:'local_test'});
+  assert.deepEqual(parseSession({authenticated:false,mode:'local_test',providerMode:'live'}),{authenticated:false,mode:'local_test',providerMode:'live'});
+  assert.throws(()=>parseSession({authenticated:false,mode:'local_test',providerMode:'real'}));
   assert.throws(()=>parseSession({authenticated:false,mode:'local_test',csrfToken:'unexpected'}));
   assert.throws(()=>parseSession({authenticated:true,mode:'production',user:{id,email:'a@example.test'}}));
 });
