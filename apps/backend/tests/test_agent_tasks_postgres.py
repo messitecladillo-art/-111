@@ -120,7 +120,10 @@ def test_teammates_review_and_advance_same_task_without_rewriting_creator(
         else (editor, owner, editor_id)
     )
     path, initial = make_task(creator, research["id"])
-    pending = step(actor, path, "advance", 0)
+    survey = step(actor, path, "advance", 0)
+    assert survey["status"] == "ready"
+    assert calls == ["survey"]
+    pending = step(actor, path, "advance", survey["revision"])
     assert pending["status"] == "needs_input"
     assert pending["state"]["awaiting_approval"] == "approve_reviewer"
     assert calls == ["survey", "reviewer"]
@@ -161,7 +164,10 @@ def test_teammate_can_supply_required_input_and_revocation_takes_effect(task_har
     assert editor.post(f"{path}/advance", json={"expectedRevision": supplied["revision"]}).status_code == 404
     assert editor.get(path).status_code == 404
     assert calls == []
-    done = step(owner, path, "advance", supplied["revision"])
+    analyzed = step(owner, path, "advance", supplied["revision"])
+    assert analyzed["status"] == "ready"
+    assert calls == ["data"]
+    done = step(owner, path, "advance", analyzed["revision"])
     assert done["status"] == "completed"
     assert done["state"]["input_artifact_refs"] == ["artifact:synthetic-test-dataset"]
     assert calls == ["data", "reviewer"]

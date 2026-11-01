@@ -21,9 +21,12 @@ def create_dependencies(settings, engine):
         if request.headers.get("origin") not in settings.allowed_origins or request.headers.get("sec-fetch-site") == "cross-site":
             raise ApiError(403, "origin_forbidden", "请从本站发起操作。")
 
-    def session_user(request, session, required=True):
+    def session_user(request, session, required=True, *, lock=False):
         token = request.cookies.get(settings.cookie_name, "")
-        row = session.execute(select(Session).where(Session.token_hash == keyed(settings, "session/v1", token)).execution_options(populate_existing=True)).scalar_one_or_none() if token else None
+        query = select(Session).where(Session.token_hash == keyed(settings, "session/v1", token))
+        if lock:
+            query = query.with_for_update()
+        row = session.execute(query.execution_options(populate_existing=True)).scalar_one_or_none() if token else None
         if row is None or row.revoked_at is not None or row.expires_at <= now():
             if required:
                 raise ApiError(401, "session_required", "请先登录。")

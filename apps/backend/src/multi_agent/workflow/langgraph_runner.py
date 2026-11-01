@@ -2,8 +2,8 @@
 
 from typing import Any, TypedDict
 
-from multi_agent.agents.contracts import AgentRole
-from multi_agent.workflow.orchestrator import WorkflowEngine, WorkflowState
+from multi_agent.agents.contracts import AgentResult, AgentRole
+from multi_agent.workflow.orchestrator import PreparedStep, WorkflowEngine, WorkflowState
 
 
 class _State(TypedDict, total=False):
@@ -31,8 +31,9 @@ class _State(TypedDict, total=False):
 class LangGraphRunner:
     """Run deterministic role steps through a compiled LangGraph until a gate.
 
-    The API persists the returned state in its transaction after every invoke;
-    process restarts therefore resume from the last committed task revision.
+    ``advance`` is an in-memory library traversal. Durable API callers use
+    ``prepare_step`` and ``apply_result`` to commit each role separately and
+    never hold a database transaction while a handler runs.
     """
 
     def __init__(self, engine: WorkflowEngine):
@@ -71,6 +72,13 @@ class LangGraphRunner:
         if self.engine.next_role(state) is None:
             return self.engine.advance(state)
         return WorkflowState.from_dict(self.graph.invoke(state.to_dict()))
+
+    def prepare_step(self, state: WorkflowState) -> PreparedStep:
+        """Durable APIs dispatch one role, never the whole in-memory graph."""
+        return self.engine.prepare_step(state)
+
+    def apply_result(self, prepared: WorkflowState, result: AgentResult) -> WorkflowState:
+        return self.engine.apply_result(prepared, result)
 
     def approve(self, state: WorkflowState, *, approved: bool, feedback: str = "") -> WorkflowState:
         return self.engine.approve(state, approved=approved, feedback=feedback)

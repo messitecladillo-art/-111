@@ -3,7 +3,7 @@ from fastapi import Depends, Request
 from evix_api.requests import body
 from application.services.agent_tasks import AgentTaskService
 
-def register_routes(app, *, db, auth, owned_project):
+def register_routes(app, *, db, auth, owned_project, session_user):
     service = AgentTaskService(owned_project=owned_project, workflow_engine=app.state.workflow_engine)
 
     @app.post('/api/projects/{project_id}/agent-tasks', status_code=201)
@@ -22,7 +22,17 @@ def register_routes(app, *, db, auth, owned_project):
     @app.post('/api/projects/{project_id}/agent-tasks/{task_id}/advance')
     async def advance_task(project_id: str, task_id: str, request: Request, user=Depends(auth), session=Depends(db)):
         data = await body(request, ('expectedRevision',))
-        return await service.advance_task(project_id=project_id, task_id=task_id, user=user, session=session, data=data)
+        return await service.advance_task(project_id=project_id, task_id=task_id, user=user, session=session,
+            data=data, check_session=lambda current: session_user(request, current, lock=True))
+
+    @app.get('/api/projects/{project_id}/agent-tasks/{task_id}/executions')
+    def executions(project_id: str, task_id: str, user=Depends(auth), session=Depends(db)):
+        return service.executions(project_id=project_id, task_id=task_id, user=user, session=session)
+
+    @app.post('/api/projects/{project_id}/agent-tasks/{task_id}/cancel')
+    async def cancel_task(project_id: str, task_id: str, request: Request, user=Depends(auth), session=Depends(db)):
+        data = await body(request, ('expectedRevision',))
+        return service.cancel_task(project_id=project_id, task_id=task_id, user=user, session=session, data=data)
 
     @app.post('/api/projects/{project_id}/agent-tasks/{task_id}/approval')
     async def approve_task(project_id: str, task_id: str, request: Request, user=Depends(auth), session=Depends(db)):

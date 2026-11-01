@@ -154,8 +154,8 @@ research_agent/
 - `langgraph_runner.py` 将 Research、Survey、Data、Writing、Reviewer 路由为 LangGraph 节点。
 - `handlers.py` 通过各 Agent 的公共入口调用其内部流程，传递类型化输入输出。
 - `WorkflowState.agent_outputs` 保存角色最终结构化输出，下一角色从输入上下文获取；内部逐步检查点尚未数据库持久化。
-- `evix_api/routes/agent_tasks.py` 提供任务接口，`application/services/agent_tasks.py` 处理任务事务。
-- `infrastructure/database/models/workflows.py` 中的 `AgentTask` 与 `0008_agent_tasks` 迁移保存任务状态；写操作受项目成员权限控制。
+- `evix_api/routes/agent_tasks.py` 提供任务接口，`application/services/agent_tasks.py` 处理任务事务；`agent_task_execution.py` 先提交单角色执行回执，再在事务外调用处理器，最后核对权限与版本写回。
+- `infrastructure/database/models/workflows.py` 中的 `AgentTask` 保存任务状态，`AgentTaskExecution` 保存执行回执；迁移到 `0010_agent_task_executions` 后使用。重复请求、结果未知和取消的处理见 [执行说明](docs/agent-execution.md)。写操作受项目成员权限控制。
 
 重要状态说明：五个公共入口和内部步骤、外层 LangGraph 路由和任务检查点已实现，
 但 `create_app` 当前没有默认注册实际模型步骤执行器。未配置的步骤明确阻塞，

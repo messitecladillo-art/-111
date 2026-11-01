@@ -89,10 +89,13 @@ result = agent.run(ResearchInput(
 不会把生成的研究计划/报告当原始调查数据。
 
 `0008_agent_tasks` 建立的表继续保存外层任务状态。部署当前版本前运行
-`uv run alembic upgrade head`，应用 `0009_agent_task_collaboration`：
+`uv run alembic upgrade head`，应用到 `0010_agent_task_executions`：
 同队 owner/editor 可推进任务，创建者、项目归属、任务类型等身份字段保持不变。
 迁移不重写已有任务内容，API 启动时校验数据库版本。
-内部逐步检查点尚未持久化到数据库，不能宣称进程中断后能恢复到任意内部步骤。
+HTTP 的每次 `advance` 现在只推进一个角色，并先提交执行回执，再在事务外调用角色。
+重复版本请求返回原回执；超时或中断不自动重发，取消及迟到结果受版本校验约束。
+详见 [角色执行回执与恢复边界](../../../../docs/agent-execution.md)。
+内部逐步检查点仍未持久化到数据库，不能宣称进程中断后能恢复到任意内部步骤。
 
 ## 修改入口与回归
 
@@ -101,6 +104,7 @@ result = agent.run(ResearchInput(
 | 哪些研究成果需要用户确认 | `workflow/orchestrator.py` 的 `_APPROVAL_AFTER_REVIEW`，按实际被审角色定义 | `test_multi_agent_workflow.py`，覆盖单任务和完整研究、拒绝返修、次数上限 |
 | 批准后的继续执行 | `workflow/langgraph_runner.py` | 同上，覆盖 JSON 恢复、最终完成、已执行步骤不重复 |
 | 团队任务读写、撤权、并发版本 | `application/services/agent_tasks.py` 与数据库迁移 | `test_agent_tasks_postgres.py`，必须使用真实 PostgreSQL 和普通应用角色 |
+| 单角色调度、取消、执行回执 | `application/services/agent_task_execution.py` 与 `prepare_step/apply_result` | `test_agent_execution_postgres.py`、`test_workflow_step_execution.py` |
 | 选题确认与历史版本 | `application/services/topic_projects.py` | `test_topic_projects_postgres.py`，覆盖新草稿、历史确认与撤销 |
 
 研究设计和问卷在 Reviewer 通过后暂停，用户批准才继续；用户要求修改会返回对应
