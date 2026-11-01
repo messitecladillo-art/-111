@@ -3,6 +3,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DatasetValue } from "@/lib/canvas/execute";
 import { Tex } from "@/components/math/Tex";
+import AdvancedMethods from "./AdvancedMethods";
+import type { ReportInsert } from "@/lib/report-insert";
 import { analyzeReliability, categoryCounts, DEMO_SURVEY_CSV, finiteNumber, parseMissingCodes, parseSurveyCsv, profileSurvey, SURVEY_LIMITS, type Delimiter, type ReliabilityResult, type SurveyTable } from "@/lib/survey-analysis";
 import styles from "./SurveyLab.module.css";
 import {snapshotRecipe,type ResultSnapshot} from "@/lib/research-quality";
@@ -46,7 +48,7 @@ function saveText(content: string, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetChange,onEvidenceProposal,onResultSnapshot}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetChange?:(value:DatasetValue|null)=>void;onEvidenceProposal?:(section:ReportSection)=>void;onResultSnapshot?:(result:ResultSnapshot,figures?:ReportFigure[],visualStyle?:ProjectVisualStyle)=>void}={}) {
+export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetChange,onEvidenceProposal,onResultSnapshot,onReportInsert}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetChange?:(value:DatasetValue|null)=>void;onEvidenceProposal?:(section:ReportSection)=>void;onResultSnapshot?:(result:ResultSnapshot,figures?:ReportFigure[],visualStyle?:ProjectVisualStyle)=>void;onReportInsert?:(insert:ReportInsert)=>void}={}) {
   const [mapping,setMapping]=useState<Mapping|null>(null);
   const [linkState,setLinkState]=useState<{signature:string;link:ResearchLink|null}>({signature:'',link:null});
   const [datasetSession,setDatasetSession] = useState(0);
@@ -69,7 +71,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const [missingText, setMissingText] = useState("");
   const [routingPolicy,setRoutingPolicy]=useState<RoutingPolicy>("strict");
   const [routingApproval,setRoutingApproval]=useState<string|null>(null);
-  const [section, setSection] = useState<"data" | "mapping" | "recipes" | "reliability">("data");
+  const [section, setSection] = useState<"data" | "mapping" | "recipes" | "reliability" | "advanced">("data");
   const [seenTransfer, setSeenTransfer] = useState("");
   const [detail, setDetail] = useState<number | null>(null);
   const [interpretation, setInterpretation] = useState<"numeric" | "category">("numeric");
@@ -112,10 +114,22 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const signature = JSON.stringify({ contextKey, selected, reverse, minText, maxText, construct, missingText });
   const currentResult = result?.signature === signature ? result.value : null;
   const stepsRef = useKeyedListMotion<HTMLElement>({ ids: ['data', 'mapping', 'results'], activeId: section === 'data' || section === 'mapping' ? section : 'results', markerAxis: 'horizontal' });
-  const tabsRef = useKeyedListMotion<HTMLDivElement>({ ids: ['recipes', 'reliability'], activeId: section, markerAxis: 'horizontal' });
+  const tabsRef = useKeyedListMotion<HTMLDivElement>({ ids: ['recipes', 'reliability', 'advanced'], activeId: section, markerAxis: 'horizontal' });
   const reliabilityRef = useContentReveal<HTMLDivElement>({ token: currentResult ? `${signature}:${resultRun}` : null, enabled: section === 'reliability' });
   const currentEligibility=currentResult?result?.eligibility:null;
   const rawColumn = detail === null ? null : profile?.columns[detail];
+  // Advanced methods read the rows every linked analysis reads: all chosen columns checked as answers (eligibility,
+  // valid values), the ones treated as quantities also as numeric or rating questions.
+  function prepareAdvanced(columns:number[],scaled:number[]){
+    if(!dataset)return {table:{headers:[],rows:[],skippedBlankLines:0,delimiter:',' as const},problems:['请先载入数据。']};
+    if(interpretationPending)return {table:{...dataset.table,rows:[]},problems:['先在平台编码中确认缺失值、日期与取值解释。']};
+    if(!mapping)return {table:dataset.table,problems:[],scope:[`缺失编码：${missing.codes.join('、')||'空白'}`,...(dataset.quality?[qualityLineageStep(dataset.quality)]:[])]};
+    const rows=prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method:'frequency',columns},routing);
+    const kinds=scaled.length?prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method:'spearman',columns:scaled},routing).problems:[];
+    // Items the questionnaire scores in reverse, which the method turns (min + max − value) as the reliability check does.
+    const reverse=scaled.flatMap(i=>{const a=mapping.assignments.find(x=>x.column===dataset.table.headers[i]);const q=a&&mapping.design.questions.find(x=>x.id===a.questionId);return q?.reverse&&q.min!==null&&q.max!==null?[{column:i,min:q.min,max:q.max,name:q.variable}]:[];});
+    return {table:rows.table,problems:[...new Set([...rows.problems,...kinds])],reverse,scope:[`缺失编码：${missing.codes.join('、')||'空白'}`,'按已确认的问卷对应与跳题策略取数。',...(dataset.quality?[qualityLineageStep(dataset.quality)]:[])]};
+  }
   function prepareOverview(index:number,method:'numeric'|'frequency'){
     return dataset?(interpretationPending?{table:{...dataset.table,rows:[]},problems:['先在平台编码中确认缺失值、日期与取值解释。'],eligibility:null}:mapping?prepareLinkedAnalysis(mapping,dataset.identity,mappingStale,dataset.table,missing.codes,{method,columns:[index]},routing):{table:dataset.table,problems:[],eligibility:null}):null;
   }
@@ -300,7 +314,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     setSection("mapping");
   }
 
-  const inResults = section === "recipes" || section === "reliability";
+  const inResults = section === "recipes" || section === "reliability" || section === "advanced";
   const incomingDesign = !!sourceTransfer && snapshotSignature(sourceTransfer.snapshot) !== mapping?.sourceSignature;
   const setupIssue = interpretationPending?'平台编码尚待确认':missing.error ? '缺失代码设置需调整' : mappingStale ? '源问卷已变化' : mapping && !activeLink ? '题目对应尚未确认' : '';
   const journeyModules: JourneyModule[] = currentJourneyModules(journeySnapshot, journeyScope(contextKey, missing.codes)).map(module => setupIssue && module.status === 'ready' ? { ...module, status: 'stale', n: null } : module);
@@ -376,7 +390,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     </div>
     <div id="analysis-results" hidden={!inResults}>
       {dataset && !interpretationPending && <>
-        <div className={styles.resultsToolbar}><div ref={tabsRef} className={styles.tabs} role="group" aria-label="结果类型"><span className={styles.selectionMarker} data-motion-marker aria-hidden="true"/><button type="button" data-motion-id="recipes" aria-pressed={section === "recipes"} onClick={() => setSection("recipes")}>分析方案</button><button type="button" data-motion-id="reliability" aria-pressed={section === "reliability"} onClick={() => setSection("reliability")}>量表一致性</button></div><span>{dataset.silicon ? "硅基样本 · 模拟数据" : dataset.collection?.classification === "synthetic" ? "回收流程 · 合成验收" : dataset.kind === "simulated" ? "教学模拟数据" : "当前样本 · 未加权分析"}</span></div>
+        <div className={styles.resultsToolbar}><div ref={tabsRef} className={styles.tabs} role="group" aria-label="结果类型"><span className={styles.selectionMarker} data-motion-marker aria-hidden="true"/><button type="button" data-motion-id="recipes" aria-pressed={section === "recipes"} onClick={() => setSection("recipes")}>分析方案</button><button type="button" data-motion-id="reliability" aria-pressed={section === "reliability"} onClick={() => setSection("reliability")}>量表一致性</button><button type="button" data-motion-id="advanced" aria-pressed={section === "advanced"} onClick={() => setSection("advanced")}>高级方法</button></div><span>{dataset.silicon ? "硅基样本 · 模拟数据" : dataset.collection?.classification === "synthetic" ? "回收流程 · 合成验收" : dataset.kind === "simulated" ? "教学模拟数据" : "当前样本 · 未加权分析"}</span></div>
         {profile && section === "reliability" && <div className={styles.scaleGrid}><div className={styles.card}>
         <h3>量表设置</h3><label>构念名称<input value={construct} onChange={e => setConstruct(e.target.value)} maxLength={80} placeholder="例如：服务体验（需有量表或理论依据）"/></label>
         <div className={styles.bounds}><label>计分下限<input inputMode="decimal" value={minText} onChange={e => setMinText(e.target.value)} maxLength={20}/></label><label>计分上限<input inputMode="decimal" value={maxText} onChange={e => setMaxText(e.target.value)} maxLength={20}/></label></div>
@@ -389,6 +403,8 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
         <SourceBadge simulated={dataset.kind === "simulated"}/>
         {!currentResult ? <div className={styles.emptyDetail}><h3>{result ? "设置已改变，请重新计算" : "选好题项，再计算 α"}</h3><p>不要将人口学信息、不同构念或单选题混为一个量表。α 不替代内容效度、结构效度与理论判断。</p></div> : <>{currentEligibility&&<p className={styles.note}>{routingSummary(currentEligibility)}</p>}<div className={styles.alphaHeading}><div><span>原始 Cronbach α · 未标准化</span><strong>{format(currentResult.alpha)}</strong></div><div><b>n = {currentResult.n}</b><small>完整案例 / {currentEligibility?"符合条件的":"共"} {currentResult.total} 行<br/>{currentResult.k} 个题项 · 未加权</small></div></div><p>{currentEligibility?"符合条件的范围内":"本次计算"}未纳入 {currentResult.excluded} 行：有缺失 {currentResult.missingRows}、非数值 {currentResult.nonNumericRows}、越界值 {currentResult.outOfRangeRows}。原因可能重叠，不能直接相加。</p><div className={styles.tableScroll} tabIndex={0} aria-label="量表题项诊断，可横向滚动"><table><thead><tr><th>题项</th><th>计分均值</th><th>校正题总相关</th><th>删除后 α</th></tr></thead><tbody>{currentResult.items.map(item => <tr key={item.index}><th>{item.name}{item.reversed && <small>已反向</small>}</th><td>{format(item.mean)}</td><td>{format(item.correctedItemTotal)}</td><td>{format(item.alphaIfDeleted)}</td></tr>)}</tbody></table></div><p className={styles.note}>“—”表示不适用或未定义；删除后 α 仅供诊断，不自动删题。</p><details className={styles.statisticNotes}><summary>指标说明</summary><p>校正题总相关为该题与其余题项总分的 Pearson 相关。删除后 α 使用同一完整案例集合。</p></details><ul className={styles.cautions}>{currentResult.warnings.map(w => <li key={w}>{w}</li>)}</ul></>}
       </div></div>}
+      {/* Factor analysis, regression, logit, IPA, clusters and AHP, each written up for the report and sent to its blueprint section. */}
+      <div hidden={section !== "advanced"}>{profile&&<AdvancedMethods key={datasetSession} prepare={prepareAdvanced} context={canonical({contextKey,interpretationPending})} table={dataset.table} profile={profile} missingCodes={missing.codes} simulated={dataset.kind === "simulated"} sourceName={dataset.name} sourceHash={dataset.hash} onReportInsert={onReportInsert}/>}</div>
       <div hidden={section !== "recipes"}><AnalysisRecipeBoard onRegister={onResultSnapshot?async(value,title,scope,stillCurrent,variables,calculation,figureContext)=>{const captured=dataset,epoch=qualityContextRef.current.epoch;if(!captured)return;try{const result=await snapshotRecipe({...value,warnings:[...value.warnings,scope,`缺失编码：${missing.codes.join("、")||"空白"}`,...(captured.quality?[qualityLineageStep(captured.quality)]:[])]},{title:title||"分析结果",sourceName:captured.name,sourceUrl:"",sourceHash:captured.hash,classification:captured.kind,variables},undefined,calculation);if(datasetRef.current!==captured||qualityContextRef.current.epoch!==epoch||qualityContextRef.current.key!==registrationKey||!stillCurrent())return;const figures=figureContext?figuresFromRegistration(result,figureContext):[];onResultSnapshot(result,figures,figureContext?{schema:"ProjectVisualStyle/v1",paletteId:figureContext.theme,version:1}:undefined);setNotice("已登记分析结果，可在报告的研究发现中整理。");}catch(error){setError((error as Error).message);}}:undefined} key={datasetSession} table={dataset.table} profile={profile || profileSurvey(dataset.table,[])} invalidMissing={!!missing.error} missingCodes={missing.codes} hash={dataset.hash} simulated={dataset.kind === "simulated"} onReliability={()=>setSection("reliability")} onCandidates={setRecipeCandidates} onProgress={setJourneySnapshot} mapping={mapping} identity={dataset.identity} mappingStale={mappingStale} activeLink={activeLink} contextKey={contextKey} routing={routing}/></div>
       </>}
       <details className={styles.evidenceDrawer}><summary>整理为报告段落 <span>{evidenceCandidates.length ? `${evidenceCandidates.length} 项当前有效结果` : "计算后可用"}</span></summary><ResearchFlow candidates={evidenceCandidates} localOnly onEvidenceProposal={onEvidenceProposal} transformSection={dataset?.collection||dataset?.quality?section=>{let next=section;if(dataset.collection)next=collectionEvidenceSection(next,dataset.collection);if(dataset.quality)next=qualityEvidenceSection(next,dataset.quality);return next;}:undefined}/></details>

@@ -3,12 +3,12 @@ import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
 import {assertTrueVector} from './vector-svg.ts';
 import {blockLabel, numberedCaption, referenceSegments, resolveReferences, type BlockLabel} from './report-numbering.ts';
-import {columnWeights, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
+import {columnWeights, isExhibitNote, presentResult, sectionNotes, sourceLine, sourcePlacement, tableSpans} from './report-tables.ts';
 import {splitInlineMath} from './inline-math.ts';
 import {figureFor,reportFigureSVG,assertFormalFigureCapacity,projectPalette,defaultProjectVisualStyle,percentSeries,type ReportFigure} from './report-figure.ts';
 import type PptxGenJS from 'pptxgenjs';
 export {assertTrueVector};
-export const evidenceLabel=(r:ResultSnapshot)=>r.method==='sampling-frame'?`来源：本研究抽样设计${r.warnings.length?'；'+r.warnings.join('；'):''}`:`来源：${r.sourceName}${r.sourceUrl?' · '+r.sourceUrl:''}；有效样本 n=${r.n} / ${r.total}；${r.classification==='simulated'?'模拟数据':r.classification==='public'?'公开数据':'用户提供数据'}${r.warnings.length?'；'+r.warnings.join('；'):''}`;
+export const evidenceLabel=(r:ResultSnapshot)=>r.method==='ahp'?`来源：${r.sourceName}（${r.n} 项准则）`:r.method==='sampling-frame'?`来源：本研究抽样设计${r.warnings.length?'；'+r.warnings.join('；'):''}`:`来源：${r.sourceName}${r.sourceUrl?' · '+r.sourceUrl:''}；有效样本 n=${r.n} / ${r.total}；${r.classification==='simulated'?'模拟数据':r.classification==='public'?'公开数据':'用户提供数据'}${r.warnings.length?'；'+r.warnings.join('；'):''}`;
 export const valueText=(v:string|number|null)=>v===null?'—':typeof v==='number'?String(Number(v.toFixed(3))):v;
 export const chartNumberFormat=(values:number[])=>values.every(Number.isInteger)?'0':'0.000';
 export function assertTableRows(r:ResultSnapshot){if(!r.rows.length)throw Error(`表格“${r.title}”没有数据行，请调整筛选或共同应答范围后重新计算，或移除该表格。`);}
@@ -105,20 +105,27 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    ]})]}));
    continue;
   }
+  if(isExhibitNote(blocks,index)){
+   // The exhibit's note, formulas typeset, then the source line the exhibit left for after it.
+   const exhibit=blocks[index-1],placed=sourcePlacement(blocks,index-1)==='note';
+   out.push(new Paragraph({style:'ReportSource',keepNext:placed?true:undefined,children:await richRuns(b.text,ctx)}));
+   if(placed)out.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,sourceLine(resultFor(c.quality,exhibit.evidenceId)))}));
+   continue;
+  }
   if(b.kind!=='chart'&&b.kind!=='table'){out.push(new Paragraph({style:b.kind==='citation'?'ReportReference':'Normal',children:await richRuns(b.text,ctx)}));continue;}
   const r=resultFor(c.quality,b.evidenceId),figure=b.figureId?figureFor(c,b.figureId,b.evidenceId):null;
   if(figure&&((b.kind==='table')!==(figure.kind==='table')))throw Error('图形与内容块类型不一致，请重新选择。');
   if(figure)assertFormalFigureCapacity(figure);
   if(!used.includes(r))used.push(r);
   // A chart and a table of the same result share one source line, placed after the second.
-  const next=blocks[index+1],source=!(next&&(next.kind==='chart'||next.kind==='table')&&next.evidenceId===b.evidenceId);
+  const placement=sourcePlacement(blocks,index),source=placement==='own',noted=isExhibitNote(blocks,index+1);
   const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where,ctx.citations));
   if(b.kind==='chart'){
    const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
    // Figures share one width and size their height to the content; Word keeps the same proportions.
    const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
-   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source,keepLines:true,children:textRuns(TextRun,caption)}));
+   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:source||noted,keepLines:true,children:textRuns(TextRun,caption)}));
   }else{
    const table=figure?{headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>figureCell(cell,figure))),note:figure.note}:presentResult(r);
    assertTableRows({...r,rows:table.rows});
@@ -128,14 +135,14 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
    out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:textRuns(TextRun,caption)}));
    const all=[table.headers,...table.rows];
    // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
-   const small=all.length<=16,follows=source||!!table.note;
+   const small=all.length<=16,follows=source||noted||!!table.note;
    // A parent unit repeated on its children's rows (a sampling frame) is one vertically merged cell; covered cells stay empty.
    const spans=figure?null:tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
    const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',alignment:AlignmentType.CENTER,keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,cell,{bold:i===0})})]}))}));
    out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
-   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,table.note)}));
+   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:source||noted,children:textRuns(TextRun,table.note)}));
   }
-  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:source,children:textRuns(TextRun,figure.note)}));
+  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:source||noted,children:textRuns(TextRun,figure.note)}));
   if(source)out.push(new Paragraph({style:'ReportSource',children:textRuns(TextRun,sourceLine(r))}));
  }
  const notes=sectionNotes(used);
@@ -180,9 +187,15 @@ export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,obj
      slide.addChart(pptx.ChartType.bar,series.map(s=>({name:s.name,labels:figure.labels,values:s.values as number[]})),{...box,h:box.h-.4,barDir:figure.kind==='horizontal_bar'?'bar':'col',barGrouping:figure.kind==='percent_stacked'?'stacked':'clustered',showLegend:series.length>1,showValue:figure.style.showLabels,showTitle:false,chartColors:palette.colors.map(color=>color.slice(1)),catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:16,valAxisLabelFontSize:16,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:'263D4D',legendFontSize:16,dataLabelFormatCode:format,dataLabelPosition:figure.kind==='percent_stacked'?'ctr':'outEnd',catAxisLabelPos:'low',valAxisLabelFormatCode:figure.kind==='percent_stacked'?'0"%"':undefined,valAxisMinVal:figure.kind==='percent_stacked'?0:undefined,valAxisMaxVal:figure.kind==='percent_stacked'?100:undefined,catAxisTitle:figure.xLabel,valAxisTitle:figure.yLabel,catAxisLineShow:figure.style.showBorder,valAxisLineShow:figure.style.showBorder,valGridLine:{style:figure.style.showGrid?'solid':'none',color:'E4E9EC',size:1}});
     }else await addSvgFigure(slide,reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()),{...box,h:box.h-.4},renderSvg);
    }
+   else if(o.kind==='chart'&&(await import('./method-figures.ts')).carriesFigure(r)){
+    if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');
+    const {figureSVG}=await import('./report-figures.ts');
+    await addSvgFigure(slide,await figureSVG(r,o.valueColumn,/^#[0-9a-fA-F]{6}$/.test(o.color)?o.color:'#2F6B4F'),{...box,h:box.h-.4},renderSvg);
+   }
+   else if(o.kind==='chart'&&!(await import('./method-figures.ts')).canChart(r))throw Error(`“${r.title}”没有可画的图，请在幻灯片中改用表格。`);
    else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
    else{assertTableRows(r);const rows=[r.headers,...r.rows],fs=Math.max(14,o.fontSize),rowH=fs*1.45/72;if(rows.length>15||r.headers.length>8||rows.length*rowH>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');const none={type:'solid' as const,pt:0,color:'FFFFFF'};const cells=rows.map((row,i)=>row.map(cell=>{fitText(figureCell(cell,figure),box.w/r.headers.length-.1,rowH,fs);return{text:figureCell(cell,figure),options:{bold:i===0,align:'center' as const,border:[i===0?{type:'solid' as const,pt:1.5,color:'000000'}:none,none,i===0?{type:'solid' as const,pt:.75,color:'000000'}:i===rows.length-1?{type:'solid' as const,pt:1.5,color:'000000'}:none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}};}));slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});}
-   const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
+   const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:r.method==='ahp'?`${r.title} · ${r.sourceName}`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
    slide.addText(caption,{x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
   }
  }return [...[...evidence.values()].map(evidenceLabel),...figureNotes].join('\n');

@@ -105,7 +105,7 @@ test('progress totals and navigation follow actual ready, stale and failed modul
 });
 
 function surveyScreen(initialProps = {}) {
-  const components = ['AnalysisRecipeBoard', 'ResearchFlow', 'QuestionnaireMapping', 'RoutingAudit', 'SpreadsheetImportPanel', 'SavImportPanel', 'PlatformMappingPanel', 'QualityPanel', 'AnalysisJourney'];
+  const components = ['AnalysisRecipeBoard', 'AdvancedMethods', 'ResearchFlow', 'QuestionnaireMapping', 'RoutingAudit', 'SpreadsheetImportPanel', 'SavImportPanel', 'PlatformMappingPanel', 'QualityPanel', 'AnalysisJourney'];
   const mocks = Object.fromEntries(components.map(name => [`./${name}`, { default: name }]));
   return mount('../components/analysis/SurveyLab.tsx', { ...mocks, './SurveyLab.module.css': styles, '@/components/math/Tex': { Tex: 'Tex' }, '@/lib/survey-analysis': survey, '@/lib/questionnaire-mapping': mapping, '@/lib/analysis-journey': journey, '@/lib/research-quality': {}, '@/lib/report-figure': {}, '@/lib/research-flow': {}, '@/lib/routing-evidence': {}, '@/lib/analysis-summary': {}, '@/lib/silicon/export': {}, '@/lib/platform-analysis-dataset': {}, '@/lib/survey-import-metadata': {}, '@/lib/survey-collection': {} }, initialProps);
 }

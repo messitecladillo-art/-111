@@ -72,6 +72,7 @@ function harness() {
     toolTurn: action => { tools.push(action); return action.tool === 'lookup' ? {lookup: action.args.query, explicit: true} : {turn: {lines: [[{text: 'synthetic tool result'}]]}}; },
     lookupTurn: () => ({lines: [[{text:'lookup synthetic result'}]]}),
     blueprintNode: node => ({id: node, title:'研究背景'}), draftFacts: () => [], standingFindings: () => [], sectionText: () => '',
+    SYNTHESIS_NODES: new Set(), reportOutline: () => [],
     draftRequest: ({service: selected}) => ({facts: [], request:{serviceId: selected.id, serviceRevision: selected.revision, idempotencyKey: `draft-${++count}`}}),
     draftLine: p => [{text:p.text}], draftText: p => p.text,
     sendChatTurn: async (_mutate, request) => { posts.push(structuredClone(request)); if (posts.length === 1) return first.promise; return {id:request.idempotencyKey,status:'ready',reply:'synthetic final',step:request.step??1,message:request.message,actions:[],droppedActions:0}; },

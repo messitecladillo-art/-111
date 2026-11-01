@@ -58,7 +58,7 @@ class SectionDraftService:
             raise ApiError(409, 'outcome_unknown', '同样的拟稿有一次结果尚未明确，请先核对原回执。')
         config, key = (config_view(service), decrypt(self.settings, service))
         message = domain.draft_prompt(data)
-        if key in message or domain.contains_secret({name: data[name] for name in ('section', 'project', 'facts', 'findings', 'existing')}, key):
+        if key in message or domain.contains_secret({name: data[name] for name in ('section', 'project', 'facts', 'findings', 'existing', 'outline') if name in data}, key):
             raise ApiError(422, 'sensitive_input', '资料包含服务密钥，请移除后重试。')
         session.add(RateEvent(scope=scope))
         op.response = domain.draft_receipt(data, self.settings.provider_mode)

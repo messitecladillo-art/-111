@@ -2,7 +2,7 @@
 // a short statement carrying its numbers, named F1…Fn, and may write a number only as a placeholder; the browser puts
 // the fact's own value in its place, so every number in an adopted draft comes from a registered result. The backend
 // holds the same contract (apps/backend …/writing_agent/services/section_draft.py) and checks it again.
-import type { EditorContent } from '../editor-model.ts';
+import { createEditorContent, type EditorContent } from '../editor-model.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { writtenLines } from '../report-benchmark.ts';
 import { blueprintNode, matchBlueprintNode, type BlueprintNode } from '../report-blueprint.ts';
@@ -20,6 +20,8 @@ export type DraftRequest = {
   facts: { id: string; text: string }[];
   findings: { title: string; interpretation: string; scope: string; action: string }[];
   existing: string; serviceId: string; serviceRevision: number; consent: true;
+  /** For a section that summarises the report, the other sections' titles and what they say, in report order. */
+  outline?: { title: string; excerpt: string }[];
 };
 export type DraftStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 export type DraftParagraph = { text: string; facts: string[] };
@@ -80,25 +82,68 @@ function rowFacts(r: ResultSnapshot, row: ResultSnapshot['rows'][number], title:
   });
 }
 
+// The starting template's section bodies, matched by body alone: inserting blueprint sections renumbers its headings.
+const TEMPLATE = new Set(createEditorContent().report.map(s => s.body.trim()).filter(Boolean));
+
+/** Sections that summarise the report: they are drafted from what the other sections already say. */
+export const SYNTHESIS_NODES: ReadonlySet<string> = new Set(['abstract', 'conclusion.findings', 'conclusion.suggestions', 'conclusion.limits']);
+
+// What all excerpts together may hold: a full report's outline must leave room in the prompt for the facts and findings.
+const OUTLINE_CHARS = 6000, EXCERPT_CHARS = 400, EXCERPT_FLOOR = 80;
+// The backend refuses a prompt over 40000 bytes, instructions and JSON escaping included; the request stays under this.
+const REQUEST_BYTES = 34000;
+// The block kinds that carry the author's prose, as the report benchmark counts them.
+const PROSE = new Set(['paragraph', 'callout', 'citation']);
+const prose = (s: EditorContent['report'][number], body: string) => [...writtenLines(body), ...(s.blocks ?? []).filter(b => PROSE.has(b.kind)).flatMap(b => writtenLines(b.text))];
+// The full blueprint has 53 sections. Past this many, the outline keeps the report's opening sections and its last
+// ones, where the analyses, findings and suggestions a summary must cover are written.
+export const MAX_OUTLINE = 60;
+const OUTLINE_HEAD = 20;
+
+/**
+ * The report as the summarising sections read it: every other written section, its title and the start of its text.
+ * Excerpts share one budget of characters, so a long report sends shorter excerpts rather than failing: at least 80
+ * characters each while the budget allows, and titles alone when it is spent.
+ */
+export function reportOutline(content: EditorContent, nodeId: string, budget = OUTLINE_CHARS): { title: string; excerpt: string }[] {
+  const written = content.report.flatMap(s => {
+    const node = matchBlueprintNode(s.title);
+    if (node?.id === nodeId || node?.kind === 'references' || node?.kind === 'appendix') return [];
+    // The starting template's prompts are not the author's writing: a body still holding them counts for nothing.
+    const body = TEMPLATE.has(s.body.trim()) ? '' : s.body;
+    const text = prose(s, body).join(' ').replace(/\s+/gu, ' ').trim();
+    return text ? [{ title: clip(tidy(s.title), 80) || '未命名章节', text }] : [];
+  });
+  const kept = written.length > MAX_OUTLINE ? [...written.slice(0, OUTLINE_HEAD), ...written.slice(written.length - (MAX_OUTLINE - OUTLINE_HEAD))] : written;
+  const share = Math.floor(budget / Math.max(1, kept.length)), limit = Math.min(EXCERPT_CHARS, Math.max(Math.min(EXCERPT_FLOOR, budget), share));
+  return kept.map(({ title, text }) => ({ title, excerpt: limit > 0 ? clip(text, limit) : '' }));
+}
+
 /** What the section already says, so the draft adds to it rather than repeating it. */
 export function sectionText(content: EditorContent, nodeId: string): string {
   const sections = content.report.filter(s => matchBlueprintNode(s.title)?.id === nodeId);
-  const lines = sections.flatMap(s => [...writtenLines(s.body), ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').flatMap(b => writtenLines(b.text))]);
+  const lines = sections.flatMap(s => prose(s, s.body));
   return clip(lines.join('\n'), 3000);
 }
 
 export function draftRequest(input: { nodeId: string; held: NonNullable<ResultsView>; content: EditorContent; design: Questionnaire | null; service: { id: string; revision: number } }): { request: DraftRequest; facts: Fact[] } {
   const facts = draftFacts(input.held, input.nodeId);
-  return {
-    facts,
-    request: {
-      schemaVersion: 1, idempotencyKey: crypto.randomUUID(), section: draftSection(input.nodeId),
-      project: { title: clip(tidy(input.content.title || input.design?.title || ''), 80), objective: clip(tidy(input.design?.objective ?? ''), 400), population: clip(tidy(input.design?.population ?? ''), 200) },
-      facts: facts.map(({ id, text }) => ({ id, text })),
-      findings: standingFindings(input.held).slice(0, 20).map(f => ({ title: clip(tidy(f.title) || '未命名发现', 80), interpretation: clip(tidy(f.interpretation), 600), scope: clip(tidy(f.scope), 300), action: clip(tidy(f.action), 300) })),
-      existing: sectionText(input.content, input.nodeId), serviceId: input.service.id, serviceRevision: input.service.revision, consent: true,
-    },
+  const base: DraftRequest = {
+    schemaVersion: 1, idempotencyKey: crypto.randomUUID(), section: draftSection(input.nodeId),
+    project: { title: clip(tidy(input.content.title || input.design?.title || ''), 80), objective: clip(tidy(input.design?.objective ?? ''), 400), population: clip(tidy(input.design?.population ?? ''), 200) },
+    facts: facts.map(({ id, text }) => ({ id, text })),
+    findings: standingFindings(input.held).slice(0, 20).map(f => ({ title: clip(tidy(f.title) || '未命名发现', 80), interpretation: clip(tidy(f.interpretation), 600), scope: clip(tidy(f.scope), 300), action: clip(tidy(f.action), 300) })),
+    existing: sectionText(input.content, input.nodeId), serviceId: input.service.id, serviceRevision: input.service.revision, consent: true,
   };
+  if (!SYNTHESIS_NODES.has(input.nodeId)) return { facts, request: base };
+  // The outline takes what the facts, findings and existing text leave of the prompt: its excerpts shrink, down to titles alone.
+  const bytes = (request: DraftRequest) => new TextEncoder().encode(JSON.stringify(request)).length;
+  let budget = OUTLINE_CHARS, request: DraftRequest = { ...base, outline: reportOutline(input.content, input.nodeId, budget) };
+  while (budget > 0 && bytes(request) > REQUEST_BYTES) {
+    budget = budget > 400 ? Math.floor(budget / 2) : 0;
+    request = { ...base, outline: reportOutline(input.content, input.nodeId, budget) };
+  }
+  return { facts, request };
 }
 
 /** A receipt from the backend, checked again: a paragraph with a digit of its own or an unknown fact is dropped here too. */

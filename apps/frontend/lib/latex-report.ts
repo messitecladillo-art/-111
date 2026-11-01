@@ -8,6 +8,7 @@ import {frameTexPreamble} from './report-frame-export.ts';
 import {parseReportFrame,assertApprovedFrame,type ReportFrameStyle} from './report-frame.ts';
 import {figureTexPreamble} from './report-figure-tex.ts';
 import {figureFor,type ReportFigure,type ProjectVisualStyle} from './report-figure.ts';
+import {carriesFigure} from './method-figures.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
 export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; frame?:ReportFrameStyle; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle };
@@ -65,7 +66,9 @@ function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites 
   return blocks.map(block=>{
     if(block.kind==='formula'){
       const commands=[...block.text.matchAll(/\\([A-Za-z]+)/g)].map(m=>m[1]);
-      if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text'].includes(cmd)))throw Error('公式块包含非数学命令，请使用 LaTeX 工作台检查。');
+      if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text',
+        // Math-mode commands the method write-ups use, each also on the compiler's list (tools/latex.py COMMANDS).
+        'varepsilon','lVert','rVert','lvert','rvert','max','min','ne','qquad','quad','dfrac','tfrac','operatorname','sim','tilde','widehat','dots','cdots','ldots'].includes(cmd)))throw Error('公式块包含非数学命令，请使用 LaTeX 工作台检查。');
       return `\\[\n${block.text}\n\\]`;
     }
     if(block.kind!=='chart'&&block.kind!=='table')return `${latexLine(block.text,refs,where)}\\par`;
@@ -78,6 +81,9 @@ function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites 
       const cells=(row:(string|number|null)[])=>row.map(v=>escapeLatexText(valueText(v))).join(' & ')+String.raw` \\`;
       return ['\\begin{table}[htbp]','\\centering',`\\caption{${escapeLatexText(block.text||r.title)}}`,`\\begin{tabular}{${'c'.repeat(r.headers.length)}}`,'\\toprule[1.5bp]',cells(r.headers),'\\midrule[0.75bp]',...r.rows.map(cells),'\\bottomrule[1.5bp]','\\end{tabular}','\\end{table}',`${source}\\par`].join('\n');
     }
+    // An advanced method's own figure (forest, scree, quadrant, profile) is drawn in the Word export only; here its
+    // number and caption stay, so references to it still resolve, and the box says where to see it.
+    if(carriesFigure(r))return ['\\begin{figure}[htbp]','\\centering','\\textit{此图为方法图，在 Word 导出中绘制；其数值见同节结果表。}',`\\caption{${escapeLatexText(block.text||r.title)}}`,'\\end{figure}',`${source}\\par`].join('\n');
     const data=chartData(r,block.valueColumn);
     if(data.labels.length>16||data.values.some(v=>Math.abs(v)>1e12))throw Error('图表类别或数值范围过大，请分拆或转换计量单位。');
     const ticks=data.labels.map((_,i)=>i).join(','), labels=data.labels.map(x=>`{${escapeLatexText(x)}}`).join(',');

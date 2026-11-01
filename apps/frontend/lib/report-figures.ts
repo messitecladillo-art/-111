@@ -10,14 +10,17 @@
 import type { CustomSeriesOption, EChartsOption, SeriesOption } from 'echarts';
 import type { ResultSnapshot } from './research-quality.ts';
 import { assertTrueVector } from './svg-safety.ts';
+import { canChart, methodFigure } from './method-figures.ts';
 import { categoryOrder, crosstabOrder, groupRows } from './report-tables.ts';
 
 /** Every figure is this wide; at the full text width (14.64 cm) 22 px text prints at about 9.5 pt. */
 export const FIGURE_WIDTH = 960;
-const FONT = 'Times New Roman, SimSun, Songti SC, serif';
-const INK = '#1F2329', AXIS = '#3A4049', GRID = '#E3E6EA';
+export const FONT = 'Times New Roman, SimSun, Songti SC, serif';
+export const INK = '#1F2329', AXIS = '#3A4049', GRID = '#E3E6EA';
 
-export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box' | 'coefficient';
+export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box' | 'coefficient'
+  /** Figures of the advanced methods (lib/method-figures.ts). */
+  | 'forest' | 'scree' | 'quadrant' | 'profile';
 export type FigurePlan = { kind: FigureKind; height: number; option: EChartsOption };
 
 const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -46,32 +49,32 @@ const isPercent = (header: string) => /%|％|百分/.test(header);
 /** Axis titles in report style: "有效样本占比 (%)" → "占比（%）". */
 const axisName = (header: string) => header.replace(/\s*[（(]\s*[%％]\s*[)）]/u, '（%）').replace(/^有效样本占比/u, '占比');
 /** Negative numbers take a true minus sign, as in the text. */
-const minus = (s: string) => s.replace(/^-(?=\d)/, '−');
+export const minus = (s: string) => s.replace(/^-(?=\d)/, '−');
 const format = (v: number, percent: boolean, integer: boolean) => minus(percent ? `${v.toFixed(1)}%` : integer ? String(Math.round(v)) : v.toFixed(2));
 // Axis ticks without thousands commas (four-digit numbers stand unseparated) and free of binary noise such as 0.30000000000000004.
-const tickLabel = (v: number) => minus(String(Number(v.toPrecision(12))));
+export const tickLabel = (v: number) => minus(String(Number(v.toPrecision(12))));
 const clamp = (v: number, low: number, high: number) => Math.min(high, Math.max(low, Math.round(v)));
 const rowsHeight = (rows: number, perRow: number, extra: number) => clamp(extra + perRow * rows, 300, 760);
 
-const text = { color: INK, fontFamily: FONT, fontSize: 22 };
-const small = { ...text, fontSize: 20 };
-const base = (): EChartsOption => ({ animation: false, backgroundColor: '#FFFFFF', textStyle: text, tooltip: { show: false } });
-const grid = (extra: Record<string, unknown> = {}) => ({ left: 24, right: 40, top: 40, bottom: 24, outerBoundsMode: 'same' as const, outerBoundsContain: 'all' as const, ...extra });
-const legend = { top: 0, left: 'center', textStyle: small, itemWidth: 18, itemHeight: 12, itemGap: 20 };
-const valueAxis = (name: string, extra: Record<string, unknown> = {}) => ({
+export const text = { color: INK, fontFamily: FONT, fontSize: 22 };
+export const small = { ...text, fontSize: 20 };
+export const base = (): EChartsOption => ({ animation: false, backgroundColor: '#FFFFFF', textStyle: text, tooltip: { show: false } });
+export const grid = (extra: Record<string, unknown> = {}) => ({ left: 24, right: 40, top: 40, bottom: 24, outerBoundsMode: 'same' as const, outerBoundsContain: 'all' as const, ...extra });
+export const legend = { top: 0, left: 'center', textStyle: small, itemWidth: 18, itemHeight: 12, itemGap: 20 };
+export const valueAxis = (name: string, extra: Record<string, unknown> = {}) => ({
   type: 'value' as const, name, nameTextStyle: { ...small, padding: [0, 0, 4, 0] },
   axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: true, lineStyle: { color: AXIS } },
   axisLabel: { ...small, formatter: tickLabel }, splitLine: { show: true, lineStyle: { color: GRID, type: 'dashed' as const } }, ...extra,
 });
 // Sample sizes in labels read "（n = 97）" with an italic n, spaced like every other "n = …" in the report.
 const italicN = { formatter: (v: string) => v.replace(/（n = /gu, '（{n|n} = '), rich: { n: { ...small, fontStyle: 'italic' as const } } };
-const categoryAxis = (labels: string[], horizontal: boolean) => ({
+export const categoryAxis = (labels: string[], horizontal: boolean) => ({
   type: 'category' as const, data: labels, axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: false },
   axisLabel: { ...small, interval: 0, ...italicN, ...(horizontal ? {} : { overflow: 'break' as const, width: Math.max(80, 820 / Math.max(1, labels.length)) }) },
   ...(horizontal ? { inverse: true } : {}),
 });
 // Horizontal value axes carry their title underneath, clear of the value labels at the bar ends.
-const lowerTitle = { nameLocation: 'middle' as const, nameGap: 36 };
+export const lowerTitle = { nameLocation: 'middle' as const, nameGap: 36 };
 type Label = { value: unknown };
 
 /** One series of bars in the accent; long or many labels lie horizontally so they stay readable. */
@@ -274,6 +277,11 @@ function box(r: ResultSnapshot, accent: string): FigurePlan | null {
 /** The figure for a result and the value column the author picked. */
 export function figurePlan(r: ResultSnapshot, column: number, accent: string): FigurePlan {
   if (!/^#[0-9A-Fa-f]{6}$/.test(accent)) throw Error('图表颜色无效。');
+  // An advanced method's result carries its own figure (lib/method-figures.ts), whatever column is picked.
+  const method = methodFigure(r, accent);
+  if (method) return method;
+  // An advanced result without its own figure (AHP, or one whose figure did not fit) is never drawn as bars of its table.
+  if (!canChart(r)) throw Error(`“${r.title}”没有可画的图，请改用表格。`);
   if (column < 1 || column >= r.headers.length) throw Error('请选择有效数值列。');
   if (!r.rows.length) throw Error(`图“${r.title}”没有数据行，请重新计算或改用表格。`);
   if (r.method === 'pearson' || r.method === 'spearman') return coefficient(r, accent);
@@ -307,14 +315,20 @@ export function svgSize(svg: string): { width: number; height: number } {
 
 /** Server-rendered SVG with ECharts' interaction styles removed, checked against the vector-asset rules. */
 export async function figureSVG(r: ResultSnapshot, column: number, accent: string): Promise<string> {
-  const plan = figurePlan(r, column, accent);
+  return planSVG(figurePlan(r, column, accent));
+}
+
+/** Any figure plan as report SVG, through the same cleaning and vector check as a result's figure. */
+export async function planSVG(plan: FigurePlan): Promise<string> {
   const { engine } = await import('./chart-engine.ts');
   const chart = engine.init(null, undefined, { renderer: 'svg', ssr: true, width: FIGURE_WIDTH, height: plan.height });
   try {
     chart.setOption(plan.option);
     const svg = chart.renderToSVGString()
       .replace(/<style\b[\s\S]*?<\/style>/g, '')
-      .replace(/\s(?:class|pointer-events)="[^"]*"/g, '')
+      // Interaction hooks and ECharts' own metadata draw nothing; without them the figure also passes the stricter
+      // vector check of the PPT export (lib/vector-svg.ts).
+      .replace(/\s(?:class|pointer-events|version|baseProfile|xml:space|ecmeta_[a-z_]+)="[^"]*"/g, '')
       // Word's SVG renderer ignores the CSS font shorthand ECharts writes for rich text; spell it out as properties.
       // Only style attributes inside tags change: chart text is escaped, so a label that reads like CSS stays as written.
       .replace(/<[^>]+>/g, tag => tag.replace(/(\sstyle=")([^"]*)"/g, (_s, open: string, css: string) => `${open}${css.replace(/font:\s*([^;"]*?)(\d+(?:\.\d+)?px)\s+([^;"]+)/g, (_m, lead: string, size: string, family: string) => {
