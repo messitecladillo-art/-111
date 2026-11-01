@@ -26,4 +26,4 @@
 | POST | `/api/invites` | `{label, maxUses, days}`，返回一次性的 `code` |
 | POST | `/api/invites/{id}/revoke` | 作废自己发放的邀请码 |
 
-限制：每位管理员每小时至多发放 30 个，同时有效的至多 100 个。数据表 `invite_codes`（迁移 `0010_invite_codes`）与 `users`、`email_challenges` 一样在未登录的注册路径上读写，不设行级策略，由服务按发放人过滤。
+限制：每位管理员每小时至多发放 30 个，同时有效的至多 100 个。数据表 `invite_codes`（迁移 `0011_invite_codes`）与 `users`、`email_challenges` 一样在未登录的注册路径上读写，不设行级策略，由服务按发放人过滤。
