@@ -12,6 +12,27 @@ from shared.errors import ProviderFailure
 _CHAT_PROVIDERS = frozenset(("openai", "deepseek", "qwen", "compatible"))
 
 
+class Completion(str):
+    """A model's text, carrying the token counts its provider reported for the call (None when it reported none)."""
+    usage = None
+
+
+def _response_usage(provider, data):
+    """Input and output tokens as the provider billed them; None unless both are plain, plausible counts."""
+    if provider == "anthropic":
+        names, usage = ("input_tokens", "output_tokens"), data.get("usage")
+    elif provider == "gemini":
+        names, usage = ("promptTokenCount", "candidatesTokenCount"), data.get("usageMetadata")
+    else:
+        names, usage = ("prompt_tokens", "completion_tokens"), data.get("usage")
+    if not isinstance(usage, dict):
+        return None
+    counts = [usage.get(name) for name in names]
+    if any(type(count) is not int or not 0 <= count <= 10_000_000 for count in counts):
+        return None
+    return {"inputTokens": counts[0], "outputTokens": counts[1]}
+
+
 def _request(config, key, message):
     provider = config["provider"]
     headers = {"content-type": "application/json"}
@@ -147,7 +168,9 @@ class ChatCompletionClient:
                         result = _response_text(config["provider"], data)
                         if not isinstance(result, str) or not result.strip() or key in result:
                             raise ProviderFailure("invalid_response")
-                        return result
+                        completion = Completion(result)
+                        completion.usage = _response_usage(config["provider"], data)
+                        return completion
         except ProviderFailure:
             raise
         except (TimeoutError, httpx.HTTPError):

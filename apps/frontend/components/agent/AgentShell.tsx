@@ -8,7 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
-import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult } from '@/lib/agent/chat';
+import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult, usageText, type TokenUsage } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -292,15 +292,17 @@ export default function AgentShell() {
       return true;
     };
     // How a model call ended, on the message that holds it; the service and step stay those it was sent with.
-    const mark = (messageId: string, status: NonNullable<ModelCall['status']>, service?: string, step?: number) =>
-      threads.patch(messageId, m => m.role === 'agent' && m.model ? { ...m, model: { ...m.model, ...(service ? { service } : {}), ...(step ? { step } : {}), status } } : m);
+    const mark = (messageId: string, status: NonNullable<ModelCall['status']>, service?: string, step?: number, usage?: TokenUsage | null) =>
+      threads.patch(messageId, m => m.role === 'agent' && m.model ? { ...m, model: { ...m.model, ...(service ? { service } : {}), ...(step ? { step } : {}), ...(usage ? { usage } : {}), status } } : m);
+    // What the call cost, beside the answer, when the provider said.
+    const spent = (usage: TokenUsage | null) => (usage ? [span(' · ', 'dim'), span(usageText(usage), 'dim')] : []);
     const replace = (messageId: string, next: AgentTurn) => threads.patch(messageId, m => m.role === 'agent' ? { ...m, turn: next } : m);
     // A receipt in place of the waiting line: the reply, marked as unverified, then each tool it asked for, run here.
     // A receipt read back by 核对回执 has no chain to continue: it settles, and the user can ask again from there.
     const settle = (messageId: string, receipt: ChatReceipt, label: string, seen = new Set<string>(), service?: Service, callOwner?: string, callEpoch?: number) => {
       if (receipt.status === 'ready' && receipt.reply) {
-        mark(messageId, 'ready', label, receipt.step);
-        replace(messageId, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim')]] });
+        mark(messageId, 'ready', label, receipt.step, receipt.usage);
+        replace(messageId, { lines: [...replyLines(receipt.reply), [span('◆ ', 'cyan'), span(`${label} 的回答，未经核实；项目里的数字以工具读到的为准。`, 'dim'), ...spent(receipt.usage)]] });
         const asked = receipt.message;
         if (receipt.droppedActions) threads.appendAfter(messageId, { ...stamp(), role: 'agent', turn: { lines: [[span(`模型还请求了 ${receipt.droppedActions} 个不在清单里的操作，没有执行。`, 'dim')]] } });
         // What the read-only tools found goes back to the model, until the sentence's last step.
@@ -312,8 +314,8 @@ export default function AgentShell() {
           if (results.length && asked && service && callOwner && callEpoch !== undefined && receipt.step < MAX_STEPS) turn(asked, { step: receipt.step + 1, results, seen, service, after: messageId, owner: callOwner, epoch: callEpoch });
         });
       } else if (receipt.status === 'failed') {
-        mark(messageId, 'failed', label, receipt.step);
-        replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。')]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
+        mark(messageId, 'failed', label, receipt.step, receipt.usage);
+        replace(messageId, { lines: [[span('这一轮没有完成：', 'error'), span(CHAT_ERRORS[receipt.errorCode ?? ''] ?? '模型服务出错了。'), ...spent(receipt.usage)]], chips: receipt.message ? [{ label: '再问一次', action: { type: 'say', text: receipt.message } }] : undefined });
       } else {
         mark(messageId, 'unknown', label, receipt.step);
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span('这一轮已记下；核对只读取回执，不会再次调用模型。')]], chips: [{ label: '核对回执', action: { type: 'check', turn: receipt.id, message: messageId }, primary: true }] });
@@ -381,17 +383,17 @@ export default function AgentShell() {
     const settleDraft = (messageId: string, receipt: DraftReceipt, label: string, nodeId: string, facts: Fact[]) => {
       const title = blueprintNode(nodeId).title, again = { label: '重新起草', action: { type: 'say' as const, text: `/起草 ${title}` } };
       if (receipt.status === 'ready' && receipt.paragraphs.length) {
-        mark(messageId, 'ready', label, 1);
+        mark(messageId, 'ready', label, 1, receipt.usage);
         replace(messageId, {
           lines: [[span(`「${title}」拟稿 `), span(String(receipt.paragraphs.length), 'gold'), span(' 段：')], ...receipt.paragraphs.map(p => draftLine(p, facts)),
             ...(receipt.droppedParagraphs ? [[span(`模型另写了 ${receipt.droppedParagraphs} 段自造数字或引用了不存在的事实，已丢弃。`, 'dim')]] : []),
-            [span('◆ ', 'cyan'), span(`${label} 的拟稿，未经核实；金色数字由登记结果填入。`, 'dim')]],
+            [span('◆ ', 'cyan'), span(`${label} 的拟稿，未经核实；金色数字由登记结果填入。`, 'dim'), ...spent(receipt.usage)]],
           chips: [{ label: `写进「${title}」`.slice(0, 26), action: { type: 'adopt', node: nodeId, paragraphs: receipt.paragraphs.map(p => draftText(p, facts)),
             cited: [...new Set(receipt.paragraphs.flatMap(p => p.facts))].flatMap(id => facts.filter(f => f.id === id).map(f => f.text)) }, primary: true }, again],
         });
       } else if (receipt.status === 'failed' || receipt.status === 'ready') {
-        mark(messageId, 'failed', label, 1);
-        replace(messageId, { lines: [[span('这次起草没有完成：', 'error'), span(draftError(receipt.errorCode))]], chips: [again] });
+        mark(messageId, 'failed', label, 1, receipt.usage);
+        replace(messageId, { lines: [[span('这次起草没有完成：', 'error'), span(draftError(receipt.errorCode)), ...spent(receipt.usage)]], chips: [again] });
       } else {
         mark(messageId, 'unknown', label, 1);
         replace(messageId, { lines: [[span('结果尚未明确：', 'error'), span('这次起草已记下；核对只读取回执，不会再次调用模型。')]],

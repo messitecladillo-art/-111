@@ -63,10 +63,12 @@ class SectionDraftService:
         session.add(RateEvent(scope=scope))
         op.response = domain.draft_receipt(data, self.settings.provider_mode)
         session.commit()
-        draft, failure = (None, None)
+        draft, failure, usage = (None, None, None)
         try:
             async with asyncio.timeout(90):
                 raw = await self.generator.section_draft(config, key, message)
+                # Billed once the provider answered, whether or not the draft is then accepted.
+                usage = getattr(raw, 'usage', None)
                 if not isinstance(raw, str) or key in raw:
                     raise ProviderFailure('invalid_response')
                 draft = domain.parse_draft(raw, {fact['id'] for fact in data['facts']})
@@ -86,7 +88,7 @@ class SectionDraftService:
             status = 'outcome_unknown' if failure and failure.unknown else 'failed' if failure else 'ready'
             current.response = {**current.response, 'status': status, 'paragraphs': draft['paragraphs'] if draft else [],
                                 'droppedParagraphs': draft['droppedParagraphs'] if draft else 0,
-                                'errorCode': failure.code if failure else None, 'finishedAt': domain.iso(now())}
+                                'errorCode': failure.code if failure else None, 'usage': usage, 'finishedAt': domain.iso(now())}
         session.commit()
         check_session(session)
         return current.response

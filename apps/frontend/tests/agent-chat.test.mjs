@@ -192,3 +192,13 @@ test('writing results into the report is offered on a confirmation card that say
   assert.ok(text({ lines: listed.cards[0].lines }).includes('各年级满意度　卡方检验 · 有效样本 212 / 240 · 已写进报告'));
   assert.equal(listed.chips[0].action.text, '/写入', 'the list recommends writing what is still missing');
 });
+
+test('a receipt carries the tokens its call reported, shown as sent up and received down', async () => {
+  const { parseUsage, usageText } = await import('../lib/agent/chat.ts');
+  const receipt = parseChatReceipt({ id: 't', status: 'ready', reply: '好', actions: [], usage: { inputTokens: 18200, outputTokens: 640 } });
+  assert.deepEqual(receipt.usage, { inputTokens: 18200, outputTokens: 640 });
+  assert.equal(usageText(receipt.usage), '↑18k ↓640 tokens');
+  assert.equal(usageText({ inputTokens: 1234, outputTokens: 5 }), '↑1.2k ↓5 tokens');
+  assert.equal(parseChatReceipt({ id: 't', status: 'ready', reply: '好', actions: [] }).usage, null, 'older receipts have none');
+  for (const bad of [null, {}, { inputTokens: -1, outputTokens: 2 }, { inputTokens: 1.5, outputTokens: 2 }, { inputTokens: '3', outputTokens: 2 }]) assert.equal(parseUsage(bad), null);
+});

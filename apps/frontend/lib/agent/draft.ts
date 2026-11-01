@@ -2,6 +2,7 @@
 // a short statement carrying its numbers, named F1…Fn, and may write a number only as a placeholder; the browser puts
 // the fact's own value in its place, so every number in an adopted draft comes from a registered result. The backend
 // holds the same contract (apps/backend …/writing_agent/services/section_draft.py) and checks it again.
+import { parseUsage, type TokenUsage } from './chat.ts';
 import { createEditorContent, type EditorContent } from '../editor-model.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { writtenLines } from '../report-benchmark.ts';
@@ -25,7 +26,7 @@ export type DraftRequest = {
 };
 export type DraftStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 export type DraftParagraph = { text: string; facts: string[] };
-export type DraftReceipt = { id: string; status: DraftStatus; node: string; paragraphs: DraftParagraph[]; droppedParagraphs: number; errorCode: string | null };
+export type DraftReceipt = { id: string; status: DraftStatus; node: string; paragraphs: DraftParagraph[]; droppedParagraphs: number; errorCode: string | null; usage: TokenUsage | null };
 
 export const MAX_FACTS = 80;
 const PLACEHOLDER = /\{(F[1-9][0-9]{0,2})\}/gu;
@@ -158,7 +159,7 @@ export function parseDraftReceipt(value: unknown, factIds?: ReadonlySet<string>)
     if (DIGIT.test(text.replace(PLACEHOLDER, '')) || (factIds && cited.some(id => !factIds.has(id)))) { dropped++; return []; }
     return [{ text, facts: [...new Set(cited)] }];
   });
-  return { id: v.id, status: v.status as DraftStatus, node: typeof v.node === 'string' ? v.node : '', paragraphs: paragraphs.slice(0, 8), droppedParagraphs: dropped, errorCode: typeof v.errorCode === 'string' ? v.errorCode : null };
+  return { id: v.id, status: v.status as DraftStatus, node: typeof v.node === 'string' ? v.node : '', paragraphs: paragraphs.slice(0, 8), droppedParagraphs: dropped, errorCode: typeof v.errorCode === 'string' ? v.errorCode : null, usage: parseUsage(v.usage) };
 }
 
 /** A paragraph as the conversation shows it: the model's words, and each fact's value in gold where it cited one. */

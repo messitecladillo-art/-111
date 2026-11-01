@@ -18,7 +18,9 @@ export type Message = (
 ) & { rev?: number };
 export type ModelCall = { service: string; step: number; status?: 'running' | 'ready' | 'failed' | 'unknown' | 'refused';
   /** Request configuration captured before dispatch; not a provider-signed execution receipt. */
-  serviceId?: string; serviceRevision?: number; provider?: string; modelName?: string };
+  serviceId?: string; serviceRevision?: number; provider?: string; modelName?: string;
+  /** Tokens the provider reported for this call, once it settled. */
+  usage?: { inputTokens: number; outputTokens: number } };
 /**
  * A conversation, optionally filed under a hosted project; `filedAt` dates the filing for the same reason. `titledAt`
  * dates a name the user gave it; without one the title is its first words.

@@ -184,7 +184,7 @@ def turn_receipt(data, provider_mode):
     return {"schemaVersion": 1, "id": data["idempotencyKey"], "status": "running", "classification": "proposed",
             "providerMode": provider_mode, "modelCalled": True, "inputFingerprint": input_fingerprint(data),
             "message": data["message"], "step": data.get("step", 1), "serviceId": data["serviceId"], "serviceRevision": data["serviceRevision"],
-            "createdAt": iso(now()), "finishedAt": None, "reply": None, "actions": [], "droppedActions": 0, "errorCode": None}
+            "createdAt": iso(now()), "finishedAt": None, "reply": None, "actions": [], "droppedActions": 0, "errorCode": None, "usage": None}
 
 
 def expire_turn(op):

@@ -64,10 +64,12 @@ class AgentChatService:
         session.add(RateEvent(scope=scope))
         op.response = domain.turn_receipt(data, self.settings.provider_mode)
         session.commit()
-        reply, failure = (None, None)
+        reply, failure, usage = (None, None, None)
         try:
             async with asyncio.timeout(35):
                 raw = await self.generator.agent_chat(config, key, message)
+                # Billed once the provider answered, whether or not the answer is then accepted.
+                usage = getattr(raw, 'usage', None)
                 if not isinstance(raw, str) or key in raw:
                     raise ProviderFailure('invalid_response')
                 reply = domain.parse_reply(raw, final=data.get('step', 1) >= domain.MAX_STEPS)
@@ -87,7 +89,7 @@ class AgentChatService:
             status = 'outcome_unknown' if failure and failure.unknown else 'failed' if failure else 'ready'
             current.response = {**current.response, 'status': status, 'reply': reply['reply'] if reply else None,
                                 'actions': reply['actions'] if reply else [], 'droppedActions': reply['droppedActions'] if reply else 0,
-                                'errorCode': failure.code if failure else None, 'finishedAt': iso(now())}
+                                'errorCode': failure.code if failure else None, 'usage': usage, 'finishedAt': iso(now())}
         session.commit()
         check_session(session)
         return current.response

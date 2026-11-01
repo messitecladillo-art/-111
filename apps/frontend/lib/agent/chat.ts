@@ -15,7 +15,17 @@ export type ChatAction =
   | { tool: 'lookup'; args: { query: string } }
   | { tool: 'draft'; args: { brief: string } };
 export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
-export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null };
+/** Tokens the provider reported for one call; null when it reported none (or the call never reached it). */
+export type TokenUsage = { inputTokens: number; outputTokens: number };
+export function parseUsage(value: unknown): TokenUsage | null {
+  const v = value as Record<string, unknown> | null;
+  const count = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 10_000_000;
+  return v && typeof v === 'object' && count(v.inputTokens) && count(v.outputTokens) ? { inputTokens: v.inputTokens as number, outputTokens: v.outputTokens as number } : null;
+}
+const thousands = (n: number) => (n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`);
+/** How a call's tokens read beside its answer: sent up, received down. */
+export const usageText = (u: TokenUsage) => `↑${thousands(u.inputTokens)} ↓${thousands(u.outputTokens)} tokens`;
+export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null; usage: TokenUsage | null };
 /** What a read-only tool found, sent back so the model can go on from it. */
 export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup' | 'results'; text: string };
 export type ChatLine = { role: 'user' | 'agent'; text: string };
@@ -109,7 +119,7 @@ export function parseChatReceipt(value: unknown): ChatReceipt {
   if (!v || typeof v !== 'object' || typeof v.id !== 'string' || !['running', 'ready', 'failed', 'outcome_unknown'].includes(v.status as string)) throw Error('对话回执格式无效。');
   const actions = Array.isArray(v.actions) ? v.actions.map(action).filter((a): a is ChatAction => !!a).slice(0, 3) : [];
   return { id: v.id, status: v.status as ChatStatus, step: typeof v.step === 'number' && v.step >= 1 ? v.step : 1, message: typeof v.message === 'string' ? v.message : null, reply: typeof v.reply === 'string' && v.reply.trim() ? v.reply : null, actions,
-    droppedActions: typeof v.droppedActions === 'number' ? v.droppedActions : 0, errorCode: typeof v.errorCode === 'string' ? v.errorCode : null };
+    droppedActions: typeof v.droppedActions === 'number' ? v.droppedActions : 0, errorCode: typeof v.errorCode === 'string' ? v.errorCode : null, usage: parseUsage(v.usage) };
 }
 
 /** What a refusal or a failure means to the user, in their words. */
