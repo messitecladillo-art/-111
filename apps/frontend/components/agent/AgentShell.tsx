@@ -29,6 +29,7 @@ import { LightBar } from './Glyphs';
 import { Icon } from './icons';
 import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
+import AsciiSchool from './AsciiSchool';
 import { useShowCode } from './code-view';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import Sidebar from './Sidebar';
@@ -687,12 +688,14 @@ export default function AgentShell() {
         <div ref={scrollRef} className={styles.scroll}>
           {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>
+              <AsciiSchool />
               <div className={styles.emptyMark}><BrandMark size={44} /></div>
               <h1>我们要研究什么？</h1>
               <p>{chatMode === 'model'
                 ? `对话由「${chatService?.label ?? '模型服务'}」回答：每段对话第一次发送前请你确认；它看不到原始数据，项目里的数字以工具读到的为准。`
                 : '对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。在模型菜单里可以改用你自己的模型服务对话。'}</p>
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
+              <p className={styles.schoolHint} aria-hidden="true">每一尾鱼是一位受访者；点空白处撒一网，看看能抽到几尾</p>
             </div>}
         </div>
         <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
