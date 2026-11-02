@@ -26,8 +26,10 @@ const list = (values: readonly (string | number)[]) => `[${values.map(v => typeo
 
 function reader(sourceName: string): ScriptLine[] {
   const excel = /\.xlsx?$/i.test(sourceName);
+  // A source named for display (a pasted table, the teaching sample) has no file yet: it is saved as CSV first.
+  const file = /\.(csv|tsv|txt|xlsx?)$/i.test(sourceName) ? sourceName : `${oneLine(sourceName).replace(/[\\/:*?"<>|]+/g, '_') || '数据'}.csv`;
   return [
-    style(`DATA = ${py(sourceName)}`, '数据文件：放在脚本旁边，或改成文件在你电脑上的完整路径'),
+    style(`DATA = ${py(file)}`, file === sourceName ? '数据文件：放在脚本旁边，或改成文件在你电脑上的完整路径' : '数据文件：先把这份数据另存为 CSV（UTF-8），放在脚本旁边；也可以改成完整路径'),
     excel ? plain('df = pd.read_excel(DATA, dtype=str, keep_default_na=False).fillna("")')
       : plain('df = pd.read_csv(DATA, dtype=str, keep_default_na=False, encoding="utf-8-sig")'),
   ];

@@ -25,6 +25,9 @@ const PATHS: Record<string, ReactNode> = {
   download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
   expand: <path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" />,
   shrink: <path d="M4 14h6v6M20 10h-6V4M20 4l-6 6M4 20l6-6" />,
+  code: <path d="m8 7-5 5 5 5M16 7l5 5-5 5" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  chart: <><path d="M4 20h16" /><path d="M7 16v-5M12 16V7M17 16v-8" /></>,
   more: <><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></>,
 };
 

@@ -38,7 +38,7 @@ export function Figure({ result, column, accent,figure,visualStyle }: { result: 
   return state.error ? <p className={styles.error}>{state.error}</p> : <div className={styles.figure} role="img" aria-label={result.title} dangerouslySetInnerHTML={{ __html: state.svg! }}/>;
 }
 
-function Table({ result,figure }: { result: ResultSnapshot;figure?:ReportFigure }) {
+export function ResultTable({ result,figure }: { result: ResultSnapshot;figure?:ReportFigure }) {
   const table = figure ? {headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>typeof cell==='number'?String(Number(cell.toFixed(figure.style.decimals))):cell??'—')),note:figure.note} : presentResult(result), spans = figure ? null : tableSpans(result, table);
   // Merged cells (a sampling frame's parent units) span their children's rows, as in Word.
   const span = (r: number, c: number) => spans ? spans[r][c] : 1;
@@ -75,7 +75,7 @@ export default function PaperBlocks({ section, content, labels, citations }: { s
     const caption = numberedCaption(blockLabel(labels, section.id, block.id), block.text || result.title);
     return <figure key={block.id} className={styles.block}>
       {block.kind === 'table' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}
-      {block.kind === 'chart' ? <Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle}/> : <Table result={result} figure={figure}/>}
+      {block.kind === 'chart' ? <Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle}/> : <ResultTable result={result} figure={figure}/>}
       {block.kind === 'chart' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}
       {block.kind==='chart'&&figure?.note&&<p className={styles.small}>{figure.note}</p>}
       {source && <p className={styles.small}>{sourceLine(result)}</p>}

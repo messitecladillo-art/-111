@@ -22,7 +22,7 @@ export function parseUsage(value: unknown): TokenUsage | null {
   const count = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 10_000_000;
   return v && typeof v === 'object' && count(v.inputTokens) && count(v.outputTokens) ? { inputTokens: v.inputTokens as number, outputTokens: v.outputTokens as number } : null;
 }
-const thousands = (n: number) => (n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`);
+export const thousands = (n: number) => (n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`);
 /** How a call's tokens read beside its answer: sent up, received down. */
 export const usageText = (u: TokenUsage) => `↑${thousands(u.inputTokens)} ↓${thousands(u.outputTokens)} tokens`;
 export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null; usage: TokenUsage | null };

@@ -5,6 +5,8 @@ import { useMemo, useRef, useState } from 'react';
 import { turnText } from '@/lib/agent/chat';
 import { Icon } from './icons';
 import { tidyTitle as tidy, type Book, type Thread } from './threads';
+import { thousands } from '@/lib/agent/chat';
+import type { RoomId } from '@/lib/agent/rooms';
 import styles from './AgentShell.module.css';
 
 type Props = {
@@ -22,6 +24,19 @@ type Props = {
   onRemove: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onCollapse: () => void;
+  /** The research path, each step with how much evidence it holds where that is measured (null: not measured). */
+  stages: { id: RoomId; name: string; glyph: string; score: number | null }[];
+  openRoom: RoomId | null;
+  onRoom: (id: RoomId) => void;
+  /** Registered results, newest first; one opens beside the conversation. */
+  outputs: { id: string; title: string; detail: string }[];
+  openOutput: string | null;
+  onOutput: (id: string) => void;
+  /** Tokens the model calls in this browser reported today. */
+  todayTokens: number;
+  onModels: () => void;
+  onExport: (() => void) | null;
+  onLogout: () => void;
 };
 
 /** Where a conversation's words hold what is searched for: a few words either side of the first place. */
@@ -42,7 +57,9 @@ function excerpt(thread: Thread, wanted: string): string | null {
  * them, then the rest by recency. Search reads titles and what was said. A conversation can be renamed in place;
  * deleting asks once more in place and removes the conversation only, never project work.
  */
-export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse }: Props) {
+export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout }: Props) {
+  const [menu, setMenu] = useState(false);
+  const [allOutputs, setAllOutputs] = useState(false);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -111,6 +128,28 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
     {searching && <input className={styles.sideSearch} autoFocus value={query} placeholder="搜索对话标题与内容" aria-label="搜索对话标题与内容" onChange={event => setQuery(event.target.value)} />}
     <nav className={styles.sideScroll} aria-label="对话">
       <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}><Icon name="edit" />新对话</button>
+      {!wanted && <>
+        <p className={styles.sideLabel}>研究进度</p>
+        <ol className={styles.stages}>
+          {stages.map(stage => {
+            const state = stage.score === null ? 'unmeasured' : stage.score >= 0.999 ? 'done' : stage.score > 0 ? 'active' : 'empty';
+            return <li key={stage.id}><button type="button" data-state={state} aria-current={openRoom === stage.id ? 'true' : undefined} onClick={() => onRoom(stage.id)}
+              title={stage.score === null ? `${stage.name}：打开模块` : `${stage.name}：证据照度 ${Math.round(stage.score * 100)}%`}>
+              <span className={styles.stageMark} aria-hidden="true">{state === 'done' ? <Icon name="check" /> : stage.glyph}</span>
+              <span className={styles.stageName}>{stage.name}</span>
+              {state === 'active' && <span className={styles.stageBar} aria-hidden="true"><i style={{ width: `${Math.round(stage.score! * 100)}%` }} /></span>}
+              <small>{state === 'done' ? '完成' : state === 'active' ? `${Math.round(stage.score! * 100)}%` : state === 'empty' ? '未开始' : ''}</small>
+            </button></li>;
+          })}
+        </ol>
+        {outputs.length > 0 && <>
+          <p className={styles.sideLabel}>产出 <small>{outputs.length}</small></p>
+          {(allOutputs ? outputs : outputs.slice(0, 5)).map(output => <button key={output.id} type="button" className={styles.output} aria-current={openOutput === output.id ? 'true' : undefined} onClick={() => onOutput(output.id)} title={output.title}>
+            <Icon name="chart" /><span>{output.title}<small>{output.detail}</small></span>
+          </button>)}
+          {outputs.length > 5 && <button type="button" className={styles.sideMore} onClick={() => setAllOutputs(!allOutputs)}>{allOutputs ? '收起' : `全部 ${outputs.length} 项`}</button>}
+        </>}
+      </>}
       {account === 'ready' && projects.length > 0 && <>
         <p className={styles.sideLabel}>项目</p>
         {projects.map(project => {
@@ -136,8 +175,21 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
         <span role="alert">账号服务暂未就绪</span>
         <span className={styles.spacer} />
         <button type="button" onClick={onRetry}>重新连接</button>
-      </> : <>
-        {account === 'ready' ? <span title={email}>{email}</span> : <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>}
+      </> : account === 'ready' ? <div className={styles.accountWrap}>
+        {menu && <div className={styles.accountMenu} role="menu" aria-label="账号">
+          <button type="button" role="menuitem" onClick={() => { setMenu(false); onModels(); }}>模型设置</button>
+          <Link role="menuitem" href="/invites" onClick={() => setMenu(false)}>邀请码（管理员）</Link>
+          {onExport && <button type="button" role="menuitem" onClick={() => { setMenu(false); onExport(); }}>导出对话记录</button>}
+          <Link role="menuitem" href="/workspace" onClick={() => setMenu(false)}>经典工作台 ↗</Link>
+          <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenu(false); onLogout(); }}>退出登录</button>
+        </div>}
+        <button type="button" className={styles.account} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title={email}>
+          <span className={styles.accountAvatar} aria-hidden="true">{(email[0] ?? '?').toUpperCase()}</span>
+          <span className={styles.accountText}><b>{email}</b><small>今日 {thousands(todayTokens)} tokens</small></span>
+          <Icon name="more" />
+        </button>
+      </div> : <>
+        <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>
         <span className={styles.spacer} />
         {account === 'guest' ? <Link href="/login">登录</Link> : <Link href="/workspace">经典工作台 ↗</Link>}
       </>}

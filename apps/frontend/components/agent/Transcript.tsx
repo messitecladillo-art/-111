@@ -1,11 +1,13 @@
 'use client';
 
-import { memo, useEffect, useLayoutEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { usageText } from '@/lib/agent/chat';
 import { Formula } from '@/components/math/Tex';
 import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
 import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
-import type { Message } from './threads';
+import { Icon } from './icons';
+import type { Message, ModelCall } from './threads';
 import styles from './AgentShell.module.css';
 
 type Handlers = { onAction: (action: AgentAction) => void; onAnswer: (id: string, answer: 'confirmed' | 'cancelled', action?: AgentAction) => void };
@@ -38,6 +40,7 @@ function MessageView({ message, onAction, onAnswer }: { message: Message } & Han
   if (message.role === 'pending') return <div className={styles.message}><div className={styles.reply}><p className={styles.waiting}>正在查知识镜「{message.query}」</p></div></div>;
   const { turn } = message;
   return <div className={styles.message}>
+    {message.model && <StepHead model={message.model} at={message.at} />}
     <div className={styles.reply}>
       {turn.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}
       {turn.cards?.map((card, i) => <Card key={i} card={card} message={message} onAction={onAction} onAnswer={onAnswer} />)}
@@ -47,6 +50,29 @@ function MessageView({ message, onAction, onAnswer }: { message: Message } & Han
       </div>}
     </div>
   </div>;
+}
+
+const STEP_STATE: Record<NonNullable<ModelCall['status']>, string> = { running: '进行中', ready: '完成', failed: '未完成', unknown: '待核对', refused: '未发出' };
+/**
+ * A model call as a step of the work: what it is doing, through which service, how long it has run and, once settled,
+ * what it cost in tokens as the provider reported them.
+ */
+function StepHead({ model, at }: { model: ModelCall; at: number }) {
+  const status = model.status ?? 'ready';
+  return <div className={styles.stepHead} data-status={status}>
+    <span className={styles.stepIcon} aria-hidden="true">{status === 'running' ? <i /> : status === 'ready' ? <Icon name="check" /> : '!'}</span>
+    <span className={styles.stepText}>第 {model.step} 步 · {model.service}{model.modelName ? <small>{model.modelName}</small> : null}</span>
+    <span className={styles.spacer} />
+    {status === 'running' ? <Elapsed since={at} /> : <span>{STEP_STATE[status]}</span>}
+    {model.usage && <span className={styles.stepCost} title="服务商报告的输入 / 输出 token">{usageText(model.usage)}</span>}
+  </div>;
+}
+/** Seconds since a call was sent, while it is still running in this visit; a stale one from an earlier visit just says so. */
+function Elapsed({ since }: { since: number }) {
+  const [now, setNow] = useState(since);
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  const seconds = Math.max(0, Math.round((now - since) / 1000));
+  return <span aria-live="off">{seconds > 600 ? '等待回执' : `已用 ${seconds} 秒`}</span>;
 }
 
 /** Numbers in a recorded step develop into gold; digits inside a fingerprint, a variable code or "SHA-256" stay plain. */

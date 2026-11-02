@@ -8,7 +8,7 @@ import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
-import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult, usageText, type TokenUsage } from '@/lib/agent/chat';
+import { CHAT_ERRORS, HISTORY_LIMIT, MAX_STEPS, TEXT_LIMIT, chatContext, chatHistory, isDefiniteChatRejection, isResultTool, replyLines, spanText, thousands, turnText, type ChatAction, type ChatLine, type ChatReceipt, type ChatRequest, type ToolResult, usageText, type TokenUsage } from '@/lib/agent/chat';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
 import { ThemeProvider, saveTheme, switchTheme, useThemePreference, type Section } from '@/components/workbench/shell-kit';
 import { percent } from '@/lib/agent/glyphs';
@@ -28,6 +28,9 @@ import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
 import Lobby from './Lobby';
+import OutputPanel from './OutputPanel';
+import { useShowCode } from './code-view';
+import { METHOD_LABELS } from '@/lib/report-placement';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
@@ -55,6 +58,14 @@ function currentPanel(): RoomId | null {
   const hash = window.location.hash.slice(1);
   return hash === 'lifecycle' ? 'workspace' : isRoomId(hash) ? hash : null;
 }
+/** A registered result opened beside the conversation, `#output/<id>`; it takes the panel's place while no module is open. */
+function currentOutput(): string | null {
+  const match = /^#output\/(.{1,400})$/.exec(window.location.hash);
+  try { return match ? decodeURIComponent(match[1]) : null; } catch { return null; }
+}
+/** The research path as the sidebar shows it, in working order. */
+const STAGES: RoomId[] = ['diagnose', 'design', 'sampling', 'analysis', 'editor', 'defense'];
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const subscribeNothing = () => () => {};
 const searchKey = () => /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
 const EMPTY_MESSAGES: Message[] = [];
@@ -105,6 +116,8 @@ export default function AgentShell() {
   const thread = book.threads.find(t => t.id === book.active) ?? null;
   const messages = thread?.messages ?? EMPTY_MESSAGES;
   const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
+  const outputId = useSyncExternalStore(subscribeHash, currentOutput, () => null);
+  const [showCode, setShowCode] = useShowCode(owner);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
@@ -117,13 +130,15 @@ export default function AgentShell() {
     return report ? { results, findings: report.quality?.findings ?? [], pending: deferredView.resultPending, placed: results.filter(r => resultPlaced(report, r)).map(r => r.id) } : null;
   }, [deferredView]);
 
+  // A result opened beside the conversation, while no module holds the panel and the result is known in this visit.
+  const output = !panel && outputId ? held?.results.find(r => r.id === outputId) ?? null : null;
   const [visited, setVisited] = useState<RoomId[]>([]);
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
   const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
   // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
   const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
-  const crowded = !!panel && viewport < 1680;
+  const crowded = (!!panel || !!output) && viewport < 1680;
   const [sideAlone, setSideAlone] = useState(true), [sideBeside, setSideBeside] = useState(false);
   const sideOpen = crowded ? sideBeside : sideAlone;
   const setSideOpen = crowded ? setSideBeside : setSideAlone;
@@ -194,7 +209,7 @@ export default function AgentShell() {
   const chatService = resolveModelRoute('research', lists.services, preferences).service;
   const reportService = resolveModelRoute('report', lists.services, preferences).service;
 
-  const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, []);
+  const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, [setCanvasReturn]);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
   const nav = useMemo<WorkbenchNav>(() => ({ section: panel ?? 'overview', openFromCanvas, showWorkbench, canvasFocus }), [panel, openFromCanvas, showWorkbench, canvasFocus]);
   const backToCanvas = () => {
@@ -568,9 +583,18 @@ export default function AgentShell() {
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
   const here = panel ? roomById(panel) : null, lit = panel ? roomLight(light, panel) : null;
+  const outputs = [...(held?.results ?? [])].reverse().map(r => ({ id: r.id, title: r.title, detail: `${METHOD_LABELS[r.method] ?? r.method} · 有效样本 ${r.n}` }));
+  const stages = STAGES.map(id => ({ id, name: roomById(id).name, glyph: roomById(id).glyph, score: roomLight(light, id)?.score ?? null }));
+  // The work in view: the call still running in this conversation, and what its model calls have cost so far.
+  const running = messages.find(m => m.role === 'agent' && m.model?.status === 'running') as Extract<Message, { role: 'agent' }> | undefined;
+  const looking = messages.some(m => m.role === 'pending');
+  const spent = messages.reduce((sum, m) => m.role === 'agent' && m.model?.usage ? { inputTokens: sum.inputTokens + m.model.usage.inputTokens, outputTokens: sum.outputTokens + m.model.usage.outputTokens } : sum, { inputTokens: 0, outputTokens: 0 });
+  const today = useSyncExternalStore(subscribeNothing, startOfToday, () => 0);
+  const todayTokens = book.threads.reduce((total, t) => total + t.messages.reduce((sum, m) => m.role === 'agent' && m.at >= today && m.model?.usage ? sum + m.model.usage.inputTokens + m.model.usage.outputTokens : sum, 0), 0);
+  const exportThread = thread && messages.length > 0 ? () => exportRecord(thread) : null;
 
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
-    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? 'none'} data-expanded={expanded && !!panel}>
+    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? (output ? 'output' : 'none')} data-expanded={expanded && !!panel}>
       <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); focusInput(); }}>跳到输入框</a>
 
       <nav ref={railRef} className={styles.rail} aria-label="工具" style={{ position: 'relative' }}>
@@ -635,15 +659,29 @@ export default function AgentShell() {
 
       <Sidebar book={book} projects={projects} account={generationAccount} email={email} notice={accountNotice}
         failed={!!sessionError} onRetry={() => { setAccountNotice(''); refresh().catch(error => setAccountNotice(errorMessage(error))); }} onNew={id => { threads.draft(id); focusInput(); }}
-        onSelect={threads.select} onRemove={threads.remove} onRename={threads.rename} onCollapse={() => setSideOpen(false)} />
+        onSelect={threads.select} onRemove={threads.remove} onRename={threads.rename} onCollapse={() => setSideOpen(false)}
+        stages={stages} openRoom={panel} onRoom={go} outputs={outputs} openOutput={output?.id ?? null} onOutput={id => { window.location.hash = `output/${encodeURIComponent(id)}`; }}
+        todayTokens={todayTokens} onModels={() => go('services')} onExport={exportThread}
+        onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }} />
 
       <main className={styles.main} aria-label="对话" data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
           <span className={styles.topTitle}>{thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
+          <span className={styles.workState} data-busy={!!running || looking} role="status">
+            <i aria-hidden="true" />{running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
+          </span>
           <span className={styles.spacer} />
-          {thread && messages.length > 0 && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
-            onClick={() => download(recordName(thread, Date.now()), conversationMarkdown(thread, Date.now()))}><Icon name="download" /></button>}
+          {(spent.inputTokens > 0 || spent.outputTokens > 0) && <span className={styles.meter} title="这段对话里，服务商报告的输入 / 输出 token 合计">
+            {thousands(spent.inputTokens + spent.outputTokens)} tokens<small><b data-dir="in">↑{thousands(spent.inputTokens)}</b><b data-dir="out">↓{thousands(spent.outputTokens)}</b></small>
+          </span>}
+          <span className={styles.modelTag} title={chatMode === 'model' ? '对话由这个模型服务回答；在输入框的菜单里更换' : '指令模式：不调用模型；在输入框的菜单里可以改用模型对话'}>
+            {chatMode === 'model' ? chatService ? `${chatService.label} · ${chatService.model}` : '未选模型' : '指令模式'}
+          </span>
+          <button type="button" className={styles.codeToggle} aria-pressed={showCode} onClick={() => setShowCode(!showCode)}
+            title={showCode ? '隐藏每项结果背后的代码' : '显示每项结果背后可复现的 Python 代码：负责编程的同学打开，其他人保持关闭即可'}><Icon name="code" />显示代码</button>
+          {exportThread && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
+            onClick={exportThread}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
         <div ref={scrollRef} className={styles.scroll}>
@@ -663,7 +701,7 @@ export default function AgentShell() {
           mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
       </main>
 
-      <section className={styles.panel} hidden={!panel} aria-label={here ? here.name : '模块'} data-dialog-background
+      <section className={styles.panel} hidden={!panel && !output} aria-label={here ? here.name : output ? '产出' : '模块'} data-dialog-background
         style={{ ['--panel-w' as string]: `${panelWidth}px` }}>
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {here && <header className={styles.panelHead}>
@@ -675,7 +713,8 @@ export default function AgentShell() {
             title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
         </header>}
-        <div className={styles.panelBody} data-room={panel ?? undefined}>
+        {output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} />}
+        <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel}>
           {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
           {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && visited.includes(id)).map(id =>
             <div key={id} className={styles.pane} data-workbench-panel={id} hidden={panel !== id}>{panels[id]}</div>)}
@@ -702,6 +741,12 @@ function chatLine(message: Message): ChatLine[] {
   if (message.role !== 'agent' || message.turn.cards?.some(card => card.kind === 'confirm' || card.kind === 'consent')) return [];
   const text = message.turn.lines.map(line => line.map(spanText).join('')).join('\n').trim();
   return text ? [{ role: 'agent', text }] : [];
+}
+
+/** The conversation as a Markdown record, dated now. */
+function exportRecord(thread: Parameters<typeof conversationMarkdown>[0]) {
+  const now = Date.now();
+  download(recordName(thread, now), conversationMarkdown(thread, now));
 }
 
 /** Saves text as a file the user downloads; nothing leaves the browser. */

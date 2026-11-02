@@ -59,3 +59,9 @@ test('results without a calculation receipt get no script rather than a guessed 
   assert.equal(reproScript({...r,receipt:undefined}),null);
   assert.equal(reproScript({...r,method:'kmeans'}),null);
 });
+test('a source named only for display is saved as CSV first, and the script says so',async()=>{
+  const r=await registered(node('frequency',0));
+  const s=reproScript({...r,sourceName:'12 行教学模拟数据'}),data=s.lines.find(l=>l.text.startsWith('DATA = '));
+  assert.equal(data.text,'DATA = "12 行教学模拟数据.csv"');assert.match(data.note,/另存为 CSV/);
+  assert.match(s.lines.find(l=>l.text.startsWith('df = ')).text,/read_csv/);
+});
