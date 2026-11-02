@@ -15,7 +15,8 @@ export type School = {
 
 export const NET_RADIUS = 70;
 export const RIPPLE_LIFE = 1.1, CATCH_LIFE = 2.6;
-const NEIGHBOUR = 56, SEPARATION = 20, FLEE = 110;
+// Distances between fish are measured with the width shrunk by GLYPH, since a fish is a few characters wide and one line tall.
+const NEIGHBOUR = 56, SEPARATION = 15, GLYPH = 2.2, FLEE = 110;
 const MAX_SPEED = 46, MIN_SPEED = 14;
 
 /** Mulberry32: small, fast and the same everywhere. */
@@ -41,10 +42,17 @@ export function createSchool(width: number, height: number, seed = 20261102): Sc
   return { width, height, time: 0, fish, ripples: [], catches: [], pointer: { x: 0, y: 0, active: false }, random, keepOut: null };
 }
 
-/** A new size keeps the fish, carried proportionally into the new bounds. */
+/**
+ * A new size keeps the fish, carried proportionally into the new bounds. A large change (a panel opening or closing)
+ * scatters them afresh instead, so a school squeezed into a narrow strip does not stay bunched when the room comes back.
+ */
 export function resizeSchool(school: School, width: number, height: number) {
   if (width <= 0 || height <= 0) return;
-  for (const f of school.fish) { f.x = f.x / school.width * width; f.y = f.y / school.height * height; }
+  const rx = width / school.width, ry = height / school.height, large = rx > 1.5 || rx < 1 / 1.5 || ry > 1.5 || ry < 1 / 1.5;
+  for (const f of school.fish) {
+    if (large) { f.x = school.random() * width; f.y = school.random() * height; }
+    else { f.x *= rx; f.y *= ry; }
+  }
   school.width = width; school.height = height;
 }
 
@@ -60,9 +68,11 @@ export function stepSchool(school: School, dt: number) {
       const dx = o.x - f.x, dy = o.y - f.y, d = Math.hypot(dx, dy);
       if (d > NEIGHBOUR || d === 0) continue;
       n++; cx += dx; cy += dy; avx += o.vx; avy += o.vy;
-      if (d < SEPARATION) { ax -= dx / d * (SEPARATION - d) * 3.2; ay -= dy / d * (SEPARATION - d) * 3.2; }
+      const near = Math.hypot(dx / GLYPH, dy);
+      if (near < SEPARATION) { const push = (SEPARATION - near) * 7 / Math.max(near, 1); ax -= dx / GLYPH * push; ay -= dy * push; }
     }
-    if (n) { ax += cx / n * 0.6 + (avx / n - f.vx) * 0.5; ay += cy / n * 0.6 + (avy / n - f.vy) * 0.5; }
+    // Cohesion is gentle: a school, not a ball.
+    if (n) { ax += cx / n * 0.12 + (avx / n - f.vx) * 0.5; ay += cy / n * 0.12 + (avy / n - f.vy) * 0.5; }
     // A slow wander keeps the school from settling into one stream.
     ax += (random() - 0.5) * 30; ay += (random() - 0.5) * 18;
     if (pointer.active) {

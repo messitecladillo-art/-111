@@ -31,3 +31,15 @@ test('a resize carries the fish into the new bounds, and each faces the way it s
   assert.ok(s.fish.every(f=>f.x<450&&f.y<300));
   assert.equal(glyph({vx:1,size:0}),'><>');assert.equal(glyph({vx:-1,size:0}),'<><');assert.equal(glyph({vx:-1,size:1}),"<'))><");
 });
+test('a school keeps its spacing instead of collapsing into a ball, even when squeezed',()=>{
+  // A narrow conversation column (a panel open beside it) with the words across nearly all of it.
+  const s=createSchool(380,760);s.keepOut={x:10,y:250,width:360,height:300};run(s,30);
+  const gap=f=>Math.min(...s.fish.filter(o=>o!==f).map(o=>Math.hypot((o.x-f.x)/2.2,o.y-f.y)));
+  const mean=s.fish.reduce((sum,f)=>sum+gap(f),0)/s.fish.length;
+  assert.ok(mean>=12,`mean nearest gap ${mean.toFixed(1)}`);
+});
+test('a large resize scatters the school over the new room rather than stretching a bunch',()=>{
+  const s=createSchool(900,600);for(const f of s.fish){f.x=10+f.x%30;f.y=10+f.y%20;}
+  resizeSchool(s,300,600);resizeSchool(s,900,600);
+  const xs=s.fish.map(f=>f.x);assert.ok(Math.max(...xs)-Math.min(...xs)>450,'spread across the width again');
+});
