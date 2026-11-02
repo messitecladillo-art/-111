@@ -87,7 +87,9 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,questionnaire=null,onContentChange}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void}={}) {
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
+  /** A local draft to start from; `savedInBrowser` says the caller keeps the draft in this browser as it changes. */
+  initialContent?:EditorContent|null;savedInBrowser?:boolean}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -98,7 +100,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   if (permissionVersion.readOnly !== readOnly) setPermissionVersion({ readOnly, epoch: permissionEpoch });
   useLayoutEffect(() => { permission.current.update(readOnly); }, [readOnly]);
   const canMutate = useCallback(() => !readOnly && permission.current.allows(permissionEpoch), [readOnly, permissionEpoch]);
-  const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? createEditorContent());
+  const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? initialContent ?? createEditorContent());
   // The agent shell reads the report it hosts to light the report room; it never writes through this.
   useEffect(() => { onContentChange?.(content); }, [content, onContentChange]);
   const reportSettings = content.reportFormat ?? DEFAULT_REPORT_SETTINGS;
@@ -243,7 +245,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
 
   const save = useCallback(async (copy = false, forVersion = false): Promise<Draft | null> => {
     if(!canMutate())return null;
-    if(localOnly){if(projectBinding){projectBinding.onSave();return null;}setMessage('当前为本地编辑。请下载 JSON 备份保存进度；可继续导出 Word 和 PPTX。');return null;}
+    if(localOnly){if(projectBinding){projectBinding.onSave();return null;}setMessage(savedInBrowser?'已自动保存在这个浏览器；换设备或清理浏览器数据会丢失，重要进度请下载 JSON 备份。':'当前为本地编辑。请下载 JSON 备份保存进度；可继续导出 Word 和 PPTX。');return null;}
     if (identityTransition.current || busy.current || (versionOperation.current && !forVersion)) return null;
     busy.current = true; setPhase("saving"); setMessage("");
     const snapshot = JSON.stringify(current.current);
@@ -280,7 +282,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       setMessage(e instanceof Error ? e.message : "保存失败，内容仍在当前页面。请重试或导出备份。");
       return null;
     } finally { busy.current = false; }
-  }, [connected, resetVersions, setRecord, acknowledgeSaved,localOnly,projectBinding,canMutate]);
+  }, [connected, resetVersions, setRecord, acknowledgeSaved,localOnly,projectBinding,canMutate,savedInBrowser]);
 
   useEffect(() => {
     if (!dirty || blocked.current || busy.current || versionOperation.current || phase === "loading" || !connected) return;
