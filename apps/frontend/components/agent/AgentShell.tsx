@@ -34,7 +34,7 @@ import Advisors from './Advisors';
 import { ADVISORS, advisorReading } from '@/lib/agent/advisors';
 import CursorTrail from './CursorTrail';
 import ReportPaper from '@/components/editors/ReportPaper';
-import { PaperToolbar, ReportInspector, ReportNav } from './ReportWorkspace';
+import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
@@ -115,7 +115,7 @@ function savedPanelWidth(): number | null {
  * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
-  const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark } = useWorkbenchModules(true);
+  const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark, setLiveReport } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
   const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount } = useHostedSession();
@@ -134,13 +134,19 @@ export default function AgentShell() {
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
+  const [liveWriting, setLiveWriting] = useState<LiveWritingStatus | null>(null);
+  const autoFollowRef = useRef(true);
+  const toggleAutoFollow = useCallback(() => {
+    autoFollowRef.current = !autoFollowRef.current;
+    setLiveWriting(prev => (prev ? { ...prev, autoFollow: autoFollowRef.current } : null));
+  }, []);
   // Before any report exists in this browser the paper shows the blank template, as the editor would open it.
   const [blankReport] = useState(createEditorContent);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
-  const paperContent = deferredView.report ?? blankReport;
+  const paperContent = view.report ?? blankReport;
   const paperRef = useRef<HTMLDivElement>(null);
   // The report check runs on whatever the paper shows, the blank template included, so the inspector always has a score.
   const paperBenchmark = useMemo(() => light.benchmark ?? benchmarkReport(paperContent), [light.benchmark, paperContent]);
@@ -587,6 +593,22 @@ export default function AgentShell() {
           } catch {
             /* ignore */
           }
+          // Focus the middle report canvas immediately so the user watches the report being written in real time
+          setStage('paper');
+          closePanel();
+          setLiveWriting({
+            active: true,
+            phase: 'contract',
+            completed: 0,
+            total: 26,
+            paragraphs: 0,
+            facts: 0,
+            lastSectionId: null,
+            lastSectionTitle: '正在初始化 9 章 26 节蓝图与四张证据台账…',
+            topicTitle: topicLabel,
+            autoFollow: autoFollowRef.current,
+          });
+
           const waitingMsg: Message = {
             ...stamp(),
             role: 'agent',
@@ -600,11 +622,11 @@ export default function AgentShell() {
             turn: {
               lines: [
                 [
-                  span('正在调用 '),
+                  span('已在中间报告画布启动 '),
                   span('DeepSeek (deepseek-chat)', 'strong'),
-                  span(` 全流程并发撰写「${topicLabel}」的 `),
+                  span(` 实时并发撰写「${topicLabel}」的 `),
                   span('9 章 26 节', 'gold'),
-                  span(' 完整报告（Wave 1 主体与实证 22 节 → Wave 2 摘要与 3W1H 结论 4 节 → 06 六大顾问终审自愈，预计约 30–40 秒）…', 'dim'),
+                  span(' 完整报告（每写完一节将立即在纸面落笔并自动定位）…', 'dim'),
                 ],
               ],
             },
@@ -617,16 +639,124 @@ export default function AgentShell() {
               topic: action.topic.trim() || undefined,
               mode: action.mode ?? 'demonstration',
               apiKey: sessionKey || undefined,
+              stream: true,
             }),
           })
             .then(async res => {
-              const data = await res.json();
-              if (!res.ok || !data?.ok || !data?.pack) {
-                throw new Error(data?.message || `HTTP ${res.status}`);
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData?.message || `HTTP ${res.status}`);
               }
-              loadBenchmark(action.topic.trim() || 'current', data.pack);
-              go('editor');
-              const s = data.summary;
+              const contentType = res.headers.get('content-type') ?? '';
+              let finalData: any = null;
+              let runningParagraphs = 0;
+              const citedFactsSet = new Set<string>();
+
+              if (contentType.includes('application/x-ndjson') && res.body) {
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                while (true) {
+                  const { value, done } = await reader.read();
+                  if (done) break;
+                  buffer += decoder.decode(value, { stream: true });
+                  const lines = buffer.split('\n');
+                  buffer = lines.pop() ?? '';
+                  for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    const evt = JSON.parse(trimmed);
+                    if (evt.type === 'init' && evt.pack) {
+                      loadBenchmark(action.topic.trim() || 'current', evt.pack);
+                      setLiveWriting(prev => ({
+                        active: true,
+                        phase: 'wave1',
+                        completed: 0,
+                        total: evt.total ?? 26,
+                        paragraphs: 0,
+                        facts: 0,
+                        lastSectionId: null,
+                        lastSectionTitle: '9 章 26 节蓝图与 6 项统计图表已就位，DeepSeek 正在并发落笔…',
+                        topicTitle: evt.topic?.shortTitle || prev?.topicTitle || topicLabel,
+                        autoFollow: autoFollowRef.current,
+                      }));
+                    } else if (evt.type === 'section' && evt.report) {
+                      setLiveReport(evt.report);
+                      runningParagraphs += evt.trace?.keptParagraphs ?? 0;
+                      for (const f of evt.trace?.citedFacts ?? []) citedFactsSet.add(f);
+                      setLiveWriting(prev => ({
+                        active: true,
+                        phase: evt.phase === 'wave2' ? 'wave2' : 'wave1',
+                        completed: evt.completed ?? (prev?.completed ?? 0) + 1,
+                        total: evt.total ?? prev?.total ?? 26,
+                        paragraphs: runningParagraphs,
+                        facts: citedFactsSet.size,
+                        lastSectionId: evt.sectionId ?? null,
+                        lastSectionTitle: `${evt.title ?? ''}（+${evt.trace?.keptParagraphs ?? 0}段）`,
+                        topicTitle: prev?.topicTitle ?? topicLabel,
+                        autoFollow: autoFollowRef.current,
+                      }));
+                      if (autoFollowRef.current && evt.sectionId) {
+                        requestAnimationFrame(() => pickSection(evt.sectionId));
+                      }
+                      replace(waitingMsg.id, {
+                        lines: [
+                          [
+                            span('正在中间报告画布实时落笔：已完成 '),
+                            span(`${evt.completed}/${evt.total} 节`, 'gold'),
+                            span(' · 累计 '),
+                            span(`${runningParagraphs} 段`, 'gold'),
+                            span(' · 绑定 '),
+                            span(`${citedFactsSet.size} 项`, 'gold'),
+                            span(' {F编号} 事实 · 最新完成「'),
+                            span(evt.title ?? '', 'strong'),
+                            span('」'),
+                          ],
+                        ],
+                      });
+                    } else if (evt.type === 'repair' && evt.report) {
+                      setLiveReport(evt.report);
+                      setLiveWriting(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              phase: 'repair',
+                              lastSectionTitle: `06 六大顾问终审自愈（执行 ${evt.repairsApplied?.length ?? 0} 项修复）`,
+                            }
+                          : null,
+                      );
+                    } else if (evt.type === 'done') {
+                      finalData = evt;
+                    } else if (evt.type === 'error') {
+                      throw new Error(evt.message || '全报告流式生成中断');
+                    }
+                  }
+                }
+              } else {
+                finalData = await res.json();
+              }
+
+              if (!finalData?.ok || !finalData?.pack) {
+                throw new Error(finalData?.message || '未收到完整报告数据包');
+              }
+
+              loadBenchmark(action.topic.trim() || 'current', finalData.pack);
+              const s = finalData.summary;
+              const firstSectionId = finalData.pack.report?.report?.[0]?.id ?? 'sec-abstract';
+              setLiveWriting({
+                active: false,
+                phase: 'done',
+                completed: s.totalSectionsGenerated,
+                total: s.totalSectionsGenerated,
+                paragraphs: s.totalParagraphsWritten,
+                facts: s.totalFactsCited,
+                lastSectionId: firstSectionId,
+                lastSectionTitle: '摘要（点击回到篇首）',
+                topicTitle: finalData.topic?.shortTitle || topicLabel,
+                autoFollow: autoFollowRef.current,
+              });
+              requestAnimationFrame(() => pickSection(firstSectionId));
+
               mark(
                 waitingMsg.id,
                 'ready',
@@ -641,7 +771,7 @@ export default function AgentShell() {
                   [
                     span('已由 '),
                     span('DeepSeek 全流程 Agent', 'strong'),
-                    span(' 自动生成全篇报告并写入右侧编辑器：共撰写 '),
+                    span(' 在中间报告画布完成实时撰稿：共撰写 '),
                     span(`${s.totalSectionsGenerated} 节`, 'gold'),
                     span('、'),
                     span(`${s.totalParagraphsWritten} 段`, 'gold'),
@@ -659,11 +789,11 @@ export default function AgentShell() {
                 cards: [
                   {
                     kind: 'tool',
-                    title: `全报告生成回执 · ${data.topic?.shortTitle || topicLabel}`,
+                    title: `全报告生成回执 · ${finalData.topic?.shortTitle || topicLabel}`,
                     lines: [
-                      [span('00 四张交接台账', 'teal'), span(`　结论证据表 ${data.contract?.claimLedger?.length ?? 4} 条 · 文献核验表 ${data.contract?.literatureLedger?.length ?? 3} 条 · 统计结果表 ${data.contract?.statsLedger?.length ?? 6} 条 · 图表登记表 ${data.contract?.figureLedger?.length ?? 7} 条`, 'dim')],
+                      [span('00 四张交接台账', 'teal'), span(`　结论证据表 ${finalData.contract?.claimLedger?.length ?? 4} 条 · 文献核验表 ${finalData.contract?.literatureLedger?.length ?? 3} 条 · 统计结果表 ${finalData.contract?.statsLedger?.length ?? 6} 条 · 图表登记表 ${finalData.contract?.figureLedger?.length ?? 7} 条`, 'dim')],
                       [span('05 两波事实锁死', 'teal'), span(`　LLM 成功生成 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
-                      [span('06 六顾问终审自愈', 'teal'), span(`　自动执行 ${data.repairsApplied?.length ?? 0} 项方法学与互证修复 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
+                      [span('06 六顾问终审自愈', 'teal'), span(`　自动执行 ${finalData.repairsApplied?.length ?? 0} 项方法学与互证修复 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
                     ],
                   },
                 ],
@@ -676,6 +806,7 @@ export default function AgentShell() {
               });
             })
             .catch(err => {
+              setLiveWriting(prev => (prev ? { ...prev, active: false } : null));
               mark(waitingMsg.id, 'failed', 'DeepSeek · 00-06 全流程引擎', 1);
               replace(waitingMsg.id, {
                 lines: [
@@ -690,10 +821,11 @@ export default function AgentShell() {
         }
         case 'loadBenchmark':
           loadBenchmark(action.benchmarkId);
-          go('editor');
+          setStage('paper');
+          closePanel();
           say(
             [
-              span('已为您全链条铸造国奖标准成果包（课题参数：'),
+              span('已为您全链条铸造国奖标准成果包并呈现在中间报告画布（课题参数：'),
               span(`「${action.benchmarkId === 'current' ? '当前项目选题' : action.benchmarkId}」`, 'strong'),
               span(' · 12 题全映射量表 · '),
               span('641 行', 'gold'),
@@ -701,7 +833,7 @@ export default function AgentShell() {
               span('6 项', 'gold'),
               span('SHA-256 统计快照 · '),
               span('4 条', 'gold'),
-              span('确认发现 · 100/100 基准分正文与 8 页路演分镜）。四室照度已 100% 点亮，右侧已打开报告与 PPT。'),
+              span('确认发现 · 100/100 基准分正文与 8 页路演分镜）。四室照度已 100% 点亮。'),
             ],
             [
               { label: '查看九门金石印鉴', action: { type: 'say', text: '/印鉴' }, primary: true },
@@ -720,8 +852,9 @@ export default function AgentShell() {
             source: '证见工坊',
             items: cleanParagraphs.map(text => ({ kind: 'paragraph', text })),
           });
-          go('editor');
-          say([span(`已将工坊产出「${action.title}」写入右侧报告与 PPT 对应章节，可在编辑器顶部随时撤销。`, 'dim')]);
+          setStage('paper');
+          closePanel();
+          say([span(`已将工坊产出「${action.title}」写入中间报告画布对应章节，可在编辑器顶部随时撤销。`, 'dim')]);
           break;
         }
       }
@@ -737,7 +870,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, focusInput, sendToReport, loadBenchmark]);
+  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport]);
 
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {
@@ -884,19 +1017,19 @@ export default function AgentShell() {
         stages={stages} openRoom={panel} onRoom={go} outputs={outputs} openOutput={output?.id ?? null} onOutput={id => { window.location.hash = `output/${encodeURIComponent(id)}`; }}
         todayTokens={todayTokens} onModels={() => go('services')} onExport={exportThread}
         onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}
-        nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} /> : undefined} />
+        nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })} liveWriting={liveWriting} /> : undefined} />
 
       <main className={styles.main} aria-label={stage === 'paper' ? '报告' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
-          <span className={styles.topTitle}>{stage === 'paper' ? (deferredView.report?.title ?? blankReport.title) : thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
+          <span className={styles.topTitle}>{stage === 'paper' ? paperContent.title : thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
             <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
             <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
             <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
-          <span className={styles.workState} data-busy={!!running || looking} role="status">
-            <i aria-hidden="true" />{running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
+          <span className={styles.workState} data-busy={!!running || looking || !!liveWriting?.active} role="status">
+            <i aria-hidden="true" />{liveWriting?.active ? `实时撰稿中 · ${liveWriting.completed}/${liveWriting.total} 节` : running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
           </span>
           <span className={styles.spacer} />
           {(spent.inputTokens > 0 || spent.outputTokens > 0) && <span className={styles.meter} title="这段对话里，服务商报告的输入 / 输出 token 合计">
@@ -913,8 +1046,18 @@ export default function AgentShell() {
         </header>
         {stage === 'advisors' && <Advisors benchmark={paperBenchmark} hired={hired} onHire={setHired} />}
         {stage === 'paper' && <div ref={paperRef} className={styles.paperStage} role="region" aria-label="报告实时排版">
-          <PaperToolbar section={paperContent.report.find(s => s.id === pickedSection) ?? null} results={paperContent.quality?.results ?? []} onInsert={insertIntoSection} onEdit={() => go('editor')} />
-          <ReportPaper content={paperContent} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" />
+          <PaperToolbar
+            section={paperContent.report.find(s => s.id === pickedSection) ?? null}
+            results={paperContent.quality?.results ?? []}
+            onInsert={insertIntoSection}
+            onEdit={() => go('editor')}
+            onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })}
+            onInstantForge={topic => agent.perform({ type: 'loadBenchmark', benchmarkId: topic || 'current' })}
+            liveWriting={liveWriting}
+            onToggleAutoFollow={toggleAutoFollow}
+            onJumpToSection={pickSection}
+          />
+          <ReportPaper content={paperContent} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" writingActive={!!liveWriting?.active} />
         </div>}
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
           <BrandMark size={16} />证见 AI{running || looking ? <i aria-label="工作中" /> : null}

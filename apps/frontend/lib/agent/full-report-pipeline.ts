@@ -951,6 +951,23 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
+export type FullReportProgressEvent = {
+  phase: 'contract' | 'wave1' | 'wave2' | 'repair' | 'done';
+  nodeId?: string;
+  sectionId?: string;
+  title?: string;
+  body?: string;
+  source?: string;
+  trace?: SectionGenerationTrace;
+  topic?: ContestTopicBlueprint;
+  contract?: SkillPackContract;
+  pack?: HanchaoBenchmarkPack;
+  report?: EditorContent;
+  repairsApplied?: string[];
+  completed: number;
+  total: number;
+};
+
 /**
  * 全流程 Agent 自动生成全报告主入口：
  * 1. 执行 00–04 阶段底座铸造与四张交接台账生成；
@@ -965,13 +982,7 @@ export async function generateFullReportWithAgent(input: {
   mode?: ProjectResearchMode;
   llm: LlmProviderConfig;
   sectionNodes?: readonly string[];
-  onProgress?: (event: {
-    phase: 'contract' | 'wave1' | 'wave2' | 'repair' | 'done';
-    nodeId?: string;
-    title?: string;
-    completed: number;
-    total: number;
-  }) => void;
+  onProgress?: (event: FullReportProgressEvent) => void;
   fetcher?: typeof globalThis.fetch;
 }): Promise<FullReportGenerationResult> {
   const startedAt = Date.now();
@@ -1018,8 +1029,6 @@ export async function generateFullReportWithAgent(input: {
   const totalNodes = wave1Nodes.length + wave2Nodes.length;
   let completedNodes = 0;
 
-  input.onProgress?.({ phase: 'contract', completed: 0, total: totalNodes });
-
   // Materialize the complete multi-chapter blueprint structure (chapters + all wanted sections + references + appendices)
   const outlineItems = blueprintOutline({ nodes: [...wantedNodes] }).filter(
     item => item.node.kind !== 'references' && item.node.kind !== 'appendix',
@@ -1049,8 +1058,56 @@ export async function generateFullReportWithAgent(input: {
     report: materializedSections,
   };
 
+  input.onProgress?.({
+    phase: 'contract',
+    completed: 0,
+    total: totalNodes,
+    topic,
+    contract,
+    pack: { ...pack, report: workingReport },
+    report: workingReport,
+  });
+
   const traces: SectionGenerationTrace[] = [];
   const concurrency = input.llm.concurrency ?? 5;
+
+  const commitSectionToReport = (
+    nodeId: string,
+    title: string,
+    body: string,
+    wave: 1 | 2,
+    trace: SectionGenerationTrace,
+  ) => {
+    let sectionId = `bp-${nodeId}`;
+    const source =
+      wave === 1
+        ? `证见全流程 Agent · DeepSeek 实时拟稿（绑定 ${trace.citedFacts.length} 项事实）`
+        : `证见全流程 Agent · DeepSeek 综合拟稿（绑定 ${trace.citedFacts.length} 项事实）`;
+    workingReport = {
+      ...workingReport,
+      report: workingReport.report.map(sec => {
+        const node = matchBlueprintNode(sec.title);
+        if (node?.id === nodeId) {
+          sectionId = sec.id;
+          return { ...sec, body, source };
+        }
+        return sec;
+      }),
+    };
+    completedNodes++;
+    input.onProgress?.({
+      phase: wave === 1 ? 'wave1' : 'wave2',
+      nodeId,
+      sectionId,
+      title,
+      body,
+      source,
+      trace,
+      report: workingReport,
+      completed: completedNodes,
+      total: totalNodes,
+    });
+  };
 
   const draftOneSection = async (nodeId: string, wave: 1 | 2): Promise<{ nodeId: string; body: string; trace: SectionGenerationTrace }> => {
     const secStart = Date.now();
@@ -1071,6 +1128,7 @@ export async function generateFullReportWithAgent(input: {
         const llmRes = await callLlmForSection(prompt, input.llm, input.fetcher);
         const hydrated = parseAndHydrateSectionDraft(llmRes.content, tokens);
         if (hydrated.paragraphs.length > 0) {
+          const body = hydrated.paragraphs.join('\n\n');
           const trace: SectionGenerationTrace = {
             nodeId,
             title,
@@ -1085,9 +1143,8 @@ export async function generateFullReportWithAgent(input: {
             durationMs: Date.now() - secStart,
             tokens: llmRes.usage,
           };
-          completedNodes++;
-          input.onProgress?.({ phase: wave === 1 ? 'wave1' : 'wave2', nodeId, title, completed: completedNodes, total: totalNodes });
-          return { nodeId, body: hydrated.paragraphs.join('\n\n'), trace };
+          commitSectionToReport(nodeId, title, body, wave, trace);
+          return { nodeId, body, trace };
         }
         lastError = new Error(`All paragraphs dropped (dropped=${hydrated.droppedParagraphs})`);
       } catch (err) {
@@ -1110,47 +1167,28 @@ export async function generateFullReportWithAgent(input: {
       durationMs: Date.now() - secStart,
       error: lastError?.message ?? 'Unknown error',
     };
-    completedNodes++;
-    input.onProgress?.({ phase: wave === 1 ? 'wave1' : 'wave2', nodeId, title, completed: completedNodes, total: totalNodes });
+    commitSectionToReport(nodeId, title, fallbackBody, wave, trace);
     return { nodeId, body: fallbackBody, trace };
   };
 
   // Wave 1: Generate all body and empirical sections concurrently
   const wave1Outputs = await runWithConcurrency(wave1Nodes, concurrency, nodeId => draftOneSection(nodeId, 1));
-  const wave1ByNode = new Map(wave1Outputs.map(o => [o.nodeId, o.body]));
   traces.push(...wave1Outputs.map(o => o.trace));
-
-  workingReport = {
-    ...workingReport,
-    report: workingReport.report.map(sec => {
-      const node = matchBlueprintNode(sec.title);
-      if (node && wave1ByNode.has(node.id)) {
-        return { ...sec, body: wave1ByNode.get(node.id)!, source: '证见全流程 Agent · DeepSeek 拟稿' };
-      }
-      return sec;
-    }),
-  };
 
   // Wave 2: Generate synthesis sections (findings, suggestions, limits, abstract) using the real Wave 1 outline
   const wave2Outputs = await runWithConcurrency(wave2Nodes, Math.min(concurrency, 4), nodeId => draftOneSection(nodeId, 2));
-  const wave2ByNode = new Map(wave2Outputs.map(o => [o.nodeId, o.body]));
   traces.push(...wave2Outputs.map(o => o.trace));
 
-  workingReport = {
-    ...workingReport,
-    report: workingReport.report.map(sec => {
-      const node = matchBlueprintNode(sec.title);
-      if (node && wave2ByNode.has(node.id)) {
-        return { ...sec, body: wave2ByNode.get(node.id)!, source: '证见全流程 Agent · DeepSeek 综合拟稿' };
-      }
-      return sec;
-    }),
-  };
-
   // Stage 06: Benchmark & 6-Advisor Self-Repair Loop
-  input.onProgress?.({ phase: 'repair', completed: completedNodes, total: totalNodes });
   const benchmarkBeforeRepair = benchmarkReport(workingReport);
   const { content: repairedReport, repairs } = repairReportForFullScore(workingReport, fallbackSections);
+  input.onProgress?.({
+    phase: 'repair',
+    completed: completedNodes,
+    total: totalNodes,
+    repairsApplied: repairs,
+    report: repairedReport,
+  });
   const benchmarkAfterRepair = benchmarkReport(repairedReport);
   const advisorsAfterRepair = ADVISORS.map(advisor => advisorReading(advisor, benchmarkAfterRepair));
 

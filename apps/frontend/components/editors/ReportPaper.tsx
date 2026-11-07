@@ -30,8 +30,8 @@ function previewLines(body: string): Line[] {
  * reference list, numbered and cited as the Word export numbers and cites them. The same paper serves the editor's live
  * preview and the agent's centre stage; a section can be picked by clicking it.
  */
-export default function ReportPaper({ content, activeSectionId, onPick, label = '报告书实时预览' }: {
-  content: EditorContent; activeSectionId?: string | null; onPick?: (sectionId: string) => void; label?: string;
+export default function ReportPaper({ content, activeSectionId, onPick, label = '报告书实时预览', writingActive = false }: {
+  content: EditorContent; activeSectionId?: string | null; onPick?: (sectionId: string) => void; label?: string; writingActive?: boolean;
 }) {
   const labels = reportLabels(content.report);
   const cited = referenceNumbers(content), citations = cited.numbers, uncited = new Set(cited.uncited.map(e => e.id));
@@ -43,7 +43,11 @@ export default function ReportPaper({ content, activeSectionId, onPick, label = 
       return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === activeSectionId ? styles.activeSection : undefined}
         data-pickable={onPick ? 'true' : undefined} onClick={onPick ? () => onPick(s.id) : undefined}>
         <h3>{s.title || '未命名章节'}</h3>
-        {empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === 'blank' ? <p key={i} className={styles.blank} aria-hidden="true" />
+        {empty ? (
+          <p className={styles.pending} style={writingActive ? { color: '#1f6b5f', fontStyle: 'normal', fontWeight: 500 } : undefined}>
+            {writingActive ? '✦ DeepSeek 全流程引擎正在结合 {F编号} 受控证据并发撰写本节…' : '待撰写'}
+          </p>
+        ) : previewLines(s.body).map((line, i) => line.kind === 'blank' ? <p key={i} className={styles.blank} aria-hidden="true" />
           : line.kind === 'keywords' ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p>
           : <p key={i} className={line.kind === 'hintStart' ? styles.hintStart : line.kind === 'hint' ? styles.hintLine : undefined}>{line.kind === 'p' ? <PaperText text={line.text} labels={labels} citations={citations} /> : line.text}</p>)}
         {references && <ol className={styles.referenceList}>{cited.order.map(entry => <li key={entry.id} data-uncited={uncited.has(entry.id) || undefined}><span>[{citations.get(entry.id)}]</span>{unfinishedReference(entry) ? <em className={styles.pending}>尚未填写题名</em> : formatReference(entry)}</li>)}</ol>}

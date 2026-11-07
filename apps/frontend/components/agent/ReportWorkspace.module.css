@@ -84,3 +84,20 @@
 
 .byGlyph { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-right: 6px; border-radius: 50%; background: #1f5a4f; color: #fff; font-family: var(--c-serif); font-size: 9.5px; font-style: normal; font-weight: 400; vertical-align: 1px; }
 .sectionOk { margin: 0 2px 10px; color: var(--c-accent); font-size: 12px; }
+
+/* Real-time canvas writing telemetry HUD bar right under PaperToolbar */
+.liveHud { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--c-line); border-radius: 13px; background: rgba(255, 255, 255, 0.92); box-shadow: 0 4px 14px -6px rgba(23, 26, 25, 0.18); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 12px; }
+.liveHud[data-active="true"] { border-color: rgba(31, 107, 95, 0.38); }
+.liveHudTrack { position: relative; height: 4px; border-radius: 999px; background: var(--c-line); overflow: hidden; }
+.liveHudTrack i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #1f6b5f, #c68b2c); transition: width 320ms var(--c-ease); }
+.liveHudRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.liveHudBadge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--c-fg); }
+.liveHudBadge b { width: 7px; height: 7px; border-radius: 50%; background: #1f6b5f; }
+.liveHud[data-active="true"] .liveHudBadge b { animation: hud-pulse 1.1s ease-in-out infinite; }
+@keyframes hud-pulse { 0%, 100% { transform: scale(0.9); opacity: 0.55; } 50% { transform: scale(1.25); opacity: 1; } }
+.liveHudStats { color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.liveHudStats b { color: var(--c-fg); font-weight: 600; }
+.liveHudSection { margin-left: auto; padding: 3px 9px; border: 1px solid rgba(31, 107, 95, 0.28); border-radius: 999px; background: var(--c-accent-soft); color: var(--c-accent); font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liveHudSection:hover { border-color: var(--c-accent); }
+.liveHudFollow { padding: 3px 9px; border: 1px solid var(--c-line); border-radius: 999px; background: var(--c-raise); color: var(--c-dim); font: inherit; font-size: 11.5px; cursor: pointer; }
+.liveHudFollow[aria-pressed="true"] { border-color: #1f6b5f; color: #1f6b5f; font-weight: 500; }

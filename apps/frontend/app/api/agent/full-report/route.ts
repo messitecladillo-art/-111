@@ -16,6 +16,7 @@ type RequestPayload = {
   model?: string;
   concurrency?: number;
   sectionNodes?: string[];
+  stream?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -40,22 +41,126 @@ export async function POST(request: Request) {
       );
     }
 
+    const mode: ProjectResearchMode =
+      body.mode === 'plan' || body.mode === 'empirical' || body.mode === 'demonstration'
+        ? body.mode
+        : 'demonstration';
+    const concurrency =
+      typeof body.concurrency === 'number' && body.concurrency >= 1 && body.concurrency <= 8
+        ? body.concurrency
+        : 6;
+
+    if (body.stream) {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const send = (payload: Record<string, unknown>) => {
+            try {
+              controller.enqueue(encoder.encode(`${JSON.stringify(payload)}\n`));
+            } catch {
+              // Ignore if client closed stream early
+            }
+          };
+
+          try {
+            const result = await generateFullReportWithAgent({
+              topic: typeof body.topic === 'string' ? body.topic.trim() : undefined,
+              mode,
+              llm: {
+                provider: body.provider ?? 'deepseek',
+                baseUrl: body.baseUrl ?? 'https://api.deepseek.com/v1',
+                apiKey,
+                model: body.model ?? 'deepseek-chat',
+                temperature: 0.2,
+                concurrency,
+              },
+              sectionNodes: Array.isArray(body.sectionNodes) ? body.sectionNodes : undefined,
+              onProgress: event => {
+                if (event.phase === 'contract') {
+                  send({
+                    type: 'init',
+                    phase: 'contract',
+                    completed: event.completed,
+                    total: event.total,
+                    topic: event.topic,
+                    contract: event.contract,
+                    pack: event.pack,
+                    report: event.report,
+                  });
+                } else if (event.phase === 'wave1' || event.phase === 'wave2') {
+                  send({
+                    type: 'section',
+                    phase: event.phase,
+                    completed: event.completed,
+                    total: event.total,
+                    nodeId: event.nodeId,
+                    sectionId: event.sectionId,
+                    title: event.title,
+                    body: event.body,
+                    source: event.source,
+                    trace: event.trace,
+                    report: event.report,
+                  });
+                } else if (event.phase === 'repair') {
+                  send({
+                    type: 'repair',
+                    phase: 'repair',
+                    completed: event.completed,
+                    total: event.total,
+                    repairsApplied: event.repairsApplied,
+                    report: event.report,
+                  });
+                }
+              },
+            });
+
+            send({
+              type: 'done',
+              ok: true,
+              topic: result.topic,
+              pack: result.pack,
+              report: result.report,
+              contract: result.contract,
+              traces: result.traces,
+              repairsApplied: result.repairsApplied,
+              summary: result.summary,
+            });
+          } catch (err) {
+            send({
+              type: 'error',
+              ok: false,
+              message: err instanceof Error ? err.message : '全报告自动生成未完成。',
+            });
+          } finally {
+            try {
+              controller.close();
+            } catch {
+              // Already closed
+            }
+          }
+        },
+      });
+
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/x-ndjson; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+        },
+      });
+    }
+
     const result = await generateFullReportWithAgent({
       topic: typeof body.topic === 'string' ? body.topic.trim() : undefined,
-      mode:
-        body.mode === 'plan' || body.mode === 'empirical' || body.mode === 'demonstration'
-          ? body.mode
-          : 'demonstration',
+      mode,
       llm: {
         provider: body.provider ?? 'deepseek',
         baseUrl: body.baseUrl ?? 'https://api.deepseek.com/v1',
         apiKey,
         model: body.model ?? 'deepseek-chat',
         temperature: 0.2,
-        concurrency:
-          typeof body.concurrency === 'number' && body.concurrency >= 1 && body.concurrency <= 8
-            ? body.concurrency
-            : 6,
+        concurrency,
       },
       sectionNodes: Array.isArray(body.sectionNodes) ? body.sectionNodes : undefined,
     });

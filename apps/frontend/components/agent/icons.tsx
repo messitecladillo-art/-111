@@ -14,6 +14,7 @@ const PATHS: Record<string, ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
   info: <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 8h.01" /></>,
   bolt: <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />,
+  spark: <path d="M12 2.5 14.4 9.6 21.5 12 14.4 14.4 12 21.5 9.6 14.4 2.5 12 9.6 9.6 12 2.5Z" />,
   up: <path d="M12 19V5M6 11l6-6 6 6" />,
   down: <path d="m7 10 5 5 5-5" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,

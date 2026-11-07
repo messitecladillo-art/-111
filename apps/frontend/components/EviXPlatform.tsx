@@ -575,7 +575,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string, customPack?: import("@/lib/agent/hanchao-benchmark").HanchaoBenchmarkPack) => void } {
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string, customPack?: import("@/lib/agent/hanchao-benchmark").HanchaoBenchmarkPack) => void; setLiveReport: (content: EditorContent) => void } {
   const { session, identityEpoch, loading } = useHostedSession();
   // The agent keeps its report draft in this browser, for whoever is signed in; the classic workbench does not.
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
@@ -658,7 +658,7 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
   }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, reportChanged, draftOwner, storedDraft, report, benchmarkEpoch, figureTweak, figureTweakHandled]);
-  return { panels, view, publishProposal, sendToReport: setReportInsert, tweakFigure, loadBenchmark };
+  return { panels, view, publishProposal, sendToReport: setReportInsert, tweakFigure, loadBenchmark, setLiveReport: reportChanged };
 }
 
 export default function EviXPlatform() {
