@@ -87,6 +87,17 @@ export function figuresFromRegistration(result:ResultSnapshot,context:ChartRegis
 }
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'})[c]!);
 /** Deterministic SVG shared by editor and Office. PDF uses these same aggregate values. */
+/**
+ * An axis a reader can count along: ticks at 1, 2, 2.5 or 5 times a power of ten, the range widened to whole steps,
+ * at most `most` intervals. A constant series still gets one step either side of zero.
+ */
+export function niceScale(low:number,high:number,most=5):{min:number;max:number;ticks:number[]} {
+  const lo=Math.min(low,high),hi=Math.max(low,high),raw=(hi-lo)/most||Math.abs(hi)/most||1;
+  const power=10**Math.floor(Math.log10(raw)),step=[1,2,2.5,5,10].map(m=>m*power).find(v=>v>=raw*(1-1e-12))!;
+  const clean=(v:number)=>Number(v.toPrecision(12));
+  const min=clean(Math.floor(lo/step+1e-9)*step),max=clean(Math.max(Math.ceil(hi/step-1e-9)*step,min+step));
+  return {min,max,ticks:Array.from({length:Math.round((max-min)/step)+1},(_,i)=>clean(min+i*step))};
+}
 export function reportFigureSVG(value:ReportFigure,style:ProjectVisualStyle):string {
   const f=parseReportFigure(value),palette=projectPalette(style),colors=palette.colors,ink='#263D4D';assertFormalFigureCapacity(f);
   const out=[`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" role="img" aria-label="${escape(f.title)}"><desc>${escape(f.note)}</desc><rect width="1000" height="700" fill="#FFFFFF"/>`];
@@ -104,8 +115,8 @@ export function reportFigureSVG(value:ReportFigure,style:ProjectVisualStyle):str
     [f.table.headers,...f.table.rows].forEach((row,i)=>row.forEach((v,j)=>label(typeof v==='number'?fmt(v):v??'—',75+(j+.5)*cw,90+(i+.72)*rh,18)));
     line(75,90+(f.table.rows.length+1)*rh,925,90+(f.table.rows.length+1)*rh,ink,1.5*pt);
   }else if(f.kind==='boxplot'){
-    const min=Math.min(...f.boxes.map(b=>b.low)),max=Math.max(...f.boxes.map(b=>b.high)),span=max-min||1,y=(v:number)=>bottom-(v-min)/span*h;
-    for(let i=0;i<=(max===min?0:4);i++){const value=min+(max-min)*i/4;if(f.style.showGrid)line(left,y(value),right,y(value),'#E4E9EC');label(fmt(value),left-12,y(value)+6,20,'end');}
+    const scale=niceScale(Math.min(...f.boxes.map(b=>b.low)),Math.max(...f.boxes.map(b=>b.high))),min=scale.min,span=scale.max-scale.min,y=(v:number)=>bottom-(v-min)/span*h;
+    for(const value of scale.ticks){if(f.style.showGrid)line(left,y(value),right,y(value),'#E4E9EC');label(String(value),left-12,y(value)+6,20,'end');}
     f.boxes.forEach((b,i)=>{const x=left+w*(i+.5)/f.boxes.length,bw=Math.min(80,w/f.boxes.length*.5);line(x,y(b.low),x,y(b.high),colors[0],2);line(x-bw/3,y(b.low),x+bw/3,y(b.low));line(x-bw/3,y(b.high),x+bw/3,y(b.high));rect(x-bw/2,y(b.q3),bw,y(b.q1)-y(b.q3),colors[4%colors.length]);line(x-bw/2,y(b.median),x+bw/2,y(b.median),colors[0],3);label(b.label,x,bottom+30,18);});
     label('箱须采用已登记摘要 · 不显示逐条离群值',left,615,18,'start');
   }else if(f.kind==='heatmap'){
@@ -118,9 +129,12 @@ export function reportFigureSVG(value:ReportFigure,style:ProjectVisualStyle):str
     const labels=hist?f.bins.map(b=>`${fmt(b.start)}–${fmt(b.end)}`):f.labels;
     let series=hist?[{name:'频数',values:f.bins.map(b=>b.count)}]:f.series;
     if(f.kind==='percent_stacked')series=percentSeries(f);
-    const values=series.flatMap(s=>s.values.filter((v):v is number=>v!==null)),min=f.kind==='percent_stacked'?0:Math.min(0,...values),max=f.kind==='percent_stacked'?100:Math.max(0,...values),span=max-min||1;
+    const values=series.flatMap(s=>s.values.filter((v):v is number=>v!==null));
+    // Bars start at zero; a percentage stack spans exactly 0–100.
+    const scale=f.kind==='percent_stacked'?{min:0,max:100,ticks:[0,25,50,75,100]}:niceScale(Math.min(0,...values),Math.max(0,...values));
+    const min=scale.min,span=scale.max-scale.min;
     const y=(v:number)=>bottom-(v-min)/span*h,x=(v:number)=>left+(v-min)/span*w;
-    for(let i=0;i<=4;i++){const v=min+span*i/4;if(horizontal){if(f.style.showGrid)line(x(v),top,x(v),bottom,'#E4E9EC');label(fmt(v),x(v),bottom+28,17);}else{if(f.style.showGrid)line(left,y(v),right,y(v),'#E4E9EC');label(fmt(v),left-12,y(v)+6,17,'end');}}
+    for(const v of scale.ticks){if(horizontal){if(f.style.showGrid)line(x(v),top,x(v),bottom,'#E4E9EC');label(String(v),x(v),bottom+28,17);}else{if(f.style.showGrid)line(left,y(v),right,y(v),'#E4E9EC');label(String(v),left-12,y(v)+6,17,'end');}}
     labels.forEach((cat,i)=>{const slot=(horizontal?h:w)/labels.length;if(horizontal)label(cat,left-15,top+slot*(i+.62),18,'end');else label(cat,left+slot*(i+.5),bottom+32,18);
       let stacked=0;series.forEach((s,j)=>{const v=s.values[i];if(v===null)return;const fill=colors[j%colors.length];if(f.kind==='percent_stacked'){rect(left+slot*(i+.16),y(stacked+v),slot*.68,v/span*h,fill);if(f.style.showLabels&&v>=7)label(fmt(v)+'%',left+slot*(i+.5),y(stacked+v/2)+6,18,'middle',j<3?'#FFFFFF':ink);stacked+=v;}else if(horizontal){const rh=slot*.7/series.length;rect(Math.min(x(v),x(0)),top+slot*(i+.15)+j*rh,Math.abs(x(v)-x(0)),rh*.95,fill);if(f.style.showLabels)label(fmt(v),x(v)+(v<0?-8:8),top+slot*(i+.15)+(j+.7)*rh,16,v<0?'end':'start');}else{const constant=hist&&f.bins[0].start===f.bins.at(-1)!.end,binRange=hist?f.bins.at(-1)!.end-f.bins[0].start:1,bw=hist?(constant?w:(f.bins[i].end-f.bins[i].start)/binRange*w):slot*.7/series.length,px=hist?(constant?left:left+(f.bins[i].start-f.bins[0].start)/binRange*w):left+slot*(i+.15)+j*bw;rect(px,Math.min(y(v),y(0)),bw*(hist?1:.95),Math.abs(y(v)-y(0)),fill);if(f.style.showLabels)label(fmt(v),px+bw*.5,y(v)+(v<0?22:-8),16);}});
     });

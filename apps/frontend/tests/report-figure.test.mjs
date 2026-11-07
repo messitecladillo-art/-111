@@ -11,7 +11,7 @@ import {buildChartSnapshot} from '../lib/chart-data.ts';
 import {defaultChartStyle,CHART_THEMES} from '../lib/chart-theme.ts';
 import {addQualityObjects,assertTrueVector} from '../lib/quality-export.ts';
 import {buildDocx} from '../lib/editor-export.ts';
-import {REPORT_FIGURE_KINDS,figureFromSnapshot,figureFromResult,figuresFromRegistration,figureFor,parseReportFigure,projectPalette,reportFigureChoices,reportFigureSVG,percentSeries} from '../lib/report-figure.ts';
+import {REPORT_FIGURE_KINDS,figureFromSnapshot,figureFromResult,figuresFromRegistration,figureFor,parseReportFigure,projectPalette,reportFigureChoices,reportFigureSVG,percentSeries,niceScale} from '../lib/report-figure.ts';
 
 const visual={schema:'ProjectVisualStyle/v1',paletteId:'forest',version:1};
 const source={title:'公开测试摘要',sourceName:'合成回归用例',sourceUrl:'',sourceHash:'a'.repeat(64),classification:'simulated'};
@@ -138,4 +138,22 @@ test('SVG XML validation supports genuine local clips and gradients while reject
   '<svg xmlns="http://www.w3.org/2000/svg"><use href="#x"/></svg>',
   '<svg xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="loop"><rect clip-path="url(#loop)"/></clipPath></defs></svg>',
  ];for(const svg of invalid)assert.throws(()=>assertTrueVector(svg));
+});
+
+test('axes count in whole steps a reader can follow',()=>{
+ assert.deepEqual(niceScale(0,58.33),{min:0,max:60,ticks:[0,20,40,60]});
+ assert.deepEqual(niceScale(0,4.17).ticks,[0,1,2,3,4,5]);
+ assert.deepEqual(niceScale(-3.2,11).ticks,[-5,0,5,10,15]);
+ assert.deepEqual(niceScale(0,0.37).ticks,[0,0.1,0.2,0.3,0.4],'no floating residue such as 0.30000000000000004');
+ assert.deepEqual(niceScale(12,13.4).ticks,[12,12.5,13,13.5]);
+ assert.deepEqual(niceScale(0,0),{min:0,max:1,ticks:[0,1]},'a constant series still has an axis');
+ for(const [a,b] of [[0,7],[0,123456],[-0.004,0.019],[3,3.0001]]){const s=niceScale(a,b);assert.ok(s.min<=a&&s.max>=b&&s.ticks.length>=2&&s.ticks.length<=7,JSON.stringify([a,b,s]));}
+});
+test('a bar figure labels its axis at whole steps, whatever its decimals',()=>{
+ const figure=parseReportFigure({schema:'ReportFigure/v1',id:'f',resultId:'r',resultHash:'b'.repeat(64),kind:'bar',title:'渠道',xLabel:'渠道',yLabel:'占比 (%)',note:'',n:12,
+  labels:['校园','社区'],series:[{name:'占比 (%)',values:[58.33,41.67]}],bins:[],boxes:[],table:{headers:['渠道','占比 (%)'],rows:[['校园',58.33],['社区',41.67]]},style:{decimals:0,showLabels:true,showGrid:true,showBorder:false}});
+ const svg=reportFigureSVG(figure,visual),ticks=[...svg.matchAll(/text-anchor="end" fill="#263D4D">([^<]+)</g)].map(m=>m[1]).filter(t=>!t.startsWith('n ='));
+ assert.deepEqual(ticks,['0','20','40','60']);
+ assert.ok(!/14\.58|29\.17/.test(svg));
+ assert.match(svg,/>58</,'data labels still follow the figure decimals');
 });
