@@ -211,7 +211,12 @@ def references_content(value):
         raise ApiError()
     ids = set()
     for entry in value:
-        e = object_fields(entry, ("id", "type", "authors", "title", "source", "publisher", "place", "year", "volume", "issue", "pages", "edition", "date", "accessed", "url", "doi", "number", "text"))
+        e = object_fields(entry, ("id", "type", "authors", "title", "source", "publisher", "place", "year", "volume", "issue", "pages", "edition", "date", "accessed", "url", "doi", "number", "text"), ("verification", "locator"))
+        # Mirrors the browser: how far the source was checked, and where in it the cited claim is supported.
+        if "verification" in e and e["verification"] not in ("pending", "metadata_only", "verified", "rejected"):
+            raise ApiError()
+        if "locator" in e:
+            reference_line(e["locator"], 200)
         if e["type"] not in REFERENCE_TYPES or not isinstance(e["authors"], list) or len(e["authors"]) > 30:
             raise ApiError()
         for author in e["authors"]:

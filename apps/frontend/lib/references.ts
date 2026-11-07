@@ -22,7 +22,17 @@ export type ReferenceEntry = {
   url: string; doi: string;
   /** 标准号或报告编号. */ number: string;
   /** 'other' 类型按原文著录的整条文献. */ text: string;
+  /** How far the source has been checked against the claims it is cited for; absent on records from before it was kept. */
+  verification?: Verification;
+  /** Where in the source the cited claim is supported: page, section, figure or table, web page title. */
+  locator?: string;
 };
+/**
+ * A source matched only by its bibliographic record has not been read for the claim it is cited for; only a source
+ * whose content was checked can support a formal conclusion.
+ */
+export const VERIFICATION = { pending: '待核验', metadata_only: '仅核书目', verified: '已核内容', rejected: '不采纳' } as const;
+export type Verification = keyof typeof VERIFICATION;
 export const REFERENCE_LIMIT = 200;
 const FIELDS = ['id', 'type', 'authors', 'title', 'source', 'publisher', 'place', 'year', 'volume', 'issue', 'pages', 'edition', 'date', 'accessed', 'url', 'doi', 'number', 'text'] as const;
 const LIMITS: Record<string, number> = { id: 80, title: 400, source: 200, publisher: 200, place: 80, year: 20, volume: 40, issue: 40, pages: 60, edition: 40, date: 20, accessed: 20, url: 1000, doi: 200, number: 80, text: 1000 };
@@ -45,12 +55,18 @@ export function parseReferences(value: unknown): ReferenceEntry[] {
   const entries = value.map((raw): ReferenceEntry => {
     // Plain objects with exactly the known own fields; inherited properties never count.
     let x: Record<string, unknown>;
-    try { x = qualityRecord(raw, [...FIELDS]); } catch { return fail('条目字段含未知或非法字段。'); }
+    try { x = qualityRecord(raw, [...FIELDS, 'verification', 'locator']); } catch { return fail('条目字段含未知或非法字段。'); }
     if (FIELDS.some(k => !Object.hasOwn(x, k))) return fail('条目字段不完整。');
     if (typeof x.type !== 'string' || !Object.hasOwn(REFERENCE_TYPES, x.type)) return fail('文献类型不受支持。');
     if (!Array.isArray(x.authors) || x.authors.length > 30) return fail('责任者最多 30 个。');
     const entry = { ...Object.fromEntries(FIELDS.filter(k => k !== 'type' && k !== 'authors').map(k => [k, line(x[k], LIMITS[k], k)])), type: x.type as ReferenceType, authors: x.authors.map(a => line(a, 120, '责任者')) } as ReferenceEntry;
     if (!entry.id.trim()) return fail('条目缺少标识。');
+    // Optional and last, so records saved before verification was kept parse and fingerprint as they were.
+    if (Object.hasOwn(x, 'verification')) {
+      if (typeof x.verification !== 'string' || !Object.hasOwn(VERIFICATION, x.verification)) return fail('核验状态不受支持。');
+      entry.verification = x.verification as Verification;
+    }
+    if (Object.hasOwn(x, 'locator')) entry.locator = line(x.locator, 200, '支持位置');
     return entry;
   });
   if (new Set(entries.map(e => e.id)).size !== entries.length) return fail('条目标识重复。');

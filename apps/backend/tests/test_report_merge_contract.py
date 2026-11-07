@@ -45,3 +45,14 @@ def test_combined_fields_do_not_disable_each_others_validation(invalid):
         value["version"] = 2
     with pytest.raises(ApiError):
         report_content(value)
+
+
+def test_a_reference_may_say_how_far_it_was_checked_and_where_it_supports_the_claim():
+    value = combined_content()
+    value["references"][0].update(verification="metadata_only", locator="第 3 节，表 2")
+    assert report_content(json.loads(json.dumps(value, ensure_ascii=False))) == value
+    for bad in ({"verification": "trusted"}, {"verification": 1}, {"locator": "line\nbreak"}, {"locator": "x" * 201}):
+        broken = copy.deepcopy(combined_content())
+        broken["references"][0].update(bad)
+        with pytest.raises(ApiError):
+            report_content(broken)

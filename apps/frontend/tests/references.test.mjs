@@ -146,3 +146,25 @@ test('the report check reads structured references: completeness, citation cover
   assert.match(check('citations').detail, /参考文献 4 条，正文引用了其中 3 条/);
   assert.doesNotMatch(check('unwritten').detail, /参考文献/, 'structured entries write the references section');
 });
+
+test('a record may say how far its source was checked, and older records parse as they were', () => {
+  const legacy = parseReferences([J]);
+  assert.ok(!('verification' in legacy[0]) && !('locator' in legacy[0]), 'nothing is added to a record that did not have it');
+  const checked = parseReferences([{ ...J, verification: 'verified', locator: '第 3 节，表 2' }]);
+  assert.equal(checked[0].verification, 'verified'); assert.equal(checked[0].locator, '第 3 节，表 2');
+  assert.throws(() => parseReferences([{ ...J, verification: 'trusted' }]), /核验状态/);
+  assert.throws(() => parseReferences([{ ...J, locator: '一行\n两行' }]), /支持位置/);
+});
+
+test('the report check counts only cited sources read for their claim, and a rejected source still cited fails', () => {
+  const content = { ...createEditorContent(), references: [{ ...J, verification: 'metadata_only' }, { ...entry('M', { id: 'm', authors: ['王五'], title: '抽样调查', publisher: '某出版社', place: '北京', year: '2020' }), verification: 'verified', locator: '第 2 章' }] };
+  content.report = [{ id: 's', title: '一、研究背景', body: `已有研究[[引:j]]与教材[[引:m]]都讨论了这一问题。`, source: '' }];
+  const check = () => benchmarkReport(content).checks.find(c => c.id === 'referenceVerification');
+  assert.equal(check().status, 'partial'); assert.match(check().detail, /2 条文献中 1 条已核对内容/);
+  content.references[0].verification = 'verified';
+  assert.equal(check().status, 'pass');
+  content.references[0].verification = 'rejected';
+  assert.equal(check().status, 'fail'); assert.match(check().detail, /不采纳/);
+  content.report[0].body = '还没有引用。';
+  assert.equal(check().status, 'na');
+});

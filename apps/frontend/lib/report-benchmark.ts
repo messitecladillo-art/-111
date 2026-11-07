@@ -321,6 +321,14 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   add('findingEvidence', 'compliance', '研究发现不以模拟数据为据', simulatedFindings.length ? (/模拟/.test(content.subtitle + content.title) ? 1 : 0) : null,
     simulatedFindings.length ? (/模拟/.test(content.subtitle + content.title) ? '报告整体标明为模拟演示，发现只作演示。'
       : `${simulatedFindings.length} 条已确认的发现以模拟数据为据，如「${simulatedFindings[0].title}」；模拟数据只能演示方法，不能写成调查发现。`) : '没有以模拟数据为据的已确认发现。', [FINDINGS_FIX]);
+  // Only a source read for the claim it is cited for supports it; a bibliographic match does not.
+  if (structured.length) {
+    const uncitedIds = new Set(referenceNumbers(content).uncited.map(e => e.id)), cited = structured.filter(e => !uncitedIds.has(e.id));
+    const checked = cited.filter(e => e.verification === 'verified').length, rejected = cited.filter(e => e.verification === 'rejected');
+    add('referenceVerification', 'compliance', '引用的文献已核内容', cited.length ? (rejected.length ? 0 : share(checked, cited.length)) : null,
+      !cited.length ? '正文还没有引用文献。' : rejected.length ? `${rejected.length} 条标为不采纳的文献仍在正文引用，如「${formatReference(rejected[0]).slice(0, 24)}…」。`
+        : `正文引用的 ${cited.length} 条文献中 ${checked} 条已核对内容；只核了书目的文献不能支撑正式结论。`);
+  }
   appendixCheck('reproducible', 'compliance', '数据与代码说明', /数据|代码|可复现|程序/, '附录中没有数据或代码说明。', [], ['appendix.data', 'appendix.code']);
 
   const dimensions = (Object.keys(BENCHMARK_DIMENSIONS) as BenchmarkDimension[]).map(id => {

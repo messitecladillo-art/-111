@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { emptyReference, formatReference, importReferenceLines, REFERENCE_LIMIT, REFERENCE_TYPES, referenceProblems, unfinishedReference, type ReferenceEntry, type ReferenceType } from '@/lib/references';
+import { emptyReference, formatReference, importReferenceLines, REFERENCE_LIMIT, REFERENCE_TYPES, referenceProblems, unfinishedReference, VERIFICATION, type ReferenceEntry, type ReferenceType, type Verification } from '@/lib/references';
 import styles from './ReferencesPanel.module.css';
 
 type Field = { key: keyof ReferenceEntry; label: string; placeholder?: string; wide?: boolean };
@@ -69,8 +69,11 @@ export default function ReferencesPanel({ references, numbers, uncited, legacy, 
               <button type="button" disabled={disabled} onClick={() => remove(entry)}>删除</button>
             </span>
           </div>
-          {(uncited.has(entry.id) || problems.length > 0) && <div className={styles.flags}>
+          {(uncited.has(entry.id) || problems.length > 0 || entry.verification !== 'verified') && <div className={styles.flags}>
             {uncited.has(entry.id) && <span className={styles.flag}>正文尚未引用</span>}
+            {!uncited.has(entry.id) && entry.verification === 'rejected' && <span className={styles.flag} data-tone="warn">已标不采纳，正文仍在引用</span>}
+            {!uncited.has(entry.id) && entry.verification !== 'verified' && entry.verification !== 'rejected' && <span className={styles.flag} data-tone="warn">{entry.verification === 'metadata_only' ? '只核了书目，未核内容' : '尚未核对内容'}</span>}
+            {entry.verification === 'verified' && !entry.locator?.trim() && <span className={styles.flag}>已核内容，未写支持位置</span>}
             {problems.map(problem => <span key={problem} className={styles.flag} data-tone="warn">{problem}</span>)}
           </div>}
           {editing && <div className={styles.form}>
@@ -83,6 +86,10 @@ export default function ReferencesPanel({ references, numbers, uncited, legacy, 
               onBlur={() => setAuthorDraft(null)}/></label>}
             {FIELDS[entry.type].map(field => <label key={field.key} className={field.wide ? styles.wide : undefined}>{field.label}
               <input disabled={disabled} placeholder={field.placeholder} value={entry[field.key] as string} onChange={e => update(entry.id, { [field.key]: e.target.value })}/></label>)}
+            <label>核验状态<select value={entry.verification ?? 'pending'} disabled={disabled} onChange={e => update(entry.id, { verification: e.target.value as Verification })}>
+              {(Object.keys(VERIFICATION) as Verification[]).map(v => <option key={v} value={v}>{VERIFICATION[v]}</option>)}
+            </select></label>
+            <label className={styles.wide}>支持位置<input disabled={disabled} maxLength={200} placeholder="引用的说法在原文哪里：页码、章节、图表号或网页标题" value={entry.locator ?? ''} onChange={e => update(entry.id, { locator: e.target.value })}/></label>
           </div>}
         </li>;
       })}
