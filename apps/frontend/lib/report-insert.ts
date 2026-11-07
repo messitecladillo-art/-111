@@ -21,8 +21,11 @@ export type InsertItem =
   | { kind: 'figure'; result: ResultSnapshot; caption: string }
   /** A result the report has registered, written into its own blueprint section as the editor's placement writes it. */
   | { kind: 'result'; resultId: string };
-/** `source` names the module in the confirmation message; `id` lets the editor apply each insert once. */
-export type ReportInsert = { id: string; node: string; source: string; items: InsertItem[] };
+/**
+ * `source` names the module in the confirmation message; `id` lets the editor apply each insert once. `sectionId`, when
+ * given, is the section the user picked, and takes precedence over the blueprint node.
+ */
+export type ReportInsert = { id: string; node: string; source: string; items: InsertItem[]; sectionId?: string };
 export type AppliedInsert = { content: EditorContent; sectionId: string; created: string[]; blocks: ReportBlock[] };
 
 /** The report with an insert applied: its tables registered as results, its blocks appended to the target section. */
@@ -34,7 +37,9 @@ export function applyReportInsert(content: EditorContent, insert: ReportInsert, 
     if (item.kind === 'formula' && texProblem(item.tex)) throw Error(`公式无法排版：${texProblem(item.tex)}`);
     // The same design inserted twice reuses its registered table rather than adding a duplicate.
     if (item.kind === 'table') next = appendQualityResult(next, item.result);
-    if (item.kind === 'figure' && !insert.items.some(other => other.kind === 'table' && other.result.id === item.result.id)) throw Error('图须与其结果表一同写入。');
+    // A figure plots a registered result: one the report already holds, or one whose table travels with it.
+    if (item.kind === 'figure' && !insert.items.some(other => other.kind === 'table' && other.result.id === item.result.id)
+      && !next.quality?.results.some(r => r.id === item.result.id && r.resultHash === item.result.resultHash)) throw Error('图须与其结果表一同写入。');
   }
   const target = targetSection(next, insert.node, sectionId);
   const blocks = insert.items.flatMap(item => item.kind === 'paragraph' ? [block('paragraph', item.text)]

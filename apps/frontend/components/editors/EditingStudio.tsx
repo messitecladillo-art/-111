@@ -314,7 +314,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if(busy.current||versionOperation.current)return;
     const currentContent=current.current;
     let applied:ReturnType<typeof applyReportInsert>;
-    try{applied=applyReportInsert(currentContent,reportInsert);}
+    try{applied=applyReportInsert(currentContent,reportInsert,reportInsert.sectionId);}
     catch(error){setMessage(`未能写入${reportInsert.source}：${(error as Error).message}`);onReportInsertHandled?.();return;}
     current.current=applied.content;
     setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(applied.content);if(!blocked.current)setPhase('ready');

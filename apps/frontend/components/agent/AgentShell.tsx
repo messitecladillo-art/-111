@@ -31,7 +31,9 @@ import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
 import { useShowCode, useStage } from './code-view';
 import ReportPaper from '@/components/editors/ReportPaper';
-import { ReportInspector, ReportNav } from './ReportWorkspace';
+import { PaperToolbar, ReportInspector, ReportNav } from './ReportWorkspace';
+import { matchBlueprintNode } from '@/lib/report-blueprint';
+import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
 import { createEditorContent } from '@/lib/editor-model';
 import { METHOD_LABELS } from '@/lib/report-placement';
@@ -580,6 +582,12 @@ export default function AgentShell() {
     return { send, perform, answer };
   }, [go, focusInput, sendToReport]);
 
+  // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
+  const insertIntoSection = useCallback((items: InsertItem[]) => {
+    const section = paperContent.report.find(s => s.id === pickedSection);
+    if (!section) return;
+    sendToReport({ id: crypto.randomUUID(), node: matchBlueprintNode(section.title)?.id ?? '', source: '报告工具栏', items, sectionId: section.id });
+  }, [paperContent, pickedSection, sendToReport]);
   // A writing tool opens the copilot and says its command there, as if typed.
   const sayFromTool = useCallback((text: string) => { setCopilotOpen(true); agent.send(text); }, [agent]);
 
@@ -745,6 +753,7 @@ export default function AgentShell() {
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
         {stage === 'paper' && <div ref={paperRef} className={styles.paperStage} role="region" aria-label="报告实时排版">
+          <PaperToolbar section={paperContent.report.find(s => s.id === pickedSection) ?? null} results={paperContent.quality?.results ?? []} onInsert={insertIntoSection} onEdit={() => go('editor')} />
           <ReportPaper content={paperContent} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" />
         </div>}
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
@@ -791,7 +800,9 @@ export default function AgentShell() {
           figure={deferredView.report ? figureOf(deferredView.report, output) : null} visualStyle={deferredView.report?.visualStyle} />}
         <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel}>
           {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
-          {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && visited.includes(id)).map(id =>
+          {/* The report editor stays mounted, hidden, while the report fills the centre: the paper shows its content and the
+              toolbar writes through it. */}
+          {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && (visited.includes(id) || (id === 'editor' && stage === 'paper'))).map(id =>
             <div key={id} className={styles.pane} data-workbench-panel={id} hidden={panel !== id}>{panels[id]}</div>)}
         </div>
         {canvasReturn && panel && panel !== 'canvas' && <div className={styles.canvasReturn} role="region" aria-label="画布返回">

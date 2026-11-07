@@ -138,3 +138,17 @@ test('Word merges a frame table\'s parent units and keeps the three-line rules',
   assert.match(xml, /资料来源：本研究抽样设计。/);
   assert.doesNotMatch(xml, /有效样本 n = 0/);
 });
+
+test('the toolbar writes into the section the user picked, and a figure may plot a result the report already holds', async () => {
+  const input = qualityResult(screening, new Set(['attention']), 20);
+  const r = await snapshotRecipe(input, { title: '回收问卷质量控制', sourceName: '教学模拟问卷', sourceUrl: '', sourceHash: 'c'.repeat(64), classification: 'simulated' }, 'qc');
+  const content = parseEditorContent({ ...report(), quality: { version: 1, results: [r], findings: [] } });
+  const picked = content.report[3];
+  const paragraph = applyReportInsert(content, { id: 'i1', node: 'data.cleaning', source: '报告工具栏', items: [{ kind: 'paragraph', text: '一段正文。' }], sectionId: picked.id }, picked.id);
+  assert.equal(paragraph.sectionId, picked.id, 'the picked section wins over the blueprint node');
+  const figure = applyReportInsert(content, { id: 'i2', node: '', source: '报告工具栏', items: [{ kind: 'figure', result: r, caption: r.title }] }, picked.id);
+  assert.deepEqual(figure.blocks.map(b => b.kind), ['chart'], 'only the figure is added; the registered table is not repeated');
+  const stranger = { ...r, id: 'other', resultHash: 'd'.repeat(64) };
+  assert.throws(() => applyReportInsert(content, { id: 'i3', node: '', source: '报告工具栏', items: [{ kind: 'figure', result: stranger, caption: 'x' }] }, picked.id), /图须与其结果表一同写入/);
+  assert.throws(() => applyReportInsert(content, { id: 'i4', node: '', source: '报告工具栏', items: [{ kind: 'paragraph', text: 'x' }] }, 'gone'), /目标章节不存在/);
+});
