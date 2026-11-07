@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type RefCallback } from 'react';
+import { useMemo, useState, type KeyboardEvent, type RefCallback } from 'react';
 import { Formula } from '@/components/math/Tex';
 import { parseEditorContent, type EditorContent, type ReportSection } from '@/lib/editor-model';
 import { texProblem } from '@/lib/omml';
@@ -207,6 +207,7 @@ export function ReportInspector({
             })()}
         </section>
         <section className={styles.block}>
+          <p className={styles.keyHint}><kbd>[</kbd> <kbd>]</kbd> 切换上一节、下一节</p>
           <p className={styles.label}>统计</p>
           <dl className={styles.stats}>
             {stats.map(([k, v]) => (
@@ -349,6 +350,11 @@ export function PaperToolbar({
   };
 
   const charted = results.filter(r => suggestedExhibits(r).includes('chart'));
+  // Ctrl or ⌘ + Enter adds what was typed; Esc closes the box without adding.
+  const keys = (submit: () => unknown) => (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') { event.preventDefault(); setOpen(null); }
+    else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); }
+  };
   const problem = tex.trim() ? texProblem(tex) : null;
   const pct = liveWriting ? Math.round((liveWriting.completed / Math.max(1, liveWriting.total)) * 100) : 0;
 
@@ -631,10 +637,11 @@ export function PaperToolbar({
                 maxLength={2000}
                 value={text}
                 onChange={e => setText(e.target.value)}
+                onKeyDown={keys(() => text.trim() && put([{ kind: 'paragraph', text: text.trim() }], '一段正文'))}
                 placeholder={`写一段加到「${section.title}」末尾。数字请用登记结果，不要手填。`}
               />
               <div className={styles.popActions}>
-                <span>{text.trim().length} 字</span>
+                <span>{text.trim().length} 字 · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 加入，<kbd>Esc</kbd> 关闭</span>
                 <button
                   type="button"
                   data-primary="true"
@@ -685,6 +692,7 @@ export function PaperToolbar({
                 ref={focusQuietly}
                 value={tex}
                 onChange={e => setTex(e.target.value)}
+                onKeyDown={keys(() => tex.trim() && !problem && put([{ kind: 'formula', tex: tex.trim() }], '一个公式'))}
                 placeholder="LaTeX，例如 n_0=\frac{z^2p(1-p)}{d^2}"
               />
               <div className={styles.texPreview}>
@@ -699,7 +707,7 @@ export function PaperToolbar({
                 )}
               </div>
               <div className={styles.popActions}>
-                <span>独立公式，导出时自动编号</span>
+                <span>独立公式，导出时自动编号 · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 加入</span>
                 <button
                   type="button"
                   data-primary="true"

@@ -166,6 +166,14 @@ export default function AgentShell() {
     if (box && target) box.scrollTo({ top: box.scrollTop + target.getBoundingClientRect().top - box.getBoundingClientRect().top - 24, behavior: 'smooth' });
   }, []);
   const choreo = useLiveReportChoreography(paperRef, paperContent, pickSection);
+  // In the report, [ and ] step to the previous and next section, as a reader pages through.
+  const stepSection = useCallback((by: number) => {
+    if (stage !== 'paper') return;
+    const list = paperContent.report; if (!list.length) return;
+    const at = list.findIndex(sec => sec.id === pickedSection);
+    const next = list[Math.max(0, Math.min(list.length - 1, at < 0 ? (by > 0 ? 0 : list.length - 1) : at + by))];
+    pickSection(next.id);
+  }, [stage, paperContent, pickedSection, pickSection]);
 
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
   // The plan makes room for the sections the registered results belong in.
@@ -279,8 +287,8 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, dataset = deferredView.dataset, liveReport = view.report;
   // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor }; });
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection }; });
   // When entering the middle report canvas on an untouched skeleton, automatically hydrate the full 9-chapter 26-section
   // standard report so the canvas renders complete A4 pages, TOC, three-line tables, and built-in SVG figures.
   // The sample replaces the questionnaire and the data, so it fills only a project that holds neither.
@@ -947,6 +955,7 @@ export default function AgentShell() {
         if (currentPanel()) window.location.hash = ''; else if (reopen) window.location.hash = reopen;
       }
       if (event.key === 'Escape') setRailMenu(null);
+      if (!typing && (event.key === '[' || event.key === ']') && !event.ctrlKey && !event.metaKey && !event.altKey) latest.current.stepSection(event.key === ']' ? 1 : -1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
