@@ -35,6 +35,7 @@ import { ADVISORS, advisorReading } from '@/lib/agent/advisors';
 import CursorTrail from './CursorTrail';
 import ReportPaper from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
+import { ReportLiveTheater, ReportXrefDock, useLiveReportChoreography } from './ReportLiveTheater';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
@@ -158,6 +159,7 @@ export default function AgentShell() {
     const box = paperRef.current, target = box?.querySelector<HTMLElement>(`[data-report-section="${CSS.escape(id)}"]`);
     if (box && target) box.scrollTo({ top: box.scrollTop + target.getBoundingClientRect().top - box.getBoundingClientRect().top - 24, behavior: 'smooth' });
   }, []);
+  const choreo = useLiveReportChoreography(paperRef, paperContent, pickSection);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
   // The plan makes room for the sections the registered results belong in.
   const plan = useMemo(() => deferredView.report ? reportPlan(deferredView.report, light.benchmark, (deferredView.report.quality?.results ?? []).map(suggestedNode)) : null, [deferredView, light]);
@@ -699,16 +701,20 @@ export default function AgentShell() {
                       if (autoFollowRef.current && evt.sectionId) {
                         requestAnimationFrame(() => pickSection(evt.sectionId));
                       }
+                      const streamedSection = evt.report.report?.find((sec: any) => sec.id === evt.sectionId);
+                      if (streamedSection) {
+                        choreo.animateIncomingSection(streamedSection, evt.report);
+                      }
                       replace(waitingMsg.id, {
                         lines: [
                           [
-                            span('正在中间报告画布实时落笔：已完成 '),
+                            span('🤖 首席撰稿官正在中间报告画布逐字落笔：已完成 '),
                             span(`${evt.completed}/${evt.total} 节`, 'gold'),
                             span(' · 累计 '),
                             span(`${runningParagraphs} 段`, 'gold'),
-                            span(' · 绑定 '),
+                            span(' · 锚定 '),
                             span(`${citedFactsSet.size} 项`, 'gold'),
-                            span(' {F编号} 事实 · 最新完成「'),
+                            span(' 实证数据与图表 · 最新落笔「'),
                             span(evt.title ?? '', 'strong'),
                             span('」'),
                           ],
@@ -716,12 +722,13 @@ export default function AgentShell() {
                       });
                     } else if (evt.type === 'repair' && evt.report) {
                       setLiveReport(evt.report);
+                      choreo.runReviewAndFormatChoreography(evt.report);
                       setLiveWriting(prev =>
                         prev
                           ? {
                               ...prev,
                               phase: 'repair',
-                              lastSectionTitle: `06 六大顾问终审自愈（执行 ${evt.repairsApplied?.length ?? 0} 项修复）`,
+                              lastSectionTitle: `🔍 终审修辞官正在划改病句并巡检全篇版式（完成 ${evt.repairsApplied?.length ?? 0} 项修订）`,
                             }
                           : null,
                       );
@@ -770,14 +777,14 @@ export default function AgentShell() {
                 lines: [
                   [
                     span('已由 '),
-                    span('DeepSeek 全流程 Agent', 'strong'),
-                    span(' 在中间报告画布完成实时撰稿：共撰写 '),
+                    span('证见 AI 撰稿团', 'strong'),
+                    span(' 在中间报告画布完成实时撰稿与终审修订：共撰写 '),
                     span(`${s.totalSectionsGenerated} 节`, 'gold'),
                     span('、'),
                     span(`${s.totalParagraphsWritten} 段`, 'gold'),
-                    span(' 正文，精准绑定 '),
+                    span(' 正文，精准锚定 '),
                     span(`${s.totalFactsCited} 项`, 'gold'),
-                    span(' {F编号} 登记事实，对标体检得分 '),
+                    span(' 实证调查数据与图表互证，对标体检得分 '),
                     span(`${s.finalScore} / 100`, 'gold'),
                     span('，六大顾问 '),
                     span(`${s.advisorPassCount} / ${s.advisorTotalCount}`, 'gold'),
@@ -789,11 +796,11 @@ export default function AgentShell() {
                 cards: [
                   {
                     kind: 'tool',
-                    title: `全报告生成回执 · ${finalData.topic?.shortTitle || topicLabel}`,
+                    title: `全报告实时撰稿与审稿回执 · ${finalData.topic?.shortTitle || topicLabel}`,
                     lines: [
-                      [span('00 四张交接台账', 'teal'), span(`　结论证据表 ${finalData.contract?.claimLedger?.length ?? 4} 条 · 文献核验表 ${finalData.contract?.literatureLedger?.length ?? 3} 条 · 统计结果表 ${finalData.contract?.statsLedger?.length ?? 6} 条 · 图表登记表 ${finalData.contract?.figureLedger?.length ?? 7} 条`, 'dim')],
-                      [span('05 两波事实锁死', 'teal'), span(`　LLM 成功生成 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
-                      [span('06 六顾问终审自愈', 'teal'), span(`　自动执行 ${finalData.repairsApplied?.length ?? 0} 项方法学与互证修复 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
+                      [span('🔗 交叉引证图谱', 'teal'), span(`　核心结论 ${finalData.contract?.claimLedger?.length ?? 4} 条 · 参考文献 ${finalData.contract?.literatureLedger?.length ?? 3} 篇 · 统计模型 ${finalData.contract?.statsLedger?.length ?? 6} 项 · 图表目录 ${finalData.contract?.figureLedger?.length ?? 7} 项`, 'dim')],
+                      [span('🤖 首席撰稿落笔', 'teal'), span(`　DeepSeek 实时撰写 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
+                      [span('🔍 终审划改定稿', 'teal'), span(`　完成 ${finalData.repairsApplied?.length ?? 0} 项方法学修辞划改与版式巡检 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
                     ],
                   },
                 ],
@@ -823,6 +830,11 @@ export default function AgentShell() {
           loadBenchmark(action.benchmarkId);
           setStage('paper');
           closePanel();
+          window.setTimeout(() => {
+            if (latest.current.liveReport) {
+              choreo.playFullTheaterShowcase(latest.current.liveReport);
+            }
+          }, 220);
           say(
             [
               span('已为您全链条铸造国奖标准成果包并呈现在中间报告画布（课题参数：'),
@@ -870,7 +882,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport]);
+  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport, choreo]);
 
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {
@@ -1057,7 +1069,42 @@ export default function AgentShell() {
             onToggleAutoFollow={toggleAutoFollow}
             onJumpToSection={pickSection}
           />
-          <ReportPaper content={paperContent} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" writingActive={!!liveWriting?.active} />
+          <ReportXrefDock
+            content={paperContent}
+            activeTargetKey={choreo.activeTargetKey}
+            onTriggerXref={choreo.triggerXrefSynapse}
+            onSweepAllXrefs={choreo.sweepAllXrefs}
+            onReplayTheater={() => {
+              if ((paperContent.quality?.results?.length ?? 0) === 0) {
+                loadBenchmark('current');
+                window.setTimeout(() => {
+                  if (latest.current.liveReport) choreo.playFullTheaterShowcase(latest.current.liveReport);
+                }, 220);
+              } else {
+                choreo.playFullTheaterShowcase(paperContent);
+              }
+            }}
+            onStartLiveDeepSeek={() => agent.perform({ type: 'generateFullReport', topic: '' })}
+            theaterBusy={choreo.robotVisible || !!liveWriting?.active}
+          />
+          <ReportLiveTheater
+            paperRef={paperRef}
+            robotRole={choreo.robotRole}
+            robotStatusText={choreo.robotStatusText}
+            robotVisible={choreo.robotVisible}
+            forgePod={choreo.forgePod}
+            beams={choreo.beams}
+          />
+          <ReportPaper
+            content={paperContent}
+            activeSectionId={pickedSection}
+            onPick={setPickedSection}
+            label="报告实时排版"
+            writingActive={!!liveWriting?.active}
+            typingState={choreo.typingState}
+            reviewState={choreo.reviewState}
+            formatScanSectionId={choreo.formatScanSectionId}
+          />
         </div>}
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
           <BrandMark size={16} />证见 AI{running || looking ? <i aria-label="工作中" /> : null}

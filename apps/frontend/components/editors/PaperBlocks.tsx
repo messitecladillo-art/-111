@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
@@ -14,12 +14,97 @@ type Labels = Map<string, BlockLabel>;
 const ACCENT: Record<EditorContent['accent'], string> = { teal: '#0F766E', blue: '#234E80', burgundy: '#8A3449' };
 
 type Citations = ReadonlyMap<string, number>;
+
+const INLINE_XREF_RE = /((?:附?[图表]|式)\s*[（(]?[0-9]+(?:[\-－—.][0-9]+)?[)）]?|\[\s*\d+(?:\s*[,，、\-–—]\s*\d+)*\s*\])/gu;
+
+function renderRichPlainRun(
+  text: string,
+  keyPrefix: string,
+  labelToBlockId: ReadonlyMap<string, string>,
+) {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let idx = 0;
+  for (const m of text.matchAll(INLINE_XREF_RE)) {
+    const start = m.index ?? 0;
+    if (start > last) {
+      parts.push(<span key={`${keyPrefix}-t-${idx++}`}>{text.slice(last, start)}</span>);
+    }
+    const token = m[0];
+    if (token.startsWith('[')) {
+      const firstNum = /\d+/u.exec(token)?.[0] ?? '1';
+      parts.push(
+        <sup
+          key={`${keyPrefix}-c-${idx++}`}
+          className={styles.cite}
+          data-cite-source={firstNum}
+          data-xref-kind="citation"
+          title={`交叉引用：参考文献 [${firstNum}]（悬停或点击查看双端连线）`}
+        >
+          {token}
+        </sup>,
+      );
+    } else {
+      const normalized = token.replace(/\s+/gu, ' ').trim();
+      const compact = token.replace(/\s+/gu, '');
+      const matchedId = labelToBlockId.get(normalized) ?? labelToBlockId.get(compact) ?? normalized;
+      parts.push(
+        <span
+          key={`${keyPrefix}-x-${idx++}`}
+          className={styles.xrefPill}
+          data-xref-source={matchedId}
+          data-xref-label={normalized}
+          title={`交叉引用：${normalized}（悬停或点击查看图表双端连线）`}
+        >
+          {token}
+        </span>,
+      );
+    }
+    last = start + token.length;
+  }
+  if (last < text.length) {
+    parts.push(<span key={`${keyPrefix}-t-${idx++}`}>{text.slice(last)}</span>);
+  }
+  return parts;
+}
+
 /** Running text as the export prints it: references resolved, citations as superscripts, `$…$` typeset, broken references marked. */
 export function PaperText({ text, labels, citations }: { text: string; labels: Labels; citations?: Citations }) {
-  return <>{referenceSegments(text, labels, citations).map((segment, i) => segment.missing
-    ? <mark key={i} className={styles.broken} title={segment.cite ? '对应的参考文献已删除，导出前请重新插入引用' : '对应的图、表或公式已删除或类型不符，导出前请重新插入引用'}>{segment.text}</mark>
-    : segment.cite ? <sup key={i} className={styles.cite}>{segment.text}</sup>
-    : splitInlineMath(segment.text).map((part, j) => part.math ? <Tex key={`${i}-${j}`} tex={part.text}/> : <span key={`${i}-${j}`}>{part.text}</span>))}</>;
+  const labelToBlockId = new Map<string, string>();
+  for (const [k, v] of labels.entries()) {
+    if (!k.includes('\u0000')) {
+      labelToBlockId.set(v.reference, k);
+      labelToBlockId.set(v.reference.replace(/\s+/gu, ''), k);
+      labelToBlockId.set(v.label, k);
+      labelToBlockId.set(v.label.replace(/\s+/gu, ''), k);
+    }
+  }
+  return <>{referenceSegments(text, labels, citations).map((segment, i) => {
+    if (segment.missing) {
+      return <mark key={i} className={styles.broken} title={segment.cite ? '对应的参考文献已删除，导出前请重新插入引用' : '对应的图、表或公式已删除或类型不符，导出前请重新插入引用'}>{segment.text}</mark>;
+    }
+    if (segment.cite) {
+      const firstNum = /\d+/u.exec(segment.text)?.[0] ?? '1';
+      return <sup key={i} className={styles.cite} data-cite-source={firstNum} data-xref-kind="citation">{segment.text}</sup>;
+    }
+    const directBlockId = labelToBlockId.get(segment.text) ?? labelToBlockId.get(segment.text.replace(/\s+/gu, ''));
+    if (directBlockId) {
+      return (
+        <span
+          key={i}
+          className={styles.xrefPill}
+          data-xref-source={directBlockId}
+          data-xref-label={segment.text}
+          title={`交叉引用：${segment.text}（悬停或点击查看图表双端连线）`}
+        >
+          {segment.text}
+        </span>
+      );
+    }
+    return splitInlineMath(segment.text).map((part, j) =>
+      part.math ? <Tex key={`${i}-${j}`} tex={part.text}/> : renderRichPlainRun(part.text, `${i}-${j}`, labelToBlockId),
+    );
+  })}</>;
 }
 
 /** The same server-style SVG figure the Word export embeds. */
@@ -60,7 +145,8 @@ export default function PaperBlocks({ section, content, labels, citations }: { s
   if (!blocks.length) return null;
   const used: ResultSnapshot[] = [];
   const items = blocks.map((block, index) => {
-    if (block.kind === 'formula') return <div key={block.id} className={styles.equation}><Formula tex={block.text || '\\text{（空公式）}'} number={blockLabel(labels, section.id, block.id)?.number} copyable={false} compact/></div>;
+    const bLabel = blockLabel(labels, section.id, block.id);
+    if (block.kind === 'formula') return <div key={block.id} className={styles.equation} data-xref-target={block.id} data-xref-label={bLabel?.reference ?? ''}><Formula tex={block.text || '\\text{（空公式）}'} number={bLabel?.number} copyable={false} compact/></div>;
     if (isExhibitNote(blocks, index)) {
       const exhibit = blocks[index - 1], placed = sourcePlacement(blocks, index - 1) === 'note';
       let line = '';
@@ -72,8 +158,8 @@ export default function PaperBlocks({ section, content, labels, citations }: { s
     try { result = resultFor(content.quality, block.evidenceId);if(block.figureId){figure=figureFor(content,block.figureId,block.evidenceId);if((block.kind==='table')!==(figure.kind==='table'))throw Error('图形与内容块类型不一致。');} } catch (error) { return <p key={block.id} className={styles.error}>{(error as Error).message}</p>; }
     if (!used.includes(result)) used.push(result);
     const source = sourcePlacement(blocks, index) === 'own';
-    const caption = numberedCaption(blockLabel(labels, section.id, block.id), block.text || result.title);
-    return <figure key={block.id} className={styles.block}>
+    const caption = numberedCaption(bLabel, block.text || result.title);
+    return <figure key={block.id} className={styles.block} data-xref-target={block.id} data-xref-label={bLabel?.reference ?? ''} data-xref-caption={caption}>
       {block.kind === 'table' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}
       {block.kind === 'chart' ? <Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle}/> : <ResultTable result={result} figure={figure}/>}
       {block.kind === 'chart' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}

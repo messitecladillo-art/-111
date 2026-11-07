@@ -1,0 +1,318 @@
+.theaterOverlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+  overflow: hidden;
+}
+
+.synapseSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.beamPrimary {
+  fill: none;
+  stroke: url(#evix-beam-teal-gold);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(15, 118, 110, 0.55));
+  stroke-dasharray: 8 6;
+  animation: beam-flow 680ms linear infinite;
+}
+
+.beamSecondary {
+  fill: none;
+  stroke: url(#evix-beam-gold-teal);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  opacity: 0.88;
+  filter: drop-shadow(0 0 8px rgba(198, 139, 44, 0.65));
+  stroke-dasharray: 5 9;
+  animation: beam-flow-reverse 820ms linear infinite;
+}
+
+@keyframes beam-flow {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes beam-flow-reverse {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 28; }
+}
+
+.nodeRing {
+  fill: rgba(15, 118, 110, 0.14);
+  stroke: #0f766e;
+  stroke-width: 2;
+  animation: node-pulse 900ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.nodeRingGold {
+  fill: rgba(198, 139, 44, 0.16);
+  stroke: #c68b2c;
+  stroke-width: 2;
+  animation: node-pulse 900ms cubic-bezier(0.22, 1, 0.36, 1) 180ms infinite;
+}
+
+@keyframes node-pulse {
+  0%, 100% { r: 7px; opacity: 0.95; stroke-width: 2.2px; }
+  50% { r: 16px; opacity: 0.35; stroke-width: 1.2px; }
+}
+
+.synapseBadge {
+  position: fixed;
+  transform: translate(-50%, -130%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.96), rgba(20, 83, 74, 0.96));
+  border: 1px solid rgba(198, 139, 44, 0.75);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.35), 0 0 0 3px rgba(198, 139, 44, 0.22);
+  animation: badge-pop 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes badge-pop {
+  from { opacity: 0; transform: translate(-50%, -100%) scale(0.88); }
+  to { opacity: 1; transform: translate(-50%, -130%) scale(1); }
+}
+
+/* Autonomous AI Ghost Cursor (Robot Co-Author Pointer) */
+.robotCursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 48;
+  pointer-events: none;
+  transition: transform 110ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.cursorHalo {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 118, 110, 0.38) 0%, rgba(198, 139, 44, 0.18) 60%, transparent 100%);
+  animation: halo-breathe 900ms ease-in-out infinite;
+}
+
+.robotCursor[data-persona="review"] .cursorHalo {
+  background: radial-gradient(circle, rgba(198, 139, 44, 0.48) 0%, rgba(220, 38, 38, 0.2) 65%, transparent 100%);
+}
+
+@keyframes halo-breathe {
+  0%, 100% { transform: scale(0.85); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; }
+}
+
+.cursorArrow {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 3px 8px rgba(15, 23, 42, 0.28));
+}
+
+.cursorPill {
+  position: absolute;
+  left: 20px;
+  top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f766e, #134e4a);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px -4px rgba(15, 118, 110, 0.45);
+}
+
+.robotCursor[data-persona="review"] .cursorPill {
+  background: linear-gradient(135deg, #b45309, #92400e);
+}
+
+.robotCursor[data-persona="chart"] .cursorPill {
+  background: linear-gradient(135deg, #1d4ed8, #0f766e);
+}
+
+.cursorDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fde68a;
+  box-shadow: 0 0 6px #fde68a;
+}
+
+/* Floating Chart / Table Forge Card that pops out and flies into the paper */
+.forgePod {
+  position: fixed;
+  right: 280px;
+  top: 132px;
+  z-index: 47;
+  width: 290px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(198, 139, 44, 0.65);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 42px -10px rgba(15, 118, 110, 0.32), 0 0 0 4px rgba(198, 139, 44, 0.16);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  animation: forge-fly-lifecycle 1450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes forge-fly-lifecycle {
+  0% {
+    opacity: 0;
+    transform: translate(60px, -20px) scale(0.72) rotate(4deg);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.03) rotate(0deg);
+  }
+  68% {
+    opacity: 1;
+    transform: translate(-40px, 24px) scale(0.98) rotate(-1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-260px, 140px) scale(0.38) rotate(-6deg);
+  }
+}
+
+.forgePodHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: #0f766e;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.forgePodTitle {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.forgeMiniBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 42px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(198, 139, 44, 0.08));
+}
+
+.forgeMiniBars i {
+  flex: 1;
+  border-radius: 4px 4px 1px 1px;
+  background: linear-gradient(180deg, #0f766e, #c68b2c);
+  animation: bar-grow 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bar-grow {
+  from { height: 15%; opacity: 0.4; }
+}
+
+/* Interactive Cross-Reference Directory Dock (图目录 · 表目录 · 文献目录) */
+.xrefDock {
+  position: sticky;
+  top: 62px;
+  z-index: 4;
+  max-width: 816px;
+  margin: -6px auto 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px -8px rgba(23, 26, 25, 0.16);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+}
+
+.xrefDockHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.xrefDockHead b {
+  color: var(--c-fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.xrefDockHead small {
+  color: var(--c-dim);
+  font-size: 11.5px;
+}
+
+.xrefPillsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dirNode {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-raise);
+  color: var(--c-fg);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.dirNode:hover,
+.dirNode[data-xref-active="true"] {
+  border-color: #c68b2c;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(198, 139, 44, 0.14));
+  color: #0f766e;
+  font-weight: 600;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(198, 139, 44, 0.22);
+}
+
+.dirTag {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+  font-weight: 600;
+  font-size: 10.5px;
+}
+
+.dirTag[data-kind="table"] {
+  background: rgba(198, 139, 44, 0.15);
+  color: #92400e;
+}
+
+.dirTag[data-kind="cite"] {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}

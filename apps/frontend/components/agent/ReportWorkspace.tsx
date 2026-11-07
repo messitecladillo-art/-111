@@ -150,11 +150,11 @@ const TOOLS: { id: Exclude<Tool, 'ai'>; label: string; icon: string }[] = [
 ];
 
 const PHASE_LABELS: Record<LiveWritingStatus['phase'], string> = {
-  contract: '00–04 契约与四张交接台账锁定 · 展开 9 章 26 节蓝图',
-  wave1: '05 Wave 1 · DeepSeek 并发撰写主体与实证章节',
-  wave2: '05 Wave 2 · 基于全篇大纲合成结论、3W1H 对策与摘要',
-  repair: '06 六大顾问终审自愈 · 校验方法学红线与图表文献互证',
-  done: '✓ 26 节全报告实时撰稿完成 · 100/100 满分通过',
+  contract: '🤖 证见撰稿团就位 · 正在铺展 9 章 26 节研究蓝图与图表目录',
+  wave1: '🤖 首席撰稿官 & 📊 统计制图官 · 正在逐字落笔正文并飞入实证图表',
+  wave2: '🔗 交叉引证官 · 正在串联全篇图目录、表目录与参考文献双轨引证',
+  repair: '🔍 终审修辞官 · 正在逐句划改方法学病句并巡检全篇学术版式',
+  done: '✓ 证见 AI 撰稿团已完成 26 节全报告撰写、互证连线与终审定稿',
 };
 
 /**
@@ -233,7 +233,7 @@ export function PaperToolbar({
             {PHASE_LABELS[liveWriting.phase]}
           </span>
           <span className={styles.liveHudStats}>
-            已写 <b>{liveWriting.completed}/{liveWriting.total}</b> 节 · <b>{liveWriting.paragraphs}</b> 段 · 绑定 <b>{liveWriting.facts}</b> 项 {'{F编号}'} 事实
+            已写 <b>{liveWriting.completed}/{liveWriting.total}</b> 节 · <b>{liveWriting.paragraphs}</b> 段 · 精准锚定 <b>{liveWriting.facts}</b> 处实证数据与图表互证
           </span>
           {liveWriting.lastSectionTitle && (
             <button
@@ -269,7 +269,7 @@ export function PaperToolbar({
           placeholder="输入任意参赛课题名称（留空则按当前项目课题生成 26 节全报告）…"
         />
         <div className={styles.popActions}>
-          <span>00–06 技能包 · 9 章 26 节在当前纸面实时落笔</span>
+          <span>🤖 逐字拟人打字 · 📊 图表浮窗飞入 · 🔗 双轨激光引证 · 🔍 审稿划改</span>
           {onInstantForge && (
             <button
               type="button"
