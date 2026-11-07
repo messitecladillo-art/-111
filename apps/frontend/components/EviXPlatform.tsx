@@ -53,6 +53,7 @@ import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-
 import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
 import type { DatasetValue } from '@/lib/canvas/execute';
 import { readReportDraft, saveReportDraft } from '@/lib/agent/report-draft';
+import type { FigureTweak } from '@/lib/agent/figure-tweak';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -573,7 +574,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void } {
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void } {
   const { session, identityEpoch, loading } = useHostedSession();
   // The agent keeps its report draft in this browser, for whoever is signed in; the classic workbench does not.
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
@@ -588,6 +589,10 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
   const publishProposal = useCallback((proposal: AgentQuestionnaireProposal) => { handoffs.publish('questionnaire', proposal); }, [handoffs]);
   // Paragraphs, tables and formulas a workbench module sends to the report; the editor applies each once.
   const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
+  // A figure changed in the conversation; the editor applies it once and clears it.
+  const [figureTweak,setFigureTweak]=useState<FigureTweak|null>(null);
+  const tweakFigure=useCallback((tweak:FigureTweak)=>{setFigureTweak(tweak);},[]);
+  const figureTweakHandled=useCallback(()=>{setFigureTweak(null);},[]);
   const [edited,setReport]=useState<{owner:string|null;content:EditorContent}|null>(null);
   // Until the editor has opened in this visit, the stored draft stands for the report.
   const report=edited&&edited.owner===draftOwner?edited.content:storedDraft;
@@ -633,7 +638,7 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} key={draftOwner??'local'} initialContent={storedDraft} savedInBrowser={!!draftOwner}/>,
+      editor: <EditingStudio localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={draftOwner??'local'} initialContent={storedDraft} savedInBrowser={!!draftOwner}/>,
       defense: <DefenseStudio />,
       analysis: <SurveyLab onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onDatasetChange={handoffs.setDataset}/>,
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} />,
@@ -643,8 +648,8 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
-  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, reportChanged, draftOwner, storedDraft]);
-  return { panels, view, publishProposal, sendToReport: setReportInsert };
+  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, reportChanged, draftOwner, storedDraft, figureTweak, figureTweakHandled]);
+  return { panels, view, publishProposal, sendToReport: setReportInsert, tweakFigure };
 }
 
 export default function EviXPlatform() {

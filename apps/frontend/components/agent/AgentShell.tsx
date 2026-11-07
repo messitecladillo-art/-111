@@ -31,6 +31,7 @@ import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
 import { useShowCode } from './code-view';
 import { METHOD_LABELS } from '@/lib/report-placement';
+import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
 import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
@@ -104,7 +105,7 @@ function savedPanelWidth(): number | null {
  * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
-  const { panels, view, publishProposal, sendToReport } = useWorkbenchModules(true);
+  const { panels, view, publishProposal, sendToReport, tweakFigure } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
   const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount } = useHostedSession();
@@ -232,8 +233,10 @@ export default function AgentShell() {
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
   const report = deferredView.report, design = deferredView.design, liveReport = view.report;
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate }; });
+  // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
+  const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor }; });
   const agent = useMemo(() => {
     // Read the store synchronously at dispatch: a selection can change before the next effect updates `latest`.
     const currentService = (task: ModelTask) => resolveModelRoute(task, latest.current.generation.lists.services, getModelPreferences(latest.current.owner)).service;
@@ -241,8 +244,34 @@ export default function AgentShell() {
     const send = (raw: string) => {
       const text = raw.trim();
       if (!text) return;
+      if (restyle(text)) return;
       if (latest.current.chatMode === 'model' && !/^[/／]/u.test(text)) ask(text);
       else local(text);
+    };
+    // With an output open, a sentence about its figure changes the report's figure directly, in either mode: no model is
+    // needed to recolour a chart. The reply lists each change, from what it was to what it is now.
+    const restyle = (text: string) => {
+      const { outputId, liveReport, tweakFigure, mountEditor } = latest.current;
+      const result = outputId && liveReport ? liveReport.quality?.results.find(r => r.id === outputId) : undefined;
+      const request = result ? parseFigureRequest(text) : null;
+      if (!result || !liveReport || !request) return false;
+      const lines: Line[] = [];
+      let changed = false;
+      if (Object.keys(request.change).length) {
+        try {
+          const preview = applyFigureChange(liveReport, result.id, request.change);
+          if (preview.changes.length) {
+            mountEditor();
+            tweakFigure({ id: crypto.randomUUID(), resultId: result.id, change: request.change });
+            lines.push([span('已改「'), span(result.title, 'strong'), span('」的图：')], ...preview.changes.map(c => [span('· ', 'dim'), span(c, 'teal')]));
+            changed = true;
+          } else lines.push([span('图已经是这样了，没有改动。', 'dim')]);
+        } catch (error) { lines.push([span('没有改：', 'error'), span((error as Error).message)]); }
+      }
+      for (const note of request.unsupported) lines.push([span(note, 'dim')]);
+      if (changed) lines.push([span('◆ ', 'cyan'), span('改动写进了报告，在「报告与 PPT」里可以撤销。', 'dim')]);
+      threads.append([{ ...stamp(), role: 'user', text }, { ...stamp(), role: 'agent', turn: { lines } }]);
+      return true;
     };
     const local = (text: string) => {
       const { panel, light, theme, traces, held, plan, generation } = latest.current;
@@ -713,7 +742,8 @@ export default function AgentShell() {
             title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
         </header>}
-        {output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} />}
+        {output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} onSay={agent.send}
+          figure={deferredView.report ? figureOf(deferredView.report, output) : null} visualStyle={deferredView.report?.visualStyle} />}
         <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel}>
           {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
           {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && visited.includes(id)).map(id =>
