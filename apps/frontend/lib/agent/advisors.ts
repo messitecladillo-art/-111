@@ -53,3 +53,19 @@ export function advisorReading(advisor: Advisor, benchmark: BenchmarkResult | nu
 
 /** The advisors a team has hired, in the order they are listed; unknown ids are dropped. */
 export const hiredAdvisors = (ids: readonly string[]) => ADVISORS.filter(a => ids.includes(a.id));
+
+/** Checks that read a section's own words, as opposed to the report as a whole (abstract, appendices, references). */
+export const SECTION_CHECKS = ['causal', 'oddsRatio', 'rankMedian', 'nullResult', 'clusterCircular', 'dynamicClaim', 'simulationRobust', 'samplingWording', 'captions'] as const;
+
+/**
+ * One section's problems: the report check run on that section alone, its text-level findings kept, each with the
+ * advisor whose field it is. The rest of the report stays as it is, so results and references still resolve.
+ */
+export function sectionIssues(content: import('../editor-model.ts').EditorContent, sectionId: string, check: (content: import('../editor-model.ts').EditorContent) => BenchmarkResult): { check: BenchmarkCheck; advisor: Advisor }[] {
+  const section = content.report.find(s => s.id === sectionId);
+  if (!section) return [];
+  const alone = { ...content, report: [section] };
+  return check(alone).checks
+    .filter(c => (SECTION_CHECKS as readonly string[]).includes(c.id) && (c.status === 'fail' || c.status === 'partial'))
+    .map(c => ({ check: c, advisor: ADVISORS.find(a => a.checks.includes(c.id))! }));
+}

@@ -7,7 +7,8 @@ import { texProblem } from '@/lib/omml';
 import type { InsertItem } from '@/lib/report-insert';
 import { suggestedExhibits } from '@/lib/report-placement';
 import type { ResultSnapshot } from '@/lib/research-quality';
-import type { AdvisorReading } from '@/lib/agent/advisors';
+import { sectionIssues, type AdvisorReading } from '@/lib/agent/advisors';
+import { benchmarkReport } from '@/lib/report-benchmark';
 import type { BenchmarkResult } from '@/lib/report-benchmark';
 import { writtenLines } from '@/lib/report-benchmark';
 import { outlineKind, reportPart } from '@/lib/report-format';
@@ -76,6 +77,12 @@ export function ReportInspector({ content, picked, benchmark, advisors, onSay, o
           <span>{hasContent(section) ? `已写 ${written(section)} 字` : '尚未撰写'}{exhibits(section) ? ` · ${exhibits(section)} 个图、表或公式` : ''}</span>
           {outlineKind(section.title) !== 'chapter' && reportPart(section.title) !== 'references' && <button type="button" data-primary="true" onClick={() => onSay(`/起草 ${section.title}`)}>起草这一节</button>}
         </div> : <p className={styles.hint}>在纸面上点一节，这里显示它的情况和可做的事。</p>}
+        {section && (() => {
+          const issues = sectionIssues(content, section.id, benchmarkReport);
+          return issues.length ? <ul className={styles.todo} aria-label="本节体检">{issues.map(({ check, advisor }) => <li key={check.id} data-status={check.status}>
+            <b><i className={styles.byGlyph} title={advisor.name} aria-label={advisor.name}>{advisor.glyph}</i>{check.label}</b><span>{check.detail}</span></li>)}</ul>
+            : hasContent(section) ? <p className={styles.sectionOk}>本节文字未见常见误读。</p> : null;
+        })()}
       </section>
       <section className={styles.block}>
         <p className={styles.label}>统计</p>

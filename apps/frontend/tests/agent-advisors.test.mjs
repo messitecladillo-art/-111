@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADVISORS, advisorReading, hiredAdvisors } from '../lib/agent/advisors.ts';
+import { ADVISORS, SECTION_CHECKS, advisorReading, hiredAdvisors, sectionIssues } from '../lib/agent/advisors.ts';
 import { benchmarkReport } from '../lib/report-benchmark.ts';
 import { createEditorContent } from '../lib/editor-model.ts';
 import { emptyReference } from '../lib/references.ts';
@@ -25,4 +25,17 @@ test('an advisor reports only what the report check found in its field', () => {
 
 test('hired advisors keep the listed order and ignore ids that no longer exist', () => {
   assert.deepEqual(hiredAdvisors(['writing', 'gone', 'design']).map(a => a.id), ['design', 'writing']);
+});
+
+test('a section is checked on its own words, and each problem names the advisor whose field it is', () => {
+  const content = createEditorContent();
+  content.report = [
+    { id: 'a', title: '一、分析', body: 'Logistic 回归中，有经历者的 OR 为 2.3，即观赛概率是无经历者的 2.3 倍。', source: '' },
+    { id: 'b', title: '二、建议', body: '建议由社区牵头，以季度到场人次评估。', source: '' },
+  ];
+  const a = sectionIssues(content, 'a', benchmarkReport);
+  assert.deepEqual(a.map(x => [x.check.id, x.advisor.id]), [['oddsRatio', 'modeling']]);
+  assert.deepEqual(sectionIssues(content, 'b', benchmarkReport), [], 'the other section carries none of it');
+  assert.deepEqual(sectionIssues(content, 'gone', benchmarkReport), []);
+  for (const id of SECTION_CHECKS) assert.ok(ADVISORS.some(adv => adv.checks.includes(id)), id);
 });
