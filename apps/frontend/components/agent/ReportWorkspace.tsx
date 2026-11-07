@@ -7,6 +7,7 @@ import { texProblem } from '@/lib/omml';
 import type { InsertItem } from '@/lib/report-insert';
 import { suggestedExhibits } from '@/lib/report-placement';
 import type { ResultSnapshot } from '@/lib/research-quality';
+import type { AdvisorReading } from '@/lib/agent/advisors';
 import type { BenchmarkResult } from '@/lib/report-benchmark';
 import { writtenLines } from '@/lib/report-benchmark';
 import { outlineKind, reportPart } from '@/lib/report-format';
@@ -49,7 +50,9 @@ export function ReportNav({ content, picked, onPick, onSay }: { content: EditorC
  * The writing inspector beside the paper: the section in view, then what the report holds, then the report check's
  * score and the first things it says to fix.
  */
-export function ReportInspector({ content, picked, benchmark, onSay, onEdit }: { content: EditorContent; picked: string | null; benchmark: BenchmarkResult | null; onSay: (text: string) => void; onEdit: () => void }) {
+export function ReportInspector({ content, picked, benchmark, advisors, onSay, onEdit, onAdvisors }: { content: EditorContent; picked: string | null; benchmark: BenchmarkResult | null;
+  /** Hired advisors' readings; with any hired, the check speaks through them. */
+  advisors: AdvisorReading[]; onSay: (text: string) => void; onEdit: () => void; onAdvisors: () => void }) {
   const section = content.report.find(s => s.id === picked) ?? null;
   const blocks = content.report.flatMap(s => s.blocks ?? []);
   const stats: [string, number][] = [
@@ -82,8 +85,14 @@ export function ReportInspector({ content, picked, benchmark, onSay, onEdit }: {
         <p className={styles.label}>对标体检</p>
         {benchmark ? <>
           <div className={styles.score}><b>{benchmark.score}</b><span>/ 100</span><i style={{ width: `${benchmark.score}%` }} aria-hidden="true" /></div>
-          {todo.length ? <ul className={styles.todo}>{todo.map(c => <li key={c.id} data-status={c.status}><b>{c.label}</b><span>{c.detail}</span></li>)}</ul>
+          {advisors.length ? advisors.map(({ advisor, issues, checked, passed }) => <div key={advisor.id} className={styles.advisor}>
+            <p className={styles.advisorHead}><b aria-hidden="true">{advisor.glyph}</b>{advisor.name}<small>{checked ? `${passed}/${checked} 通过` : '暂无可查'}</small></p>
+            {issues.length ? <ul className={styles.todo}>{issues.slice(0, 3).map(c => <li key={c.id} data-status={c.status}><b>{c.label}</b><span>{c.detail}</span></li>)}</ul>
+              : <p className={styles.hint}>{checked ? '这一领域没有意见。' : '报告里还没有它能检查的内容。'}</p>}
+          </div>)
+            : todo.length ? <ul className={styles.todo}>{todo.map(c => <li key={c.id} data-status={c.status}><b>{c.label}</b><span>{c.detail}</span></li>)}</ul>
             : <p className={styles.hint}>可检测的项目都通过了；仍需人工核对数字与版面。</p>}
+          {!advisors.length && <button type="button" className={styles.linkButton} onClick={onAdvisors}>雇用顾问，按领域看意见 →</button>}
         </> : <p className={styles.hint}>打开过报告后显示体检结果。</p>}
       </section>
     </div>

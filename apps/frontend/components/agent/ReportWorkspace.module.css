@@ -74,3 +74,10 @@
 .texPreview { display: flex; align-items: center; justify-content: center; min-height: 54px; padding: 8px; border: 1px dashed var(--c-line-strong); border-radius: 10px; background: var(--c-bg); color: var(--c-fg); overflow-x: auto; }
 .texProblem { color: var(--c-err); font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .popover, .toolbarSaid { animation: none; } .toolbar button { transition: none; } }
+
+.advisor { margin: 0 0 10px; }
+.advisorHead { display: flex; align-items: center; gap: 8px; margin: 2px 2px 6px; font-size: 12.5px; font-weight: 600; }
+.advisorHead b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #1f5a4f; color: #fff; font-family: var(--c-serif); font-size: 12px; font-weight: 400; }
+.advisorHead small { margin-left: auto; color: var(--c-dim); font-size: 11.5px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.linkButton { margin: 0 2px 10px; padding: 0; border: 0; background: none; color: var(--c-accent); font: inherit; font-size: 12.5px; cursor: pointer; }
+.linkButton:hover { text-decoration: underline; }

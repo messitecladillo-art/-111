@@ -581,3 +581,5 @@
   .waiting, .stepHead[data-status="running"] .stepText, .workState[data-busy="true"] { animation: none; background: none; -webkit-text-fill-color: currentColor; }
   .trail { display: none; }
 }
+
+.stageSwitch button small { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--c-accent); color: #fff; font-size: 10.5px; font-weight: 600; }

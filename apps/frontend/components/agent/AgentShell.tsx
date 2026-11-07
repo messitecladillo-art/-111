@@ -29,7 +29,9 @@ import { LightBar } from './Glyphs';
 import { Icon } from './icons';
 import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
-import { useShowCode, useStage } from './code-view';
+import { useHired, useShowCode, useStage } from './code-view';
+import Advisors from './Advisors';
+import { ADVISORS, advisorReading } from '@/lib/agent/advisors';
 import CursorTrail from './CursorTrail';
 import ReportPaper from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav } from './ReportWorkspace';
@@ -128,6 +130,7 @@ export default function AgentShell() {
   const outputId = useSyncExternalStore(subscribeHash, currentOutput, () => null);
   const [showCode, setShowCode] = useShowCode(owner);
   const [stage, setStage] = useStage(owner);
+  const [hired, setHired] = useHired(owner);
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
@@ -737,6 +740,7 @@ export default function AgentShell() {
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
             <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
             <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
+            <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
           <span className={styles.workState} data-busy={!!running || looking} role="status">
             <i aria-hidden="true" />{running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
@@ -754,6 +758,7 @@ export default function AgentShell() {
             onClick={exportThread}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
+        {stage === 'advisors' && <Advisors benchmark={paperBenchmark} hired={hired} onHire={setHired} />}
         {stage === 'paper' && <div ref={paperRef} className={styles.paperStage} role="region" aria-label="报告实时排版">
           <PaperToolbar section={paperContent.report.find(s => s.id === pickedSection) ?? null} results={paperContent.quality?.results ?? []} onInsert={insertIntoSection} onEdit={() => go('editor')} />
           <ReportPaper content={paperContent} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" />
@@ -761,7 +766,7 @@ export default function AgentShell() {
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
           <BrandMark size={16} />证见 AI{running || looking ? <i aria-label="工作中" /> : null}
         </button>}
-        <div className={stage === 'paper' ? styles.copilot : styles.chatColumn} hidden={stage === 'paper' && !copilotOpen}>
+        <div className={stage === 'paper' ? styles.copilot : styles.chatColumn} hidden={(stage === 'paper' && !copilotOpen) || stage === 'advisors'}>
         {stage === 'paper' && <div className={styles.copilotHead}>
           <BrandMark size={16} /><b>证见 AI</b><small>{thread?.title ?? '新对话'}</small>
           <span className={styles.spacer} />
@@ -787,7 +792,8 @@ export default function AgentShell() {
 
       <section className={styles.panel} hidden={!panel && !output && !inspecting} aria-label={here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
         data-inspector={inspecting || undefined} style={{ ['--panel-w' as string]: `${inspecting ? INSPECTOR : panelWidth}px` }}>
-        {inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark} onSay={sayFromTool} onEdit={() => go('editor')} />}
+        {inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}
+          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {here && <header className={styles.panelHead}>
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>

@@ -34,5 +34,21 @@ export function useShowCode(owner: string | null): [boolean, (on: boolean) => vo
 }
 
 /** What fills the centre: the conversation, or the report itself with the conversation as a copilot beside it. */
-export type Stage = 'chat' | 'paper';
-export const useStage = (owner: string | null) => useChoice<Stage>(owner, 'evix.agent.stage.v1:', ['chat', 'paper'], 'chat');
+export type Stage = 'chat' | 'paper' | 'advisors';
+export const useStage = (owner: string | null) => useChoice<Stage>(owner, 'evix.agent.stage.v1:', ['chat', 'paper', 'advisors'], 'chat');
+
+/** The advisors this person has hired, as a comma list; the snapshot is the stored string, so it is stable between reads. */
+export function useHired(owner: string | null): [string[], (ids: string[]) => void] {
+  const key = 'evix.agent.advisors.v1:';
+  const read = () => {
+    if (!owner) return '';
+    try { return storage(owner).getItem(key + owner) ?? ''; } catch { return ''; }
+  };
+  const raw = useSyncExternalStore(subscribe, read, () => '');
+  const set = useCallback((ids: string[]) => {
+    if (!owner) return;
+    try { storage(owner).setItem(key + owner, ids.join(',')); } catch { /* Without storage the choice is lost on reload. */ }
+    for (const listener of listeners) listener();
+  }, [owner]);
+  return [raw ? raw.split(',').filter(Boolean) : [], set];
+}
