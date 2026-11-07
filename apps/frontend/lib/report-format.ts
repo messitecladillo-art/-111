@@ -126,6 +126,14 @@ export function evaluateReportFormat(value: ReportFormatSettings): ReportFormatE
   };
 }
 export type ReportPart = 'abstract'|'references'|'appendix'|'body';
+/** Outline rows follow the document structure: front matter, chapters, their sections, then back matter. */
+export function outlineKind(title: string): 'front' | 'chapter' | 'section' | 'plain' | 'back' {
+  const part = reportPart(title);
+  if (part === 'abstract') return 'front';
+  if (part !== 'body') return 'back';
+  const level = reportHeadingLevel(title);
+  return level === 1 ? 'chapter' : level === 2 ? 'section' : 'plain';
+}
 export function reportPart(title: string): ReportPart {
   const text=title.trim().replace(/^[一二三四五六七八九十\d]+[、.．]\s*/, '');
   if (/^(摘要|abstract)$/i.test(text)) return 'abstract';

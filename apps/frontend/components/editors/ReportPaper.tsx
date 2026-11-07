@@ -3,20 +3,12 @@
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import { formatReference, referenceNumbers, unfinishedReference } from '@/lib/references';
 import { writtenLines } from '@/lib/report-benchmark';
-import { reportHeadingLevel, reportPart } from '@/lib/report-format';
+import { outlineKind, reportPart } from '@/lib/report-format';
 import { reportLabels } from '@/lib/report-numbering';
 import PaperBlocks, { PaperText } from './PaperBlocks';
 import styles from './EditingStudio.module.css';
 
-/** Outline rows follow the document structure: front matter, chapters, their sections, then back matter. */
-export function outlineKind(title: string): 'front' | 'chapter' | 'section' | 'plain' | 'back' {
-  const part = reportPart(title);
-  if (part === 'abstract') return 'front';
-  if (part !== 'body') return 'back';
-  const level = reportHeadingLevel(title);
-  return level === 1 ? 'chapter' : level === 2 ? 'section' : 'plain';
-}
-export const sectionWritten = (s: ReportSection) => writtenLines(s.body).length > 0 || !!s.blocks?.some(b => b.kind !== 'paragraph' || writtenLines(b.text).length > 0);
+const sectionWritten = (s: ReportSection) => writtenLines(s.body).length > 0 || !!s.blocks?.some(b => b.kind !== 'paragraph' || writtenLines(b.text).length > 0);
 
 type Line = { kind: 'p' | 'blank' | 'keywords' | 'hintStart' | 'hint'; text: string };
 /** Preview lines: guidance left over in old drafts shows as a marked note, since it would still export as text. */
