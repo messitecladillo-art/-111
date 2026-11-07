@@ -100,7 +100,6 @@
 .shell:global(.workbench):not(:global(.hosted-auth))[data-side="closed"] { --side-w: 0px; }
 :where(.shell) button { font: inherit; color: inherit; }
 .shell :focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; box-shadow: none; }
-.shell ::selection { background: rgba(15, 118, 110, 0.18); }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .skip { position: fixed; left: 12px; top: -60px; z-index: 90; padding: 8px 14px; border-radius: 8px; background: var(--c-raise); color: var(--c-fg); box-shadow: var(--c-shadow); }
 .skip:focus { top: 10px; }
@@ -532,3 +531,53 @@
 .copilot .empty { padding: 24px 18px; }
 .copilot .empty h1 { font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { .copilot { animation: none; } .copilotPill, .stageSwitch button { transition: none; } }
+
+/* ——— Motion: one vocabulary of durations and easings, small distances, nothing for reduced motion ——— */
+.shell:global(.workbench):not(:global(.hosted-auth)) {
+  --dur-fast: 0.15s; --dur-base: 0.24s; --dur-enter: 0.36s;
+  --ease-settle: cubic-bezier(0.22, 0.8, 0.36, 1); --ease-glide: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1); --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+.shell ::selection { background: rgba(15, 118, 110, 0.2); }
+/* Scrollbars that keep out of the way until they are needed. */
+.shell ::-webkit-scrollbar { width: 5px; height: 5px; }
+.shell ::-webkit-scrollbar-track { background: transparent; }
+.shell ::-webkit-scrollbar-thumb { border-radius: 3px; background: rgba(127, 127, 127, 0.16); transition: background 0.2s; }
+.shell ::-webkit-scrollbar-thumb:hover { background: rgba(127, 127, 127, 0.34); }
+
+/* Menus and the launcher spring from where they open. */
+.menu, .launcher, .accountMenu { animation: pop-in var(--dur-base) var(--ease-glide) both; transform-origin: top left; }
+.menu[data-place="above"], .accountMenu { transform-origin: bottom left; animation-name: pop-up; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes pop-up { from { opacity: 0; transform: translateY(8px) scale(0.95); } to { opacity: 1; transform: none; } }
+
+/* What arrives, rises a little; a list arrives one item after another. */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.message { animation: rise var(--dur-enter) var(--ease-settle) both; }
+.empty > * { animation: rise 0.42s var(--ease-settle) both; }
+.empty > :nth-child(2) { animation-delay: 40ms; } .empty > :nth-child(3) { animation-delay: 80ms; } .empty > :nth-child(4) { animation-delay: 120ms; }
+.stages li, .output, .thread { animation: rise var(--dur-enter) var(--ease-settle) both; }
+.stages li:nth-child(2) { animation-delay: 30ms; } .stages li:nth-child(3) { animation-delay: 60ms; } .stages li:nth-child(4) { animation-delay: 90ms; }
+.stages li:nth-child(5) { animation-delay: 120ms; } .stages li:nth-child(6) { animation-delay: 150ms; }
+
+/* Work in progress shimmers: a band of light passes over the words. */
+.waiting, .stepHead[data-status="running"] .stepText, .workState[data-busy="true"] {
+  background-image: linear-gradient(100deg, currentColor 38%, var(--c-faint) 50%, currentColor 62%); background-size: 240% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 2.6s linear infinite;
+}
+.workState[data-busy="true"] i { -webkit-text-fill-color: initial; }
+@keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+/* A press is felt. */
+.chip, .suggestions button, .send, .toolButton, .railButton, .codeToggle, .output, .stages button { transition-property: background-color, border-color, color, box-shadow, transform; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-snap); }
+.chip:active, .suggestions button:active, .send:active:not(:disabled), .toolButton:active, .railButton:active, .codeToggle:active, .output:active, .stages button:active { transform: scale(0.97); }
+.suggestions button:hover { transform: translateY(-1px); }
+
+/* The cursor trail: above everything, taking no click; its colour is the accent. */
+.trail { position: fixed; inset: 0; z-index: 2147483000; width: 100%; height: 100%; color: var(--c-accent); pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu, .launcher, .accountMenu, .message, .empty > *, .stages li, .output, .thread { animation: none; }
+  .waiting, .stepHead[data-status="running"] .stepText, .workState[data-busy="true"] { animation: none; background: none; -webkit-text-fill-color: currentColor; }
+  .trail { display: none; }
+}

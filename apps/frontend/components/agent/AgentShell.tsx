@@ -30,6 +30,7 @@ import { Icon } from './icons';
 import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
 import { useShowCode, useStage } from './code-view';
+import CursorTrail from './CursorTrail';
 import ReportPaper from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav } from './ReportWorkspace';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
@@ -658,6 +659,7 @@ export default function AgentShell() {
 
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
     <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? (output ? 'output' : 'none')} data-expanded={expanded && !!panel}>
+      <CursorTrail />
       <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); focusInput(); }}>跳到输入框</a>
 
       <nav ref={railRef} className={styles.rail} aria-label="工具" style={{ position: 'relative' }}>
