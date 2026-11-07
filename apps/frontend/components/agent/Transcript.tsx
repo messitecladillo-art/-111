@@ -7,6 +7,7 @@ import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
 import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
 import { Icon } from './icons';
+import { ChartStudioView, CodeStudioView, WritingStudioView } from './StudioCards';
 import type { Message, ModelCall } from './threads';
 import styles from './AgentShell.module.css';
 
@@ -102,6 +103,9 @@ function Card({ card, message, onAction, onAnswer }: { card: AgentCard; message:
   if (card.kind === 'consent') return <ConsentCard messageId={message.id} card={card} at={message.at} />;
   if (card.kind === 'job') return <JobCard messageId={message.id} card={card} />;
   if (card.kind === 'proposal') return <ProposalView card={card} />;
+  if (card.kind === 'chart-studio') return <div className={styles.card}><span className={styles.cardTitle}>{card.title}</span><ChartStudioView data={card.studio} onAction={onAction} /></div>;
+  if (card.kind === 'code-studio') return <div className={styles.card}><span className={styles.cardTitle}>{card.title}</span><CodeStudioView data={card.studio} onAction={onAction} /></div>;
+  if (card.kind === 'writing-studio') return <div className={styles.card}><span className={styles.cardTitle}>{card.title}</span><WritingStudioView data={card.studio} onAction={onAction} /></div>;
   if (card.kind === 'trace') return <div className={`${styles.card} ${styles.trace}`}>
     <span className={styles.cardTitle}>回溯 · {card.reference}</span>
     <p className={styles.traceHead}><b>{card.reference}</b>{card.title}</p>
