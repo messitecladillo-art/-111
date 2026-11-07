@@ -61,6 +61,10 @@ export type AgentAction =
   | { type: 'checkDraft'; draft: string; message: string; node: string; facts: { id: string; text: string; value: string }[] }
   /** Forges a complete National First Prize pack for any topic or archetype into design, dataset, and report. */
   | { type: 'loadBenchmark'; benchmarkId: string }
+  /** Runs the 00–06 full-workflow LLM multi-chapter report generation pipeline (26 sections + 4 ledgers + 6-advisor self-repair). */
+  | { type: 'generateFullReport'; topic: string; mode?: 'plan' | 'demonstration' | 'empirical' }
+  /** Stores a session-scoped LLM API key in browser sessionStorage for direct full-report generation. */
+  | { type: 'setApiKey'; apiKey: string }
   /** Inserts text/code/chart-reading paragraphs produced in an interactive studio card into a blueprint section. */
   | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[] };
 /** A primary link is the one step the agent recommends; a turn has at most one. */
@@ -111,6 +115,8 @@ export type Command = { name: string; args?: string; line: string; words: readon
 const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打开${r.name}`, words: [r.id] }));
 export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
+  { name: '全报告', args: '任意课题或留空', line: 'AI 全流程自动生成 26 节国奖级全报告（00–06 技能包 · 事实锁死 · 六大顾问自愈）', words: ['fullreport', 'autoreport'] },
+  { name: '密钥', args: 'sk-...', line: '绑定当前会话大模型 API Key（DeepSeek / OpenAI）用于全报告自动生成', words: ['apikey', 'key'] },
   { name: '铸造', args: '任意课题或留空', line: '通用国奖全链条铸造引擎（任意选题 → 12题量表·641样本·6模型·100分报告）', words: ['forge', 'award', 'benchmark'] },
   { name: '汉超', args: '样板或课题', line: '八大国奖范式对标账本与「汉超」308页全链条素材检视', words: ['hanchao'] },
   { name: '备赛', line: '参赛者八阶全周期领航员与卡点诊断', words: ['coach', 'guide'] },
@@ -235,6 +241,57 @@ function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
         ...(spots.length > shown.length ? [[t(`还有 ${spots.length - shown.length} 处，项目全景里列全了。`, 'dim')]] : [])],
       links: rooms.map(id => say(`去${named(id)}`, `/${roomById(id).command}`)),
     }],
+  };
+}
+
+function buildFullReportTurn(ctx: RouterContext, rawTopic = ''): AgentTurn {
+  const topic = rawTopic.trim() || ctx.projectTitle?.trim() || '当前参赛研究课题';
+  return {
+    lines: [
+      [t('已就绪：'), t('全流程 Agent 自动生成全报告（00–06 技能包全闭环）', 'strong'), t('。')],
+      [t(`目标课题：「${topic}」 · 覆盖 9 章 `, 'dim'), t('26 节', 'gold'), t('（Wave 1 主体与实证 22 节并发拟稿 → Wave 2 结论/3W1H 建议/局限/摘要 4 节综合拟稿）。', 'dim')],
+    ],
+    cards: [{
+      kind: 'tool',
+      title: '全流程自动生成契约 · 00–06 市调科研融合技能包',
+      lines: [
+        [t('00 全流程门禁', 'teal'), t('　锁定 demonstration/empirical 模式，自动构建《结论证据表》《文献核验表》《统计结果表》《图表登记表》四张交接台账', 'dim')],
+        [t('01–04 证据锁死', 'teal'), t('　12 题全映射量表 · 641 行样本 · 6 项 SHA-256 统计快照 · 受控占位符 {F1}..{F77} / {G1}..{G6} / {R1}..{R3}', 'dim')],
+        [t('05 两阶段撰稿', 'teal'), t('　调用 DeepSeek 并发撰写 26 节正文（约 120 段、2.2 万字），严禁自造任何统计数字', 'dim')],
+        [t('06 六顾问自愈', 'teal'), t('　设/证/统/图/写/交 六大顾问终审自愈（防因果误读、OR 误读、稳健性误读、漏引图表），确保 100/100 交付', 'dim')],
+      ],
+      links: [
+        { label: `立即生成「${topic.slice(0, 14)}」全报告（26节）`, action: { type: 'generateFullReport', topic: rawTopic.trim() || ctx.projectTitle?.trim() || '' }, primary: true },
+        say('切换课题：智慧养老终端调查', '/全报告 银发数智·适老跃迁：城市老年群体智慧医疗终端使用障碍与无障碍服务优化调查'),
+        say('切换课题：高校AIGC治理', '/全报告 智启未来：高校学生生成式AI辅助学习采纳机制与学术规范治理调查'),
+      ],
+    }],
+    chips: [
+      recommend({ label: '立即启动 AI 全报告生成', action: { type: 'generateFullReport', topic: rawTopic.trim() || ctx.projectTitle?.trim() || '' } }),
+      say('/铸造'),
+      say('/印鉴'),
+    ],
+  };
+}
+
+function buildApiKeyTurn(rawKey = ''): AgentTurn {
+  const cleaned = rawKey.trim();
+  if (!cleaned) {
+    return {
+      lines: [
+        [t('用法：发送 '), t('/密钥 sk-...', 'teal'), t(' 即可将你的 DeepSeek / OpenAI 兼容 API Key 绑定至当前浏览器会话（仅存于本地 sessionStorage，不入库）。')],
+        [t('本地开发环境已默认接入 .env.local 中的 DEEPSEEK_API_KEY，可直接运行 ', 'dim'), t('/全报告', 'teal'), t('。', 'dim')],
+      ],
+      chips: [recommend(say('/全报告')), say('/帮助')],
+    };
+  }
+  return {
+    lines: [
+      [t('已将会话 API Key（'), t(`${cleaned.slice(0, 6)}…${cleaned.slice(-4)}`, 'gold'), t('）绑定至当前浏览器。')],
+      [t('现在可直接点击下方按钮或发送 ', 'dim'), t('/全报告 ‹你的课题›', 'teal'), t(' 启动 26 节全流程自动撰稿。', 'dim')],
+    ],
+    act: { type: 'setApiKey', apiKey: cleaned },
+    chips: [recommend(say('/全报告')), say('/铸造')],
   };
 }
 
@@ -440,6 +497,8 @@ function slash(body: string, ctx: RouterContext): Routed {
   if (room) return { turn: open(room, ctx) };
   switch (command.name) {
     case '下一步': return { turn: nextStep(ctx) };
+    case '全报告': return { turn: buildFullReportTurn(ctx, arg) };
+    case '密钥': return { turn: buildApiKeyTurn(arg) };
     case '铸造':
     case '汉超': return { turn: buildHanchaoTurn(ctx, arg) };
     case '备赛': return { turn: buildCoachTurn(ctx) };
@@ -474,6 +533,7 @@ const NEXT = /下一步|接下来|该做什么|先做什么|从哪(里)?开始|�
 const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|短板|没通过/u;
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
 const SEAL = /印鉴|九门印鉴|核验印鉴|循证印鉴|核验码/u;
+const FULL_REPORT = /(?:自动|一键|全流程|ai|大模型).{0,6}(?:生成|起草|撰写|写)(?:整份|全篇|完整|全套|全)?报告|(?:生成|起草|撰写)全报告/iu;
 const HANCHAO = /铸造|国奖标准|全链条产出|汉超|蒜鸟|武汉城市足球|国奖标杆|标杆样板|双轨赛道/u;
 const COACH = /备赛|参赛指南|八阶|国奖路线|怎么拿国奖/u;
 const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
@@ -502,6 +562,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   const scope = mentionedRooms(input).map(r => r.id).find(lit);
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
   if (SEAL.test(input)) return { turn: sealStatus(ctx) };
+  if (FULL_REPORT.test(input)) return { turn: buildFullReportTurn(ctx, input.replace(FULL_REPORT, '').trim()) };
   if (HANCHAO.test(input)) return { turn: buildHanchaoTurn(ctx, input) };
   if (COACH.test(input)) return { turn: buildCoachTurn(ctx) };
   if (PLOT_STUDIO.test(input)) return { turn: buildChartStudioTurn(ctx, input) };

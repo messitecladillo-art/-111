@@ -575,7 +575,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string) => void } {
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string, customPack?: import("@/lib/agent/hanchao-benchmark").HanchaoBenchmarkPack) => void } {
   const { session, identityEpoch, loading } = useHostedSession();
   // The agent keeps its report draft in this browser, for whoever is signed in; the classic workbench does not.
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
@@ -599,8 +599,8 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
   // Until the editor has opened in this visit, the stored draft stands for the report.
   const report=edited&&edited.owner===draftOwner?edited.content:storedDraft;
   const reportChanged=useCallback((content:EditorContent)=>{setReport({owner:draftOwner,content});if(draftOwner)saveReportDraft(draftOwner,content);},[draftOwner]);
-  const loadBenchmark = useCallback((id: string) => {
-    const pack = forgeNationalAwardPack(id === 'current' ? undefined : id, exchange.design?.design ?? null);
+  const loadBenchmark = useCallback((id: string, customPack?: import("@/lib/agent/hanchao-benchmark").HanchaoBenchmarkPack) => {
+    const pack = customPack ?? forgeNationalAwardPack(id === 'current' ? undefined : id, exchange.design?.design ?? null);
     handoffs.setDesign({ design: pack.design, pending: false });
     handoffs.setDataset(pack.dataset);
     reportChanged(pack.report);

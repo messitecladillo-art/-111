@@ -82,7 +82,7 @@ const EMPTY_MESSAGES: Message[] = [];
 const PANEL_KEY = 'evix.agent.panel-width.v1';
 // Gutters: the canvas padding on the right and the margins between floating panels (see AgentShell.module.css).
 const RAIL = 52, SIDEBAR = 264, GUTTERS = 24, MIN_PANEL = 480, MIN_TALK = 360, INSPECTOR = 248;
-const SUGGESTIONS = ['下一步做什么', '/铸造', '/绘图', '/编程', '/撰稿', '/印鉴'];
+const SUGGESTIONS = ['下一步做什么', '/全报告', '/铸造', '/绘图', '/编程', '/撰稿', '/印鉴'];
 const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
 
 /** The panel width remembered in this browser, if any; a width is a convenience only. */
@@ -571,6 +571,123 @@ export default function AgentShell() {
           go('editor');
           say([span('已交给右侧的报告与 PPT 写入；写了哪些内容会显示在编辑器顶部，可以撤销。', 'dim')]);
           break;
+        case 'setApiKey': {
+          try {
+            window.sessionStorage.setItem('evix.agent.direct-api-key.v1', action.apiKey.trim());
+          } catch {
+            /* sessionStorage unavailable */
+          }
+          break;
+        }
+        case 'generateFullReport': {
+          const topicLabel = action.topic.trim() || latest.current.report?.title || latest.current.design?.title || '当前参赛研究课题';
+          let sessionKey = '';
+          try {
+            sessionKey = window.sessionStorage.getItem('evix.agent.direct-api-key.v1') ?? '';
+          } catch {
+            /* ignore */
+          }
+          const waitingMsg: Message = {
+            ...stamp(),
+            role: 'agent',
+            model: {
+              service: 'DeepSeek 全流程撰稿引擎',
+              provider: 'deepseek',
+              modelName: 'deepseek-chat',
+              step: 1,
+              status: 'running',
+            },
+            turn: {
+              lines: [
+                [
+                  span('正在调用 '),
+                  span('DeepSeek (deepseek-chat)', 'strong'),
+                  span(` 全流程并发撰写「${topicLabel}」的 `),
+                  span('9 章 26 节', 'gold'),
+                  span(' 完整报告（Wave 1 主体与实证 22 节 → Wave 2 摘要与 3W1H 结论 4 节 → 06 六大顾问终审自愈，预计约 30–40 秒）…', 'dim'),
+                ],
+              ],
+            },
+          };
+          threads.append([waitingMsg]);
+          void fetch('/api/agent/full-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              topic: action.topic.trim() || undefined,
+              mode: action.mode ?? 'demonstration',
+              apiKey: sessionKey || undefined,
+            }),
+          })
+            .then(async res => {
+              const data = await res.json();
+              if (!res.ok || !data?.ok || !data?.pack) {
+                throw new Error(data?.message || `HTTP ${res.status}`);
+              }
+              loadBenchmark(action.topic.trim() || 'current', data.pack);
+              go('editor');
+              const s = data.summary;
+              mark(
+                waitingMsg.id,
+                'ready',
+                'DeepSeek · 00-06 全流程引擎',
+                1,
+                s?.totalTokens
+                  ? { inputTokens: Math.round(s.totalTokens * 0.7), outputTokens: Math.round(s.totalTokens * 0.3) }
+                  : null,
+              );
+              replace(waitingMsg.id, {
+                lines: [
+                  [
+                    span('已由 '),
+                    span('DeepSeek 全流程 Agent', 'strong'),
+                    span(' 自动生成全篇报告并写入右侧编辑器：共撰写 '),
+                    span(`${s.totalSectionsGenerated} 节`, 'gold'),
+                    span('、'),
+                    span(`${s.totalParagraphsWritten} 段`, 'gold'),
+                    span(' 正文，精准绑定 '),
+                    span(`${s.totalFactsCited} 项`, 'gold'),
+                    span(' {F编号} 登记事实，对标体检得分 '),
+                    span(`${s.finalScore} / 100`, 'gold'),
+                    span('，六大顾问 '),
+                    span(`${s.advisorPassCount} / ${s.advisorTotalCount}`, 'gold'),
+                    span(' 零问题通过（耗时 '),
+                    span(`${(s.totalDurationMs / 1000).toFixed(1)}s`, 'gold'),
+                    span('）。'),
+                  ],
+                ],
+                cards: [
+                  {
+                    kind: 'tool',
+                    title: `全报告生成回执 · ${data.topic?.shortTitle || topicLabel}`,
+                    lines: [
+                      [span('00 四张交接台账', 'teal'), span(`　结论证据表 ${data.contract?.claimLedger?.length ?? 4} 条 · 文献核验表 ${data.contract?.literatureLedger?.length ?? 3} 条 · 统计结果表 ${data.contract?.statsLedger?.length ?? 6} 条 · 图表登记表 ${data.contract?.figureLedger?.length ?? 7} 条`, 'dim')],
+                      [span('05 两波事实锁死', 'teal'), span(`　LLM 成功生成 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
+                      [span('06 六顾问终审自愈', 'teal'), span(`　自动执行 ${data.repairsApplied?.length ?? 0} 项方法学与互证修复 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
+                    ],
+                  },
+                ],
+                chips: [
+                  { label: '查看九门金石印鉴', action: { type: 'say', text: '/印鉴' }, primary: true },
+                  { label: '/写报告', action: { type: 'say', text: '/写报告' } },
+                  { label: '/绘图', action: { type: 'say', text: '/绘图' } },
+                  { label: '/编程', action: { type: 'say', text: '/编程' } },
+                ],
+              });
+            })
+            .catch(err => {
+              mark(waitingMsg.id, 'failed', 'DeepSeek · 00-06 全流程引擎', 1);
+              replace(waitingMsg.id, {
+                lines: [
+                  [span('全报告自动生成未完成：', 'error'), span(err instanceof Error ? err.message : '请求异常')],
+                ],
+                chips: [
+                  { label: '重试 /全报告', action: { type: 'say', text: `/全报告 ${action.topic}`.trim() }, primary: true },
+                ],
+              });
+            });
+          break;
+        }
         case 'loadBenchmark':
           loadBenchmark(action.benchmarkId);
           go('editor');

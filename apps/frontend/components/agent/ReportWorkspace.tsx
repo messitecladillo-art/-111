@@ -38,6 +38,8 @@ export function ReportNav({ content, picked, onPick, onSay }: { content: EditorC
     </ol>
     <p className={styles.label}>AI 写作工具</p>
     <div className={styles.tools}>
+      <button type="button" data-primary="true" onClick={() => onSay('/全报告')} title="调用大模型按 00-06 技能包一次性撰写全部 26 节正文并执行六顾问自愈">
+        <Icon name="spark" />AI 全流程生成全报告</button>
       <button type="button" disabled={!draftable} onClick={() => section && onSay(`/起草 ${section.title}`)} title={draftable ? `用你的模型服务起草「${section!.title}」` : '先在纸面或目录里选一节'}>
         <Icon name="edit" />起草本节{section && draftable ? <small>{section.title}</small> : null}</button>
       <button type="button" onClick={() => onSay('/写入')}><Icon name="plus" />把登记结果写进报告</button>

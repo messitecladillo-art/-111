@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildSkillPackContract,
+  generateFullReportWithAgent,
+  parseAndHydrateSectionDraft,
+  sanitizeModelParagraph,
+  WAVE_1_SECTION_NODES,
+  WAVE_2_SYNTHESIS_NODES,
+} from '../lib/agent/full-report-pipeline.ts';
+import {
   buildHanchaoBenchmarkPack,
   decomposeContestTopic,
   diagnoseAgainstHanchao,
@@ -203,4 +211,93 @@ test('Universal National Award Forging Engine de-overfits Hanchao and forges arb
 
   const adaptiveWriting = buildWritingStudioCardData(customCtx, '3w1h');
   assert.ok(adaptiveWriting.templates[0].defaultDraft.includes('新能源汽车'));
+});
+
+test('Full-Report Skill-Pack Pipeline (00-06) builds 4 stage-handoff ledgers, sanitizes non-statistical digits, and generates 26/26 sections at 100/100 score', async () => {
+  const topic = decomposeContestTopic('校园AI自习室与智慧书院空间错峰预约及学习效能循证调研');
+  const pack = await forgeNationalAwardPack('campus-ai');
+  const contract = buildSkillPackContract(pack, topic, 'demonstration');
+
+  // 1. Verify 00-04 four canonical stage-handoff ledgers and RQ design matrix
+  assert.equal(contract.mode, 'demonstration');
+  assert.ok(contract.claimLedger.length >= 4);
+  assert.ok(contract.literatureLedger.length >= 3);
+  assert.ok(contract.statsLedger.length >= 6);
+  assert.ok(contract.figureLedger.length >= 6);
+  assert.equal(contract.designMatrix.length, 3);
+
+  // 2. Verify sanitizeModelParagraph preserves {F..}/{G..}/{R..} while converting Q11/95%/3W1H/ordinals
+  const raw = '在 Q11 题项与 5 级量表中，有效样本为{F2}（有效回收率{F1}），在 95%置信区间下详见{G1}与第1象限对策（遵循 3W1H 闭环）{R1}。';
+  const cleaned = sanitizeModelParagraph(raw);
+  assert.ok(cleaned.includes('{F2}'));
+  assert.ok(cleaned.includes('{F1}'));
+  assert.ok(cleaned.includes('{G1}'));
+  assert.ok(cleaned.includes('{R1}'));
+  assert.equal(/[0-9]/u.test(cleaned.replace(/\{(?:F|G|R)\d+\}/gu, '')), false);
+
+  // 3. Verify parseAndHydrateSectionDraft handles unescaped inner quotes and hydrates tokens
+  const mockTokens = {
+    facts: [
+      { id: 'F1', text: '有效回收率为94.4%', value: '94.4%' },
+      { id: 'F2', text: '有效样本为641份', value: '641份' },
+    ],
+    exhibits: [{ id: 'G1', text: '图1', value: '[[图:res-1]]' }],
+    references: [{ id: 'R1', text: '文献1', value: '[1]' }],
+  };
+  const hydrated = parseAndHydrateSectionDraft(
+    '{"paragraphs":[{"text":"本节基于有效样本{F2}（回收率{F1}）开展"双轨对比"实证检验，结果如{G1}所示{R1}。"}]}',
+    mockTokens,
+  );
+  assert.equal(hydrated.paragraphs.length, 1);
+  assert.equal(hydrated.droppedParagraphs, 0);
+  assert.ok(hydrated.paragraphs[0].includes('641份'));
+  assert.ok(hydrated.paragraphs[0].includes('[[图:res-1]]'));
+  assert.ok(hydrated.paragraphs[0].includes('[1]'));
+
+  // 4. Verify full 26-section pipeline with mock LLM fetcher achieves 26/26 sections, 100/100 score, and 6/6 advisors with 0 issues
+  const mockFetcher = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    const promptText = body.messages[0].content;
+    const hasG1 = promptText.includes('"id":"G1"');
+    const hasR1 = promptText.includes('"id":"R1"');
+    const paragraphs = [
+      {
+        text: `本研究围绕核心议题开展分层随机抽样与多维量表测量，基于有效样本{F2}（有效回收率{F1}，预调查样本{F3}）构建完整证据链${hasG1 ? '，核心图表详见{G1}' : ''}${hasR1 ? '，理论脉络参见{R1}{R2}{R3}' : ''}。`,
+      },
+      {
+        text: '在调查执行与统计建模过程中，研究团队严格遵循注意力甄别、作答时长底线、逻辑矛盾校验、规律作答筛查与缺失值多重插补五道质控工序，由行业主管部门、核心运营方与技术平台团队协同推进季度监测指标复盘。',
+      },
+      {
+        text: '关键词：正大杯市场调查、分层抽样设计、五维体验量表、多元统计检验、循证决策转化',
+      },
+    ];
+    return new Response(
+      JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({ paragraphs }) } }],
+        usage: { prompt_tokens: 500, completion_tokens: 200, total_tokens: 700 },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  };
+
+  const fullRes = await generateFullReportWithAgent({
+    topic: '校园AI自习室与智慧书院空间错峰预约及学习效能循证调研',
+    mode: 'demonstration',
+    llm: { apiKey: 'sk-test-mock', concurrency: 6 },
+    fetcher: mockFetcher,
+  });
+
+  assert.equal(fullRes.summary.totalSectionsGenerated, WAVE_1_SECTION_NODES.length + WAVE_2_SYNTHESIS_NODES.length);
+  assert.equal(fullRes.summary.llmSuccessCount, 26);
+  assert.equal(fullRes.summary.finalScore, 100);
+  assert.equal(fullRes.summary.advisorPassCount, 6);
+  assert.equal(fullRes.summary.advisorTotalCount, 6);
+
+  // 5. Verify router commands /全报告 and /密钥
+  const emptyLight = illuminate({ design: null, dataset: null, report: null, resultPending: false });
+  const rFull = route('/全报告 智慧养老助餐服务调研', { room: null, light: emptyLight });
+  assert.ok('turn' in rFull && rFull.turn.chips?.some(c => c.action.type === 'generateFullReport'));
+
+  const rKey = route('/密钥 sk-test1234567890', { room: null, light: emptyLight });
+  assert.ok('turn' in rKey && rKey.turn.act?.type === 'setApiKey');
 });
