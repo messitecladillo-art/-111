@@ -33,9 +33,9 @@ import { useHired, useShowCode, useStage } from './code-view';
 import Advisors from './Advisors';
 import { ADVISORS, advisorReading } from '@/lib/agent/advisors';
 import CursorTrail from './CursorTrail';
-import ReportPaper from '@/components/editors/ReportPaper';
+import ReportPaper, { type DocFormatMode } from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
-import { ReportLiveTheater, ReportXrefDock, useLiveReportChoreography } from './ReportLiveTheater';
+import { ReportLiveTheater, useLiveReportChoreography } from './ReportLiveTheater';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
@@ -135,7 +135,9 @@ export default function AgentShell() {
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
+  const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
   const [liveWriting, setLiveWriting] = useState<LiveWritingStatus | null>(null);
+  const autoHydratedRef = useRef(false);
   const autoFollowRef = useRef(true);
   const toggleAutoFollow = useCallback(() => {
     autoFollowRef.current = !autoFollowRef.current;
@@ -160,6 +162,25 @@ export default function AgentShell() {
     if (box && target) box.scrollTo({ top: box.scrollTop + target.getBoundingClientRect().top - box.getBoundingClientRect().top - 24, behavior: 'smooth' });
   }, []);
   const choreo = useLiveReportChoreography(paperRef, paperContent, pickSection);
+
+  // When entering the middle report canvas on an untouched skeleton, automatically hydrate the full 9-chapter 26-section
+  // standard report so the canvas renders complete A4 pages, TOC, three-line tables, and built-in SVG figures.
+  useEffect(() => {
+    if (stage !== 'paper' || autoHydratedRef.current) return;
+    const isBareSkeleton =
+      (paperContent.quality?.results?.length ?? 0) === 0 &&
+      paperContent.report.length <= 6 &&
+      paperContent.report.some(s => /写作提示】/u.test(s.body));
+    if (isBareSkeleton) {
+      autoHydratedRef.current = true;
+      loadBenchmark('current');
+      window.setTimeout(() => {
+        if (latest.current.liveReport) {
+          choreo.playFullTheaterShowcase(latest.current.liveReport);
+        }
+      }, 260);
+    }
+  }, [stage, paperContent, loadBenchmark, choreo]);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
   // The plan makes room for the sections the registered results belong in.
   const plan = useMemo(() => deferredView.report ? reportPlan(deferredView.report, light.benchmark, (deferredView.report.quality?.results ?? []).map(suggestedNode)) : null, [deferredView, light]);
@@ -708,13 +729,13 @@ export default function AgentShell() {
                       replace(waitingMsg.id, {
                         lines: [
                           [
-                            span('🤖 首席撰稿官正在中间报告画布逐字落笔：已完成 '),
+                            span('正在中间报告画布逐字落笔：已完成 '),
                             span(`${evt.completed}/${evt.total} 节`, 'gold'),
                             span(' · 累计 '),
                             span(`${runningParagraphs} 段`, 'gold'),
-                            span(' · 锚定 '),
+                            span(' · 已关联 '),
                             span(`${citedFactsSet.size} 项`, 'gold'),
-                            span(' 实证数据与图表 · 最新落笔「'),
+                            span(' 统计数据与图表 · 最新落笔「'),
                             span(evt.title ?? '', 'strong'),
                             span('」'),
                           ],
@@ -728,7 +749,7 @@ export default function AgentShell() {
                           ? {
                               ...prev,
                               phase: 'repair',
-                              lastSectionTitle: `🔍 终审修辞官正在划改病句并巡检全篇版式（完成 ${evt.repairsApplied?.length ?? 0} 项修订）`,
+                              lastSectionTitle: `正在执行学术表述修订与版式规整（已完成 ${evt.repairsApplied?.length ?? 0} 项修订）`,
                             }
                           : null,
                       );
@@ -798,9 +819,9 @@ export default function AgentShell() {
                     kind: 'tool',
                     title: `全报告实时撰稿与审稿回执 · ${finalData.topic?.shortTitle || topicLabel}`,
                     lines: [
-                      [span('🔗 交叉引证图谱', 'teal'), span(`　核心结论 ${finalData.contract?.claimLedger?.length ?? 4} 条 · 参考文献 ${finalData.contract?.literatureLedger?.length ?? 3} 篇 · 统计模型 ${finalData.contract?.statsLedger?.length ?? 6} 项 · 图表目录 ${finalData.contract?.figureLedger?.length ?? 7} 项`, 'dim')],
-                      [span('🤖 首席撰稿落笔', 'teal'), span(`　DeepSeek 实时撰写 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
-                      [span('🔍 终审划改定稿', 'teal'), span(`　完成 ${finalData.repairsApplied?.length ?? 0} 项方法学修辞划改与版式巡检 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
+                      [span('交叉引用索引', 'teal'), span(`　核心结论 ${finalData.contract?.claimLedger?.length ?? 4} 条 · 参考文献 ${finalData.contract?.literatureLedger?.length ?? 3} 篇 · 统计模型 ${finalData.contract?.statsLedger?.length ?? 6} 项 · 图表目录 ${finalData.contract?.figureLedger?.length ?? 7} 项`, 'dim')],
+                      [span('正文实时撰写', 'teal'), span(`　DeepSeek 实时撰写 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
+                      [span('审阅修订定稿', 'teal'), span(`　完成 ${finalData.repairsApplied?.length ?? 0} 项方法学修辞划改与版式校验 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
                     ],
                   },
                 ],
@@ -1059,22 +1080,14 @@ export default function AgentShell() {
         {stage === 'advisors' && <Advisors benchmark={paperBenchmark} hired={hired} onHire={setHired} />}
         {stage === 'paper' && <div ref={paperRef} className={styles.paperStage} role="region" aria-label="报告实时排版">
           <PaperToolbar
+            content={paperContent}
             section={paperContent.report.find(s => s.id === pickedSection) ?? null}
             results={paperContent.quality?.results ?? []}
             onInsert={insertIntoSection}
             onEdit={() => go('editor')}
             onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })}
             onInstantForge={topic => agent.perform({ type: 'loadBenchmark', benchmarkId: topic || 'current' })}
-            liveWriting={liveWriting}
-            onToggleAutoFollow={toggleAutoFollow}
-            onJumpToSection={pickSection}
-          />
-          <ReportXrefDock
-            content={paperContent}
-            activeTargetKey={choreo.activeTargetKey}
-            onTriggerXref={choreo.triggerXrefSynapse}
-            onSweepAllXrefs={choreo.sweepAllXrefs}
-            onReplayTheater={() => {
+            onPlayChoreography={() => {
               if ((paperContent.quality?.results?.length ?? 0) === 0) {
                 loadBenchmark('current');
                 window.setTimeout(() => {
@@ -1084,8 +1097,11 @@ export default function AgentShell() {
                 choreo.playFullTheaterShowcase(paperContent);
               }
             }}
-            onStartLiveDeepSeek={() => agent.perform({ type: 'generateFullReport', topic: '' })}
-            theaterBusy={choreo.robotVisible || !!liveWriting?.active}
+            liveWriting={liveWriting}
+            onToggleAutoFollow={toggleAutoFollow}
+            onJumpToSection={pickSection}
+            docFormat={docFormat}
+            onChangeDocFormat={setDocFormat}
           />
           <ReportLiveTheater
             paperRef={paperRef}
@@ -1104,6 +1120,10 @@ export default function AgentShell() {
             typingState={choreo.typingState}
             reviewState={choreo.reviewState}
             formatScanSectionId={choreo.formatScanSectionId}
+            activeCatalogKey={choreo.activeTargetKey}
+            onCatalogHover={(attr, id) => choreo.triggerXrefSynapse(attr, id, false)}
+            onCatalogClick={(attr, id) => choreo.triggerXrefSynapse(attr, id, true)}
+            docFormat={docFormat}
           />
         </div>}
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>

@@ -101,3 +101,58 @@
 .liveHudSection:hover { border-color: var(--c-accent); }
 .liveHudFollow { padding: 3px 9px; border: 1px solid var(--c-line); border-radius: 999px; background: var(--c-raise); color: var(--c-dim); font: inherit; font-size: 11.5px; cursor: pointer; }
 .liveHudFollow[aria-pressed="true"] { border-color: #1f6b5f; color: #1f6b5f; font-weight: 500; }
+
+/* Collapsible Live LaTeX (.tex) Source Drawer */
+.latexSourceDrawer {
+  margin-top: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 10px 28px -12px rgba(15, 23, 42, 0.35);
+}
+.latexSourceHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #1e293b;
+  background: #1e293b;
+  font-size: 12px;
+}
+.latexSourceHead b {
+  color: #f8fafc;
+  font-family: var(--c-mono);
+}
+.latexSourceActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.latexSourceActions button {
+  padding: 3px 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.latexSourceActions button:hover {
+  border-color: #2dd4bf;
+  color: #2dd4bf;
+}
+.latexSourcePre {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 240px;
+  overflow: auto;
+  font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
