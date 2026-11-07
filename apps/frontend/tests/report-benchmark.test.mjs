@@ -121,6 +121,21 @@ test('correlation written as causation and undeclared simulated data are both fl
   assert.equal(check(report, 'simulated').status, 'pass');
 });
 
+test('a confirmed finding resting on simulated results is not an observed finding unless the report says it is a simulation', () => {
+  const content = createEditorContent();
+  content.version = 2;
+  content.quality = { version: 1, results: [result('r1', { classification: 'simulated' })], findings: [finding('f1', '延长开放时间')] };
+  content.report = [section('s', '一、分析', '当前样本中，夜间开放需求较高。')];
+  let report = benchmarkReport(content);
+  assert.equal(check(report, 'findingEvidence').status, 'fail');
+  assert.match(check(report, 'findingEvidence').detail, /发现r1|发现f1/);
+  content.subtitle = '教学模拟演示';
+  report = benchmarkReport(content);
+  assert.equal(check(report, 'findingEvidence').status, 'pass');
+  content.quality.results[0].classification = 'user_provided';
+  assert.equal(check(benchmarkReport(content), 'findingEvidence').status, 'na');
+});
+
 test('summary references resolve to actual exhibits without requiring an exhibit in every section',()=>{
  const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1')],findings:[]}};
  content.report=[section('s','一、分析','根据[[图:f]]组织判断。',{blocks:[{id:'f',kind:'chart',text:'分布',evidenceId:'r1',valueColumn:1}]}),section('d','二、讨论','综合[[图:f]]，提出待验证解释。')];
@@ -193,4 +208,31 @@ test('figure and table counts remain descriptive regardless of page length or re
  const content={...createEditorContent(),version:2,quality:{version:1,results:[result('r1')],findings:[]}};
  content.report=[section('s','一、分析','当前结果需继续解释。',{blocks:[{id:'c',kind:'chart',text:'分布',evidenceId:'r1',valueColumn:1},{id:'t',kind:'table',text:'明细',evidenceId:'r1',valueColumn:1}]})];
  const checks=benchmarkReport(content);for(const id of ['length','figureCount','tableCount','numeric','paragraphs'])assert.equal(check(checks,id).status,'na',id);
+});
+
+test('readings a reviewer would reject are flagged, and correct wording earns nothing by itself', () => {
+  const content = createEditorContent();
+  const run = body => { content.report = [section('s', '一、分析', body)]; return benchmarkReport(content); };
+  let report = run('受访者整体满意，平均分 4.1 分，样本 400 人，结构稳定，后续再作比较。');
+  for (const id of ['oddsRatio', 'rankMedian', 'nullResult', 'clusterCircular', 'dynamicClaim', 'simulationRobust', 'samplingWording']) assert.equal(check(report, id).status, 'na', id);
+  report = run('Logistic 回归中，有观赛经历者的 OR 为 2.3，即观赛概率是无经历者的 2.3 倍。\nMann-Whitney 检验表明两组中位数存在差异，p<0.01。\n性别差异不显著（p>0.05），说明男女之间没有差异。');
+  for (const id of ['oddsRatio', 'rankMedian', 'nullResult']) assert.equal(check(report, id).status, 'fail', id);
+  assert.match(check(report, 'oddsRatio').detail, /优势/);
+  content.report = [section('a', '摘要', '结果显示，有经历者的观赛概率是无经历者的 2.3 倍（OR=2.3）。'), section('s', '一、分析', '见正文。')];
+  assert.equal(check(benchmarkReport(content), 'oddsRatio').status, 'fail', 'the abstract is checked too');
+  report = run('有观赛经历者的优势是无经历者的 2.3 倍（OR=2.3，95% CI 1.4–3.8）。\nMann-Whitney 检验表明两组的分布位置不同（p<0.01）。\n性别差异不显著（p>0.05），95% 置信区间显示差异不超过 0.3 分。');
+  for (const id of ['oddsRatio', 'rankMedian', 'nullResult']) { assert.equal(check(report, id).status, 'na', id); assert.match(check(report, id).detail, /未见此问题/, id); }
+});
+
+test('cluster self-validation, cross-sectional evolution, simulated robustness and borrowed sampling names are caught', () => {
+  const content = createEditorContent();
+  const run = body => { content.report = [section('s', '一、分析', body)]; return benchmarkReport(content); };
+  let report = run('对四类群体的聚类变量做方差分析，各变量差异显著，说明聚类效果良好。\n用户的消费意愿沿着认知、尝试、依赖三个阶段演化。\n基于模拟数据重复 500 次，结果的稳健性检验通过。');
+  for (const id of ['clusterCircular', 'dynamicClaim', 'simulationRobust']) assert.equal(check(report, id).status, 'fail', id);
+  report = run('聚类方案在 200 次重抽样中保持稳定，未参与聚类的消费频率在各类间分布不同。\n根据横截面结果，我们提出认知、尝试、依赖三阶段演化的路径假设，有待追踪验证。\n剔除作答过短样本后重新估计，系数方向与大小基本不变，稳健性检验通过。');
+  for (const id of ['clusterCircular', 'dynamicClaim', 'simulationRobust']) { assert.equal(check(report, id).status, 'na', id); assert.match(check(report, id).detail, /未见此问题/, id); }
+  content.report = [section('d', '（三）抽样设计', '本次采用多阶段随机抽样，通过问卷星在朋友圈和社群转发发放问卷。')];
+  assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'fail');
+  content.report = [section('d', '（三）抽样设计', '本次采用便利抽样，通过问卷星在朋友圈和社群转发发放问卷，结论不外推到总体。')];
+  assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'na');
 });

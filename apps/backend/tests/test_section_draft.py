@@ -41,6 +41,20 @@ def test_a_malformed_request_is_refused(change):
         draft.request_input(request(**change))
 
 
+def test_the_prompt_orders_a_result_paragraph_and_names_the_common_misreadings():
+    prompt = draft.draft_prompt(request())
+    assert "样本与条件、结果与对应的图表、它支持的解释、因设计限制尚不能推及的范围" in prompt
+    assert "不是概率的倍数" in prompt and "不显著不写成没有差异" in prompt and "模拟数据的结果不写成调查发现" in prompt
+
+
+def test_a_request_at_the_browser_budget_still_fits_the_prompt():
+    # The browser trims a draft request to 34000 bytes; the rules added to the prompt must not push such a request over.
+    data = request(facts=[{"id": f"F{i + 1}", "text": "长" * 150} for i in range(60)], existing="长" * 2000)
+    assert len(json.dumps(data, ensure_ascii=False).encode("utf-8")) >= 33000
+    assert draft.request_input(data) == data
+    assert draft.encoded_size(draft.draft_prompt(data)) <= draft.PROMPT_BYTES
+
+
 def test_consent_and_size_are_explained():
     with pytest.raises(ApiError) as refused:
         draft.request_input(request(consent=False))

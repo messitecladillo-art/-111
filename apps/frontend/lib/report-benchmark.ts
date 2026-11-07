@@ -266,6 +266,36 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const causal = paragraphs.filter(l => /相关|关联/.test(l) && /导致|造成|决定了|引起了|使得/.test(l));
   add('causal', 'actions', '相关不写成因果', prose.length ? (causal.length === 0 ? 1 : causal.length === 1 ? 0.5 : 0) : null,
     causal.length ? `${causal.length} 段在相关性结果旁使用了因果措辞，如「${causal[0].slice(0, 24)}…」。` : '没有发现把相关写成因果的措辞。');
+  // Misreadings a reviewer catches in survey reports. They only take away: writing about a method correctly earns nothing,
+  // as naming a method earns nothing, so a report cannot gain points by mentioning more methods.
+  const misuse = (id: string, label: string, topic: RegExp, wrong: (line: string) => boolean, advice: string, dimension: BenchmarkDimension = 'analysis') => {
+    // The abstract is read first and quoted most, so its wording is checked with the body's.
+    const about = [...paragraphs, ...(abstract?.lines ?? [])].filter(l => topic.test(l)), bad = about.filter(wrong);
+    add(id, dimension, label, bad.length ? 0 : null,
+      bad.length ? `${bad.length} 段有此问题，如「${bad[0].slice(0, 28)}…」。${advice}` : about.length ? '相关表述未见此问题。' : '正文未涉及。');
+  };
+  misuse('oddsRatio', 'OR 不写成概率倍数', /\bOR\b|优势比|发生比|比值比/u,
+    l => /(概率|可能性|几率)[^。；]{0,12}(是|为|提高|增加|高出|达到)[^。；]{0,8}[0-9０-９.]+\s*倍/u.test(l),
+    'OR 是优势（odds）之比，不等于概率的倍数；写成「优势是…的 x 倍」，或另算边际效应说明概率变化。');
+  misuse('rankMedian', '秩检验不写成中位数检验', /秩和|秩检验|Mann|Whitney|Kruskal|Wilcoxon/iu,
+    l => /中位数[^。；]{0,8}(相等|相同|无差异|没有差异|存在差异|有差异)/u.test(l),
+    '秩检验比较的是分布或相对位置，只有在各组分布形状相同时才能读作中位数之差。');
+  misuse('nullResult', '不显著不写成没有差异', /不显著|未达到显著|p\s*[>＞]\s*0?\.05/iu,
+    l => /(不显著|未达到显著|p\s*[>＞]\s*0?\.05)[^。]{0,16}(说明|表明|证明|可见)[^。]{0,10}(没有|不存在|无)(差异|影响|关系|关联)/iu.test(l),
+    '不显著只说明这批样本不足以排除没有差异，结合置信区间说明能排除多大的差异。');
+  misuse('clusterCircular', '聚类效果不用聚类变量自证', /聚类|类别间|各类群|画像/u,
+    l => /(聚类|分类|分群)[^。]{0,24}(合理|有效|效果良好|区分度)/u.test(l) && /(显著差异|差异显著|方差分析|ANOVA|F\s*检验)/iu.test(l),
+    '用参与聚类的变量做组间检验，差异是聚类构造出来的；请用稳定性（重抽样、多个 k）或未参与聚类的变量来验证。');
+  misuse('dynamicClaim', '横截面数据不声称动态演化', /演化|演进|动态演变|状态转移|系统动力学/u,
+    l => !/纵向|追踪|面板数据|多期|时间序列|重复测量|情境推演|路径假设|假设/u.test(proseText) && /演化|演进|动态演变|状态转移/u.test(l),
+    '一次横截面调查观察不到演化；写成「路径假设」或「情境推演」，或补充纵向数据。');
+  misuse('simulationRobust', '模拟结果不当作稳健性检验', /稳健性|鲁棒性/u,
+    l => /模拟|仿真|合成数据/u.test(l) && /(通过|稳健|可靠)/u.test(l),
+    '模拟或合成数据得到的结果只说明模型在假设下的表现，不能当作真实数据的稳健性检验。');
+  const onlineRecruiting = /问卷星|网络发放|线上发放|线上链接|朋友圈|社交媒体|社群转发|便利抽样|滚雪球|自愿作答|自愿参与/u;
+  misuse('samplingWording', '抽样名称与实际招募一致', /随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样/u,
+    l => !samplingTable && onlineRecruiting.test(sampling.flatMap(s => s.lines).join('\n') + '\n' + l),
+    '线上公开链接、自愿作答和转发招募属于便利或配额方式，不能借用随机抽样的名称；确有抽样框时附上各阶段抽样框表。', 'design');
 
   // 合规披露
   appendixCheck('aiDisclosure', 'compliance', 'AI 工具使用说明', /人工智能|AI|大模型|生成式/i, '附录中没有 AI 工具使用说明。', [], ['appendix.ai']);
@@ -285,6 +315,12 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const declared = /模拟/.test(content.subtitle + content.title) || body.every(s => !(s.section.blocks ?? []).some(b => simulated.some(r => r.id === b.evidenceId)) || /【教学模拟数据/.test(s.section.body + s.section.source));
   add('simulated', 'compliance', '模拟数据已声明', simulated.length ? (declared ? 1 : 0) : null,
     simulated.length ? (declared ? '使用模拟数据的章节均已声明。' : '有章节使用了模拟数据结果但没有声明，不能作为实际调查结论。') : '没有使用模拟数据。');
+  // A confirmed finding is a claim about what was observed; simulated results can only illustrate, unless the whole report says it is a simulation.
+  const simulatedIds = new Set((content.quality?.results ?? []).filter(r => r.classification === 'simulated').map(r => r.id));
+  const simulatedFindings = confirmed.filter(f => f.evidenceIds.some(id => simulatedIds.has(id)));
+  add('findingEvidence', 'compliance', '研究发现不以模拟数据为据', simulatedFindings.length ? (/模拟/.test(content.subtitle + content.title) ? 1 : 0) : null,
+    simulatedFindings.length ? (/模拟/.test(content.subtitle + content.title) ? '报告整体标明为模拟演示，发现只作演示。'
+      : `${simulatedFindings.length} 条已确认的发现以模拟数据为据，如「${simulatedFindings[0].title}」；模拟数据只能演示方法，不能写成调查发现。`) : '没有以模拟数据为据的已确认发现。', [FINDINGS_FIX]);
   appendixCheck('reproducible', 'compliance', '数据与代码说明', /数据|代码|可复现|程序/, '附录中没有数据或代码说明。', [], ['appendix.data', 'appendix.code']);
 
   const dimensions = (Object.keys(BENCHMARK_DIMENSIONS) as BenchmarkDimension[]).map(id => {
