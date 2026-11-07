@@ -31,6 +31,8 @@ import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
 import { useShowCode, useStage } from './code-view';
 import ReportPaper from '@/components/editors/ReportPaper';
+import { ReportInspector, ReportNav } from './ReportWorkspace';
+import { benchmarkReport } from '@/lib/report-benchmark';
 import { createEditorContent } from '@/lib/editor-model';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
@@ -74,7 +76,7 @@ const searchKey = () => /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'C
 const EMPTY_MESSAGES: Message[] = [];
 const PANEL_KEY = 'evix.agent.panel-width.v1';
 // Gutters: the canvas padding on the right and the margins between floating panels (see AgentShell.module.css).
-const RAIL = 52, SIDEBAR = 264, GUTTERS = 24, MIN_PANEL = 480, MIN_TALK = 360;
+const RAIL = 52, SIDEBAR = 264, GUTTERS = 24, MIN_PANEL = 480, MIN_TALK = 360, INSPECTOR = 248;
 const SUGGESTIONS = ['下一步做什么', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '/照度'];
 const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
 
@@ -132,6 +134,18 @@ export default function AgentShell() {
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
+  const paperContent = deferredView.report ?? blankReport;
+  const paperRef = useRef<HTMLDivElement>(null);
+  // The report check runs on whatever the paper shows, the blank template included, so the inspector always has a score.
+  const paperBenchmark = useMemo(() => light.benchmark ?? benchmarkReport(paperContent), [light.benchmark, paperContent]);
+  // The writing inspector stands where the module panel would, while the report fills the centre and no module is open.
+  const inspecting = stage === 'paper' && !panel && !outputId;
+  // A section picked from the outline is scrolled into view on the paper.
+  const pickSection = useCallback((id: string) => {
+    setPickedSection(id);
+    const box = paperRef.current, target = box?.querySelector<HTMLElement>(`[data-report-section="${CSS.escape(id)}"]`);
+    if (box && target) box.scrollTo({ top: box.scrollTop + target.getBoundingClientRect().top - box.getBoundingClientRect().top - 24, behavior: 'smooth' });
+  }, []);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
   // The plan makes room for the sections the registered results belong in.
   const plan = useMemo(() => deferredView.report ? reportPlan(deferredView.report, light.benchmark, (deferredView.report.quality?.results ?? []).map(suggestedNode)) : null, [deferredView, light]);
@@ -566,6 +580,9 @@ export default function AgentShell() {
     return { send, perform, answer };
   }, [go, focusInput, sendToReport]);
 
+  // A writing tool opens the copilot and says its command there, as if typed.
+  const sayFromTool = useCallback((text: string) => { setCopilotOpen(true); agent.send(text); }, [agent]);
+
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
   const { ready: knowledgeReady, search } = knowledge;
@@ -700,7 +717,8 @@ export default function AgentShell() {
         onSelect={threads.select} onRemove={threads.remove} onRename={threads.rename} onCollapse={() => setSideOpen(false)}
         stages={stages} openRoom={panel} onRoom={go} outputs={outputs} openOutput={output?.id ?? null} onOutput={id => { window.location.hash = `output/${encodeURIComponent(id)}`; }}
         todayTokens={todayTokens} onModels={() => go('services')} onExport={exportThread}
-        onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }} />
+        onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}
+        nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} /> : undefined} />
 
       <main className={styles.main} aria-label={stage === 'paper' ? '报告' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
@@ -726,8 +744,8 @@ export default function AgentShell() {
             onClick={exportThread}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
-        {stage === 'paper' && <div className={styles.paperStage} role="region" aria-label="报告实时排版">
-          <ReportPaper content={deferredView.report ?? blankReport} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" />
+        {stage === 'paper' && <div ref={paperRef} className={styles.paperStage} role="region" aria-label="报告实时排版">
+          <ReportPaper content={paperContent} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" />
         </div>}
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
           <BrandMark size={16} />证见 AI{running || looking ? <i aria-label="工作中" /> : null}
@@ -756,8 +774,9 @@ export default function AgentShell() {
         </div>
       </main>
 
-      <section className={styles.panel} hidden={!panel && !output} aria-label={here ? here.name : output ? '产出' : '模块'} data-dialog-background
-        style={{ ['--panel-w' as string]: `${panelWidth}px` }}>
+      <section className={styles.panel} hidden={!panel && !output && !inspecting} aria-label={here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
+        data-inspector={inspecting || undefined} style={{ ['--panel-w' as string]: `${inspecting ? INSPECTOR : panelWidth}px` }}>
+        {inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark} onSay={sayFromTool} onEdit={() => go('editor')} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {here && <header className={styles.panelHead}>
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>
