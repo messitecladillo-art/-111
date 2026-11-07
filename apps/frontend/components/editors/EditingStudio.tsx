@@ -16,7 +16,7 @@ import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
 import EditorRecovery from "./EditorRecovery";
 import { EDITOR_RECOVERY_CHANNEL, EDITOR_RECOVERY_EVENT } from "@/lib/editor-recovery";
 import { useHostedSession } from '../hosted/HostedSession';
-import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportHeadingLevel, reportPart, reportExportOptions } from '@/lib/report-format';
+import { DEFAULT_REPORT_SETTINGS, reportFormatNotices, reportPart, reportExportOptions } from '@/lib/report-format';
 import ReportFormatPanel from './ReportFormatPanel';
 import ReportFramePanel from './ReportFramePanel';
 import EvidenceAppendicesPanel from './EvidenceAppendicesPanel';
@@ -25,14 +25,14 @@ import {appendRegisteredResult} from '@/lib/result-registration';
 import type {ProjectVisualStyle,ReportFigure} from '@/lib/report-figure';
 import LatexWorkbench from './LatexWorkbench';
 import QualityStudio,{QualitySlidePreview} from './QualityStudio';
-import PaperBlocks,{PaperText} from './PaperBlocks';
 import { reportLabels, referenceToken } from '@/lib/report-numbering';
 import {appendQualityResult,QUALITY_LAYOUT_LABELS} from '@/lib/quality-layouts';
 import {type ResultSnapshot} from '@/lib/research-quality';
 import { appendEvidenceSection } from '@/lib/project-report';
 import { applyReportInsert, insertSummary, type ReportInsert } from '@/lib/report-insert';
-import { citationToken, formatReference, referenceNumbers, unfinishedReference, type ReferenceEntry } from '@/lib/references';
+import { citationToken, formatReference, referenceNumbers, type ReferenceEntry } from '@/lib/references';
 import ReferencesPanel from './ReferencesPanel';
+import ReportPaper, { outlineKind, sectionWritten } from './ReportPaper';
 import AppendixHelper from './AppendixHelper';
 import { appendLines } from '@/lib/report-appendices';
 import type { Questionnaire } from '@/lib/questionnaire';
@@ -65,28 +65,6 @@ function subscribeNarrowScreen(listener: () => void) {
   return () => media.removeEventListener("change", listener);
 }
 const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
-/** Outline rows follow the document structure: front matter, chapters, their sections, then back matter. */
-function outlineKind(title: string): "front" | "chapter" | "section" | "plain" | "back" {
-  const part = reportPart(title);
-  if (part === "abstract") return "front";
-  if (part !== "body") return "back";
-  const level = reportHeadingLevel(title);
-  return level === 1 ? "chapter" : level === 2 ? "section" : "plain";
-}
-const sectionWritten = (s: ReportSection) => writtenLines(s.body).length > 0 || !!s.blocks?.some(b => b.kind !== "paragraph" || writtenLines(b.text).length > 0);
-/** Preview lines: guidance left over in old drafts shows as a marked note, since it would still export as text. */
-function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintStart" | "hint"; text: string }[] {
-  const out: { kind: "p" | "blank" | "keywords" | "hintStart" | "hint"; text: string }[] = [];
-  if (!body.trim()) return out;
-  let hint = false;
-  for (const raw of body.split(/\r\n|\r|\n/)) {
-    const line = raw.trim();
-    if (/写作提示】/.test(line)) { hint = true; out.push({ kind: "hintStart", text: line.replace(/^【[^】]*写作提示】/, "") }); continue; }
-    if (hint) { if (!line) { hint = false; out.push({ kind: "blank", text: "" }); } else out.push({ kind: "hint", text: line }); continue; }
-    out.push(!line ? { kind: "blank", text: "" } : /^关键词[:：]/.test(line) ? { kind: "keywords", text: line.replace(/^关键词[:：]\s*/, "") } : { kind: "p", text: raw });
-  }
-  return out;
-}
 
 export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,figureTweak,onFigureTweakHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
   /** A local draft to start from; `savedInBrowser` says the caller keeps the draft in this browser as it changes. */
@@ -719,7 +697,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       <div className={styles.previewPane}>
         <div className={styles.previewHeading}><div><strong>实时预览</strong><span>{mode === "report" ? "连续正文 · A4 导出" : "16:9 · 可编辑文字"}</span></div>{mode === "report" && <button type="button" onClick={()=>{const box=previewRef.current;const target=box&&[...box.querySelectorAll<HTMLElement>('[data-report-section]')].find(element=>element.dataset.reportSection===section.id);if(box&&target)box.scrollTo({top:box.scrollTop+target.getBoundingClientRect().top-box.getBoundingClientRect().top-24,behavior:'instant'});}}>定位当前章节</button>}</div>
         <div className={styles.previewScroll} ref={previewRef} tabIndex={0} role="region" aria-label="实时预览（可滚动）">
-          {mode === "report" ? <article className={styles.paper} aria-label="报告书实时预览"><header><h2>{content.title}</h2><p>{content.subtitle}</p></header>{content.report.map(s => { const kind = outlineKind(s.title), empty = kind !== "chapter" && !sectionWritten(s) && !/写作提示】/.test(s.body) && !(reportPart(s.title) === "references" && cited.order.length > 0); return <section key={s.id} data-report-section={s.id} data-kind={kind} data-part={reportPart(s.title)} className={s.id === section.id ? styles.activeSection : undefined}><h3>{s.title || "未命名章节"}</h3>{empty ? <p className={styles.pending}>待撰写</p> : previewLines(s.body).map((line, i) => line.kind === "blank" ? <p key={i} className={styles.blank} aria-hidden="true"/> : line.kind === "keywords" ? <p key={i} className={styles.keywords}><b>关键词：</b>{line.text}</p> : <p key={i} className={line.kind === "hintStart" ? styles.hintStart : line.kind === "hint" ? styles.hintLine : undefined}>{line.kind === "p" ? <PaperText text={line.text} labels={labels} citations={citations}/> : line.text}</p>)}{reportPart(s.title) === 'references' && cited.order.length > 0 && <ol className={styles.referenceList}>{cited.order.map(entry => <li key={entry.id} data-uncited={uncited.has(entry.id) || undefined}><span>[{citations.get(entry.id)}]</span>{unfinishedReference(entry) ? <em className={styles.pending}>尚未填写题名</em> : formatReference(entry)}</li>)}</ol>}<PaperBlocks section={s} content={content} labels={labels} citations={citations}/>{s.source && <p className={styles.source}>来源 / 说明：{s.source}</p>}</section>; })}</article> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/>}
+          {mode === "report" ? <ReportPaper content={content} activeSectionId={section.id} /> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/>}
         </div>
         <div className={styles.previewFoot}><span>导出后请复核分页与字体</span></div>
       </div>

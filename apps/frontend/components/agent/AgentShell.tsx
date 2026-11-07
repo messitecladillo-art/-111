@@ -29,7 +29,9 @@ import { LightBar } from './Glyphs';
 import { Icon } from './icons';
 import Lobby from './Lobby';
 import OutputPanel from './OutputPanel';
-import { useShowCode } from './code-view';
+import { useShowCode, useStage } from './code-view';
+import ReportPaper from '@/components/editors/ReportPaper';
+import { createEditorContent } from '@/lib/editor-model';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
 import Sidebar from './Sidebar';
@@ -120,6 +122,12 @@ export default function AgentShell() {
   const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
   const outputId = useSyncExternalStore(subscribeHash, currentOutput, () => null);
   const [showCode, setShowCode] = useShowCode(owner);
+  const [stage, setStage] = useStage(owner);
+  // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [pickedSection, setPickedSection] = useState<string | null>(null);
+  // Before any report exists in this browser the paper shows the blank template, as the editor would open it.
+  const [blankReport] = useState(createEditorContent);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
@@ -694,10 +702,14 @@ export default function AgentShell() {
         todayTokens={todayTokens} onModels={() => go('services')} onExport={exportThread}
         onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }} />
 
-      <main className={styles.main} aria-label="对话" data-dialog-background>
+      <main className={styles.main} aria-label={stage === 'paper' ? '报告' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
-          <span className={styles.topTitle}>{thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
+          <span className={styles.topTitle}>{stage === 'paper' ? (deferredView.report?.title ?? blankReport.title) : thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
+          <span className={styles.stageSwitch} role="group" aria-label="中间显示">
+            <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
+            <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
+          </span>
           <span className={styles.workState} data-busy={!!running || looking} role="status">
             <i aria-hidden="true" />{running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
           </span>
@@ -714,6 +726,18 @@ export default function AgentShell() {
             onClick={exportThread}><Icon name="download" /></button>}
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
+        {stage === 'paper' && <div className={styles.paperStage} role="region" aria-label="报告实时排版">
+          <ReportPaper content={deferredView.report ?? blankReport} activeSectionId={pickedSection} onPick={setPickedSection} label="报告实时排版" />
+        </div>}
+        {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
+          <BrandMark size={16} />证见 AI{running || looking ? <i aria-label="工作中" /> : null}
+        </button>}
+        <div className={stage === 'paper' ? styles.copilot : styles.chatColumn} hidden={stage === 'paper' && !copilotOpen}>
+        {stage === 'paper' && <div className={styles.copilotHead}>
+          <BrandMark size={16} /><b>证见 AI</b><small>{thread?.title ?? '新对话'}</small>
+          <span className={styles.spacer} />
+          <button type="button" className={styles.iconButton} aria-label="收起证见 AI" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
+        </div>}
         <div ref={scrollRef} className={styles.scroll}>
           {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>
@@ -729,6 +753,7 @@ export default function AgentShell() {
           projects={projects} projectId={projectId} onProject={threads.setProject}
           services={services} serviceId={chatService?.id ?? ''} onService={id => prefer('research', id)}
           mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
+        </div>
       </main>
 
       <section className={styles.panel} hidden={!panel && !output} aria-label={here ? here.name : output ? '产出' : '模块'} data-dialog-background

@@ -3,24 +3,36 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 /**
- * Whether this person sees the code behind each result: off by default, so the agent stays simple for those who do not
- * program, and switched on by whoever handles the code in a team. It is a per-person view setting, remembered in this
- * browser for an account and for the tab for a guest; it changes nothing that is computed.
+ * A person's view choices, remembered in this browser for an account and for the tab for a guest. They change what is
+ * shown, never what is computed.
  */
-const KEY = 'evix.agent.show-code.v1:', listeners = new Set<() => void>();
+const listeners = new Set<() => void>();
 const storage = (owner: string) => owner === 'guest' ? window.sessionStorage : window.localStorage;
 function subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }
-function read(owner: string | null): boolean {
-  if (!owner) return false;
-  try { return storage(owner).getItem(KEY + owner) === '1'; } catch { return false; }
+
+function useChoice<T extends string>(owner: string | null, key: string, values: readonly T[], fallback: T): [T, (next: T) => void] {
+  const read = () => {
+    if (!owner) return fallback;
+    try { const v = storage(owner).getItem(key + owner); return values.includes(v as T) ? v as T : fallback; } catch { return fallback; }
+  };
+  const value = useSyncExternalStore(subscribe, read, () => fallback);
+  const set = useCallback((next: T) => {
+    if (!owner) return;
+    try { storage(owner).setItem(key + owner, next); } catch { /* Without storage the choice is lost on reload. */ }
+    for (const listener of listeners) listener();
+  }, [owner, key]);
+  return [value, set];
 }
 
+/**
+ * Whether this person sees the code behind each result: off by default, so the agent stays simple for those who do not
+ * program, and switched on by whoever handles the code in a team.
+ */
 export function useShowCode(owner: string | null): [boolean, (on: boolean) => void] {
-  const on = useSyncExternalStore(subscribe, () => read(owner), () => false);
-  const set = useCallback((next: boolean) => {
-    if (!owner) return;
-    try { storage(owner).setItem(KEY + owner, next ? '1' : '0'); } catch { /* Without storage the choice is lost on reload. */ }
-    for (const listener of listeners) listener();
-  }, [owner]);
-  return [on, set];
+  const [value, set] = useChoice(owner, 'evix.agent.show-code.v1:', ['1', '0'] as const, '0');
+  return [value === '1', useCallback((on: boolean) => set(on ? '1' : '0'), [set])];
 }
+
+/** What fills the centre: the conversation, or the report itself with the conversation as a copilot beside it. */
+export type Stage = 'chat' | 'paper';
+export const useStage = (owner: string | null) => useChoice<Stage>(owner, 'evix.agent.stage.v1:', ['chat', 'paper'], 'chat');
