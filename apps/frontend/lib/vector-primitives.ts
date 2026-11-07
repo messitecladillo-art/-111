@@ -24,6 +24,27 @@ export function getVectorPrimitives(id:string,color='#255D87'):VectorPrimitive[]
     {shape:'roundRect',x:267,y:151,width:14,height:60,fill:color,rotation:-39},
     line(202,116,18,16,1,5,'#B79048'),line(220,132,32,-37,1,5,'#B79048'),
   ];
+  if(id==='prism-compass')return [
+    {shape:'ellipse',x:70,y:30,width:180,height:180,stroke:'#B79048',lineWidth:2,opacity:.45},
+    {shape:'ellipse',x:92,y:52,width:136,height:136,stroke:color,lineWidth:3,opacity:.85},
+    {shape:'ellipse',x:122,y:82,width:76,height:76,fill:color,opacity:.14,stroke:'#B79048',lineWidth:2},
+    line(160,14,0,212,.55,2,'#B79048'),line(54,120,212,0,.55,2,'#B79048'),
+    line(96,56,128,128,.35,2,color),line(96,184,128,-128,.35,2,color),
+    {shape:'roundRect',x:146,y:106,width:28,height:28,fill:'#B79048',rotation:45},
+    {shape:'ellipse',x:154,y:24,width:12,height:12,fill:'#B79048'},
+    {shape:'ellipse',x:250,y:114,width:12,height:12,fill:color},
+    {shape:'ellipse',x:154,y:204,width:12,height:12,fill:'#B79048'},
+    {shape:'ellipse',x:58,y:114,width:12,height:12,fill:color},
+  ];
+  if(id==='xiejian-seal')return [
+    {shape:'roundRect',x:76,y:36,width:168,height:168,fill:'#FAF6EE',stroke:'#9E2A2B',lineWidth:4},
+    {shape:'roundRect',x:88,y:48,width:144,height:144,stroke:'#B79048',lineWidth:2,opacity:.75},
+    line(144,48,0,144,.45,2,'#9E2A2B'),line(176,48,0,144,.45,2,'#9E2A2B'),
+    line(88,96,144,0,.45,2,'#9E2A2B'),line(88,144,144,0,.45,2,'#9E2A2B'),
+    rect(102,62,28,22,.85,'#9E2A2B'),rect(150,62,20,22,.7,color),rect(190,62,28,22,.85,'#9E2A2B'),
+    rect(102,108,28,24,.7,color),rect(148,106,24,28,.95,'#B79048'),rect(190,108,28,24,.7,color),
+    rect(102,156,28,22,.85,'#9E2A2B'),rect(150,156,20,22,.7,color),rect(190,156,28,22,.85,'#9E2A2B'),
+  ];
   throw Error('矢量素材不存在。');
 }
 export function vectorPrimitivesSvg(id:string,color:string):string {

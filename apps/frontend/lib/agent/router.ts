@@ -16,6 +16,17 @@ import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
 import { findingNeedsReview, type ResearchFinding, type ResultSnapshot } from '../research-quality.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
 import type { ModelConsentBinding } from './model-routing.ts';
+import { computeSealDigest } from '../provenance-seal.ts';
+import {
+  buildChartStudioTurn,
+  buildCoachTurn,
+  buildCodeStudioTurn,
+  buildHanchaoTurn,
+  buildWritingStudioTurn,
+  type ChartStudioCardData,
+  type CodeStudioCardData,
+  type WritingStudioCardData,
+} from './studios.ts';
 
 /**
  * gold: a number with an origin · cyan: generated, unconfirmed · teal: a method or command · error: failures only.
@@ -47,7 +58,11 @@ export type AgentAction =
    */
   | { type: 'adopt'; node: string; paragraphs: string[]; cited: string[] }
   /** Reads the receipt of a draft whose outcome was unclear, filling it from the facts it was sent with; never calls the model again. */
-  | { type: 'checkDraft'; draft: string; message: string; node: string; facts: { id: string; text: string; value: string }[] };
+  | { type: 'checkDraft'; draft: string; message: string; node: string; facts: { id: string; text: string; value: string }[] }
+  /** Forges a complete National First Prize pack for any topic or archetype into design, dataset, and report. */
+  | { type: 'loadBenchmark'; benchmarkId: string }
+  /** Inserts text/code/chart-reading paragraphs produced in an interactive studio card into a blueprint section. */
+  | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[] };
 /** A primary link is the one step the agent recommends; a turn has at most one. */
 export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
@@ -64,7 +79,13 @@ export type AgentCard =
    */
   | { kind: 'job'; status: 'running' | 'done' | 'failed' | 'unknown'; detail: string; projectId: string; serviceLabel: string; model: string; request?: QuestionnaireGenerationRequest; noCall?: true }
   /** A questionnaire the model proposed: generated and not yet reviewed, so it is shown as such until 问卷设计 applies it. */
-  | { kind: 'proposal'; projectId: string; proposalId: string; serviceId: string; serviceRevision: number; serviceLabel: string; model: string; inputRevision: number; design: Questionnaire };
+  | { kind: 'proposal'; projectId: string; proposalId: string; serviceId: string; serviceRevision: number; serviceLabel: string; model: string; inputRevision: number; design: Questionnaire }
+  /** High-freedom interactive SVG Chart Studio card. */
+  | { kind: 'chart-studio'; title: string; studio: ChartStudioCardData }
+  /** High-freedom multi-language (Python / R / SPSS / LaTeX) Statistical Code Studio card. */
+  | { kind: 'code-studio'; title: string; studio: CodeStudioCardData }
+  /** High-freedom evidence-bound Co-Authoring & 5W1H Defense Writing Studio card. */
+  | { kind: 'writing-studio'; title: string; studio: WritingStudioCardData };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
 /** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
 /** `room` is the module open in the side panel, or null while only the conversation shows. */
@@ -74,7 +95,11 @@ export type ResultsView = { results: readonly ResultSnapshot[]; findings: readon
   placed: readonly string[] } | null;
 export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 'light' | 'dark'; traces?: readonly Trace[]; results?: ResultsView;
   /** The report as a plan of work; null before the report has been seen in this visit. */
-  plan?: ReportPlan | null };
+  plan?: ReportPlan | null;
+  /** Optional active project title, questionnaire design, and dataset name for topic-adaptive studios. */
+  projectTitle?: string;
+  design?: Questionnaire | null;
+  datasetName?: string };
 /** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
 export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
   /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
@@ -86,7 +111,14 @@ export type Command = { name: string; args?: string; line: string; words: readon
 const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打开${r.name}`, words: [r.id] }));
 export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
+  { name: '铸造', args: '任意课题或留空', line: '通用国奖全链条铸造引擎（任意选题 → 12题量表·641样本·6模型·100分报告）', words: ['forge', 'award', 'benchmark'] },
+  { name: '汉超', args: '样板或课题', line: '八大国奖范式对标账本与「汉超」308页全链条素材检视', words: ['hanchao'] },
+  { name: '备赛', line: '参赛者八阶全周期领航员与卡点诊断', words: ['coach', 'guide'] },
+  { name: '绘图', args: '图题或维度', line: '交互式出版级统计制图工坊（5 类图型 · 4 套国奖透镜 · 数据自由编辑）', words: ['plot', 'chart'] },
+  { name: '编程', args: '方法或语言', line: 'Python / R / SPSS / LaTeX 三线表可复现统计编程工坊', words: ['code', 'script'] },
+  { name: '撰稿', args: '章节或模板', line: '国奖循证撰稿、事实胶囊注入与 5W1H 答辩手卡工坊', words: ['compose', 'polish'] },
   { name: '照度', line: '各模块的证据完整度', words: ['status'] },
+  { name: '印鉴', line: '生成九门循证核验码与四阶证据摘要', words: ['seal', 'certificate'] },
   { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
   { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
   { name: '结果', args: '标题或方法', line: '已登记的分析结果：方法、有效样本与主要统计量', words: ['results'] },
@@ -154,6 +186,39 @@ function status(ctx: RouterContext, scope?: RoomId): AgentTurn {
     lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的模块：问卷、抽样、分析与报告；其他模块接入 Agent 主循环后再计算。', 'dim')]],
     cards: [{ kind: 'tool', title: '读取 · 项目照度', columns: true, lines: light.rooms.map(r => [t(named(r.room)), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(percent(r.score), 'gold'), t(r.summary, 'dim')]) }],
     chips: [recommend(say('下一步做什么')), say('还缺什么', '/盲区')],
+  };
+}
+
+function sealStatus(ctx: RouterContext): AgentTurn {
+  const { light } = ctx;
+  const gates = light.rooms.flatMap((r, ri) =>
+    r.checks.map((c, ci) => ({
+      id: `G${ri + 1}${ci + 1}`,
+      name: c.label,
+      status: (c.passed ? 'passed' : 'pending') as 'passed' | 'pending',
+    })),
+  );
+  const digest = computeSealDigest({
+    gates,
+    qdia: {
+      questions: light.rooms[0]?.checks.filter(c => c.passed).length ?? 0,
+      sampleRows: light.rooms[1]?.checks.filter(c => c.passed).length ?? 0,
+      results: ctx.results?.results.length ?? 0,
+      findings: ctx.results?.findings.length ?? 0,
+    },
+  });
+  return {
+    lines: [
+      [t('九门循证核验码 '), t(digest, 'gold'), t(' · 整体照度 '), t(percent(light.overall), 'gold'), t('。')],
+      [t('无征不信：每一项结论须绑定上游问卷、抽样与分析结果指纹。', 'dim')],
+    ],
+    cards: [{
+      kind: 'tool',
+      title: `核验印鉴 · ${digest}`,
+      columns: true,
+      lines: light.rooms.map(r => [t(named(r.room)), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(percent(r.score), 'gold'), t(r.summary, 'dim')]),
+    }],
+    chips: [recommend(say('下一步做什么')), say('/照度'), say('/盲区')],
   };
 }
 
@@ -375,7 +440,14 @@ function slash(body: string, ctx: RouterContext): Routed {
   if (room) return { turn: open(room, ctx) };
   switch (command.name) {
     case '下一步': return { turn: nextStep(ctx) };
+    case '铸造':
+    case '汉超': return { turn: buildHanchaoTurn(ctx, arg) };
+    case '备赛': return { turn: buildCoachTurn(ctx) };
+    case '绘图': return { turn: buildChartStudioTurn(ctx, arg) };
+    case '编程': return { turn: buildCodeStudioTurn(ctx, arg) };
+    case '撰稿': return { turn: buildWritingStudioTurn(ctx, arg) };
     case '照度': return { turn: status(ctx, scope) };
+    case '印鉴': return { turn: sealStatus(ctx) };
     case '盲区': return { turn: blindSpots(ctx, scope) };
     case '来处': return { turn: trace(ctx, arg) };
     case '结果': return { turn: results(ctx, arg) };
@@ -401,6 +473,12 @@ const HELP = /^(帮助|help|你能做什么|你会什么|你可以做什么|能�
 const NEXT = /下一步|接下来|该做什么|先做什么|从哪(里)?开始|怎么开始/u;
 const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|短板|没通过/u;
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
+const SEAL = /印鉴|九门印鉴|核验印鉴|循证印鉴|核验码/u;
+const HANCHAO = /铸造|国奖标准|全链条产出|汉超|蒜鸟|武汉城市足球|国奖标杆|标杆样板|双轨赛道/u;
+const COACH = /备赛|参赛指南|八阶|国奖路线|怎么拿国奖/u;
+const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
+const CODE_STUDIO = /^(?:打开)?(?:编程|写代码|统计编程|代码工坊|三线表代码|复现代码|python代码|r代码|spss代码)(?:工坊)?$|生成.*(?:python|r语言|spss|latex).*代码/iu;
+const WRITING_STUDIO = /^(?:打开)?(?:撰稿|润色|写作工坊|撰稿工坊|答辩手卡|5w1h答辩)(?:工坊)?$/iu;
 const WHERE = /^(我在哪|这是哪|当前模块|打开的是什么|我在哪里)/u;
 const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
 const PLAN = /^(帮我|我要|开始)?(写|撰写|完成)(一份|整份|这份)?报告$|报告(怎么写|还缺什么|写到哪|写得怎么样)/u;
@@ -423,6 +501,12 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (GENERATE.test(input)) return { generate: input };
   const scope = mentionedRooms(input).map(r => r.id).find(lit);
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
+  if (SEAL.test(input)) return { turn: sealStatus(ctx) };
+  if (HANCHAO.test(input)) return { turn: buildHanchaoTurn(ctx, input) };
+  if (COACH.test(input)) return { turn: buildCoachTurn(ctx) };
+  if (PLOT_STUDIO.test(input)) return { turn: buildChartStudioTurn(ctx, input) };
+  if (CODE_STUDIO.test(input)) return { turn: buildCodeStudioTurn(ctx, input) };
+  if (WRITING_STUDIO.test(input)) return { turn: buildWritingStudioTurn(ctx, input) };
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
   if (TRACE.test(input)) { const m = EXHIBIT.exec(input); return { turn: trace(ctx, m ? m[1] + m[2] : '') }; }

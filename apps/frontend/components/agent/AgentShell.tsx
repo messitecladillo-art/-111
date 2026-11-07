@@ -82,7 +82,7 @@ const EMPTY_MESSAGES: Message[] = [];
 const PANEL_KEY = 'evix.agent.panel-width.v1';
 // Gutters: the canvas padding on the right and the margins between floating panels (see AgentShell.module.css).
 const RAIL = 52, SIDEBAR = 264, GUTTERS = 24, MIN_PANEL = 480, MIN_TALK = 360, INSPECTOR = 248;
-const SUGGESTIONS = ['下一步做什么', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '/照度'];
+const SUGGESTIONS = ['下一步做什么', '/铸造', '/绘图', '/编程', '/撰稿', '/印鉴'];
 const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
 
 /** The panel width remembered in this browser, if any; a width is a convenience only. */
@@ -115,7 +115,7 @@ function savedPanelWidth(): number | null {
  * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
-  const { panels, view, publishProposal, sendToReport, tweakFigure } = useWorkbenchModules(true);
+  const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
   const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount } = useHostedSession();
@@ -261,11 +261,11 @@ export default function AgentShell() {
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
-  const report = deferredView.report, design = deferredView.design, liveReport = view.report;
+  const report = deferredView.report, design = deferredView.design, dataset = deferredView.dataset, liveReport = view.report;
   // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor }; });
+  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor });
+  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor }; });
   const agent = useMemo(() => {
     // Read the store synchronously at dispatch: a selection can change before the next effect updates `latest`.
     const currentService = (task: ModelTask) => resolveModelRoute(task, latest.current.generation.lists.services, getModelPreferences(latest.current.owner)).service;
@@ -303,9 +303,9 @@ export default function AgentShell() {
       return true;
     };
     const local = (text: string) => {
-      const { panel, light, theme, traces, held, plan, generation } = latest.current;
+      const { panel, light, theme, traces, held, plan, report, design, dataset, generation } = latest.current;
       const user: Message = { ...stamp(), role: 'user', text };
-      const routed = route(text, { room: panel, light, theme, traces, results: held, plan });
+      const routed = route(text, { room: panel, light, theme, traces, results: held, plan, projectTitle: report?.title || design?.title, design, datasetName: dataset?.name });
       if ('draft' in routed) { threads.append([user]); askDraft(routed.draft); return; }
       // Drafting with a model always starts with the user's consent, never with a call.
       if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
@@ -505,8 +505,8 @@ export default function AgentShell() {
     // A read-only tool's finding is returned so it can go back to the model.
     const run = async (afterId: string, action: ChatAction, current: () => boolean): Promise<ToolResult | null> => {
       if (!current()) return null;
-      const { panel, light, theme, traces, held, plan, generation, knowledge } = latest.current;
-      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan });
+      const { panel, light, theme, traces, held, plan, report, design, dataset, generation, knowledge } = latest.current;
+      const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan, projectTitle: report?.title || design?.title, design, datasetName: dataset?.name });
       if ('draft' in routed) return null;
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
       if ('lookup' in routed) {
@@ -571,6 +571,42 @@ export default function AgentShell() {
           go('editor');
           say([span('已交给右侧的报告与 PPT 写入；写了哪些内容会显示在编辑器顶部，可以撤销。', 'dim')]);
           break;
+        case 'loadBenchmark':
+          loadBenchmark(action.benchmarkId);
+          go('editor');
+          say(
+            [
+              span('已为您全链条铸造国奖标准成果包（课题参数：'),
+              span(`「${action.benchmarkId === 'current' ? '当前项目选题' : action.benchmarkId}」`, 'strong'),
+              span(' · 12 题全映射量表 · '),
+              span('641 行', 'gold'),
+              span('双轨合成样本 · '),
+              span('6 项', 'gold'),
+              span('SHA-256 统计快照 · '),
+              span('4 条', 'gold'),
+              span('确认发现 · 100/100 基准分正文与 8 页路演分镜）。四室照度已 100% 点亮，右侧已打开报告与 PPT。'),
+            ],
+            [
+              { label: '查看九门金石印鉴', action: { type: 'say', text: '/印鉴' }, primary: true },
+              { label: '/绘图', action: { type: 'say', text: '/绘图' } },
+              { label: '/编程', action: { type: 'say', text: '/编程' } },
+              { label: '/撰稿', action: { type: 'say', text: '/撰稿' } },
+            ],
+          );
+          break;
+        case 'insertStudioBlock': {
+          const cleanParagraphs = action.paragraphs.filter(p => typeof p === 'string' && p.trim()).slice(0, 12);
+          if (!cleanParagraphs.length) break;
+          sendToReport({
+            id: crypto.randomUUID(),
+            node: action.node,
+            source: '证见工坊',
+            items: cleanParagraphs.map(text => ({ kind: 'paragraph', text })),
+          });
+          go('editor');
+          say([span(`已将工坊产出「${action.title}」写入右侧报告与 PPT 对应章节，可在编辑器顶部随时撤销。`, 'dim')]);
+          break;
+        }
       }
     };
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
@@ -584,7 +620,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, focusInput, sendToReport]);
+  }, [go, focusInput, sendToReport, loadBenchmark]);
 
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {

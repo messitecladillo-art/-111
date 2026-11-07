@@ -2,6 +2,8 @@ export const VECTOR_ASSETS = [
   { id:'mosaic-edge', title:'证据拼片', category:'底纹', description:'有限色块组合，适用于封面与分节边缘。' },
   { id:'focus-loop', title:'聚焦轮廓', category:'主题元素', description:'层叠轮廓，适用于研究问题与综合发现。' },
   { id:'path-ribbon', title:'行动路径', category:'边饰', description:'连续的几何路径，适用于建议与结论页。' },
+  { id:'prism-compass', title:'棱镜星盘', category:'主题元素', description:'四阶折射与星盘几何，适用于封面、研究设计与方法页。' },
+  { id:'xiejian-seal', title:'九门方印', category:'印鉴', description:'宋刻双阑方印与九宫格几何，适用于扉页、核验回执与结论页。' },
 ] as const;
 export {getVectorPrimitives} from './vector-primitives.ts';
 import {vectorPrimitivesSvg} from './vector-primitives.ts';

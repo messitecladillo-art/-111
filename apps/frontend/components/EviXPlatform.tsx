@@ -25,6 +25,7 @@ import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel
 import type { ReactNode } from "react";
 import type { EditorContent } from "@/lib/editor-model";
 import type { ProjectView } from "@/lib/agent/illumination";
+import { forgeNationalAwardPack } from "@/lib/agent/hanchao-benchmark";
 import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -574,7 +575,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void } {
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string) => void } {
   const { session, identityEpoch, loading } = useHostedSession();
   // The agent keeps its report draft in this browser, for whoever is signed in; the classic workbench does not.
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
@@ -594,9 +595,17 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
   const tweakFigure=useCallback((tweak:FigureTweak)=>{setFigureTweak(tweak);},[]);
   const figureTweakHandled=useCallback(()=>{setFigureTweak(null);},[]);
   const [edited,setReport]=useState<{owner:string|null;content:EditorContent}|null>(null);
+  const [benchmarkEpoch,setBenchmarkEpoch]=useState(0);
   // Until the editor has opened in this visit, the stored draft stands for the report.
   const report=edited&&edited.owner===draftOwner?edited.content:storedDraft;
   const reportChanged=useCallback((content:EditorContent)=>{setReport({owner:draftOwner,content});if(draftOwner)saveReportDraft(draftOwner,content);},[draftOwner]);
+  const loadBenchmark = useCallback((id: string) => {
+    const pack = forgeNationalAwardPack(id === 'current' ? undefined : id, exchange.design?.design ?? null);
+    handoffs.setDesign({ design: pack.design, pending: false });
+    handoffs.setDataset(pack.dataset);
+    reportChanged(pack.report);
+    setBenchmarkEpoch(e => e + 1);
+  }, [handoffs, exchange.design, reportChanged]);
   const dataset=exchange.dataset;
   const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
   const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => {
@@ -638,7 +647,7 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={draftOwner??'local'} initialContent={storedDraft} savedInBrowser={!!draftOwner}/>,
+      editor: <EditingStudio localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={`${draftOwner??'local'}:${benchmarkEpoch}`} initialContent={report??storedDraft} savedInBrowser={!!draftOwner}/>,
       defense: <DefenseStudio />,
       analysis: <SurveyLab onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onDatasetChange={handoffs.setDataset}/>,
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} />,
@@ -648,8 +657,8 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
-  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, reportChanged, draftOwner, storedDraft, figureTweak, figureTweakHandled]);
-  return { panels, view, publishProposal, sendToReport: setReportInsert, tweakFigure };
+  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, reportChanged, draftOwner, storedDraft, report, benchmarkEpoch, figureTweak, figureTweakHandled]);
+  return { panels, view, publishProposal, sendToReport: setReportInsert, tweakFigure, loadBenchmark };
 }
 
 export default function EviXPlatform() {
