@@ -71,7 +71,8 @@ const subscribeNothing = () => () => {};
 const searchKey = () => /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
 const EMPTY_MESSAGES: Message[] = [];
 const PANEL_KEY = 'evix.agent.panel-width.v1';
-const RAIL = 52, SIDEBAR = 264, MIN_PANEL = 480, MIN_TALK = 360;
+// Gutters: the canvas padding on the right and the margins between floating panels (see AgentShell.module.css).
+const RAIL = 52, SIDEBAR = 264, GUTTERS = 24, MIN_PANEL = 480, MIN_TALK = 360;
 const SUGGESTIONS = ['下一步做什么', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '/照度'];
 const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
 
@@ -148,7 +149,7 @@ export default function AgentShell() {
   // conversation its minimum. Widths are read through stores so the first client render matches the server's.
   const savedWidth = useSyncExternalStore(subscribeNothing, savedPanelWidth, () => null);
   const [draggedWidth, setPanelWidth] = useState<number | null>(null);
-  const room = viewport - RAIL - (sideOpen ? SIDEBAR : 0);
+  const room = viewport - RAIL - GUTTERS - (sideOpen ? SIDEBAR : 0);
   const available = Math.max(MIN_PANEL, room - MIN_TALK);
   const panelWidth = Math.min(available, draggedWidth ?? savedWidth ?? Math.round(Math.min(1240, Math.max(MIN_PANEL, room * 0.7))));
   const [dragging, setDragging] = useState(false);
@@ -593,7 +594,7 @@ export default function AgentShell() {
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
     const startX = event.clientX, startWidth = Math.min(panelWidth, available);
-    const limit = () => Math.max(MIN_PANEL, window.innerWidth - RAIL - (sideOpen ? SIDEBAR : 0) - MIN_TALK);
+    const limit = () => Math.max(MIN_PANEL, window.innerWidth - RAIL - GUTTERS - (sideOpen ? SIDEBAR : 0) - MIN_TALK);
     setDragging(true);
     const move = (e: PointerEvent) => setPanelWidth(Math.round(Math.min(limit(), Math.max(MIN_PANEL, startWidth + startX - e.clientX))));
     const up = () => {

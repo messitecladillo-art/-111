@@ -4,17 +4,21 @@
    generated content, the ▓▒░ light bar, and the gold light path of a trace. */
 
 .shell:global(.workbench):not(:global(.hosted-auth)) {
+  --c-canvas: #eff1f0;
   --c-bg: #ffffff;
-  --c-side: #f7f7f8;
-  --c-rail: #f1f1f3;
+  --c-side: #f8faf9;
+  --c-rail: transparent;
   --c-raise: #ffffff;
-  --c-hover: #ececef;
-  --c-bubble: #f1f1f3;
-  --c-line: #e7e7ea;
-  --c-line-strong: #d6d6dc;
-  --c-fg: #1d1d21;
-  --c-dim: #6b6b75;
-  --c-faint: #a1a1ab;
+  --c-hover: #eef1ef;
+  --c-bubble: #f1f4f2;
+  --c-line: #e4e8e6;
+  --c-line-strong: #d2d9d6;
+  --c-fg: #171a19;
+  --c-dim: #6b7370;
+  --c-faint: #9ca3a0;
+  --c-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --c-radius: 20px;
+  --c-gutter: 8px;
   --c-accent: #0f766e;
   --c-accent-soft: rgba(15, 118, 110, 0.08);
   --c-gold: #9a5b06;
@@ -60,14 +64,16 @@
   color-scheme: light;
 }
 .shell:global(.workbench):not(:global(.hosted-auth))[data-theme="dark"] {
-  --c-bg: #18181b;
-  --c-side: #1e1e22;
-  --c-rail: #1b1b1e;
-  --c-raise: #222226;
-  --c-hover: #29292e;
-  --c-bubble: #27272c;
-  --c-line: #2c2c31;
-  --c-line-strong: #3a3a41;
+  --c-canvas: #111312;
+  --c-bg: #18191a;
+  --c-side: #1b1d1c;
+  --c-rail: transparent;
+  --c-raise: #222424;
+  --c-hover: #2a2d2c;
+  --c-bubble: #26292a;
+  --c-line: #2a2e2c;
+  --c-line-strong: #3a3f3d;
+  --c-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   --c-fg: #ececf1;
   --c-dim: #a1a1aa;
   --c-faint: #6b6b74;
@@ -487,3 +493,15 @@
 .stepText small { margin-left: 6px; color: var(--c-dim); font-size: 11.5px; }
 .stepCost { padding-left: 8px; border-left: 1px solid var(--c-line); }
 @media (prefers-reduced-motion: reduce) { .stepIcon i, .workState[data-busy="true"] i { animation: none; } }
+
+/* ——— Floating panels: the rail sits on a quiet canvas; sidebar, conversation and module panel float on it as rounded
+   cards with a hairline border and a shadow one barely sees. Gutters are margins, so a folded sidebar leaves none. ——— */
+.shell:global(.workbench):not(:global(.hosted-auth)) { padding: var(--c-gutter) var(--c-gutter) var(--c-gutter) 0; background: var(--c-canvas); }
+.rail { border-right: 0; background: transparent; }
+.sidebar, .main, .panel { border: 1px solid var(--c-line); border-radius: var(--c-radius); box-shadow: var(--c-card-shadow); overflow: hidden; }
+.sidebar { margin-right: var(--c-gutter); }
+.shell[data-side="closed"] .sidebar { margin-right: 0; border-width: 0; box-shadow: none; }
+.panel { margin-left: var(--c-gutter); border-left: 1px solid var(--c-line); }
+.shell[data-expanded="true"] .panel { margin-left: 0; border-left: 1px solid var(--c-line); }
+.sideFoot { border-top-color: var(--c-line); }
+.panelHead { border-bottom-color: var(--c-line); }
