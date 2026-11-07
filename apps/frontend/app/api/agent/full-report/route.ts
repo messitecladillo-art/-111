@@ -19,6 +19,16 @@ type RequestPayload = {
   stream?: boolean;
 };
 
+// Only these model hosts are called, so a request cannot point the server's fetch at an address of its own.
+const MODEL_HOSTS = new Set(['api.deepseek.com', 'api.openai.com', 'dashscope.aliyuncs.com']);
+function modelBase(asked: unknown): string | null {
+  if (asked === undefined) return 'https://api.deepseek.com/v1';
+  try {
+    const url = new URL(String(asked));
+    return url.protocol === 'https:' && MODEL_HOSTS.has(url.hostname) ? url.href : null;
+  } catch { return null; }
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as RequestPayload;
@@ -39,6 +49,11 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
+    }
+
+    const baseUrl = modelBase(body.baseUrl);
+    if (!baseUrl) {
+      return NextResponse.json({ ok: false, code: 'model_host_rejected', message: '模型服务地址不在允许范围内。' }, { status: 400 });
     }
 
     const mode: ProjectResearchMode =
@@ -68,7 +83,7 @@ export async function POST(request: Request) {
               mode,
               llm: {
                 provider: body.provider ?? 'deepseek',
-                baseUrl: body.baseUrl ?? 'https://api.deepseek.com/v1',
+                baseUrl,
                 apiKey,
                 model: body.model ?? 'deepseek-chat',
                 temperature: 0.2,
@@ -156,7 +171,7 @@ export async function POST(request: Request) {
       mode,
       llm: {
         provider: body.provider ?? 'deepseek',
-        baseUrl: body.baseUrl ?? 'https://api.deepseek.com/v1',
+        baseUrl,
         apiKey,
         model: body.model ?? 'deepseek-chat',
         temperature: 0.2,

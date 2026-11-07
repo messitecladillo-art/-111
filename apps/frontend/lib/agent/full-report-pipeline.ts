@@ -18,7 +18,6 @@ import type { EditorContent, ReportSection } from '../editor-model.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { type BenchmarkResult, benchmarkReport } from '../report-benchmark.ts';
 import { blueprintNode, blueprintOutline, matchBlueprintNode } from '../report-blueprint.ts';
-import { block, suggestedNode } from '../report-placement.ts';
 import type { ReportBlock, ResultSnapshot } from '../research-quality.ts';
 import { ADVISORS, type AdvisorReading, advisorReading } from './advisors.ts';
 import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline, sectionText } from './draft.ts';

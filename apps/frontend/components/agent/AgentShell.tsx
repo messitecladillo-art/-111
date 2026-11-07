@@ -54,6 +54,10 @@ import { eligibleModelServices, getModelPreferences, matchesModelConsent, resolv
  */
 type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service; after: string; owner: string; epoch: number };
 import styles from './AgentShell.module.css';
+import type { FullReportGenerationResult } from '@/lib/agent/full-report-pipeline';
+
+// What the full-report route answers with: the pipeline's result, as JSON or as the stream's last line.
+type FullReportReply = Partial<Pick<FullReportGenerationResult, 'pack' | 'topic' | 'contract' | 'summary' | 'repairsApplied'>> & { ok?: boolean; message?: string };
 
 // Every workbench module opens in the panel and every panel hosts a module: the two lists cannot drift apart.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
@@ -163,24 +167,6 @@ export default function AgentShell() {
   }, []);
   const choreo = useLiveReportChoreography(paperRef, paperContent, pickSection);
 
-  // When entering the middle report canvas on an untouched skeleton, automatically hydrate the full 9-chapter 26-section
-  // standard report so the canvas renders complete A4 pages, TOC, three-line tables, and built-in SVG figures.
-  useEffect(() => {
-    if (stage !== 'paper' || autoHydratedRef.current) return;
-    const isBareSkeleton =
-      (paperContent.quality?.results?.length ?? 0) === 0 &&
-      paperContent.report.length <= 6 &&
-      paperContent.report.some(s => /写作提示】/u.test(s.body));
-    if (isBareSkeleton) {
-      autoHydratedRef.current = true;
-      loadBenchmark('current');
-      window.setTimeout(() => {
-        if (latest.current.liveReport) {
-          choreo.playFullTheaterShowcase(latest.current.liveReport);
-        }
-      }, 260);
-    }
-  }, [stage, paperContent, loadBenchmark, choreo]);
   const traces = useMemo(() => traceExhibits(deferredView.report, deferredView.design), [deferredView]);
   // The plan makes room for the sections the registered results belong in.
   const plan = useMemo(() => deferredView.report ? reportPlan(deferredView.report, light.benchmark, (deferredView.report.quality?.results ?? []).map(suggestedNode)) : null, [deferredView, light]);
@@ -295,6 +281,25 @@ export default function AgentShell() {
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
   const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor });
   useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor }; });
+  // When entering the middle report canvas on an untouched skeleton, automatically hydrate the full 9-chapter 26-section
+  // standard report so the canvas renders complete A4 pages, TOC, three-line tables, and built-in SVG figures.
+  // The sample replaces the questionnaire and the data, so it fills only a project that holds neither.
+  useEffect(() => {
+    if (stage !== 'paper' || autoHydratedRef.current || deferredView.design || deferredView.dataset) return;
+    const isBareSkeleton =
+      (paperContent.quality?.results?.length ?? 0) === 0 &&
+      paperContent.report.length <= 6 &&
+      paperContent.report.some(s => /写作提示】/u.test(s.body));
+    if (isBareSkeleton) {
+      autoHydratedRef.current = true;
+      loadBenchmark('current');
+      window.setTimeout(() => {
+        if (latest.current.liveReport) {
+          choreo.playFullTheaterShowcase(latest.current.liveReport);
+        }
+      }, 260);
+    }
+  }, [stage, paperContent, loadBenchmark, choreo, deferredView]);
   const agent = useMemo(() => {
     // Read the store synchronously at dispatch: a selection can change before the next effect updates `latest`.
     const currentService = (task: ModelTask) => resolveModelRoute(task, latest.current.generation.lists.services, getModelPreferences(latest.current.owner)).service;
@@ -671,7 +676,7 @@ export default function AgentShell() {
                 throw new Error(errData?.message || `HTTP ${res.status}`);
               }
               const contentType = res.headers.get('content-type') ?? '';
-              let finalData: any = null;
+              let finalData: FullReportReply | null = null;
               let runningParagraphs = 0;
               const citedFactsSet = new Set<string>();
 
@@ -722,7 +727,7 @@ export default function AgentShell() {
                       if (autoFollowRef.current && evt.sectionId) {
                         requestAnimationFrame(() => pickSection(evt.sectionId));
                       }
-                      const streamedSection = evt.report.report?.find((sec: any) => sec.id === evt.sectionId);
+                      const streamedSection = evt.report.report?.find((sec: { id: string }) => sec.id === evt.sectionId);
                       if (streamedSection) {
                         choreo.animateIncomingSection(streamedSection, evt.report);
                       }
@@ -770,6 +775,7 @@ export default function AgentShell() {
 
               loadBenchmark(action.topic.trim() || 'current', finalData.pack);
               const s = finalData.summary;
+              if (!s) throw new Error('未收到完整报告数据包');
               const firstSectionId = finalData.pack.report?.report?.[0]?.id ?? 'sec-abstract';
               setLiveWriting({
                 active: false,
