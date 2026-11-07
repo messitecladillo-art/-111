@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { Figure, ResultTable } from '@/components/editors/PaperBlocks';
+import { CHART_THEMES } from '@/lib/chart-theme';
+import { REPORT_FIGURE_LABELS, type ProjectVisualStyle, type ReportFigure, type ReportFigureKind } from '@/lib/report-figure';
 import { defaultColumn, METHOD_LABELS, suggestedExhibits } from '@/lib/report-placement';
 import { reproScript, scriptText } from '@/lib/repro-script';
 import type { ResultSnapshot } from '@/lib/research-quality';
@@ -15,7 +17,22 @@ type Tab = 'chart' | 'table' | 'code';
  * view on, the Python that recomputes it, with the lines a beginner may change told apart from those that decide the
  * conclusion.
  */
-export default function OutputPanel({ result, showCode, onClose, onOpenAnalysis }: { result: ResultSnapshot; showCode: boolean; onClose: () => void; onOpenAnalysis: () => void }) {
+/** Changes a figure can take from a sentence: the other kinds of its family, three other palettes, its value labels. */
+function tweaks(result: ResultSnapshot, figure: ReportFigure | null, palette: string): string[] {
+  const family: ReportFigureKind[] = result.method === 'crosstab' ? ['grouped_bar', 'percent_stacked', 'heatmap'] : ['bar', 'horizontal_bar'];
+  const kind = figure?.kind ?? family[0];
+  return [
+    ...family.filter(k => k !== kind).map(k => `换成${REPORT_FIGURE_LABELS[k]}`),
+    ...CHART_THEMES.slice(0, 5).filter(t => t.id !== palette).slice(0, 3).map(t => `配色换成${t.title}`),
+    (figure?.style.showLabels ?? true) ? '隐藏数值标签' : '显示数值标签',
+  ];
+}
+
+export default function OutputPanel({ result, showCode, onClose, onOpenAnalysis, onSay, figure, visualStyle }: { result: ResultSnapshot; showCode: boolean; onClose: () => void; onOpenAnalysis: () => void;
+  /** Says a sentence in the conversation, as if typed. */
+  onSay: (text: string) => void;
+  /** The report's own figure for this result and the report's palette, when the report holds one. */
+  figure: ReportFigure | null; visualStyle?: ProjectVisualStyle }) {
   const charted = suggestedExhibits(result).includes('chart');
   const tabs: [Tab, string][] = [...(charted ? [['chart', '图'] as [Tab, string]] : []), ['table', '表'], ...(showCode ? [['code', '代码'] as [Tab, string]] : [])];
   const [picked, setPicked] = useState<Tab | null>(null);
@@ -33,9 +50,12 @@ export default function OutputPanel({ result, showCode, onClose, onOpenAnalysis 
     </div>
     <div className={styles.body} role="tabpanel">
       {tab === 'chart' && <>
-        <div className={styles.figure}><Figure result={result} column={defaultColumn(result)} accent="#0F766E" /></div>
-        <p className={styles.hint}>要换图型、配色或字号，到「数据分析」的图表工作室细调{showCode ? '；也可以在「代码」里改蓝色标出的那几行，在本地重画' : ''}。</p>
-        <div className={styles.tweaks}><button type="button" onClick={onOpenAnalysis}>打开图表工作室</button></div>
+        <div className={styles.figure}><Figure result={result} column={defaultColumn(result)} accent="#0F766E" figure={figure ?? undefined} visualStyle={visualStyle} /></div>
+        <p className={styles.hint}>跟证见说一句就能改，例如「换成条形图」「配色换成洞见青」；改动写进报告，可以撤销。字号由报告排版统一设定{showCode ? '，要单独改请用「代码」在本地重画' : ''}。</p>
+        <div className={styles.tweaks}>
+          {tweaks(result, figure, visualStyle?.paletteId ?? 'blue').map(t => <button key={t} type="button" onClick={() => onSay(t)}>{t}</button>)}
+          <button type="button" data-quiet="true" onClick={onOpenAnalysis}>打开图表工作室</button>
+        </div>
       </>}
       {tab === 'table' && <div className={styles.table}><ResultTable result={result} /></div>}
       {tab === 'code' && <Code result={result} />}

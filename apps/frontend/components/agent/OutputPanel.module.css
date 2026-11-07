@@ -43,3 +43,4 @@
 .lines li[data-kind="style"] small { color: #1f4e79; }
 .lines li[data-kind="risk"] { border-left-color: #e0a100; background: #fff7e0; }
 .lines li[data-kind="risk"] small { color: #7a4e00; }
+.tweaks button[data-quiet="true"] { border-style: dashed; color: var(--c-dim); }

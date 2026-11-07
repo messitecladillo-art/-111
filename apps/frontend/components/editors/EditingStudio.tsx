@@ -1,5 +1,6 @@
 "use client";
 
+import { applyFigureChange, type FigureTweak } from '@/lib/agent/figure-tweak';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import { ACCENTS, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
@@ -87,9 +88,11 @@ function previewLines(body: string): { kind: "p" | "blank" | "keywords" | "hintS
   return out;
 }
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
+export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,figureTweak,onFigureTweakHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
   /** A local draft to start from; `savedInBrowser` says the caller keeps the draft in this browser as it changes. */
-  initialContent?:EditorContent|null;savedInBrowser?:boolean}={}) {
+  initialContent?:EditorContent|null;savedInBrowser?:boolean;
+  /** A figure changed in the conversation; applied once as an undoable step. */
+  figureTweak?:FigureTweak|null;onFigureTweakHandled?:()=>void}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -342,6 +345,23 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     },0);
     return ()=>window.clearTimeout(timer);
   },[reportInsert,onReportInsertHandled,phase,identityFrozen,canMutate]);
+  useEffect(()=>{
+    if(!canMutate()||!figureTweak||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
+    const timer=window.setTimeout(()=>{
+    if(!alive.current||identityTransition.current||!canMutate()||busy.current||versionOperation.current)return;
+    const currentContent=current.current;
+    let applied:ReturnType<typeof applyFigureChange>;
+    try{applied=applyFigureChange(currentContent,figureTweak.resultId,figureTweak.change);}
+    catch(error){setMessage(`未能按对话改图：${(error as Error).message}`);onFigureTweakHandled?.();return;}
+    if(applied.content!==currentContent){
+      current.current=applied.content;
+      setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(applied.content);if(!blocked.current)setPhase('ready');
+      setMessage(`已按对话改图「${applied.figure.title}」：${applied.changes.join('；')}。可撤销。`);
+    }
+    onFigureTweakHandled?.();
+    },0);
+    return ()=>window.clearTimeout(timer);
+  },[figureTweak,onFigureTweakHandled,phase,identityFrozen,canMutate]);
   function undo() {
     if(!canMutate())return;
     const previous = past[past.length - 1]; if (!previous) return;
