@@ -37,18 +37,23 @@
      near-white cards, neutral ink and lines, the same teal. Tokens given as var(--c-…) follow the theme by themselves. */
   --wb-bg: var(--c-bg);
   --wb-glow: none;
-  --wb-surface: #fcfcfd;
+  --wb-surface: #f8faf9;
   --wb-solid: #ffffff;
-  --wb-sidebar: #f6f6f8;
+  --wb-sidebar: #eff1f0;
+  /* Modules take the agent's shapes and motion too: rounder cards, the shell's type, the settling ease. */
+  --wb-radius: 10px;
+  --wb-radius-lg: 18px;
+  --wb-sans: var(--c-sans);
+  --wb-ease: cubic-bezier(0.22, 0.8, 0.36, 1);
   --wb-text: var(--c-fg);
   --wb-muted: var(--c-dim);
   --wb-accent: var(--c-accent);
   --wb-accent-soft: var(--c-accent-soft);
-  --wb-line: rgba(17, 17, 26, 0.1);
-  --wb-line-strong: rgba(17, 17, 26, 0.18);
-  --wb-well: rgba(17, 17, 26, 0.03);
-  --wb-shadow: 0 1px 2px rgba(17, 17, 26, 0.04), 0 10px 28px -20px rgba(17, 17, 26, 0.25);
-  --wb-shadow-lift: 0 1px 2px rgba(17, 17, 26, 0.05), 0 18px 40px -22px rgba(17, 17, 26, 0.3);
+  --wb-line: rgba(23, 26, 25, 0.1);
+  --wb-line-strong: rgba(23, 26, 25, 0.17);
+  --wb-well: rgba(23, 26, 25, 0.03);
+  --wb-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --wb-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.05), 0 14px 30px -18px rgba(23, 26, 25, 0.3);
 
   display: grid;
   grid-template-columns: 52px var(--side-w) minmax(0, 1fr) auto;
