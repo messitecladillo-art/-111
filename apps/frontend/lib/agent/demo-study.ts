@@ -459,9 +459,14 @@ export async function computeDemoReport(study: DemoStudy, options: { onLog?: (li
   await basic('crosstab', 'Q1', 'Q2', `不同${label('Q1')}的${label('Q2')}差异`);
   await basic('crosstab', 'Q1', 'Q12', `不同${label('Q1')}的${label('Q12')}差异`);
   await basic('crosstab', 'Q2', 'Q12', `不同${label('Q2')}的${label('Q12')}差异`);
-  for (const q of ['Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q9', 'Q10', 'Q11']) await basic('groups', 'Q1', q, `不同${label('Q1')}的${label(q)}评价差异`);
-  for (const q of ['Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q10', 'Q11']) await basic('groups', 'Q2', q, `不同${label('Q2')}的${label(q)}评价差异`);
-  for (const [a, b] of [['Q10', 'Q11'], ['Q9', 'Q11'], ['Q3', 'Q11'], ['Q5', 'Q11'], ['Q6', 'Q10']] as const) await basic('spearman', a, b, `${label(a)}与${label(b)}的单调关联`);
+  // The rating dimensions are read together, not one chart each: their whole answer distributions, every dimension
+  // across the groups of each background question (one test per dimension, Holm-corrected, with effect sizes), and the
+  // correlations among them.
+  const dimensions = [...five, col('Q9'), col('Q10'), col('Q11')];
+  await advanced({ method: 'likert', items: dimensions, scale: { min: 1, max: 5 } }, '各评价维度的作答分布');
+  await advanced({ method: 'profile', group: col('Q1'), dimensions }, `不同${label('Q1')}的各评价维度差异`);
+  await advanced({ method: 'profile', group: col('Q2'), dimensions }, `不同${label('Q2')}的各评价维度差异`);
+  await advanced({ method: 'correlation', variables: dimensions }, '各评价维度之间的相关');
   await advanced({ method: 'validity', items: five }, `${bp.scaleConstruct}的因子结构`);
   await advanced({ method: 'regression', outcome: col('Q11'), predictors: [...five, col('Q9'), col('Q10')] }, `${label('Q11')}的影响因素`);
   await advanced({ method: 'ipa', performance: five, importance: null, overall: col('Q10') }, '五个方面的重要性与表现');

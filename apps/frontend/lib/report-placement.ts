@@ -17,7 +17,7 @@ const MAX_BLOCKS = 60;
 /** The blueprint section each advanced method writes into (lib/advanced-analysis.ts). */
 /** Why an advanced result is not placed from its table alone: its write-up comes from the calculation. */
 export const ADVANCED_PLACEMENT = '高级方法的结果请在「数据分析 · 高级方法」中写进报告：方法说明、公式与读数来自计算过程，不能只凭结果表重写。';
-export const ADVANCED_NODES: Readonly<Record<string, string>> = { validity: 'data.testing', regression: 'drivers.model', logistic: 'drivers.model', ipa: 'diagnosis.evaluation', cluster: 'segments.cluster', ahp: 'plan.priority' };
+export const ADVANCED_NODES: Readonly<Record<string, string>> = { validity: 'data.testing', regression: 'drivers.model', logistic: 'drivers.model', ipa: 'diagnosis.evaluation', cluster: 'segments.cluster', ahp: 'plan.priority', profile: 'compare.tests', likert: 'sample.descriptive', correlation: 'compare.tests' };
 
 export function suggestedNode(r: ResultSnapshot): string {
   if (ADVANCED_NODES[r.method]) return ADVANCED_NODES[r.method];

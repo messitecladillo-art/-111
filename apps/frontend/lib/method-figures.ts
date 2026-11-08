@@ -138,6 +138,109 @@ export function clusterProfilePlot(centers: readonly (readonly number[])[], size
   } };
 }
 
+// The one second hue: the low side of a scale with a real midpoint (disagreement on a rating, a negative correlation).
+const OPPOSITE = '#A65A3A', NEUTRAL = '#C9CDD2';
+const mixHex = (a: string, b: string, t: number) => {
+  const c = (h: string) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  return `#${c(a).map((v, i) => Math.round(v + (c(b)[i] - v) * t).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+};
+const SHAPES = ['circle', 'rect', 'diamond', 'triangle', 'pin', 'roundRect'] as const;
+
+/**
+ * Several dimensions compared across groups as a dot plot: one row per dimension, one marker per group (told apart by
+ * shade and shape, named in the legend), a grey bar spanning the groups' means. Position on a common scale carries
+ * the comparison, so the axis need not start at zero.
+ */
+export function dotPlot(dimensions: readonly string[], groups: readonly { label: string; n: number }[], means: readonly (readonly number[])[], accent: string): FigurePlan {
+  if (dimensions.length < 2 || groups.length < 2 || means.some(row => row.length !== groups.length || !row.every(Number.isFinite))) throw Error('均值与分组不对应，无法作图。');
+  const colours = accentScale(accent, groups.length), all = means.flat(), bounds = niceBounds(Math.min(...all) - 0.15, Math.max(...all) + 0.15);
+  const spans: CustomSeriesOption = {
+    type: 'custom', silent: true, z: 1, data: means.map((row, i) => [i, Math.min(...row), Math.max(...row)]),
+    renderItem: (_params, api) => {
+      const i = Number(api.value(0)), a = api.coord([Number(api.value(1)), i]), b = api.coord([Number(api.value(2)), i]);
+      return { type: 'line', shape: { x1: a[0], y1: a[1], x2: b[0], y2: b[1] }, style: { stroke: '#D5D9DE', lineWidth: 8, lineCap: 'round' } } as unknown as Group;
+    },
+  };
+  return { kind: 'dots', height: clamp(150 + 62 * dimensions.length, 320, 760), option: {
+    ...base(), legend: { ...legend, itemWidth: 16, itemHeight: 16 }, grid: grid({ top: 64, bottom: 24, right: 48 }),
+    xAxis: valueAxis('组均值', { ...lowerTitle, ...bounds }),
+    yAxis: categoryAxis([...dimensions], true),
+    series: [spans, ...groups.map((g, j) => ({
+      type: 'scatter' as const, name: `${g.label}（n = ${g.n}）`, z: 3, symbol: SHAPES[j % SHAPES.length], symbolSize: 18,
+      itemStyle: { color: colours[j], borderColor: '#FFFFFF', borderWidth: 1.5, opacity: 1 },
+      data: means.map((row, i) => [row[j], i]),
+    }))],
+  } };
+}
+
+/**
+ * Rating items as diverging stacked bars: agreement to the right of the neutral answer, disagreement to the left, the
+ * neutral share split across the centre line. Items run from the most to the least favourable.
+ */
+export function likertPlot(items: readonly string[], levels: readonly number[], shares: readonly (readonly number[])[], accent: string): FigurePlan {
+  if (items.length < 2 || levels.length < 2 || shares.some(row => row.length !== levels.length)) throw Error('作答比例与等级不对应，无法作图。');
+  const mid = (levels[0] + levels.at(-1)!) / 2, below = levels.filter(l => l < mid), above = levels.filter(l => l > mid), neutral = levels.indexOf(mid);
+  const favour = (row: readonly number[]) => row.reduce((s, v, i) => s + (levels[i] > mid ? v : 0), 0);
+  const order = items.map((_, i) => i).sort((a, b) => favour(shares[b]) - favour(shares[a]));
+  const colourOf = (l: number) => {
+    if (l === mid) return NEUTRAL;
+    const side = l < mid ? below : above, rank = l < mid ? below.length - below.indexOf(l) : above.indexOf(l) + 1;
+    const t = side.length === 1 ? 0 : 0.55 * (1 - (rank - 1) / (side.length - 1));
+    return mixHex(l < mid ? OPPOSITE : accent, '#FFFFFF', t);
+  };
+  const pct = (v: number) => v * 100;
+  // A segment's label is its level's whole share: the neutral answer, drawn as two halves, is labelled once with all of it.
+  const segment = (name: string, l: number, values: number[], stack: 'left' | 'right', shown = values.map(Math.abs)) => ({
+    type: 'bar' as const, name, stack, barWidth: '56%', data: values, itemStyle: { color: colourOf(l), borderColor: '#FFFFFF', borderWidth: 1 },
+    label: { show: true, position: 'inside' as const, ...small, fontSize: 17, color: onFillInk(colourOf(l)), formatter: (p: { dataIndex: number }) => (shown[p.dataIndex] >= 7 && Math.abs(values[p.dataIndex]) >= 3.5 ? `${shown[p.dataIndex].toFixed(0)}%` : '') },
+  });
+  const half = (i: number) => (neutral >= 0 ? pct(shares[i][neutral]) / 2 : 0);
+  // Each side stacks outward from the centre: the neutral half first, then the levels nearest the midpoint.
+  const series = [
+    ...(neutral >= 0 ? [segment(`${mid} 分`, mid, order.map(i => -half(i)), 'left', order.map(i => pct(shares[i][neutral]))), { ...segment(`${mid} 分`, mid, order.map(half), 'right'), label: { show: false } }] : []),
+    ...[...below].reverse().map(l => segment(`${l} 分`, l, order.map(i => -pct(shares[i][levels.indexOf(l)])), 'left')),
+    ...above.map(l => segment(`${l} 分`, l, order.map(i => pct(shares[i][levels.indexOf(l)])), 'right')),
+  ];
+  const extent = Math.max(...order.map(i => half(i) + below.reduce((s, l) => s + pct(shares[i][levels.indexOf(l)]), 0)), ...order.map(i => half(i) + above.reduce((s, l) => s + pct(shares[i][levels.indexOf(l)]), 0)));
+  const reach = Math.min(100, Math.ceil(extent / 20) * 20);
+  return { kind: 'likert', height: clamp(160 + 58 * items.length, 320, 760), option: {
+    ...base(), legend: { ...legend, data: levels.map(l => `${l} 分`) }, grid: grid({ top: 64, bottom: 24, right: 40 }),
+    xAxis: valueAxis('作答占比（%，中性回答居中）', { ...lowerTitle, min: -reach, max: reach, interval: 20, axisLabel: { ...small, formatter: (v: number) => `${Math.abs(v)}` } }),
+    yAxis: categoryAxis(order.map(i => items[i]), true),
+    series: series as SeriesOption[],
+  } };
+}
+const onFillInk = (fill: string) => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(fill.slice(i, i + 2), 16) / 255).map(s => (s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.21 ? INK : '#FFFFFF';
+};
+
+/**
+ * A correlation matrix as the lower triangle of a heat map on a scale centred at zero: positive in the accent,
+ * negative in the opposite hue, each cell labelled with its coefficient. Rows are numbered as in the table.
+ */
+export function correlationPlot(variables: readonly string[], rho: (a: number, b: number) => number, accent: string): FigurePlan {
+  const m = variables.length;
+  if (m < 3) throw Error('至少需要 3 个变量。');
+  const deep = mixHex(accent, '#000000', 0.15), cells: [number, number, number][] = [];
+  for (let i = 1; i < m; i++) for (let j = 0; j < i; j++) cells.push([j, i - 1, rho(i, j)]);
+  const shade = (v: number) => (v >= 0 ? mixHex('#FFFFFF', deep, v) : mixHex('#FFFFFF', OPPOSITE, -v));
+  return { kind: 'correlation', height: clamp(140 + 62 * (m - 1), 340, 760), option: {
+    ...base(), grid: grid({ top: 40, right: 24, bottom: 16 }),
+    xAxis: { type: 'category', data: variables.slice(0, -1).map((_, j) => `（${j + 1}）`), position: 'top', axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...small, interval: 0 } },
+    yAxis: { type: 'category', data: variables.slice(1).map((v, i) => `（${i + 2}）${v}`), inverse: true, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...small, interval: 0 } },
+    visualMap: { show: false, min: -1, max: 1, dimension: 2, inRange: { color: [OPPOSITE, '#FFFFFF', deep] } },
+    series: [{
+      type: 'heatmap', data: cells, itemStyle: { borderColor: '#FFFFFF', borderWidth: 2 },
+      label: {
+        show: true, ...small, fontSize: 18,
+        formatter: (p: { value: unknown }) => { const v = Number((p.value as number[])[2]); return `{${onFillInk(shade(v)) === INK ? 'ink' : 'paper'}|${minus(v.toFixed(2))}}`; },
+        rich: { ink: { ...small, fontSize: 18, color: INK }, paper: { ...small, fontSize: 18, color: '#FFFFFF' } },
+      },
+    }],
+  } };
+}
+
 /**
  * A method's figure travels in its registered result: the numbers it plots are the result's metrics, labelled
  * "名称｜量", so the preview, the editor and the Word export redraw the same figure from the stored result alone.
@@ -148,8 +251,11 @@ export type MethodFigureData =
   | { kind: 'forest'; rows: readonly { name: string; estimate: number; low: number; high: number }[] }
   | { kind: 'scree'; eigenvalues: readonly number[] }
   | { kind: 'quadrant'; points: readonly { name: string; importance: number; performance: number }[]; lines: { importance: number; performance: number } }
-  | { kind: 'profile'; centers: readonly (readonly number[])[]; sizes: readonly number[]; variables: readonly string[] };
-const SEP = '｜', MAX_METRICS = 40;
+  | { kind: 'profile'; centers: readonly (readonly number[])[]; sizes: readonly number[]; variables: readonly string[] }
+  | { kind: 'dots'; dimensions: readonly string[]; groups: readonly { label: string; n: number }[]; means: readonly (readonly number[])[] }
+  | { kind: 'likert'; items: readonly string[]; levels: readonly number[]; shares: readonly (readonly number[])[] }
+  | { kind: 'correlation'; variables: readonly string[]; pairs: readonly { a: number; b: number; rho: number }[] };
+const SEP = '｜', PAIR = ' ↔ ', MAX_METRICS = 40;
 const key = (name: string) => name.replace(/\s+/gu, ' ').trim().slice(0, 120) || '未命名';
 
 export function figureMetrics(data: MethodFigureData): FigureMetric[] | null {
@@ -157,11 +263,15 @@ export function figureMetrics(data: MethodFigureData): FigureMetric[] | null {
     : data.kind === 'scree' ? data.eigenvalues.map((value, j) => ({ label: `特征值${SEP}${j + 1}`, value }))
       : data.kind === 'quadrant' ? [{ label: `分界线${SEP}重要性`, value: data.lines.importance }, { label: `分界线${SEP}表现`, value: data.lines.performance },
         ...data.points.flatMap(p => [{ label: `${key(p.name)}${SEP}重要性`, value: p.importance }, { label: `${key(p.name)}${SEP}表现`, value: p.performance }])]
-        : data.centers.flatMap((c, j) => [{ label: `第 ${j + 1} 类${SEP}人数`, value: data.sizes[j] }, ...c.map((value, d) => ({ label: `第 ${j + 1} 类${SEP}${key(data.variables[d])}`, value }))]);
+        : data.kind === 'profile' ? data.centers.flatMap((c, j) => [{ label: `第 ${j + 1} 类${SEP}人数`, value: data.sizes[j] }, ...c.map((value, d) => ({ label: `第 ${j + 1} 类${SEP}${key(data.variables[d])}`, value }))])
+          // A dot plot: each group's size, then every dimension's mean in each group.
+          : data.kind === 'dots' ? [...data.groups.map(g => ({ label: `人数${SEP}${key(g.label)}`, value: g.n })), ...data.dimensions.flatMap((d, i) => data.groups.map((g, j) => ({ label: `${key(d)}${SEP}${key(g.label)}`, value: data.means[i][j] })))]
+            : data.kind === 'likert' ? data.items.flatMap((item, i) => data.levels.map((l, k) => ({ label: `${key(item)}${SEP}${l} 分`, value: data.shares[i][k] })))
+              : data.pairs.map(p => ({ label: `${key(data.variables[p.a])}${PAIR}${key(data.variables[p.b])}${SEP}ρ`, value: p.rho }));
   return metrics.length <= MAX_METRICS && metrics.every(m => Number.isFinite(m.value)) ? metrics : null;
 }
 
-const FIGURE_OF: Record<string, MethodFigureData['kind']> = { regression: 'forest', logistic: 'forest', validity: 'scree', ipa: 'quadrant', cluster: 'profile' };
+const FIGURE_OF: Record<string, MethodFigureData['kind']> = { regression: 'forest', logistic: 'forest', validity: 'scree', ipa: 'quadrant', cluster: 'profile', profile: 'dots', likert: 'likert', correlation: 'correlation' };
 // Advanced methods whose results are tables of formatted text: they have no figure but their own.
 const ADVANCED = new Set([...Object.keys(FIGURE_OF), 'ahp']);
 
@@ -198,6 +308,19 @@ export function methodFigure(r: { method: string; headers: readonly string[]; me
       const clusters = [...new Set(split.map(p => p.head))], variables = [...new Set(split.filter(p => p.field !== '人数').map(p => p.field))];
       const value = (head: string, field: string) => split.find(p => p.head === head && p.field === field)?.value as number;
       return clusterProfilePlot(clusters.map(c => variables.map(v => value(c, v))), clusters.map(c => value(c, '人数')), variables, accent);
+    }
+    case 'dots': {
+      const groups = parts.filter(p => p.head === '人数').map(p => ({ label: p.field, n: p.value as number })), dimensions = heads.filter(h => h !== '人数');
+      return dotPlot(dimensions, groups, dimensions.map(d => groups.map(g => pick(d, g.label))), accent);
+    }
+    case 'likert': {
+      const levels = [...new Set(parts.map(p => Number.parseInt(p.field, 10)))];
+      return likertPlot(heads, levels, heads.map(h => levels.map(l => pick(h, `${l} 分`))), accent);
+    }
+    case 'correlation': {
+      const pairs = heads.map(h => h.split(PAIR)), variables = [...new Set(pairs.flat())];
+      if (pairs.some(p => p.length !== 2)) return null;
+      return correlationPlot(variables, (a, b) => pick(`${variables[Math.min(a, b)]}${PAIR}${variables[Math.max(a, b)]}`, 'ρ'), accent);
     }
   }
 }

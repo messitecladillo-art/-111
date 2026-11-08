@@ -20,7 +20,7 @@ export const INK = '#1F2329', AXIS = '#3A4049', GRID = '#E3E6EA';
 
 export type FigureKind = 'bars' | 'barsHorizontal' | 'ring' | 'stacked' | 'heatmap' | 'grouped' | 'means' | 'box' | 'coefficient'
   /** Figures of the advanced methods (lib/method-figures.ts). */
-  | 'forest' | 'scree' | 'quadrant' | 'profile';
+  | 'forest' | 'scree' | 'quadrant' | 'profile' | 'dots' | 'likert' | 'correlation';
 export type FigurePlan = { kind: FigureKind; height: number; option: EChartsOption };
 
 const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));

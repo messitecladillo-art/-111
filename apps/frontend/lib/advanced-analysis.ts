@@ -12,7 +12,8 @@ import { logisticRegression } from './logistic.ts';
 import { ahp } from './ahp.ts';
 import { ipa } from './ipa.ts';
 import { kmeans, silhouette, standardize } from './kmeans.ts';
-import { ahpWriting, clusterWriting, ipaWriting, logisticWriting, regressionWriting, validityWriting, type MethodWriting } from './method-writing.ts';
+import { ahpWriting, clusterWriting, correlationWriting, ipaWriting, likertWriting, logisticWriting, profileWriting, regressionWriting, validityWriting, type MethodWriting } from './method-writing.ts';
+import { groupProfile, likertDistribution, spearmanMatrix } from './composite-analysis.ts';
 import { figureMetrics, methodFigure, type FigureMetric, type MethodFigureData } from './method-figures.ts';
 import type { FigurePlan } from './report-figures.ts';
 import type { ReportInsert } from './report-insert.ts';
@@ -25,7 +26,10 @@ export type AdvancedSpec =
   | { method: 'logistic'; outcome: number; predictors: number[] }
   | { method: 'ipa'; performance: number[]; importance: number[] | null; overall: number | null }
   | { method: 'cluster'; variables: number[]; k: number }
-  | { method: 'ahp'; criteria: string[]; matrix: number[][] };
+  | { method: 'ahp'; criteria: string[]; matrix: number[][] }
+  | { method: 'profile'; group: number; dimensions: number[] }
+  | { method: 'likert'; items: number[]; scale?: { min: number; max: number } }
+  | { method: 'correlation'; variables: number[] };
 export type AdvancedMethod = AdvancedSpec['method'];
 /** `chart` is what the report figure plots, as the result's metrics; `figure` draws it for the preview. */
 export type AdvancedRun = { method: AdvancedMethod; title: string; variables: string[]; n: number; total: number; writing: MethodWriting;
@@ -42,6 +46,9 @@ export const ADVANCED_METHODS: readonly { id: AdvancedMethod; title: string; use
   { id: 'ipa', title: '重要性—表现分析（IPA）', use: '找出重要但表现欠佳、应优先改进的属性。', node: ADVANCED_NODES.ipa },
   { id: 'cluster', title: 'K-means 聚类画像', use: '把受访者分成特征相近的几类人群。', node: ADVANCED_NODES.cluster },
   { id: 'ahp', title: '层次分析法（AHP）', use: '由专家两两比较，确定各方案准则的权重。', node: ADVANCED_NODES.ahp },
+  { id: 'profile', title: '多维度组间比较', use: '一次比较各组在多个评价维度上的差异，检验校正多重比较并给出效应量。', node: ADVANCED_NODES.profile },
+  { id: 'likert', title: '量表作答分布', use: '看每个评分题在各等级上的作答比例，发现均值掩盖的分化。', node: ADVANCED_NODES.likert },
+  { id: 'correlation', title: '相关矩阵', use: '一次看多个维度两两之间的关联结构。', node: ADVANCED_NODES.correlation },
 ];
 const REFUSALS: Record<string, string> = {
   'too-few-items': '至少需要 3 个题项。', 'too-few-cases': '完整案例太少，不足以估计。', 'constant-item': '有题项在完整案例中没有变化。',
@@ -80,6 +87,9 @@ const label = (table: SurveyTable, c: number) => table.columnLabels?.[table.head
  * outcome, which is a 0/1 choice). With a linked questionnaire the scaled ones must be numeric or rating questions.
  */
 export function advancedColumns(spec: AdvancedSpec): { all: number[]; scaled: number[] } {
+  if (spec.method === 'profile') return { all: [spec.group, ...spec.dimensions], scaled: spec.dimensions };
+  if (spec.method === 'likert') return { all: spec.items, scaled: spec.items };
+  if (spec.method === 'correlation') return { all: spec.variables, scaled: spec.variables };
   const all = spec.method === 'ahp' ? [] : spec.method === 'validity' ? spec.items : spec.method === 'cluster' ? spec.variables
     : spec.method === 'ipa' ? [...spec.performance, ...(spec.importance ?? []), ...(spec.overall === null ? [] : [spec.overall])] : [spec.outcome, ...spec.predictors];
   return { all, scaled: spec.method === 'logistic' ? all.slice(1) : all };
@@ -105,6 +115,7 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
     return { method: 'ahp', title: '评价准则权重', variables: spec.criteria, n: spec.criteria.length, total: spec.criteria.length, writing: ahpWriting(r, spec.criteria), chart: null, figure: null,
       judgements: { criteria: spec.criteria, matrix: spec.matrix } };
   }
+  if (spec.method === 'profile' || spec.method === 'likert' || spec.method === 'correlation') return runComposite(spec, table, missingCodes);
   const columns = advancedColumns(spec).all;
   if ((spec.method === 'regression' || spec.method === 'logistic') && spec.predictors.length > MAX_PREDICTORS) return { refused: `自变量至多 ${MAX_PREDICTORS} 个，结果表才能放进报告与 PPT；请先按研究问题筛选。` };
   if (spec.method === 'ipa' && spec.performance.length > MAX_ATTRIBUTES) return { refused: `属性至多 ${MAX_ATTRIBUTES} 个，结果表才能放进报告与 PPT。` };
@@ -156,6 +167,37 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
     }
   }
 }
+/**
+ * The composite methods read several dimensions in one result; the profile's grouping column is a category, so they
+ * take their own complete rows instead of the all-numeric complete cases.
+ */
+function runComposite(spec: Extract<AdvancedSpec, { method: 'profile' | 'likert' | 'correlation' }>, table: SurveyTable, missingCodes: readonly string[]): AdvancedRun | { refused: string } {
+  const columns = advancedColumns(spec).all;
+  if (new Set(columns).size !== columns.length) return { refused: '同一列不能同时担任两个角色。' };
+  if (columns.some(c => !Number.isInteger(c) || c < 0 || c >= table.headers.length)) return { refused: '请选择有效列。' };
+  const names = (list: readonly number[]) => list.map(c => label(table, c));
+  if (spec.method === 'profile') {
+    if (spec.dimensions.length > MAX_DIMENSIONS) return { refused: `评价维度至多 ${MAX_DIMENSIONS} 个，结果表才能排进报告。` };
+    const group = label(table, spec.group), dims = names(spec.dimensions), r = groupProfile(table, spec.group, spec.dimensions, dims, missingCodes);
+    if ('refused' in r) return r;
+    return withFigure({ method: 'profile', title: `不同${group}的各评价维度差异`, variables: [group, ...dims], n: r.n, total: r.total, invalid: r.invalid, writing: profileWriting(r, group) },
+      `不同${group}受访者各评价维度均值对比图`, { kind: 'dots', dimensions: dims, groups: r.groups, means: r.dimensions.map(d => d.means) });
+  }
+  if (spec.method === 'likert') {
+    if (spec.items.length > MAX_ATTRIBUTES) return { refused: `评分题至多 ${MAX_ATTRIBUTES} 个，结果表才能放进报告与 PPT。` };
+    const items = names(spec.items), r = likertDistribution(table, spec.items, items, missingCodes, spec.scale);
+    if ('refused' in r) return r;
+    return withFigure({ method: 'likert', title: '各评价维度作答分布', variables: items, n: r.n, total: r.total, invalid: r.invalid, writing: likertWriting(r) },
+      '各评价维度作答分布图', { kind: 'likert', items, levels: r.levels, shares: r.items.map(x => x.shares) });
+  }
+  if (spec.variables.length > MAX_CORRELATION_VARIABLES) return { refused: `变量至多 ${MAX_CORRELATION_VARIABLES} 个，相关矩阵表才能排进报告（不超过 10 列）。` };
+  const variables = names(spec.variables), r = spearmanMatrix(table, spec.variables, variables, missingCodes);
+  if ('refused' in r) return r;
+  return withFigure({ method: 'correlation', title: '各评价维度相关系数矩阵', variables, n: r.n, total: r.total, invalid: r.invalid, writing: correlationWriting(r) },
+    '各评价维度 Spearman 相关系数热力图', { kind: 'correlation', variables, pairs: r.pairs });
+}
+// A profile table has a column per group plus three; a correlation table one per variable but the last, plus one.
+export const MAX_DIMENSIONS = 8, MAX_CORRELATION_VARIABLES = 9;
 const ACCENT = '#2F6B4F';
 /**
  * The source an AHP result names. The matrix is typed in here; nothing shows who judged, so it is never called an

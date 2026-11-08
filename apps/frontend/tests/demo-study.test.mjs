@@ -43,13 +43,16 @@ test('a teaching simulation: its questionnaire maps every question, its answers 
 
   // Every result was registered with a hash of what it holds, computed on the screened answers.
   const results = pack.report.quality.results;
-  assert.ok(results.length >= 25, `${results.length} results`);
+  assert.ok(results.length >= 14, `${results.length} results`);
+  // The rating dimensions are read together: their distributions, every dimension across each background question, and their correlations.
+  for (const method of ['likert', 'profile', 'correlation']) assert.ok(results.some(r => r.method === method), `a ${method} result`);
+  assert.equal(results.filter(r => r.method === 'groups' || r.method === 'spearman').length, 0, 'no single-dimension comparisons left');
   await verifyResearchQuality(pack.report.quality);
   assert.ok(results.every(r => r.classification === 'simulated'));
   const screening = results.find(r => r.method === 'quality-control');
   assert.equal(screening.n, rows.length);
   assert.ok(screening.rows.some(row => row[0] === '答案完全重复' && row[3] === '仅标记'));
-  for (const method of ['frequency', 'alpha', 'crosstab', 'groups', 'spearman', 'regression', 'ipa', 'cluster']) assert.ok(results.some(r => r.method === method), method);
+  for (const method of ['frequency', 'alpha', 'crosstab', 'likert', 'profile', 'correlation', 'regression', 'ipa', 'cluster']) assert.ok(results.some(r => r.method === method), method);
 
   // Nothing borrowed from a real report, and the back matter says what was done.
   assert.ok(!BORROWED.test(JSON.stringify({ design: pack.design, report: pack.report.report, blueprint: pack.blueprint })));
@@ -104,7 +107,8 @@ test('the studios show only registered numbers: empty forms before there are res
   assert.ok(charts.datasets.length >= 5);
   for (const spec of charts.datasets) {
     const result = results.find(r => `result-${r.id}` === spec.id);
-    const cells = new Set(result.rows.flat().map(Number).filter(Number.isFinite).map(v => Number(v.toFixed(3))));
+    // A cell such as "12.3%" or "−0.25" is the number 12.3 or −0.25, as the studio reads it.
+    const cells = new Set(result.rows.flat().map(c => Number(String(c).replace(/−/gu, '-').replace(/[%％]$/u, ''))).filter(Number.isFinite).map(v => Number(v.toFixed(3))));
     assert.ok(spec.points.every(p => cells.has(p.primary)), `${spec.title}: every bar is a registered cell`);
   }
   const crosstab = buildCodeStudioCardData(ctx, 'latex').recipes.find(r => r.id === 'crosstab-chi2').snippets.latex;
@@ -138,7 +142,7 @@ test('the full-report pipeline writes up the computed simulation, and its AI app
   assert.equal(contract.mode, 'demonstration');
   assert.equal(contract.designMatrix.length, 3);
   assert.ok(contract.designMatrix.every(row => !/PPS|分层抽样/u.test(row.analysisMethod)), 'no sampling design is claimed for a convenience sample');
-  assert.ok(contract.statsLedger.length >= 25);
+  assert.equal(contract.statsLedger.length, pack.report.quality.results.length, 'one ledger row per registered result');
   assert.equal(contract.claimLedger.length, 0, 'no finding is confirmed until a person confirms it');
 
   const cleaned = sanitizeModelParagraph('在 Q11 题项与 5 级量表中，有效样本为{F2}，在 95%置信区间下详见{G1}{R1}。');

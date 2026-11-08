@@ -35,6 +35,8 @@ function Prose({ text }: { text: string }) {
  */
 export default function AdvancedMethods({ table, profile, missingCodes, simulated, sourceName, sourceHash, onReportInsert, prepare, context = '' }: Props) {
   const numeric = useMemo(() => profile.columns.filter(c => c.numeric > 0 && !c.likelyIdentifier), [profile]);
+  // A grouping column is any category, numbered or named.
+  const categories = useMemo(() => profile.columns.filter(c => !c.likelyIdentifier), [profile]);
   const name = (index: number) => table.columnLabels?.[table.headers[index]] ?? table.headers[index] ?? `第 ${index + 1} 列`;
   const [method, setMethod] = useState<AdvancedMethod>('validity');
   const [picked, setPicked] = useState<number[]>([]), [outcome, setOutcome] = useState<number | null>(null);
@@ -55,6 +57,9 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
       case 'ipa': return importanceMode === 'stated'
         ? (picked.every(c => importance[c] !== undefined) ? { method, performance: picked, importance: picked.map(c => importance[c]), overall: null } : null)
         : (overall === null ? null : { method, performance: picked, importance: null, overall });
+      case 'profile': return outcome === null ? null : { method, group: outcome, dimensions: picked };
+      case 'likert': return { method, items: picked };
+      case 'correlation': return { method, variables: picked };
       case 'ahp': return { method, criteria: names, matrix: names.map((_, i) => names.map((__, j) => (i === j ? 1 : i < j ? judgements[`${i}-${j}`] ?? 1 : 1 / (judgements[`${j}-${i}`] ?? 1)))) };
     }
   };
@@ -96,8 +101,8 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
   const columnChecks = (label: string, exclude: number | null = null) => <fieldset className={styles.columns}><legend>{label}</legend>
     {numeric.filter(c => c.index !== exclude).map(c => <label key={c.index}><input type="checkbox" checked={picked.includes(c.index)} onChange={() => toggle(c.index)} />{name(c.index)}</label>)}
   </fieldset>;
-  const columnSelect = (label: string, value: number | null, set: (v: number | null) => void) => <label className={styles.field}>{label}
-    <select value={value ?? ''} onChange={e => set(e.target.value === '' ? null : Number(e.target.value))}><option value="">请选择</option>{numeric.map(c => <option key={c.index} value={c.index}>{name(c.index)}</option>)}</select>
+  const columnSelect = (label: string, value: number | null, set: (v: number | null) => void, among = numeric) => <label className={styles.field}>{label}
+    <select value={value ?? ''} onChange={e => set(e.target.value === '' ? null : Number(e.target.value))}><option value="">请选择</option>{among.map(c => <option key={c.index} value={c.index}>{name(c.index)}</option>)}</select>
   </label>;
 
   return <section className={styles.panel} aria-label="高级方法">
@@ -118,6 +123,9 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
           </fieldset>
           {importanceMode === 'derived' ? columnSelect('总体满意度', overall, setOverall)
             : picked.map(c => <label key={c} className={styles.field}>{name(c)} 的重要性<select value={importance[c] ?? ''} onChange={e => setImportance({ ...importance, [c]: Number(e.target.value) })}><option value="">请选择</option>{numeric.map(o => <option key={o.index} value={o.index}>{name(o.index)}</option>)}</select></label>)}</>}
+        {method === 'profile' && <>{columnSelect('分组变量（2–6 组）', outcome, setOutcome, categories)}{columnChecks('评价维度（2–8 个）', outcome)}</>}
+        {method === 'likert' && columnChecks('同一量表的评分题（至少 2 个）')}
+        {method === 'correlation' && columnChecks('变量（3–9 个）')}
         {method === 'ahp' && <>
           <label className={styles.field}>准则（每行一个）<textarea rows={4} value={criteria} onChange={e => setCriteria(e.target.value)} /></label>
           <fieldset className={styles.matrix}><legend>两两比较（1～9：行准则比列准则重要的程度；小于 1 填分数如 0.333）</legend>

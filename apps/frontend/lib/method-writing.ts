@@ -13,6 +13,7 @@ import type { Logistic } from './logistic.ts';
 import type { Ahp } from './ahp.ts';
 import type { Ipa } from './ipa.ts';
 import type { Clustering } from './kmeans.ts';
+import type { GroupProfile, LikertDistribution, SpearmanMatrix } from './composite-analysis.ts';
 import { coef as f3, dof, lead, literalText as literal, pMath, stat as f2, tex2, tex3, type ResultRefs } from './report-templates.ts';
 
 export type MethodTable = { caption: string; headers: string[]; rows: string[][]; note: string };
@@ -161,5 +162,80 @@ export function clusterWriting(result: Clustering, silhouetteMean: number, varia
       note: `注：变量已标准化（均值 0、标准差 1），中心值为正表示高于总体平均；$k=${result.k}$，平均轮廓系数 $\\bar{s}=${tex3(silhouetteMean)}$，$n=${result.n}$。`,
     },
     reading: `${lead(refs)}将受访者分为 ${result.k} 类，平均轮廓系数为 $${tex3(silhouetteMean)}$，${silhouetteMean >= 0.5 ? '聚类结构合理' : silhouetteMean >= 0.25 ? '聚类结构一般，类别边界不够清晰' : '聚类结构不明显，以下画像仅供参考'}。${profile.join('；')}。各类的命名应结合变量含义与调查背景确定。`,
+  };
+}
+
+const holmMath = (p: number) => (p < 0.001 ? 'p_{\\mathrm{Holm}}<0.001' : `p_{\\mathrm{Holm}}=${p.toFixed(3)}`);
+/** Kruskal–Wallis ε²: about 0.01, 0.08 and 0.26 mark small, medium and large differences. */
+const epsilonBand = (e: number) => (e >= 0.26 ? '差异较大' : e >= 0.08 ? '差异中等' : e >= 0.01 ? '差异较小' : '差异可忽略');
+/** Spearman |ρ|: about 0.1, 0.3 and 0.5 mark weak, moderate and strong association. */
+const rhoBand = (r: number) => (Math.abs(r) >= 0.5 ? '强' : Math.abs(r) >= 0.3 ? '中等' : Math.abs(r) >= 0.1 ? '弱' : '极弱');
+const stars = (p: number) => (p < 0.001 ? '***' : p < 0.01 ? '**' : p < 0.05 ? '*' : '');
+
+/** Several dimensions compared across the groups of one variable, for a "差异检验" section. */
+export function profileWriting(result: GroupProfile, group: string, refs: ResultRefs = {}): MethodWriting {
+  const d = result.dimensions.length, df = result.dimensions[0].df;
+  const differing = result.dimensions.filter(x => x.pAdjusted < 0.05), similar = result.dimensions.filter(x => x.pAdjusted >= 0.05);
+  const describe = (x: GroupProfile['dimensions'][number]) => {
+    const order = x.means.map((m, g) => [g, m] as const).sort((a, b) => b[1] - a[1]), [hi, lo] = [order[0], order.at(-1)!];
+    return `${quote(x.name)}（$H(${df})=${tex2(x.h)}$，$${holmMath(x.pAdjusted)}$，$\\varepsilon^2=${tex3(x.epsilonSquared)}$，${epsilonBand(x.epsilonSquared)}）上，${quote(result.groups[hi[0]].label)}均值最高（${f2(hi[1])}），${quote(result.groups[lo[0]].label)}最低（${f2(lo[1])}）`;
+  };
+  return {
+    text: `为同时比较不同${literal(group)}受访者在 ${d} 个评价维度上的差异，对每个维度作 Kruskal–Wallis 秩和检验（不要求正态分布，含并列校正），以 $\\varepsilon^2$ 衡量差异大小，并以 Holm 法校正 ${d} 次检验带来的多重比较：`,
+    formulas: ['H=\\frac{12}{N(N+1)}\\sum_{g=1}^{G}\\frac{R_g^{2}}{n_g}-3(N+1)', '\\varepsilon^{2}=\\frac{H}{N-1}', 'p_{(i)}^{\\mathrm{Holm}}=\\max_{j\\le i}\\min\\left\\{1,\\,(m-j+1)\\,p_{(j)}\\right\\}'],
+    where: '式中，$N$ 为有效样本量，$G$ 为组数，$n_g$ 与 $R_g$ 分别为第 $g$ 组的人数与秩和，有并列值时 $H$ 再除以并列校正因子；$\\varepsilon^2$ 取值 0～1，约 0.01、0.08、0.26 分别对应较小、中等、较大的差异；$m$ 为检验次数，$p_{(j)}$ 为第 $j$ 小的原始 p 值。',
+    table: {
+      caption: `不同${literal(group)}受访者各评价维度均值与差异检验汇总表`,
+      headers: ['评价维度', ...result.groups.map(g => `${literal(g.label)}（n = ${g.n}）`), 'H', 'p（Holm）', 'ε²'],
+      rows: result.dimensions.map(x => [literal(x.name), ...x.means.map(f2), f2(x.h), pCell(x.pAdjusted), f3(x.epsilonSquared)]),
+      note: `注：表中为各组均值；$H$ 的自由度为 ${df}，p 值经 Holm 法校正；$n=${result.n}$。`,
+    },
+    reading: `${lead(refs)}${differing.length ? `校正多重比较后，在${differing.map(describe).join('；')}` : `校正多重比较后，各评价维度在不同${literal(group)}之间的差异均未达到 0.05 的显著性水平`}。`
+      + (differing.length && similar.length ? `${names(similar.map(x => x.name))}在各组之间没有显著差异。` : '')
+      + '组间差异只说明不同人群的评价不同，不能据此认为分组本身是差异的原因。',
+  };
+}
+
+/** Each rating item's whole answer distribution, for a "描述性统计" section. */
+export function likertWriting(result: LikertDistribution, refs: ResultRefs = {}): MethodWriting {
+  const L = result.levels.length, low = result.levels[0], high = result.levels.at(-1)!, mid = (low + high) / 2;
+  const topLevels = result.levels.filter(l => l > mid), bottomLevels = result.levels.filter(l => l < mid);
+  const bottom = (x: LikertDistribution['items'][number]) => x.shares.reduce((s, v, i) => s + (result.levels[i] < mid ? v : 0), 0);
+  const ranked = [...result.items].sort((a, b) => b.top - a.top), weak = result.items.filter(x => bottom(x) >= 0.2);
+  return {
+    text: `为呈现各评价维度的作答全貌而不只看均值，统计每个题项在 ${L} 级量表各等级上的作答比例，并计算均值与高分占比：`,
+    formulas: ['p_{kl}=\\frac{n_{kl}}{n_k},\\qquad \\bar{x}_k=\\sum_{l}l\\,p_{kl}', 'T_k=\\sum_{l>c}p_{kl}'],
+    where: `式中，$n_{kl}$ 为第 $k$ 题选择第 $l$ 级的人数，$n_k$ 为该题有效作答数，$c$ 为量表中点（${mid}），$T_k$ 为高分（${topLevels.join('、')} 分）占比。`,
+    table: {
+      caption: '各评价维度作答分布表',
+      headers: ['题项', ...result.levels.map(l => `${l} 分`), '均值', '高分占比'],
+      rows: result.items.map(x => [literal(x.name), ...x.shares.map(percent), f2(x.mean), percent(x.top)]),
+      note: `注：比例以各题有效作答为分母；高分指 ${topLevels.join('、')} 分；$n=${result.n}$。`,
+    },
+    reading: `${lead(refs)}高分占比最高的是${quote(ranked[0].name)}（${percent(ranked[0].top)}，均值 ${f2(ranked[0].mean)}），最低的是${quote(ranked.at(-1)!.name)}（${percent(ranked.at(-1)!.top)}，均值 ${f2(ranked.at(-1)!.mean)}）。`
+      + (weak.length ? `${names(weak.map(x => x.name))}选择 ${bottomLevels.join('、')} 分的比例不低于 20%（${weak.map(x => percent(bottom(x))).join('、')}），评价分化较明显，是均值掩盖的薄弱处。` : `各题选择 ${bottomLevels.join('、')} 分的比例均低于 20%，低分评价较少。`),
+  };
+}
+
+/** Spearman correlations between every pair of dimensions, for a "相关分析" section. */
+export function correlationWriting(result: SpearmanMatrix, refs: ResultRefs = {}): MethodWriting {
+  const m = result.variables.length, tests = result.pairs.length, label = (i: number) => `（${i + 1}）`;
+  const ranked = [...result.pairs].sort((a, b) => Math.abs(b.rho) - Math.abs(a.rho)), significant = result.pairs.filter(p => p.pAdjusted < 0.05);
+  const pair = (p: SpearmanMatrix['pairs'][number]) => `${quote(result.variables[p.a])}与${quote(result.variables[p.b])}（$\\rho=${tex3(p.rho)}$，$${holmMath(p.pAdjusted)}$）`;
+  const cell = (a: number, b: number) => { const p = result.pairs.find(x => x.a === Math.min(a, b) && x.b === Math.max(a, b))!; return `${f3(p.rho)}${stars(p.pAdjusted)}`; };
+  return {
+    text: `为考察各评价维度之间的关联结构，计算两两之间的 Spearman 秩相关系数（以平均秩处理并列值），并以 Holm 法校正 ${tests} 次检验带来的多重比较：`,
+    formulas: ['\\rho_{ab}=\\frac{\\sum_{i}(r_{ai}-\\bar{r}_a)(r_{bi}-\\bar{r}_b)}{\\sqrt{\\sum_{i}(r_{ai}-\\bar{r}_a)^{2}\\sum_{i}(r_{bi}-\\bar{r}_b)^{2}}}', 't=\\rho\\sqrt{\\frac{n-2}{1-\\rho^{2}}}'],
+    where: '式中，$r_{ai}$ 为第 $i$ 位受访者在变量 $a$ 上的秩，$\\bar{r}_a$ 为平均秩；统计量 $t$ 近似服从自由度为 $n-2$ 的 $t$ 分布。$\\lvert\\rho\\rvert$ 约 0.1、0.3、0.5 分别对应弱、中等、强的关联；相关只说明两者同向或反向变化，不说明因果。',
+    table: {
+      caption: '各评价维度 Spearman 相关系数矩阵表',
+      headers: ['变量', ...result.variables.slice(0, -1).map((_, i) => label(i))],
+      rows: result.variables.map((v, i) => [`${label(i)}${literal(v)}`, ...result.variables.slice(0, -1).map((_, j) => (j < i ? cell(i, j) : j === i ? '1' : ''))]),
+      note: `注：下三角为 Spearman 秩相关系数；*、**、*** 分别表示 Holm 校正后 $p<0.05$、$p<0.01$、$p<0.001$；$n=${result.n}$。`,
+    },
+    reading: `${lead(refs)}${m} 个维度两两之间的相关系数在 $${tex3(Math.min(...result.pairs.map(p => p.rho)))}$～$${tex3(Math.max(...result.pairs.map(p => p.rho)))}$ 之间，校正后 ${significant.length} / ${tests} 对达到 0.05 的显著性水平。`
+      + `关联最强的是${ranked.slice(0, Math.min(3, ranked.length)).map(pair).join('、')}，属${rhoBand(ranked[0].rho)}关联；`
+      + `最弱的是${pair(ranked.at(-1)!)}。`
+      + (Math.abs(ranked[0].rho) < 0.5 ? '各维度之间至多为中等关联，说明它们反映服务的不同侧面，可以分别评估与改进。' : '关联较强的维度在受访者评价中相伴变化，改进时宜统筹考虑。'),
   };
 }
