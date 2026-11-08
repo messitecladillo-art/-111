@@ -76,7 +76,7 @@ test('native chart labels use explicit placement and avoid optional decimal poin
  const r=c.quality.results[0];r.rows[0][1]=1/3;r.resultHash=await digestText(JSON.stringify(resultPayload(r)));zip=await JSZip.loadAsync(await (await buildPptx(c)).arrayBuffer());xml=await Object.values(zip.files).find(f=>/^ppt\/charts\/chart\d+\.xml$/.test(f.name)).async('string');assert.match(xml,/formatCode="0.000"/);assert.match(xml,/<c:v>0.3333333333333333<\/c:v>/);
 });
 test('Word chart and captions remain a local group without binding the whole report',async()=>{
- const zip=await JSZip.loadAsync(await (await word(await fixture())).arrayBuffer()),xml=await zip.file('word/document.xml').async('string');const paragraphs=[...xml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)].map(m=>m[0]);assert.match(paragraphs.find(p=>p.includes('asvg:svgBlip')),/<w:keepNext\/>/);assert.match(paragraphs.find(p=>p.includes('ReportFigureCaption')&&p.includes('分类人数')),/<w:keepNext\/>/);assert.doesNotMatch(paragraphs.find(p=>p.includes('保留正文')),/<w:keepNext\/>/);
+ const zip=await JSZip.loadAsync(await (await word(await fixture())).arrayBuffer()),xml=await zip.file('word/document.xml').async('string');const paragraphs=[...xml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)].map(m=>m[0]);assert.match(paragraphs.find(p=>p.includes('asvg:svgBlip')),/<w:keepNext\/>/);assert.doesNotMatch(paragraphs.find(p=>p.includes('ReportFigureCaption')&&p.includes('分类人数')),/<w:keepNext\/>/,'nothing follows a caption now that no source line is printed');assert.doesNotMatch(paragraphs.find(p=>p.includes('保留正文')),/<w:keepNext\/>/);
 });
 
 test('native decorative geometry preserves vector shapes, negative line direction and transforms',async()=>{

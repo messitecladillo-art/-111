@@ -4,6 +4,7 @@ import { ACCENTS, parseEditorContent, type EditorContent } from "./editor-model.
 import {addFrameToWord} from './report-frame-export.ts';
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 import { formatReference, referenceNumbers, unfinishedCited, unfinishedReference } from './references.ts';
+import { A4_PAGE_PX, pageArtBytes } from './page-art.ts';
 
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -30,7 +31,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     const blank = cited.order.findIndex(unfinishedReference);
     if (blank >= 0) throw Error(`第 ${blank + 1} 条参考文献尚未填写题名，请补全或删除后再导出。`);
   }
-  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel } = await import("docx");
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, Header, ImageRun, HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom, TextWrappingType, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel } = await import("docx");
   const {default:JSZip}=await import('jszip');
   // Chinese in 宋体 / 黑体; Latin letters and numbers in Times New Roman, as competition templates set them.
   const font=(eastAsia:string)=>({ascii:'Times New Roman',hAnsi:'Times New Roman',eastAsia,cs:'Times New Roman',hint:'eastAsia'});
@@ -64,12 +65,25 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   const sections:ConstructorParameters<typeof Document>[0]['sections'][number][]=[];
   const sectionKinds:('cover'|'body'|'appendix'|'preliminary')[]=[];
   const footer=()=>new Footer({children:[new Paragraph({alignment:AlignmentType.CENTER,indent:{firstLine:0,firstLineChars:0},spacing:{before:0,after:0,line:240},children:[new TextRun({...bodyRun,children:[PageNumber.CURRENT]})]})]});
+  // A whole-page image behind the text, placed at the page's top-left corner: the cover, or the frame in the header.
+  const pageImage=(art:NonNullable<EditorContent['coverImage']|EditorContent['frameImage']>,name:string,title:string,description:string)=>new ImageRun({type:art.mime==='image/png'?'png':'jpg',data:pageArtBytes(art),transformation:{width:A4_PAGE_PX.width,height:A4_PAGE_PX.height},altText:{title,description,name},floating:{horizontalPosition:{relative:HorizontalPositionRelativeFrom.PAGE,offset:0},verticalPosition:{relative:VerticalPositionRelativeFrom.PAGE,offset:0},behindDocument:true,allowOverlap:true,lockAnchor:true,layoutInCell:false,wrap:{type:TextWrappingType.NONE}}});
+  // The frame image sits in the first header after the cover; later sections link to it, so the file holds it once.
+  let frameHeaderPlaced=false;
+  const frameHeader=()=>{if(!content.frameImage||frameHeaderPlaced)return undefined;frameHeaderPlaced=true;return {default:new Header({children:[new Paragraph({...flush,spacing:{before:0,after:0,line:240},children:[pageImage(content.frameImage,'frame-image','页框','页面四周的装饰页框')]})]})};};
   function addSection(children:ConstructorParameters<typeof Document>[0]["sections"][number]["children"],kind:'cover'|'preliminary'|'body',restart?:number){
     sectionKinds.push(kind==='body'&&options.part==='appendix'?'appendix':kind);
-    sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
+    const headers=kind==='cover'?undefined:frameHeader();
+    sections.push({...(headers?{headers}:{}),properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
   const title=()=>new Paragraph({style:'Title',children:textRuns(TextRun,content.title,{...bodyRun,size:32,sizeComplexScript:32,bold:true})});
-  if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:textRuns(TextRun,content.title)}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:textRuns(TextRun,content.subtitle)})]:[])],'cover');
+  // A cover image is the whole cover, its title drawn into it: the page holds the picture, edge to edge behind one
+  // empty paragraph, and no title text of its own.
+  if(options.includeCover&&content.coverImage){
+    addSection([new Paragraph({...flush,spacing:{before:0,after:0,line:240},children:[pageImage(content.coverImage,'cover-image','封面',content.subtitle?`${content.title}——${content.subtitle}`:content.title)]})],'cover');
+    // The artwork is the whole page: no page frame is printed over it.
+    sectionKinds[sectionKinds.length-1]='preliminary';
+  }
+  else if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:textRuns(TextRun,content.title)}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:textRuns(TextRun,content.subtitle)})]:[])],'cover');
   // Numbers come from the whole draft, so the main text and a separately exported appendix agree.
   const ctx:WordContext={labels:reportLabels(content.report),math:[],where:'',section:'',citations:cited.numbers};
   const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>blockLabel(ctx.labels,s.id,b.id)?.kind===kind));
@@ -78,8 +92,8 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     if(!options.includeToc||tocInserted)return;
     const children:Array<ConstructorParameters<typeof Document>[0]["sections"][number]["children"][number]>=[new Paragraph({style:'ReportSpecialHeading',text:'目录'}),new TableOfContents('目录',{hyperlink:true,headingStyleRange:'1-3'})];
     if(exported('table'))children.push(new Paragraph({style:'ReportSpecialHeading',pageBreakBefore:true,text:'表目录'}),new TableOfContents('表目录',{hyperlink:true,stylesWithLevels:[new StyleLevel('表题',1)]}));
-    // The figure list follows the table list on the same page; both stay within the counted front matter.
-    if(exported('figure'))children.push(new Paragraph({style:'ReportSpecialHeading',pageBreakBefore:!exported('table'),spacing:{before:480},text:'图目录'}),new TableOfContents('图目录',{hyperlink:true,stylesWithLevels:[new StyleLevel('图题',1)]}));
+    // The list of figures starts a page of its own, as the contents and the list of tables do; all stay within the counted front matter.
+    if(exported('figure'))children.push(new Paragraph({style:'ReportSpecialHeading',pageBreakBefore:true,text:'图目录'}),new TableOfContents('图目录',{hyperlink:true,stylesWithLevels:[new StyleLevel('图题',1)]}));
     addSection(children,'preliminary',preliminaryStarted?undefined:1);preliminaryStarted=true;tocInserted=true;
   }
   for(const section of report){

@@ -135,7 +135,7 @@ test('Word merges a frame table\'s parent units and keeps the three-line rules',
   const xml = await zip.file('word/document.xml').async('string');
   assert.ok((xml.match(/<w:vMerge w:val="restart"\/>/g) ?? []).length >= 2, 'parent units restart a vertical merge');
   assert.ok((xml.match(/<w:vMerge(?: w:val="continue")?\/>/g) ?? []).length >= 3, 'their children rows continue it');
-  assert.match(xml, /资料来源：本研究抽样设计。/);
+  assert.doesNotMatch(xml, /<w:t[^>]*>资料来源/u, 'the frame table prints no source line');
   assert.doesNotMatch(xml, /有效样本 n = 0/);
 });
 

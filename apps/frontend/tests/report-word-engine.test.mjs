@@ -210,7 +210,7 @@ test('Word export carries native equations, numbered captions, resolved referenc
   assert.match(xml, /表 2-1  年龄组与频次/);
   assert.match(xml, /图 2-2  满意度均值/);
   assert.doesNotMatch(xml, /§§OMML/);
-  assert.equal([...xml.matchAll(/<w:t xml:space="preserve">资料来源：/g)].length, 2, 'the chart and table of one result share a source line');
+  assert.doesNotMatch(xml, /<w:t[^>]*>资料来源：/u, 'figures and tables print no source line');
   assert.equal([...xml.matchAll(/>注：/g)].length, 1, 'caveats are gathered once for the section');
   assert.match(xml, /TOC \\h \\t &quot;图题,1&quot;/);
   assert.match(xml, /TOC \\h \\t &quot;表题,1&quot;/);

@@ -1,11 +1,11 @@
-import { EDITOR_LIMITS, parseEditorContent, type EditorContent } from './editor-model.ts';
+import { EDITOR_LIMITS, PAGE_ART_DRAFT_BYTES, parseEditorContent, type EditorContent } from './editor-model.ts';
 import {
   parseProjectReport, parseReportHead, reportContentsEqual,
   type ProjectReport, type ProjectReportSummary, type SaveReportRequest,
 } from './project-report.ts';
 
 /** Content's existing 2 MB cap plus a bounded report/version JSON envelope. */
-export const REPORT_READ_OPTIONS = Object.freeze({ maxBytes: EDITOR_LIMITS.bytes + 16_384 });
+export const REPORT_READ_OPTIONS = Object.freeze({ maxBytes: EDITOR_LIMITS.bytes + PAGE_ART_DRAFT_BYTES + 16_384 });
 
 /** Freeze only the detached request; never freeze the editor's live object. */
 function freezeRequest<T>(value: T): T {

@@ -162,7 +162,7 @@ def validate_report_visuals(content):
     if not isinstance(content, dict) or type(content.get('version')) is not int or content['version'] not in (1, 2, 3):
         raise ApiError()
     version = content['version']
-    visual_keys = ('visualStyle', 'figures', 'reportFrame')
+    visual_keys = ('visualStyle', 'figures', 'reportFrame', 'coverImage', 'frameImage')
     if version != 3 and any(key in content for key in visual_keys):
         raise ApiError()
     style = _visual_style(content['visualStyle']) if 'visualStyle' in content else None
@@ -196,4 +196,12 @@ def validate_report_visuals(content):
                     raise ApiError()
     if 'reportFrame' in content:
         _frame(content['reportFrame'], style)
+    if 'coverImage' in content:
+        from .page_art import cover_image_bytes
+        cover_image_bytes(content['coverImage'])
+    if 'frameImage' in content:
+        from .page_art import frame_image_bytes
+        if 'reportFrame' in content:
+            raise ApiError()
+        frame_image_bytes(content['frameImage'])
     return content

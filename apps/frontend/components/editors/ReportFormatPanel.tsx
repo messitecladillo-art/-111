@@ -1,6 +1,7 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
+import { pageArtDataUrl, coverImageFromFile, frameImageFromFile, type CoverImage, type FrameImage } from '@/lib/page-art';
 import {
   evaluateReportFormat, REPORT_FORMAT_PROFILES, reportFormatNotices,
   type ReportFormatSettings,
@@ -11,14 +12,47 @@ type Props = {
   value: ReportFormatSettings;
   onChange: (settings: ReportFormatSettings) => void;
   sections: readonly { title: string }[];
+  /** The whole-page cover made with the report-cover skill; it replaces the system-set title page. */
+  coverImage?: CoverImage;
+  onCoverImage?: (cover: CoverImage | undefined) => void;
+  /** The transparent page frame made with the report-frame skill; it lies behind every page after the cover. */
+  frameImage?: FrameImage;
+  onFrameImage?: (frame: FrameImage | undefined) => void;
 };
 
 const GROUPS = ['本科组', '专科组', '研究生组', '在华留学生组'];
 const TRACKS = ['自主选题', '企业命题'];
 const STAGES = ['知识赛', '校赛', '企业命题赛', '省赛', '全国赛初赛', '全国赛决赛'];
 
+/** One piece of skill-made page art: a thumbnail, what it does, and upload / replace / remove. */
+function ArtRow<T extends CoverImage | FrameImage>({ id, label, art, accept, hint, detail, warning, onFile, onRemove }: { id: string; label: string; art?: T; accept: string; hint: string; detail: (art: T) => string; warning?: string; onFile: (file: File) => Promise<void>; onRemove: () => void }) {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true); setError('');
+    try { await onFile(file); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : `${label}无法读取。`); }
+    finally { setBusy(false); }
+  };
+  return <div className={styles.coverRow}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- the draft's own data URL; an image optimizer cannot serve it. */}
+    {art ? <img className={styles.coverThumb} src={pageArtDataUrl(art)} alt={`当前${label}`} /> : <span className={styles.coverThumb} aria-hidden="true" />}
+    <div className={styles.coverText}>
+      <strong>{label}</strong>
+      <p>{art ? detail(art) : hint}</p>
+      {warning && <p className={styles.coverWarn}>{warning}</p>}
+      {error && <p className={styles.coverWarn} role="alert">{error}</p>}
+    </div>
+    <div className={styles.coverActions}>
+      <label className={styles.coverButton} htmlFor={id}>{busy ? '处理中…' : art ? '更换' : `上传${label}`}<input id={id} type="file" accept={accept} disabled={busy} onChange={event => { void pick(event.target.files?.[0]); event.target.value = ''; }} /></label>
+      {art && <button type="button" className={styles.coverRemove} onClick={() => { setError(''); onRemove(); }}>移除</button>}
+    </div>
+  </div>;
+}
+
 /** A selected layout and an applicable competition rule have separate receipts. */
-export default function ReportFormatPanel({ value, onChange, sections }: Props) {
+export default function ReportFormatPanel({ value, onChange, sections, coverImage, onCoverImage, frameImage, onFrameImage }: Props) {
   const id = useId();
   const evaluation = evaluateReportFormat(value);
   const notices = reportFormatNotices(sections);
@@ -75,6 +109,15 @@ export default function ReportFormatPanel({ value, onChange, sections }: Props) 
           <label className={styles.check} htmlFor={id + '-pages'}><input id={id + '-pages'} type="checkbox" checked={value.options.numberPages} onChange={event => update({ options: { ...value.options, numberPages: event.target.checked } })} />页码</label>
         </div>
       </div>
+      {onCoverImage && <ArtRow id={id + '-cover-image'} label="封面图" art={coverImage} accept="image/png,image/jpeg" onRemove={() => onCoverImage(undefined)}
+        hint="上传用报告封面技能生成的整页封面（A4 竖版 JPEG / PNG，题名画在图中）。未上传时使用标题页。"
+        detail={art => `整页铺满 A4 封面，画布、Word 与 LaTeX 一致；系统不再另排标题。${art.widthPx}×${art.heightPx} 像素。`}
+        warning={!value.options.includeCover && coverImage ? '「标题页」未勾选，导出时不含封面。' : ''}
+        onFile={file => coverImageFromFile(file, `封面图「${file.name.slice(0, 120)}」由报告封面技能整页生成，题名字形在图中；作者已逐字核对。`).then(onCoverImage)} />}
+      {onFrameImage && <ArtRow id={id + '-frame-image'} label="页框图" art={frameImage} accept="image/png" onRemove={() => onFrameImage(undefined)}
+        hint="上传用报告页框技能生成的透明 A4 PNG；装饰只在页边，正文区与页码区必须完全透明。"
+        detail={art => `铺在封面之后的每一页，正文版心不变；画布、Word 与 LaTeX 一致。${art.widthPx}×${art.heightPx} 像素。`}
+        onFile={file => frameImageFromFile(file, `页框图「${file.name.slice(0, 120)}」由报告页框技能生成，只在页边装饰。`).then(onFrameImage)} />}
       {notices.length > 0 && <ul className={styles.notices} aria-label="章节建议">{notices.map(notice => <li key={notice}>{notice}</li>)}</ul>}
       <details className={styles.source}>
         <summary>来源与适用范围</summary>

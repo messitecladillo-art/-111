@@ -1,5 +1,6 @@
-import {assertFindingReferences, assertTableRows, evidenceLabel, valueText} from './quality-export.ts';
-import { chartData, resultFor, verifyResearchQuality, type ReportBlock } from './research-quality.ts';
+import {assertFindingReferences, assertTableRows, valueText} from './quality-export.ts';
+import { chartData, resultFor, verifyResearchQuality, type ReportBlock, type ResultSnapshot } from './research-quality.ts';
+import { sectionNotes } from './report-tables.ts';
 import {parseEditorContent,type EditorContent,type LatexReport} from './editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS, parseReportFormatOptions, parseReportFormatSettings, reportPart, type ReportFormatOptions } from './report-format.ts';
 import { referenceSegments, reportLabels, type BlockLabel } from './report-numbering.ts';
@@ -9,9 +10,10 @@ import {parseReportFrame,assertApprovedFrame,type ReportFrameStyle} from './repo
 import {figureTexPreamble} from './report-figure-tex.ts';
 import {figureFor,type ReportFigure,type ProjectVisualStyle} from './report-figure.ts';
 import {carriesFigure} from './method-figures.ts';
+import {coverImageTitlepage,frameImagePreamble,parseCoverImage,parseFrameImage,type CoverImage,type FrameImage} from './page-art.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
-export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; frame?:ReportFrameStyle; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle };
+export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; frame?:ReportFrameStyle; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle;coverImage?:CoverImage;frameImage?:FrameImage };
 export type LatexDiagnostic = { severity: 'error' | 'warning'; line: number | null; message: string };
 export type LatexCompileReceipt = { status: 'compiled' | 'error' | 'unavailable'; source: string; sourceHash: string; pdfBase64: string | null; diagnostics: LatexDiagnostic[]; engine: 'xelatex' | null };
 
@@ -63,7 +65,9 @@ function latexLine(text: string, refs: Cites, where: string): string {
 }
 
 function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites = { labels: reportLabels(content.report), citations: referenceNumbers(content).numbers }, where = '内容块'): string {
-  return blocks.map(block=>{
+  // As in the Word export: no source line under an exhibit, the section's caveats gathered once in a small note.
+  const used:ResultSnapshot[]=[];
+  const out=blocks.map(block=>{
     if(block.kind==='formula'){
       const commands=[...block.text.matchAll(/\\([A-Za-z]+)/g)].map(m=>m[1]);
       if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','zeta','iota','kappa','nu','xi','tau','upsilon','phi','varphi','psi','vartheta','varpi','varrho','varsigma','Gamma','Theta','Lambda','Xi','Pi','Upsilon','Phi','Psi','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text',
@@ -73,22 +77,24 @@ function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites 
     }
     if(block.kind!=='chart'&&block.kind!=='table')return `${latexLine(block.text,refs,where)}\\par`;
     const r=resultFor(content.quality,block.evidenceId);
-    const source=escapeLatexParagraphText(evidenceLabel(r));
-    if(block.figureId){const figure=figureFor(content,block.figureId,block.evidenceId),index=content.figures!.findIndex(f=>f.id===figure.id),table=figure.kind==='table';return [`\\begin{${table?'table':'figure'}}[htbp]`,'\\centering',...(table?[`\\caption{${escapeLatexText(block.text||figure.title)}}`]:[]),`\\ResearchFigure{${index}}`,...(!table?[`\\caption{${escapeLatexText(block.text||figure.title)}}`]:[]),`\\end{${table?'table':'figure'}}`,`${source}\\par`].join('\n');}
+    if(!used.includes(r))used.push(r);
+    if(block.figureId){const figure=figureFor(content,block.figureId,block.evidenceId),index=content.figures!.findIndex(f=>f.id===figure.id),table=figure.kind==='table';return [`\\begin{${table?'table':'figure'}}[htbp]`,'\\centering',...(table?[`\\caption{${escapeLatexText(block.text||figure.title)}}`]:[]),`\\ResearchFigure{${index}}`,...(!table?[`\\caption{${escapeLatexText(block.text||figure.title)}}`]:[]),`\\end{${table?'table':'figure'}}`].join('\n');}
     if(block.kind==='table'){
       assertTableRows(r);
       if(r.headers.length>10||r.rows.length>25)throw Error('表格超过 10 列或 25 行，请分拆后导出 LaTeX。');
       const cells=(row:(string|number|null)[])=>row.map(v=>escapeLatexText(valueText(v))).join(' & ')+String.raw` \\`;
-      return ['\\begin{table}[htbp]','\\centering',`\\caption{${escapeLatexText(block.text||r.title)}}`,`\\begin{tabular}{${'c'.repeat(r.headers.length)}}`,'\\toprule[1.5bp]',cells(r.headers),'\\midrule[0.75bp]',...r.rows.map(cells),'\\bottomrule[1.5bp]','\\end{tabular}','\\end{table}',`${source}\\par`].join('\n');
+      return ['\\begin{table}[htbp]','\\centering',`\\caption{${escapeLatexText(block.text||r.title)}}`,`\\begin{tabular}{${'c'.repeat(r.headers.length)}}`,'\\toprule[1.5bp]',cells(r.headers),'\\midrule[0.75bp]',...r.rows.map(cells),'\\bottomrule[1.5bp]','\\end{tabular}','\\end{table}'].join('\n');
     }
     // An advanced method's own figure (forest, scree, quadrant, profile) is drawn in the Word export only; here its
     // number and caption stay, so references to it still resolve, and the box says where to see it.
-    if(carriesFigure(r))return ['\\begin{figure}[htbp]','\\centering','\\textit{此图为方法图，在 Word 导出中绘制；其数值见同节结果表。}',`\\caption{${escapeLatexText(block.text||r.title)}}`,'\\end{figure}',`${source}\\par`].join('\n');
+    if(carriesFigure(r))return ['\\begin{figure}[htbp]','\\centering','\\textit{此图为方法图，在 Word 导出中绘制；其数值见同节结果表。}',`\\caption{${escapeLatexText(block.text||r.title)}}`,'\\end{figure}'].join('\n');
     const data=chartData(r,block.valueColumn);
     if(data.labels.length>16||data.values.some(v=>Math.abs(v)>1e12))throw Error('图表类别或数值范围过大，请分拆或转换计量单位。');
     const ticks=data.labels.map((_,i)=>i).join(','), labels=data.labels.map(x=>`{${escapeLatexText(x)}}`).join(',');
-    return ['\\begin{figure}[htbp]','\\centering',`\\definecolor{ResearchAccent}{HTML}{${content.accent==='teal'?'0F766E':content.accent==='burgundy'?'8A3449':'234E80'}}`,'\\begin{tikzpicture}',`\\begin{axis}[width=13cm,height=8cm,ybar,bar width=12pt,xtick={${ticks}},xticklabels={${labels}},x tick label style={rotate=35,anchor=east},ylabel={${escapeLatexText(r.headers[block.valueColumn])}},enlarge x limits=0.12,nodes near coords,point meta=explicit symbolic]`,`\\addplot[fill=ResearchAccent,draw=ResearchAccent] coordinates {${data.values.map((v,i)=>`(${i},${v}) [${valueText(v)}]`).join(' ')}};`,'\\end{axis}','\\end{tikzpicture}',`\\caption{${escapeLatexText(block.text||r.title)}}`,'\\end{figure}',`${source}\\par`].join('\n');
-  }).join('\n\n');
+    return ['\\begin{figure}[htbp]','\\centering',`\\definecolor{ResearchAccent}{HTML}{${content.accent==='teal'?'0F766E':content.accent==='burgundy'?'8A3449':'234E80'}}`,'\\begin{tikzpicture}',`\\begin{axis}[width=13cm,height=8cm,ybar,bar width=12pt,xtick={${ticks}},xticklabels={${labels}},x tick label style={rotate=35,anchor=east},ylabel={${escapeLatexText(r.headers[block.valueColumn])}},enlarge x limits=0.12,nodes near coords,point meta=explicit symbolic]`,`\\addplot[fill=ResearchAccent,draw=ResearchAccent] coordinates {${data.values.map((v,i)=>`(${i},${v}) [${valueText(v)}]`).join(' ')}};`,'\\end{axis}','\\end{tikzpicture}',`\\caption{${escapeLatexText(block.text||r.title)}}`,'\\end{figure}'].join('\n');
+  });
+  const notes=sectionNotes(used);
+  return [...out,...(notes?[`{\\small\\noindent ${escapeLatexParagraphText(notes)}\\par}`]:[])].join('\n\n');
 }
 
 export function generateLatexBody(content: EditorContent): string {
@@ -123,15 +129,16 @@ export function latexFigureReferences(body:string):{index:number;start:number;en
 export function latexCompileInput(content: EditorContent): LatexCompileInput {
   const options = parseReportFormatOptions((content.reportFormat ?? DEFAULT_REPORT_SETTINGS).options);
   const original=content.latex?.body??'',refs=latexFigureReferences(original),used=[...new Set(refs.map(r=>r.index))].sort((a,b)=>a-b);
-  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{})};
+  const cover={...(options.includeCover&&content.coverImage?{coverImage:content.coverImage}:{}),...(content.frameImage?{frameImage:content.frameImage}:{})};
+  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...cover};
   let offset=0,body='';for(const ref of refs){body+=original.slice(offset,ref.start)+used.indexOf(ref.index);offset=ref.end;}body+=original.slice(offset);
-  return { title: content.title, subtitle: content.subtitle, body, options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}) };
+  return { title: content.title, subtitle: content.subtitle, body, options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}),...cover };
 }
 export function latexCompileKey(input: LatexCompileInput): string {
   const o = input.options;
   return JSON.stringify({ title: input.title, subtitle: input.subtitle, body: input.body,
     ...(input.frame?{frame:input.frame}:{}),
-    ...(input.figures?.length?{figures:input.figures}:{}),...(input.visualStyle?{visualStyle:input.visualStyle}:{}),
+    ...(input.figures?.length?{figures:input.figures}:{}),...(input.visualStyle?{visualStyle:input.visualStyle}:{}),...(input.coverImage?{coverImage:input.coverImage}:{}),...(input.frameImage?{frameImage:input.frameImage}:{}),
     options: { part: o.part, includeCover: o.includeCover, includeToc: o.includeToc, firstLineChars: o.firstLineChars, numberPages: o.numberPages } });
 }
 
@@ -157,10 +164,18 @@ export function buildLatexSource(input: LatexCompileInput): string {
   ];
   if(input.body.includes('\\begin{tikzpicture}'))lines.splice(3,0,'\\usepackage{pgfplots}','\\pgfplotsset{compat=1.18}');
   if(input.figures?.length){if(!input.visualStyle)throw Error('图形缺少配色版本。');lines.splice(3,0,'\\usepackage{tikz}');lines.splice(lines.indexOf('\\begin{document}'),0,...figureTexPreamble(input.figures,input.visualStyle));}
+  // A cover image is the whole cover: it fills the page, carries its own title lettering and gets no page frame.
+  const cover=o.includeCover&&input.coverImage?parseCoverImage(input.coverImage):null;
+  // A frame image lies behind every page after the cover, its ornaments only in the page perimeter.
+  const frameImage=input.frameImage?parseFrameImage(input.frameImage):null;
+  if((cover||frameImage)&&!input.figures?.length)lines.splice(3,0,'\\usepackage{tikz}');
+  if(frameImage)lines.splice(lines.indexOf('\\begin{document}'),0,...frameImagePreamble());
   const frame=input.frame?parseReportFrame(input.frame):null;
-  if(frame&&frame.layout!=='none'){lines.splice(lines.indexOf('\\begin{document}'),0,...frameTexPreamble(frame));if(frame.appliesTo.includes('cover'))lines.push('\\ReportFrameActivetrue');}
-  if (o.includeCover) lines.push('\\begin{titlepage}', '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
+  if(frame&&frame.layout!=='none'){lines.splice(lines.indexOf('\\begin{document}'),0,...frameTexPreamble(frame));if(frame.appliesTo.includes('cover')&&!cover)lines.push('\\ReportFrameActivetrue');}
+  if(cover)lines.push(...coverImageTitlepage(cover));
+  else if (o.includeCover) lines.push('\\begin{titlepage}', '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
   if(frame&&frame.layout!=='none')lines.push('\\ReportFrameActivefalse');
+  if(frameImage)lines.push('\\ReportFrameImagetrue');
   if (o.includeToc) lines.push('\\pagenumbering{Roman}', '\\tableofcontents', '\\clearpage', '\\pagenumbering{arabic}');
   if(frame&&frame.layout!=='none'&&frame.appliesTo.includes(o.part==='appendix'?'appendix':'body'))lines.push('\\ReportFrameActivetrue');
   lines.push('% BODY START', input.body.replace(/\r\n?/g, '\n'), '% BODY END', '\\end{document}', '');

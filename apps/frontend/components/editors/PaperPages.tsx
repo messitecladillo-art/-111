@@ -11,7 +11,8 @@ import { matchBlueprintNode } from '@/lib/report-blueprint';
 import { figureFor, type ReportFigure } from '@/lib/report-figure';
 import { DEFAULT_REPORT_OPTIONS, reportHeadingLevel, reportPart } from '@/lib/report-format';
 import { blockLabel, numberedCaption, reportLabels } from '@/lib/report-numbering';
-import { isExhibitNote, sectionNotes, sourceLine, sourcePlacement } from '@/lib/report-tables';
+import { isExhibitNote, sectionNotes } from '@/lib/report-tables';
+import { pageArtDataUrl } from '@/lib/page-art';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { Formula } from '../math/Tex';
 import { ACCENT, Figure, PaperText, ResultTable } from './PaperBlocks';
@@ -150,7 +151,8 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
       items.push(fieldEnd(`${prefix}lot:end`));
     }
     if (figures.length) {
-      items.push({ key: `${prefix}lof`, kind: 'special', style: 'front', breakBefore: !tables.length, hardBreak: !tables.length, keepNext: true, before: tables.length ? 24 : 6, render: () => <p className={css.special}>图目录</p> });
+      // The list of figures starts a page of its own, as the contents and the list of tables do.
+      items.push({ key: `${prefix}lof`, kind: 'special', style: 'front', breakBefore: true, hardBreak: true, keepNext: true, render: () => <p className={css.special}>图目录</p> });
       for (const f of figures) items.push(entry(`${prefix}lof:${f.anchor}`, 1, f.title, f.anchor, { blockId: f.blockId }));
       items.push(fieldEnd(`${prefix}lof:end`));
     }
@@ -219,13 +221,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
         return;
       }
       if (isExhibitNote(blocks, index)) {
-        const exhibit = blocks[index - 1], placed = sourcePlacement(blocks, index - 1) === 'note';
-        out.push({ ...base, advisor: exhibitOwner, key: `n:${block.id}`, kind: 'small', keepNext: placed, render: () => <p className={css.small}>{rich(block.text)}</p> });
-        if (placed) {
-          let line = '';
-          try { line = sourceLine(resultFor(content.quality, exhibit.evidenceId)); } catch { line = ''; }
-          if (line) out.push({ ...base, advisor: exhibitOwner, key: `ns:${block.id}`, kind: 'small', render: () => <p className={css.small}>{autospace(line)}</p> });
-        }
+        out.push({ ...base, advisor: exhibitOwner, key: `n:${block.id}`, kind: 'small', render: () => <p className={css.small}>{rich(block.text)}</p> });
         return;
       }
       if (block.kind !== 'chart' && block.kind !== 'table') {
@@ -241,21 +237,21 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
         return;
       }
       if (!used.includes(result)) used.push(result);
-      const source = sourcePlacement(blocks, index) === 'own', noted = isExhibitNote(blocks, index + 1);
+      // No source line under a figure or table: where the data came from is told once, in the text and the appendix.
+      const noted = isExhibitNote(blocks, index + 1);
       const caption = numberedCaption(label, block.text || result.title);
       const exhibit = { ...base, advisor: exhibitOwner };
       const target = (onPage: boolean) => (onPage ? { 'data-xref-target': block.id, 'data-xref-label': label?.reference ?? '', 'data-xref-caption': caption } : {});
       if (block.kind === 'chart') {
         out.push({ ...exhibit, key: `f:${block.id}`, kind: 'figure', keepNext: true, render: ({ onPage }) => <div className={css.figure} {...target(onPage)}><Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle} /></div> });
-        out.push({ ...exhibit, key: `c:${block.id}`, anchor: `x:${block.id}`, kind: 'caption', keepNext: source || noted || !!figure?.note, render: () => <p className={css.caption}>{rich(caption)}</p> });
-        if (figure?.note) out.push({ ...exhibit, key: `fn:${block.id}`, kind: 'small', keepNext: source || noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
+        out.push({ ...exhibit, key: `c:${block.id}`, anchor: `x:${block.id}`, kind: 'caption', keepNext: noted || !!figure?.note, render: () => <p className={css.caption}>{rich(caption)}</p> });
+        if (figure?.note) out.push({ ...exhibit, key: `fn:${block.id}`, kind: 'small', keepNext: noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
       } else {
         const rows = (figure ? figure.table.rows.length : result.rows.length) + 1;
         out.push({ ...exhibit, key: `c:${block.id}`, anchor: `x:${block.id}`, kind: 'caption', keepNext: true, before: 12, after: 3, render: () => <p className={css.tableCaption}>{rich(caption)}</p> });
-        out.push({ ...exhibit, key: `t:${block.id}`, kind: 'table', keepNext: rows <= 16 && (source || noted || !!figure?.note), split: rows > 16 ? 'rows' : undefined, render: ({ onPage }) => <div className={css.table} {...target(onPage)}><ResultTable result={result} figure={figure} wordColumns noteApart /></div> });
-        if (figure?.note) out.push({ ...exhibit, key: `tn:${block.id}`, kind: 'small', keepNext: source || noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
+        out.push({ ...exhibit, key: `t:${block.id}`, kind: 'table', keepNext: rows <= 16 && (noted || !!figure?.note), split: rows > 16 ? 'rows' : undefined, render: ({ onPage }) => <div className={css.table} {...target(onPage)}><ResultTable result={result} figure={figure} wordColumns noteApart /></div> });
+        if (figure?.note) out.push({ ...exhibit, key: `tn:${block.id}`, kind: 'small', keepNext: noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
       }
-      if (source) out.push({ ...exhibit, key: `s:${block.id}`, kind: 'small', render: () => <p className={css.small}>{autospace(sourceLine(result))}</p> });
     });
     const notes = sectionNotes(used);
     if (notes) out.push({ ...base, advisor: exhibitOwner, key: `sn:${s.id}`, kind: 'note', render: () => <p className={css.note}>{autospace(notes)}</p> });
@@ -278,7 +274,8 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
 
   const cover = (): Item => ({
     key: 'cover', kind: 'cover', style: 'cover', breakBefore: true,
-    render: () => <div className={css.cover}><p className={css.coverTitle}>{autospace(content.title || '未命名研究')}</p>{content.subtitle && <p className={css.coverSubtitle}>{autospace(content.subtitle)}</p>}</div>,
+    // A cover image is the whole page (drawn by the page itself, edge to edge); the flow then holds nothing.
+    render: () => content.coverImage ? <div /> : <div className={css.cover}><p className={css.coverTitle}>{autospace(content.title || '未命名研究')}</p>{content.subtitle && <p className={css.coverSubtitle}>{autospace(content.subtitle)}</p>}</div>,
   });
   if (options.includeCover) items.push(cover());
   let bodyStarted = false;
@@ -490,6 +487,8 @@ export default function PaperPages({
     return count;
   }, [items]);
 
+  const coverSrc = useMemo(() => (content.coverImage ? pageArtDataUrl(content.coverImage) : ''), [content.coverImage]);
+  const frameSrc = useMemo(() => (content.frameImage ? pageArtDataUrl(content.frameImage) : ''), [content.frameImage]);
   const framed = Math.max(1, layout?.pages.length ?? 1) * (PAGE.height + PAGE_GAP) - PAGE_GAP;
   const mainPages = layout ? layout.pages.filter(p => shown[p.first]?.doc !== 'appendix').length : 0;
   const appendixPages = layout ? layout.pages.length - mainPages : 0;
@@ -555,6 +554,10 @@ export default function PaperPages({
           }
           return (
             <article key={index} className={css.page} data-page-style={style} aria-label={folios[index] ? `第 ${folios[index]} 页` : '封面'}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- the draft's own data URL; an image optimizer cannot serve it. */}
+              {style === 'cover' && coverSrc && <img className={css.pageArt} src={coverSrc} alt={content.subtitle ? `封面：${content.title}——${content.subtitle}` : `封面：${content.title}`} draggable={false} />}
+              {/* eslint-disable-next-line @next/next/no-img-element -- the draft's own data URL; an image optimizer cannot serve it. */}
+              {style !== 'cover' && frameSrc && <img className={css.pageArt} src={frameSrc} alt="" aria-hidden="true" draggable={false} />}
               {workState && workPlacement?.page === index && <aside
                 className={css.workOverlay} data-screen-only="true" aria-label="报告生成状态"
                 style={{ top: `calc(${PAGE.topMm}mm + ${workPlacement.top}px)` }}>

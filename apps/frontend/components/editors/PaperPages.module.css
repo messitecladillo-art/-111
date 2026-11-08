@@ -65,6 +65,8 @@
 .special { font-size: 14pt; line-height: 22.68pt; text-align: center; text-indent: 0; }
 .title { font-size: 16pt; font-weight: 700; line-height: 20.736pt; text-align: center; text-indent: 0; }
 .cover { padding-top: 210pt; text-align: center; }
+/* Skill-made page art (the cover image, the transparent page frame) fills the whole A4 page, as Word and LaTeX print it. */
+.pageArt { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; object-fit: fill; border-radius: inherit; pointer-events: none; user-select: none; }
 .coverTitle { padding-bottom: 18pt; font-size: 22pt; font-weight: 700; line-height: 47.52pt; text-align: center; }
 .coverSubtitle { padding-top: 6pt; font-size: 14pt; line-height: 27.216pt; text-align: center; }
 

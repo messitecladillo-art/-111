@@ -4,6 +4,7 @@ import { parseReferences, type ReferenceEntry } from './references.ts';
 import { qualityText, QUALITY_LAYOUTS, parseResearchQuality, parseReportBlock, parseSlideObject, type ResearchQuality, type ReportBlock, type SlideObject, type QualityLayout } from './research-quality.ts';
 import {parseProjectVisualStyle,parseReportFigure,projectPalette,type ProjectVisualStyle,type ReportFigure} from './report-figure.ts';
 import {parseReportFrame,buildFramePrimitives,type ReportFrameStyle} from './report-frame.ts';
+import {parseCoverImage,parseFrameImage,type CoverImage,type FrameImage} from './page-art.ts';
 export type ReportSection = { id: string; title: string; body: string; source: string; blocks?:ReportBlock[]; findingIds?:string[]; findingSnapshots?:Record<string,string> };
 export type SlideLayout = "cover" | "content" | "two-column" | QualityLayout;
 export type Slide = { id: string; title: string; body: string; aside: string; notes: string; layout: SlideLayout; reportLink?: ReportSlideLink; objects?:SlideObject[] };
@@ -23,6 +24,10 @@ export type EditorContent = {
   visualStyle?: ProjectVisualStyle;
   figures?: ReportFigure[];
   reportFrame?: ReportFrameStyle;
+  /** The whole-page cover artwork, made with the report-cover skill; when present it is the cover page. */
+  coverImage?: CoverImage;
+  /** The page frame made with the report-frame skill: a transparent A4 PNG behind every page after the cover. */
+  frameImage?: FrameImage;
 };
 export type DraftSummary = { id: string; title: string; revision: number; updatedAt: string };
 export type Draft = DraftSummary & { content: EditorContent };
@@ -30,8 +35,20 @@ export type DraftVersionSummary = { id: string; draftId: string; label: string; 
 export type DraftVersion = DraftVersionSummary & { content: EditorContent };
 export function applyReportFrame(content:EditorContent,frame:ReportFrameStyle|undefined):EditorContent {
   const next={...content,version:3 as const};
-  if(frame){next.reportFrame=frame;next.visualStyle??={schema:'ProjectVisualStyle/v1',paletteId:frame.palette.id as ProjectVisualStyle['paletteId'],version:frame.palette.version};}
+  if(frame){delete next.frameImage;next.reportFrame=frame;next.visualStyle??={schema:'ProjectVisualStyle/v1',paletteId:frame.palette.id as ProjectVisualStyle['paletteId'],version:frame.palette.version};}
   else delete next.reportFrame;
+  return parseEditorContent(next);
+}
+/** Sets or removes the whole-page cover image; a draft that carries one is a version 3 draft. */
+export function applyCoverImage(content:EditorContent,cover:CoverImage|undefined):EditorContent {
+  const next={...content,version:3 as const};
+  if(cover)next.coverImage=cover;else delete next.coverImage;
+  return parseEditorContent(next);
+}
+/** Sets or removes the frame image; a page carries one frame, so it replaces a drawn page frame. */
+export function applyFrameImage(content:EditorContent,frame:FrameImage|undefined):EditorContent {
+  const next={...content,version:3 as const};
+  if(frame){next.frameImage=frame;delete next.reportFrame;}else delete next.frameImage;
   return parseEditorContent(next);
 }
 export const DRAFT_VERSION_LIMIT = 20;
@@ -46,6 +63,14 @@ export const ACCENTS = { teal: "0F766E", blue: "234E80", burgundy: "8A3449" } as
 /** Sections hold chapters and their subsections separately, so a full report needs far more than 40. */
 export const EDITOR_LIMITS = { sections: 100, slides: 40, body: 12000, slideBody: 1800, latexBody: 120000, bytes: 2_000_000 } as const;
 export const EDITOR_SIZE_LABEL = "2 MB";
+/** Room for the page art (a cover up to 1 MB and a frame up to 600 KB, as base64), which has caps of its own. */
+export const PAGE_ART_DRAFT_BYTES = 2_300_000;
+/** A draft's size against the 2 MB cap: its text and structure, without the page art. */
+export function draftTextBytes(content: EditorContent): number {
+  const text: Partial<EditorContent> = { ...content };
+  delete text.coverImage; delete text.frameImage;
+  return new TextEncoder().encode(JSON.stringify(text)).length;
+}
 
 export function createEditorContent(): EditorContent {
   const sections = [
@@ -83,8 +108,8 @@ export function parseEditorContent(value: unknown): EditorContent {
     if (new Set(result.map(x => x.id)).size !== result.length) throw new Error("内容标识重复。");
     return result;
   }
-  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex", "quality","visualStyle","figures","reportFrame","references"]);
-  if (![1,2,3].includes(x.version as number) || !["teal", "blue", "burgundy"].includes(x.accent as string) || (x.version===1&&Object.hasOwn(x,'quality')) || (x.version!==3&&['visualStyle','figures','reportFrame'].some(k=>Object.hasOwn(x,k)))) throw new Error("草稿版本或主题不受支持。");
+  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex", "quality","visualStyle","figures","reportFrame","coverImage","frameImage","references"]);
+  if (![1,2,3].includes(x.version as number) || !["teal", "blue", "burgundy"].includes(x.accent as string) || (x.version===1&&Object.hasOwn(x,'quality')) || (x.version!==3&&['visualStyle','figures','reportFrame','coverImage','frameImage'].some(k=>Object.hasOwn(x,k)))) throw new Error("草稿版本或主题不受支持。");
   let latex: LatexReport | undefined;
   if (Object.hasOwn(x, 'latex')) {
     const draft = object(x.latex, ['version', 'body', 'reportHash']);
@@ -99,6 +124,8 @@ export function parseEditorContent(value: unknown): EditorContent {
     ...(Object.hasOwn(x,'references') ? {references:parseReferences(x.references)} : {}),
     ...(Object.hasOwn(x,'visualStyle')?{visualStyle:parseProjectVisualStyle(x.visualStyle)}:{}),
     ...(Object.hasOwn(x,'reportFrame')?{reportFrame:parseReportFrame(x.reportFrame)}:{}),
+    ...(Object.hasOwn(x,'coverImage')?{coverImage:parseCoverImage(x.coverImage)}:{}),
+    ...(Object.hasOwn(x,'frameImage')?{frameImage:parseFrameImage(x.frameImage)}:{}),
     ...(Object.hasOwn(x,'figures')?{figures:(()=>{if(!Array.isArray(x.figures)||x.figures.length>120)throw Error('图形数量超过限制。');const figures=x.figures.map(parseReportFigure);if(new Set(figures.map(f=>f.id)).size!==figures.length)throw Error('图形标识重复。');return figures;})()}:{}),
     report: entries(x.report, EDITOR_LIMITS.sections, v => {
       const s = object(v, x.version!==1?["id", "title", "body", "source", "blocks", "findingIds", "findingSnapshots"]:["id", "title", "body", "source"]);
@@ -124,13 +151,14 @@ export function parseEditorContent(value: unknown): EditorContent {
   const findingIds=new Set(parsed.quality?.findings.map(f=>f.id)??[]);
   for(const figure of parsed.figures??[]){const result=parsed.quality?.results.find(r=>r.id===figure.resultId);if(!result||result.resultHash!==figure.resultHash||result.n!==figure.n)throw Error('图形引用的分析版本已变化，请重新登记图形。');}
   if(parsed.figures?.length&&!parsed.visualStyle)throw Error('图形缺少项目配色版本。');
+  if(parsed.reportFrame&&parsed.frameImage)throw Error('一份报告只用一种页框：页框图与绘制页框请二选一。');
   if(parsed.reportFrame){buildFramePrimitives(parsed.reportFrame);const p=parsed.reportFrame.paper,m=parsed.reportFrame.marginsMm,c=parsed.reportFrame.palette;if(p.widthMm!==210||p.heightMm!==297||m.top!==25.4||m.bottom!==25.4||m.left!==31.8||m.right!==31.8)throw Error('页框几何须与当前 A4 排版设置一致。');const colors=projectPalette(parseProjectVisualStyle({schema:'ProjectVisualStyle/v1',paletteId:c.id,version:c.version})).colors;if([c.primary,c.secondary,c.accent].some((color,i)=>color.toUpperCase()!==colors[(i*2)%colors.length]))throw Error('页框颜色须与其配色版本一致。');if(parsed.reportFrame.status==='approved'){const s=parsed.visualStyle;if(!s||s.paletteId!==c.id||s.version!==c.version)throw Error('页框配色已变化，请重新预览应用。');}}
   for(const item of [...parsed.report.flatMap(s=>s.blocks??[]),...parsed.slides.flatMap(s=>s.objects??[])]){if(!item.figureId)continue;if(parsed.version!==3)throw Error('旧版本不支持共享图形。');const figure=parsed.figures?.find(f=>f.id===item.figureId);if(!figure||figure.resultId!==item.evidenceId||!['chart','table'].includes(item.kind)||(item.kind==='table')!==(figure.kind==='table'))throw Error('图形引用或类型不一致。');}
   for(const slide of parsed.slides)for(const obj of slide.objects??[])if(obj.sourceSectionId&&parsed.version!==3)throw Error('旧版本不支持带章节范围的图文关联。');
   for(const section of parsed.report)if(section.findingIds?.some(id=>!findingIds.has(id)))throw Error('章节引用的研究发现不存在。');
   for(const section of parsed.report)for(const block of section.blocks??[])if(['chart','table'].includes(block.kind)&&!resultIds.has(block.evidenceId))throw Error('内容块的分析引用不存在。');
   for(const slide of parsed.slides)for(const obj of slide.objects??[])if(['chart','table'].includes(obj.kind)&&!resultIds.has(obj.evidenceId))throw Error('页面对象的分析引用不存在。');
-  if (new TextEncoder().encode(JSON.stringify(parsed)).length > EDITOR_LIMITS.bytes) throw new Error(`草稿超过 ${EDITOR_SIZE_LABEL}，请拆分作品。`);
+  if (draftTextBytes(parsed) > EDITOR_LIMITS.bytes) throw new Error(`草稿超过 ${EDITOR_SIZE_LABEL}，请拆分作品。`);
   return parsed;
 }
 

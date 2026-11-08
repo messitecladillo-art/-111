@@ -1,5 +1,6 @@
 from ..services.report_frame_template import checked_frame, frame_tex_preamble
 from ..services.report_figure_template import figure_tex_preamble
+from ..services.page_art import FRAME_IMAGE_FILE, cover_image_bytes, cover_image_file, cover_image_titlepage, frame_image_bytes, frame_image_preamble
 """Bounded project-scoped XeLaTeX export of a closed, body-only TeX subset."""
 import base64
 from decimal import Decimal, ROUND_HALF_UP, localcontext
@@ -24,7 +25,7 @@ MAX_FILES = 12 * 1024 * 1024
 ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular array figure tikzpicture axis".split())
 COMMANDS = frozenset((
     "section subsection subsubsection paragraph subparagraph par newline linebreak textbf textit emph textrm textsf texttt textnormal underline textsuperscript textsubscript "
-    "item caption label ref eqref centering toprule midrule bottomrule multicolumn "
+    "item caption label ref eqref centering toprule midrule bottomrule multicolumn small noindent "
     "textbackslash textasciitilde textasciicircum textdegree textendash textemdash textquotedblleft textquotedblright "
     "frac dfrac tfrac sqrt overline widehat widetilde hat bar vec dot ddot tilde acute grave breve check mathrm mathbf mathit mathsf mathtt mathcal mathbb mathop operatorname text "
     "left right middle big Big bigg Bigg bigl bigr Bigl Bigr biggl biggr Biggl Biggr "
@@ -58,7 +59,7 @@ def normalize_body(content):
     return content.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
+def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None):
     """Keep byte-identical with the frontend generator; source is always returned by API."""
     frame = checked_frame(frame, visual_style)
     lines = [
@@ -83,14 +84,29 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
     if figures:
         lines[3:3] = [r"\usepackage{tikz}"]
         lines[-2:-2] = figure_tex_preamble(figures, visual_style)
+    # A cover image is the whole cover: it fills the page, carries its own title lettering and gets no page frame.
+    cover = cover_image if settings["includeCover"] and cover_image else None
+    if cover:
+        cover_image_bytes(cover)
+    # A frame image lies behind every page after the cover, its ornaments only in the page perimeter.
+    if frame_image:
+        frame_image_bytes(frame_image)
+    if (cover or frame_image) and not figures:
+        lines[3:3] = [r"\usepackage{tikz}"]
+    if frame_image:
+        lines[-2:-2] = frame_image_preamble()
     if frame and frame['layout'] != 'none':
         lines[-2:-2] = frame_tex_preamble(frame)
-        if 'cover' in frame['appliesTo']:
+        if 'cover' in frame['appliesTo'] and not cover:
             lines.append(r"\ReportFrameActivetrue")
-    if settings["includeCover"]:
+    if cover:
+        lines += cover_image_titlepage(cover)
+    elif settings["includeCover"]:
         lines += [r"\begin{titlepage}", r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
     if frame and frame['layout'] != 'none':
         lines.append(r"\ReportFrameActivefalse")
+    if frame_image:
+        lines.append(r"\ReportFrameImagetrue")
     if settings["includeToc"]:
         lines += [r"\pagenumbering{Roman}", r"\tableofcontents", r"\clearpage", r"\pagenumbering{arabic}"]
     if frame and frame['layout'] != 'none' and ('appendix' if settings['part'] == 'appendix' else 'body') in frame['appliesTo']:
@@ -403,8 +419,9 @@ class LatexCompiler:
         self.settings = settings
         self.slots = threading.BoundedSemaphore(settings.latex_concurrency)
 
-    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
-        source = build_source(title, subtitle, content, settings, frame, figures, visual_style)
+    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None):
+        cover_image = cover_image if settings["includeCover"] else None
+        source = build_source(title, subtitle, content, settings, frame, figures, visual_style, cover_image, frame_image)
         result = {"status": "error", "source": source, "sourceHash": hashlib.sha256(source.encode("utf-8")).hexdigest(), "pdfBase64": None, "diagnostics": [], "engine": None}
         try: validate_body(content, len(figures or []))
         except UnsafeBody as error:
@@ -419,6 +436,10 @@ class LatexCompiler:
             with tempfile.TemporaryDirectory(prefix="evix-latex-") as directory:
                 directory = Path(directory)
                 (directory / "document.tex").write_text(source, encoding="utf-8", newline="\n")
+                if cover_image:
+                    (directory / cover_image_file(cover_image)).write_bytes(cover_image_bytes(cover_image))
+                if frame_image:
+                    (directory / FRAME_IMAGE_FILE).write_bytes(frame_image_bytes(frame_image))
                 deadline = time.monotonic() + self.settings.latex_timeout_seconds
                 log = ""
                 for _ in range(2):

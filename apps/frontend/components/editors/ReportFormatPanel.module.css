@@ -20,6 +20,20 @@
 .panel .check { display: flex; align-items: center; gap: 7px; color: var(--wb-text); font-weight: 400; }
 .panel .check input { width: 16px; height: 16px; padding: 0; margin: 0; accent-color: var(--wb-accent); }
 .check input:disabled { opacity: .55; }
+.coverRow { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; padding: 12px 0 0; border-top: 1px solid var(--wb-line); }
+.coverThumb { display: block; inline-size: 54px; aspect-ratio: 210 / 297; object-fit: cover; border: 1px solid var(--wb-line); border-radius: 3px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+span.coverThumb { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--wb-line) 6px 7px); box-shadow: none; opacity: .6; }
+.coverRow + .coverRow { border-top-style: dashed; }
+.coverText { display: grid; gap: 4px; min-width: 0; }
+.coverText strong { font-size: 13px; }
+.coverText p { margin: 0; color: var(--wb-muted); line-height: 1.6; }
+.coverText .coverWarn { color: var(--wb-risk); }
+.coverActions { display: flex; gap: 8px; }
+.panel .coverButton { display: inline-flex; align-items: center; padding: 6px 12px; border: 1px solid var(--wb-line); border-radius: 6px; background: var(--wb-surface); color: var(--wb-text); font-weight: 600; cursor: pointer; }
+.panel .coverButton:focus-within { outline: 2px solid var(--wb-accent); outline-offset: 3px; }
+.panel .coverButton input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
+.coverRemove { padding: 6px 12px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--wb-muted); font: inherit; cursor: pointer; }
+.coverRemove:hover { color: var(--wb-risk); }
 .notices { padding: 0 0 0 18px; margin: 0; display: grid; gap: 6px; color: var(--wb-muted); line-height: 1.6; }
 .source { border-top: 1px solid var(--wb-line); padding-top: 12px; color: var(--wb-muted); font-size: 12px; }
 .source summary { cursor: pointer; width: fit-content; }

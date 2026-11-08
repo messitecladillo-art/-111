@@ -119,7 +119,7 @@ test('valid report above the old one MB transport cap fits the bounded full rece
   const serializedBytes = Buffer.byteLength(JSON.stringify(reply), 'utf8');
   assert.ok(serializedBytes > 1_000_000);
   assert.ok(serializedBytes < REPORT_READ_OPTIONS.maxBytes);
-  assert.ok(REPORT_READ_OPTIONS.maxBytes < 2_100_000, 'budget remains bounded near the existing content limit');
+  assert.ok(REPORT_READ_OPTIONS.maxBytes < 2_000_000 + 2_300_000 + 100_000, 'budget remains bounded near the content limit plus the page art allowance');
   const parsed = validateReportSaveReceipt(request, reply, project);
   assert.equal(parsed.content.report.length, 40);
   assert.equal(reconcileReportHead(parsed, { report: reply }, project).kind, 'current');

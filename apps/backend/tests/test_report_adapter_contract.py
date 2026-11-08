@@ -121,5 +121,6 @@ async def test_late_revocation_does_not_return_private_compile_result(revocation
     with pytest.raises(ApiError):
         await service.compile_report(project_id="p", user=SimpleNamespace(id="u"), session=session,
                                      check_session=revoked, data=compile_data())
-    assert len(called) == 1 and called[0][4:] == (None, None, None)
+    # frame, figures, visual style, cover image, frame image
+    assert len(called) == 1 and called[0][4:] == (None, None, None, None, None)
     assert session.calls == ["user-lock", "quota", "rate-event", "commit"]

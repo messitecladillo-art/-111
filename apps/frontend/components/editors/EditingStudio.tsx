@@ -5,7 +5,7 @@ import { applyArtifactToReport, type ArtifactRecord } from '@/lib/agent/artifact
 import { applySectionRevision, type RevisionSnapshot, type SectionRevisionProposal, type RevisionApplyResult } from '@/lib/agent/section-revision';
 import type { ReportRunScope } from '@/lib/agent/report-work';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
-import { ACCENTS, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { ACCENTS, applyCoverImage, applyFrameImage, applyReportFrame, createEditorContent, draftTextBytes, EDITOR_LIMITS, EDITOR_SIZE_LABEL, PAGE_ART_DRAFT_BYTES, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
 import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
@@ -288,7 +288,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   function edit(next: EditorContent) {
     if (!canMutate() || versionOperation.current) return false;
     const recoverable = next.title.trim() ? next : { ...next, title: "未命名研究" };
-    if (new TextEncoder().encode(JSON.stringify(recoverable)).length > EDITOR_LIMITS.bytes) {
+    if (draftTextBytes(recoverable) > EDITOR_LIMITS.bytes) {
       setMessage(`此作品已接近 ${EDITOR_SIZE_LABEL} 上限，本次输入未加入。请先导出备份，并将内容拆分为另一作品。`); return false;
     }
     const previous = current.current;
@@ -498,7 +498,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
     if (!file || !canReplace()) return;
     busy.current = true; setPhase("loading");
     try {
-      if (file.size > EDITOR_LIMITS.bytes) throw new Error(`备份超过 ${EDITOR_SIZE_LABEL}。`);
+      if (file.size > EDITOR_LIMITS.bytes + PAGE_ART_DRAFT_BYTES) throw new Error(`备份超过 ${EDITOR_SIZE_LABEL}（另含封面图与页框图）。`);
       const raw: unknown = JSON.parse(await file.text());
       if (!alive.current || identityTransition.current || !canMutate()) return;
       if (raw && typeof raw === "object" && "title" in raw && typeof raw.title === "string" && !raw.title.trim()) raw.title = "未命名研究";
@@ -675,7 +675,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       if(!edit(next))return false;
       setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
     }}/>}
-    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
+    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report} coverImage={content.coverImage} onCoverImage={cover=>{if(!canMutate())return;edit(applyCoverImage(current.current,cover));}} frameImage={content.frameImage} onFrameImage={frame=>{if(!canMutate())return;edit(applyFrameImage(current.current,frame));}}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>{setQualityOpen(true);setToolsOpen(false);qualityToggleRef.current?.focus();}}/>}
     </div>
     <div id="editor-quality" hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>

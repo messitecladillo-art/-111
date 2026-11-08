@@ -29,5 +29,5 @@ def register_reports(app, *, auth, db, owned_project, operation):
 
     @app.post('/api/projects/{project_id}/report/versions', status_code=201)
     async def save(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
-        data = await body(request, ('content', 'expectedRevision', 'idempotencyKey'), limit=domain.MAX_CONTENT_BYTES + 100000)
+        data = await body(request, ('content', 'expectedRevision', 'idempotencyKey'), limit=domain.MAX_CONTENT_BYTES + domain.MAX_PAGE_ART_BYTES + 100000)
         return await service.save(project_id=project_id, user=user, session=session, data=data)

@@ -142,19 +142,9 @@ function groups(r: ResultSnapshot): PresentedTable | null {
 }
 
 /** The report view of a result. Only the analysis recipes' own layouts are rearranged; anything else keeps every column, only rounded. */
-/** A "注：" paragraph right after a table or figure is that exhibit's note: set small and unindented, before its source line. */
+/** A "注：" paragraph right after a table or figure is that exhibit's note: set small and unindented. */
 export const isExhibitNote = (blocks: readonly ReportBlock[], index: number): boolean =>
   blocks[index]?.kind === 'paragraph' && /^注[：:]/u.test(blocks[index].text) && (blocks[index - 1]?.kind === 'chart' || blocks[index - 1]?.kind === 'table');
-
-/**
- * Where an exhibit's source line goes: "own" right after it, "note" after its note, "shared" after the next exhibit of
- * the same result (a table and its figure share one source, the table's note between them).
- */
-export function sourcePlacement(blocks: readonly ReportBlock[], index: number): 'own' | 'note' | 'shared' {
-  const noted = isExhibitNote(blocks, index + 1), next = blocks[index + (noted ? 2 : 1)];
-  if (next && (next.kind === 'chart' || next.kind === 'table') && next.evidenceId === blocks[index].evidenceId) return 'shared';
-  return noted ? 'note' : 'own';
-}
 
 export function presentResult(r: ResultSnapshot): PresentedTable {
   const h = r.headers;
