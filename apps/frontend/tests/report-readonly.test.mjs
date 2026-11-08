@@ -10,6 +10,7 @@ import * as numbering from '../lib/report-numbering.ts';
 import * as references from '../lib/references.ts';
 import * as reportInsert from '../lib/report-insert.ts';
 import * as appendices from '../lib/report-appendices.ts';
+import * as revision from '../lib/agent/section-revision.ts';
 import { hostedReportHookModule } from './helpers/hosted-report-hook.mjs';
 import {blankStoryCard,buildStoryboard} from '../lib/report-storyboard.ts';
 import {QUALITY_LAYOUT_LABELS} from '../lib/quality-layouts.ts';
@@ -23,7 +24,7 @@ const reportVersion = (revision, content, id = `00000000-0000-4000-8000-${String
 
 // Execute the actual component and callbacks with controlled hooks/I/O. This is not a DOM renderer.
 function harness(source = editorSource, overrides = {}) {
-  const slots = [], layouts = [], effects = [], timers = new Map(), downloads = [], snapshots = [];
+  const slots = [], layouts = [], effects = [], timers = new Map(), downloads = [], snapshots = [], documentEvents = new Map();
   let cursor = 0, timerId = 0, tree, props;
   const hooks = {
     useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial; return [slots[index], next => { slots[index] = typeof next === 'function' ? next(slots[index]) : next; }]; },
@@ -45,6 +46,7 @@ function harness(source = editorSource, overrides = {}) {
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'fragment' },
     '@/lib/editor-model': model, '@/lib/report-format': format,
     '@/lib/report-permission': permission,
+    '@/lib/agent/section-revision': revision,
     // Pure report-engine modules run for real: numbering, references, inserts and appendices.
     '@/lib/report-numbering': numbering, '@/lib/references': references, '@/lib/report-insert': reportInsert, '@/lib/report-appendices': appendices,
     '@/lib/report-blueprint': { matchBlueprintNode: () => null },
@@ -71,11 +73,15 @@ function harness(source = editorSource, overrides = {}) {
   vm.runInNewContext(code, {
     exports, require: name => modules[name] ?? (name.endsWith('.css') ? {} : defaultModule(name.replace(/^\.\//, ''))),
     window: { addEventListener() {}, removeEventListener() {}, confirm: () => true, setTimeout: callback => { timers.set(++timerId, callback); return timerId; }, clearTimeout: id => timers.delete(id) },
-    document: { querySelector: () => null }, TextEncoder, Blob, structuredClone,
+    document: { querySelector: () => null,
+      addEventListener: (name, listener) => { if (!documentEvents.has(name)) documentEvents.set(name, new Set()); documentEvents.get(name).add(listener); },
+      removeEventListener: (name, listener) => documentEvents.get(name)?.delete(listener),
+    }, TextEncoder, Blob, structuredClone,
     crypto: { randomUUID: () => 'test-id' }, setTimeout, clearTimeout, queueMicrotask, console,
   });
   const api = {
     exports, timers, downloads, snapshots,
+    documentEvent(name) { for (const listener of documentEvents.get(name) ?? []) listener(); },
     render(nextProps, beforeLayouts) { props = nextProps ?? props; cursor = 0; layouts.length = 0; effects.length = 0; tree = exports.default(props); beforeLayouts?.(); for (const effect of layouts.splice(0)) effect(); for (const effect of effects.splice(0)) effect(); return tree; },
     find(predicate) { const walk = node => { if (!node || typeof node !== 'object') return; if (Array.isArray(node)) { for (const child of node) { const found = walk(child); if (found) return found; } return; } if (predicate(node)) return node; return walk(node.props?.children); }; const found = walk(tree); assert.ok(found, 'rendered node must exist'); return found; },
     editorProps(readOnly, extra = {}) { return { localOnly: true, projectBinding: { initialContent: model.createEditorContent(), status: 'ready', readOnly, onSnapshot: value => snapshots.push(value), onSave() {} }, ...extra }; },
@@ -90,6 +96,34 @@ test('permission tickets are revoked by downgrade and stay revoked after restora
   guard.update(true); assert.equal(guard.allows(ticket), false);
   guard.update(false); assert.equal(guard.allows(ticket), false);
   assert.equal(guard.allows(guard.epoch), true);
+});
+
+test('section revision waits for IME, applies once and uses the existing undo history', () => {
+  const h = harness(), ref = { current: null }, scope = { owner: 'a', epoch: 1, thread: 't', project: 'p' };
+  h.render(h.editorProps(false, { controllerRef: ref, revisionInputVersion: 'data-a' }));
+  const snap = ref.current.readRevisionSnapshot();
+  const prepared = revision.prepareSectionRevision(snap, snap.content.report[1].id, null, scope, { id: 'model', revision: 1 });
+  const proposal = { id: 'revision-once', anchor: prepared.anchor, paragraphs: ['新的研究问题表达。'] };
+  h.documentEvent('compositionstart'); assert.equal(ref.current.reviseSection(proposal, scope).ok, false);
+  assert.deepEqual(h.content(), snap.content);
+  h.documentEvent('compositionend'); assert.equal(ref.current.reviseSection(proposal, scope).ok, true); h.render();
+  assert.equal(h.content().report[1].body, '新的研究问题表达。');
+  assert.equal(ref.current.reviseSection(proposal, scope).ok, false);
+  h.find(n => n.type === 'button' && n.props.onClick?.name === 'undo').props.onClick(); h.render();
+  assert.deepEqual(h.content(), snap.content);
+  assert.equal(ref.current.reviseSection(proposal, scope).ok, false, 'undo does not resurrect a consumed proposal');
+});
+
+test('mounted editor rejects a revision after live edits or permission revocation', () => {
+  const h = harness(), ref = { current: null }, scope = { owner: 'a', epoch: 1, thread: 't', project: 'p' };
+  const props = h.editorProps(false, { controllerRef: ref }); h.render(props);
+  const snap = ref.current.readRevisionSnapshot(), prepared = revision.prepareSectionRevision(snap, snap.content.report[1].id, null, scope, { id: 'model', revision: 1 });
+  const proposal = { id: 'old-proposal', anchor: prepared.anchor, paragraphs: ['旧候选。'] };
+  const changed = { ...snap.content, subtitle: '更新的研究范围' };
+  h.find(n => n.type === 'QualityStudio').props.onChange(changed);
+  assert.equal(ref.current.reviseSection(proposal, scope).ok, false, 'checks current ref before parent effects');
+  h.render({ ...props, projectBinding: { ...props.projectBinding, readOnly: true } });
+  assert.equal(ref.current.reviseSection(proposal, scope).ok, false);
 });
 
 test('composed story apply upgrades v2 only with a current base and live permission ticket', async () => {

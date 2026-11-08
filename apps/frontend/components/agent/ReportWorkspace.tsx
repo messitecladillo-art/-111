@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type KeyboardEvent, type RefCallback } from 'react';
+import { useMemo, useState, type KeyboardEvent, type RefCallback, type ReactNode } from 'react';
 import { Formula } from '@/components/math/Tex';
 import { parseEditorContent, type EditorContent, type ReportSection } from '@/lib/editor-model';
 import { texProblem } from '@/lib/omml';
@@ -122,6 +122,7 @@ export function ReportInspector({
   onSay,
   onEdit,
   onAdvisors,
+  revision,
 }: {
   content: EditorContent;
   picked: string | null;
@@ -130,6 +131,7 @@ export function ReportInspector({
   onSay: (text: string) => void;
   onEdit: () => void;
   onAdvisors: () => void;
+  revision?: ReactNode;
 }) {
   const section = content.report.find(s => s.id === picked) ?? null;
   const blocks = content.report.flatMap(s => s.blocks ?? []);
@@ -155,6 +157,7 @@ export function ReportInspector({
         </button>
       </header>
       <div className={styles.scroll}>
+        {revision}
         <section className={styles.block}>
           <p className={styles.label}>当前章节</p>
           {section ? (
@@ -400,7 +403,7 @@ export function PaperToolbar({
   };
 
   return (
-    <div className={styles.toolbarWrap}>
+    <div className={styles.toolbarWrap} data-report-toolbar>
       <div className={styles.toolbar} role="toolbar" aria-label="报告排版与生成工具栏">
         {TOOLS.map(tool => (
           <button
