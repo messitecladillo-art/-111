@@ -732,11 +732,16 @@ export function parseAndHydrateSectionDraft(
     // A registered category's name may carry digits; only the digits outside such names are numbers the model wrote.
     const numbersOnly = withoutNames(withoutPlaceholders, context?.labels);
 
+    // A rate or share must cite a share: "有效回收率{F2}" bound to a count (641) is a wrong fact, however fluent.
+    const misbound = [...sanitized.matchAll(new RegExp(`(?:率|占比|比例|百分比)(?:为|是|达|达到|约为|仅|仅为)?\\s*\\{(F\\d+)\\}`, 'gu'))]
+      .some(m => { const v = factMap.get(m[1]) ?? ''; return !/%$/u.test(v) && !(Number(v) >= 0 && Number(v) <= 1 && /\./u.test(v)); });
     const planned = !!context && (context.planSection || (!!context.pending && PLANNED.test(withoutPlaceholders)));
     const unbacked = context && !planned ? unbackedAnalyses(withoutPlaceholders, context.methods) : [];
     const reason = unknownToken
       ? '引用了不存在的占位符'
-      : DIGIT_RE.test(numbersOnly)
+      : misbound
+        ? '比率处引用了不是比率的数字'
+        : DIGIT_RE.test(numbersOnly)
         ? '占位符之外写了阿拉伯数字'
         : CN_QUANTITY.test(numbersOnly)
           ? '用汉字写了数量'

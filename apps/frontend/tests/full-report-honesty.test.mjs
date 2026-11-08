@@ -148,6 +148,14 @@ test('each section is written under its advisor: the advisor\'s skill and rules 
   assert.deepEqual(Object.fromEntries(res.traces.map(t => [t.nodeId, t.advisor])), { 'design.sampling': 'design', 'compare.tests': 'modeling' });
 });
 
+test('a rate bound to a count is refused: the share must be a share', () => {
+  // F1 is a rate (94.4%), F2 a count (641).
+  assert.equal(parseAndHydrateSectionDraft(draft('有效回收率为{F1}。'), tokens, results).paragraphs.length, 1);
+  const wrong = parseAndHydrateSectionDraft(draft('实回收有效样本{F2}份，有效回收率为{F2}。'), tokens, results);
+  assert.deepEqual(wrong.dropReasons, ['比率处引用了不是比率的数字']);
+  assert.equal(parseAndHydrateSectionDraft(draft('有效样本为{F2}份。'), tokens, results).paragraphs.length, 1, 'a count where a count belongs is fine');
+});
+
 test('a registered category may carry digits in its name; other digits are still refused', () => {
   const results = [{ rows: [['60–70岁', 120, 45.2], ['71岁及以上', 146, 54.8]] }];
   const design = { questions: [{ choices: [{ code: '1', label: '9–12 元' }, { code: '2', label: '13–18 元' }] }] };
