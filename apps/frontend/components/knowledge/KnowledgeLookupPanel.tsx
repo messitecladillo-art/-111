@@ -5,6 +5,7 @@ import { errorMessage, HostedApiError } from '@/components/hosted/api-client';
 import { parseKnowledgeLookup, type KnowledgeLookupWire } from '@/lib/knowledge/api-contracts';
 import { confirmedKnowledgeQuery, isKnownLookupRejection, parseStoredKnowledgeLookup, type StoredKnowledgeLookup } from '@/lib/knowledge/account-sync';
 import { KNOWLEDGE_DOMAINS } from '@/lib/knowledge/types';
+import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
 import styles from './Knowledge.module.css';
 
 type TermIntent = { accountId: string; idempotencyKey: string; term: string; domain: string; note: string };
@@ -131,6 +132,13 @@ export default function KnowledgeLookupPanel({ initialQuery = '', purpose = 'kno
   }
   const unresolved = owned && pending && !['ready', 'failed'].includes(pending.status ?? 'running');
   const shownReceipt = owned ? receipt : null;
+  const ownedPending = owned && accountId && pending?.accountId === accountId ? pending : null;
+  const outcomeUnknown = ownedPending?.status === 'outcome_unknown' || shownReceipt?.status === 'outcome_unknown';
+  const lookupStatus = shownReceipt?.status ?? ownedPending?.status;
+  // A cached running marker is not a fresh server receipt; restore quietly until the user reconciles it.
+  const awaitingReconciliation = !!ownedPending && !busy && !shownReceipt && lookupStatus === 'running';
+  const showLookupWork = !!ownedPending && (busy || outcomeUnknown || lookupStatus === 'queued' || lookupStatus === 'running');
+  const lookupHeading = outcomeUnknown || awaitingReconciliation ? '本次调用待核对' : lookupStatus === 'queued' ? '检索已排队' : busy ? (shownReceipt ? '正在核对本次请求' : '正在提交检索') : '正在查证';
   return <details className={styles.recognition}>
     <summary>{purpose === 'topics' ? '检索最新热点' : '联网查证与补词'}</summary>
     <p className={styles.caption}>{purpose === 'topics' ? '编辑地区、领域与时间范围，查找新的公开线索。' : '内置知识没有覆盖时，查阅原始来源。'}</p>
@@ -140,6 +148,8 @@ export default function KnowledgeLookupPanel({ initialQuery = '', purpose = 'kno
       <button type="button" disabled={busy || Boolean(unresolved)} onClick={() => void runLookup()}>{busy ? '提交中…' : '确认检索'}</button>
       {owned && pending && <button type="button" disabled={busy} onClick={() => void runLookup(true)}>{unresolved ? '核对本次请求' : '查看检索回执'}</button>}
     </div>
+    {showLookupWork && <ReportWorkstation inline kind="research" heading={lookupHeading}
+      state={{ phase: outcomeUnknown || awaitingReconciliation || lookupStatus === 'queued' ? 'waiting' : busy ? 'preparing' : 'writing', detail: `检索词：${ownedPending!.query}`, completed: 0, total: 0 }} />}
     {owned && notice && <p role="status" className={styles.notice}>{notice}</p>}
     {shownReceipt && <section aria-label="联网查证结果">
       <p className={styles.eyebrow}><span>{statusLabel(shownReceipt.status)}</span><span>{shownReceipt.credits === null ? '用量待核对' : `${shownReceipt.credits} credit`}</span></p>

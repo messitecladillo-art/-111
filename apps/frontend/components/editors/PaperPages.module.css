@@ -3,6 +3,11 @@
    Screen marks (advisor bars, the plugin dock, the status line) stay outside the text area and never move the flow. */
 
 .viewer { position: relative; display: grid; justify-items: center; gap: 14px; inline-size: 100%; }
+.workDock { inline-size: min(100%, 560px); animation: work-arrive 220ms ease-out; }
+.workOverlay { position: absolute; left: 31.8mm; width: 146.4mm; height: 260px; display: flex; justify-content: center; z-index: 2; animation: work-arrive 220ms ease-out; }
+@keyframes work-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .workDock, .workOverlay { animation: none; } }
+@media print { .workDock, .workOverlay { display: none !important; } }
 
 /* —— Advisor plugins —— */
 .dock { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; inline-size: min(100%, 880px); padding: 6px 8px; border: 1px solid var(--c-line, #e4e8e6); border-radius: 16px; background: color-mix(in srgb, var(--c-raise, #fcfdfc) 94%, transparent); backdrop-filter: blur(10px); box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 10px 24px -16px rgba(23, 26, 25, .35); font: 12px/1.2 system-ui, -apple-system, "Microsoft YaHei", sans-serif; }

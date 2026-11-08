@@ -14,6 +14,8 @@ import { buildLatexSource, generateLatexBody, latexCompileInput } from '@/lib/la
 import type { DocFormatMode } from '@/components/editors/ReportPaper';
 import { Icon } from './icons';
 import styles from './ReportWorkspace.module.css';
+import type { LiveWritingStatus } from '@/lib/agent/report-work';
+export type { LiveWritingStatus } from '@/lib/agent/report-work';
 
 const written = (s: ReportSection) =>
   [s.body, ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').map(b => b.text)]
@@ -23,19 +25,6 @@ const written = (s: ReportSection) =>
 const exhibits = (s: ReportSection) =>
   (s.blocks ?? []).filter(b => b.kind === 'chart' || b.kind === 'table' || b.kind === 'formula').length;
 const hasContent = (s: ReportSection) => written(s) > 0 || !!s.blocks?.some(b => b.kind !== 'paragraph');
-
-export type LiveWritingStatus = {
-  active: boolean;
-  phase: 'contract' | 'wave1' | 'wave2' | 'repair' | 'done';
-  completed: number;
-  total: number;
-  paragraphs: number;
-  facts: number;
-  lastSectionId: string | null;
-  lastSectionTitle: string;
-  topicTitle: string;
-  autoFollow: boolean;
-};
 
 /**
  * The report's own navigation, in the sidebar while the report fills the centre: its sections in order, each with
@@ -288,11 +277,12 @@ const TOOLS: { id: Exclude<Tool, 'ai'>; label: string; icon: string }[] = [
 ];
 
 const PHASE_LABELS: Record<LiveWritingStatus['phase'], string> = {
-  contract: '正在构建 9 章 26 节目录与统计图表索引',
-  wave1: '正在逐节撰写正文并嵌入统计图表',
-  wave2: '正在关联全篇图目录、表目录与参考文献交叉引用',
-  repair: '正在执行学术表述修订与版式规整',
-  done: '全篇 26 节撰写与版式校验已完成',
+  contract: '等待接收章节计划与研究材料',
+  wave1: '正在起草研究章节',
+  wave2: '正在组织摘要与结论',
+  repair: '正在核对表述与研究结果',
+  done: '本次报告已返回',
+  error: '本次生成未完成，已写入的内容保留',
 };
 
 /**
@@ -545,7 +535,7 @@ export function PaperToolbar({
       {liveWriting && (
         <div className={styles.liveHud} data-active={liveWriting.active || undefined} role="status" aria-live="polite">
           <div className={styles.liveHudTrack} aria-hidden="true">
-            <i style={{ width: `${liveWriting.phase === 'done' ? 100 : Math.max(4, pct)}%` }} />
+            <i style={{ width: `${liveWriting.phase === 'done' ? 100 : Math.max(0, Math.min(100, pct))}%` }} />
           </div>
           <div className={styles.liveHudRow}>
             <span className={styles.liveHudBadge}>
@@ -553,7 +543,7 @@ export function PaperToolbar({
               {PHASE_LABELS[liveWriting.phase]}
             </span>
             <span className={styles.liveHudStats}>
-              已完成 <b>{liveWriting.completed}/{liveWriting.total}</b> 节 · <b>{liveWriting.paragraphs}</b> 段 · 已关联{' '}
+              {liveWriting.total > 0 ? <>已返回 <b>{liveWriting.completed}/{liveWriting.total}</b> 节 · </> : null}<b>{liveWriting.paragraphs}</b> 段 · 已关联{' '}
               <b>{liveWriting.facts}</b> 处统计数据与图表引用
             </span>
             {liveWriting.lastSectionTitle && (
@@ -563,7 +553,7 @@ export function PaperToolbar({
                 onClick={() => liveWriting.lastSectionId && onJumpToSection?.(liveWriting.lastSectionId)}
                 title="点击跳转到当前最新落笔章节"
               >
-                当前章节：{liveWriting.lastSectionTitle}
+                最近返回：{liveWriting.lastSectionTitle}
               </button>
             )}
             {liveWriting.active && onToggleAutoFollow && (

@@ -8,6 +8,7 @@ import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
 import { Icon } from './icons';
 import { ChartStudioView, CodeStudioView, WritingStudioView } from './StudioCards';
+import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
 import type { Message, ModelCall } from './threads';
 import styles from './AgentShell.module.css';
 
@@ -18,7 +19,9 @@ type Handlers = { onAction: (action: AgentAction) => void; onAnswer: (id: string
  * scrolled back to read; sending always brings the reader back down. Its handlers are stable, so it re-renders only
  * when the conversation does.
  */
-export default memo(function Transcript({ messages, scrollRef, ...handlers }: { messages: Message[]; scrollRef: RefObject<HTMLDivElement | null> } & Handlers) {
+export default memo(function Transcript({ messages, scrollRef, activeCallIds, workInPaper = false, ...handlers }: {
+  messages: Message[]; scrollRef: RefObject<HTMLDivElement | null>; activeCallIds: ReadonlySet<string>; workInPaper?: boolean;
+} & Handlers) {
   const pinned = useRef(true);
   useEffect(() => {
     const el = scrollRef.current;
@@ -32,17 +35,24 @@ export default memo(function Transcript({ messages, scrollRef, ...handlers }: { 
     if (el && (pinned.current || last?.role === 'user' || last?.role === 'pending')) { el.scrollTop = el.scrollHeight; pinned.current = true; }
   }, [messages, scrollRef]);
   return <div className={styles.column} role="log" aria-label="对话记录" aria-live="polite" aria-relevant="additions">
-    {messages.map(message => <MessageView key={message.id} message={message} {...handlers} />)}
+    {messages.map(message => <MessageView key={message.id} message={message}
+      active={activeCallIds.has(message.id)} showWork={!workInPaper && (message === messages.at(-1))} {...handlers} />)}
   </div>;
 });
 
-function MessageView({ message, onAction, onAnswer }: { message: Message } & Handlers) {
+function MessageView({ message, active, showWork, onAction, onAnswer }: { message: Message; active: boolean; showWork: boolean } & Handlers) {
   if (message.role === 'user') return <div className={`${styles.message} ${styles.user}`}><p>{message.text}</p></div>;
-  if (message.role === 'pending') return <div className={styles.message}><div className={styles.reply}><p className={styles.waiting}>正在查知识镜「{message.query}」</p></div></div>;
+  if (message.role === 'pending') return <div className={styles.message}><div className={styles.reply}>
+    {showWork ? <ReportWorkstation inline kind="research" heading="正在查询知识镜"
+      state={{ phase: 'writing', detail: message.query, completed: 0, total: 0 }} />
+      : <p>正在查知识镜「{message.query}」</p>}
+  </div></div>;
   const { turn } = message;
   return <div className={styles.message}>
-    {message.model && <StepHead model={message.model} at={message.at} />}
+    {message.model && <StepHead model={message.model} at={message.at} active={active} />}
     <div className={styles.reply}>
+      {showWork && active && message.model?.status === 'running' && <ReportWorkstation inline
+        heading="正在等待模型返回" state={{ phase: 'writing', detail: message.model.service, completed: 0, total: 0 }} />}
       {turn.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}
       {turn.cards?.map((card, i) => <Card key={i} card={card} message={message} onAction={onAction} onAnswer={onAnswer} />)}
       {!!turn.chips?.length && <div className={styles.chips}>
@@ -58,8 +68,8 @@ const STEP_STATE: Record<NonNullable<ModelCall['status']>, string> = { running: 
  * A model call as a step of the work: what it is doing, through which service, how long it has run and, once settled,
  * what it cost in tokens as the provider reported them.
  */
-function StepHead({ model, at }: { model: ModelCall; at: number }) {
-  const status = model.status ?? 'ready';
+function StepHead({ model, at, active }: { model: ModelCall; at: number; active: boolean }) {
+  const status = model.status === 'running' && !active ? 'unknown' : model.status ?? 'ready';
   return <div className={styles.stepHead} data-status={status}>
     <span className={styles.stepIcon} aria-hidden="true">{status === 'running' ? <i /> : status === 'ready' ? <Icon name="check" /> : '!'}</span>
     <span className={styles.stepText}>第 {model.step} 步 · {model.service}{model.modelName ? <small>{model.modelName}</small> : null}</span>
