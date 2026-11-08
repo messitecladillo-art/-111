@@ -2,6 +2,8 @@
 
 import {
   FormEvent,
+  cloneElement,
+  useLayoutEffect,
   useCallback,
   useEffect,
   useMemo,
@@ -22,11 +24,11 @@ import ProjectPortal from "@/components/workspace/ProjectPortal";
 import EvidenceFlight from "@/components/EvidenceFlight";
 import ChoiceGroup from "@/components/ChoiceGroup";
 import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel } from "@/components/WorkbenchShell";
-import type { ReactNode } from "react";
-import type { EditorContent } from "@/lib/editor-model";
+import type { ReactElement, ReactNode } from "react";
+import { createEditorContent, type EditorContent } from "@/lib/editor-model";
 import type { ProjectView } from "@/lib/agent/illumination";
 import type { EditingStudioHandle } from '@/components/editors/EditingStudio';
-import type { RevisionSnapshot, SectionRevisionProposal, RevisionApplyResult } from '@/lib/agent/section-revision';
+import type { SectionRevisionProposal, RevisionApplyResult } from '@/lib/agent/section-revision';
 import type { ReportRunScope } from '@/lib/agent/report-work';
 import { buildDemoPack, type DemoPack } from "@/lib/agent/demo-study";
 import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
@@ -56,7 +58,9 @@ import ResearchPipeline from '@/components/overview/ResearchPipeline';
 import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-actions';
 import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
 import type { DatasetValue } from '@/lib/canvas/execute';
-import { readReportDraft, saveReportDraft } from '@/lib/agent/report-draft';
+import { archiveReportDraft, flushReportDraft, readReportDraft, readReportVersions, saveReportDraft } from '@/lib/agent/report-draft';
+import { hasUserResearchSource, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
+import type { FullReportPack } from '@/lib/agent/full-report-pipeline';
 import type { FigureTweak } from '@/lib/agent/figure-tweak';
 
 type UnknownRecord = Record<string, unknown>;
@@ -557,9 +561,11 @@ function ruleTypeLabel(value: string) {
   } as Record<string, string>)[value] ?? "其他规则";
 }
 
-function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design: DesignSnapshot | null }) {
+function CanvasPanel({ dataset, design, projectId }: { dataset: DatasetValue | null; design: DesignSnapshot | null; projectId: string|null }) {
   const nav = useWorkbenchNav();
   const auth = useHostedSession();
+  const mounted=useRef(true);
+  useLayoutEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const [guest] = useState<CanvasIdentity>(() => {
     let storage: Storage | null = null;
     try { storage = typeof window === 'undefined' ? null : window.sessionStorage; } catch { /* This mount can use an ephemeral guest scope. */ }
@@ -568,7 +574,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
   if (auth.loading || !auth.session) return <p className="wb-canvas-loading" role="status">{auth.error ? '账号状态暂未就绪，请重新连接。' : '正在核对画布归属…'}</p>;
   const ownerId = auth.session.authenticated ? auth.session.user?.id ?? null : null;
   if (auth.session.authenticated && !ownerId) return <p className="wb-canvas-loading" role="alert">画布归属未确定，请重新登录。</p>;
-  return <ResearchCanvas storageScope={{ identity: ownerId ? { kind: 'account', id: ownerId } : guest, projectId: LOCAL_CANVAS_WORKSPACE }} identityEpoch={auth.identityEpoch} isCurrentScope={() => auth.isCurrentIdentity(ownerId, auth.identityEpoch)} workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
+  return <ResearchCanvas storageScope={{ identity: ownerId ? { kind: 'account', id: ownerId } : guest, projectId: projectId??LOCAL_CANVAS_WORKSPACE }} identityEpoch={auth.identityEpoch} isCurrentScope={() => mounted.current&&auth.isCurrentIdentity(ownerId, auth.identityEpoch)} workspaceDataset={dataset} design={design} onOpen={nav.openFromCanvas} onShowWorkbench={nav.showWorkbench} focus={nav.canvasFocus} active={nav.section === 'canvas'} />;
 }
 
 /**
@@ -578,54 +584,82 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string, customPack?: DemoPack) => Promise<boolean>; setLiveReport: (content: EditorContent) => void; readRevisionSnapshot: () => RevisionSnapshot | null; reviseSection: (proposal: SectionRevisionProposal, scope: ReportRunScope) => RevisionApplyResult } {
+export function useWorkbenchModules(observeReport = false, projectId: string|null = null) {
   const { session, identityEpoch, loading, isCurrentAccount } = useHostedSession();
-  const revisionEditor = useRef<EditingStudioHandle | null>(null);
-  const readRevisionSnapshot = useCallback(() => revisionEditor.current?.readRevisionSnapshot() ?? null, []);
-  const reviseSection = useCallback((proposal: SectionRevisionProposal, scope: ReportRunScope): RevisionApplyResult => {
-    if (loading || !session?.authenticated || !scope.owner || !isCurrentAccount(scope.owner, scope.epoch) || scope.owner !== session.user?.id || scope.epoch !== identityEpoch) return { ok: false, reason: "登录状态已变化，请重新确认。" };
-    return revisionEditor.current?.reviseSection(proposal, scope) ?? { ok: false, reason: "编辑器尚未就绪。" };
-  }, [loading, session, identityEpoch, isCurrentAccount]);
-  // The agent keeps its report draft in this browser, for whoever is signed in; the classic workbench does not.
-  const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
-  const storedDraft = useMemo(() => draftOwner && typeof window !== 'undefined' ? readReportDraft(draftOwner) : null, [draftOwner]);
-  const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(
-    JSON.stringify(['workspace', session?.user?.id ?? null, identityEpoch]),
-  );
-  const revisionInputVersion = useMemo(() => ({ dataset: exchange.dataset, design: exchange.design, pending: [exchange.pending.design, exchange.pending.dataset, exchange.pending.result], token: crypto.randomUUID() }), [exchange.dataset, exchange.design, exchange.pending.design, exchange.pending.dataset, exchange.pending.result]);
+  const draftOwner = observeReport && !loading && session ? (session.authenticated && session.user?.id ? session.user.id : 'guest') : null;
+  const identityScope=JSON.stringify(['workspace',session?.user?.id??null,identityEpoch]);
+  const workspaceScope=JSON.stringify([identityScope,projectId]);
+  const scopeTicket=useMemo(()=>({scope:workspaceScope}),[workspaceScope]);
+  const activeScope=useRef<typeof scopeTicket|null>(scopeTicket);
+  useLayoutEffect(()=>{activeScope.current=scopeTicket;return()=>{activeScope.current=null;flushReportDraft();};},[scopeTicket]);
+  const currentScope=useCallback(()=>activeScope.current===scopeTicket,[scopeTicket]);
+  const revisionEditor=useRef<EditingStudioHandle|null>(null);
+  const readRevisionSnapshot=useCallback(()=>currentScope()?revisionEditor.current?.readRevisionSnapshot()??null:null,[currentScope]);
+  const reviseSection=useCallback((proposal:SectionRevisionProposal,scope:ReportRunScope):RevisionApplyResult=>{
+    if(!currentScope()||loading||!scope.owner||!isCurrentAccount(scope.owner,scope.epoch)||scope.project!==projectId)return {ok:false,reason:'登录或项目已变化，请重新确认。'};
+    return revisionEditor.current?.reviseSection(proposal,scope)??{ok:false,reason:'编辑器尚未就绪。'};
+  },[currentScope,loading,isCurrentAccount,projectId]);
+  const storedDraft=useMemo(()=>draftOwner&&typeof window!=='undefined'?readReportDraft(draftOwner,projectId):null,[draftOwner,projectId]);
+  const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(workspaceScope,identityScope);
+  const datasetChanged=useCallback((value:DatasetValue|null)=>{if(currentScope())handoffs.setDataset(value);},[handoffs,currentScope]);
+  const designChanged=useCallback((snapshot:DesignSnapshot)=>{if(currentScope())handoffs.setDesign(snapshot);},[handoffs,currentScope]);
+  const revisionInputVersion=useMemo(()=>({dataset:exchange.dataset,design:exchange.design,pending:[exchange.pending.design,exchange.pending.dataset,exchange.pending.result],token:crypto.randomUUID()}),[exchange.dataset,exchange.design,exchange.pending.design,exchange.pending.dataset,exchange.pending.result]);
   const resultHandled = useHandoffAcknowledgement(handoffs, 'result', exchange.pending.result?.deliveryId);
+  const datasetHandled=useHandoffAcknowledgement(handoffs,'dataset',exchange.pending.dataset?.deliveryId);
+  const datasetDelivery=useMemo(()=>exchange.pending.dataset?{...exchange.pending.dataset.payload,id:exchange.pending.dataset.deliveryId}:null,[exchange.pending.dataset]);
   const briefHandled = useHandoffAcknowledgement(handoffs, 'brief', exchange.pending.brief?.deliveryId);
-  // A model's questionnaire proposal waits in the 问卷室 for review; applying or keeping the design acknowledges it.
   const proposalHandled = useHandoffAcknowledgement(handoffs, 'questionnaire', exchange.pending.questionnaire?.deliveryId);
-  const publishProposal = useCallback((proposal: AgentQuestionnaireProposal) => { handoffs.publish('questionnaire', proposal); }, [handoffs]);
-  // Paragraphs, tables and formulas a workbench module sends to the report; the editor applies each once.
-  const [reportInsert,setReportInsert]=useState<import("@/lib/report-insert").ReportInsert|null>(null);
-  // A figure changed in the conversation; the editor applies it once and clears it.
-  const [figureTweak,setFigureTweak]=useState<FigureTweak|null>(null);
-  const tweakFigure=useCallback((tweak:FigureTweak)=>{setFigureTweak(tweak);},[]);
-  const figureTweakHandled=useCallback(()=>{setFigureTweak(null);},[]);
-  const [edited,setReport]=useState<{owner:string|null;content:EditorContent}|null>(null);
+  const publishProposal = useCallback((proposal: AgentQuestionnaireProposal) => { if(currentScope())handoffs.publish('questionnaire', proposal); }, [handoffs,currentScope]);
+  const [pendingInsert,setPendingInsert]=useState<{scope:string;value:import("@/lib/report-insert").ReportInsert}|null>(null);
+  const reportInsert=pendingInsert?.scope===workspaceScope?pendingInsert.value:null;
+  const setReportInsert=useCallback((value:import("@/lib/report-insert").ReportInsert|null)=>{if(currentScope())setPendingInsert(value?{scope:workspaceScope,value}:null);},[workspaceScope,currentScope]);
+  const [pendingTweak,setPendingTweak]=useState<{scope:string;value:FigureTweak}|null>(null);
+  const figureTweak=pendingTweak?.scope===workspaceScope?pendingTweak.value:null;
+  const tweakFigure=useCallback((value:FigureTweak)=>{if(currentScope())setPendingTweak({scope:workspaceScope,value});},[workspaceScope,currentScope]);
+  const figureTweakHandled=useCallback(()=>{if(currentScope())setPendingTweak(null);},[currentScope]);
+  const [edited,setReport]=useState<{scope:string;content:EditorContent}|null>(null);
   const [benchmarkEpoch,setBenchmarkEpoch]=useState(0);
-  // Until the editor has opened in this visit, the stored draft stands for the report.
-  const report=edited&&edited.owner===draftOwner?edited.content:storedDraft;
-  const reportChanged=useCallback((content:EditorContent)=>{setReport({owner:draftOwner,content});if(draftOwner)saveReportDraft(draftOwner,content);},[draftOwner]);
-  // A teaching simulation for the topic: its questionnaire, its screened answers, and a report whose results the
-  // analysis engine computed on them. A pack the full-report pipeline already built is loaded as it is.
-  const loadBenchmark = useCallback(async (id: string, customPack?: DemoPack) => {
-    let pack: DemoPack;
-    try { pack = customPack ?? await buildDemoPack(id === 'current' ? undefined : id, exchange.design?.design ?? null); }
-    catch { return false; }
-    handoffs.setDesign({ design: pack.design, pending: false });
-    handoffs.setDataset(pack.dataset);
-    reportChanged(pack.report);
-    setBenchmarkEpoch(e => e + 1);
-    return true;
-  }, [handoffs, exchange.design, reportChanged]);
+  const emptyReport=useMemo(()=>createEditorContent(),[]);
+  const report=edited?.scope===workspaceScope?edited.content:(storedDraft??(observeReport?emptyReport:null));
+  const reportChanged=useCallback((content:EditorContent)=>{if(!currentScope())return;setReport({scope:workspaceScope,content});if(draftOwner)saveReportDraft(draftOwner,content,projectId);},[draftOwner,projectId,workspaceScope,currentScope]);
+  const reportSource=useMemo<ReportRunSource>(()=>({design:exchange.design?.design??null,dataset:exchange.dataset,report,inputPending:!!exchange.design?.pending||!!exchange.pending.result||!!exchange.pending.dataset||!!reportInsert||!!figureTweak}),[exchange.design,exchange.dataset,exchange.pending.result,exchange.pending.dataset,report,reportInsert,figureTweak]);
+  const sourceRef=useRef(reportSource);
+  useLayoutEffect(()=>{sourceRef.current=reportSource;},[reportSource]);
+  const sourceMatches=useCallback((expected:ReportRunSource)=>{
+    if(!currentScope())return false;
+    const live=handoffs.getSnapshot();
+    const source={...sourceRef.current,report:revisionEditor.current?.readRevisionSnapshot().content??sourceRef.current.report,design:live.design?.design??null,dataset:live.dataset,inputPending:!!sourceRef.current.inputPending||!!live.design?.pending||!!live.pending.result||!!live.pending.dataset};
+    return !source.inputPending&&reportSourceKey(source)===reportSourceKey(expected);
+  },[currentScope,handoffs]);
+  const applyCandidate=useCallback((pack:FullReportPack,expected:ReportRunSource):'applied'|'conflict'|'storage_failed'=>{
+    if(!sourceMatches(expected))return 'conflict';
+    if(!draftOwner||!archiveReportDraft(draftOwner,projectId,expected.report??createEditorContent()))return 'storage_failed';
+    saveReportDraft(draftOwner,pack.report,projectId);
+    if(!flushReportDraft())return 'storage_failed';
+    sourceRef.current={design:pack.design,dataset:pack.dataset,report:pack.report,inputPending:false};
+    handoffs.setDesign({design:pack.design,pending:false});handoffs.setDataset(pack.dataset);
+    setReport({scope:workspaceScope,content:pack.report});setBenchmarkEpoch(e=>e+1);
+    return 'applied';
+  },[sourceMatches,draftOwner,projectId,handoffs,workspaceScope]);
+  const reportVersions=useMemo(()=>{void benchmarkEpoch;return draftOwner?readReportVersions(draftOwner,projectId):[];},[draftOwner,projectId,benchmarkEpoch]);
+  const restoreReportVersion=useCallback((content:EditorContent,expected:ReportRunSource):'applied'|'conflict'|'storage_failed'=>{
+    if(!sourceMatches(expected))return 'conflict';
+    if(!draftOwner||!archiveReportDraft(draftOwner,projectId,expected.report??createEditorContent()))return 'storage_failed';
+    saveReportDraft(draftOwner,content,projectId);if(!flushReportDraft())return 'storage_failed';
+    sourceRef.current={...expected,report:content};setReport({scope:workspaceScope,content});setBenchmarkEpoch(e=>e+1);return 'applied';
+  },[sourceMatches,draftOwner,projectId,workspaceScope]);
+  const loadBenchmark=useCallback(async(id:string,customPack?:DemoPack)=>{
+    const expected=sourceRef.current;
+    if(!currentScope()||hasUserResearchSource(expected))return false;
+    let pack:DemoPack;
+    try{pack=customPack??await buildDemoPack(id==='current'?undefined:id,expected.design);}catch{return false;}
+    return applyCandidate(pack,expected)==='applied';
+  },[currentScope,applyCandidate]);
   const dataset=exchange.dataset;
-  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
+  const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==='simulated',hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith('质控'))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
   const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => {
     const registration=normalizeResultRegistration(exchange.pending.result?.payload);
-    return ({
+    const entries:Record<WorkbenchPanel,ReactNode>={
       overview: <>
       <section className="hero" id="overview" aria-labelledby="hero-title">
         <div className="hero-grid" aria-hidden="true" />
@@ -662,18 +696,20 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio revisionInputVersion={revisionInputVersion.token} controllerRef={revisionEditor} localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={`${draftOwner??'local'}:${benchmarkEpoch}`} initialContent={report??storedDraft} savedInBrowser={!!draftOwner}/>,
+      editor: <EditingStudio controllerRef={revisionEditor} revisionInputVersion={revisionInputVersion.token} localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={`${workspaceScope}:${benchmarkEpoch}`} initialContent={report??storedDraft} savedInBrowser={!!draftOwner}/>,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={exchange.pending.dataset?.payload} onDatasetChange={handoffs.setDataset}/>,
-      canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} />,
-      silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
-      design: <QuestionnaireStudio localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={handoffs.setDesign} onAnalyze={snapshot=>{handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
-      diagnose: <DiagnosisPanel onBriefSource={source=>{if(source)handoffs.publish('brief',source);else briefHandled();}} />,
+      analysis: <SurveyLab key={`${workspaceScope}:${benchmarkEpoch}`} initialDataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{if(!currentScope())return;handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={datasetDelivery} onDatasetTransferHandled={datasetHandled} onDatasetChange={datasetChanged}/>,
+      canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} projectId={projectId} />,
+      silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{if(!currentScope())return;handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
+      design: <QuestionnaireStudio key={`${workspaceScope}:${benchmarkEpoch}`} initialDesign={exchange.design?.design??null} localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={designChanged} onAnalyze={snapshot=>{if(!currentScope())return;handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
+      diagnose: <DiagnosisPanel onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
-  }); }, [exchange, handoffs, resultHandled, briefHandled, proposalHandled, reportInsert, observeReport, reportChanged, draftOwner, storedDraft, report, benchmarkEpoch, figureTweak, figureTweakHandled, revisionInputVersion]);
-  return { panels, view, publishProposal, sendToReport: setReportInsert, tweakFigure, loadBenchmark, setLiveReport: reportChanged, readRevisionSnapshot, reviseSection };
+    };
+    return Object.fromEntries(Object.entries(entries).map(([key,panel])=>[key,cloneElement(panel as ReactElement,{key:`${workspaceScope}:${(panel as ReactElement).key??key}`})])) as Record<WorkbenchPanel,ReactNode>;
+  }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion]);
+  return {panels,view,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection};
 }
 
 export default function EviXPlatform() {

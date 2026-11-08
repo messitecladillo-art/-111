@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import type { FullReportGenerationResult } from '@/lib/agent/full-report-pipeline';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import { referenceNumbers } from '@/lib/references';
 import { blockLabel, reportLabels } from '@/lib/report-numbering';
@@ -41,30 +42,10 @@ type DirectoryEntry = {
 
 const ROLE_META: Record<RobotRole, { badge: string; title: string }> = {
   writer: { badge: '撰写', title: '正在输入正文' },
-  chart: { badge: '图表', title: '正在生成并嵌入图表' },
+  chart: { badge: '图表', title: '展示已登记图表' },
   xref: { badge: '引用', title: '正在关联交叉引用' },
-  reviewer: { badge: '审阅', title: '正在修订表述与版式' },
+  reviewer: { badge: '审阅', title: '展示本轮实际修订' },
 };
-
-const SAMPLE_REDLINES: {
-  matchSectionRe: RegExp;
-  badPhrase: string;
-  goodPhrase: string;
-  reason: string;
-}[] = [
-  {
-    matchSectionRe: /假设|回归|聚类|实证|发现|结论/u,
-    badPhrase: '这充分证明了核心自变量直接决定了用户满意度并消除了全部误差',
-    goodPhrase: '这表明核心自变量与满意度呈显著正向关联（横截面样本不支持直接因果推断）',
-    reason: '方法学规范：横截面回归不宜使用绝对化因果表述',
-  },
-  {
-    matchSectionRe: /摘要|背景|方案|抽样|数据|建议/u,
-    badPhrase: '本次调研样本完美代表了全国所有人群且不存在任何抽样偏差',
-    goodPhrase: '本次分层配额样本在目标调研群体内具备代表性，外推时仍需控制潜在自选择偏误',
-    reason: '外推边界规范：补充样本适用范围说明',
-  },
-];
 
 export function buildReportDirectory(content: EditorContent): DirectoryEntry[] {
   const labels = reportLabels(content.report);
@@ -97,7 +78,7 @@ export function buildReportDirectory(content: EditorContent): DirectoryEntry[] {
       key: `cite:${numStr}`,
       kind: 'ref',
       tag: `[${numStr}]`,
-      title: `${refEntry.authors || ''} (${refEntry.year || '2025'}) ${refEntry.title || ''}`.trim(),
+      title: `${refEntry.authors || ''} (${refEntry.year || '年份待核对'}) ${refEntry.title || ''}`.trim(),
       targetAttr: 'cite',
       targetId: numStr,
       sectionId: content.report.find(sec => /文献|附录/u.test(sec.title))?.id ?? content.report[content.report.length - 1]?.id ?? '',
@@ -143,7 +124,7 @@ export function ReportLiveTheater({
       // The overlay covers the visible width only: sized from scrollWidth it counted its own width and never shrank,
       // which left the paper stage scrolling sideways.
       setStageSize({
-        w: Math.max(container.clientWidth, 320),
+        w: Math.max(container.clientWidth, 1),
         h: Math.max(container.scrollHeight, cRect.height, 1000),
       });
       if (caret && robotVisible) {
@@ -254,13 +235,7 @@ export function ReportLiveTheater({
             ) : forgePod.result && forgePod.kind === 'table' ? (
               <ResultTable result={forgePod.result} />
             ) : (
-              <div className={styles.forgePodBars}>
-                <i style={{ height: '48%' }} />
-                <i style={{ height: '76%' }} />
-                <i style={{ height: '94%' }} />
-                <i style={{ height: '65%' }} />
-                <i style={{ height: '85%' }} />
-              </div>
+              <p className={styles.forgePodNote}>查看报告内已有公式或图表</p>
             )}
           </div>
         </div>
@@ -276,366 +251,120 @@ export function useLiveReportChoreography(
 ) {
   const [typingState, setTypingState] = useState<LiveTypingState | null>(null);
   const [reviewState, setReviewState] = useState<LiveReviewState | null>(null);
-  const [formatScanSectionId, setFormatScanSectionId] = useState<string | null>(null);
   const [robotRole, setRobotRole] = useState<RobotRole>('writer');
-  const [robotStatusText, setRobotStatusText] = useState<string>('');
-  const [robotVisible, setRobotVisible] = useState<boolean>(false);
+  const [robotStatusText, setRobotStatusText] = useState('');
+  const [robotVisible, setRobotVisible] = useState(false);
   const [forgePod, setForgePod] = useState<ForgePodState | null>(null);
   const [beams, setBeams] = useState<SynapseBeam[]>([]);
   const [activeTargetKey, setActiveTargetKey] = useState<string | null>(null);
-
-  const timerIdsRef = useRef<number[]>([]);
+  const timerIds = useRef(new Set<number>());
+  const reducedMotion = useRef(false);
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => { reducedMotion.current = query.matches; };
+    update(); query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   const clearAllTimers = useCallback(() => {
-    for (const id of timerIdsRef.current) window.clearTimeout(id);
-    timerIdsRef.current = [];
+    timerIds.current.forEach(id => window.clearTimeout(id)); timerIds.current.clear();
   }, []);
-
-  const schedule = useCallback((fn: () => void, delayMs: number) => {
-    const id = window.setTimeout(fn, delayMs);
-    timerIdsRef.current.push(id);
-    return id;
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = window.setTimeout(() => { timerIds.current.delete(id); fn(); }, delay);
+    timerIds.current.add(id); return id;
   }, []);
-
   const clearActiveDomHighlights = useCallback(() => {
+    paperRef.current?.querySelectorAll('[data-xref-active], [data-fly-in]').forEach(element => {
+      element.removeAttribute('data-xref-active'); element.removeAttribute('data-fly-in');
+    });
+  }, [paperRef]);
+  const stop = useCallback(() => {
+    clearAllTimers(); clearActiveDomHighlights(); setTypingState(null); setReviewState(null);
+    setRobotVisible(false); setForgePod(null); setBeams([]); setActiveTargetKey(null);
+  }, [clearAllTimers, clearActiveDomHighlights]);
+
+  const triggerXrefSynapse = useCallback((attr: 'xref' | 'cite', targetId: string, scroll = false) => {
     const container = paperRef.current;
     if (!container) return;
-    container
-      .querySelectorAll('[data-xref-active="true"]')
-      .forEach(el => el.removeAttribute('data-xref-active'));
-  }, [paperRef]);
-
-  const triggerXrefSynapse = useCallback(
-    (targetAttr: 'xref' | 'cite', targetId: string, scrollIntoView = false) => {
-      const container = paperRef.current;
-      if (!container) return;
-
-      clearActiveDomHighlights();
-      const key = `${targetAttr}:${targetId}`;
-      setActiveTargetKey(key);
-
-      const sourceSelector =
-        targetAttr === 'xref'
-          ? `[data-xref-source="${targetId}"]`
-          : `[data-cite-source="${targetId}"]`;
-      const targetSelector =
-        targetAttr === 'xref'
-          ? `[data-xref-target="${targetId}"]`
-          : `[data-cite-target="${targetId}"]`;
-      const dirSelector = `[data-directory-node="${key}"]`;
-
-      const sources = Array.from(container.querySelectorAll<HTMLElement>(sourceSelector));
-      const targetEl = container.querySelector<HTMLElement>(targetSelector);
-      const dirEl = container.querySelector<HTMLElement>(dirSelector);
-
-      sources.forEach(el => el.setAttribute('data-xref-active', 'true'));
-      targetEl?.setAttribute('data-xref-active', 'true');
-
-      const primarySource = sources[0] ?? null;
-      if (scrollIntoView) {
-        if (primarySource) {
-          primarySource.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-
-      const measureAndDraw = () => {
-        const cRect = container.getBoundingClientRect();
-        const centerOf = (el: HTMLElement) => {
-          const r = el.getBoundingClientRect();
-          return {
-            x: r.left - cRect.left + container.scrollLeft + r.width / 2,
-            y: r.top - cRect.top + container.scrollTop + r.height / 2,
-          };
-        };
-
-        const newBeams: SynapseBeam[] = [];
-        if (primarySource && targetEl) {
-          const p1 = centerOf(primarySource);
-          const p2 = centerOf(targetEl);
-          newBeams.push({
-            id: `beam-main-${key}`,
-            x1: p1.x,
-            y1: p1.y,
-            x2: p2.x,
-            y2: p2.y,
-          });
-        }
-        if (dirEl && primarySource) {
-          const d = centerOf(dirEl);
-          const p1 = centerOf(primarySource);
-          newBeams.push({
-            id: `beam-dir-${key}`,
-            x1: d.x,
-            y1: d.y,
-            x2: p1.x,
-            y2: p1.y,
-          });
-        } else if (dirEl && targetEl) {
-          const d = centerOf(dirEl);
-          const p2 = centerOf(targetEl);
-          newBeams.push({
-            id: `beam-dir-target-${key}`,
-            x1: d.x,
-            y1: d.y,
-            x2: p2.x,
-            y2: p2.y,
-          });
-        }
-
-        setBeams(newBeams);
+    clearActiveDomHighlights();
+    const escaped = CSS.escape(targetId), key = `${attr}:${targetId}`;
+    const sources = Array.from(container.querySelectorAll<HTMLElement>(`[data-${attr}-source="${escaped}"]`));
+    const target = container.querySelector<HTMLElement>(`[data-${attr}-target="${escaped}"]`);
+    const directory = container.querySelector<HTMLElement>(`[data-directory-node="${CSS.escape(key)}"]`);
+    sources.forEach(element => element.setAttribute('data-xref-active', 'true'));
+    target?.setAttribute('data-xref-active', 'true'); setActiveTargetKey(key);
+    if (scroll) (sources[0] ?? target)?.scrollIntoView({ behavior: reducedMotion.current ? 'auto' : 'smooth', block: 'center' });
+    if (!reducedMotion.current) schedule(() => {
+      const rect = container.getBoundingClientRect();
+      const center = (element: HTMLElement) => {
+        const bounds = element.getBoundingClientRect();
+        return { x: bounds.left - rect.left + container.scrollLeft + bounds.width / 2, y: bounds.top - rect.top + container.scrollTop + bounds.height / 2 };
       };
-
-      window.setTimeout(measureAndDraw, scrollIntoView ? 220 : 16);
-      window.setTimeout(() => {
-        setBeams(curr => (curr.some(b => b.id.endsWith(key)) ? [] : curr));
-        setActiveTargetKey(curr => (curr === key ? null : curr));
-        clearActiveDomHighlights();
-      }, 2400);
-    },
-    [paperRef, clearActiveDomHighlights],
-  );
+      const source = sources[0] ?? directory;
+      if (!source || !target) return;
+      const from = center(source), to = center(target);
+      setBeams([{ id: key, x1: from.x, y1: from.y, x2: to.x, y2: to.y }]);
+    }, scroll ? 220 : 16);
+    schedule(() => { setBeams(current => current.some(beam => beam.id === key) ? [] : current); setActiveTargetKey(current => current === key ? null : current); clearActiveDomHighlights(); }, 2200);
+  }, [paperRef, clearActiveDomHighlights, schedule]);
 
   useEffect(() => {
     const container = paperRef.current;
     if (!container) return;
-
-    const onMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const xrefEl = target.closest<HTMLElement>('[data-xref-source]');
-      if (xrefEl) {
-        const id = xrefEl.getAttribute('data-xref-source');
-        if (id) triggerXrefSynapse('xref', id, false);
-        return;
-      }
-      const citeEl = target.closest<HTMLElement>('[data-cite-source]');
-      if (citeEl) {
-        const id = citeEl.getAttribute('data-cite-source');
-        if (id) triggerXrefSynapse('cite', id, false);
-      }
+    const focus = (event: Event) => {
+      const element = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-xref-source], [data-cite-source]');
+      if (!element) return;
+      const attr = element.hasAttribute('data-xref-source') ? 'xref' : 'cite';
+      const id = element.getAttribute(`data-${attr}-source`);
+      if (id) triggerXrefSynapse(attr, id, event.type === 'click');
     };
-
-    const onClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const xrefEl = target.closest<HTMLElement>('[data-xref-source]');
-      if (xrefEl) {
-        e.stopPropagation();
-        const id = xrefEl.getAttribute('data-xref-source');
-        if (id) triggerXrefSynapse('xref', id, true);
-        return;
-      }
-      const citeEl = target.closest<HTMLElement>('[data-cite-source]');
-      if (citeEl) {
-        e.stopPropagation();
-        const id = citeEl.getAttribute('data-cite-source');
-        if (id) triggerXrefSynapse('cite', id, true);
-      }
-    };
-
-    container.addEventListener('mouseover', onMouseOver);
-    container.addEventListener('click', onClick);
-    return () => {
-      container.removeEventListener('mouseover', onMouseOver);
-      container.removeEventListener('click', onClick);
-    };
+    container.addEventListener('mouseover', focus); container.addEventListener('focusin', focus); container.addEventListener('click', focus);
+    return () => { container.removeEventListener('mouseover', focus); container.removeEventListener('focusin', focus); container.removeEventListener('click', focus); };
   }, [paperRef, triggerXrefSynapse]);
 
-  const animateIncomingSection = useCallback(
-    (section: ReportSection, contentSnapshot: EditorContent) => {
-      const fullBody = (section.body || '').trim();
-      if (!fullBody) return;
+  const animateIncomingSection = useCallback((section: ReportSection, snapshot: EditorContent) => {
+    stop();
+    const body = (section.body || '').trim();
+    if (!body || reducedMotion.current) return;
+    setRobotVisible(true); setRobotRole('writer'); setRobotStatusText(section.title);
+    for (let step = 1; step <= 12; step++) schedule(() => setTypingState({ sectionId: section.id, visibleBody: body.slice(0, Math.ceil(body.length * step / 12)) }), step * 35);
+    schedule(() => {
+      setTypingState(null);
+      const exhibit = section.blocks?.find(block => block.kind === 'chart' || block.kind === 'table');
+      if (!exhibit || (exhibit.kind !== 'chart' && exhibit.kind !== 'table')) { setRobotVisible(false); return; }
+      const result = resultFor(snapshot.quality, exhibit.evidenceId);
+      if (!result) { setRobotVisible(false); return; }
+      const label = blockLabel(reportLabels(snapshot.report), section.id, exhibit.id)?.label ?? '已登记图表';
+      setRobotRole('chart'); setRobotStatusText(label);
+      setForgePod({ kind: exhibit.kind, label, caption: exhibit.text || result.title, phase: 'pop', result, valueColumn: exhibit.kind === 'chart' ? exhibit.valueColumn : 1 });
+      schedule(() => setForgePod(previous => previous ? { ...previous, phase: 'fly' } : null), 600);
+      schedule(() => { setForgePod(null); setRobotVisible(false); triggerXrefSynapse('xref', exhibit.id); }, 1000);
+    }, 470);
+  }, [stop, schedule, triggerXrefSynapse]);
 
-      setRobotVisible(true);
-      setRobotRole('writer');
-      setRobotStatusText(section.title);
-
-      const totalLen = fullBody.length;
-      const totalSteps = 18;
-      const stepMs = 42;
-
-      for (let step = 1; step <= totalSteps; step++) {
-        schedule(() => {
-          const sliceLen = Math.min(totalLen, Math.round((totalLen * step) / totalSteps));
-          setTypingState({
-            sectionId: section.id,
-            visibleBody: fullBody.slice(0, sliceLen),
-          });
-        }, step * stepMs);
-      }
-
-      schedule(() => {
-        setTypingState(null);
-        const exhibits = (section.blocks ?? []).filter(
-          b => b.kind === 'chart' || b.kind === 'table' || b.kind === 'formula',
-        );
-        if (exhibits.length > 0) {
-          const firstExhibit = exhibits[0];
-          const labels = reportLabels(contentSnapshot.report);
-          const labelStr = blockLabel(labels, section.id, firstExhibit.id)?.label ?? '图 1-1';
-          let matchedResult: ResultSnapshot | undefined;
-          try {
-            if (firstExhibit.kind === 'chart' || firstExhibit.kind === 'table') {
-              matchedResult = resultFor(contentSnapshot.quality, firstExhibit.evidenceId);
-            }
-          } catch {
-            matchedResult = undefined;
-          }
-          setRobotRole('chart');
-          setRobotStatusText(labelStr);
-          setForgePod({
-            kind: firstExhibit.kind as 'chart' | 'table' | 'formula',
-            label: labelStr,
-            caption: firstExhibit.text || matchedResult?.title || section.title,
-            phase: 'pop',
-            result: matchedResult,
-            valueColumn: firstExhibit.kind === 'chart' ? firstExhibit.valueColumn : 1,
-          });
-          const container = paperRef.current;
-          const figEl = container?.querySelector<HTMLElement>(`[data-xref-target="${firstExhibit.id}"]`);
-          figEl?.setAttribute('data-fly-in', 'true');
-
-          schedule(() => {
-            setForgePod(prev => (prev ? { ...prev, phase: 'fly' } : null));
-          }, 680);
-          schedule(() => {
-            setForgePod(null);
-            setRobotRole('xref');
-            setRobotStatusText(labelStr);
-            triggerXrefSynapse('xref', firstExhibit.id, false);
-          }, 1020);
-        }
-      }, (totalSteps + 1) * stepMs);
-    },
-    [paperRef, schedule, triggerXrefSynapse],
-  );
-
-  const runReviewAndFormatChoreography = useCallback(
-    (contentSnapshot: EditorContent, onFinish?: () => void) => {
-      const candidateSections = contentSnapshot.report.filter(s => (s.body || '').trim().length > 40);
-      if (!candidateSections.length) {
-        onFinish?.();
-        return;
-      }
-
-      const targetSec =
-        candidateSections.find(s => /假设|回归|发现|实证/u.test(s.title)) ??
-        candidateSections[Math.min(2, candidateSections.length - 1)];
-      const spec =
-        SAMPLE_REDLINES.find(r => r.matchSectionRe.test(targetSec.title)) ?? SAMPLE_REDLINES[0];
-
-      setRobotVisible(true);
-      setRobotRole('reviewer');
-      setRobotStatusText(targetSec.title);
-      onFocusSection?.(targetSec.id);
-
-      setReviewState({
-        sectionId: targetSec.id,
-        badPhrase: spec.badPhrase,
-        goodPhrase: spec.goodPhrase,
-        reason: spec.reason,
-        step: 'flag',
-        typedGood: '',
-      });
-
-      const rewriteSteps = 16;
-      const stepMs = 45;
-      for (let i = 1; i <= rewriteSteps; i++) {
-        schedule(() => {
-          const chars = Math.round((spec.goodPhrase.length * i) / rewriteSteps);
-          setReviewState({
-            sectionId: targetSec.id,
-            badPhrase: spec.badPhrase,
-            goodPhrase: spec.goodPhrase,
-            reason: spec.reason,
-            step: i === rewriteSteps ? 'done' : 'rewrite',
-            typedGood: spec.goodPhrase.slice(0, chars),
-          });
-        }, 650 + i * stepMs);
-      }
-
-      const sweepStartMs = 650 + (rewriteSteps + 3) * stepMs;
-      const sweepTargets = candidateSections.slice(0, 6);
-      sweepTargets.forEach((sec, idx) => {
-        schedule(() => {
-          setRobotStatusText(sec.title);
-          setFormatScanSectionId(sec.id);
-        }, sweepStartMs + idx * 240);
-      });
-
-      schedule(
-        () => {
-          setFormatScanSectionId(null);
-          setReviewState(null);
-          setRobotVisible(false);
-          onFinish?.();
-        },
-        sweepStartMs + sweepTargets.length * 240 + 600,
-      );
-    },
-    [onFocusSection, schedule],
-  );
+  const runReviewAndFormatChoreography = useCallback((snapshot: EditorContent, revisions: FullReportGenerationResult['revisions'] = [], onFinish?: () => void) => {
+    stop();
+    const revision = revisions.find(item => item.before !== item.after && snapshot.report.some(section => section.id === item.sectionId));
+    if (!revision || reducedMotion.current) { onFinish?.(); return; }
+    onFocusSection?.(revision.sectionId); setRobotVisible(true); setRobotRole('reviewer'); setRobotStatusText('本轮实际修订');
+    const review = { sectionId: revision.sectionId, badPhrase: revision.before, goodPhrase: revision.after, reason: revision.reason };
+    setReviewState({ ...review, step: 'flag', typedGood: '' });
+    for (let step = 1; step <= 12; step++) schedule(() => setReviewState({ ...review, step: step === 12 ? 'done' : 'rewrite', typedGood: revision.after.slice(0, Math.ceil(revision.after.length * step / 12)) }), 550 + step * 45);
+    schedule(() => { setReviewState(null); setRobotVisible(false); onFinish?.(); }, 2100);
+  }, [stop, schedule, onFocusSection]);
 
   const sweepAllXrefs = useCallback(() => {
-    clearAllTimers();
-    const entries = buildReportDirectory(paperContent);
-    if (!entries.length) return;
-    setRobotVisible(true);
-    setRobotRole('xref');
+    stop(); if (reducedMotion.current) return;
+    const entries = buildReportDirectory(paperContent).slice(0, 5);
+    entries.forEach((entry, index) => schedule(() => triggerXrefSynapse(entry.targetAttr, entry.targetId, true), index * 1000));
+  }, [stop, paperContent, schedule, triggerXrefSynapse]);
+  const playFullTheaterShowcase = useCallback((contentOverride?: EditorContent, revisions: FullReportGenerationResult['revisions'] = []) => {
+    const content = contentOverride ?? paperContent;
+    const section = content.report.find(item => item.body.trim().length > 30);
+    stop(); if (!section || reducedMotion.current) return;
+    onFocusSection?.(section.id); animateIncomingSection(section, content);
+    if (revisions.length) schedule(() => runReviewAndFormatChoreography(content, revisions), 2200);
+  }, [paperContent, stop, onFocusSection, animateIncomingSection, schedule, runReviewAndFormatChoreography]);
+  useEffect(() => () => { clearAllTimers(); clearActiveDomHighlights(); }, [clearAllTimers, clearActiveDomHighlights]);
 
-    const picks = entries.slice(0, 6);
-    picks.forEach((entry, idx) => {
-      schedule(() => {
-        setRobotStatusText(entry.tag);
-        triggerXrefSynapse(entry.targetAttr, entry.targetId, true);
-      }, idx * 1050);
-    });
-
-    schedule(() => {
-      setRobotVisible(false);
-    }, picks.length * 1050 + 1200);
-  }, [clearAllTimers, paperContent, schedule, triggerXrefSynapse]);
-
-  const playFullTheaterShowcase = useCallback(
-    (contentOverride?: EditorContent) => {
-      const targetContent = contentOverride ?? paperContent;
-      clearAllTimers();
-
-      const writtenSecs = targetContent.report.filter(s => (s.body || '').trim().length > 30);
-      if (!writtenSecs.length) return;
-
-      const secWithExhibit =
-        writtenSecs.find(s => (s.blocks ?? []).some(b => b.kind === 'chart' || b.kind === 'table')) ??
-        writtenSecs[0];
-
-      onFocusSection?.(secWithExhibit.id);
-      animateIncomingSection(secWithExhibit, targetContent);
-
-      schedule(() => {
-        runReviewAndFormatChoreography(targetContent);
-      }, 2200);
-    },
-    [paperContent, clearAllTimers, onFocusSection, animateIncomingSection, schedule, runReviewAndFormatChoreography],
-  );
-
-  useEffect(() => () => clearAllTimers(), [clearAllTimers]);
-
-  return {
-    typingState,
-    reviewState,
-    formatScanSectionId,
-    robotRole,
-    robotStatusText,
-    robotVisible,
-    forgePod,
-    beams,
-    activeTargetKey,
-    triggerXrefSynapse,
-    sweepAllXrefs,
-    animateIncomingSection,
-    runReviewAndFormatChoreography,
-    playFullTheaterShowcase,
-    setRobotVisible,
-  };
+  return { typingState, reviewState, formatScanSectionId: null, robotRole, robotStatusText, robotVisible, forgePod, beams, activeTargetKey, triggerXrefSynapse, sweepAllXrefs, animateIncomingSection, runReviewAndFormatChoreography, playFullTheaterShowcase, setRobotVisible, stop };
 }

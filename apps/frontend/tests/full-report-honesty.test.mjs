@@ -99,13 +99,17 @@ test('section facts come only from registered results and the study records, nev
   assert.equal(rate?.value, '90.0%', 'the rate is 180 valid of 200 issued, as the frame registers them');
 });
 
-test('a simulated pack is always written up as a teaching demonstration, and its plain references are not called verified', async () => {
+test('explicit empirical mode never silently falls back to simulation; demonstration remains explicit and honest', async () => {
   const pack = await buildDemoPack('');
   const contract = buildSkillPackContract(pack, decomposeTopic(''), 'demonstration');
   assert.ok(contract.literatureLedger.every(l => l.verificationStatus !== 'verified' || (pack.report.references ?? []).some(r => r.id === l.sourceId && r.verification === 'verified')));
   assert.ok(contract.designMatrix.every(row => !/Logit|优势比/u.test(row.analysisMethod)), 'no analysis is planned as done that no result registers');
+  await assert.rejects(generateFullReportWithAgent({
+    mode: 'empirical', llm: { apiKey: 'sk-test-mock' }, sectionNodes: ['compare.tests'],
+    fetcher: async () => { throw Error('input validation must precede every model call'); },
+  }), error => error.code === 'base_required');
   const res = await generateFullReportWithAgent({
-    mode: 'empirical',
+    mode: 'demonstration',
     llm: { apiKey: 'sk-test-mock', concurrency: 4 },
     sectionNodes: ['compare.tests'],
     fetcher: async () => new Response(JSON.stringify({ choices: [{ message: { content: draft('列联检验显示两类受众的观赛状态分布存在关联，见{G1}。') } }] }), { status: 200 }),
@@ -181,9 +185,10 @@ test('a registered category may carry digits in its name; other digits are still
   const labels = categoryLabels(results, design);
   assert.deepEqual(new Set(labels), new Set(['71岁及以上', '60–70岁', '13–18 元', '9–12 元']));
   assert.ok(labels.every((l, i) => i === 0 || labels[i - 1].length >= l.length), 'longest names first, so a short name never cuts a longer one');
-  const named = parseAndHydrateSectionDraft(draft('「60–70岁」受访者中选择「9–12 元」档位的比例最高，为{F1}。'), tokens, { ...results, methods: [], planSection: false, labels });
+  const namedTokens = { ...tokens, facts: [{ id: 'F1', text: '「60–70岁」受访者中「9–12 元」档位的比例为 45.2%', value: '45.2%' }] };
+  const named = parseAndHydrateSectionDraft(draft('「60–70岁」受访者中选择「9–12 元」档位的比例为{F1}。'), namedTokens, { methods: [], planSection: false, labels });
   assert.equal(named.paragraphs.length, 1);
-  assert.match(named.paragraphs[0], /60–70岁.*9–12 元.*94\.4%/u);
+  assert.match(named.paragraphs[0], /60–70岁.*9–12 元.*45\.2%/u);
   const invented = parseAndHydrateSectionDraft(draft('「60–70岁」受访者中约有 45 人选择「9–12 元」档位。'), tokens, { methods: [], planSection: false, labels });
   assert.deepEqual(invented.dropReasons, ['占位符之外写了阿拉伯数字']);
 });

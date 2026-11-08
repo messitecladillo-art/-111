@@ -666,3 +666,18 @@
 .studioSecondaryBtn:hover { border-color: var(--c-accent); color: var(--c-accent); }
 .studioStatusNote { font-size: 12px; color: var(--c-gold); }
 
+
+/* Candidate review and original-history controls live above the paper. */
+.reviewNotice,.versions,.receipts { max-width: 816px; margin: 0 auto 14px; padding: 12px 16px; border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-raise); color: var(--c-fg); font-size: 12px; overflow-wrap: anywhere; }
+.reviewNotice { border-color: var(--c-accent); color: var(--c-accent); }
+.versions summary,.receipts summary { min-height: 26px; cursor: pointer; font-weight: 600; }
+.versions p,.receipts p { margin: 8px 0; color: var(--c-dim); font-size: 11px; }
+.versions ul,.receipts ul { margin: 8px 0 0; padding: 0; list-style: none; max-height: 280px; overflow-y: auto; }
+.versions li,.receipts li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--c-line); }
+.versions li > div { flex: 1; min-width: 0; }.versions b { display: block; font-size: 12px; font-weight: 500; }.versions small { display: block; color: var(--c-dim); font-size: 10px; }.versions button { flex: none; min-height: 34px; padding: 5px 10px; border: 1px solid var(--c-line-strong); border-radius: 7px; background: var(--c-bg); color: var(--c-fg); font: inherit; font-size: 11px; cursor: pointer; }.versions button:disabled { opacity: .45; cursor: default; }
+.receipts a { color: var(--c-accent); text-underline-offset: 3px; }.receipts li a { flex: 1; }.receipts li span { color: var(--c-dim); font-size: 10px; }
+@media (max-width: 959px) { .shell:global(.workbench):not(:global(.hosted-auth)) { --side-w: 0px; }.shell[data-side="open"] .sidebar { position: fixed; z-index: 50; left: 52px; top: 0; bottom: 0; width: min(264px, calc(100vw - 52px)); background: var(--c-side); box-shadow: var(--c-shadow); visibility: visible; }.paperStage { padding: 12px 10px 80px; }.reviewNotice,.versions,.receipts { padding: 10px 12px; }.topTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; }.workState { display: none; } }
+@media (max-width: 600px) { .versions li { flex-wrap: wrap; }.versions li > div { flex-basis: 100%; }.topTitle { max-width: 110px; }.stageSwitch { flex: none; }.stageSwitch button { padding-inline: 6px; }.top { gap: 5px; padding-inline: 8px; }.paperStage { padding: 10px 8px 80px; }.receipts li { flex-wrap: wrap; gap: 4px; }.receipts li a { flex-basis: 100%; } }
+@media (prefers-reduced-motion: reduce) { .shell * { scroll-behavior: auto !important; }.shell button { transition: none !important; } }
+@media (max-width: 959px) { .panel[data-inspector="true"] { display: none; }.panel:not([data-inspector="true"]):not([hidden]) { position: fixed; inset: 8px 8px 8px 60px; z-index: 20; width: auto; max-width: calc(100vw - 68px); min-width: 0; }.panel .resize { display: none; }.panelHead { flex-wrap: wrap; gap: 6px; }.panelLight,.panelLink { display: none; } }
+@media (max-width: 600px) { .top .codeToggle,.top .modelTag,.top .meter { display: none; }.stageSwitch { margin-left: 0; }.stageSwitch button { min-height: 32px; }.stageSwitch button svg { display: none; }.topTitle { flex: 1; }.copilot { right: 8px; bottom: 8px; width: calc(100% - 16px); max-height: calc(100% - 60px); }.copilot .column { width: calc(100% - 16px); } }

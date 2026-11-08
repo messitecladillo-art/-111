@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { flushSync } from 'react-dom';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
@@ -26,6 +26,7 @@ import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agen
 import Composer from './Composer';
 import SectionRevision from './SectionRevision';
 import { useSectionRevision } from './useSectionRevision';
+import { reportWorkState, sameReportRunScope, type ReportRunScope } from '@/lib/agent/report-work';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
@@ -38,11 +39,10 @@ import CursorTrail from './CursorTrail';
 import ReportPaper, { type DocFormatMode } from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
 import { ReportLiveTheater, useLiveReportChoreography } from './ReportLiveTheater';
-import { reportWorkState, ReportRunFence, sameReportRunScope, type ReportRunScope } from '@/lib/agent/report-work';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
-import { createEditorContent } from '@/lib/editor-model';
+import { createEditorContent, type EditorContent } from '@/lib/editor-model';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
 import Sidebar from './Sidebar';
@@ -57,10 +57,15 @@ import { eligibleModelServices, getModelPreferences, matchesModelConsent, resolv
  */
 type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service; after: string; owner: string; epoch: number };
 import styles from './AgentShell.module.css';
-import type { FullReportGenerationResult } from '@/lib/agent/full-report-pipeline';
+import type { FullReportGenerationResult, FullReportPack, ProjectResearchMode } from '@/lib/agent/full-report-pipeline';
+import { canAcceptReportCandidate, hasUserResearchSource, mergeReportCandidate, reportChanges, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
+import { fullReportInputRevision } from '@/lib/agent/full-report-request';
+import { requestFullReport, fullReportFailureStatus } from './full-report-client';
+import AgentRunReview from './AgentRunReview';
 
-// What the full-report route answers with: the pipeline's result, as JSON or as the stream's last line.
-type FullReportReply = Partial<Pick<FullReportGenerationResult, 'pack' | 'topic' | 'contract' | 'summary' | 'repairsApplied'>> & { ok?: boolean; message?: string };
+type ReportCandidate = { runId: string; scope: string; threadId: string | null; sourceKey: string; source: ReportRunSource; mode: ProjectResearchMode; before: EditorContent; preview: EditorContent; pack?: FullReportPack; result?: FullReportGenerationResult; pending: boolean; failed?: string; receipts: { id: string; nodeId: string; status: string }[] };
+type ReportRunHandle = { runId: string; scope: ReportRunScope; threadId: string | null; owner: string; epoch: number; messageId: string; controller: AbortController };
+const REPORT_MODES: Record<ProjectResearchMode, string> = { plan: '研究方案', demonstration: '教学模拟', empirical: '真实资料' };
 
 // Every workbench module opens in the panel and every panel hosts a module: the two lists cannot drift apart.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
@@ -123,16 +128,36 @@ function savedPanelWidth(): number | null {
  * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
-  const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark, setLiveReport, readRevisionSnapshot, reviseSection } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
-  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount, isCurrentIdentity } = useHostedSession();
+  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount } = useHostedSession();
   const [accountNotice, setAccountNotice] = useState('');
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
   useEffect(() => { if (owner) threads.bind(owner); }, [owner]);
   const book = useSyncExternalStore(threads.subscribe, () => threads.view(owner), threads.serverSnapshot);
   const thread = book.threads.find(t => t.id === book.active) ?? null;
+  const projectId = thread ? thread.projectId : book.draftProject;
+  const displayScope: ReportRunScope = { owner: owner === 'guest' ? null : owner, epoch: identityEpoch, thread: thread?.id ?? null, project: projectId };
+  const readReportScope = useCallback((): ReportRunScope => {
+    const live = threads.view(owner), selected = live.threads.find(item => item.id === live.active);
+    return { owner: owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch) ? owner : null, epoch: identityEpoch,
+      thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
+  }, [owner, identityEpoch, isCurrentAccount]);
+  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection } = useWorkbenchModules(true, projectId);
+  const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
+  const activeReportRun = useRef<ReportRunHandle | null>(null);
+  const preparingReport = useRef<{ id: string; scope: ReportRunScope } | null>(null);
+  const [candidate, setCandidate] = useState<ReportCandidate | null>(null);
+  const [lockedSections, setLockedSections] = useState<{ runId: string; ids: string[] }>({ runId: '', ids: [] });
+  const [reviewNotice, setReviewNotice] = useState('');
+  const visibleCandidate = candidate?.scope === reportScope && candidate.threadId === book.active ? candidate : null;
+  const sourceKey = useMemo(() => reportSourceKey(reportSource), [reportSource]);
+  const candidateConflict = !!visibleCandidate && (visibleCandidate.sourceKey !== sourceKey || !!reportSource.inputPending);
+  const candidateChanges = useMemo(() => visibleCandidate ? reportChanges(visibleCandidate.before, visibleCandidate.preview) : [], [visibleCandidate]);
+  const lockedSectionIds = lockedSections.runId === visibleCandidate?.runId ? lockedSections.ids : [];
+  // Remove the legacy direct-key slot; credentials are entered only in the hosted model-service form.
+  useEffect(() => { try { window.sessionStorage.removeItem('evix.agent.direct-api-key.v1'); } catch { /* no browser storage */ } }, []);
   const messages = thread?.messages ?? EMPTY_MESSAGES;
   const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
   const outputId = useSyncExternalStore(subscribeHash, currentOutput, () => null);
@@ -143,38 +168,36 @@ export default function AgentShell() {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
   const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
-  const reportRuns = useMemo(() => new ReportRunFence(), []);
   // Only requests dispatched in this mounted workspace may animate. Restored messages are records, not live jobs.
   const [activeCalls, setActiveCalls] = useState<{ id: string; owner: string; epoch: number }[]>([]);
   const startCall = useCallback((id: string, owner: string, epoch: number) => {
     setActiveCalls(calls => [...calls.filter(call => call.id !== id), { id, owner, epoch }]);
   }, []);
   const finishCall = useCallback((id: string) => setActiveCalls(calls => calls.filter(call => call.id !== id)), []);
+
   const [writingEnvelope, setWritingEnvelope] = useState<{ scope: ReportRunScope; status: LiveWritingStatus } | null>(null);
-  const reportProject = thread ? thread.projectId : book.draftProject;
-  const displayScope: ReportRunScope = { owner, epoch: identityEpoch, thread: thread?.id ?? null, project: reportProject };
   const liveWriting = writingEnvelope && sameReportRunScope(writingEnvelope.scope, displayScope) ? writingEnvelope.status : null;
-  useEffect(() => {
-    const scope: ReportRunScope = { owner, epoch: identityEpoch, thread: thread?.id ?? null, project: reportProject };
-    return () => reportRuns.cancelScope(scope);
-  }, [owner, identityEpoch, thread?.id, reportProject, reportRuns]);
-  useEffect(() => () => reportRuns.cancel(), [reportRuns]);
-  const autoHydratedRef = useRef(false);
+  const setReportWriting = useCallback((scope: ReportRunScope, update: LiveWritingStatus | null | ((previous: LiveWritingStatus) => LiveWritingStatus)) => {
+    setWritingEnvelope(previous => {
+      if (typeof update === 'function') return previous && sameReportRunScope(previous.scope, scope) ? { ...previous, status: update(previous.status) } : previous;
+      return update ? { scope: { ...scope }, status: update } : previous && sameReportRunScope(previous.scope, scope) ? null : previous;
+    });
+  }, []);
   const autoFollowRef = useRef(true);
   const toggleAutoFollow = useCallback(() => {
     autoFollowRef.current = !autoFollowRef.current;
-    setWritingEnvelope(prev => prev ? { ...prev, status: { ...prev.status, autoFollow: autoFollowRef.current } } : null);
-  }, []);
+    setReportWriting(readReportScope(), previous => ({ ...previous, autoFollow: autoFollowRef.current }));
+  }, [readReportScope, setReportWriting]);
   // Before any report exists in this browser the paper shows the blank template, as the editor would open it.
   const [blankReport] = useState(createEditorContent);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
   const light = useMemo(() => illuminate(deferredView), [deferredView]);
-  const paperContent = view.report ?? blankReport;
+  const paperContent = visibleCandidate?.preview ?? view.report ?? blankReport;
   const paperRef = useRef<HTMLDivElement>(null);
   // The report check runs on whatever the paper shows, the blank template included, so the inspector always has a score.
-  const paperBenchmark = useMemo(() => light.benchmark ?? benchmarkReport(paperContent), [light.benchmark, paperContent]);
+  const paperBenchmark = useMemo(() => benchmarkReport(paperContent), [paperContent]);
   // The writing inspector stands where the module panel would, while the report fills the centre and no module is open.
   const inspecting = stage === 'paper' && !panel && !outputId;
   // A section picked from the outline is scrolled into view on the paper.
@@ -215,7 +238,7 @@ export default function AgentShell() {
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
   // give it room and comes back when the panel closes; what the user chooses in either state is kept for that state.
   const viewport = useSyncExternalStore(subscribeResize, () => window.innerWidth, () => 1440);
-  const crowded = (!!panel || !!output) && viewport < 1680;
+  const crowded = viewport < 960 || ((!!panel || !!output) && viewport < 1680);
   const [sideAlone, setSideAlone] = useState(true), [sideBeside, setSideBeside] = useState(false);
   const sideOpen = crowded ? sideBeside : sideAlone;
   const setSideOpen = crowded ? setSideBeside : setSideAlone;
@@ -293,10 +316,10 @@ export default function AgentShell() {
   }, [owner, identityEpoch, isCurrentAccount]);
   const openRevisionSettings = useCallback(() => { window.location.hash = 'services'; }, []);
   const revision = useSectionRevision({
-    sectionId: pickedSection, scope: { ...displayScope, owner: owner === 'guest' ? null : owner }, service: reportService, design: view.design,
+    sectionId: pickedSection, scope: { owner: owner === 'guest' ? null : owner, epoch: identityEpoch, thread: thread?.id ?? null, project: projectId }, service: reportService, design: view.design,
     readScope: revisionScope, readSnapshot: readRevisionSnapshot, apply: reviseSection,
     mountEditor: () => setVisited(v => v.includes('editor') ? v : [...v, 'editor']),
-    openSettings: openRevisionSettings, mutate, disabled: !!liveWriting?.active, readDisabled: () => reportRuns.active,
+    openSettings: openRevisionSettings, mutate, disabled: !!liveWriting?.active || !!visibleCandidate, disabledReason: visibleCandidate ? '请先采纳或关闭整稿候选，再修订当前报告。' : undefined, readDisabled: () => !!activeReportRun.current || !!preparingReport.current,
   });
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, [setCanvasReturn]);
@@ -324,36 +347,35 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, dataset = deferredView.dataset, liveReport = view.report;
   // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
-  const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection });
-  useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection }; });
-  const readReportScope = useCallback((): ReportRunScope => {
-    const current = latest.current;
-    const currentBook = threads.view(current.owner);
-    const currentThread = currentBook.threads.find(t => t.id === currentBook.active);
-    return { owner: current.owner, epoch: current.identityEpoch, thread: currentThread?.id ?? null,
-      project: currentThread ? currentThread.projectId : currentBook.draftProject };
-  }, []);
-  // When entering the middle report canvas on an untouched skeleton, automatically hydrate the full 9-chapter 26-section
-  // standard report so the canvas renders complete A4 pages, TOC, three-line tables, and built-in SVG figures.
-  // The sample replaces the questionnaire and the data, so it fills only a project that holds neither.
-  useEffect(() => {
-    if (stage !== 'paper' || autoHydratedRef.current || deferredView.design || deferredView.dataset) return;
-    const isBareSkeleton =
-      (paperContent.quality?.results?.length ?? 0) === 0 &&
-      paperContent.report.length <= 6 &&
-      paperContent.report.some(s => /写作提示】/u.test(s.body));
-    if (isBareSkeleton) {
-      autoHydratedRef.current = true;
-      // The teaching simulation is computed here (its analyses run in a fraction of a second); the showcase plays once
-      // the computed report is in place.
-      void loadBenchmark('current').then(loaded => {
-        if (!loaded) return;
-        window.setTimeout(() => {
-          if (latest.current.liveReport) choreo.playFullTheaterShowcase(latest.current.liveReport);
-        }, 260);
-      });
+  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection });
+  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection }; });
+  const stopChoreography = choreo.stop;
+  const stopReportRun = useCallback((reason = '已取消运行；原稿已保留。已发出的调用可能仍计费，请核对回执。') => {
+    preparingReport.current = null;
+    const run = activeReportRun.current;
+    if (run) {
+      activeReportRun.current = null; run.controller.abort();
+      finishCall(run.messageId);
+      threads.patch(run.messageId, message => message.role === 'agent' ? { ...message, model: message.model ? { ...message.model, status: 'unknown' } : undefined, turn: { lines: [[span(reason, 'dim')]], chips: [{ label: '核对本轮运行回执', action: { type: 'href', href: `/api/agent/report-runs/${run.runId}` } }] } } : message);
+      setCandidate(previous => previous?.runId === run.runId ? { ...previous, pending: false, failed: reason } : previous);
+      setReportWriting(run.scope, previous => ({ ...previous, active: false, phase: 'cancelled' }));
     }
-  }, [stage, paperContent, loadBenchmark, choreo, deferredView]);
+    stopChoreography();
+  }, [stopChoreography, finishCall, setReportWriting]);
+  useLayoutEffect(() => {
+    const scope: ReportRunScope = { owner: owner === 'guest' ? null : owner, epoch: identityEpoch, thread: thread?.id ?? null, project: projectId };
+    const run = activeReportRun.current;
+    if (run && !sameReportRunScope(run.scope, readReportScope())) stopReportRun('账号、项目或对话已切换。本次运行已停止接收，请核对原对话中的调用回执。');
+    else stopChoreography();
+    return () => {
+      const current = activeReportRun.current;
+      if (current && sameReportRunScope(current.scope, scope)) stopReportRun('账号、项目或对话已切换。本次运行已停止接收，请核对原对话中的调用回执。');
+      if (preparingReport.current && sameReportRunScope(preparingReport.current.scope, scope)) preparingReport.current = null;
+      setReportWriting(scope, null);
+    };
+  }, [owner, identityEpoch, thread?.id, projectId, readReportScope, stopReportRun, stopChoreography, setReportWriting]);
+  useEffect(() => () => { activeReportRun.current?.controller.abort(); activeReportRun.current = null; preparingReport.current = null; }, []);
+
   const agent = useMemo(() => {
     // Read the store synchronously at dispatch: a selection can change before the next effect updates `latest`.
     const currentService = (task: ModelTask) => resolveModelRoute(task, latest.current.generation.lists.services, getModelPreferences(latest.current.owner)).service;
@@ -361,6 +383,9 @@ export default function AgentShell() {
     const send = (raw: string) => {
       const text = raw.trim();
       if (!text) return;
+      if (/^[/／]密钥(?:\s|$)|\bsk-[A-Za-z0-9_-]{12,}/u.test(text)) {
+        say([span('检测到可能的服务密钥，本条内容未写入对话。请在模型设置中接入服务。', 'dim')]); go('services'); return;
+      }
       if (restyle(text)) return;
       if (latest.current.chatMode === 'model' && !/^[/／]/u.test(text)) ask(text);
       else local(text);
@@ -448,8 +473,8 @@ export default function AgentShell() {
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
-      startCall(waiting.id, callOwner, callEpoch);
       const seen = next?.seen ?? new Set<string>();
+      startCall(waiting.id, callOwner, callEpoch);
       sendChatTurn(mutate, request).then(receipt => { if (isCurrentAccount(callOwner, callEpoch)) settle(waiting.id, receipt, chatService.label, seen, chatService, callOwner, callEpoch); }, failure => { if (isCurrentAccount(callOwner, callEpoch)) fail(waiting.id, failure, request.idempotencyKey, text); }).finally(() => finishCall(waiting.id));
       return true;
     };
@@ -662,310 +687,126 @@ export default function AgentShell() {
           say([span('已交给右侧的报告与 PPT 写入；写了哪些内容会显示在编辑器顶部，可以撤销。', 'dim')]);
           break;
         case 'setApiKey': {
-          try {
-            window.sessionStorage.setItem('evix.agent.direct-api-key.v1', action.apiKey.trim());
-          } catch {
-            /* sessionStorage unavailable */
-          }
+          say([span('请在「模型设置」中保存服务密钥。对话框不会保存或使用直接粘贴的密钥。', 'dim')], [{ label: '打开模型设置', action: { type: 'open', room: 'services' } }]);
+          go('services');
           break;
         }
         case 'generateFullReport': {
-          if (reportRuns.active) { say([span('当前报告正在生成，请等待本次返回。', 'dim')]); break; }
-          const identity = readReportScope();
-          const identityOwner = identity.owner === 'guest' ? null : identity.owner;
-          if (!identity.owner || !isCurrentIdentity(identityOwner, identity.epoch)) {
-            say([span('登录状态尚未确认，请等待服务连接后再试。', 'dim')]); break;
+          if (activeReportRun.current || preparingReport.current) { say([span('当前已有候选稿任务在准备或生成，请等待完成或取消运行。', 'dim')]); break; }
+          const current = latest.current;
+          const service = currentService('report');
+          if (!current.owner || current.owner === 'guest' || current.generation.account !== 'ready' || !service || !current.csrfToken) {
+            say([span('生成候选稿需要登录并在模型设置中选择可用的报告服务。', 'dim')]); go('services'); break;
           }
-          const topicLabel = action.topic.trim() || latest.current.report?.title || latest.current.design?.title || '当前参赛研究课题';
-          let sessionKey = '';
-          try {
-            sessionKey = window.sessionStorage.getItem('evix.agent.direct-api-key.v1') ?? '';
-          } catch {
-            /* ignore */
-          }
-          // Focus the middle report canvas immediately so the user watches the report being written in real time
-          setStage('paper');
-          closePanel();
-          const waitingMsg: Message = {
-            ...stamp(),
-            role: 'agent',
-            model: {
-              service: 'DeepSeek 全流程撰稿引擎',
-              provider: 'deepseek',
-              modelName: 'deepseek-chat',
-              step: 1,
-              status: 'running',
-            },
-            turn: {
-              lines: [
-                [
-                  span('正在请求 '),
-                  span('DeepSeek (deepseek-chat)', 'strong'),
-                  span(` 撰写「${topicLabel}」。`),
-                  span('等待接收章节计划与研究材料。', 'dim'),
-                ],
-              ],
-            },
-          };
-          threads.append([waitingMsg]);
-          // append may create the first conversation; bind only after its stable ID exists.
           const requestScope = readReportScope();
-          const ticket = reportRuns.start(requestScope, () => {
-            finishCall(waitingMsg.id);
-            setWritingEnvelope(prev => prev && sameReportRunScope(prev.scope, requestScope)
-              ? { ...prev, status: { ...prev.status, active: false, phase: 'error' } } : prev);
-            if (isCurrentIdentity(identityOwner, identity.epoch)) {
-              mark(waitingMsg.id, 'unknown');
-              replace(waitingMsg.id, { lines: [[span('已离开本次报告任务，停止接收后续内容。外部调用结果待核对。', 'dim')]] });
-            }
-          });
-          if (!ticket) break;
-          startCall(waitingMsg.id, identity.owner, identity.epoch);
-          const currentRun = () => reportRuns.accepts(ticket, readReportScope()) && isCurrentIdentity(identityOwner, identity.epoch);
-          const setLiveWriting = (change: LiveWritingStatus | ((prev: LiveWritingStatus | null) => LiveWritingStatus | null)) => {
-            if (!currentRun()) return;
-            setWritingEnvelope(prev => {
-              const previous = prev && sameReportRunScope(prev.scope, ticket.scope) ? prev.status : null;
-              const status = typeof change === 'function' ? change(previous) : change;
-              return status ? { scope: ticket.scope, status } : null;
-            });
-          };
-          setLiveWriting({ active: true, phase: 'contract', completed: 0, total: 0, paragraphs: 0, facts: 0,
-            lastSectionId: null, lastSectionTitle: '等待接收章节计划与研究材料', topicTitle: topicLabel,
-            autoFollow: autoFollowRef.current });
-          void fetch('/api/agent/full-report', {
-            method: 'POST',
-            signal: ticket.controller.signal,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              topic: action.topic.trim() || undefined,
-              mode: action.mode ?? 'demonstration',
-              apiKey: sessionKey || undefined,
-              stream: true,
-            }),
-          })
-            .then(async res => {
-              if (!currentRun()) return;
-              if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                if (!currentRun()) return;
-                throw new Error(errData?.message || `HTTP ${res.status}`);
+          if (requestScope.owner !== current.owner || requestScope.epoch !== current.identityEpoch || requestScope.project !== current.projectId) {
+            say([span('登录或项目已变化，请等待当前资料就绪后重新生成。', 'dim')]); break;
+          }
+          const source = current.reportSource;
+          if (source.inputPending) { say([span('原稿或研究资料仍在载入，请等待载入完成后再生成。', 'dim')]); break; }
+          const mode = action.mode ?? (source.dataset?.kind === 'simulated' ? 'demonstration' : source.dataset ? 'empirical' : 'plan');
+          if (mode === 'demonstration' && hasUserResearchSource(source)) {
+            say([span('当前工作区已有用户资料。请新建空白项目载入教学模拟，避免混用研究来源。', 'dim')]); go('workspace'); break;
+          }
+          if (mode !== 'demonstration' && !source.design) {
+            say([span('先完成调查设计，再以当前资料生成研究方案或实证候选稿。空白工作区也可明确载入教学模拟。', 'dim')], [{ label: '打开调查设计', action: { type: 'open', room: 'design' }, primary: true }, { label: '教学模拟', action: { type: 'generateFullReport', topic: action.topic, mode: 'demonstration' } }]); break;
+          }
+          if (mode === 'empirical' && !current.projectId) { say([span('真实资料报告需要先关联一个项目，以便核对调用归属和资料版本。', 'dim')]); go('workspace'); break; }
+          const topic = (action.topic.trim() || source.design?.title || source.report?.title || '当前研究课题').slice(0, 160);
+          const before = source.report ?? blankReport;
+          const base = source.design && (mode !== 'demonstration' || source.dataset?.kind === 'simulated') ? { design: source.design, dataset: source.dataset, report: before } : undefined;
+          const sourceKey = reportSourceKey(source), scope = current.reportScope, callOwner = current.owner, callEpoch = current.identityEpoch;
+          const preparation = { id: crypto.randomUUID(), scope: { ...requestScope } };
+          preparingReport.current = preparation;
+          setCopilotOpen(true);
+          void (async () => {
+            let handle: ReportRunHandle | null = null;
+            try {
+              const inputRevision = await fullReportInputRevision({ topic, mode, base });
+              if (preparingReport.current !== preparation || !sameReportRunScope(requestScope, readReportScope()) || reportSourceKey(latest.current.reportSource) !== sourceKey) return;
+              const selected = currentService('report');
+              if (!selected || selected.id !== service.id || selected.revision !== service.revision) { say([span('报告模型配置已变化，请重新点击生成并核对服务。', 'dim')]); return; }
+              if (!matchesModelConsent(action.modelBinding, callOwner, callEpoch, service) || action.inputRevision !== inputRevision) {
+                threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('发送前核对本次任务：')]], cards: [{ kind: 'confirm', title: `${REPORT_MODES[mode]} · ${service.label} · ${service.model} · v${service.revision}`,
+                  lines: [
+                    [span(`课题：${topic}。本次生成独立候选稿，审阅后再决定是否采纳。`)],
+                    [span(`资料范围：${base ? `当前调查设计、${source.dataset ? `${source.dataset.table.rows.length} 行${source.dataset.kind === 'simulated' ? '模拟' : '用户'}数据的本地分析结果` : '无采集数据'}、原稿正文与已登记证据` : '由课题构建并明确标注的教学模拟资料'}。`)],
+                    [span('应用服务核对问卷、数据指纹及登记结果；模型收到研究设计、章节上下文和证据摘要，原始逐行作答不发送给模型。', 'dim')],
+                    [span('全篇最多处理 26 节，包含有限重试及返修时最多 104 次模型调用。用量按服务商实际回执显示，费用以服务商账单为准。', 'dim')],
+                    [span(`输入版本：${inputRevision.slice(0, 12)}。资料、模型或账号变更后需重新确认。`, 'dim')],
+                  ], confirm: { label: '确认并生成候选稿', action: { ...action, topic, mode, inputRevision, modelBinding: { owner: callOwner, identityEpoch: callEpoch, serviceId: service.id, serviceRevision: service.revision } } }, cancel: '暂不发送' }] } }]);
+                return;
               }
-              const contentType = res.headers.get('content-type') ?? '';
-              let finalData: FullReportReply | null = null;
-              let runningParagraphs = 0;
-              const citedFactsSet = new Set<string>();
-
-              if (contentType.includes('application/x-ndjson') && res.body) {
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                while (true) {
-                  const { value, done } = await reader.read();
-                  if (!currentRun()) { await reader.cancel(); return; }
-                  buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
-                  if (done && buffer.trim()) buffer += '\n';
-                  const lines = buffer.split('\n');
-                  buffer = lines.pop() ?? '';
-                  for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed) continue;
-                    const evt = JSON.parse(trimmed);
-                    if (evt.type === 'init' && evt.pack) {
-                      void loadBenchmark(action.topic.trim() || 'current', evt.pack);
-                      setLiveWriting(prev => ({
-                        active: true,
-                        phase: 'wave1',
-                        completed: 0,
-                        total: evt.total ?? 0,
-                        paragraphs: 0,
-                        facts: 0,
-                        lastSectionId: null,
-                        lastSectionTitle: '报告蓝图与已登记的结果已就位，模型正在并发起草…',
-                        topicTitle: evt.topic?.shortTitle || prev?.topicTitle || topicLabel,
-                        autoFollow: autoFollowRef.current,
-                      }));
-                    } else if (evt.type === 'section' && evt.report) {
-                      setLiveReport(evt.report);
-                      runningParagraphs += evt.trace?.keptParagraphs ?? 0;
-                      for (const f of evt.trace?.citedFacts ?? []) citedFactsSet.add(f);
-                      setLiveWriting(prev => ({
-                        active: true,
-                        phase: evt.phase === 'wave2' ? 'wave2' : 'wave1',
-                        completed: evt.completed ?? (prev?.completed ?? 0) + 1,
-                        total: evt.total ?? prev?.total ?? 0,
-                        paragraphs: runningParagraphs,
-                        facts: citedFactsSet.size,
-                        lastSectionId: evt.sectionId ?? null,
-                        lastSectionTitle: `${evt.title ?? ''}（+${evt.trace?.keptParagraphs ?? 0}段）`,
-                        topicTitle: prev?.topicTitle ?? topicLabel,
-                        autoFollow: autoFollowRef.current,
-                      }));
-                      if (autoFollowRef.current && evt.sectionId) {
-                        requestAnimationFrame(() => pickSection(evt.sectionId));
-                      }
-                      const streamedSection = evt.report.report?.find((sec: { id: string }) => sec.id === evt.sectionId);
-                      if (streamedSection) {
-                        choreo.animateIncomingSection(streamedSection, evt.report);
-                      }
-                      replace(waitingMsg.id, {
-                        lines: [
-                          [
-                            span('正在中间报告画布逐字落笔：已完成 '),
-                            span(`${evt.completed}/${evt.total} 节`, 'gold'),
-                            span(' · 累计 '),
-                            span(`${runningParagraphs} 段`, 'gold'),
-                            span(' · 已关联 '),
-                            span(`${citedFactsSet.size} 项`, 'gold'),
-                            span(' 统计数据与图表 · 最新落笔「'),
-                            span(evt.title ?? '', 'strong'),
-                            span('」'),
-                          ],
-                        ],
-                      });
-                    } else if (evt.type === 'repair' && evt.report) {
-                      setLiveReport(evt.report);
-                      choreo.runReviewAndFormatChoreography(evt.report);
-                      setLiveWriting(prev =>
-                        prev
-                          ? {
-                              ...prev,
-                              phase: 'repair',
-                              lastSectionTitle: `正在执行学术表述修订与版式规整（已完成 ${evt.repairsApplied?.length ?? 0} 项修订）`,
-                            }
-                          : null,
-                      );
-                    } else if (evt.type === 'done') {
-                      finalData = evt;
-                    } else if (evt.type === 'error') {
-                      throw new Error(evt.message || '全报告流式生成中断');
-                    }
+              const runId = crypto.randomUUID(), controller = new AbortController();
+              const waiting: Message = { ...stamp(), role: 'agent', model: { service: service.label, serviceId: service.id, serviceRevision: service.revision, provider: service.provider, modelName: service.model, reportRunId: runId, step: 1, status: 'running' }, turn: { lines: [[span(`正在生成「${topic}」的独立候选稿。原稿保持在编辑器中。`, 'dim')]], chips: [{ label: '查看本轮运行回执', action: { type: 'href', href: `/api/agent/report-runs/${runId}` } }] } };
+              threads.append([waiting]);
+              const runScope = { ...requestScope, thread: threads.threadOf(waiting.id)?.id ?? null };
+              handle = { runId, scope: runScope, owner: callOwner, epoch: callEpoch, threadId: runScope.thread, messageId: waiting.id, controller };
+              activeReportRun.current = handle;
+              startCall(waiting.id, callOwner, callEpoch);
+              const run = handle;
+              const stillCurrent = () => activeReportRun.current === run && !controller.signal.aborted && sameReportRunScope(run.scope, readReportScope()) && !!threads.threadOf(waiting.id);
+              if (!stillCurrent()) { mark(waiting.id, 'refused'); replace(waiting.id, { lines: [[span('项目或对话已变化，本次尚未发送模型请求。', 'dim')]] }); return; }
+              setCandidate({ runId, scope, threadId: handle.threadId, sourceKey, source, mode, before, preview: before, pending: true, receipts: [] });
+              setLockedSections({ runId, ids: [] }); setReviewNotice('');
+              setStage('paper'); closePanel(); setCopilotOpen(false); choreo.stop();
+              setReportWriting(run.scope, { active: true, phase: 'contract', completed: 0, total: 0, paragraphs: 0, facts: 0, lastSectionId: null, lastSectionTitle: '', topicTitle: topic, autoFollow: autoFollowRef.current });
+              const seenSections = new Map<string, { paragraphs: number; facts: string[] }>();
+              const result = await requestFullReport({ schemaVersion: 1, runId, projectId: current.projectId, inputRevision, serviceId: service.id, serviceRevision: service.revision, consent: true, topic, mode, base, stream: true, concurrency: 3 }, {
+                csrfToken: current.csrfToken!, signal: controller.signal,
+                onEvent: event => {
+                  if (!stillCurrent()) return;
+                  if (event.type === 'receipt') {
+                    setCandidate(previous => previous?.runId === runId ? { ...previous, receipts: [...previous.receipts.filter(receipt => receipt.id !== event.id), { id: event.id, nodeId: event.nodeId, status: event.status }] } : previous);
+                    return;
                   }
-                  if (done) break;
-                }
-              } else {
-                finalData = await res.json();
-                if (!currentRun()) return;
-              }
-
-              if (!finalData?.ok || !finalData?.pack) {
-                throw new Error(finalData?.message || '未收到完整报告数据包');
-              }
-
-              void loadBenchmark(action.topic.trim() || 'current', finalData.pack);
-              const s = finalData.summary;
-              if (!s) throw new Error('未收到完整报告数据包');
-              const firstSectionId = finalData.pack.report?.report?.[0]?.id ?? 'sec-abstract';
-              setLiveWriting({
-                active: false,
-                phase: 'done',
-                completed: s.totalSectionsGenerated,
-                total: s.totalSectionsGenerated,
-                paragraphs: s.totalParagraphsWritten,
-                facts: s.totalFactsCited,
-                lastSectionId: firstSectionId,
-                lastSectionTitle: '摘要（点击回到篇首）',
-                topicTitle: finalData.topic?.shortTitle || topicLabel,
-                autoFollow: autoFollowRef.current,
+                  if (event.report || event.pack) setCandidate(previous => previous?.runId === runId ? { ...previous, preview: event.report ?? event.pack!.report } : previous);
+                  if (event.sectionId && event.trace) seenSections.set(event.sectionId, { paragraphs: event.trace.status === 'llm_generated' ? event.trace.keptParagraphs : 0, facts: event.trace.status === 'llm_generated' ? event.trace.citedFacts : [] });
+                  const sections = [...seenSections.values()];
+                  setReportWriting(run.scope, previous => ({ ...previous, phase: event.phase, completed: event.completed, total: event.total, paragraphs: sections.reduce((sum, section) => sum + section.paragraphs, 0), facts: new Set(sections.flatMap(section => section.facts)).size, lastSectionId: event.sectionId ?? previous.lastSectionId, lastSectionTitle: event.title ?? previous.lastSectionTitle, autoFollow: autoFollowRef.current }));
+                  if (event.type === 'section' && event.report && event.sectionId) {
+                    const section = event.report.report.find(item => item.id === event.sectionId);
+                    if (section && event.trace?.status === 'llm_generated') choreo.animateIncomingSection(section, event.report);
+                    if (autoFollowRef.current) pickSection(event.sectionId);
+                  }
+                  if (event.type === 'repair' && event.report && event.revisions?.length) choreo.runReviewAndFormatChoreography(event.report, event.revisions);
+                  replace(waiting.id, { lines: [[span(`候选稿已处理 ${event.completed}/${event.total} 节；所有内容仍待完整检查与审阅。`, 'dim')]], chips: [{ label: '查看本轮运行回执', action: { type: 'href', href: `/api/agent/report-runs/${runId}` } }] });
+                },
               });
-              requestAnimationFrame(() => pickSection(firstSectionId));
-
-              mark(
-                waitingMsg.id,
-                'ready',
-                'DeepSeek · 00-06 全流程引擎',
-                1,
-                s?.totalTokens
-                  ? { inputTokens: Math.round(s.totalTokens * 0.7), outputTokens: Math.round(s.totalTokens * 0.3) }
-                  : null,
-              );
-              replace(waitingMsg.id, {
-                lines: [
-                  [
-                    span('已由 '),
-                    span('证见 AI 撰稿团', 'strong'),
-                    span(' 在中间报告画布完成实时撰稿与终审修订：共撰写 '),
-                    span(`${s.totalSectionsGenerated} 节`, 'gold'),
-                    span('、'),
-                    span(`${s.totalParagraphsWritten} 段`, 'gold'),
-                    span(' 正文，精准锚定 '),
-                    span(`${s.totalFactsCited} 项`, 'gold'),
-                    span(' 实证调查数据与图表互证，对标体检得分 '),
-                    span(`${s.finalScore} / 100`, 'gold'),
-                    span('，六大顾问 '),
-                    span(`${s.advisorPassCount} / ${s.advisorTotalCount}`, 'gold'),
-                    span(' 零问题通过（耗时 '),
-                    span(`${(s.totalDurationMs / 1000).toFixed(1)}s`, 'gold'),
-                    span('）。'),
-                  ],
-                ],
-                cards: [
-                  {
-                    kind: 'tool',
-                    title: `全报告实时撰稿与审稿回执 · ${finalData.topic?.shortTitle || topicLabel}`,
-                    lines: [
-                      [span('交叉引用索引', 'teal'), span(`　核心结论 ${finalData.contract?.claimLedger?.length ?? 4} 条 · 参考文献 ${finalData.contract?.literatureLedger?.length ?? 3} 篇 · 统计模型 ${finalData.contract?.statsLedger?.length ?? 6} 项 · 图表目录 ${finalData.contract?.figureLedger?.length ?? 7} 项`, 'dim')],
-                      [span('正文实时撰写', 'teal'), span(`　DeepSeek 实时撰写 ${s.llmSuccessCount}/${s.totalSectionsGenerated} 节 · 累计写入 ${s.totalParagraphsWritten} 段 · 消耗 ${s.totalTokens?.toLocaleString() ?? '—'} Tokens`, 'dim')],
-                      [span('审阅修订定稿', 'teal'), span(`　完成 ${finalData.repairsApplied?.length ?? 0} 项方法学修辞划改与版式校验 · 最终基准分 ${s.finalScore}/100 · 设/证/统/图/写/交 全部通过`, 'dim')],
-                    ],
-                  },
-                ],
-                chips: [
-                  { label: '查看九门金石印鉴', action: { type: 'say', text: '/印鉴' }, primary: true },
-                  { label: '/写报告', action: { type: 'say', text: '/写报告' } },
-                  { label: '/绘图', action: { type: 'say', text: '/绘图' } },
-                  { label: '/编程', action: { type: 'say', text: '/编程' } },
-                ],
-              });
-            })
-            .catch(err => {
-              if (!currentRun()) return;
-              setLiveWriting(prev => (prev ? { ...prev, active: false, phase: 'error' } : null));
-              mark(waitingMsg.id, 'failed', 'DeepSeek · 00-06 全流程引擎', 1);
-              replace(waitingMsg.id, {
-                lines: [
-                  [span('全报告自动生成未完成：', 'error'), span(err instanceof Error ? err.message : '请求异常')],
-                ],
-                chips: [
-                  { label: '重试 /全报告', action: { type: 'say', text: `/全报告 ${action.topic}`.trim() }, primary: true },
-                ],
-              });
-            }).finally(() => { finishCall(waitingMsg.id); reportRuns.finish(ticket); });
+              if (!stillCurrent()) return;
+              setCandidate(previous => previous?.runId === runId ? { ...previous, preview: result.report, pack: result.pack, result, pending: false } : previous);
+              setReportWriting(run.scope, previous => ({ ...previous, active: false, phase: 'done', completed: result.summary.totalSectionsGenerated, total: result.summary.totalSectionsGenerated, paragraphs: result.summary.totalParagraphsWritten, facts: result.summary.totalFactsCited }));
+              mark(waiting.id, result.summary.llmSuccessCount > 0 ? 'ready' : 'failed', undefined, undefined, result.summary.usageReported ? { inputTokens: result.summary.promptTokens, outputTokens: result.summary.completionTokens } : undefined);
+              replace(waiting.id, { lines: [[span(`本轮模型写成 ${result.summary.llmSuccessCount}/${result.summary.totalSectionsGenerated} 节，${result.summary.fallbackCount} 节待补写。`, 'strong')], [span(result.quality.status === 'blocked' ? '存在阻断项，暂不能采纳。请查看候选稿审阅工作台。' : '候选稿已就绪，请检查证据、实际修订和原稿差异后采纳。', 'dim')], [span(result.summary.usageReported ? `服务商报告输入 ${result.summary.promptTokens} / 输出 ${result.summary.completionTokens} tokens。` : '服务商未完整报告用量；未推算 token 或费用。', 'dim')]], chips: [{ label: '查看本轮运行回执', action: { type: 'href', href: `/api/agent/report-runs/${runId}` } }] });
+              if (result.revisions.length) choreo.runReviewAndFormatChoreography(result.report, result.revisions); else choreo.stop();
+            } catch (error) {
+              if (!handle) { if (sameReportRunScope(requestScope, readReportScope())) say([span('无法核对本次资料版本，尚未启动生成。请重新检查资料。', 'error')]); return; }
+              if (activeReportRun.current !== handle || handle.controller.signal.aborted || !sameReportRunScope(handle.scope, readReportScope()) || !threads.threadOf(handle.messageId)) return;
+              const notice = error instanceof HostedApiError ? error.message : '连接或结果校验未完成，原稿已保留。请先核对本轮调用回执。';
+              setCandidate(previous => previous?.runId === handle!.runId ? { ...previous, pending: false, failed: notice } : previous);
+              setReportWriting(handle.scope, previous => ({ ...previous, active: false, phase: 'failed' })); choreo.stop();
+              mark(handle.messageId, fullReportFailureStatus(error));
+              replace(handle.messageId, { lines: [[span(notice, 'error')]], chips: [{ label: '核对本轮运行回执', action: { type: 'href', href: `/api/agent/report-runs/${handle.runId}` } }] });
+            } finally {
+              if (handle) finishCall(handle.messageId);
+              if (handle && activeReportRun.current === handle) activeReportRun.current = null;
+              if (preparingReport.current === preparation) preparingReport.current = null;
+            }
+          })();
           break;
         }
-        case 'loadBenchmark':
-          setStage('paper');
-          closePanel();
+        case 'loadBenchmark': {
+          const source = latest.current.reportSource, scope = latest.current.reportScope, activeThread = threads.view(latest.current.owner).active;
+          if (activeReportRun.current || hasUserResearchSource(source)) { say([span('当前已有生成任务或用户资料。请先完成任务，或切换到空白项目再载入教学模拟。', 'dim')]); break; }
+          setStage('paper'); closePanel();
           void loadBenchmark(action.benchmarkId).then(loaded => {
-            if (!loaded) {
-              say([span('教学模拟研究没有生成成功，当前工作区未作改动。')]);
-              return;
-            }
-            window.setTimeout(() => {
-              const report = latest.current.liveReport;
-              if (report) choreo.playFullTheaterShowcase(report);
-              const results = report?.quality?.results ?? [];
-              const kept = results.find(r => r.method === 'quality-control')?.n;
-              say(
-                [
-                  span('已生成教学模拟研究并放进中间报告画布：'),
-                  span(`「${report?.title ?? action.benchmarkId}」`, 'strong'),
-                  span(' · 问卷 12 题'),
-                  ...(kept ? [span(' · 筛查后保留 '), span(`${kept} 份`, 'gold'), span('模拟作答')] : []),
-                  span(' · '),
-                  span(`${results.length} 项`, 'gold'),
-                  span('结果由分析引擎在模拟数据上计算并登记。叙述性章节留空，可用 /全报告 交给模型起草。'),
-                ],
-                [
-                  { label: '/全报告', action: { type: 'say', text: '/全报告' }, primary: true },
-                  { label: '/绘图', action: { type: 'say', text: '/绘图' } },
-                  { label: '/编程', action: { type: 'say', text: '/编程' } },
-                  { label: '/撰稿', action: { type: 'say', text: '/撰稿' } },
-                ],
-              );
-            }, 220);
+            if (latest.current.reportScope !== scope || threads.view(latest.current.owner).active !== activeThread) return;
+            if (!loaded) { say([span('教学模拟未载入，当前工作区已保留。请核对资料来源。', 'dim')]); return; }
+            setCandidate(null); choreo.stop();
+            say([span('已载入明确标注的教学模拟研究。模拟结果由分析引擎计算，不能作为真实调研证据；叙述性章节可另行生成候选稿。', 'dim')], [{ label: '生成模拟候选稿', action: { type: 'generateFullReport', topic: '', mode: 'demonstration' }, primary: true }]);
           });
           break;
+        }
         case 'insertStudioBlock': {
           const cleanParagraphs = action.paragraphs.filter(p => typeof p === 'string' && p.trim()).slice(0, 12);
           if (!cleanParagraphs.length) break;
@@ -993,14 +834,15 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport, choreo, reportRuns, readReportScope, isCurrentIdentity, startCall, finishCall]);
+  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, choreo, blankReport, readReportScope, setReportWriting, startCall, finishCall]);
 
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {
+    if (visibleCandidate) return;
     const section = paperContent.report.find(s => s.id === pickedSection);
     if (!section) return;
     sendToReport({ id: crypto.randomUUID(), node: matchBlueprintNode(section.title)?.id ?? '', source: '报告工具栏', items, sectionId: section.id });
-  }, [paperContent, pickedSection, sendToReport]);
+  }, [paperContent, pickedSection, sendToReport, visibleCandidate]);
   // A writing tool opens the copilot and says its command there, as if typed.
   const sayFromTool = useCallback((text: string) => { setCopilotOpen(true); agent.send(text); }, [agent]);
 
@@ -1056,15 +898,13 @@ export default function AgentShell() {
 
   const projects = lists.projects.map(p => ({ id: p.id, label: p.title }));
   const services = eligibleModelServices('research', lists.services).map(s => ({ id: s.id, label: s.label, detail: `${s.model} · v${s.revision}` }));
-  const projectId = thread ? thread.projectId : book.draftProject;
   const projectLabel = projects.find(p => p.id === projectId)?.label;
   const email = account?.user?.email ?? '';
   const here = panel ? roomById(panel) : null, lit = panel ? roomLight(light, panel) : null;
   const outputs = [...(held?.results ?? [])].reverse().map(r => ({ id: r.id, title: r.title, detail: `${METHOD_LABELS[r.method] ?? r.method} · 有效样本 ${r.n}` }));
   const stages = STAGES.map(id => ({ id, name: roomById(id).name, glyph: roomById(id).glyph, score: roomLight(light, id)?.score ?? null }));
   // The work in view: the call still running in this conversation, and what its model calls have cost so far.
-  const activeCallIds = new Set(activeCalls.filter(call => call.owner === owner && call.epoch === identityEpoch).map(call => call.id));
-  const running = messages.findLast(m => m.role === 'agent' && m.model?.status === 'running' && activeCallIds.has(m.id)) as Extract<Message, { role: 'agent' }> | undefined;
+  const running = messages.find(m => m.role === 'agent' && m.model?.status === 'running') as Extract<Message, { role: 'agent' }> | undefined;
   const looking = messages.some(m => m.role === 'pending');
   const spent = messages.reduce((sum, m) => m.role === 'agent' && m.model?.usage ? { inputTokens: sum.inputTokens + m.model.usage.inputTokens, outputTokens: sum.outputTokens + m.model.usage.outputTokens } : sum, { inputTokens: 0, outputTokens: 0 });
   const today = useSyncExternalStore(subscribeNothing, startOfToday, () => 0);
@@ -1179,24 +1019,52 @@ export default function AgentShell() {
             onEdit={() => go('editor')}
             onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })}
             onInstantForge={topic => agent.perform({ type: 'loadBenchmark', benchmarkId: topic || 'current' })}
-            onPlayChoreography={() => {
-              if ((paperContent.quality?.results?.length ?? 0) === 0) {
-                void loadBenchmark('current').then(loaded => {
-                  if (!loaded) return;
-                  window.setTimeout(() => {
-                    if (latest.current.liveReport) choreo.playFullTheaterShowcase(latest.current.liveReport);
-                  }, 220);
-                });
-              } else {
-                choreo.playFullTheaterShowcase(paperContent);
-              }
-            }}
+            previewOnly={!!visibleCandidate}
+            onPlayChoreography={() => choreo.playFullTheaterShowcase(paperContent, visibleCandidate?.result?.revisions ?? [])}
             liveWriting={liveWriting}
             onToggleAutoFollow={toggleAutoFollow}
             onJumpToSection={pickSection}
             docFormat={docFormat}
             onChangeDocFormat={setDocFormat}
           />
+          {reviewNotice && <p className={styles.reviewNotice} role="status">{reviewNotice}</p>}
+          {reportVersions.length > 0 && <details className={styles.versions}>
+            <summary>最近 {Math.min(reportVersions.length, 3)} 个原稿版本</summary>
+            <p>采纳候选稿和恢复版本前保留原稿，最多保留最近三版。</p>
+            <ul>{reportVersions.slice(0, 3).map((version, index) => <li key={`${version.savedAt}-${index}`}>
+              <div><b>{version.content.title}</b><small>{new Date(version.savedAt).toLocaleString('zh-CN')} · {version.content.report.length} 节</small></div>
+              <button type="button" disabled={!!liveWriting?.active || !!reportSource.inputPending} onClick={() => {
+                const scope = readReportScope();
+                if (scope.owner !== owner || scope.epoch !== identityEpoch || scope.project !== projectId) { setReviewNotice('登录或项目已变化，请重新核对版本。'); return; }
+                const outcome = restoreReportVersion(version.content, latest.current.reportSource);
+                if (outcome === 'applied') { choreo.stop(); setCandidate(null); setReviewNotice('已恢复所选原稿版本，恢复前的版本也已保留。'); }
+                else setReviewNotice(outcome === 'conflict' ? '原稿正在更新，请等待资料载入完成后再恢复。' : '无法保存版本，当前原稿未被替换。');
+              }}>恢复此版</button>
+            </li>)}</ul>
+          </details>}
+          {visibleCandidate && <>
+            <AgentRunReview quality={visibleCandidate.result?.quality} revisions={visibleCandidate.result?.revisions} summary={visibleCandidate.result?.summary} mode={visibleCandidate.mode} conflict={candidateConflict} pending={visibleCandidate.pending} failed={visibleCandidate.failed} changes={candidateChanges} lockedSectionIds={lockedSectionIds}
+              onCancel={() => stopReportRun()}
+              onDiscard={() => { stopReportRun(); setCandidate(null); setReportWriting(readReportScope(), null); setReviewNotice('候选稿已丢弃，原稿保留。'); }}
+              onSelectSection={pickSection}
+              onToggleSectionLock={id => setLockedSections(previous => { const ids = previous.runId === visibleCandidate.runId ? previous.ids : []; return { runId: visibleCandidate.runId, ids: ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id] }; })}
+              onApply={() => {
+                const result = visibleCandidate.result, pack = visibleCandidate.pack;
+                const scope = readReportScope();
+                if (!scope.owner || visibleCandidate.scope !== `${scope.owner}:${scope.epoch}:${scope.project ?? 'local'}` || visibleCandidate.threadId !== scope.thread) { setReviewNotice('登录、项目或对话已变化，请重新核对候选稿。'); return; }
+                if (!result || !pack || visibleCandidate.failed || !canAcceptReportCandidate({ sourceKey: visibleCandidate.sourceKey, currentSource: latest.current.reportSource, status: result.quality.status, pending: visibleCandidate.pending })) { setReviewNotice('原稿或资料已变化，当前候选稿不能采纳。请重新核对输入。'); return; }
+                const merged = mergeReportCandidate(latest.current.reportSource.report ?? blankReport, pack.report, lockedSectionIds);
+                const outcome = applyCandidate({ ...pack, report: merged }, visibleCandidate.source);
+                if (outcome === 'applied') { choreo.stop(); setCandidate(null); setReportWriting(scope, null); setReviewNotice('已采纳所选变更，采纳前的原稿可从最近版本中恢复。'); }
+                else setReviewNotice(outcome === 'conflict' ? '原稿或研究资料已修改，没有覆盖当前版本。' : '无法保存原稿快照，本次没有采纳。请检查浏览器可用存储。');
+              }} />
+            <details className={styles.receipts}>
+              <summary>本轮调用记录 · {visibleCandidate.receipts.length} 条</summary>
+              <a href={`/api/agent/report-runs/${visibleCandidate.runId}`} target="_blank" rel="noreferrer">核对运行回执 ↗</a>
+              <p>“已发出”表示等待回执核对。取消或断流不会自动撤销已发出的服务商调用。</p>
+              <ul>{visibleCandidate.receipts.map(receipt => <li key={receipt.id}><a href={`/api/agent/report-sections/${encodeURIComponent(receipt.id)}`} target="_blank" rel="noreferrer">{blueprintNode(receipt.nodeId)?.title ?? receipt.nodeId} ↗</a><span>{({ dispatched: '已发出 · 待核对', ready: '已返回', failed: '失败', unknown: '结果待核对', running: '处理中' } as Record<string, string>)[receipt.status] ?? '待核对'}</span></li>)}</ul>
+            </details>
+          </>}
           <ReportLiveTheater
             paperRef={paperRef}
             robotRole={choreo.robotRole}
@@ -1231,8 +1099,7 @@ export default function AgentShell() {
           <button type="button" className={styles.iconButton} aria-label="收起证见 AI" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
         </div>}
         <div ref={scrollRef} className={styles.scroll}>
-          {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} activeCallIds={activeCallIds}
-            workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />
+          {messages.length ? <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>
               <div className={styles.emptyMark}><BrandMark size={44} /></div>
               <h1>我们要研究什么？</h1>

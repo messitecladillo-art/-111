@@ -19,6 +19,8 @@ export type Message = (
 export type ModelCall = { service: string; step: number; status?: 'running' | 'ready' | 'failed' | 'unknown' | 'refused';
   /** Request configuration captured before dispatch; not a provider-signed execution receipt. */
   serviceId?: string; serviceRevision?: number; provider?: string; modelName?: string;
+  /** A persisted full-report stream must be reconciled after this page visit ends. */
+  reportRunId?: string;
   /** Tokens the provider reported for this call, once it settled. */
   usage?: { inputTokens: number; outputTokens: number } };
 /**
@@ -61,7 +63,8 @@ function read(id: string): Stored {
     return { threads, active, removed: gone };
   } catch { return { threads: [], active: null, removed: [] }; }
 }
-const kept = (thread: Thread) => ({ ...thread, messages: thread.messages.filter(m => m.role !== 'pending') });
+// Keep the active in-memory stream running. Its equal-version persisted copy records uncertainty, not activity.
+const kept = (thread: Thread):Thread => ({ ...thread, messages: thread.messages.filter(m => m.role !== 'pending').map(m=>m.role==='agent'&&m.model?.reportRunId&&m.model.status==='running'?{...m,model:{...m.model,status:'unknown' as const}}:m) });
 function persist() {
   if (owner === null) return;
   try { storage(owner)?.setItem(PREFIX + owner, JSON.stringify({ threads: book.threads.map(kept), active: book.active, removed })); } catch { /* Without storage the conversations stay in memory only. */ }
