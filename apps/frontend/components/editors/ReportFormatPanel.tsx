@@ -1,7 +1,6 @@
 'use client';
 
 import { useId } from 'react';
-import { FLOWING_LINES, type CoverArt } from '@/lib/cover-art';
 import {
   evaluateReportFormat, REPORT_FORMAT_PROFILES, reportFormatNotices,
   type ReportFormatSettings,
@@ -12,9 +11,6 @@ type Props = {
   value: ReportFormatSettings;
   onChange: (settings: ReportFormatSettings) => void;
   sections: readonly { title: string }[];
-  /** The cover ornament, drawn under the title in the canvas and both exports; absent when the cover is plain. */
-  coverArt?: CoverArt;
-  onCoverArt?: (art: CoverArt | undefined) => void;
 };
 
 const GROUPS = ['本科组', '专科组', '研究生组', '在华留学生组'];
@@ -22,7 +18,7 @@ const TRACKS = ['自主选题', '企业命题'];
 const STAGES = ['知识赛', '校赛', '企业命题赛', '省赛', '全国赛初赛', '全国赛决赛'];
 
 /** A selected layout and an applicable competition rule have separate receipts. */
-export default function ReportFormatPanel({ value, onChange, sections, coverArt, onCoverArt }: Props) {
+export default function ReportFormatPanel({ value, onChange, sections }: Props) {
   const id = useId();
   const evaluation = evaluateReportFormat(value);
   const notices = reportFormatNotices(sections);
@@ -77,10 +73,8 @@ export default function ReportFormatPanel({ value, onChange, sections, coverArt,
           <label className={styles.check} htmlFor={id + '-cover'}><input id={id + '-cover'} type="checkbox" checked={value.options.includeCover} onChange={event => update({ options: { ...value.options, includeCover: event.target.checked } })} />标题页</label>
           <label className={styles.check} htmlFor={id + '-toc'}><input id={id + '-toc'} type="checkbox" checked={value.options.includeToc} onChange={event => update({ options: { ...value.options, includeToc: event.target.checked } })} />目录</label>
           <label className={styles.check} htmlFor={id + '-pages'}><input id={id + '-pages'} type="checkbox" checked={value.options.numberPages} onChange={event => update({ options: { ...value.options, numberPages: event.target.checked } })} />页码</label>
-          {onCoverArt && <label className={styles.check} htmlFor={id + '-cover-art'} title={FLOWING_LINES.note}><input id={id + '-cover-art'} type="checkbox" checked={!!coverArt} disabled={!value.options.includeCover} onChange={event => onCoverArt(event.target.checked ? FLOWING_LINES : undefined)} />封面装饰「{FLOWING_LINES.title}」</label>}
         </div>
       </div>
-      {coverArt && <p className={styles.coverNote}>{coverArt.note} 画布、Word 与 LaTeX 绘制同一组矢量线条，标题区保持留白。使用 AI 生成的装饰，须在 AI 工具使用说明中披露。</p>}
       {notices.length > 0 && <ul className={styles.notices} aria-label="章节建议">{notices.map(notice => <li key={notice}>{notice}</li>)}</ul>}
       <details className={styles.source}>
         <summary>来源与适用范围</summary>

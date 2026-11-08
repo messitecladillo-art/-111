@@ -2,7 +2,6 @@ import { validateQuality, wordBlocks, addQualityObjects, assertFindingReferences
 import { blockLabel, reportLabels } from "./report-numbering.ts";
 import { ACCENTS, parseEditorContent, type EditorContent } from "./editor-model.ts";
 import {addFrameToWord} from './report-frame-export.ts';
-import { coverArtSvg } from './cover-art.ts';
 import { DEFAULT_REPORT_OPTIONS, parseReportFormatOptions, reportHeadingLevel, reportPart, type ReportFormatOptions } from './report-format.ts';
 import { formatReference, referenceNumbers, unfinishedCited, unfinishedReference } from './references.ts';
 
@@ -31,16 +30,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     const blank = cited.order.findIndex(unfinishedReference);
     if (blank >= 0) throw Error(`第 ${blank + 1} 条参考文献尚未填写题名，请补全或删除后再导出。`);
   }
-  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel, ImageRun, HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom, TextWrappingType } = await import("docx");
-  // The cover ornament: the whole page as one vector image behind the title, anchored to the page corner.
-  const coverArtRuns=async()=>{
-    if(!content.coverArt)return [];
-    const svg=coverArtSvg(content.coverArt);
-    const fallback=renderSvg?await renderSvg(svg):Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
-    return [new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:fallback},transformation:{width:794,height:1123},
-      floating:{horizontalPosition:{relative:HorizontalPositionRelativeFrom.PAGE,offset:0},verticalPosition:{relative:VerticalPositionRelativeFrom.PAGE,offset:0},behindDocument:true,allowOverlap:true,wrap:{type:TextWrappingType.NONE}},
-      altText:{title:'封面装饰',description:content.coverArt.note,name:content.coverArt.id}})];
-  };
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber, NumberFormat, SectionType, TableOfContents, StyleLevel } = await import("docx");
   const {default:JSZip}=await import('jszip');
   // Chinese in 宋体 / 黑体; Latin letters and numbers in Times New Roman, as competition templates set them.
   const font=(eastAsia:string)=>({ascii:'Times New Roman',hAnsi:'Times New Roman',eastAsia,cs:'Times New Roman',hint:'eastAsia'});
@@ -79,7 +69,7 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
     sections.push({properties:{type:SectionType.NEXT_PAGE,page:{...page,...(kind==='cover'||!options.numberPages?{}:{pageNumbers:{formatType:kind==='preliminary'?NumberFormat.UPPER_ROMAN:NumberFormat.DECIMAL,...(restart===undefined?{}:{start:restart})}})}},footers:{default:kind==='cover'||!options.numberPages?new Footer({children:[]}):footer()},children});
   }
   const title=()=>new Paragraph({style:'Title',children:textRuns(TextRun,content.title,{...bodyRun,size:32,sizeComplexScript:32,bold:true})});
-  if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:[...await coverArtRuns(),...textRuns(TextRun,content.title)]}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:textRuns(TextRun,content.subtitle)})]:[])],'cover');
+  if(options.includeCover)addSection([new Paragraph({style:'ReportCoverTitle',children:textRuns(TextRun,content.title)}),...(content.subtitle?[new Paragraph({style:'ReportCoverSubtitle',children:textRuns(TextRun,content.subtitle)})]:[])],'cover');
   // Numbers come from the whole draft, so the main text and a separately exported appendix agree.
   const ctx:WordContext={labels:reportLabels(content.report),math:[],where:'',section:'',citations:cited.numbers};
   const exported=(kind:'figure'|'table')=>report.some(s=>(s.blocks??[]).some(b=>blockLabel(ctx.labels,s.id,b.id)?.kind===kind));

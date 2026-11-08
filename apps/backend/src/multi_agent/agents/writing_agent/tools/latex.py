@@ -1,6 +1,5 @@
 from ..services.report_frame_template import checked_frame, frame_tex_preamble
 from ..services.report_figure_template import figure_tex_preamble
-from ..services.cover_art import checked_cover_art, cover_art_tex
 """Bounded project-scoped XeLaTeX export of a closed, body-only TeX subset."""
 import base64
 from decimal import Decimal, ROUND_HALF_UP, localcontext
@@ -59,7 +58,7 @@ def normalize_body(content):
     return content.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_art=None):
+def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
     """Keep byte-identical with the frontend generator; source is always returned by API."""
     frame = checked_frame(frame, visual_style)
     lines = [
@@ -88,11 +87,8 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
         lines[-2:-2] = frame_tex_preamble(frame)
         if 'cover' in frame['appliesTo']:
             lines.append(r"\ReportFrameActivetrue")
-    cover = checked_cover_art(cover_art) if settings["includeCover"] and cover_art else None
-    if cover and r"\usepackage{tikz}" not in lines:
-        lines[3:3] = [r"\usepackage{tikz}"]
     if settings["includeCover"]:
-        lines += [r"\begin{titlepage}", *(cover_art_tex(cover) if cover else []), r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
+        lines += [r"\begin{titlepage}", r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
     if frame and frame['layout'] != 'none':
         lines.append(r"\ReportFrameActivefalse")
     if settings["includeToc"]:
@@ -407,8 +403,8 @@ class LatexCompiler:
         self.settings = settings
         self.slots = threading.BoundedSemaphore(settings.latex_concurrency)
 
-    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_art=None):
-        source = build_source(title, subtitle, content, settings, frame, figures, visual_style, cover_art)
+    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None):
+        source = build_source(title, subtitle, content, settings, frame, figures, visual_style)
         result = {"status": "error", "source": source, "sourceHash": hashlib.sha256(source.encode("utf-8")).hexdigest(), "pdfBase64": None, "diagnostics": [], "engine": None}
         try: validate_body(content, len(figures or []))
         except UnsafeBody as error:

@@ -24,7 +24,6 @@ class LatexService:
         if data.get('frame') and visual_style is None:
             raise ApiError()
         frame = domain.checked_frame(data.get('frame'), visual_style)
-        cover_art = domain.checked_cover_art(data['coverArt']) if data.get('coverArt') is not None else None
         if figures is not None:
             if not isinstance(figures, list) or not figures or len(figures) > 120 or visual_style is None:
                 raise ApiError()
@@ -45,7 +44,7 @@ class LatexService:
         session.commit()
         result = await asyncio.to_thread(
             self.compiler.compile, data['title'], data['subtitle'], data['body'],
-            format_options, frame, figures, visual_style, cover_art,
+            format_options, frame, figures, visual_style,
         )
         current_user = check_session(session)
         self.owned_project(session, current_user, project_id)

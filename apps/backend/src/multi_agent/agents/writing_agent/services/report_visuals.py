@@ -7,7 +7,6 @@ import math
 import re
 from shared.errors import ApiError
 from shared.contracts import object_fields, text
-from .cover_art import checked_cover_art
 
 
 # Mirrors CHART_THEMES. The cross-language registry test makes palette drift visible.
@@ -163,11 +162,9 @@ def validate_report_visuals(content):
     if not isinstance(content, dict) or type(content.get('version')) is not int or content['version'] not in (1, 2, 3):
         raise ApiError()
     version = content['version']
-    visual_keys = ('visualStyle', 'figures', 'reportFrame', 'coverArt')
+    visual_keys = ('visualStyle', 'figures', 'reportFrame')
     if version != 3 and any(key in content for key in visual_keys):
         raise ApiError()
-    if 'coverArt' in content:
-        checked_cover_art(content['coverArt'])
     style = _visual_style(content['visualStyle']) if 'visualStyle' in content else None
     figures = [_figure(value) for value in _list(content.get('figures', []), 120)]
     if len({f['id'] for f in figures}) != len(figures) or figures and style is None:
