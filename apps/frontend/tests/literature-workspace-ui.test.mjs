@@ -28,8 +28,15 @@ function mount(snapshot, overrides = {}) {
   const jsx = (type, props) => ({ type, props });
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/data/award-cases': { awardCases: [] }, '@/components/workbench/shell-kit': { useWorkbenchTheme: () => 'light' }, '@/lib/topic-lab/workspace': { ...workspace, createLiteratureWorkspaceSnapshot: (c, s) => workspace.createLiteratureWorkspaceSnapshot(structuredClone(c), structuredClone(s)), ...overrides }, '@/lib/topic-lab/parse': parse, '@/lib/topic-lab/terms': terms, '@/lib/topic-lab/network': network, '@/lib/topic-lab/burst': burst, '@/lib/topic-lab/trend': trend, '@/lib/topic-lab/evaluate': evaluate, './shared': { fmtInt: String, pct: String } };
   const exports = {}; vm.runInNewContext(compiled, { exports, require: name => imports[name] ?? { default: name }, TextDecoder, TextEncoder, Map, Set });
-  async function settle() { for (let n = 0; n < 40; n++) { if (dirty) { cursor = 0; dirty = false; tree = exports.default(props); while (effects.length) effects.shift()(); } await new Promise(r => setImmediate(r)); } }
-  return { settle, published, get tree() { return tree; }, change(next) { props = { ...props, ...next }; dirty = true; }, input(file) { walk(tree).find(n => n.type === 'input' && n.props.type === 'file').props.onChange({ target: { files: [file], value: '' } }); }, unmount() { cells.forEach(c => c?.cleanup?.()); } };
+  async function turn() { if (dirty) { cursor = 0; dirty = false; tree = exports.default(props); while (effects.length) effects.shift()(); } await new Promise(r => setImmediate(r)); }
+  async function settle() { for (let n = 0; n < 40; n++) await turn(); }
+  async function waitFor(predicate, description, timeoutMs = 5000) {
+    const deadline = Date.now() + timeoutMs;
+    do { await turn(); if (predicate()) return; } while (Date.now() < deadline);
+    assert.fail(`Timed out after ${timeoutMs}ms waiting for ${description}. Last rendered text: ${text(tree).slice(0, 1200)}`);
+  }
+  const restored = filename => text(tree).includes(filename) && !text(tree).includes('正在核对项目文献快照');
+  return { settle, waitFor, restored, published, get tree() { return tree; }, change(next) { props = { ...props, ...next }; dirty = true; }, input(file) { walk(tree).find(n => n.type === 'input' && n.props.type === 'file').props.onChange({ target: { files: [file], value: '' } }); }, unmount() { cells.forEach(c => c?.cleanup?.()); } };
 }
 async function snapshot(title) {
   const records = parse.parseLiterature(`TY  - JOUR\nTI  - ${title}\nPY  - 2024\nKW  - synthetic\nER  -`).records;
@@ -38,9 +45,12 @@ async function snapshot(title) {
 
 test('late import is fenced on project snapshot change and unmount', async () => {
   const a = await snapshot('Synthetic first'), b = await snapshot('Synthetic second');
-  const screen = mount(a); await screen.settle(); assert.match(text(screen.tree), /Synthetic first.ris/);
+  const screen = mount(a);
+  await screen.waitFor(() => screen.restored('Synthetic first.ris'), 'initial A snapshot restoration');
+  assert.match(text(screen.tree), /Synthetic first.ris/);
   const pending = deferred(); screen.input({ name: 'late.ris', size: 20, arrayBuffer: () => pending.promise });
-  screen.change({ initialSnapshot: b }); await screen.settle();
+  screen.change({ initialSnapshot: b });
+  await screen.waitFor(() => screen.restored('Synthetic second.ris'), 'project B snapshot restoration');
   pending.resolve(new TextEncoder().encode('TY  - JOUR\nTI  - Synthetic late\nER  -').buffer); await screen.settle();
   assert.match(text(screen.tree), /Synthetic second.ris/); assert.doesNotMatch(text(screen.tree), /late.ris/);
   assert.ok(screen.published.every(s => !s.corpus?.files.some(f => f.name === 'late.ris')));
@@ -53,7 +63,10 @@ test('late import is fenced on project snapshot change and unmount', async () =>
 test('a late hash cannot publish the previous project after restoration changes', async () => {
   const a = await snapshot('Synthetic alpha'), b = await snapshot('Synthetic beta'), pending = deferred();
   const screen = mount(a, { createLiteratureWorkspaceSnapshot: (corpus, settings) => corpus?.files[0]?.name === 'Synthetic alpha.ris' ? pending.promise : workspace.createLiteratureWorkspaceSnapshot(structuredClone(corpus), structuredClone(settings)) });
-  await screen.settle(); screen.change({ initialSnapshot: b }); await screen.settle(); pending.resolve(a); await screen.settle();
+  await screen.waitFor(() => screen.restored('Synthetic alpha.ris'), 'initial A snapshot restoration before its pending hash');
+  screen.change({ initialSnapshot: b });
+  await screen.waitFor(() => screen.restored('Synthetic beta.ris'), 'project B snapshot restoration before resolving the old hash');
+  pending.resolve(a); await screen.settle();
   assert.match(text(screen.tree), /Synthetic beta.ris/); assert.ok(screen.published.every(s => s.corpusHash !== a.corpusHash));
   screen.unmount();
 });
