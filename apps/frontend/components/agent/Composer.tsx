@@ -19,6 +19,7 @@ type Props = {
   /** 指令模式 answers here; 用模型对话 sends sentences to `chatLabel`, a service that can talk. */
   mode: 'command' | 'model'; onMode: (mode: 'command' | 'model') => void; chatLabel: string;
   onOpen: (room: RoomId) => void;
+  onDraftWriter?: (write:(text:string)=>boolean) => () => void;
 };
 type MenuName = 'project' | 'model' | 'attach' | null;
 
@@ -28,8 +29,22 @@ type MenuName = 'project' | 'model' | 'attach' | null;
  * method is composing. Above it, the project the conversation is filed under and where its work is kept; below it,
  * what may be attached, how the agent acts, and which model service drafts for it.
  */
-export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen }: Props) {
+export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen, onDraftWriter }: Props) {
   const [value, setValue] = useState('');
+  const draftValue=useRef(value), composing=useRef(false), queued=useRef<string[]>([]), draftEpoch=useRef(0);
+  useLayoutEffect(()=>{draftValue.current=value;},[value]);
+  useLayoutEffect(()=>{
+    draftEpoch.current++;
+    const epoch=draftEpoch.current;
+    if(!onDraftWriter)return;
+    const insert=(text:string)=>{
+      if(!text.trim()||draftValue.current.length+queued.current.join('\n\n').length+text.length>6000)return false;
+      if(composing.current){queued.current.push(text);return true;}
+      const next=[draftValue.current,text].filter(Boolean).join('\n\n');draftValue.current=next;setValue(next);inputRef.current?.focus();return true;
+    };
+    const unregister=onDraftWriter(insert);
+    return ()=>{draftEpoch.current=epoch+1;queued.current=[];unregister();};
+  },[onDraftWriter,inputRef]);
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState('');
   const [history, setHistory] = useState<string[]>([]);
@@ -60,7 +75,7 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
   }, [menu]);
   const toggle = (name: MenuName) => { if (name !== 'attach') onNeedLists(); setMenu(menu === name ? null : name); };
 
-  const change = (next: string) => { setValue(next); setActive(0); setRecall(-1); };
+  const change = (next: string) => { draftValue.current=next;setValue(next); setActive(0); setRecall(-1); };
   const send = (text: string) => {
     if (!text.trim()) return;
     onSend(text);
@@ -134,6 +149,8 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
         </div>)}
       </div>}
       <textarea ref={inputRef} id="agent-command-line" rows={1} value={value} spellCheck={false} enterKeyHint="send"
+        onCompositionStart={()=>{composing.current=true;}}
+        onCompositionEnd={()=>{composing.current=false;if(queued.current.length){const additions=queued.current.splice(0),epoch=draftEpoch.current;window.setTimeout(()=>{if(epoch!==draftEpoch.current)return;const next=[draftValue.current,...additions].filter(Boolean).join('\n\n');draftValue.current=next;setValue(next);},0);}}}
         placeholder="随心输入，或输入 / 调出命令" aria-label="对证见说" aria-autocomplete="list"
         aria-controls={options.length ? 'agent-commands' : undefined} aria-activedescendant={selected >= 0 ? `agent-command-${selected}` : undefined}
         onChange={event => change(event.target.value)} onKeyDown={key} />
