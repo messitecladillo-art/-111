@@ -16,6 +16,9 @@ import KeywordMap from './KeywordMap';
 import PaperNetwork from './PaperNetwork';
 import TopicStudio, { type TopicHandoff } from './TopicStudio';
 import WordCloud from './WordCloud';
+import { CHART_THEMES } from '@/lib/chart-theme';
+import type { ChartThemeId } from '@/lib/chart-types';
+import { DEFAULT_CLOUD_APPEARANCE, type CloudAppearance } from '@/lib/topic-lab/cloud-shapes';
 import { fmtInt, pct } from './shared';
 import styles from './TopicLab.module.css';
 
@@ -40,8 +43,9 @@ async function readText(file: File): Promise<string> {
   return utf8.replace(/^﻿/, '');
 }
 
-export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapshot }: { onUseTopic?: (h: TopicHandoff) => void; initialSnapshot?: LiteratureWorkspaceSnapshot | null; onSnapshot?: (snapshot: LiteratureWorkspaceSnapshot | null) => void }) {
+export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapshot, projectPaletteId }: { onUseTopic?: (h: TopicHandoff) => void; initialSnapshot?: LiteratureWorkspaceSnapshot | null; onSnapshot?: (snapshot: LiteratureWorkspaceSnapshot | null) => void; projectPaletteId?: ChartThemeId }) {
   const theme = useWorkbenchTheme();
+  const projectPalette = projectPaletteId ? CHART_THEMES.find(palette => palette.id === projectPaletteId) : undefined;
   const [corpus, setCorpus] = useState<Corpus | null>(null);
   const [busy, setBusy] = useState('');
   const [importError, setImportError] = useState('');
@@ -50,6 +54,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
   const [maxTerms, setMaxTerms] = useState(100);
   const [resolution, setResolution] = useState(1);
   const [colorBy, setColorBy] = useState<'cluster' | 'year'>('cluster');
+  const [cloud, setCloud] = useState<CloudAppearance | undefined>(undefined);
   const [thesaurusDraft, setThesaurusDraft] = useState('');
   const [thesaurus, setThesaurus] = useState('');
   const [gamma, setGamma] = useState(1);
@@ -61,7 +66,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
   const onSnapshotRef = useRef(onSnapshot);
   const [restoreBusy, setRestoreBusy] = useState(true);
   const [saved, setSaved] = useState<{ inputs: unknown[]; snapshot: LiteratureWorkspaceSnapshot } | null>(null);
-  const snapshotInputs = [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket];
+  const snapshotInputs = [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket, cloud];
   const currentSnapshot = saved && saved.inputs.every((input, i) => Object.is(input, snapshotInputs[i])) ? saved.snapshot : null;
   const evidence = useMemo(() => currentSnapshot ? literatureEvidenceReference(currentSnapshot) : undefined, [currentSnapshot]);
 
@@ -78,6 +83,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
         setMinDf(snapshot?.settings.minDf ?? 2); setMaxTerms(snapshot?.settings.maxTerms ?? 100);
         setResolution(snapshot?.settings.resolution ?? 1); setColorBy(snapshot?.settings.colorBy ?? 'cluster');
         setThesaurus(snapshot?.settings.thesaurus ?? ''); setThesaurusDraft(snapshot?.settings.thesaurus ?? '');
+        setCloud(snapshot?.settings.cloud);
         setGamma(snapshot?.settings.gamma ?? 1); setView(snapshot?.settings.view ?? 'cloud'); setBasket(snapshot?.settings.basket ?? []);
         publishedHash.current = snapshot?.snapshotHash ?? null; setImportError('');
         restoring.current = false; setRestoreBusy(false);
@@ -92,16 +98,16 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
   useEffect(() => {
     if (restoring.current || restoreBusy) return;
     let cancelled = false; const token = epoch.current;
-    void createLiteratureWorkspaceSnapshot(corpus, { source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket }).then(snapshot => {
+    void createLiteratureWorkspaceSnapshot(corpus, { source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket, ...(cloud ? { cloud } : {}) }).then(snapshot => {
       if (cancelled || !mounted.current || epoch.current !== token) return;
-      setSaved({ inputs: [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket], snapshot });
+      setSaved({ inputs: [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket, cloud], snapshot });
       if (publishedHash.current !== snapshot.snapshotHash) {
         publishedHash.current = snapshot.snapshotHash;
         try { onSnapshotRef.current?.(snapshot); } catch (error) { setImportError(error instanceof Error ? error.message : '浏览器未能保存文献快照。'); }
       }
     }).catch(error => { if (!cancelled && mounted.current && epoch.current === token) setImportError(error instanceof Error ? error.message : '文献快照无法保存。'); });
     return () => { cancelled = true; };
-  }, [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket, restoreBusy]);
+  }, [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket, cloud, restoreBusy]);
 
   const merged = useMemo(() => corpus ? mergeRecords(corpus.lists) : null, [corpus]);
   const records = useMemo(() => merged?.records ?? [], [merged]);
@@ -156,7 +162,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     if (!mounted.current || epoch.current !== token) return;
     const next: Corpus = corpus?.kind === 'import' ? { kind: 'import', lists: [...corpus.lists, ...lists], files: [...corpus.files, ...reports] } : { kind: 'import', lists, files: reports };
     try {
-      await createLiteratureWorkspaceSnapshot(next, { source: null, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view: 'cloud', basket: [] });
+      await createLiteratureWorkspaceSnapshot(next, { source: null, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view: 'cloud', basket: [], ...(cloud ? { cloud } : {}) });
       if (!mounted.current || epoch.current !== token) return;
       setBusy(''); setCorpus(next);
     } catch (error) {
@@ -167,7 +173,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     if (lists.some(l => l.length)) setView('cloud');
   }
   const loadLibrary = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus({ kind: 'library', lists: [awardCaseRecords(awardCases)], files: [] }); setSource(null); setMinDf(2); setBasket([]); setView('cloud'); };
-  const clear = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus(null); setBasket([]); setSource(null); setThesaurus(''); setThesaurusDraft(''); };
+  const clear = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus(null); setBasket([]); setSource(null); setCloud(undefined); setThesaurus(''); setThesaurusDraft(''); };
   const onDrop = (e: DragEvent) => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length) void addFiles(e.dataTransfer.files); };
 
   const hiddenInput = <input ref={fileInput} type="file" multiple accept=".txt,.ris,.bib,.enw,.net,.nbib,.ciw,text/plain" className={styles.srOnly} tabIndex={-1} aria-hidden="true" onChange={e => { if (e.target.files) void addFiles(e.target.files); e.target.value = ''; }} />;
@@ -249,7 +255,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     </div>
     <div role="tabpanel" id={`tl-panel-${view}`} aria-labelledby={`tl-tab-${view}`} className={styles.panel}>
       {!map || !index || !cy ? null : map.nodes.length < 3 && view !== 'studio' && view !== 'papers' && view !== 'timeline' ? <div className={styles.emptyView}><strong>可用的词太少</strong><p>出现 ≥ {minDf} 篇的词不足 3 个。可以降低“最少出现”，或改用其他词来源。</p></div> : <>
-        {view === 'cloud' && <WordCloud dataNote={dataNote} map={map} trends={trends} theme={theme} basket={basket} onToggle={toggle} colorBy={colorBy} clusterNames={clusterNames} />}
+        {view === 'cloud' && <WordCloud projectPalette={projectPalette} appearance={cloud ?? DEFAULT_CLOUD_APPEARANCE} onAppearanceChange={setCloud} dataNote={dataNote} map={map} trends={trends} theme={theme} basket={basket} onToggle={toggle} colorBy={colorBy} clusterNames={clusterNames} />}
         {view === 'map' && <KeywordMap dataNote={dataNote} map={map} index={index} trends={trends} bursts={bursts} lastYear={lastYear} theme={theme} basket={basket} onToggle={toggle} colorBy={colorBy} />}
         {view === 'burst' && <BurstView dataNote={dataNote} theme={theme} index={index} records={records} cy={cy} basket={basket} onToggle={toggle} gamma={gamma} onGamma={setGamma} keywordBursts={topBursts} />}
         {view === 'papers' && <PaperNetwork dataNote={dataNote} records={records} index={index} theme={theme} basket={basket} basketLabels={basketLabels} />}
