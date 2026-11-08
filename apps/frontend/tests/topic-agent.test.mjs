@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { freezeTopicAgentRequest, inferTopicAgentIntent, knownTopicAgentRejection, parseTopicAgentConversation, parseTopicAgentPending, parseTopicAgentTurn, proposeTopicProfile, runLocalTopicAgent, topicAgentContinuationCandidates, topicAgentConversationResumable, topicAgentFingerprintMaterial, topicAgentScopeQuery, verifyTopicAgentTurn } from '../lib/topic-agent/index.ts';
 import { EMPTY_TOPIC_PROFILE } from '../lib/topic-advisor/types.ts';
 import { parseTopicProfile, stableStringify } from '../lib/topic-advisor/parse.ts';
-import { TOPIC_SOURCE_VERSIONS } from '../lib/topic-proposal.ts';
+import { TOPIC_AGENT_SOURCE_VERSIONS as TOPIC_SOURCE_VERSIONS } from '../lib/topic-agent/index.ts';
 const profile = () => structuredClone({ ...EMPTY_TOPIC_PROFILE, schemaVersion: 2, regionRef: null, referenceDate: '2026-10-18' });
 const digest = value => createHash('sha256').update(stableStringify(value)).digest('hex');
 const local = (extra = {}) => runLocalTopicAgent({ profile: profile(), message: '寻找有实际样本渠道的校园服务选题', intent: 'recommend', ...extra });
