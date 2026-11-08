@@ -11,7 +11,8 @@ import { parseKnowledgeLookup, type KnowledgeLookupWire } from '@/lib/knowledge/
 import { profileFingerprint, recommendTopics, type TopicProfile } from '@/lib/topic-advisor';
 import { stableStringify } from '@/lib/topic-advisor/parse';
 import { TOPIC_BUNDLE } from '@/lib/topic-advisor/client-bundle';
-import { TOPIC_SOURCE_VERSIONS, topicGeographyLabel, type TopicRefinement } from '@/lib/topic-proposal';
+import { topicGeographyLabel, type TopicRefinement } from '@/lib/topic-proposal';
+import { TOPIC_AGENT_SOURCE_VERSIONS as TOPIC_SOURCE_VERSIONS } from '@/lib/topic-agent';
 import { freezeTopicAgentRequest, inferTopicAgentIntent, knownTopicAgentRejection, parseTopicAgentConversation, parseTopicAgentPending, parseTopicAgentTurn, proposeTopicProfile, runLocalTopicAgent, topicAgentContinuationCandidates, topicAgentConversationResumable, topicAgentScopeQuery, verifyTopicAgentTurn, type AgentIntent, type TopicAgentPending, type TopicAgentTurn } from '@/lib/topic-agent';
 import styles from './TopicAgent.module.css';
 

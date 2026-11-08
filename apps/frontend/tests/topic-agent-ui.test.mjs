@@ -62,6 +62,7 @@ function mount(options = {}) {
     '@/lib/topic-advisor/client-bundle': { TOPIC_BUNDLE: { catalog: { patterns: [{ id: 'topic-1' }] } } },
     '@/lib/topic-proposal': { TOPIC_SOURCE_VERSIONS: versions, topicGeographyLabel: profile => profile.city },
     '@/lib/topic-agent': {
+      TOPIC_AGENT_SOURCE_VERSIONS: versions,
       async runLocalTopicAgent(input) { localCalls.push(structuredClone(input)); return options.local ? options.local(input) : makeTurn(input, ++turnCount); },
       freezeTopicAgentRequest: input => ({ schemaVersion: 1, idempotencyKey: `nonce-${++nonce}`, catalogVersion: 'catalog-test', ...structuredClone(input) }),
       parseTopicAgentTurn: raw => { if (!raw?.id || !raw?.profile) throw Error('无效回执'); return structuredClone(raw); },
