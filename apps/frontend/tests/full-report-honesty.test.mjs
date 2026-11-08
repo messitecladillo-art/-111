@@ -229,6 +229,20 @@ test('a second revision round may fix what the first did not; without a sampling
   assert.match(seen[0], /没有登记抽样框：不用“随机抽样、分层抽样/u);
 });
 
+test('the cleaning section is told which screening rules the data went through, and only those', async () => {
+  const pack = await buildDemoPack('');
+  const prompts = [];
+  const fetcher = async (_u, init) => {
+    prompts.push(JSON.parse(init.body).messages[0].content);
+    return new Response(JSON.stringify({ choices: [{ message: { content: draft('本节交代质量筛查的做法与结果。') } }] }), { status: 200 });
+  };
+  await generateFullReportWithAgent({ base: { design: pack.design, dataset: pack.dataset, report: pack.report }, llm: { apiKey: 'x', concurrency: 1 }, sectionNodes: ['data.cleaning'], fetcher });
+  const prompt = prompts.find(p => p.includes('节点 ID：data.cleaning'));
+  assert.match(prompt, /实际采用的规则：直线作答、注意力题未通过、答案完全重复/u);
+  assert.match(prompt, /没有采用的规则（如作答时长、逻辑矛盾）不写成已经做过/u);
+  assert.doesNotMatch(prompt, /交代注意力甄别、作答时长、逻辑矛盾、规律作答与缺失值五类/u, 'no longer told to describe rules that were not run');
+});
+
 test('a revision that leaves the problem standing is not kept', async () => {
   const fetcher = async () =>
     new Response(JSON.stringify({ choices: [{ message: { content: draft('整体满意度与复游推荐意愿相关，说明满意度导致了复游意愿上升，见{G1}。') } }] }), { status: 200 });

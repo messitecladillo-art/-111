@@ -577,7 +577,12 @@ export function buildFullReportSectionPrompt(input: {
   } else if (input.nodeId === 'data.pilot') {
     specificRules.push('资料中有预调查结果才引用其 {F编号}；没有就只写预调查的做法与据此修订问卷的思路，并写明预调查指标尚未登记，不写任何数值。');
   } else if (input.nodeId === 'data.cleaning') {
-    specificRules.push('交代注意力甄别、作答时长、逻辑矛盾、规律作答与缺失值五类质控规则；样本量与回收率只用资料中对应的 {F编号}，资料没有的计数不写。');
+    // Only the rules the registered screening applied: a rule the data had no column for was not run.
+    const screening = input.held.results.find(r => r.method === 'quality-control');
+    const applied = screening ? [...new Set(screening.rows.map(row => String(row[0] ?? '').trim()).filter(Boolean))] : [];
+    specificRules.push(applied.length
+      ? `交代本次质量筛查实际采用的规则：${applied.join('、')}（各规则是剔除还是仅标记，以筛查结果表为准）；没有采用的规则（如作答时长、逻辑矛盾）不写成已经做过。样本量与回收率只用资料中对应的 {F编号}，资料没有的计数不写。`
+      : '资料中没有登记质量筛查结果：只写拟采用的筛查规则，并写明筛查结果尚未登记，不写任何计数。');
   } else if (input.nodeId === 'conclusion.suggestions') {
     specificRules.push('每条对策建议对应一条实证结论，并写明执行主体、实施步骤与评估指标；评估指标写指标名称，不写目标数值。');
   }

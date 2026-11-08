@@ -2,7 +2,7 @@
 
 import { applyFigureChange, type FigureTweak } from '@/lib/agent/figure-tweak';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
-import { ACCENTS, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { ACCENTS, applyCoverArt, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
 import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
@@ -642,7 +642,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
       if(!edit(next))return false;
       setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
     }}/>}
-    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report}/></fieldset> }
+    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report} coverArt={content.coverArt} onCoverArt={art=>edit(applyCoverArt(content,art))}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>{setQualityOpen(true);setToolsOpen(false);qualityToggleRef.current?.focus();}}/>}
     </div>
     <div id="editor-quality" hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>

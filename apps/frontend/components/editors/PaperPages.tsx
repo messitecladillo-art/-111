@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ADVISORS, ADVISOR_TONES, advisorForNode, exhibitAdvisor } from '@/lib/agent/advisors';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import { MAIN_PAGE_LIMIT, PAGE, WORD_LATIN_SINGLE, WORD_SINGLE, autospace, folio, lineSplits, paginate, type FlowBox, type PageSlice, type PageStyle } from '@/lib/paper-layout';
+import { coverArtSvg } from '@/lib/cover-art';
 import { formatReference, referenceNumbers, unfinishedReference } from '@/lib/references';
 import { writtenLines } from '@/lib/report-benchmark';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
@@ -477,6 +478,7 @@ export default function PaperPages({
     return count;
   }, [items]);
 
+  const coverSvg = useMemo(() => (content.coverArt ? coverArtSvg(content.coverArt) : ''), [content.coverArt]);
   const framed = Math.max(1, layout?.pages.length ?? 1) * (PAGE.height + PAGE_GAP) - PAGE_GAP;
   const mainPages = layout ? layout.pages.filter(p => shown[p.first]?.doc !== 'appendix').length : 0;
   const appendixPages = layout ? layout.pages.length - mainPages : 0;
@@ -538,6 +540,8 @@ export default function PaperPages({
           }
           return (
             <article key={index} className={css.page} data-page-style={style} aria-label={folios[index] ? `第 ${folios[index]} 页` : '封面'}>
+              {/* The cover ornament under the title: generated SVG markup from the parsed definition (numbers and hex colours only). */}
+              {style === 'cover' && coverSvg && <div className={css.coverArt} aria-hidden="true" dangerouslySetInnerHTML={{ __html: coverSvg }} />}
               <div className={`${css.flow} ${css.body}`} style={{ height: p.end - p.start }}>
                 <div className={css.slice} style={{ transform: `translateY(${-shift}px)` }}>
                   {shown.slice(p.first, p.last + 1).map(item => (

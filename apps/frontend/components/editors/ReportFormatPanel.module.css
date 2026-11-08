@@ -21,6 +21,7 @@
 .panel .check input { width: 16px; height: 16px; padding: 0; margin: 0; accent-color: var(--wb-accent); }
 .check input:disabled { opacity: .55; }
 .notices { padding: 0 0 0 18px; margin: 0; display: grid; gap: 6px; color: var(--wb-muted); line-height: 1.6; }
+.coverNote { margin: 0; color: var(--wb-muted); font-size: 12px; line-height: 1.6; }
 .source { border-top: 1px solid var(--wb-line); padding-top: 12px; color: var(--wb-muted); font-size: 12px; }
 .source summary { cursor: pointer; width: fit-content; }
 .source dl { display: grid; gap: 9px; margin: 12px 0 0; }

@@ -9,9 +9,12 @@ import {parseReportFrame,assertApprovedFrame,type ReportFrameStyle} from './repo
 import {figureTexPreamble} from './report-figure-tex.ts';
 import {figureFor,type ReportFigure,type ProjectVisualStyle} from './report-figure.ts';
 import {carriesFigure} from './method-figures.ts';
+import {coverArtTex,parseCoverArt,type CoverArt} from './cover-art.ts';
 
 export const LATEX_LIMITS = { body: 120000, pdfBytes: 4 * 1024 * 1024, responseBytes: 8 * 1024 * 1024, timeoutMs: 65000 } as const;
-export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; frame?:ReportFrameStyle; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle };
+export type LatexCompileInput = { title: string; subtitle: string; body: string; options: ReportFormatOptions; frame?:ReportFrameStyle; figures?:ReportFigure[];visualStyle?:ProjectVisualStyle;
+  /** The cover ornament, drawn on the title page as a TikZ overlay. */
+  coverArt?:CoverArt };
 export type LatexDiagnostic = { severity: 'error' | 'warning'; line: number | null; message: string };
 export type LatexCompileReceipt = { status: 'compiled' | 'error' | 'unavailable'; source: string; sourceHash: string; pdfBase64: string | null; diagnostics: LatexDiagnostic[]; engine: 'xelatex' | null };
 
@@ -37,6 +40,8 @@ export function latexReportKey(content: EditorContent): string {
   const options = settings.options;
   return JSON.stringify({ title: content.title, subtitle: content.subtitle,
     ...(content.reportFrame?{reportFrame:content.reportFrame}:{}),...(content.figures?.length?{figures:content.figures,visualStyle:content.visualStyle}:{}),
+    // Only a draft with a cover ornament carries it, so the key of every other draft is unchanged.
+    ...(content.coverArt?{coverArt:content.coverArt}:{}),
     report: content.report.map(section => ({ id: section.id, title: section.title, body: section.body, source: section.source, ...(section.blocks?.length ? { blocks: section.blocks } : {}), ...(section.findingIds ? { findingIds: section.findingIds } : {}), ...(section.findingSnapshots ? { findingSnapshots: section.findingSnapshots } : {}) })),
     ...(content.report.some(s=>s.blocks?.length||s.findingIds?.length) ? { quality: content.quality } : {}),
     // Only drafts with structured references carry them, so the key of every older draft is unchanged.
@@ -123,15 +128,17 @@ export function latexFigureReferences(body:string):{index:number;start:number;en
 export function latexCompileInput(content: EditorContent): LatexCompileInput {
   const options = parseReportFormatOptions((content.reportFormat ?? DEFAULT_REPORT_SETTINGS).options);
   const original=content.latex?.body??'',refs=latexFigureReferences(original),used=[...new Set(refs.map(r=>r.index))].sort((a,b)=>a-b);
-  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{})};
+  const cover=content.coverArt?{coverArt:parseCoverArt(content.coverArt)}:{};
+  if(used.some(index=>!content.figures?.[index]))return {title:content.title,subtitle:content.subtitle,body:original,options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...cover};
   let offset=0,body='';for(const ref of refs){body+=original.slice(offset,ref.start)+used.indexOf(ref.index);offset=ref.end;}body+=original.slice(offset);
-  return { title: content.title, subtitle: content.subtitle, body, options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}) };
+  return { title: content.title, subtitle: content.subtitle, body, options,...(content.reportFrame?{frame:parseReportFrame(content.reportFrame),visualStyle:content.visualStyle}:{}),...(used.length?{figures:used.map(i=>content.figures![i]),visualStyle:content.visualStyle}:{}),...cover };
 }
 export function latexCompileKey(input: LatexCompileInput): string {
   const o = input.options;
   return JSON.stringify({ title: input.title, subtitle: input.subtitle, body: input.body,
     ...(input.frame?{frame:input.frame}:{}),
     ...(input.figures?.length?{figures:input.figures}:{}),...(input.visualStyle?{visualStyle:input.visualStyle}:{}),
+    ...(input.coverArt?{coverArt:input.coverArt}:{}),
     options: { part: o.part, includeCover: o.includeCover, includeToc: o.includeToc, firstLineChars: o.firstLineChars, numberPages: o.numberPages } });
 }
 
@@ -159,7 +166,9 @@ export function buildLatexSource(input: LatexCompileInput): string {
   if(input.figures?.length){if(!input.visualStyle)throw Error('图形缺少配色版本。');lines.splice(3,0,'\\usepackage{tikz}');lines.splice(lines.indexOf('\\begin{document}'),0,...figureTexPreamble(input.figures,input.visualStyle));}
   const frame=input.frame?parseReportFrame(input.frame):null;
   if(frame&&frame.layout!=='none'){lines.splice(lines.indexOf('\\begin{document}'),0,...frameTexPreamble(frame));if(frame.appliesTo.includes('cover'))lines.push('\\ReportFrameActivetrue');}
-  if (o.includeCover) lines.push('\\begin{titlepage}', '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
+  const coverArt=o.includeCover&&input.coverArt?parseCoverArt(input.coverArt):null;
+  if(coverArt&&!lines.includes('\\usepackage{tikz}'))lines.splice(3,0,'\\usepackage{tikz}');
+  if (o.includeCover) lines.push('\\begin{titlepage}', ...(coverArt?coverArtTex(coverArt):[]), '\\centering', '\\vspace*{25mm}', `{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont ${metadata(input.title)}\\par}`, '\\vspace{10mm}', `${metadata(input.subtitle)}\\par`, '\\end{titlepage}');
   if(frame&&frame.layout!=='none')lines.push('\\ReportFrameActivefalse');
   if (o.includeToc) lines.push('\\pagenumbering{Roman}', '\\tableofcontents', '\\clearpage', '\\pagenumbering{arabic}');
   if(frame&&frame.layout!=='none'&&frame.appliesTo.includes(o.part==='appendix'?'appendix':'body'))lines.push('\\ReportFrameActivetrue');

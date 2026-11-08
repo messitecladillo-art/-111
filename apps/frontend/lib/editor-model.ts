@@ -4,6 +4,7 @@ import { parseReferences, type ReferenceEntry } from './references.ts';
 import { qualityText, QUALITY_LAYOUTS, parseResearchQuality, parseReportBlock, parseSlideObject, type ResearchQuality, type ReportBlock, type SlideObject, type QualityLayout } from './research-quality.ts';
 import {parseProjectVisualStyle,parseReportFigure,projectPalette,type ProjectVisualStyle,type ReportFigure} from './report-figure.ts';
 import {parseReportFrame,buildFramePrimitives,type ReportFrameStyle} from './report-frame.ts';
+import {parseCoverArt,type CoverArt} from './cover-art.ts';
 export type ReportSection = { id: string; title: string; body: string; source: string; blocks?:ReportBlock[]; findingIds?:string[]; findingSnapshots?:Record<string,string> };
 export type SlideLayout = "cover" | "content" | "two-column" | QualityLayout;
 export type Slide = { id: string; title: string; body: string; aside: string; notes: string; layout: SlideLayout; reportLink?: ReportSlideLink; objects?:SlideObject[] };
@@ -23,6 +24,8 @@ export type EditorContent = {
   visualStyle?: ProjectVisualStyle;
   figures?: ReportFigure[];
   reportFrame?: ReportFrameStyle;
+  /** A vector ornament drawn on the cover page under the title, in the canvas and in both exports. */
+  coverArt?: CoverArt;
 };
 export type DraftSummary = { id: string; title: string; revision: number; updatedAt: string };
 export type Draft = DraftSummary & { content: EditorContent };
@@ -32,6 +35,12 @@ export function applyReportFrame(content:EditorContent,frame:ReportFrameStyle|un
   const next={...content,version:3 as const};
   if(frame){next.reportFrame=frame;next.visualStyle??={schema:'ProjectVisualStyle/v1',paletteId:frame.palette.id as ProjectVisualStyle['paletteId'],version:frame.palette.version};}
   else delete next.reportFrame;
+  return parseEditorContent(next);
+}
+/** Sets or removes the cover ornament; like a page frame, it needs a version-3 draft. */
+export function applyCoverArt(content:EditorContent,art:CoverArt|undefined):EditorContent {
+  const next={...content,version:3 as const};
+  if(art)next.coverArt=art;else delete next.coverArt;
   return parseEditorContent(next);
 }
 export const DRAFT_VERSION_LIMIT = 20;
@@ -83,8 +92,8 @@ export function parseEditorContent(value: unknown): EditorContent {
     if (new Set(result.map(x => x.id)).size !== result.length) throw new Error("内容标识重复。");
     return result;
   }
-  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex", "quality","visualStyle","figures","reportFrame","references"]);
-  if (![1,2,3].includes(x.version as number) || !["teal", "blue", "burgundy"].includes(x.accent as string) || (x.version===1&&Object.hasOwn(x,'quality')) || (x.version!==3&&['visualStyle','figures','reportFrame'].some(k=>Object.hasOwn(x,k)))) throw new Error("草稿版本或主题不受支持。");
+  const x = object(value, ["version", "title", "subtitle", "accent", "report", "slides", "reportFormat", "latex", "quality","visualStyle","figures","reportFrame","references","coverArt"]);
+  if (![1,2,3].includes(x.version as number) || !["teal", "blue", "burgundy"].includes(x.accent as string) || (x.version===1&&Object.hasOwn(x,'quality')) || (x.version!==3&&['visualStyle','figures','reportFrame','coverArt'].some(k=>Object.hasOwn(x,k)))) throw new Error("草稿版本或主题不受支持。");
   let latex: LatexReport | undefined;
   if (Object.hasOwn(x, 'latex')) {
     const draft = object(x.latex, ['version', 'body', 'reportHash']);
@@ -99,6 +108,7 @@ export function parseEditorContent(value: unknown): EditorContent {
     ...(Object.hasOwn(x,'references') ? {references:parseReferences(x.references)} : {}),
     ...(Object.hasOwn(x,'visualStyle')?{visualStyle:parseProjectVisualStyle(x.visualStyle)}:{}),
     ...(Object.hasOwn(x,'reportFrame')?{reportFrame:parseReportFrame(x.reportFrame)}:{}),
+    ...(Object.hasOwn(x,'coverArt')?{coverArt:parseCoverArt(x.coverArt)}:{}),
     ...(Object.hasOwn(x,'figures')?{figures:(()=>{if(!Array.isArray(x.figures)||x.figures.length>120)throw Error('图形数量超过限制。');const figures=x.figures.map(parseReportFigure);if(new Set(figures.map(f=>f.id)).size!==figures.length)throw Error('图形标识重复。');return figures;})()}:{}),
     report: entries(x.report, EDITOR_LIMITS.sections, v => {
       const s = object(v, x.version!==1?["id", "title", "body", "source", "blocks", "findingIds", "findingSnapshots"]:["id", "title", "body", "source"]);
