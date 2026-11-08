@@ -289,8 +289,10 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   misuse('dynamicClaim', '横截面数据不声称动态演化', /演化|演进|动态演变|状态转移|系统动力学/u,
     l => !/纵向|追踪|面板数据|多期|时间序列|重复测量|情境推演|路径假设|假设/u.test(proseText) && /演化|演进|动态演变|状态转移/u.test(l),
     '一次横截面调查观察不到演化；写成「路径假设」或「情境推演」，或补充纵向数据。');
+  // The disclaimer the advice asks for ("模拟数据不能当作稳健性检验") names robustness too; a negated claim is not one.
   misuse('simulationRobust', '模拟结果不当作稳健性检验', /稳健性|鲁棒性/u,
-    l => /模拟|仿真|合成数据/u.test(l) && /(通过|稳健|可靠)/u.test(l),
+    l => /模拟|仿真|合成数据/u.test(l) && /(通过|稳健|可靠)/u.test(l)
+      && !/(?:不能|不可|不应|不得|不宜|并非|不|未)(?:被)?(?:当作|当成|作为|视为|构成|等同于?|充当|用作|用于)[^。；]{0,16}(?:稳健|鲁棒|可靠)/u.test(l),
     '模拟或合成数据得到的结果只说明模型在假设下的表现，不能当作真实数据的稳健性检验。');
   const onlineRecruiting = /问卷星|网络发放|线上发放|线上链接|朋友圈|社交媒体|社群转发|便利抽样|滚雪球|自愿作答|自愿参与/u;
   misuse('samplingWording', '抽样名称与实际招募一致', /随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样/u,

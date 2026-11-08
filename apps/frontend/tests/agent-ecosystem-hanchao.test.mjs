@@ -213,7 +213,7 @@ test('Universal National Award Forging Engine de-overfits Hanchao and forges arb
   assert.ok(adaptiveWriting.templates[0].defaultDraft.includes('新能源汽车'));
 });
 
-test('Full-Report Skill-Pack Pipeline (00-06) builds 4 stage-handoff ledgers, sanitizes non-statistical digits, and generates 26/26 sections at 100/100 score', async () => {
+test('Full-Report Skill-Pack Pipeline (00-06) builds 4 stage-handoff ledgers, sanitizes non-statistical digits, and generates 26/26 sections, reporting the score the text earns', async () => {
   const topic = decomposeContestTopic('校园AI自习室与智慧书院空间错峰预约及学习效能循证调研');
   const pack = await forgeNationalAwardPack('campus-ai');
   const contract = buildSkillPackContract(pack, topic, 'demonstration');
@@ -289,8 +289,8 @@ test('Full-Report Skill-Pack Pipeline (00-06) builds 4 stage-handoff ledgers, sa
 
   assert.equal(fullRes.summary.totalSectionsGenerated, WAVE_1_SECTION_NODES.length + WAVE_2_SYNTHESIS_NODES.length);
   assert.equal(fullRes.summary.llmSuccessCount, 26);
-  assert.equal(fullRes.summary.finalScore, 100);
-  assert.equal(fullRes.summary.advisorPassCount, 6);
+  // The score reported is the score of the text as it stands: nothing is patched in to reach a number.
+  assert.equal(fullRes.summary.finalScore, benchmarkReport(fullRes.report).score);
   assert.equal(fullRes.summary.advisorTotalCount, 6);
 
   // 5. Verify router commands /全报告 and /密钥

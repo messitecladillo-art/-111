@@ -64,7 +64,10 @@ export function draftFacts(held: NonNullable<ResultsView>, nodeId: string): Fact
   for (const r of ordered) {
     const title = clip(r.title, 40);
     if (!isFrame(r)) add(`「${title}」：${methodName(r)}，有效样本 ${r.n}（共 ${r.total}）${r.classification === 'simulated' ? '，教学模拟数据' : ''}`, String(r.n));
-    for (const m of r.metrics.slice(0, 4)) if (m.value !== null && Number.isFinite(m.value)) add(`「${title}」的${m.label}为 ${figure(m.value)}`, figure(m.value));
+    for (const m of r.metrics.slice(0, 4)) if (m.value !== null && Number.isFinite(m.value)) {
+      const share = /[%％]/u.test(m.label), name = m.label.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim(), value = `${figure(m.value)}${share ? '%' : ''}`;
+      add(`「${title}」的${name}为 ${value}`, value);
+    }
     if (!isFrame(r)) for (const row of r.rows.slice(0, 6)) rowFacts(r, row, title, add);
   }
   return facts.map((f, i) => ({ id: `F${i + 1}`, ...f }));

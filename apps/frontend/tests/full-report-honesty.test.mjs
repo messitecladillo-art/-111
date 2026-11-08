@@ -1,0 +1,140 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  PLAN_NODE,
+  awaitsResults,
+  buildSectionTokens,
+  buildSkillPackContract,
+  generateFullReportWithAgent,
+  parseAndHydrateSectionDraft,
+  sanitizeModelParagraph,
+  unbackedAnalyses,
+} from '../lib/agent/full-report-pipeline.ts';
+import { decomposeContestTopic, forgeNationalAwardPack } from '../lib/agent/hanchao-benchmark.ts';
+import { benchmarkReport } from '../lib/report-benchmark.ts';
+
+const tokens = {
+  facts: [
+    { id: 'F1', text: '有效回收率为 94.4%', value: '94.4%' },
+    { id: 'F2', text: '有效样本为 641', value: '641' },
+  ],
+  exhibits: [{ id: 'G1', text: '本节表「交叉表」', value: '[[表:t1]]' }],
+  references: [],
+};
+const draft = (...texts) => JSON.stringify({ paragraphs: texts.map(text => ({ text })) });
+const results = { methods: ['crosstab', 'spearman', 'alpha'], planSection: false };
+
+test('a number written out in Chinese is refused like a digit', () => {
+  for (const text of [
+    '高满意度组复游意愿的优势约为参照组的一点八倍，见{G1}。',
+    '高校受众的双赛皆看率高出城区受众约十四个百分点。',
+    '约百分之三十的受访者表示愿意复游。',
+    '超过四成受访者认为交通是短板。',
+  ]) {
+    const out = parseAndHydrateSectionDraft(draft(text), tokens, results);
+    assert.equal(out.paragraphs.length, 0, text);
+    assert.deepEqual(out.dropReasons, ['用汉字写了数量'], text);
+  }
+  // Structure stays expressible: dimensions, item numbers, ordinals and "this point" are not quantities.
+  const kept = parseAndHydrateSectionDraft(draft('五维量表覆盖题一至题十二，一是氛围，二是交通；这一点十分关键，有效样本{F2}份。'), tokens, results);
+  assert.equal(kept.paragraphs.length, 1);
+  assert.match(kept.paragraphs[0], /有效样本641份/u);
+});
+
+test('a results paragraph may not claim an analysis no registered result comes from', () => {
+  const claims = [
+    '在有序 Logit 模型中，满意度每提高一个单位，复游意愿的优势比大于一。',
+    '共线性诊断显示各解释变量的方差膨胀因子处于温和区间。',
+    '因子分析表明量表结构清晰，KMO 检验通过。',
+  ];
+  for (const text of claims) {
+    const out = parseAndHydrateSectionDraft(draft(text), tokens, results);
+    assert.equal(out.paragraphs.length, 0, text);
+    assert.match(out.dropReasons[0], /未登记的分析/u, text);
+  }
+  assert.deepEqual(unbackedAnalyses(claims[0], ['logistic']), [], 'a registered model backs its own claims');
+  // A design section names the analyses the study means to run.
+  assert.equal(parseAndHydrateSectionDraft(draft(claims[0]), tokens, { ...results, planSection: true }).paragraphs.length, 1);
+  assert.ok(PLAN_NODE.test('design.methods') && !PLAN_NODE.test('drivers.model'));
+  // A results section still awaiting its results may set out the model as planned, never report it as run.
+  const awaiting = { ...results, pending: true };
+  assert.equal(parseAndHydrateSectionDraft(draft('本节分析结果尚未登记，拟以复游推荐意愿为被解释变量构建有序 Logit 模型，并计划检验平行线假定。'), tokens, awaiting).paragraphs.length, 1);
+  assert.equal(parseAndHydrateSectionDraft(draft(claims[1]), tokens, awaiting).paragraphs.length, 0);
+  assert.equal(awaitsResults('drivers.model', []), true);
+  assert.equal(awaitsResults('design.methods', []), false, 'a plan section is not a results section');
+});
+
+test('the sanitizer keeps what a sentence says: a threshold is not turned into significance, a year not into "recently"', () => {
+  assert.match(sanitizeModelParagraph('Pearson χ² 检验的统计量为{F1}。'), /χ²/u);
+  for (const text of ['性别差异 p>0.05，不显著。', '该政策于2024年发布。']) {
+    const out = parseAndHydrateSectionDraft(draft(text), tokens, results);
+    assert.equal(out.paragraphs.length, 0, text);
+    assert.deepEqual(out.dropReasons, ['占位符之外写了阿拉伯数字'], text);
+  }
+});
+
+test('section facts come only from registered results and the study records, never from typed-in numbers', async () => {
+  const pack = await forgeNationalAwardPack('');
+  const results = pack.report.quality.results;
+  const held = { results, findings: pack.report.quality.findings ?? [], pending: false, placed: results.map(r => r.id) };
+  const facts = buildSectionTokens(held, pack.report, 'data.pilot', pack.design).facts;
+  // Every fact value is a registered metric, a registered cell, a rate worked out from two registered counts, or the questionnaire's length.
+  const registered = new Set(results.flatMap(r => [String(r.n), ...r.metrics.map(m => m.value), ...r.rows.flat()].filter(v => v !== null).map(v => String(v).replace(/%$/u, ''))));
+  for (const f of facts) {
+    const bare = f.value.replace(/%$/u, '');
+    const known = registered.has(bare) || [...registered].some(v => Number(v) === Number(bare)) || /有效回收率为/u.test(f.text) || /道题$/u.test(f.text);
+    assert.ok(known, `${f.id} ${f.text}`);
+  }
+  // Typed into the pipeline before, registered by no result: a KMO, a pilot KMO, a CITC floor, an expected count, an n0.
+  for (const typed of ['0.864', '0.841', '0.68', '26.37', '384.16']) assert.ok(!facts.some(f => f.value === typed), typed);
+  const rate = facts.find(f => /有效回收率为/u.test(f.text));
+  assert.equal(rate?.value, '94.4%', 'the rate is 641 valid of 679 issued, as the frame registers them');
+});
+
+test('a simulated pack is always written up as a teaching demonstration, and its plain references are not called verified', async () => {
+  const pack = await forgeNationalAwardPack('');
+  const contract = buildSkillPackContract(pack, decomposeContestTopic(''), 'demonstration');
+  assert.ok(contract.literatureLedger.every(l => l.verificationStatus !== 'verified' || (pack.report.references ?? []).some(r => r.id === l.sourceId && r.verification === 'verified')));
+  assert.ok(contract.designMatrix.every(row => !/Logit|优势比/u.test(row.analysisMethod)), 'no analysis is planned as done that no result registers');
+  const res = await generateFullReportWithAgent({
+    mode: 'empirical',
+    llm: { apiKey: 'sk-test-mock', concurrency: 4 },
+    sectionNodes: ['compare.tests'],
+    fetcher: async () => new Response(JSON.stringify({ choices: [{ message: { content: draft('列联检验显示两类受众的观赛状态分布存在关联，见{G1}。') } }] }), { status: 200 }),
+  });
+  assert.equal(res.contract.mode, 'demonstration');
+  assert.equal(res.contract.dataStatus, 'synthetic');
+});
+
+test('a flagged section goes back to the model once; the revision is kept because it clears the problem, and the score is the text\'s own', async () => {
+  const prompts = [];
+  const reply = paragraphs => new Response(JSON.stringify({ choices: [{ message: { content: draft(...paragraphs) } }], usage: { total_tokens: 10 } }), { status: 200 });
+  const fetcher = async (_url, init) => {
+    const prompt = JSON.parse(init.body).messages[0].content;
+    prompts.push(prompt);
+    if (prompt.includes('审稿修订助手')) return reply(['整体满意度与复游推荐意愿呈正向关联，这一关联不能说明因果方向，见{G1}。']);
+    return reply(['整体满意度与复游推荐意愿相关，说明满意度导致了复游意愿上升，见{G1}。']);
+  };
+  const res = await generateFullReportWithAgent({ llm: { apiKey: 'sk-test-mock', concurrency: 2 }, sectionNodes: ['compare.tests'], fetcher });
+  const revisions = prompts.filter(p => p.includes('审稿修订助手'));
+  assert.equal(revisions.length, 1, 'one revision round');
+  assert.match(revisions[0], /因果/u, 'the revision prompt names the problem');
+  const section = res.report.report.find(s => s.body.includes('不能说明因果方向'));
+  assert.ok(section, 'the revised text is in the report');
+  assert.ok(!res.report.report.some(s => s.body.includes('导致了复游意愿上升')), 'the flagged sentence is gone');
+  assert.equal(res.summary.revisedSections, 1);
+  assert.ok(res.repairsApplied.some(r => r.includes('按审稿意见修订')));
+  assert.equal(res.summary.finalScore, benchmarkReport(res.report).score);
+  // No sentence is typed in to pass a check.
+  const all = res.report.report.map(s => s.body).join('\n');
+  for (const boilerplate of ['借鉴了既有权威文献', '有效回收率为 94.4%。', '季度脉冲监测指标']) assert.ok(!all.includes(boilerplate), boilerplate);
+});
+
+test('a revision that leaves the problem standing is not kept', async () => {
+  const fetcher = async () =>
+    new Response(JSON.stringify({ choices: [{ message: { content: draft('整体满意度与复游推荐意愿相关，说明满意度导致了复游意愿上升，见{G1}。') } }] }), { status: 200 });
+  const res = await generateFullReportWithAgent({ llm: { apiKey: 'sk-test-mock', concurrency: 2 }, sectionNodes: ['compare.tests'], fetcher });
+  assert.equal(res.summary.revisedSections, 0);
+  assert.ok(res.report.report.some(s => s.body.includes('导致了复游意愿上升')), 'the original stays, and the report check keeps flagging it');
+  assert.ok(benchmarkReport(res.report).checks.some(c => c.id === 'causal' && c.status !== 'pass'));
+});

@@ -18,16 +18,15 @@ import type { EditorContent, ReportSection } from '../editor-model.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { type BenchmarkResult, benchmarkReport } from '../report-benchmark.ts';
 import { blueprintNode, blueprintOutline, matchBlueprintNode } from '../report-blueprint.ts';
+import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
 import type { ReportBlock, ResultSnapshot } from '../research-quality.ts';
-import { ADVISORS, type AdvisorReading, advisorReading } from './advisors.ts';
-import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline, sectionText } from './draft.ts';
+import { ADVISORS, type AdvisorReading, advisorReading, sectionIssues } from './advisors.ts';
+import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline } from './draft.ts';
 import {
   type ContestTopicBlueprint,
   type HanchaoBenchmarkPack,
   decomposeContestTopic,
-  diagnoseAgainstHanchao,
   forgeNationalAwardPack,
-  toHanchaoProjectView,
 } from './hanchao-benchmark.ts';
 import { standingFindings, type ResultsView } from './router.ts';
 
@@ -124,6 +123,8 @@ export type SectionGenerationTrace = {
   rawParagraphs: number;
   keptParagraphs: number;
   droppedParagraphs: number;
+  /** Why each dropped paragraph was dropped, in order. */
+  dropReasons?: string[];
   citedFacts: string[];
   citedExhibits: string[];
   citedReferences: string[];
@@ -153,6 +154,8 @@ export type FullReportGenerationResult = {
     finalScore: number;
     advisorPassCount: number;
     advisorTotalCount: number;
+    /** Sections the model revised after the report check flagged them, and kept because the revision cleared problems. */
+    revisedSections: number;
   };
 };
 
@@ -191,6 +194,43 @@ export const WAVE_2_SYNTHESIS_NODES: readonly string[] = [
 
 const PLACEHOLDER_RE = /\{(F[1-9][0-9]{0,2}|G[1-9][0-9]?|R[1-9][0-9]?)\}/gu;
 const DIGIT_RE = /[0-9０-９]/u;
+// A number written out in Chinese is a number all the same: a decimal, a percentage, a multiple or a gap in percentage
+// points that the model worked out or made up would otherwise pass the digit check ("一点八倍", "十四个百分点").
+const CN_NUMERAL = '[零〇一二两三四五六七八九十百千万]';
+const CN_QUANTITY = new RegExp(
+  `${CN_NUMERAL}+点[零〇一二三四五六七八九]+|百分之${CN_NUMERAL}+|${CN_NUMERAL}+\\s*(?:倍|个百分点)|[一二两三四五六七八九]成(?=以上|左右|多|的|受访|样本|用户|居民|学生|群体)`,
+  'u',
+);
+/**
+ * Analyses a paragraph can claim, and the registered methods that back each. A results paragraph claiming one that no
+ * registered result comes from is dropped: the model may not report a model, a factor solution or a clustering that
+ * was never run, nor its diagnostics.
+ */
+const ANALYSIS_CLAIMS: readonly { name: string; words: RegExp; methods: RegExp }[] = [
+  {
+    name: '回归或 Logit 模型',
+    words: /回归(?:模型|分析|系数|方程|结果)|[Ll]ogit|[Ll]ogistic|[Pp]robit|优势比|比值比|发生比|(?<![A-Za-z])OR(?![A-Za-z])|边际效应|方差膨胀|VIF|共线性|平行线假定|伪\s*R/u,
+    methods: /regress|logit|logistic|probit|ols/iu,
+  },
+  { name: '因子分析或 KMO 检验', words: /因子分析|因子载荷|公因子|KMO|Bartlett|球形检验|主成分/iu, methods: /factor|kmo|efa|cfa|pca/iu },
+  { name: '聚类分析', words: /聚类|K-?means|轮廓系数/iu, methods: /cluster|kmeans/iu },
+];
+/** Sections that set out the plan: an analysis named there is one the study means to run, not a result it reports. */
+export const PLAN_NODE = /^(?:intro|design)\./u;
+/** Sections that report results: without a registered result of their own they may only say what is still to come. */
+const EVIDENCE_NODES = new Set(['data.testing', 'sample.profile', 'sample.descriptive', 'compare.tests', 'drivers.model', 'diagnosis.evaluation']);
+/** Words that put an analysis in the future: such a sentence plans the analysis, it does not report it. */
+const PLANNED = /拟|计划|将(?:采用|构建|估计|报告|检验|开展)|尚未登记|待(?:估计|补|登记|完成)/u;
+
+/** A results section with no registered result of its own: it may set out the analysis it still needs, as a plan. */
+export function awaitsResults(nodeId: string, results: readonly ResultSnapshot[]): boolean {
+  return EVIDENCE_NODES.has(nodeId) && !results.some(r => suggestedNode(r) === nodeId);
+}
+
+/** The analyses a text claims that none of the registered methods backs. */
+export function unbackedAnalyses(text: string, methods: readonly string[]): string[] {
+  return ANALYSIS_CLAIMS.filter(c => c.words.test(text) && !methods.some(m => c.methods.test(m))).map(c => c.name);
+}
 const CN_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十'];
 
 function toChineseNumber(n: number): string {
@@ -232,22 +272,15 @@ export function sanitizeModelParagraph(raw: string): string {
       // Convert R² / R2 / χ² / χ2 -> R平方 / χ²
       s = s.replace(/R\s*[2²]/gu, 'R平方');
       s = s.replace(/χ\s*2/gu, 'χ²');
-      // Convert subscript/superscript digits
-      s = s.replace(/[₀₁₂₃₄₅₆₇₈₉⁰¹²³⁴⁵⁶⁷⁸⁹]/gu, '');
       // Convert conceptual confidence interval phrases
       s = s.replace(/95\s*[%％]\s*置信区间/gu, '九五置信区间');
       s = s.replace(/99\s*[%％]\s*置信区间/gu, '九九置信区间');
       s = s.replace(/90\s*[%％]\s*置信区间/gu, '九零置信区间');
-      // Convert conceptual years like 2024年 / 2025年 / 2026年 -> 近年
-      s = s.replace(/20[12][0-9]\s*(?:—|-|–|至)?\s*(?:20[12][0-9])?\s*年(?:度)?/gu, '近年');
       // Convert conceptual unit phrases in OR / regression explanation
       s = s.replace(/([每提高增加降低变动取值]{1,3})\s*1\s*(个?单位)/gu, '$1一个$2');
       s = s.replace(/(OR|优势比|比值比|系数)([大和小等]于)\s*1(?![0-9.])/gu, '$1$2一');
       // Convert conceptual Likert scale phrases
       s = s.replace(/([1-9])\s*(分制|级量表|点量表|分量表)/gu, (_, d: string, tail: string) => `${toChineseNumber(Number(d))}${tail}`);
-      // Convert conceptual significance threshold
-      s = s.replace(/p\s*[<＜>＞=＝≤≥]\s*0?\.0[015]+/giu, 'p值达到显著性阈值');
-      s = s.replace(/0\.0[015]+\s*(的?显著性|水平|阈值)/gu, '零点零五$1');
       // Convert literal figure/table numbers written outside {G..} (e.g. 图3-1, 表4-2, 附录1) -> 统计图 / 统计表 / 附录
       s = s.replace(/(?:图|Figure)\s*[0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)*/giu, '正文中统计图');
       s = s.replace(/(?:表|Table)\s*[0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)*/giu, '正文中统计表');
@@ -302,8 +335,8 @@ export function buildSkillPackContract(
       decisionMeaning: '量化体验改善与机制协同对二次消费闭环的边际带动潜力',
       construct: '协同机制支持度、整体满意度与复购留存意愿',
       itemIds: ['Q9', 'Q10', 'Q11', 'Q12'],
-      analysisMethod: 'Spearman 秩相关检验 + 有序 Logit 优势比（OR）与边际效应模型框架',
-      boundary: '陈述性偏好（意愿）不等于实际复购流水，相关与回归系数不直接等同于因果效应',
+      analysisMethod: 'Spearman 秩相关检验',
+      boundary: '陈述性偏好（意愿）不等于实际复购流水，相关系数不直接等同于因果效应',
     },
   ];
 
@@ -340,7 +373,7 @@ export function buildSkillPackContract(
           type: b.kind,
           sectionNode: node?.id ?? section.id,
           resultIds: b.evidenceId ? [b.evidenceId] : [],
-          sampleNote: dataStatus === 'synthetic' ? '教学模拟样本（n=641，DEFF=1.65）' : '实证有效样本（n=641）',
+          sampleNote: `${dataStatus === 'synthetic' ? '教学模拟样本' : '登记样本'}（n=${results.find(r => r.id === b.evidenceId)?.n ?? '未登记'}）`,
           takeaway: b.text || '支撑本节核心统计发现',
         });
       }
@@ -379,7 +412,8 @@ export function buildSkillPackContract(
             authors: clean.split('.')[0] ?? '权威文献作者',
             year: yearMatch ? yearMatch[0] : '2024',
             venue: '期刊/制度文献',
-            verificationStatus: 'verified' as const,
+            // A line in the reference list is a citation as written, not a checked one.
+            verificationStatus: 'metadata_only' as const,
             supportedClaim: `支撑「${topic.shortTitle}」研究背景、方法学规范或构念操作化定义`,
             limitation: '外部文献结论受其原有时空与样本约束，仅作理论与方法参照',
           };
@@ -442,22 +476,19 @@ export function buildSectionTokens(
   design?: Questionnaire | null,
 ): SectionTokenMap {
   const baseFacts = draftFacts(held, nodeId);
-  // Add project-level structural facts (valid rate, pilot sample, question count, reference count) so the model can cite them as {Fk}
-  const extraFacts: Omit<Fact, 'id'>[] = [
-    { text: '正式调查累计发放问卷 679 份，回收有效问卷 641 份，有效回收率为 94.4%', value: '94.4%' },
-    { text: '正式调查有效样本量为 641 份', value: '641' },
-    { text: '正式调查累计发放问卷 679 份', value: '679' },
-    { text: '预调查阶段独立发放并回收有效测试问卷 68 份，预调查 Cronbach α 为 0.876，KMO 为 0.841', value: '68' },
-    { text: '预调查量表 Cronbach α 系数为 0.876，KMO 抽样适切性度量为 0.841', value: '0.876' },
-    { text: '正式调查量表 KMO 抽样适切性度量为 0.864，Bartlett 球形检验 p < 0.001', value: '0.864' },
-    { text: '显著性检验 p 值小于 0.001', value: '0.001' },
-    { text: '各题项校正项总计相关 CITC 均大于 0.68', value: '0.68' },
-    { text: '列联表全部单元格最小期望频数为 26.37（大于 5）', value: '26.37' },
-    { text: '正式调查剔除无效问卷 38 份（注意力题未通过或作答时长过短）', value: '38' },
-    { text: '分层抽样初始样本量 n0 为 384.16，经设计效应修正后为 634 份，计划有效样本底线为 600 份', value: '600' },
-    { text: `正式问卷共包含 ${design?.questions.length ?? 12} 道结构化测量题项`, value: String(design?.questions.length ?? 12) },
-    { text: '分层 PPS 抽样设计效应 DEFF 为 1.65，置信水平 95%，最大允许绝对误差 5.0%', value: '1.65' },
-  ];
+  // Facts the study's own records give beyond each result's metrics: a frame's valid rate, worked out from the two
+  // counts it registers, and the questionnaire's length. Nothing is typed in here: without a record there is no fact.
+  const extraFacts: Omit<Fact, 'id'>[] = [];
+  for (const r of held.results) {
+    if (r.method !== 'sampling-frame') continue;
+    const issued = r.metrics.find(m => /^(?:实际发放问卷|实发问卷|实际发放)$/u.test(m.label))?.value;
+    const valid = r.metrics.find(m => /^(?:有效回收样本|有效回收)$/u.test(m.label))?.value;
+    if (typeof issued === 'number' && typeof valid === 'number' && issued > 0 && valid <= issued) {
+      const rate = `${(Math.round((valid / issued) * 1000) / 10).toFixed(1)}%`;
+      extraFacts.push({ text: `「${r.title}」的有效回收率为 ${rate}（有效回收 ${valid} 份 ÷ 实际发放 ${issued} 份）`, value: rate });
+    }
+  }
+  if (design?.questions.length) extraFacts.push({ text: `正式问卷共 ${design.questions.length} 道题`, value: String(design.questions.length) });
   const mergedFacts: Fact[] = [...baseFacts];
   for (const ef of extraFacts) {
     if (mergedFacts.length < 80 && !mergedFacts.some(f => f.text === ef.text)) {
@@ -519,9 +550,47 @@ export function buildFullReportSectionPrompt(input: {
   const section = draftSection(input.nodeId);
   const isSynthesis = SYNTHESIS_NODES.has(input.nodeId);
   const outline = isSynthesis ? reportOutline(input.content, input.nodeId, 5000) : undefined;
+  const methods = [...new Set(input.held.results.map(r => r.method))];
+  const registered = (family: RegExp) => methods.some(m => family.test(m));
+  const planSection = PLAN_NODE.test(input.nodeId);
+  const pending = awaitsResults(input.nodeId, input.held.results);
+  const analyses = methods.map(m => METHOD_LABELS[m] ?? m);
+
+  const specificRules: string[] = [];
+  if (input.nodeId === 'abstract') {
+    specificRules.push(
+      '本节为全篇【摘要】：用四到五段交代研究背景与核心问题、调查设计与样本（样本量、回收率用对应的 {F编号}）、核心统计发现（用对应的 {F编号}）及对策建议；最后一段单独以“关键词：”开头，列出五到七个中文关键词，用顿号分隔。',
+    );
+  } else if ((input.nodeId === 'intro.literature' || input.nodeId === 'intro.background') && input.tokens.references.length) {
+    specificRules.push('在观点处用 references 里的占位符（{R1}、{R2} 等）标注出处，让文献服务于问题提出；不得杜撰文献或其结论。');
+  } else if (input.nodeId === 'data.pilot') {
+    specificRules.push('资料中有预调查结果才引用其 {F编号}；没有就只写预调查的做法与据此修订问卷的思路，并写明预调查指标尚未登记，不写任何数值。');
+  } else if (input.nodeId === 'data.cleaning') {
+    specificRules.push('交代注意力甄别、作答时长、逻辑矛盾、规律作答与缺失值五类质控规则；样本量与回收率只用资料中对应的 {F编号}，资料没有的计数不写。');
+  } else if (input.nodeId === 'conclusion.suggestions') {
+    specificRules.push('每条对策建议对应一条实证结论，并写明执行主体、实施步骤与评估指标；评估指标写指标名称，不写目标数值。');
+  }
+  if (pending) {
+    specificRules.push('本节尚无对应的登记结果：只写本节拟采用的分析思路与要回答的问题，写到的每种分析都用“拟”“计划”标明尚未进行，并明确写出“本节分析结果尚未登记”，不写任何结果、检验结论或诊断。');
+  }
+  if (input.tokens.exhibits.length > 0) {
+    specificRules.push(
+      `本节可引用 ${input.tokens.exhibits.length} 个图表（exhibits 列表）：在论述中写出占位符 ${input.tokens.exhibits.map(e => `{${e.id}}`).join('、')}（如“见{G1}”“如{G1}所示”），让图表与正文互证。`,
+    );
+  }
+  const redLines = [
+    '相关关系或横截面数据不写成因果（在“相关/关联”旁不用“导致、造成、决定了、引起了、使得”）；',
+    'p 值不显著只说明现有样本尚不足以排除零假设，不写成“证明没有差异/不存在关联”；',
+    '横截面调查不声称观察到“动态演化/状态转移”，机制推演须标明“路径假设”；',
+    '模拟或合成数据（mode=demonstration）如实声明为教学模拟演示，不当作真实数据，也不当作稳健性检验；',
+    '秩和等非参数检验比较的是分布位置，不写成“中位数相等/中位数无差异”；',
+    ...(registered(/regress|logit|logistic|probit|ols/iu) ? ['OR（优势比）只写成“优势（odds）是参照组的多少倍”，不写成“概率是多少倍”；'] : []),
+    ...(registered(/cluster|kmeans/iu) ? ['不用参与聚类的输入变量做显著性检验来自证分群有效；'] : []),
+  ];
   const material = {
     mode: input.contract.mode,
     section,
+    analyses,
     project: {
       title: input.content.title || input.design?.title || input.contract.topic.title,
       objective: input.design?.objective || `围绕「${input.contract.topic.shortTitle}」开展循证调查研究`,
@@ -540,52 +609,42 @@ export function buildFullReportSectionPrompt(input: {
     ...(outline ? { outline } : {}),
   };
 
-  const specificRules: string[] = [];
-  if (input.nodeId === 'abstract') {
-    specificRules.push(
-      '本节为全篇【摘要】：用 4 到 5 段完整交代研究背景与核心问题、抽样设计与有效回收率（必须引用有效样本量与有效回收率对应的 {F编号}）、核心统计发现（引用 χ²、Cronbach α、五维均值、t 检验、Spearman ρ 对应的 {F编号}）及分层对策建议；最后一段必须单独以“关键词：”开头，列出五到七个中文关键词（用顿号分隔，不得含阿拉伯数字）。',
-    );
-  } else if (input.nodeId === 'intro.literature' || input.nodeId === 'intro.background') {
-    specificRules.push(
-      '必须在正文中自然引用 references 里的文献占位符（如 {R1}、{R2}、{R3} 等），在句末或观点处标注，使文献真正服务于问题提出与综述脉络。',
-    );
-  } else if (input.nodeId === 'data.pilot') {
-    specificRules.push(
-      '必须写明预调查的有效样本量与预调查 Cronbach α、KMO 检验结果（引用对应的 {F编号}），并说明据此对问卷题项表述做出的修正。',
-    );
-  } else if (input.nodeId === 'data.cleaning') {
-    specificRules.push(
-      '必须明确交代正式调查累计发放量、回收有效样本量与有效回收率（引用对应的 {F编号}），并写明注意力甄别题、作答时长阈值、逻辑矛盾校验、规律作答筛查与缺失值处理五类质控规则。',
-    );
-  } else if (input.nodeId === 'conclusion.suggestions') {
-    specificRules.push(
-      '每条对策建议必须严格对应一条实证结论，并显式写明【执行主体】（如行业主管部门、核心运营方、平台技术团队、社区联盟）、【实施步骤】与【评估指标/考核指标】（如核销率、滞留时长缩短比例、满意度监测指标）。',
-    );
-  }
-  if (input.tokens.exhibits.length > 0) {
-    specificRules.push(
-      `本节挂载了 ${input.tokens.exhibits.length} 个图表（exhibits 列表）：请务必在正文论述中显式写出占位符 ${input.tokens.exhibits.map(e => `{${e.id}}`).join('、')}（如“见{G1}”或“如{G1}所示”），完成图表与正文的互证。`,
-    );
-  }
-
   return (
-    '你是正大杯全国大学生市场调查与分析大赛国奖级首席撰稿 Agent，严格遵循《市调科研融合技能包》00-06 规范撰写报告章节。\n' +
+    '你是正大杯全国大学生市场调查与分析大赛的报告撰稿助手，按《市调科研融合技能包》规范撰写报告章节。\n' +
     `当前撰写章节：「${section.title}」（节点 ID：${section.node}）。\n` +
-    '【核心铁律 1：零自造数字与受控占位符】\n' +
-    '1. 凡是统计数字、样本量、百分比、均值、检验值、自由度、信度系数、有效回收率等，只能写成 {F编号}（如“有效样本为{F2}，有效回收率为{F1}”）。\n' +
-    '2. 凡是引用本节图表，写成 {G编号}（如“见{G1}”）；凡是引用参考文献，写成 {R编号}（如“既有研究指出{R1}”）。\n' +
-    '3. 除 {F编号}、{G编号}、{R编号} 花括号内部以外，正文中严禁出现任何阿拉伯数字（0-9）！题号、维度数、置信水平、序号等概念一律用汉字表述（例如写成“题一至题十二”“五维量表”“九五置信区间”“每提高一个单位”“优势比大于一”“一是、二是”），否则含阿拉伯数字的段落会被校验器丢弃。\n' +
-    '【核心铁律 2：八大统计与方法学防误读红线】\n' +
-    '1. 相关关系或横截面回归绝不写成因果（严禁在“相关/关联”旁使用“导致/造成/决定了/引起了/使得”）；\n' +
-    '2. OR（优势比）只能写成“高意愿的优势（odds）是参照组的多少倍”，严禁写成“概率是…的多少倍”；\n' +
-    '3. 秩和检验/非参数检验比较的是分布或相对位置，严禁写成“中位数相等/中位数无差异”；\n' +
-    '4. p 值不显著只说明现有样本尚不足以排除零假设，严禁写成“证明没有差异/不存在关联”；\n' +
-    '5. 聚类分析严禁用参与聚类的输入变量做 ANOVA 显著性来自证分群有效；\n' +
-    '6. 横截面调查严禁声称观察到“动态演化/状态转移”（若涉及机制推演必须标明“路径假设”或“情境推演”）；\n' +
-    '7. 模拟/合成数据（mode=demonstration）必须诚实声明为教学模拟演示，严禁将模拟数据当作真实数据的稳健性检验。\n' +
-    '【写作体例】\n' +
-    '中文学术调查报告语体，先亮核心判断、再摆证据链、最后交代适用边界；写 3 到 5 段，每段 100 到 220 字。\n' +
+    '【规则一：数字只来自资料】\n' +
+    '1. 统计数字、样本量、百分比、均值、检验值、自由度、信度系数、回收率等，一律写成 {F编号}（如“有效样本{F2}份，有效回收率{F1}”）。占位符只代表数字本身，百分比已带 %；单位（份、人、分）写在占位符之后。\n' +
+    '2. 引用图表写 {G编号}（如“见{G1}”）；引用文献写 {R编号}（如“既有研究指出{R1}”）。\n' +
+    '3. 占位符以外不得出现阿拉伯数字，也不得用汉字写数量（如“一点八倍”“十四个百分点”“百分之三十”“四成”）；差值、倍数等派生数字一律不写。题号、维度数、序号写成汉字（如“题一至题十二”“五维量表”“一是、二是”）。违反的段落整段丢弃。\n' +
+    '【规则二：只写已登记的分析】\n' +
+    (planSection
+      ? '本节属于研究设计：可以说明拟采用的分析方法，但不得声称已得出结果。\n'
+      : `资料 analyses 列出了本研究已登记的全部分析（${analyses.join('、') || '暂无'}）。没有列出的分析（如回归模型、Logit、优势比、边际效应、方差膨胀因子、因子分析、KMO、聚类）不得声称做过，也不得给出其结果或诊断，写到这类分析的段落整段丢弃。\n`) +
+    '【规则三：防误读红线】\n' +
+    redLines.map((rule, i) => `${i + 1}. ${rule}`).join('\n') +
+    '\n【写作体例】\n' +
+    '中文学术调查报告语体，先亮核心判断、再摆证据、最后交代适用边界；写三到五段，每段一百到二百二十字。\n' +
     (specificRules.length ? `【本节专项要求】\n${specificRules.join('\n')}\n` : '') +
+    '只输出严格合法的 JSON 对象：{"paragraphs":[{"text":"段落正文"}]}，不要输出任何额外解释。\n' +
+    `资料 JSON：${JSON.stringify(material)}`
+  );
+}
+
+/**
+ * The revision round for a section the report check flagged: the model gets its own paragraphs back, placeholders
+ * unexpanded, with the problems named, and changes only the sentences at fault.
+ */
+export function buildRevisionPrompt(title: string, drafts: readonly string[], problems: readonly string[], tokens: SectionTokenMap): string {
+  const material = {
+    paragraphs: drafts,
+    facts: tokens.facts.map(({ id, text }) => ({ id, text })),
+    exhibits: tokens.exhibits.map(({ id, text }) => ({ id, text })),
+    references: tokens.references.map(({ id, text }) => ({ id, text })),
+  };
+  return (
+    `你是同一份调查报告的审稿修订助手。下面是「${title}」一节的段落，数字仍以 {F编号}、{G编号}、{R编号} 占位。审稿发现以下问题：\n` +
+    problems.map((p, i) => `${i + 1}. ${p}`).join('\n') +
+    '\n请只改出问题的句子，其余原样保留；不新增资料中没有的数字、分析或结论。占位符规则不变：占位符以外不得出现阿拉伯数字，也不得用汉字写数量。\n' +
     '只输出严格合法的 JSON 对象：{"paragraphs":[{"text":"段落正文"}]}，不要输出任何额外解释。\n' +
     `资料 JSON：${JSON.stringify(material)}`
   );
@@ -597,9 +656,18 @@ export function buildFullReportSectionPrompt(input: {
 export function parseAndHydrateSectionDraft(
   rawJsonText: string,
   tokens: SectionTokenMap,
+  /**
+   * What the section may claim: the registered methods, whether the section sets out the plan, and whether it is a
+   * results section still awaiting its results, where an analysis may be named as planned but not as done.
+   */
+  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean },
 ): {
   paragraphs: string[];
+  /** The kept paragraphs as the model wrote them, placeholders unexpanded: what a revision round starts from. */
+  drafts: string[];
   droppedParagraphs: number;
+  /** Why each dropped paragraph was dropped, in order. */
+  dropReasons: string[];
   citedFacts: string[];
   citedExhibits: string[];
   citedReferences: string[];
@@ -627,6 +695,8 @@ export function parseAndHydrateSectionDraft(
   }
 
   const paragraphs: string[] = [];
+  const drafts: string[] = [];
+  const dropReasons: string[] = [];
   const citedFacts = new Set<string>();
   const citedExhibits = new Set<string>();
   const citedReferences = new Set<string>();
@@ -636,6 +706,7 @@ export function parseAndHydrateSectionDraft(
     const rawText = typeof (row as { text?: unknown })?.text === 'string' ? (row as { text: string }).text : '';
     if (!rawText.trim()) {
       droppedParagraphs++;
+      dropReasons.push('空段落');
       continue;
     }
     const sanitized = sanitizeModelParagraph(rawText);
@@ -643,8 +714,20 @@ export function parseAndHydrateSectionDraft(
     const unknownToken = tokensFound.some(id => !factMap.has(id) && !exhibitMap.has(id) && !refMap.has(id));
     const withoutPlaceholders = sanitized.replace(PLACEHOLDER_RE, '');
 
-    if (unknownToken || DIGIT_RE.test(withoutPlaceholders)) {
+    const planned = !!context && (context.planSection || (!!context.pending && PLANNED.test(withoutPlaceholders)));
+    const unbacked = context && !planned ? unbackedAnalyses(withoutPlaceholders, context.methods) : [];
+    const reason = unknownToken
+      ? '引用了不存在的占位符'
+      : DIGIT_RE.test(withoutPlaceholders)
+        ? '占位符之外写了阿拉伯数字'
+        : CN_QUANTITY.test(withoutPlaceholders)
+          ? '用汉字写了数量'
+          : unbacked.length
+            ? `写了未登记的分析（${unbacked.join('、')}）`
+            : '';
+    if (reason) {
       droppedParagraphs++;
+      dropReasons.push(reason);
       continue;
     }
 
@@ -658,11 +741,14 @@ export function parseAndHydrateSectionDraft(
       return factMap.get(id) ?? exhibitMap.get(id) ?? refMap.get(id) ?? '';
     });
     paragraphs.push(hydrated);
+    drafts.push(sanitized);
   }
 
   return {
     paragraphs: paragraphs.slice(0, 8),
+    drafts: drafts.slice(0, 8),
     droppedParagraphs,
+    dropReasons,
     citedFacts: [...citedFacts],
     citedExhibits: [...citedExhibits],
     citedReferences: [...citedReferences],
@@ -724,11 +810,12 @@ export async function callLlmForSection(
 }
 
 /**
- * 06-Word编排与成果验收：六大顾问终审自愈器（Self-Repair Engine）
- * 检查生成的全报告在 benchmarkReport 与 advisorReading 下的每一项指标，
- * 对大模型偶发遗漏的关键词行、图表引用锚点、文献顺序编码引用、有效回收率/预调查说明或因果误读进行外科手术式自愈。
+ * 06-Word编排与成果验收：定稿整理。
+ * Only what is true by construction is added: a section the model left empty takes its fallback, an exhibit placed in
+ * a section is pointed to from that section, and a section resting on simulated results says so. Wording problems
+ * are the revision round's to fix; what it could not fix stays visible in the report check.
  */
-export function repairReportForFullScore(
+export function finalizeReport(
   content: EditorContent,
   fallbackSections: Map<string, string>,
 ): { content: EditorContent; repairs: string[] } {
@@ -738,67 +825,19 @@ export function repairReportForFullScore(
     blocks: s.blocks ? [...s.blocks] : undefined,
   }));
 
-  // 1. Ensure every writable section has substantive prose (fallback to verified template if LLM dropped all paragraphs)
+  // 1. A writable section with no prose takes its fallback.
   reportSections = reportSections.map(sec => {
     const node = matchBlueprintNode(sec.title);
     if (!node || node.kind === 'chapter' || node.kind === 'references') return sec;
     const hasProse = sec.body.trim().length > 40 || (sec.blocks ?? []).some(b => b.kind === 'paragraph' && b.text.trim().length > 40);
     if (!hasProse && fallbackSections.has(node.id)) {
-      repairs.push(`章节「${sec.title}」回填受控基准段落`);
+      repairs.push(`章节「${sec.title}」回填样板段落`);
       return { ...sec, body: fallbackSections.get(node.id)! };
     }
     return sec;
   });
 
-  // 2. Sanitize any accidental methodological misreadings across all sections (causal, oddsRatio, simulationRobust, rankMedian, nullResult, clusterCircular, dynamicClaim)
-  reportSections = reportSections.map(sec => {
-    let body = sec.body;
-    if (/相关|关联/u.test(body) && /导致|造成|决定了|引起了|使得/u.test(body)) {
-      body = body.replace(/导致|造成|决定了|引起了|使得/gu, '伴随');
-      repairs.push(`章节「${sec.title}」修正相关与因果混用措辞`);
-    }
-    if (/\bOR\b|优势比|发生比|比值比/u.test(body) && /(概率|可能性|几率)[^。；]{0,12}(是|为|提高|增加|高出|达到)[^。；]{0,8}[0-9０-９.]+\s*倍/u.test(body)) {
-      body = body.replace(/(概率|可能性|几率)([^。；]{0,12}(?:是|为|提高|增加|高出|达到)[^。；]{0,8}[0-9０-９.]+\s*倍)/gu, '优势（odds）$2');
-      repairs.push(`章节「${sec.title}」修正 OR 优势比误读措辞`);
-    }
-    if (/稳健性|鲁棒性/u.test(body) && /模拟|仿真|合成数据/u.test(body)) {
-      body = body.replace(/稳健性|鲁棒性/gu, '参数一致性').replace(/稳健/gu, '一致');
-      repairs.push(`章节「${sec.title}」修正模拟数据充当稳健性检验措辞`);
-    }
-    if (/秩和|秩检验|Mann|Whitney|Kruskal|Wilcoxon/iu.test(body) && /中位数[^。；]{0,8}(相等|相同|无差异|没有差异|存在差异|有差异)/u.test(body)) {
-      body = body.replace(/中位数([^。；]{0,8}(?:相等|相同|无差异|没有差异|存在差异|有差异))/gu, '秩次分布位置$1');
-      repairs.push(`章节「${sec.title}」修正秩检验等同于中位数检验措辞`);
-    }
-    if (/(不显著|未达到显著|p\s*[>＞]\s*0?\.05)[^。]{0,16}(说明|表明|证明|可见)[^。]{0,10}(没有|不存在|无)(差异|影响|关系|关联)/iu.test(body)) {
-      body = body.replace(/((?:不显著|未达到显著|p\s*[>＞]\s*0?\.05)[^。]{0,16})(?:说明|表明|证明|可见)[^。]{0,10}(?:没有|不存在|无)(差异|影响|关系|关联)/giu, '$1说明现有样本尚不足以排除零假设（不能直接断言无$2）');
-      repairs.push(`章节「${sec.title}」修正 p 值不显著等同于无差异措辞`);
-    }
-    if (/(聚类|分类|分群)[^。]{0,24}(合理|有效|效果良好|区分度)/u.test(body) && /(显著差异|差异显著|方差分析|ANOVA|F\s*检验)/iu.test(body)) {
-      body = body.replace(/方差分析|ANOVA|F\s*检验/giu, '轮廓系数与重抽样稳定性指标');
-      repairs.push(`章节「${sec.title}」修正聚类输入变量自证措辞`);
-    }
-    if (/演化|演进|动态演变|状态转移/u.test(body) && !/路径假设|情境推演/u.test(body)) {
-      body = body.replace(/演化|演进|动态演变|状态转移/gu, '结构关联（路径假设）');
-      repairs.push(`章节「${sec.title}」修正横截面数据动态演化措辞`);
-    }
-    return body === sec.body ? sec : { ...sec, body };
-  });
-
-  // 3. Ensure Abstract ends with "关键词：..."
-  reportSections = reportSections.map(sec => {
-    const node = matchBlueprintNode(sec.title);
-    if (node?.id !== 'abstract') return sec;
-    if (!/^关键词[:：]/mu.test(sec.body)) {
-      repairs.push('摘要末尾补齐标准「关键词：」行');
-      return {
-        ...sec,
-        body: `${sec.body.trim()}\n关键词：正大杯市场调查、分层PPS抽样、体验评价量表、列联与相关检验、循证决策建议`,
-      };
-    }
-    return sec;
-  });
-
-  // 4. Ensure every chart/table block in the report is cited in its section prose via [[图:id]] / [[表:id]]
+  // 2. Every chart and table placed in a section is pointed to from that section's prose.
   reportSections = reportSections.map(sec => {
     const evidenceBlocks = (sec.blocks ?? []).filter(b => b.kind === 'chart' || b.kind === 'table');
     if (!evidenceBlocks.length) return sec;
@@ -806,112 +845,20 @@ export function repairReportForFullScore(
       .map(b => `[[${b.kind === 'chart' ? '图' : '表'}:${b.id}]]`)
       .filter(token => !sec.body.includes(token) && !(sec.blocks ?? []).some(b => b.kind === 'paragraph' && b.text.includes(token)));
     if (!missingTokens.length) return sec;
-    repairs.push(`章节「${sec.title}」补齐图表正文互证引用 ${missingTokens.join('、')}`);
+    repairs.push(`章节「${sec.title}」补齐图表引用 ${missingTokens.join('、')}`);
     const prefix = /^\s*【教学模拟数据】/u.test(sec.body)
-      ? sec.body.replace(/^(\s*【教学模拟数据】[^\n]*\n?)/u, `$1本节核心统计证据详见${missingTokens.join('与')}。\n`)
-      : `本节核心统计证据详见${missingTokens.join('与')}。\n${sec.body}`;
+      ? sec.body.replace(/^(\s*【教学模拟数据】[^\n]*\n?)/u, `$1本节统计证据见${missingTokens.join('与')}。\n`)
+      : `本节统计证据见${missingTokens.join('与')}。\n${sec.body}`;
     return { ...sec, body: prefix };
   });
 
-  // 5. Ensure data.cleaning explicitly records valid sample count (641) and valid recovery rate (94.4%)
-  reportSections = reportSections.map(sec => {
-    const node = matchBlueprintNode(sec.title);
-    if (node?.id === 'data.cleaning') {
-      const hasValidCount = /有效(?:问卷|样本|回收)[^。；\n]{0,30}?[0-9０-９]+/u.test(sec.body);
-      const hasValidRate = /有效(?:回收)?率[^。；\n]{0,20}?[0-9０-９]+(?:\.[0-9]+)?\s*[%％]/u.test(sec.body);
-      if (!hasValidCount || !hasValidRate) {
-        repairs.push('「正式调查数据处理」补齐有效样本量（641份）与有效回收率（94.4%）精确记录');
-        return {
-          ...sec,
-          body: `${sec.body.trim()}\n正式调查累计发放问卷 679 份，经注意力甄别题、作答时长阈值、逻辑矛盾校验、规律作答筛查与缺失值处理后，最终获得有效样本 641 份，有效回收率为 94.4%。`,
-        };
-      }
-    }
-    if (node?.id === 'data.pilot') {
-      const hasPilotCount = /(预调查|预调研|预测试)[^。\n]{0,60}?[0-9０-９]+/u.test(sec.body);
-      if (!hasPilotCount) {
-        repairs.push('「预调查」补齐预调查样本量（68份）与信效度初检记录');
-        return {
-          ...sec,
-          body: `预调查阶段共发放并回收有效测试问卷 68 份，预测试量表 Cronbach α 为 0.876，KMO 值为 0.841。\n${sec.body.trim()}`,
-        };
-      }
-    }
-    if (node?.id === 'conclusion.suggestions') {
-      const hasActor = /负责|牵头|执行主体|主办方|运营方|部门|学校|高校|政府|企业|平台|社区|协会|委员会|团队/u.test(sec.body);
-      const hasMetric = /评估|考核|监测|指标|目标值|KPI|复盘|跟踪/u.test(sec.body);
-      if (!hasActor || !hasMetric) {
-        repairs.push('「对策建议」补齐 3W1H 执行主体与量化评估指标说明');
-        return {
-          ...sec,
-          body: `${sec.body.trim()}\n上述对策由行业主管部门、核心运营方与数字化平台团队作为执行主体协同推进，并建立季度脉冲监测指标与核销率考核体系进行动态复盘。`,
-        };
-      }
-    }
-    if (node?.id === 'conclusion.limits') {
-      const hasLimits = /局限|不足之处|研究不足|适用边界|外推|未来研究|研究展望/u.test(sec.body);
-      if (!hasLimits) {
-        repairs.push('「研究局限与未来展望」补齐横截面调查适用边界与外推局限说明');
-        return {
-          ...sec,
-          body: `${sec.body.trim()}\n本研究存在一定研究局限与适用边界：横截面问卷数据仅反映受访者当期陈述性偏好，向更广泛区域外推时需结合纵向面板追踪与后台核销行为日志开展未来研究验证。`,
-        };
-      }
-    }
-    return sec;
-  });
-
-  // 5b. Ensure design.sampling has a table caption line so samplingWording & samplingTable pass without adding an un-receipted body block
-  const frameResult = (content.quality?.results ?? []).find(r => r.method === 'sampling-frame');
-  if (frameResult) {
-    reportSections = reportSections.map(sec => {
-      const node = matchBlueprintNode(sec.title);
-      if (node?.id !== 'design.sampling') return sec;
-      const hasTableCaption = sec.body.split(/\r?\n/u).some(l => /^表\s*[0-9０-９]+/u.test(l.trim()));
-      if (hasTableCaption) return sec;
-      repairs.push('「抽样设计」补齐分层抽样框入样单位表题与附录互证指引');
-      return {
-        ...sec,
-        body: `${sec.body.trim()}\n表 2-1 ${frameResult.title || '双轨分层抽样各阶段入样分配表'}\n各阶段抽样框与入样单位核对详见附录抽样框账本。`,
-      };
-    });
-  }
-
-  // 6. Ensure all verified references [1]..[N] are cited in intro.background / intro.literature
-  const refSectionLinesCount = reportSections
-    .filter(s => /参考文献/u.test(s.title))
-    .flatMap(s => s.body.split(/\r?\n/u).map(l => l.trim()).filter(Boolean)).length;
-  const totalRefs = (content.references ?? []).length || refSectionLinesCount;
-  if (totalRefs > 0) {
-    const allProse = reportSections.filter(s => !/参考文献/u.test(s.title)).map(s => s.body).join('\n');
-    const missingRefNums: number[] = [];
-    for (let i = 1; i <= totalRefs; i++) {
-      const re = new RegExp(`\\[\\s*${i}\\s*\\]`, 'u');
-      if (!re.test(allProse)) missingRefNums.push(i);
-    }
-    if (missingRefNums.length > 0) {
-      const targetNodeId = reportSections.some(s => matchBlueprintNode(s.title)?.id === 'intro.literature')
-        ? 'intro.literature'
-        : 'intro.background';
-      repairs.push(`「${targetNodeId === 'intro.literature' ? '文献综述' : '研究背景'}」补齐顺序编码文献引用 ${missingRefNums.map(n => `[${n}]`).join('')}`);
-      reportSections = reportSections.map(sec => {
-        const node = matchBlueprintNode(sec.title);
-        if (node?.id !== targetNodeId) return sec;
-        return {
-          ...sec,
-          body: `${sec.body.trim()} 本研究在构念界定、分层抽样设计与多元统计建模上综合借鉴了既有权威文献的理论与方法成果 ${missingRefNums.map(n => `[${n}]`).join('')}。`,
-        };
-      });
-    }
-  }
-
-  // 7. Ensure simulated data marker is present on sections with simulated evidence blocks
+  // 3. A section resting on simulated results says so.
   const simulatedIds = new Set((content.quality?.results ?? []).filter(r => r.classification === 'simulated').map(r => r.id));
   if (simulatedIds.size > 0) {
     reportSections = reportSections.map(sec => {
       const usesSimulated = (sec.blocks ?? []).some(b => b.evidenceId && simulatedIds.has(b.evidenceId));
       if (usesSimulated && !/【教学模拟数据/u.test(sec.body + sec.source)) {
-        repairs.push(`章节「${sec.title}」补齐【教学模拟数据】合规声明`);
+        repairs.push(`章节「${sec.title}」补齐【教学模拟数据】声明`);
         return {
           ...sec,
           body: `【教学模拟数据：以下统计结果用于方法与流程演示，不作为实际调查结论】\n${sec.body}`,
@@ -987,7 +934,11 @@ export async function generateFullReportWithAgent(input: {
   const startedAt = Date.now();
   const topic = decomposeContestTopic(input.topic, input.existingDesign);
   const pack = await forgeNationalAwardPack(input.topic, input.existingDesign);
-  const mode = input.mode ?? 'demonstration';
+  // The pack's results are simulated, so the report is a teaching demonstration whatever mode was asked for: a
+  // simulated sample is never written up as a plan's targets or as verified findings.
+  const packResults = pack.report.quality?.results ?? [];
+  const mode: ProjectResearchMode =
+    packResults.length && packResults.every(r => r.classification === 'simulated') ? 'demonstration' : (input.mode ?? 'demonstration');
   const contract = buildSkillPackContract(pack, topic, mode);
 
   // Preserve baseline verified prose as fallback in case a network timeout occurs on a single section
@@ -1006,7 +957,7 @@ export async function generateFullReportWithAgent(input: {
       const bNode = blueprintNode(nodeId);
       fallbackSections.set(
         nodeId,
-        `【教学模拟数据】本节围绕「${topic.shortTitle}」执行「${bNode.title}」环节的循证分析（${bNode.purpose}）。基于有效样本 641 份（有效回收率 94.4%，预调查 68 份，五维量表 Cronbach α = 0.892，分层抽样设计效应 DEFF = 1.65），相关指标与统计检验详见本报告已登记结果快照与对应图表。`,
+        `【教学模拟数据】本节「${bNode.title}」尚无正文：模型没有返回可用段落。本节应写：${bNode.purpose}。`,
       );
     }
   }
@@ -1018,6 +969,9 @@ export async function generateFullReportWithAgent(input: {
     pending: false,
     placed: results.map(r => r.id),
   };
+  const methods = [...new Set(results.map(r => r.method))];
+  // The kept paragraphs of each drafted section as the model wrote them, with the facts they cite: a revision starts here.
+  const drafted = new Map<string, { drafts: string[]; tokens: SectionTokenMap }>();
 
   const wantedNodes = input.sectionNodes
     ? new Set(input.sectionNodes)
@@ -1079,9 +1033,9 @@ export async function generateFullReportWithAgent(input: {
   ) => {
     let sectionId = `bp-${nodeId}`;
     const source =
-      wave === 1
-        ? `证见全流程 Agent · DeepSeek 实时拟稿（绑定 ${trace.citedFacts.length} 项事实）`
-        : `证见全流程 Agent · DeepSeek 综合拟稿（绑定 ${trace.citedFacts.length} 项事实）`;
+      trace.status === 'repaired_fallback'
+        ? '教学模拟样板正文（模型没有返回可用段落）'
+        : `证见全流程 Agent · 模型${wave === 1 ? '实时' : '综合'}拟稿（绑定 ${trace.citedFacts.length} 项事实）`;
     workingReport = {
       ...workingReport,
       report: workingReport.report.map(sec => {
@@ -1122,11 +1076,14 @@ export async function generateFullReportWithAgent(input: {
     });
 
     let lastError: Error | null = null;
+    let feedback = '';
+    const context = { methods, planSection: PLAN_NODE.test(nodeId), pending: awaitsResults(nodeId, results) };
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const llmRes = await callLlmForSection(prompt, input.llm, input.fetcher);
-        const hydrated = parseAndHydrateSectionDraft(llmRes.content, tokens);
+        const llmRes = await callLlmForSection(prompt + feedback, input.llm, input.fetcher);
+        const hydrated = parseAndHydrateSectionDraft(llmRes.content, tokens, context);
         if (hydrated.paragraphs.length > 0) {
+          drafted.set(nodeId, { drafts: hydrated.drafts, tokens });
           const body = hydrated.paragraphs.join('\n\n');
           const trace: SectionGenerationTrace = {
             nodeId,
@@ -1136,6 +1093,7 @@ export async function generateFullReportWithAgent(input: {
             rawParagraphs: hydrated.paragraphs.length + hydrated.droppedParagraphs,
             keptParagraphs: hydrated.paragraphs.length,
             droppedParagraphs: hydrated.droppedParagraphs,
+            dropReasons: hydrated.dropReasons,
             citedFacts: hydrated.citedFacts,
             citedExhibits: hydrated.citedExhibits,
             citedReferences: hydrated.citedReferences,
@@ -1145,7 +1103,9 @@ export async function generateFullReportWithAgent(input: {
           commitSectionToReport(nodeId, title, body, wave, trace);
           return { nodeId, body, trace };
         }
-        lastError = new Error(`All paragraphs dropped (dropped=${hydrated.droppedParagraphs})`);
+        lastError = new Error(`All paragraphs dropped: ${hydrated.dropReasons.join('; ')}`);
+        // The second attempt is told why the first was refused.
+        feedback = `\n【上一稿全部段落被丢弃，原因：${[...new Set(hydrated.dropReasons)].join('；')}。请严格按规则重写。】`;
       } catch (err) {
         lastError = err as Error;
       }
@@ -1178,9 +1138,46 @@ export async function generateFullReportWithAgent(input: {
   const wave2Outputs = await runWithConcurrency(wave2Nodes, Math.min(concurrency, 4), nodeId => draftOneSection(nodeId, 2));
   traces.push(...wave2Outputs.map(o => o.trace));
 
-  // Stage 06: Benchmark & 6-Advisor Self-Repair Loop
+  // Stage 06: the report check reads each drafted section on its own. A flagged section goes back to the model once,
+  // with the problems named, and the revision is kept only when it leaves fewer of them. Nothing is patched by string
+  // replacement, and the score reported is the score of the text as it stands.
   const benchmarkBeforeRepair = benchmarkReport(workingReport);
-  const { content: repairedReport, repairs } = repairReportForFullScore(workingReport, fallbackSections);
+  const revisionTokens: number[] = [];
+  const reviseSection = async (nodeId: string): Promise<string | null> => {
+    const entry = drafted.get(nodeId);
+    const section = workingReport.report.find(s => matchBlueprintNode(s.title)?.id === nodeId);
+    if (!entry || !section) return null;
+    // A missing caption belongs to an exhibit, not to the prose, so it is not the writer's to revise.
+    const flagged = (content: EditorContent) => sectionIssues(content, section.id, benchmarkReport).filter(i => i.check.id !== 'captions');
+    const issues = flagged(workingReport);
+    if (!issues.length) return null;
+    try {
+      const problems = issues.map(i => `${i.check.label}：${i.check.detail}`);
+      const llmRes = await callLlmForSection(buildRevisionPrompt(section.title, entry.drafts, problems, entry.tokens), input.llm, input.fetcher);
+      revisionTokens.push(llmRes.usage?.total ?? 0);
+      const revised = parseAndHydrateSectionDraft(llmRes.content, entry.tokens, {
+        methods,
+        planSection: PLAN_NODE.test(nodeId),
+        pending: awaitsResults(nodeId, results),
+      });
+      if (!revised.paragraphs.length) return null;
+      const candidate: EditorContent = {
+        ...workingReport,
+        report: workingReport.report.map(s => (s.id === section.id ? { ...s, body: revised.paragraphs.join('\n\n') } : s)),
+      };
+      const left = flagged(candidate);
+      if (left.length >= issues.length) return null;
+      workingReport = candidate;
+      drafted.set(nodeId, { drafts: revised.drafts, tokens: entry.tokens });
+      const cleared = issues.filter(i => !left.some(l => l.check.id === i.check.id)).map(i => i.check.label);
+      return `章节「${section.title}」按审稿意见修订：${cleared.join('、')}`;
+    } catch {
+      return null;
+    }
+  };
+  const revisionNotes = (await runWithConcurrency([...drafted.keys()], concurrency, reviseSection)).filter((n): n is string => !!n);
+  const { content: repairedReport, repairs: finishing } = finalizeReport(workingReport, fallbackSections);
+  const repairs = [...revisionNotes, ...finishing];
   input.onProgress?.({
     phase: 'repair',
     completed: completedNodes,
@@ -1194,7 +1191,7 @@ export async function generateFullReportWithAgent(input: {
   const totalParagraphsWritten = traces.reduce((acc, t) => acc + t.keptParagraphs, 0);
   const totalDroppedParagraphs = traces.reduce((acc, t) => acc + t.droppedParagraphs, 0);
   const allFacts = new Set(traces.flatMap(t => t.citedFacts));
-  const totalTokens = traces.reduce((acc, t) => acc + (t.tokens?.total ?? 0), 0);
+  const totalTokens = traces.reduce((acc, t) => acc + (t.tokens?.total ?? 0), 0) + revisionTokens.reduce((a, b) => a + b, 0);
   const advisorPassCount = advisorsAfterRepair.filter(a => a.issues.length === 0).length;
 
   input.onProgress?.({ phase: 'done', completed: totalNodes, total: totalNodes });
@@ -1220,6 +1217,7 @@ export async function generateFullReportWithAgent(input: {
       finalScore: benchmarkAfterRepair.score,
       advisorPassCount,
       advisorTotalCount: advisorsAfterRepair.length,
+      revisedSections: revisionNotes.length,
     },
   };
 }

@@ -229,7 +229,7 @@ test('cluster self-validation, cross-sectional evolution, simulated robustness a
   const run = body => { content.report = [section('s', '一、分析', body)]; return benchmarkReport(content); };
   let report = run('对四类群体的聚类变量做方差分析，各变量差异显著，说明聚类效果良好。\n用户的消费意愿沿着认知、尝试、依赖三个阶段演化。\n基于模拟数据重复 500 次，结果的稳健性检验通过。');
   for (const id of ['clusterCircular', 'dynamicClaim', 'simulationRobust']) assert.equal(check(report, id).status, 'fail', id);
-  report = run('聚类方案在 200 次重抽样中保持稳定，未参与聚类的消费频率在各类间分布不同。\n根据横截面结果，我们提出认知、尝试、依赖三阶段演化的路径假设，有待追踪验证。\n剔除作答过短样本后重新估计，系数方向与大小基本不变，稳健性检验通过。');
+  report = run('聚类方案在 200 次重抽样中保持稳定，未参与聚类的消费频率在各类间分布不同。\n根据横截面结果，我们提出认知、尝试、依赖三阶段演化的路径假设，有待追踪验证。\n剔除作答过短样本后重新估计，系数方向与大小基本不变，稳健性检验通过。\n本研究为教学模拟演示，全部数据为合成数据，不能当作真实数据的稳健性检验。');
   for (const id of ['clusterCircular', 'dynamicClaim', 'simulationRobust']) { assert.equal(check(report, id).status, 'na', id); assert.match(check(report, id).detail, /未见此问题/, id); }
   content.report = [section('d', '（三）抽样设计', '本次采用多阶段随机抽样，通过问卷星在朋友圈和社群转发发放问卷。')];
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'fail');
