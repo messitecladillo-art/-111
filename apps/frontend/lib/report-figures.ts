@@ -70,7 +70,7 @@ export const valueAxis = (name: string, extra: Record<string, unknown> = {}) => 
 const italicN = { formatter: (v: string) => v.replace(/（n = /gu, '（{n|n} = '), rich: { n: { ...small, fontStyle: 'italic' as const } } };
 export const categoryAxis = (labels: string[], horizontal: boolean) => ({
   type: 'category' as const, data: labels, axisLine: { show: true, lineStyle: { color: AXIS } }, axisTick: { show: false },
-  axisLabel: { ...small, interval: 0, ...italicN, ...(horizontal ? {} : { overflow: 'break' as const, width: Math.max(80, 820 / Math.max(1, labels.length)) }) },
+  axisLabel: { ...small, interval: 0, ...italicN, ...(horizontal ? {} : { overflow: 'breakAll' as const, width: Math.max(64, Math.floor(700 / Math.max(1, labels.length))) }) },
   ...(horizontal ? { inverse: true } : {}),
 });
 // Horizontal value axes carry their title underneath, clear of the value labels at the bar ends.
@@ -155,7 +155,7 @@ function heatmap(c: Cells, accent: string): FigurePlan {
   return { kind: 'heatmap', height: rowsHeight(c.rows.length, 52, 120 + 26 * lines), option: {
     ...base(),
     grid: grid({ top: 24, right: 24 }),
-    xAxis: { type: 'category', data: c.cols, position: 'top', axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...small, fontSize: 18, interval: 0, overflow: 'break', width: Math.max(40, cellWidth), lineHeight: 24 } },
+    xAxis: { type: 'category', data: c.cols, position: 'top', axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...small, fontSize: 18, interval: 0, overflow: 'breakAll', width: Math.max(40, cellWidth), lineHeight: 24 } },
     yAxis: { type: 'category', data: withN(c), inverse: true, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...small, ...italicN } },
     visualMap: { show: false, min: 0, max, dimension: 2, inRange: { color: [low, high] } },
     series: [{

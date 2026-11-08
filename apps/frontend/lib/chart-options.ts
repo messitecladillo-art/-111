@@ -46,7 +46,7 @@ export function buildChartOption(snapshot: ChartSnapshot, kind: ChartKind, style
   };
   const label = { show: style.showLabels, color: style.ink, fontSize: style.fontSize, formatter: (p: { value: unknown }) => typeof p.value === 'number' ? fmt(p.value) : '' };
   const series: SeriesOption[] = [];
-  const categoryAxis = (labels: string[], vertical = false) => ({ ...axis, type: 'category' as const, data: labels, name: xName, axisLabel: { ...axis.axisLabel, interval: 0, hideOverlap: true, overflow: 'break' as const, width: vertical ? 160 : 120, rotate: !vertical && labels.length > 10 ? 60 : 0 } });
+  const categoryAxis = (labels: string[], vertical = false) => ({ ...axis, type: 'category' as const, data: labels, name: xName, axisLabel: { ...axis.axisLabel, interval: 0, hideOverlap: true, overflow: 'breakAll' as const, width: vertical ? 160 : 120, rotate: !vertical && labels.length > 10 ? 60 : 0 } });
   const points = (name: string, data: [number, number][], identity: string): SeriesOption => ({ type: 'scatter', name, data, symbolSize: style.pointSize, itemStyle: { color: color(identity), opacity: .75 }, label: { ...label, formatter: p => Array.isArray(p.value) ? `(${fmt(Number(p.value[0]))}, ${fmt(Number(p.value[1]))})` : '' } });
 
   if (snapshot.method === 'frequency') {

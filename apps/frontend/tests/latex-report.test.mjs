@@ -139,3 +139,14 @@ test('wrap expansion still enforces the final generated body capacity without tr
   assert.throws(()=>generateLatexBody(content),/120,000/);
   assert.equal(content.report[0].body,'A'.repeat(12000));
 });
+
+test('formula blocks the platform writes export to LaTeX, Greek letters included', () => {
+  const content = createEditorContent();
+  content.report = [{ id: 's', title: '一、分析', body: '两组比较。', source: '', blocks: [{ id: 'f', kind: 'formula', text: '\\nu=\\frac{\\left(s_1^2/n_1+s_2^2/n_2\\right)^2}{\\frac{(s_1^2/n_1)^2}{n_1-1}+\\frac{(s_2^2/n_2)^2}{n_2-1}}', evidenceId: '', valueColumn: 1 }] }];
+  const body = generateLatexBody(content);
+  assert.match(body, /\\nu=/u);
+  for (const letter of ['xi', 'tau', 'phi', 'psi', 'Phi']) {
+    content.report[0].blocks[0].text = `\\${letter}=1`;
+    assert.match(generateLatexBody(content), new RegExp(`\\\\${letter}=1`, 'u'), letter);
+  }
+});

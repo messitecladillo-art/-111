@@ -4,6 +4,7 @@ import {
   PLAN_NODE,
   awaitsResults,
   buildSectionTokens,
+  categoryLabels,
   buildSkillPackContract,
   generateFullReportWithAgent,
   parseAndHydrateSectionDraft,
@@ -145,6 +146,37 @@ test('each section is written under its advisor: the advisor\'s skill and rules 
   assert.match(sampling, /不借用随机抽样的名称/u, 'the advisor\'s own rule is in the prompt');
   assert.match(prompts.find(p => p.includes('节点 ID：compare.tests')), /「统计建模顾问」/u);
   assert.deepEqual(Object.fromEntries(res.traces.map(t => [t.nodeId, t.advisor])), { 'design.sampling': 'design', 'compare.tests': 'modeling' });
+});
+
+test('a registered category may carry digits in its name; other digits are still refused', () => {
+  const results = [{ rows: [['60–70岁', 120, 45.2], ['71岁及以上', 146, 54.8]] }];
+  const design = { questions: [{ choices: [{ code: '1', label: '9–12 元' }, { code: '2', label: '13–18 元' }] }] };
+  const labels = categoryLabels(results, design);
+  assert.deepEqual(new Set(labels), new Set(['71岁及以上', '60–70岁', '13–18 元', '9–12 元']));
+  assert.ok(labels.every((l, i) => i === 0 || labels[i - 1].length >= l.length), 'longest names first, so a short name never cuts a longer one');
+  const named = parseAndHydrateSectionDraft(draft('「60–70岁」受访者中选择「9–12 元」档位的比例最高，为{F1}。'), tokens, { ...results, methods: [], planSection: false, labels });
+  assert.equal(named.paragraphs.length, 1);
+  assert.match(named.paragraphs[0], /60–70岁.*9–12 元.*94\.4%/u);
+  const invented = parseAndHydrateSectionDraft(draft('「60–70岁」受访者中约有 45 人选择「9–12 元」档位。'), tokens, { methods: [], planSection: false, labels });
+  assert.deepEqual(invented.dropReasons, ['占位符之外写了阿拉伯数字']);
+});
+
+test('in a project, only the sections asked for are drafted; the others keep their text, figures and tables', async () => {
+  const pack = await forgeNationalAwardPack('城市社区嵌入式养老服务的使用体验与满意度调查');
+  const report = structuredClone(pack.report);
+  const compare = report.report.find(s => /差异检验/u.test(s.title));
+  compare.body = '【教学模拟数据，不能作为实际调查结果】\n这是作者已经写好的比较一节。';
+  compare.blocks = [...(compare.blocks ?? []), { id: 'blk-own-paragraph', kind: 'paragraph', text: '作者自己的一段解读。', evidenceId: '', valueColumn: 1 }];
+  const fetcher = async () => new Response(JSON.stringify({ choices: [{ message: { content: draft('本节说明调查对象的界定与纳入范围。') } }] }), { status: 200 });
+  const res = await generateFullReportWithAgent({ topic: '城市社区嵌入式养老服务的使用体验与满意度调查', base: { design: pack.design, dataset: pack.dataset, report }, llm: { apiKey: 'sk-test-mock', concurrency: 2 }, sectionNodes: ['design.population', 'plan.measures'], fetcher });
+  const kept = res.report.report.find(s => s.id === compare.id);
+  assert.equal(kept.body, compare.body, 'a section not asked for keeps its text');
+  assert.ok(kept.blocks.some(b => b.id === 'blk-own-paragraph'), 'and its own paragraphs');
+  const drafted = res.report.report.find(s => /调查对象/u.test(s.title));
+  assert.ok(drafted.body.includes('纳入范围'), 'a section asked for is drafted');
+  assert.equal(drafted.source, report.report.find(s => s.id === drafted.id).source, 'its printed source stays the author\'s: no drafting note in the submission');
+  assert.ok(res.report.report.some(s => /改进措施|方案设计/u.test(s.title) && s.body.includes('纳入范围')), 'a section asked for but missing is added and drafted');
+  assert.deepEqual(res.report.quality.results.map(r => r.id), pack.report.quality.results.map(r => r.id), 'the project\'s results are the ones written from');
 });
 
 test('a revision that leaves the problem standing is not kept', async () => {

@@ -66,7 +66,7 @@ function latexBlocks(blocks: ReportBlock[], content: EditorContent, refs: Cites 
   return blocks.map(block=>{
     if(block.kind==='formula'){
       const commands=[...block.text.matchAll(/\\([A-Za-z]+)/g)].map(m=>m[1]);
-      if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text',
+      if(commands.some(cmd=>!['frac','sqrt','sum','prod','int','iint','iiint','lim','log','ln','sin','cos','tan','exp','alpha','beta','gamma','delta','mu','sigma','theta','lambda','pi','rho','eta','epsilon','chi','omega','Delta','Sigma','Omega','zeta','iota','kappa','nu','xi','tau','upsilon','phi','varphi','psi','vartheta','varpi','varrho','varsigma','Gamma','Theta','Lambda','Xi','Pi','Upsilon','Phi','Psi','cdot','times','le','ge','neq','approx','pm','in','infty','left','right','overline','underline','hat','bar','vec','mathrm','mathbf','text',
         // Math-mode commands the method write-ups use, each also on the compiler's list (tools/latex.py COMMANDS).
         'varepsilon','lVert','rVert','lvert','rvert','max','min','ne','qquad','quad','dfrac','tfrac','operatorname','sim','tilde','widehat','dots','cdots','ldots'].includes(cmd)))throw Error('公式块包含非数学命令，请使用 LaTeX 工作台检查。');
       return `\\[\n${block.text}\n\\]`;

@@ -18,7 +18,7 @@ import type { EditorContent, ReportSection } from '../editor-model.ts';
 import type { Questionnaire } from '../questionnaire.ts';
 import { type BenchmarkResult, benchmarkReport } from '../report-benchmark.ts';
 import { blueprintNode, blueprintOutline, matchBlueprintNode } from '../report-blueprint.ts';
-import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
+import { METHOD_LABELS, suggestedNode, targetSection } from '../report-placement.ts';
 import type { ReportBlock, ResultSnapshot } from '../research-quality.ts';
 import { ADVISORS, type AdvisorReading, advisorForNode, advisorReading, sectionIssues } from './advisors.ts';
 import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline } from './draft.ts';
@@ -228,6 +228,18 @@ const PLANNED = /拟|计划|将(?:采用|构建|估计|报告|检验|开展)|尚
 export function awaitsResults(nodeId: string, results: readonly ResultSnapshot[]): boolean {
   return EVIDENCE_NODES.has(nodeId) && !results.some(r => suggestedNode(r) === nodeId);
 }
+
+/**
+ * Category names that carry digits ("60–70岁", "9–12 元", "第 1 组"): names, not statistics. They come from the registered
+ * results' rows and the questionnaire's options; the digit check reads past them, longest first.
+ */
+export function categoryLabels(results: readonly ResultSnapshot[], design?: Questionnaire | null): string[] {
+  const names = new Set<string>();
+  for (const r of results) for (const row of r.rows) for (const cell of row) if (typeof cell === 'string' && DIGIT_RE.test(cell) && cell.trim().length >= 2 && cell.length <= 40) names.add(cell.trim());
+  for (const q of design?.questions ?? []) for (const c of q.choices ?? []) if (DIGIT_RE.test(c.label) && c.label.length <= 40) names.add(c.label.trim());
+  return [...names].sort((a, b) => b.length - a.length);
+}
+const withoutNames = (text: string, names: readonly string[] = []) => names.reduce((t, name) => t.split(name).join('□'), text);
 
 /** The analyses a text claims that none of the registered methods backs. */
 export function unbackedAnalyses(text: string, methods: readonly string[]): string[] {
@@ -664,7 +676,7 @@ export function parseAndHydrateSectionDraft(
    * What the section may claim: the registered methods, whether the section sets out the plan, and whether it is a
    * results section still awaiting its results, where an analysis may be named as planned but not as done.
    */
-  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean },
+  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean; labels?: readonly string[] },
 ): {
   paragraphs: string[];
   /** The kept paragraphs as the model wrote them, placeholders unexpanded: what a revision round starts from. */
@@ -717,14 +729,16 @@ export function parseAndHydrateSectionDraft(
     const tokensFound = [...sanitized.matchAll(PLACEHOLDER_RE)].map(m => m[1]);
     const unknownToken = tokensFound.some(id => !factMap.has(id) && !exhibitMap.has(id) && !refMap.has(id));
     const withoutPlaceholders = sanitized.replace(PLACEHOLDER_RE, '');
+    // A registered category's name may carry digits; only the digits outside such names are numbers the model wrote.
+    const numbersOnly = withoutNames(withoutPlaceholders, context?.labels);
 
     const planned = !!context && (context.planSection || (!!context.pending && PLANNED.test(withoutPlaceholders)));
     const unbacked = context && !planned ? unbackedAnalyses(withoutPlaceholders, context.methods) : [];
     const reason = unknownToken
       ? '引用了不存在的占位符'
-      : DIGIT_RE.test(withoutPlaceholders)
+      : DIGIT_RE.test(numbersOnly)
         ? '占位符之外写了阿拉伯数字'
-        : CN_QUANTITY.test(withoutPlaceholders)
+        : CN_QUANTITY.test(numbersOnly)
           ? '用汉字写了数量'
           : unbacked.length
             ? `写了未登记的分析（${unbacked.join('、')}）`
@@ -822,8 +836,11 @@ export async function callLlmForSection(
 export function finalizeReport(
   content: EditorContent,
   fallbackSections: Map<string, string>,
+  /** The blueprint sections this run drafted: only they are finished here; the author's other sections stay as they are. */
+  drafted?: ReadonlySet<string>,
 ): { content: EditorContent; repairs: string[] } {
   const repairs: string[] = [];
+  const ours = (sec: ReportSection) => !drafted || drafted.has(matchBlueprintNode(sec.title)?.id ?? '');
   let reportSections: ReportSection[] = content.report.map(s => ({
     ...s,
     blocks: s.blocks ? [...s.blocks] : undefined,
@@ -832,8 +849,10 @@ export function finalizeReport(
   // 1. A writable section with no prose takes its fallback.
   reportSections = reportSections.map(sec => {
     const node = matchBlueprintNode(sec.title);
-    if (!node || node.kind === 'chapter' || node.kind === 'references') return sec;
-    const hasProse = sec.body.trim().length > 40 || (sec.blocks ?? []).some(b => b.kind === 'paragraph' && b.text.trim().length > 40);
+    if (!node || node.kind === 'chapter' || node.kind === 'references' || !ours(sec)) return sec;
+    // Any written line counts, however short; a section holding only its simulated-data mark has none.
+    const prose = (text: string) => text.split(/\r?\n/u).some(line => line.trim() && !/^\s*【教学模拟数据[^】]*】\s*$/u.test(line));
+    const hasProse = prose(sec.body) || (sec.blocks ?? []).some(b => b.kind === 'paragraph' && prose(b.text));
     if (!hasProse && fallbackSections.has(node.id)) {
       repairs.push(`章节「${sec.title}」回填样板段落`);
       return { ...sec, body: fallbackSections.get(node.id)! };
@@ -844,14 +863,14 @@ export function finalizeReport(
   // 2. Every chart and table placed in a section is pointed to from that section's prose.
   reportSections = reportSections.map(sec => {
     const evidenceBlocks = (sec.blocks ?? []).filter(b => b.kind === 'chart' || b.kind === 'table');
-    if (!evidenceBlocks.length) return sec;
+    if (!evidenceBlocks.length || !ours(sec)) return sec;
     const missingTokens = evidenceBlocks
       .map(b => `[[${b.kind === 'chart' ? '图' : '表'}:${b.id}]]`)
       .filter(token => !sec.body.includes(token) && !(sec.blocks ?? []).some(b => b.kind === 'paragraph' && b.text.includes(token)));
     if (!missingTokens.length) return sec;
     repairs.push(`章节「${sec.title}」补齐图表引用 ${missingTokens.join('、')}`);
-    const prefix = /^\s*【教学模拟数据】/u.test(sec.body)
-      ? sec.body.replace(/^(\s*【教学模拟数据】[^\n]*\n?)/u, `$1本节统计证据见${missingTokens.join('与')}。\n`)
+    const prefix = /^\s*【教学模拟数据[^】]*】/u.test(sec.body)
+      ? sec.body.replace(/^(\s*【教学模拟数据[^】]*】[^\n]*\n?)/u, `$1本节统计证据见${missingTokens.join('与')}。\n`)
       : `本节统计证据见${missingTokens.join('与')}。\n${sec.body}`;
     return { ...sec, body: prefix };
   });
@@ -861,7 +880,7 @@ export function finalizeReport(
   if (simulatedIds.size > 0) {
     reportSections = reportSections.map(sec => {
       const usesSimulated = (sec.blocks ?? []).some(b => b.evidenceId && simulatedIds.has(b.evidenceId));
-      if (usesSimulated && !/【教学模拟数据/u.test(sec.body + sec.source)) {
+      if (usesSimulated && ours(sec) && !/【教学模拟数据/u.test(sec.body + sec.source)) {
         repairs.push(`章节「${sec.title}」补齐【教学模拟数据】声明`);
         return {
           ...sec,
@@ -929,6 +948,11 @@ export async function generateFullReportWithAgent(input: {
   topic?: string;
   existingDesign?: Questionnaire | null;
   existingReport?: EditorContent | null;
+  /**
+   * A project to write in: its questionnaire, its data, and its report with the results already placed. Without it the
+   * pipeline writes over its own simulated teaching package. Sections not asked for keep everything they hold.
+   */
+  base?: { design: Questionnaire; dataset: HanchaoBenchmarkPack['dataset']; report: EditorContent };
   mode?: ProjectResearchMode;
   llm: LlmProviderConfig;
   sectionNodes?: readonly string[];
@@ -936,8 +960,10 @@ export async function generateFullReportWithAgent(input: {
   fetcher?: typeof globalThis.fetch;
 }): Promise<FullReportGenerationResult> {
   const startedAt = Date.now();
-  const topic = decomposeContestTopic(input.topic, input.existingDesign);
-  const pack = await forgeNationalAwardPack(input.topic, input.existingDesign);
+  const design = input.base?.design ?? input.existingDesign;
+  const topic = decomposeContestTopic(input.topic, design);
+  const forged = await forgeNationalAwardPack(input.topic, design);
+  const pack: HanchaoBenchmarkPack = input.base ? { ...forged, design: input.base.design, dataset: input.base.dataset, report: input.base.report } : forged;
   // The pack's results are simulated, so the report is a teaching demonstration whatever mode was asked for: a
   // simulated sample is never written up as a plan's targets or as verified findings.
   const packResults = pack.report.quality?.results ?? [];
@@ -952,7 +978,8 @@ export async function generateFullReportWithAgent(input: {
     const node = matchBlueprintNode(sec.title);
     if (node) {
       existingByNode.set(node.id, sec);
-      fallbackSections.set(node.id, sec.body);
+      // An empty section is no fallback: the generic note below says plainly that it has no text yet.
+      if (sec.body.trim()) fallbackSections.set(node.id, sec.body);
     }
   }
   // Ensure every blueprint node in WAVE_1 + WAVE_2 has a deterministic fallback paragraph
@@ -974,6 +1001,7 @@ export async function generateFullReportWithAgent(input: {
     placed: results.map(r => r.id),
   };
   const methods = [...new Set(results.map(r => r.method))];
+  const labels = categoryLabels(results, pack.design);
   // The kept paragraphs of each drafted section as the model wrote them, with the facts they cite: a revision starts here.
   const drafted = new Map<string, { drafts: string[]; tokens: SectionTokenMap }>();
 
@@ -995,7 +1023,21 @@ export async function generateFullReportWithAgent(input: {
     return node?.kind === 'references' || node?.kind === 'appendix' || /^(参考文献|附录)/u.test(sec.title);
   });
 
-  const materializedSections: ReportSection[] = [
+  // A project keeps its own report: sections asked for are cleared for drafting (their figures, tables and formulas stay),
+  // a missing one is added where the blueprint puts it, and every other section stays as it is.
+  let baseReport: EditorContent | null = null;
+  if (input.base) {
+    let working = input.base.report;
+    for (const nodeId of wantedNodes) working = targetSection(working, nodeId).content;
+    baseReport = {
+      ...working,
+      report: working.report.map(sec => {
+        const node = matchBlueprintNode(sec.title);
+        return node && wantedNodes.has(node.id) ? { ...sec, body: '', blocks: sec.blocks?.filter(b => b.kind !== 'paragraph') } : sec;
+      }),
+    };
+  }
+  const materializedSections: ReportSection[] = baseReport ? baseReport.report : [
     ...outlineItems.map(({ node, title }) => {
       const existing = existingByNode.get(node.id);
       const nonParagraphBlocks = (existing?.blocks ?? []).filter(b => b.kind !== 'paragraph');
@@ -1010,7 +1052,7 @@ export async function generateFullReportWithAgent(input: {
     ...backMatterSections,
   ];
 
-  let workingReport: EditorContent = {
+  let workingReport: EditorContent = baseReport ?? {
     ...pack.report,
     report: materializedSections,
   };
@@ -1046,7 +1088,9 @@ export async function generateFullReportWithAgent(input: {
         const node = matchBlueprintNode(sec.title);
         if (node?.id === nodeId) {
           sectionId = sec.id;
-          return { ...sec, body, source };
+          // The drafting note travels with the progress event and the trace; the section's printed source stays the
+          // author's, since a submission does not print how it was drafted (the AI-use appendix says that).
+          return { ...sec, body };
         }
         return sec;
       }),
@@ -1081,7 +1125,7 @@ export async function generateFullReportWithAgent(input: {
 
     let lastError: Error | null = null;
     let feedback = '';
-    const context = { methods, planSection: PLAN_NODE.test(nodeId), pending: awaitsResults(nodeId, results) };
+    const context = { methods, planSection: PLAN_NODE.test(nodeId), pending: awaitsResults(nodeId, results), labels };
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const llmRes = await callLlmForSection(prompt + feedback, input.llm, input.fetcher);
@@ -1165,6 +1209,7 @@ export async function generateFullReportWithAgent(input: {
         methods,
         planSection: PLAN_NODE.test(nodeId),
         pending: awaitsResults(nodeId, results),
+        labels,
       });
       if (!revised.paragraphs.length) return null;
       const candidate: EditorContent = {
@@ -1182,7 +1227,7 @@ export async function generateFullReportWithAgent(input: {
     }
   };
   const revisionNotes = (await runWithConcurrency([...drafted.keys()], concurrency, reviseSection)).filter((n): n is string => !!n);
-  const { content: repairedReport, repairs: finishing } = finalizeReport(workingReport, fallbackSections);
+  const { content: repairedReport, repairs: finishing } = finalizeReport(workingReport, fallbackSections, wantedNodes);
   const repairs = [...revisionNotes, ...finishing];
   input.onProgress?.({
     phase: 'repair',

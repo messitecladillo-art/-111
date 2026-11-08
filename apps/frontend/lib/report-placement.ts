@@ -10,7 +10,7 @@ import { resultFor, type ReportBlock, type ResultSnapshot } from './research-qua
 import { methodIntro, readingParagraph, resultCaption, type ResultRefs } from './report-templates.ts';
 
 export type ExhibitKind = 'chart' | 'table';
-const DEMOGRAPHIC = /性别|年龄|年级|学历|受教育|收入|职业|身份|专业|户籍|居住|婚姻|家庭|地区|城市|民族|政治面貌/u;
+const DEMOGRAPHIC = /性别|年龄|代际|世代|年级|学历|受教育|收入|职业|身份|专业|户籍|居住|婚姻|家庭|地区|城市|民族|政治面貌/u;
 const MAX_BLOCKS = 60;
 
 /** The blueprint section a result belongs in. */

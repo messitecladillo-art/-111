@@ -164,10 +164,13 @@ export function presentResult(r: ResultSnapshot): PresentedTable {
   return special ?? { headers: [...r.headers], rows: r.rows.map(row => row.map((value, i) => formatCell(value, r.headers[i] ?? ''))), note: '' };
 }
 
-/** Relative column widths from content: CJK characters count double, so headers never wrap one character per line. */
+/**
+ * Relative column widths from content: CJK characters count double. A header may take two lines, so it asks for half
+ * its width; a cell asks for all of its own, so "第 1 类" or a percentage never breaks one character per line.
+ */
 export function columnWeights(table: PresentedTable): number[] {
   const width = (s: string) => [...s].reduce((w, c) => w + (/[⺀-￿]/.test(c) ? 2 : 1), 0);
-  return table.headers.map((header, c) => Math.min(28, Math.max(6, width(header) + 2, ...table.rows.map(row => width(row[c] ?? '') + 2))));
+  return table.headers.map((header, c) => Math.min(28, Math.max(6, Math.ceil(width(header) / 2) + 2, ...table.rows.map(row => width(row[c] ?? '') + 2))));
 }
 
 /** A one-line source note under a figure or table; method caveats are gathered once per section instead. */
