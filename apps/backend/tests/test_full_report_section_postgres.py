@@ -41,6 +41,13 @@ def operation_response(engine, user_id, scope, key):
         Operation.user_id == user_id, Operation.scope == scope, Operation.key == key)))
 
 
+def expire_email_cooldown(engine, user_id, settings, email):
+    """Advance only this synthetic account's code cooldown, preserving hourly/IP limits."""
+    scope = keyed(settings, "email-rate/v1", email)
+    as_user(engine, user_id, lambda connection: connection.execute(update(RateEvent).where(
+        RateEvent.scope == scope).values(created_at=now() - timedelta(minutes=2))))
+
+
 def replace_response(engine, user_id, scope, key, **changes):
     response = operation_response(engine, user_id, scope, key)
     as_user(engine, user_id, lambda connection: connection.execute(update(Operation).where(
@@ -242,6 +249,7 @@ def test_unknown_with_session_revocation_blocks_new_run_after_fresh_login(harnes
     stored = operation_response(pg_engine, uid, report.SCOPE, data["idempotencyKey"])
     assert stored["status"] == "outcome_unknown" and stored["content"] is None
     assert stored["errorCode"] == "session_required" and provider.calls == 1
+    expire_email_cooldown(pg_engine, uid, settings, identity["user"]["email"])
     fresh, fresh_identity = login()
     assert fresh_identity["user"]["id"] == uid
     assert fresh.get(PATH + "/" + data["idempotencyKey"]).json() == stored
@@ -288,7 +296,9 @@ def test_receipt_session_revoked_during_actual_account_lock_wait(harness, pg_eng
                 transaction.rollback()
             event.remove(pg_engine, "before_cursor_execute", waiting_for_user)
     assert denied.status_code == 401 and denied.json()["error"]["code"] == "session_required"
-    fresh, _ = login()
+    expire_email_cooldown(pg_engine, uid, settings, identity["user"]["email"])
+    fresh, fresh_identity = login()
+    assert fresh_identity["user"]["id"] == uid
     assert fresh.get(path).status_code == 200
     assert operation_response(pg_engine, uid, report.SCOPE, ready["id"]) == ready and provider.calls == 1
 
