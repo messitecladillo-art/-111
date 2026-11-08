@@ -235,4 +235,9 @@ test('cluster self-validation, cross-sectional evolution, simulated robustness a
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'fail');
   content.report = [section('d', '（三）抽样设计', '本次采用便利抽样，通过问卷星在朋友圈和社群转发发放问卷，结论不外推到总体。')];
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'na');
+  // The disclaimer the advice asks for names the method it refuses; it is not a claim.
+  content.report = [section('d', '（三）抽样设计', '通过线上公开链接自愿作答招募，本次样本属便利样本，不借用随机抽样名称，也并非分层抽样，外推须谨慎。')];
+  assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'na');
+  content.report = [section('d', '（三）抽样设计', '本次通过线上公开链接自愿作答，采用分层抽样获取样本，并非整群抽样。')];
+  assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'fail', 'a stated claim still counts, beside a negated one');
 });

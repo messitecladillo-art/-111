@@ -187,6 +187,29 @@ test('in a project, only the sections asked for are drafted; the others keep the
   assert.deepEqual(res.report.quality.results.map(r => r.id), pack.report.quality.results.map(r => r.id), 'the project\'s results are the ones written from');
 });
 
+test('a second revision round may fix what the first did not; without a sampling frame the prompt bars probability-sampling names', async () => {
+  const prompts = [];
+  let revisions = 0;
+  const reply = text => new Response(JSON.stringify({ choices: [{ message: { content: draft(text) } }] }), { status: 200 });
+  const fetcher = async (_url, init) => {
+    const prompt = JSON.parse(init.body).messages[0].content;
+    prompts.push(prompt);
+    if (!prompt.includes('审稿修订助手')) return reply('整体满意度与复游推荐意愿相关，说明满意度导致了复游意愿上升，见{G1}。');
+    revisions++;
+    return reply(revisions === 1 ? '整体满意度与复游推荐意愿相关，满意度导致了复游意愿上升，见{G1}。' : '整体满意度与复游推荐意愿呈正向关联，不能说明因果方向，见{G1}。');
+  };
+  const res = await generateFullReportWithAgent({ llm: { apiKey: 'sk-test-mock', concurrency: 2 }, sectionNodes: ['compare.tests'], fetcher });
+  assert.equal(revisions, 2, 'two rounds');
+  assert.ok(res.report.report.some(s => s.body.includes('不能说明因果方向')), 'the second round\'s fix is kept');
+  assert.equal(res.summary.revisedSections, 1);
+  // The teaching package registers a sampling frame, so its prompt allows the design's own name; a project without one does not.
+  const pack = await forgeNationalAwardPack('城市社区嵌入式养老服务的使用体验与满意度调查');
+  const noFrame = { ...pack.report, quality: { ...pack.report.quality, results: pack.report.quality.results.filter(r => r.method !== 'sampling-frame') } };
+  const seen = [];
+  await generateFullReportWithAgent({ base: { design: pack.design, dataset: pack.dataset, report: noFrame }, llm: { apiKey: 'x', concurrency: 1 }, sectionNodes: ['design.sampling'], fetcher: async (_u, init) => { seen.push(JSON.parse(init.body).messages[0].content); return reply('本次样本为配额样本。'); } });
+  assert.match(seen[0], /没有登记抽样框：不用“随机抽样、分层抽样/u);
+});
+
 test('a revision that leaves the problem standing is not kept', async () => {
   const fetcher = async () =>
     new Response(JSON.stringify({ choices: [{ message: { content: draft('整体满意度与复游推荐意愿相关，说明满意度导致了复游意愿上升，见{G1}。') } }] }), { status: 200 });

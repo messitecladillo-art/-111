@@ -295,8 +295,11 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
       && !/(?:不能|不可|不应|不得|不宜|并非|不|未)(?:被)?(?:当作|当成|作为|视为|构成|等同于?|充当|用作|用于)[^。；]{0,16}(?:稳健|鲁棒|可靠)/u.test(l),
     '模拟或合成数据得到的结果只说明模型在假设下的表现，不能当作真实数据的稳健性检验。');
   const onlineRecruiting = /问卷星|网络发放|线上发放|线上链接|朋友圈|社交媒体|社群转发|便利抽样|滚雪球|自愿作答|自愿参与/u;
-  misuse('samplingWording', '抽样名称与实际招募一致', /随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样/u,
-    l => !samplingTable && onlineRecruiting.test(sampling.flatMap(s => s.lines).join('\n') + '\n' + l),
+  // "不借用随机抽样名称" is the disclaimer the advice asks for: a sampling name under a negation is not a claim.
+  const samplingNames = /随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样/u;
+  const negatedSampling = /(?:未|不|没有|并未|并非|而非|不能|不再|无)(?:使用|借用|采用|称为|称作|属于|是|写成|冠以)?[^。；，,]{0,4}(?:随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样)/gu;
+  misuse('samplingWording', '抽样名称与实际招募一致', samplingNames,
+    l => samplingNames.test(l.replace(negatedSampling, '')) && !samplingTable && onlineRecruiting.test(sampling.flatMap(s => s.lines).join('\n') + '\n' + l),
     '线上公开链接、自愿作答和转发招募属于便利或配额方式，不能借用随机抽样的名称；确有抽样框时附上各阶段抽样框表。', 'design');
 
   // 合规披露

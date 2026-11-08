@@ -219,6 +219,8 @@ const ANALYSIS_CLAIMS: readonly { name: string; words: RegExp; methods: RegExp }
 ];
 /** Sections that set out the plan: an analysis named there is one the study means to run, not a result it reports. */
 export const PLAN_NODE = /^(?:intro|design)\./u;
+/** How many times a flagged section may go back to the model; each kept revision must leave fewer problems. */
+const REVISION_ROUNDS = 2;
 /** Sections that report results: without a registered result of their own they may only say what is still to come. */
 const EVIDENCE_NODES = new Set(['data.testing', 'sample.profile', 'sample.descriptive', 'compare.tests', 'drivers.model', 'diagnosis.evaluation']);
 /** Words that put an analysis in the future: such a sentence plans the analysis, it does not report it. */
@@ -600,6 +602,9 @@ export function buildFullReportSectionPrompt(input: {
     '模拟或合成数据（mode=demonstration）如实声明为教学模拟演示，不当作真实数据，也不当作稳健性检验；',
     '秩和等非参数检验比较的是分布位置，不写成“中位数相等/中位数无差异”；',
     ...(registered(/regress|logit|logistic|probit|ols/iu) ? ['OR（优势比）只写成“优势（odds）是参照组的多少倍”，不写成“概率是多少倍”；'] : []),
+    ...(registered(/^sampling-frame$/u)
+      ? []
+      : ['资料中没有登记抽样框：不用“随机抽样、分层抽样、整群抽样、多阶段抽样、系统抽样、PPS 抽样”等名称描述本次样本，如实写成便利样本或配额样本，外推须谨慎；']),
     ...(registered(/cluster|kmeans/iu) ? ['不用参与聚类的输入变量做显著性检验来自证分群有效；'] : []),
   ];
   const material = {
@@ -1193,43 +1198,48 @@ export async function generateFullReportWithAgent(input: {
   const wave2Outputs = await runWithConcurrency(wave2Nodes, Math.min(concurrency, 4), nodeId => draftOneSection(nodeId, 2));
   traces.push(...wave2Outputs.map(o => o.trace));
 
-  // Stage 06: the report check reads each drafted section on its own. A flagged section goes back to the model once,
-  // with the problems named, and the revision is kept only when it leaves fewer of them. Nothing is patched by string
-  // replacement, and the score reported is the score of the text as it stands.
+  // Stage 06: the report check reads each drafted section on its own. A flagged section goes back to the model, with the
+  // problems named, for up to two rounds; a revision is kept only when it leaves fewer of them. Nothing is patched by
+  // string replacement, and the score reported is the score of the text as it stands.
   const benchmarkBeforeRepair = benchmarkReport(workingReport);
   const revisionTokens: number[] = [];
+  // A missing caption belongs to an exhibit, not to the prose, so it is not the writer's to revise.
+  const flagged = (content: EditorContent, sectionId: string) => sectionIssues(content, sectionId, benchmarkReport).filter(i => i.check.id !== 'captions');
   const reviseSection = async (nodeId: string): Promise<string | null> => {
-    const entry = drafted.get(nodeId);
-    const section = workingReport.report.find(s => matchBlueprintNode(s.title)?.id === nodeId);
-    if (!entry || !section) return null;
-    // A missing caption belongs to an exhibit, not to the prose, so it is not the writer's to revise.
-    const flagged = (content: EditorContent) => sectionIssues(content, section.id, benchmarkReport).filter(i => i.check.id !== 'captions');
-    const issues = flagged(workingReport);
-    if (!issues.length) return null;
-    try {
-      const problems = issues.map(i => `${i.check.label}：${i.check.detail}`);
-      const llmRes = await callLlmForSection(buildRevisionPrompt(section.title, entry.drafts, problems, entry.tokens), input.llm, input.fetcher);
-      revisionTokens.push(llmRes.usage?.total ?? 0);
-      const revised = parseAndHydrateSectionDraft(llmRes.content, entry.tokens, {
-        methods,
-        planSection: PLAN_NODE.test(nodeId),
-        pending: awaitsResults(nodeId, results),
-        labels,
-      });
-      if (!revised.paragraphs.length) return null;
-      const candidate: EditorContent = {
-        ...workingReport,
-        report: workingReport.report.map(s => (s.id === section.id ? { ...s, body: revised.paragraphs.join('\n') } : s)),
-      };
-      const left = flagged(candidate);
-      if (left.length >= issues.length) return null;
-      workingReport = candidate;
-      drafted.set(nodeId, { drafts: revised.drafts, tokens: entry.tokens });
-      const cleared = issues.filter(i => !left.some(l => l.check.id === i.check.id)).map(i => i.check.label);
-      return `章节「${section.title}」按审稿意见修订：${cleared.join('、')}`;
-    } catch {
-      return null;
+    const cleared: string[] = [];
+    let title = '';
+    for (let round = 0; round < REVISION_ROUNDS; round++) {
+      const entry = drafted.get(nodeId);
+      const section = workingReport.report.find(s => matchBlueprintNode(s.title)?.id === nodeId);
+      if (!entry || !section) break;
+      title = section.title;
+      const issues = flagged(workingReport, section.id);
+      if (!issues.length) break;
+      try {
+        const problems = issues.map(i => `${i.check.label}：${i.check.detail}`);
+        const llmRes = await callLlmForSection(buildRevisionPrompt(section.title, entry.drafts, problems, entry.tokens), input.llm, input.fetcher);
+        revisionTokens.push(llmRes.usage?.total ?? 0);
+        const revised = parseAndHydrateSectionDraft(llmRes.content, entry.tokens, {
+          methods,
+          planSection: PLAN_NODE.test(nodeId),
+          pending: awaitsResults(nodeId, results),
+          labels,
+        });
+        if (!revised.paragraphs.length) continue;
+        const candidate: EditorContent = {
+          ...workingReport,
+          report: workingReport.report.map(s => (s.id === section.id ? { ...s, body: revised.paragraphs.join('\n') } : s)),
+        };
+        const left = flagged(candidate, section.id);
+        if (left.length >= issues.length) continue;
+        workingReport = candidate;
+        drafted.set(nodeId, { drafts: revised.drafts, tokens: entry.tokens });
+        cleared.push(...issues.filter(i => !left.some(l => l.check.id === i.check.id)).map(i => i.check.label));
+      } catch {
+        break;
+      }
     }
+    return cleared.length ? `章节「${title}」按审稿意见修订：${[...new Set(cleared)].join('、')}` : null;
   };
   const revisionNotes = (await runWithConcurrency([...drafted.keys()], concurrency, reviseSection)).filter((n): n is string => !!n);
   const { content: repairedReport, repairs: finishing } = finalizeReport(workingReport, fallbackSections, wantedNodes);
