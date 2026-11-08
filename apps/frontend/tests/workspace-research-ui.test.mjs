@@ -34,7 +34,8 @@ function mount(relative, imports, initialProps = {}) {
   };
   hooks.useLayoutEffect = hooks.useEffect;
   const jsx = (type, props, key) => ({ type, props, key });
-  const mocks = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/motion/useWorkspaceMotion': motion, ...imports };
+  const mocks = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/motion/useWorkspaceMotion': motion,
+    '@/components/figures/report-workstation/ReportWorkstation': { default: 'ReportWorkstation' }, ...imports };
   const compiled = ts.transpileModule(fs.readFileSync(new URL(relative, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   class Element {}
   const box = { exports: {}, require: name => { assert.ok(name in mocks, `Unmocked ${name}`); return mocks[name]; }, JSON, crypto, structuredClone, console, TextDecoder, TextEncoder, HTMLElement: Element, Node: Element, document: { activeElement: null, addEventListener() {}, removeEventListener() {}, querySelectorAll: () => [], getElementById: () => null }, window: { confirm: () => true, addEventListener() {}, removeEventListener() {}, location: { hash: '' }, setTimeout, clearTimeout } };
@@ -56,11 +57,16 @@ test('empty analysis progress is compact, real activity opens it, and manual col
   assert.equal(nodes(screen.tree).some(n => n.props?.['aria-label'] === '分析当前动态'), false);
   screen.update({ reading: true, readName: 'actual.csv' }); await screen.settle();
   assert.equal(screen.tree.props['data-expanded'], true);
+  const apparatus = () => nodes(screen.tree).find(n => n.type === 'ReportWorkstation');
+  assert.equal(apparatus().props.kind, 'analysis');
+  assert.equal(apparatus().props.state.total, 0, 'file input does not fabricate a task total');
   assert.match(label(screen.tree), /正在读取文件actual.csv/);
   button(screen, '暂停动效').props.onClick(); await screen.settle();
   assert.equal(screen.tree.props['data-paused'], true);
+  assert.equal(apparatus().props.paused, true, 'pause must also stop the inline machine');
   button(screen, '收起进度').props.onClick(); await screen.settle();
   screen.update({ reading: false, dataset: { rowCount: 17, columnCount: 4 } }); await screen.settle();
+  assert.equal(apparatus(), undefined, 'read completion replaces activity with the real data state');
   assert.equal(screen.tree.props['data-expanded'], false, 'new data does not override a manual collapse');
   button(screen, '查看进度').props.onClick(); await screen.settle();
   assert.match(label(screen.tree), /17 行记录，4 个字段/);

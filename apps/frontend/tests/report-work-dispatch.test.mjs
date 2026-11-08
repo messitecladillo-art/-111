@@ -34,7 +34,7 @@ const settle=()=>new Promise(resolve=>setTimeout(resolve,25));
 function harness({fresh=false}={}) {
   let resolveFetch, rejectFetch, envelope=null, dispatched=0;
   let currentOwner='owner-a', currentEpoch=1;
-  const messages=[];const applied=[];const marks=[];const failures=[];
+  const messages=[];const applied=[];const marks=[];const failures=[];const activeCalls=new Map();
   const book={active:fresh?null:'thread-a',draftProject:'project-a',threads:fresh?[]:[{id:'thread-a',projectId:'project-a'},{id:'thread-b',projectId:'project-b'}]};
   const identity=(owner,epoch)=>owner===currentOwner&&epoch===currentEpoch;
   const gate=new model.ReportRunFence();
@@ -46,6 +46,7 @@ function harness({fresh=false}={}) {
     threads:{view:()=>book,append:ms=>{messages.push(...ms);if(!book.active){book.active='thread-a';book.threads.push({id:'thread-a',projectId:book.draftProject});}},patch:(id,f)=>{const at=messages.findIndex(m=>m.id===id);if(at>=0)messages[at]=f(messages[at]);}},
     window:{sessionStorage:{getItem:()=>null}},say:()=>{},setStage:()=>{},closePanel:()=>{},stamp:()=>({id:`message-${messages.length}`,at:1}),span:text=>text,
     setWritingEnvelope:f=>{envelope=typeof f==='function'?f(envelope):f;},autoFollowRef:{current:false},
+    startCall:(id,owner,epoch)=>activeCalls.set(id,{owner,epoch}),finishCall:id=>activeCalls.delete(id),
     fetch:()=>{dispatched++;return new Promise((resolve,reject)=>{resolveFetch=resolve;rejectFetch=reject;});},
     loadBenchmark:(...args)=>{applied.push(['loadBenchmark',...args]);return Promise.resolve(true);},
     setLiveReport:(...args)=>applied.push(['setLiveReport',...args]),
@@ -54,7 +55,7 @@ function harness({fresh=false}={}) {
     replace:(id,value)=>failures.push(value),mark:(id,status)=>marks.push(status),TextDecoder,Promise,AbortController,
   };
   vm.runInNewContext(js,context);
-  return {context,book,gate,messages,applied,marks,failures,get envelope(){return envelope;},get dispatched(){return dispatched;},
+  return {context,book,gate,messages,applied,marks,failures,activeCalls,get envelope(){return envelope;},get dispatched(){return dispatched;},
     start:()=>context.perform({type:'generateFullReport',topic:'Synthetic review'}),
     invalidate:()=>{currentOwner='owner-b';currentEpoch=2;},
     resolve:res=>resolveFetch(res),reject:err=>rejectFetch(err),
@@ -72,7 +73,8 @@ test('synchronous identity invalidation stops replies before React effects',asyn
   assert.equal(h.applied.length,0,'old identity published a report before cleanup');
 });
 test('one active dispatch rejects repeated clicks',async()=>{
-  const h=harness();h.start();h.start();assert.equal(h.dispatched,1);h.json(reply());await settle();assert.equal(h.gate.active,false);
+  const h=harness();h.start();h.start();assert.equal(h.dispatched,1);assert.equal(h.activeCalls.size,1);
+  h.json(reply());await settle();assert.equal(h.gate.active,false);assert.equal(h.activeCalls.size,0);
 });
 test('an unterminated final NDJSON line is accepted only with valid done',async()=>{
   const h=harness();h.start();h.stream([{type:'done',...reply()}]);await settle();
@@ -88,7 +90,7 @@ test('provider error and transport failure stop animation with no automatic new 
   }
 });
 test('leaving and returning to an old scope cannot resurrect an active apparatus',async()=>{
-  const h=harness();h.start();h.context.cleanupReport();h.book.active='thread-b';h.json(reply());await settle();
+  const h=harness();h.start();h.context.cleanupReport();assert.equal(h.activeCalls.size,0);h.book.active='thread-b';h.json(reply());await settle();
   h.book.active='thread-a';const shown=h.context.liveFor(h.envelope,{owner:'owner-a',epoch:1,thread:'thread-a',project:'project-a'});
   assert.ok(!shown||!shown.active,'cancelled task became animated on return');assert.equal(h.applied.length,0);
 });

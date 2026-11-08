@@ -142,6 +142,12 @@ export default function AgentShell() {
   const [pickedSection, setPickedSection] = useState<string | null>(null);
   const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
   const reportRuns = useMemo(() => new ReportRunFence(), []);
+  // Only requests dispatched in this mounted workspace may animate. Restored messages are records, not live jobs.
+  const [activeCalls, setActiveCalls] = useState<{ id: string; owner: string; epoch: number }[]>([]);
+  const startCall = useCallback((id: string, owner: string, epoch: number) => {
+    setActiveCalls(calls => [...calls.filter(call => call.id !== id), { id, owner, epoch }]);
+  }, []);
+  const finishCall = useCallback((id: string) => setActiveCalls(calls => calls.filter(call => call.id !== id)), []);
   const [writingEnvelope, setWritingEnvelope] = useState<{ scope: ReportRunScope; status: LiveWritingStatus } | null>(null);
   const reportProject = thread ? thread.projectId : book.draftProject;
   const displayScope: ReportRunScope = { owner, epoch: identityEpoch, thread: thread?.id ?? null, project: reportProject };
@@ -421,8 +427,9 @@ export default function AgentShell() {
         ? [[span('正在根据工具结果接着回答…', 'dim')]]
         : [[span('正在请'), span(`「${chatService.label}」`, 'strong'), span('回答…', 'dim')]] } };
       if (next) threads.appendAfter(next.after, waiting); else threads.append([waiting]);
+      startCall(waiting.id, callOwner, callEpoch);
       const seen = next?.seen ?? new Set<string>();
-      sendChatTurn(mutate, request).then(receipt => { if (isCurrentAccount(callOwner, callEpoch)) settle(waiting.id, receipt, chatService.label, seen, chatService, callOwner, callEpoch); }, failure => { if (isCurrentAccount(callOwner, callEpoch)) fail(waiting.id, failure, request.idempotencyKey, text); });
+      sendChatTurn(mutate, request).then(receipt => { if (isCurrentAccount(callOwner, callEpoch)) settle(waiting.id, receipt, chatService.label, seen, chatService, callOwner, callEpoch); }, failure => { if (isCurrentAccount(callOwner, callEpoch)) fail(waiting.id, failure, request.idempotencyKey, text); }).finally(() => finishCall(waiting.id));
       return true;
     };
     // How a model call ended, on the message that holds it; the service and step stay those it was sent with.
@@ -509,7 +516,8 @@ export default function AgentShell() {
       const waiting: Message = { ...stamp(), role: 'agent', model: { service: reportService.label, serviceId: reportService.id, serviceRevision: reportService.revision, provider: reportService.provider, modelName: reportService.model, step: 1, status: 'running' },
         turn: { lines: [[span('正在请'), span(`「${reportService.label}」`, 'strong'), span(`起草「${title}」…`, 'dim')]] } };
       threads.append([waiting]);
-      sendDraft(mutate, request).then(receipt => { if (owner && isCurrentAccount(owner, identityEpoch)) settleDraft(waiting.id, receipt, reportService.label, nodeId, facts); }, failure => { if (owner && isCurrentAccount(owner, identityEpoch)) failDraft(waiting.id, failure, request.idempotencyKey, nodeId, facts); });
+      startCall(waiting.id, owner, identityEpoch);
+      sendDraft(mutate, request).then(receipt => { if (owner && isCurrentAccount(owner, identityEpoch)) settleDraft(waiting.id, receipt, reportService.label, nodeId, facts); }, failure => { if (owner && isCurrentAccount(owner, identityEpoch)) failDraft(waiting.id, failure, request.idempotencyKey, nodeId, facts); }).finally(() => finishCall(waiting.id));
       return true;
     };
     const draftError = (code: string | null) => code === 'capability_unavailable' ? '这个模型服务没有启用「报告」能力。' : CHAT_ERRORS[code ?? ''] ?? '模型服务出错了。';
@@ -670,11 +678,10 @@ export default function AgentShell() {
             turn: {
               lines: [
                 [
-                  span('已在中间报告画布启动 '),
+                  span('正在请求 '),
                   span('DeepSeek (deepseek-chat)', 'strong'),
-                  span(` 实时并发撰写「${topicLabel}」的 `),
-                  span('9 章 26 节', 'gold'),
-                  span(' 完整报告（每写完一节将立即在纸面落笔并自动定位）…', 'dim'),
+                  span(` 撰写「${topicLabel}」。`),
+                  span('等待接收章节计划与研究材料。', 'dim'),
                 ],
               ],
             },
@@ -683,6 +690,7 @@ export default function AgentShell() {
           // append may create the first conversation; bind only after its stable ID exists.
           const requestScope = readReportScope();
           const ticket = reportRuns.start(requestScope, () => {
+            finishCall(waitingMsg.id);
             setWritingEnvelope(prev => prev && sameReportRunScope(prev.scope, requestScope)
               ? { ...prev, status: { ...prev.status, active: false, phase: 'error' } } : prev);
             if (isCurrentIdentity(identityOwner, identity.epoch)) {
@@ -691,6 +699,7 @@ export default function AgentShell() {
             }
           });
           if (!ticket) break;
+          startCall(waitingMsg.id, identity.owner, identity.epoch);
           const currentRun = () => reportRuns.accepts(ticket, readReportScope()) && isCurrentIdentity(identityOwner, identity.epoch);
           const setLiveWriting = (change: LiveWritingStatus | ((prev: LiveWritingStatus | null) => LiveWritingStatus | null)) => {
             if (!currentRun()) return;
@@ -900,7 +909,7 @@ export default function AgentShell() {
                   { label: '重试 /全报告', action: { type: 'say', text: `/全报告 ${action.topic}`.trim() }, primary: true },
                 ],
               });
-            }).finally(() => reportRuns.finish(ticket));
+            }).finally(() => { finishCall(waitingMsg.id); reportRuns.finish(ticket); });
           break;
         }
         case 'loadBenchmark':
@@ -963,7 +972,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport, choreo, reportRuns, readReportScope, isCurrentIdentity]);
+  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport, choreo, reportRuns, readReportScope, isCurrentIdentity, startCall, finishCall]);
 
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {
@@ -1033,7 +1042,8 @@ export default function AgentShell() {
   const outputs = [...(held?.results ?? [])].reverse().map(r => ({ id: r.id, title: r.title, detail: `${METHOD_LABELS[r.method] ?? r.method} · 有效样本 ${r.n}` }));
   const stages = STAGES.map(id => ({ id, name: roomById(id).name, glyph: roomById(id).glyph, score: roomLight(light, id)?.score ?? null }));
   // The work in view: the call still running in this conversation, and what its model calls have cost so far.
-  const running = messages.find(m => m.role === 'agent' && m.model?.status === 'running') as Extract<Message, { role: 'agent' }> | undefined;
+  const activeCallIds = new Set(activeCalls.filter(call => call.owner === owner && call.epoch === identityEpoch).map(call => call.id));
+  const running = messages.findLast(m => m.role === 'agent' && m.model?.status === 'running' && activeCallIds.has(m.id)) as Extract<Message, { role: 'agent' }> | undefined;
   const looking = messages.some(m => m.role === 'pending');
   const spent = messages.reduce((sum, m) => m.role === 'agent' && m.model?.usage ? { inputTokens: sum.inputTokens + m.model.usage.inputTokens, outputTokens: sum.outputTokens + m.model.usage.outputTokens } : sum, { inputTokens: 0, outputTokens: 0 });
   const today = useSyncExternalStore(subscribeNothing, startOfToday, () => 0);
@@ -1200,7 +1210,8 @@ export default function AgentShell() {
           <button type="button" className={styles.iconButton} aria-label="收起证见 AI" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
         </div>}
         <div ref={scrollRef} className={styles.scroll}>
-          {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} onAction={agent.perform} onAnswer={agent.answer} />
+          {messages.length ? <Transcript messages={messages} scrollRef={scrollRef} activeCallIds={activeCallIds}
+            workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />
             : <div className={styles.empty}>
               <div className={styles.emptyMark}><BrandMark size={44} /></div>
               <h1>我们要研究什么？</h1>

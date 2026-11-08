@@ -36,6 +36,20 @@ export const BASE: Part[] = [
 ];
 export const RULER = topTicks(64, 219, 5, 5, 102, 16.1, [2, 4], P);
 export const PAPER_LINES = Array.from({ length: 7 }, (_, i) => lineOnTop([89, 49 + i * 5], [i === 6 ? 146 : 195, 49 + i * 5], 16.85, P)).join('');
+export const DATA_GRID = joinPaths([
+  ...Array.from({ length: 6 }, (_, i) => lineOnTop([87, 48 + i * 7], [198, 48 + i * 7], 16.85, P)),
+  ...Array.from({ length: 7 }, (_, i) => lineOnTop([87 + i * 18.5, 48], [87 + i * 18.5, 83], 16.85, P)),
+]);
+export const REFERENCE_CARDS = joinPaths(Array.from({ length: 3 }, (_, i) => {
+  const x = 87 + i * 36;
+  return joinPaths([
+    planOutline({ x, y: 48, w: 29, d: 32, r: 1 }, 16.85, P),
+    lineOnTop([x + 4, 54], [x + 12, 54], 16.85, P),
+    lineOnTop([x + 4, 61], [x + 24, 61], 16.85, P),
+    lineOnTop([x + 4, 67], [x + 24, 67], 16.85, P),
+    lineOnTop([x + 4, 73], [x + 19, 73], 16.85, P),
+  ]);
+}));
 
 export const FEEDER: Part[] = [
   slab('evidence-tray-bottom', 12, 38, 41, 49, 15, 4, 'base'),

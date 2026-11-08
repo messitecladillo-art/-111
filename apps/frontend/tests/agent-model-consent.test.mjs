@@ -48,7 +48,8 @@ function harness() {
   const book = () => { if (!books.has(activeOwner)) books.set(activeOwner, emptyBook()); return books.get(activeOwner); };
   const all = () => book().threads.flatMap(t => t.messages);
   const home = id => book().threads.find(t => t.messages.some(m => m.id === id));
-  const posts = [], drafts = [], tools = [], navigation = [];
+  const posts = [], drafts = [], tools = [], navigation = [], callEvents = [];
+  const activeCalls = new Map();
   const first = deferred(), receipt = deferred();
   let storedPreferences = {research:A,questionnaire:A,report:A};
   const current = { owner: ALICE, identityEpoch: 1, generation: { account: 'ready', lists: { state: 'ready', services: [service(A), service(B)] }, start: () => ({ lines: [[{text: 'questionnaire consent'}]] }) },
@@ -65,6 +66,8 @@ function harness() {
     remove(id) { book().threads = book().threads.filter(t => t.id !== id); if (book().active === id) book().active = null; },
   };
   const globals = { ...chat, ...routing, getModelPreferences: () => storedPreferences, latest, threads, consented: {current: new Set()}, crypto,
+    startCall:(id,owner,epoch)=>{activeCalls.set(id,{owner,epoch});callEvents.push(['start',id]);},
+    finishCall:id=>{activeCalls.delete(id);callEvents.push(['finish',id]);},
     console, setTimeout, clearTimeout, Date, JSON, Promise, Set, Map,
     stamp: () => ({id: `message-${++count}`, at: Date.now()}), focusInput() {}, go: room => navigation.push(room), sendToReport() {},
     HostedApiError: class extends Error {}, errorMessage: error => error.message, UNRECORDED_SERVICE: 'unrecorded',
@@ -84,7 +87,7 @@ function harness() {
   const agent = context.makeAgent();
   const cards = () => all().flatMap(m => (m.turn?.cards??[]).filter(c => c.kind === 'confirm').map(card => ({message:m,card})));
   const confirm = card => agent.answer(card.message.id, 'confirmed', card.card.confirm.action);
-  return { current, latest, posts, drafts, tools, navigation, threads, first, receipt, agent, cards, confirm, all,
+  return { current, latest, posts, drafts, tools, navigation, threads, first, receipt, agent, cards, confirm, all, activeCalls, callEvents,
     chooseStored(id) { storedPreferences = {research:id,questionnaire:id,report:id}; },
     choose(id, revision=1) { storedPreferences = {research:id,questionnaire:id,report:id}; current.chatService = service(id, revision); current.reportService = service(id, revision); current.generation.lists.services = [current.chatService, service(id===A?B:A)]; },
     switchAccount() { activeOwner = BOB; current.owner = BOB; current.identityEpoch++; },
@@ -112,12 +115,17 @@ test('a legacy stored chat/report action without a consent binding cannot call a
   assert.equal(s.posts.length+s.drafts.length,0);
 });
 test('chat read-tool continuation stays with the first service after menu changes', async () => {
-  const s=harness(); s.agent.send('读取结果'); s.confirm(s.cards().at(-1)); await s.flush(); assert.equal(s.posts.length,1); s.choose(B); s.readyFirst([{tool:'results',args:{}}]); await s.flush();
+  const s=harness(); s.agent.send('读取结果'); s.confirm(s.cards().at(-1)); await s.flush(); assert.equal(s.posts.length,1);
+  assert.equal(s.activeCalls.size,1); assert.deepEqual([...s.activeCalls.values()],[{owner:ALICE,epoch:1}]);
+  s.choose(B); s.readyFirst([{tool:'results',args:{}}]); await s.flush();
   assert.equal(s.posts.length,2); assert.equal(s.posts[0].serviceId,A); assert.equal(s.posts[1].serviceId,A); assert.equal(s.posts[1].serviceRevision,1);
+  assert.equal(s.activeCalls.size,0); assert.equal(s.callEvents.filter(e=>e[0]==='start').length,2);
+  assert.equal(s.callEvents.filter(e=>e[0]==='finish').length,2);
 });
 test('an account switch during a model call cannot execute tools or a continuation', async () => {
   const s=harness(); s.agent.send('读取结果'); s.confirm(s.cards().at(-1)); await s.flush(); s.switchAccount(); s.readyFirst([{tool:'results',args:{}}]); await s.flush();
   assert.equal(s.posts.length,1); assert.equal(s.tools.length,0);
+  assert.equal(s.activeCalls.size,0,'the old identity request must settle its local activity record');
 });
 test('deleting the original thread during a model call stops its tool continuation', async () => {
   const s=harness(); s.agent.send('读取结果'); s.confirm(s.cards().at(-1)); await s.flush(); s.threads.remove(s.threads.view(ALICE).active); s.readyFirst([{tool:'results',args:{}}]); await s.flush(); assert.equal(s.posts.length,1);
