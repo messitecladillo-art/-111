@@ -47,7 +47,7 @@
 
 ## 权限与迁移
 
-部署先运行 `uv run alembic upgrade head` 到 `0010_agent_task_executions`，再运行应用。启动会拒绝旧数据库版本；迁移不重写已有任务和成果。
+部署先运行 `uv run alembic upgrade head`，再运行应用。`0010_agent_task_executions` 引入执行回执表；部署必须继续应用当前版本的全部后续迁移，不能停在 `0010`。应用要求的版本见 `evix_api/runtime.py` 的 `SCHEMA_REVISION`，部署步骤见[后端运行说明](../apps/backend/README.md)。启动会拒绝旧数据库版本；执行回执迁移不重写已有任务和成果。
 
 任务与 HTTP 回执读取仍要求当前项目成员身份，推进和取消要求 owner/editor。成员被移除、降为只读或退出登录后，迟到结果不能进入项目。个人模型 Key 不进入任务状态、回执或日志。
 

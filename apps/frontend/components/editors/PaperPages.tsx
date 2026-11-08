@@ -16,6 +16,8 @@ import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { Formula } from '../math/Tex';
 import { ACCENT, Figure, PaperText, ResultTable } from './PaperBlocks';
 import css from './PaperPages.module.css';
+import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
+import { reportWorkPlacement, type ReportWorkState } from '@/lib/agent/report-work';
 
 export type LiveTypingState = { sectionId: string; visibleBody: string };
 export type LiveReviewState = { sectionId: string; badPhrase: string; goodPhrase: string; reason: string; step: 'flag' | 'rewrite' | 'done'; typedGood: string };
@@ -371,12 +373,14 @@ const PAGE_GAP = 18;
 export default function PaperPages({
   content, label, docFormat, activeSectionId = null, writingActive = false, typingState = null, reviewState = null,
   formatScanSectionId = null, activeCatalogKey = null, onPick, onCatalogHover, onCatalogClick,
+  workState = null,
 }: {
   content: EditorContent;
   label: string;
   docFormat: 'latex' | 'word';
   activeSectionId?: string | null;
   writingActive?: boolean;
+  workState?: ReportWorkState | null;
   typingState?: LiveTypingState | null;
   reviewState?: LiveReviewState | null;
   formatScanSectionId?: string | null;
@@ -459,6 +463,15 @@ export default function PaperPages({
     return () => observer.disconnect();
   }, []);
   const zoom = zoomChoice === 'fit' ? fit : zoomChoice;
+  // The apparatus is a sibling of the measured flow. It can only occupy verified
+  // empty space below all page content; narrow/full pages use a separate dock.
+  const workPlacement = useMemo(() => {
+    if (!workState || !layout || zoom < 0.72 || !activeSectionId) return null;
+    const item = layout.items.findIndex(item => item.sectionId === activeSectionId);
+    const page = item < 0 ? -1 : layout.pages.findIndex(page => layout.tops[item] < page.end - 0.5);
+    return page < 0 ? null : reportWorkPlacement(layout.pages, layout.tops, layout.heights,
+      layout.items.map(item => item.style), PAGE.contentHeight, 260, page);
+  }, [workState, layout, zoom, activeSectionId]);
   const step = (by: 1 | -1) => {
     const now = zoom, list = by > 0 ? ZOOMS.filter(z => z > now + 0.001) : ZOOMS.filter(z => z < now - 0.001).reverse();
     if (list.length) setZoomChoice(list[0]);
@@ -519,6 +532,10 @@ export default function PaperPages({
         <label className={css.markToggle}><input type="checkbox" checked={marks} onChange={e => setMarks(e.target.checked)} />分工标注</label>
       </div>
 
+      {workState && !workPlacement && <aside className={css.workDock} data-screen-only="true" aria-label="报告生成状态">
+        <ReportWorkstation state={workState} compact />
+      </aside>}
+
       {/* Pages are laid out at their true size and only drawn smaller or larger: a transform never re-flows the text, so
           each page shows exactly what was measured; the frame takes the scaled size so the scroll extent is right. */}
       <div className={css.pagesFrame} style={{ width: PAGE.width * zoom, height: framed * zoom }}>
@@ -538,6 +555,11 @@ export default function PaperPages({
           }
           return (
             <article key={index} className={css.page} data-page-style={style} aria-label={folios[index] ? `第 ${folios[index]} 页` : '封面'}>
+              {workState && workPlacement?.page === index && <aside
+                className={css.workOverlay} data-screen-only="true" aria-label="报告生成状态"
+                style={{ top: `calc(${PAGE.topMm}mm + ${workPlacement.top}px)` }}>
+                <ReportWorkstation state={workState} compact />
+              </aside>}
               <div className={`${css.flow} ${css.body}`} style={{ height: p.end - p.start }}>
                 <div className={css.slice} style={{ transform: `translateY(${-shift}px)` }}>
                   {shown.slice(p.first, p.last + 1).map(item => (

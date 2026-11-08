@@ -7,10 +7,15 @@ import { parseExecutableTopicProfile, parseTopicBundle, parseTopicProfile, objec
 import { profileRegionStatus } from '../topic-advisor/geography.ts';
 import { TOPIC_REGION_CATALOG, regionPath } from '../topic-advisor/regions.ts';
 import type { TopicProfile, TopicRecommendation } from '../topic-advisor/types.ts';
-import { TOPIC_SOURCE_VERSIONS, parseTopicSourceVersions, type TopicRefinement, type TopicSourceVersions } from '../topic-proposal.ts';
+import { parseTopicSourceVersions, type TopicRefinement, type TopicSourceVersions } from '../topic-proposal.ts';
+import agentSourceVersionData from '../../content/topic-advisor/topic-agent-source-versions.json' with { type: 'json' };
 import { rejectDuplicateMembers } from '../questionnaire.ts';
 import { buildTopicFirstWeekPlan, selectTopicResearchCandidates } from './research.ts';
 export { buildTopicFirstWeekPlan, interpretTopicResearchFocus } from './research.ts';
+
+const agentVersionData = parseTopicSourceVersions(agentSourceVersionData);
+/** TopicAgent binds its active title guidance; TopicProposal keeps its own source digest. */
+export const TOPIC_AGENT_SOURCE_VERSIONS: Readonly<TopicSourceVersions> = Object.freeze({ ...agentVersionData, regionCatalog: Object.freeze(agentVersionData.regionCatalog) });
 
 export type AgentIntent = 'recommend' | 'compare' | 'refine' | 'plan';
 export type AgentToolReceipt = { name: 'context' | 'catalog' | 'feasibility' | 'sources' | 'draft'; status: 'complete' | 'blocked'; summary: string; patternIds: string[]; sourceIds: string[] };
@@ -66,7 +71,7 @@ export function parseTopicAgentPending(raw: unknown, ownerId: string, namespace:
   if (Object.hasOwn(request, 'projectId') && namespace !== (request.projectId ? `project:${request.projectId}` : 'global')) fail();
   return { schemaVersion: 1, ownerId, namespace, request, context: text(saved.context, 30000), sourceVersions: parseTopicSourceVersions(saved.sourceVersions) };
 }
-export function topicAgentFingerprintMaterial(request: TopicAgentRequest, sourceVersions: TopicSourceVersions = TOPIC_SOURCE_VERSIONS) {
+export function topicAgentFingerprintMaterial(request: TopicAgentRequest, sourceVersions: TopicSourceVersions = TOPIC_AGENT_SOURCE_VERSIONS) {
   return { schemaVersion: 1, catalogVersion: request.catalogVersion, profile: request.profile, candidateIds: request.candidateIds, message: request.message, intent: request.intent, parentTurnId: request.parentTurnId, mode: request.mode, serviceId: request.serviceId, serviceRevision: request.serviceRevision, lookupId: request.lookupId ?? null, sourceVersions, ...projectField(request) };
 }
 async function digest(value: unknown): Promise<string> { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stableStringify(value))))].map(value => value.toString(16).padStart(2, '0')).join(''); }
@@ -107,7 +112,7 @@ export function parseTopicAgentTurn(raw: unknown): TopicAgentTurn {
   if (mode === 'local' && (serviceId || serviceRevision) || mode === 'model' && (!serviceId || !serviceRevision)) fail();
   return { schemaVersion: 1, id: uuid(row.id), status, classification: 'proposed', mode, providerMode, modelCalled: row.modelCalled as boolean, catalogVersion: text(row.catalogVersion, 100), sourceVersions, inputFingerprint, profile, message: text(row.message), intent: enumeration(row.intent, ['recommend', 'compare', 'refine', 'plan']), candidateIds: ids, parentTurnId: row.parentTurnId === null ? null : uuid(row.parentTurnId), turnIndex: integer(row.turnIndex, 1, 12), serviceId, serviceRevision, createdAt: iso(row.createdAt), finishedAt, assistant, tools, sources: sourceList, errorCode, ...projectField(row) };
 }
-export async function verifyTopicAgentTurn(raw: TopicAgentTurn, request: TopicAgentRequest, expectedVersions: TopicSourceVersions = TOPIC_SOURCE_VERSIONS): Promise<void> {
+export async function verifyTopicAgentTurn(raw: TopicAgentTurn, request: TopicAgentRequest, expectedVersions: TopicSourceVersions = TOPIC_AGENT_SOURCE_VERSIONS): Promise<void> {
   const turn = parseTopicAgentTurn(raw);
   const versions = parseTopicSourceVersions(expectedVersions), expected = topicAgentFingerprintMaterial(request, versions);
   if (stableStringify(projectField(turn)) !== stableStringify(projectField(request)) || turn.id !== request.idempotencyKey || turn.catalogVersion !== request.catalogVersion || turn.message !== request.message || turn.intent !== request.intent || turn.parentTurnId !== request.parentTurnId || turn.mode !== request.mode || turn.serviceId !== request.serviceId || turn.serviceRevision !== request.serviceRevision || stableStringify(turn.profile) !== stableStringify(request.profile) || stableStringify(turn.candidateIds) !== stableStringify(request.candidateIds) || stableStringify(turn.sourceVersions) !== stableStringify(versions) || turn.inputFingerprint !== await digest(expected)) throw Error('选题 Agent 回执与本次材料不一致，请核对原请求。');
@@ -131,7 +136,7 @@ export function parseTopicAgentConversation(raw: unknown, scope?: string | null)
 export function topicAgentConversationResumable(input: TopicAgentTurn[], scope?: string | null): boolean {
   try {
     const turns = parseTopicAgentConversation({ turns: input }, scope);
-    return turns.length < 12 && turns.every(turn => turn.mode === 'model' && turn.status === 'ready' && turn.catalogVersion === bundle.catalog.contentVersion && stableStringify(turn.sourceVersions) === stableStringify(TOPIC_SOURCE_VERSIONS));
+    return turns.length < 12 && turns.every(turn => turn.mode === 'model' && turn.status === 'ready' && turn.catalogVersion === bundle.catalog.contentVersion && stableStringify(turn.sourceVersions) === stableStringify(TOPIC_AGENT_SOURCE_VERSIONS));
   } catch { return false; }
 }
 
@@ -188,7 +193,7 @@ export async function runLocalTopicAgent({ profile: input, message: rawMessage, 
     { name: 'draft', status: 'complete', summary: `整理 ${items.length} 份研究提案与验证计划，等待你选择。`, patternIds: items.map(item => item.patternId), sourceIds: sourceList.map(source => source.id) },
   ];
   const timestamp = new Date().toISOString();
-  return parseTopicAgentTurn({ schemaVersion: 1, id: request.idempotencyKey, status: 'ready', classification: 'proposed', mode: 'local', providerMode: 'local', modelCalled: false, catalogVersion: request.catalogVersion, sourceVersions: clone(TOPIC_SOURCE_VERSIONS), inputFingerprint: await digest(topicAgentFingerprintMaterial(request)), profile, message, intent, candidateIds: ids, parentTurnId: prior?.id ?? null, turnIndex: (prior?.turnIndex ?? 0) + 1, serviceId: null, serviceRevision: null, createdAt: timestamp, finishedAt: timestamp, assistant: { text: reply.slice(0, 2400), questions, items }, tools, sources: sourceList, errorCode: null, ...projectField(request) });
+  return parseTopicAgentTurn({ schemaVersion: 1, id: request.idempotencyKey, status: 'ready', classification: 'proposed', mode: 'local', providerMode: 'local', modelCalled: false, catalogVersion: request.catalogVersion, sourceVersions: clone(TOPIC_AGENT_SOURCE_VERSIONS), inputFingerprint: await digest(topicAgentFingerprintMaterial(request)), profile, message, intent, candidateIds: ids, parentTurnId: prior?.id ?? null, turnIndex: (prior?.turnIndex ?? 0) + 1, serviceId: null, serviceRevision: null, createdAt: timestamp, finishedAt: timestamp, assistant: { text: reply.slice(0, 2400), questions, items }, tools, sources: sourceList, errorCode: null, ...projectField(request) });
 }
 
 /** Explicit intake proposals only. Nothing is changed until the user applies this candidate profile. */

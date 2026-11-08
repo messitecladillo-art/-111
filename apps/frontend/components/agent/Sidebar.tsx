@@ -184,18 +184,18 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
           <button type="button" role="menuitem" onClick={() => { setMenu(false); onModels(); }}>模型设置</button>
           <Link role="menuitem" href="/invites" onClick={() => setMenu(false)}>邀请码（管理员）</Link>
           {onExport && <button type="button" role="menuitem" onClick={() => { setMenu(false); onExport(); }}>导出对话记录</button>}
-          <Link role="menuitem" href="/workspace" onClick={() => setMenu(false)}>经典工作台 ↗</Link>
+          <button type="button" role="menuitem" onClick={() => { setMenu(false); onRoom('diagnose'); }}>选题与研究资料</button>
           <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenu(false); onLogout(); }}>退出登录</button>
         </div>}
         <button type="button" className={styles.account} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title={email}>
           <span className={styles.accountAvatar} aria-hidden="true">{(email[0] ?? '?').toUpperCase()}</span>
-          <span className={styles.accountText}><b>{email}</b><small>今日 {thousands(todayTokens)} tokens</small></span>
+          <span className={styles.accountText}><b>{email}</b><small>今日已记录 {thousands(todayTokens)} tokens</small></span>
           <Icon name="more" />
         </button>
       </div> : <>
         <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>
         <span className={styles.spacer} />
-        {account === 'guest' ? <Link href="/login">登录</Link> : <Link href="/workspace">经典工作台 ↗</Link>}
+        {account === 'guest' ? <Link href="/login">登录</Link> : <button type="button" onClick={onRetry}>重试连接</button>}
       </>}
     </div>
   </aside>;

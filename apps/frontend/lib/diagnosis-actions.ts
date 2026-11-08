@@ -1,6 +1,7 @@
 /** Deterministic, proposed brief transfer only. No evidence certification or control-plane mutation. */
 import { PROJECT_STAGES, type ProjectStage } from '../data/control-plane-contract.generated.ts';
 import { parseQuestionnaire, type Questionnaire } from './questionnaire.ts';
+import { parseLiteratureEvidenceReference, type LiteratureEvidenceReference } from './topic-lab/evidence-reference.ts';
 
 type DiagnosisAction = { title: string; target: '#diagnose'|'#rules'|'#design'|'#analysis'|'#workspace'; input: string; output: string; review: string };
 const ACTION_ENTRIES: Record<string, DiagnosisAction> = {
@@ -18,35 +19,40 @@ const ACTION_ENTRIES: Record<string, DiagnosisAction> = {
 export const DIAGNOSIS_ACTIONS: Readonly<Record<string, Readonly<DiagnosisAction>>> = Object.freeze(Object.assign(Object.create(null), Object.fromEntries(Object.entries(ACTION_ENTRIES).map(([key,value])=>[key,Object.freeze(value)]))));
 
 export type DiagnosisBriefInput = {title:string; problem:string; decisionOwner:string; population:string; geography:string; stage:ProjectStage; evidenceStatus:'none'|'proposed'|'partial'|'verified'};
-export type DiagnosisBriefSource = {id:string; input:DiagnosisBriefInput};
+export type DiagnosisBriefSource = {id:string; input:DiagnosisBriefInput; schemaVersion?:never; literature?:never}
+  | {schemaVersion:2; id:string; input:DiagnosisBriefInput; literature:LiteratureEvidenceReference};
 export type BriefField = 'title'|'population'|'geography'|'objective';
 export type BriefProposal = {sourceId:string; sourceKey:string; baseKey:string; fields:Array<{key:BriefField;label:string;before:string;after:string;max:number;error:string}>};
 const FIELDS: ReadonlyArray<{key:BriefField;label:string;max:number}> = [{key:'title',label:'问卷名称',max:160},{key:'population',label:'调查对象与纳入条件',max:160},{key:'geography',label:'地理范围',max:160},{key:'objective',label:'决策目标',max:600}];
 
 /** Exact canonical JSON, not a cryptographic hash. Kept in page memory, not a trust certificate. */
-function canonical(value: unknown): string {
+function canonical(value: unknown, evidence = false): string {
   let nodes=0;
   function encode(v:unknown,depth:number):string {
-    if(++nodes>20000||depth>16)throw new Error('输入结构超出范围。');
+    if(++nodes>(evidence?150000:20000)||depth>16)throw new Error('输入结构超出范围。');
     if(v===null||typeof v==='boolean')return JSON.stringify(v);
-    if(typeof v==='string'){if(v.length>300000)throw new Error('输入文本超出范围。');return JSON.stringify(v);}
+    if(typeof v==='string'){if(v.length>(evidence?1_200_000:300000))throw new Error('输入文本超出范围。');return JSON.stringify(v);}
     if(typeof v==='number'&&Number.isFinite(v))return JSON.stringify(v);
     if(!v||typeof v!=='object')throw new Error('输入必须为普通 JSON 数据。');
     if(Object.getOwnPropertySymbols(v).length)throw new Error('输入不能包含符号字段。');
     if(Array.isArray(v)){
-      if(v.length>2000||Object.keys(v).length!==v.length||Object.getOwnPropertyNames(v).length!==v.length+1)throw new Error('输入数组无效。');
+      if(v.length>(evidence?100000:2000)||Object.keys(v).length!==v.length||Object.getOwnPropertyNames(v).length!==v.length+1)throw new Error('输入数组无效。');
       return '['+Array.from({length:v.length},(_,i)=>{const d=Object.getOwnPropertyDescriptor(v,String(i));if(!d||!Object.hasOwn(d,'value'))throw new Error('输入不能包含空项或访问器。');return encode(d.value,depth+1);}).join(',')+']';
     }
     if(Object.getPrototypeOf(v)!==Object.prototype)throw new Error('输入必须为普通对象。');
+    if(Object.getOwnPropertyNames(v).length!==Object.keys(v).length)throw new Error('输入不能包含隐藏字段。');
     return '{'+Object.keys(v).sort().map(k=>{const d=Object.getOwnPropertyDescriptor(v,k);if(!d||!Object.hasOwn(d,'value'))throw new Error('输入不能包含访问器。');return JSON.stringify(k)+':'+encode(d.value,depth+1);}).join(',')+'}';
   }
-  const text=encode(value,0);if(new TextEncoder().encode(text).length>1_000_000)throw new Error('输入总大小超出范围。');return text;
+  const text=encode(value,0);if(new TextEncoder().encode(text).length>(evidence?2_000_000:1_000_000))throw new Error('输入总大小超出范围。');return text;
 }
-function exactKeys(value:Record<string,unknown>,keys:string[],label:string){if(Object.keys(value).length!==keys.length||keys.some(k=>!Object.hasOwn(value,k)))throw new Error(`${label} 字段缺失或包含未知字段。`);}
-function sourceCopy(raw:DiagnosisBriefSource):DiagnosisBriefSource {
-  const source=JSON.parse(canonical(raw));
-  if(!source||typeof source!=='object'||Array.isArray(source))throw new Error('诊断来源无效。');
-  exactKeys(source,['id','input'],'诊断来源');
+function exactKeys(value:Record<string,unknown>,keys:string[],label:string){if(Reflect.ownKeys(value).length!==keys.length||keys.some(k=>!Object.hasOwn(value,k)))throw new Error(`${label} 字段缺失或包含未知字段。`);}
+export function parseDiagnosisBriefSource(raw:unknown):DiagnosisBriefSource {
+  if(!raw||typeof raw!=='object'||Object.getPrototypeOf(raw)!==Object.prototype||Object.getOwnPropertySymbols(raw).length)throw new Error('诊断来源无效。');
+  const fields=Object.getOwnPropertyDescriptors(raw);
+  if(Object.values(fields).some(field=>!field.enumerable||!Object.hasOwn(field,'value')))throw new Error('诊断来源不能包含隐藏字段或访问器。');
+  const v2=fields.schemaVersion?.value===2;
+  exactKeys(raw as Record<string,unknown>,v2?['schemaVersion','id','input','literature']:['id','input'],'诊断来源');
+  const source=JSON.parse(canonical({id:fields.id.value,input:fields.input.value}));
   const input=source.input;
   if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('诊断输入无效。');
   exactKeys(input,['title','problem','decisionOwner','population','geography','stage','evidenceStatus'],'诊断输入');
@@ -54,19 +60,20 @@ function sourceCopy(raw:DiagnosisBriefSource):DiagnosisBriefSource {
   text(source.id,120,'来源版本');
   for(const [key,max] of [['title',120],['problem',1000],['decisionOwner',120],['population',200],['geography',120]] as const)text(input[key],max,key);
   if(!PROJECT_STAGES.includes(input.stage)||!['none','proposed','partial','verified'].includes(input.evidenceStatus))throw new Error('自报阶段或证据成熟度不支持。');
-  return source as DiagnosisBriefSource;
+  return v2?{schemaVersion:2,...source,literature:parseLiteratureEvidenceReference(fields.literature.value)}:source as DiagnosisBriefSource;
 }
 function draftCopy(d:Questionnaire):Questionnaire{return parseQuestionnaire(canonical(d));}
 
 export function prepareDiagnosisBrief(source:DiagnosisBriefSource,currentDesign:Questionnaire):BriefProposal {
-  const safeSource=sourceCopy(source),design=draftCopy(currentDesign),input=safeSource.input;
+  const safeSource=parseDiagnosisBriefSource(source),design=draftCopy(currentDesign),input=safeSource.input;
   const candidates={title:input.title,population:input.population,geography:input.geography,objective:`决策主体：${input.decisionOwner}\n决策问题：${input.problem}`};
-  return {sourceId:safeSource.id,sourceKey:canonical(safeSource),baseKey:canonical(design),fields:FIELDS.map(field=>({...field,before:design[field.key],after:candidates[field.key],error:candidates[field.key].length>field.max?`诊断内容为 ${candidates[field.key].length} 字，超过此字段 ${field.max} 字上限；未截断，请修改诊断输入或不选择此字段。`:''}))};
+  return {sourceId:safeSource.id,sourceKey:canonical(safeSource,'schemaVersion' in safeSource),baseKey:canonical(design),fields:FIELDS.map(field=>({...field,before:design[field.key],after:candidates[field.key],error:candidates[field.key].length>field.max?`诊断内容为 ${candidates[field.key].length} 字，超过此字段 ${field.max} 字上限；未截断，请修改诊断输入或不选择此字段。`:''}))};
 }
 
 export function applyDiagnosisBrief(proposal:BriefProposal,source:DiagnosisBriefSource,currentDesign:Questionnaire,selectedFields:readonly BriefField[]):Questionnaire {
   const expected=prepareDiagnosisBrief(source,currentDesign);
-  if(canonical(proposal)!==canonical(expected))throw new Error('诊断来源、问卷或提案已变化；请重新预览，未应用任何修改。');
+  const evidence=Object.hasOwn(source,'schemaVersion');
+  if(canonical(proposal,evidence)!==canonical(expected,evidence))throw new Error('诊断来源、问卷或提案已变化；请重新预览，未应用任何修改。');
   // Do not invoke caller-supplied array methods, iterators or accessors during validation/application.
   const selection:unknown=JSON.parse(canonical(selectedFields));
   if(!Array.isArray(selection)||selection.length===0||selection.length>FIELDS.length||new Set(selection).size!==selection.length||selection.some(k=>!FIELDS.some(f=>f.key===k)))throw new Error('请选择不重复的有效简介字段，未应用任何修改。');

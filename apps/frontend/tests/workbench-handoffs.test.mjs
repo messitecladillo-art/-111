@@ -69,7 +69,7 @@ test('an idle store has stable immutable snapshots and null setters do not notif
   let notifications = 0;
   handoffs.subscribe(() => { notifications++; });
   assert.deepEqual(initial, {
-    scope: 'project-a', design: null, dataset: null,
+    scope: 'project-a', design: null, dataset: null, literature: null,
     pending: { design: null, dataset: null, brief: null, questionnaire: null, result: null, report: null },
   });
   handoffs.setDesign(null);

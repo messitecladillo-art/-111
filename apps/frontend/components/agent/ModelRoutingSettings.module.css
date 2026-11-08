@@ -30,6 +30,10 @@
 .summary::before { content: ""; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 .settings .summary[data-ready="true"] { background: var(--mr-accent-soft); color: var(--mr-accent); }
 .taskList { padding: 0 32px; }
+.sectionHeading { padding: 26px 0 12px; border-top: 1px solid var(--mr-line); }
+.sectionHeading h3 { font-size: 17px; font-weight: 600; }
+.settings .sectionHeading p { margin-top: 5px; color: var(--mr-muted); font-size: 14px; }
+.settings .routeWarning { margin-top: 9px; color: var(--mr-warning); font-size: 14px; }
 .task { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(280px, 1.1fr); align-items: start; gap: 40px; padding: 28px 0; border-top: 1px solid var(--mr-line); }
 .taskDetails { display: flex; align-items: flex-start; gap: 14px; padding-top: 4px; min-width: 0; }
 .taskIcon { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border: 1px solid var(--mr-line); border-radius: 10px; color: var(--mr-muted); background: var(--mr-soft); }

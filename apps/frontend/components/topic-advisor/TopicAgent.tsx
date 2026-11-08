@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { parseCollection, parseService, type Service } from '@evix/shared';
 import { useHostedSession } from '@/components/hosted/HostedSession';
+import { getStageModelPreferences, getServerStageModelPreferences, resolveStageModelRoute, setStageModelPreference, subscribeModelPreferences } from '@/lib/agent/model-routing';
 import { errorMessage, hostedRequest, HostedApiError } from '@/components/hosted/api-client';
 import KnowledgeLookupPanel from '@/components/knowledge/KnowledgeLookupPanel';
 import { useWorkbenchTheme } from '@/components/workbench/shell-kit';
@@ -11,7 +12,8 @@ import { parseKnowledgeLookup, type KnowledgeLookupWire } from '@/lib/knowledge/
 import { profileFingerprint, recommendTopics, type TopicProfile } from '@/lib/topic-advisor';
 import { stableStringify } from '@/lib/topic-advisor/parse';
 import { TOPIC_BUNDLE } from '@/lib/topic-advisor/client-bundle';
-import { TOPIC_SOURCE_VERSIONS, topicGeographyLabel, type TopicRefinement } from '@/lib/topic-proposal';
+import { topicGeographyLabel, type TopicRefinement } from '@/lib/topic-proposal';
+import { TOPIC_AGENT_SOURCE_VERSIONS as TOPIC_SOURCE_VERSIONS } from '@/lib/topic-agent';
 import { freezeTopicAgentRequest, inferTopicAgentIntent, knownTopicAgentRejection, parseTopicAgentConversation, parseTopicAgentPending, parseTopicAgentTurn, proposeTopicProfile, runLocalTopicAgent, topicAgentContinuationCandidates, topicAgentConversationResumable, topicAgentScopeQuery, verifyTopicAgentTurn, type AgentIntent, type TopicAgentPending, type TopicAgentTurn } from '@/lib/topic-agent';
 import styles from './TopicAgent.module.css';
 
@@ -87,7 +89,9 @@ function TopicAgentSession({ profile, projectId = null, cacheNamespace = 'global
   const [inputVersion, setInputVersion] = useState(initial?.inputVersion ?? 0);
   const adoptionEpoch = useRef(inputVersion), binding = useRef('');
   const [message, setMessage] = useState(initial?.message ?? ''), [pending, setPending] = useState<Pending | null>(initial?.pending ?? null);
-  const [services, setServices] = useState<Service[]>([]), [serviceId, setServiceId] = useState(initial?.pending?.request.serviceId ?? ''), [servicesLoaded, setServicesLoaded] = useState(false);
+  const [services, setServices] = useState<Service[]>([]), [servicesLoaded, setServicesLoaded] = useState(false);
+  const modelPreferences=useSyncExternalStore(subscribeModelPreferences,()=>getStageModelPreferences(ownerId),getServerStageModelPreferences);
+  const serviceId=pending?.request.serviceId??resolveStageModelRoute('research.topic',services,modelPreferences).service?.id??'';
   const [chosenIds, setChosenIds] = useState<string[]>([]), [consentStamp, setConsentStamp] = useState('');
   const [lookup, setLookup] = useState<LookupEvidence | null>(initial.lookup ?? null), [includeLookup, setIncludeLookup] = useState(false), [lookupBinding, setLookupBinding] = useState<LookupBinding | null>(null);
   const lookupSequence = useRef(0), lookupGuard = useRef<LookupBinding | null>(null), lookupReference = useRef('');
@@ -174,13 +178,17 @@ function TopicAgentSession({ profile, projectId = null, cacheNamespace = 'global
     try {
       const raw = await hostedRequest('/api/services'); if (!current()) return;
       const list = parseCollection(raw, 'services', parseService, 8).filter(item => item.capabilities.includes('research'));
-      setServices(list); setServicesLoaded(true); setServiceId(previous => list.some(item => item.id === previous) ? previous : list[0]?.id ?? ''); setConsentStamp(''); invalidateAdoption();
+      setServices(list); setServicesLoaded(true); setConsentStamp(''); invalidateAdoption();
     } catch (failure) { if (current()) setError(errorMessage(failure)); }
     finally { lock.current = false; if (current()) setBusy(false); }
   }
   async function send() {
     if (lock.current || !currentWritable() || !key || !message.trim() || unresolved || full) return;
     if (mode === 'model' && (!ownerId || !service || !consented || !candidateIds.length)) return;
+    if(mode==='model') {
+      const selected=resolveStageModelRoute('research.topic',services,getStageModelPreferences(ownerId)).service;
+      if(selected?.id!==service?.id||selected?.revision!==service?.revision){setConsentStamp('');setError('选题模型或版本已变化，请重新确认本轮调用。');return;}
+    }
     lock.current = true; setBusy(true); setError(''); setNotice(''); const attempt = ++generation.current, stamp = context;
     try {
       if (mode === 'local') {
@@ -263,7 +271,7 @@ function TopicAgentSession({ profile, projectId = null, cacheNamespace = 'global
       if (!currentWritable()) return;
       if (!topicAgentConversationResumable(turns, projectId)) { setNotice(continuationIssue(turns)); return; }
       const leaf = turns[turns.length - 1];
-      setModel(turns.map(turn => ({ turn, context: `restored:${id}` }))); setMode('model'); if (!message.trim()) { setIntent(leaf.intent); setIntentExplicit(false); } setChosenIds([]); setConsentStamp(''); setServices([]); setServicesLoaded(false); setServiceId(''); invalidateAdoption();
+      setModel(turns.map(turn => ({ turn, context: `restored:${id}` }))); setMode('model'); if (!message.trim()) { setIntent(leaf.intent); setIntentExplicit(false); } setChosenIds([]); setConsentStamp(''); setServices([]); setServicesLoaded(false); invalidateAdoption();
       setNotice('已恢复完整讨论。选择研究模型和候选方向后，可以继续提问。');
       resumeFocus.current = { ownerId, identityEpoch, projectId, epoch: adoptionEpoch.current }; setResumeFocusVersion(value => value + 1);
     } catch (failure) { if (current() && stamp === adoptionEpoch.current) setError(errorMessage(failure)); }
@@ -334,7 +342,7 @@ function TopicAgentSession({ profile, projectId = null, cacheNamespace = 'global
     </div><aside className={styles.sidebar} aria-label="选题研究依据">
       <section className={styles.context}><span className={styles.eyebrow}>当前调研条件</span><h5>{geography || '地区尚未限定'}</h5><dl><div><dt>可投入时间</dt><dd>{profile.days === null ? '待确认' : `${profile.days} 天`}</dd></div><div><dt>预算</dt><dd>{profile.budgetYuan === null ? '待确认' : `${profile.budgetYuan} 元`}</dd></div><div><dt>已确认渠道</dt><dd>{Object.values(profile.access).filter(value => value === 'confirmed').length} 项</dd></div></dl><p>修改左侧条件后，新一轮对话会按新条件重新核对。</p></section>
       <details className={styles.modelSettings}><summary>研究方式<span>{mode === 'local' ? '资料库' : '个人模型'}</span></summary><div className={styles.modeChoices}><button type="button" aria-pressed={mode === 'local'} disabled={busy || unresolved || readOnly} onClick={() => { setMode('local'); invalidateAdoption(); setConsentStamp(''); }}>资料库研究</button><button type="button" aria-pressed={mode === 'model'} disabled={busy || unresolved || readOnly} onClick={() => { setMode('model'); invalidateAdoption(); setConsentStamp(''); }}>个人模型</button></div>
-        {mode === 'model' && (!ownerId ? <p><Link href="/login">登录</Link>后接入研究模型。</p> : <><button type="button" disabled={busy || unresolved} onClick={() => void loadServices()}>{servicesLoaded ? '刷新研究模型' : '读取我的研究模型'}</button>{servicesLoaded && <label className={styles.service}>研究模型<select aria-label="选题 Agent 研究模型" value={serviceId} disabled={busy || unresolved || readOnly} onChange={event => { setServiceId(event.target.value); invalidateAdoption(); setConsentStamp(''); }}><option value="">选择模型服务</option>{services.map(item => <option key={item.id} value={item.id}>{item.label} · {item.provider} · v{item.revision}</option>)}</select></label>}<Link href="/services">管理模型服务 ↗</Link><div className={styles.candidateChoices}><b>发送给模型的研究方向</b>{!candidates.length ? <p>先使用资料库整理方向，再选择要深入的候选。</p> : candidates.map(item => <label key={item.patternId}><input type="checkbox" checked={candidateIds.includes(item.patternId)} disabled={busy || unresolved || readOnly || !candidateIds.includes(item.patternId) && candidateIds.length >= 3} onChange={event => { setChosenIds(previous => event.target.checked ? [...previous, item.patternId].slice(0, 3) : previous.filter(id => id !== item.patternId)); invalidateAdoption(); setConsentStamp(''); }} />{item.title}</label>)}</div><section className={styles.lookup} aria-label="选题公开来源检索"><header><b>公开来源</b><span>用于模型研究</span></header>
+        {mode === 'model' && (!ownerId ? <p><Link href="/login">登录</Link>后接入研究模型。</p> : <><button type="button" disabled={busy || unresolved} onClick={() => void loadServices()}>{servicesLoaded ? '刷新研究模型' : '读取我的研究模型'}</button>{servicesLoaded && <label className={styles.service}>研究模型<select aria-label="选题 Agent 研究模型" value={serviceId} disabled={busy || unresolved || readOnly} onChange={event => { setStageModelPreference(ownerId,'research.topic',event.target.value||null); invalidateAdoption(); setConsentStamp(''); }}><option value="">选择模型服务</option>{services.map(item => <option key={item.id} value={item.id}>{item.label} · {item.provider} · v{item.revision}</option>)}</select></label>}<Link href="/services">管理模型服务 ↗</Link><div className={styles.candidateChoices}><b>发送给模型的研究方向</b>{!candidates.length ? <p>先使用资料库整理方向，再选择要深入的候选。</p> : candidates.map(item => <label key={item.patternId}><input type="checkbox" checked={candidateIds.includes(item.patternId)} disabled={busy || unresolved || readOnly || !candidateIds.includes(item.patternId) && candidateIds.length >= 3} onChange={event => { setChosenIds(previous => event.target.checked ? [...previous, item.patternId].slice(0, 3) : previous.filter(id => id !== item.patternId)); invalidateAdoption(); setConsentStamp(''); }} />{item.title}</label>)}</div><section className={styles.lookup} aria-label="选题公开来源检索"><header><b>公开来源</b><span>用于模型研究</span></header>
           {lookupAllowed && lookupBinding?.context === lookupContext ? <KnowledgeLookupPanel key={`${lookupBinding.context}:${lookupBinding.epoch}`} initialQuery={lookupSeed} purpose="topics" onLookupReady={receipt => receiveLookup(receipt, lookupBinding)} /> : <p>{readOnly ? '当前项目为只读' : unresolved ? '核对原调用后可继续检索' : '等待本轮完成后可继续检索'}</p>}
           {lookup && <div className={styles.lookupReceipt}><label><input type="checkbox" aria-label="将检索回执用于本轮模型" checked={Boolean(lookupId)} disabled={!lookupCurrent || !lookup.receipt.results.length || readOnly || busy || unresolved} onChange={event => { if (!currentWritable() || lock.current || !lookupCurrent) return; setIncludeLookup(event.target.checked); setConsentStamp(''); invalidateAdoption(); }} />采用这份检索 · {lookup.receipt.results.length} 条来源</label><p>检索词：{lookup.receipt.query}</p>{!lookupCurrent && <p>研究条件已变更，请重新确认相关来源。</p>}<details><summary>查看来源与回执</summary><span>{lookup.receipt.finishedAt ? new Date(lookup.receipt.finishedAt).toLocaleString('zh-CN') : ''} · {lookup.receipt.credits} credit</span>{lookup.receipt.results.map((source, index) => <article key={`${source.url}-${index}`}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title || new URL(source.url).hostname} ↗</a><p>{source.snippet}</p></article>)}</details></div>}
         </section><details className={styles.payload}><summary>本次发送范围</summary><p>左侧调研条件、所选方向、这轮问题及最多 6 轮已保存的模型对话。</p></details><label className={styles.consent}><input type="checkbox" aria-label="确认选题 Agent 模型调用" checked={consented} disabled={busy || unresolved || readOnly || !service || !candidateIds.length || !message.trim()} onChange={event => setConsentStamp(event.target.checked ? consentKey : '')} />{auth.session?.mode === 'local_test' ? '使用合成模型验收本轮提案' : '确认发送并使用我的模型额度'}</label></>)}

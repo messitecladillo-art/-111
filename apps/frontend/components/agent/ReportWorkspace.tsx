@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type KeyboardEvent, type RefCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefCallback, type ReactNode } from 'react';
 import { Formula } from '@/components/math/Tex';
 import { parseEditorContent, type EditorContent, type ReportSection } from '@/lib/editor-model';
 import { texProblem } from '@/lib/omml';
@@ -24,18 +24,8 @@ const exhibits = (s: ReportSection) =>
   (s.blocks ?? []).filter(b => b.kind === 'chart' || b.kind === 'table' || b.kind === 'formula').length;
 const hasContent = (s: ReportSection) => written(s) > 0 || !!s.blocks?.some(b => b.kind !== 'paragraph');
 
-export type LiveWritingStatus = {
-  active: boolean;
-  phase: 'contract' | 'wave1' | 'wave2' | 'repair' | 'done';
-  completed: number;
-  total: number;
-  paragraphs: number;
-  facts: number;
-  lastSectionId: string | null;
-  lastSectionTitle: string;
-  topicTitle: string;
-  autoFollow: boolean;
-};
+export type { LiveWritingStatus } from '@/lib/agent/report-work';
+import type { LiveWritingStatus } from '@/lib/agent/report-work';
 
 /**
  * The report's own navigation, in the sidebar while the report fills the centre: its sections in order, each with
@@ -90,10 +80,10 @@ export function ReportNav({
           data-primary="true"
           disabled={liveWriting?.active}
           onClick={() => (onStartFullReport ? onStartFullReport() : onSay('/全报告'))}
-          title="在当前报告画布上实时逐节生成全部 26 节正文并执行审阅修订"
+          title="先核对研究模式、模型与资料范围，再生成独立候选稿"
         >
           <Icon name="spark" />
-          {liveWriting?.active ? `正在实时撰写 (${liveWriting.completed}/${liveWriting.total})…` : '全流程生成完整报告'}
+          {liveWriting?.active ? `正在实时撰写 (${liveWriting.completed}/${liveWriting.total})…` : '生成候选稿'}
         </button>
         <button
           type="button"
@@ -133,6 +123,7 @@ export function ReportInspector({
   onSay,
   onEdit,
   onAdvisors,
+  revision,
 }: {
   content: EditorContent;
   picked: string | null;
@@ -141,6 +132,7 @@ export function ReportInspector({
   onSay: (text: string) => void;
   onEdit: () => void;
   onAdvisors: () => void;
+  revision?: ReactNode;
 }) {
   const section = content.report.find(s => s.id === picked) ?? null;
   const blocks = content.report.flatMap(s => s.blocks ?? []);
@@ -166,6 +158,7 @@ export function ReportInspector({
         </button>
       </header>
       <div className={styles.scroll}>
+        {revision}
         <section className={styles.block}>
           <p className={styles.label}>当前章节</p>
           {section ? (
@@ -219,10 +212,11 @@ export function ReportInspector({
           </dl>
         </section>
         <section className={styles.block}>
-          <p className={styles.label}>对标体检</p>
+          <p className={styles.label}>证据完整度检查</p>
           {benchmark ? (
             <>
-              <div className={styles.score}>
+              <p className={styles.hint}>此分数反映可检查项目的完整度；方法适用性、事实真实性和导出文件仍需验收。</p>
+            <div className={styles.score}>
                 <b>{benchmark.score}</b>
                 <span>/ 100</span>
                 <i style={{ width: `${benchmark.score}%` }} aria-hidden="true" />
@@ -245,7 +239,7 @@ export function ReportInspector({
                         ))}
                       </ul>
                     ) : (
-                      <p className={styles.hint}>{checked ? '这一领域没有意见。' : '报告里还没有它能检查的内容。'}</p>
+                      <p className={styles.hint}>{checked ? '当前可检查项未发现问题，独立复核仍待完成。' : '报告里还没有它能检查的内容。'}</p>
                     )}
                   </div>
                 ))
@@ -288,16 +282,18 @@ const TOOLS: { id: Exclude<Tool, 'ai'>; label: string; icon: string }[] = [
 ];
 
 const PHASE_LABELS: Record<LiveWritingStatus['phase'], string> = {
-  contract: '正在构建 9 章 26 节目录与统计图表索引',
-  wave1: '正在逐节撰写正文并嵌入统计图表',
-  wave2: '正在关联全篇图目录、表目录与参考文献交叉引用',
-  repair: '正在执行学术表述修订与版式规整',
-  done: '全篇 26 节撰写与版式校验已完成',
+  contract: '正在核对输入与研究模式',
+  wave1: '正在生成主体章节候选稿',
+  wave2: '正在汇总已生成内容',
+  repair: '正在记录实际返修与规则检查',
+  done: '本轮运行结束 · 候选稿待审阅',
+  error: '本轮执行未完成 · 原稿已保留',
+  failed: '未收到完整结果 · 请核对回执',
+  cancelled: '已停止接收 · 原稿已保留',
 };
 
 /**
- * The bar over the paper: supports inserting blocks, switching between LaTeX PDF typesetting and 1:1 Word (.docx)
- * template layout, viewing/exporting .tex source, exporting standard .docx or PDF, and running live generation.
+ * Report controls distinguish the browser preview, source export, draft export and independent candidate generation.
  */
 export function PaperToolbar({
   content,
@@ -313,6 +309,7 @@ export function PaperToolbar({
   onJumpToSection,
   docFormat = 'latex',
   onChangeDocFormat,
+  previewOnly = false,
 }: {
   content: EditorContent;
   section: ReportSection | null;
@@ -327,6 +324,7 @@ export function PaperToolbar({
   onJumpToSection?: (sectionId: string) => void;
   docFormat?: DocFormatMode;
   onChangeDocFormat?: (mode: DocFormatMode) => void;
+  previewOnly?: boolean;
 }) {
   const [open, setOpen] = useState<Tool | null>(null);
   const [showTexSource, setShowTexSource] = useState(false);
@@ -335,13 +333,20 @@ export function PaperToolbar({
   const [tex, setTex] = useState('');
   const [topicInput, setTopicInput] = useState('');
   const [said, setSaid] = useState('');
+  const announceTimer = useRef<number | null>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (announceTimer.current) window.clearTimeout(announceTimer.current); }; }, []);
 
   const announce = (msg: string) => {
+    if (!mounted.current) return;
+    if (announceTimer.current) window.clearTimeout(announceTimer.current);
     setSaid(msg);
-    window.setTimeout(() => setSaid(''), 2800);
+    announceTimer.current = window.setTimeout(() => setSaid(''), 4200);
   };
 
   const put = (items: InsertItem[], what: string) => {
+    if (previewOnly) return;
     onInsert(items);
     setOpen(null);
     setText('');
@@ -367,18 +372,12 @@ export function PaperToolbar({
       });
       return buildLatexSource(baseInput);
     } catch {
-      return [
-        '\\documentclass[UTF8,a4paper,zihao=-4]{ctexart}',
-        '\\usepackage[top=25.4mm,bottom=25.4mm,left=31.8mm,right=31.8mm]{geometry}',
-        '\\usepackage{amsmath,amssymb,booktabs,graphicx,hyperref}',
-        '\\begin{document}',
-        ...content.report.map(s => `\\section{${s.title}}\n${s.body || ''}`),
-        '\\end{document}',
-      ].join('\n\n');
+      return '';
     }
   }, [content]);
 
   const handleDownloadTex = () => {
+    if (!generatedTexSource) { announce('源码生成失败，请在编辑器中检查报告内容后再导出。'); return; }
     const cleanTitle = (content.title || '研究报告').replace(/[<>:"/\\|?*]/gu, '_').slice(0, 80);
     const url = URL.createObjectURL(new Blob([generatedTexSource], { type: 'text/x-tex;charset=utf-8' }));
     const a = document.createElement('a');
@@ -386,7 +385,7 @@ export function PaperToolbar({
     a.download = `${cleanTitle}.tex`;
     a.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    announce('已导出标准 XeLaTeX (.tex) 源码文件');
+    announce('已导出 .tex 源码，尚未编译；请在编译后核对版式');
   };
 
   const handleExportDocx = async () => {
@@ -396,12 +395,12 @@ export function PaperToolbar({
       const { buildDocx, downloadBlob, fileName } = await import('@/lib/editor-export');
       const parsed = parseEditorContent(content);
       const blob = await buildDocx(parsed, reportExportOptions(DEFAULT_REPORT_SETTINGS.options, 'main'));
-      downloadBlob(blob, `${fileName(parsed.title)}-正大杯标准报告.docx`);
-      announce('已导出正大杯官方规范 Word (.docx) 文档');
+      downloadBlob(blob, `${fileName(parsed.title)}-报告草稿.docx`);
+      announce('已导出 Word 草稿，请打开文件核对分页、图表与公式');
     } catch (err) {
       announce(err instanceof Error ? err.message : 'Word 导出失败，请稍后重试');
     } finally {
-      setExportingDocx(false);
+      if (mounted.current) setExportingDocx(false);
     }
   };
 
@@ -410,15 +409,16 @@ export function PaperToolbar({
   };
 
   return (
-    <div className={styles.toolbarWrap}>
+    <div ref={toolbarRef} className={styles.toolbarWrap} onKeyDown={event => { if (event.key === 'Escape') { setOpen(null); setShowTexSource(false); toolbarRef.current?.querySelector<HTMLButtonElement>(`[data-tool="${open}"]`)?.focus(); } }}>
       <div className={styles.toolbar} role="toolbar" aria-label="报告排版与生成工具栏">
         {TOOLS.map(tool => (
           <button
             key={tool.id}
             type="button"
-            disabled={!section}
+            data-tool={tool.id}
+            disabled={!section || previewOnly}
             aria-pressed={open === tool.id}
-            title={section ? `往「${section.title}」里加${tool.label}` : '先在纸面或目录里选一节'}
+            title={previewOnly ? '候选稿仅供预览，请打开原稿编辑' : section ? `往「${section.title}」里加${tool.label}` : '先在纸面或目录里选一节'}
             onClick={() => setOpen(open === tool.id ? null : tool.id)}
           >
             <Icon name={tool.icon} />
@@ -433,19 +433,19 @@ export function PaperToolbar({
           type="button"
           aria-pressed={docFormat === 'latex'}
           onClick={() => onChangeDocFormat?.('latex')}
-          title="切换为 XeLaTeX (ctexart + booktabs) A4 标准学术排印模式"
+          title="浏览器中的学术样式预览；下载的源码需单独编译核验"
         >
           <Icon name="code" />
-          <span>LaTeX 排版</span>
+          <span>学术预览</span>
         </button>
         <button
           type="button"
           aria-pressed={docFormat === 'word'}
           onClick={() => onChangeDocFormat?.('word')}
-          title="切换为正大杯官方 Word (.docx) 1:1 标尺与样式模板模式（后置导出与微调）"
+          title="浏览器中的 Word 样式预览；导出后需核对实际分页"
         >
           <Icon name="book" />
-          <span>Word 模板</span>
+          <span>Word 预览</span>
         </button>
 
         {docFormat === 'latex' ? (
@@ -462,10 +462,10 @@ export function PaperToolbar({
             <button
               type="button"
               onClick={handlePrintPdf}
-              title="将当前 A4 学术排印页面直接导出/打印为标准 PDF 文档"
+              title="打开浏览器打印，可另存为 PDF；这是浏览器预览，不是 LaTeX 编译结果"
             >
               <Icon name="download" />
-              <span>导出 PDF</span>
+              <span>打印 / PDF</span>
             </button>
           </>
         ) : (
@@ -473,7 +473,7 @@ export function PaperToolbar({
             type="button"
             disabled={exportingDocx}
             onClick={() => void handleExportDocx()}
-            title="一键导出与当前画布格式 1:1 对齐的正大杯标准 Word (.docx) 文件"
+            title="导出可编辑的 Word 草稿，导出文件仍需验收"
           >
             <Icon name="download" />
             <span>{exportingDocx ? '导出中…' : '导出 .docx'}</span>
@@ -484,13 +484,14 @@ export function PaperToolbar({
 
         <button
           type="button"
+          data-tool="ai"
           aria-pressed={open === 'ai' || !!liveWriting?.active}
           onClick={() => setOpen(open === 'ai' ? null : 'ai')}
-          title="由模型实时生成完整 26 节报告并在纸面同步呈现输入、图表飞入、交叉引用与修订"
+          title="先确认研究模式、模型版本与发送资料，再生成独立候选稿"
           style={liveWriting?.active ? { color: '#1f6b5f', fontWeight: 600 } : undefined}
         >
           <Icon name="spark" />
-          <span>{liveWriting?.active ? `${liveWriting.completed}/${liveWriting.total} 撰写中` : '生成报告'}</span>
+          <span>{liveWriting?.active ? `${liveWriting.completed}/${liveWriting.total} 撰写中` : '生成候选稿'}</span>
         </button>
 
         {onPlayChoreography && (
@@ -500,29 +501,32 @@ export function PaperToolbar({
               setOpen(null);
               onPlayChoreography();
             }}
-            title="在当前纸面演示实时逐字输入、内置图表飞入、双轨交叉引用连线与审阅修订"
+            title="回放当前已有的正文和图表；只有本轮记录的实际修订才显示纠错"
           >
             <Icon name="bolt" />
-            <span>实时演练</span>
+            <span>回放呈现</span>
           </button>
         )}
 
-        <button type="button" onClick={onEdit} title="在完整编辑器里修改">
+        <button type="button" onClick={onEdit} title="打开原稿，在完整编辑器里修改">
           <Icon name="external" />
-          <span>编辑</span>
+          <span>{previewOnly ? '编辑原稿' : '编辑'}</span>
         </button>
       </div>
 
+      {previewOnly && <p className={styles.previewNote}>正在预览候选稿。插入操作已停用；「编辑原稿」打开原始版本，采纳在审阅工作台完成。</p>}
+
       {showTexSource && (
-        <div className={styles.latexSourceDrawer} role="region" aria-label="实时生成的 XeLaTeX 源码">
+        <div className={styles.latexSourceDrawer} role="region" aria-label="可导出的 XeLaTeX 源码">
           <div className={styles.latexSourceHead}>
-            <b>main.tex · XeLaTeX (ctexart + booktabs + amsmath) 实时编译源码</b>
+            <b>main.tex · XeLaTeX (ctexart + booktabs + amsmath) 可导出源码 · 尚未编译</b>
             <div className={styles.latexSourceActions}>
               <button
                 type="button"
                 onClick={() => {
-                  void navigator.clipboard?.writeText(generatedTexSource);
-                  announce('已复制完整 .tex 源码到剪贴板');
+                  if (!generatedTexSource) { announce('源码生成失败，暂不能复制。'); return; }
+                  if (!navigator.clipboard) { announce('当前浏览器不支持复制，请下载源码。'); return; }
+                  void navigator.clipboard.writeText(generatedTexSource).then(() => announce('已复制 .tex 源码')).catch(() => announce('复制失败，请下载源码。'));
                 }}
               >
                 复制源码
@@ -531,7 +535,7 @@ export function PaperToolbar({
                 下载 .tex
               </button>
               <button type="button" onClick={handlePrintPdf}>
-                编译导出 PDF
+                打印当前预览
               </button>
               <button type="button" onClick={() => setShowTexSource(false)}>
                 收起
@@ -545,7 +549,7 @@ export function PaperToolbar({
       {liveWriting && (
         <div className={styles.liveHud} data-active={liveWriting.active || undefined} role="status" aria-live="polite">
           <div className={styles.liveHudTrack} aria-hidden="true">
-            <i style={{ width: `${liveWriting.phase === 'done' ? 100 : Math.max(4, pct)}%` }} />
+            <i style={{ width: `${liveWriting.phase === 'done' ? 100 : Math.max(0, Math.min(100, pct))}%` }} />
           </div>
           <div className={styles.liveHudRow}>
             <span className={styles.liveHudBadge}>
@@ -553,8 +557,8 @@ export function PaperToolbar({
               {PHASE_LABELS[liveWriting.phase]}
             </span>
             <span className={styles.liveHudStats}>
-              已完成 <b>{liveWriting.completed}/{liveWriting.total}</b> 节 · <b>{liveWriting.paragraphs}</b> 段 · 已关联{' '}
-              <b>{liveWriting.facts}</b> 处统计数据与图表引用
+              已处理 <b>{liveWriting.completed}/{liveWriting.total}</b> 节 · <b>{liveWriting.paragraphs}</b> 段 · 已关联{' '}
+              <b>{liveWriting.facts}</b> 处事实锚点
             </span>
             {liveWriting.lastSectionTitle && (
               <button
@@ -591,12 +595,14 @@ export function PaperToolbar({
         <div className={styles.popover}>
           <input
             ref={focusQuietly}
+            aria-label="研究课题名称"
+            maxLength={160}
             value={topicInput}
             onChange={e => setTopicInput(e.target.value)}
-            placeholder="输入研究课题名称（留空则按当前项目课题生成 9 章 26 节完整报告）…"
+            placeholder="研究课题名称（留空使用当前项目标题）…"
           />
           <div className={styles.popActions}>
-            <span>支持实时逐字输入、内置统计图生成嵌入、目录交叉引用连线与审阅修订</span>
+            <span>先确认资料和模型服务；本次内容进入独立候选稿，审阅后采纳。</span>
             {onInstantForge && (
               <button
                 type="button"
@@ -607,7 +613,7 @@ export function PaperToolbar({
                   onInstantForge(t);
                 }}
               >
-                快速生成样板
+                载入教学模拟
               </button>
             )}
             <button
@@ -621,13 +627,13 @@ export function PaperToolbar({
                 onStartFullReport?.(t);
               }}
             >
-              {liveWriting?.active ? '正在实时撰写…' : '启动实时全篇撰写'}
+              {liveWriting?.active ? '正在实时撰写…' : '核对并生成候选稿'}
             </button>
           </div>
         </div>
       )}
 
-      {open && open !== 'ai' && section && (
+      {open && open !== 'ai' && section && !previewOnly && (
         <div className={styles.popover}>
           {open === 'text' && (
             <>
@@ -637,7 +643,7 @@ export function PaperToolbar({
                 maxLength={2000}
                 value={text}
                 onChange={e => setText(e.target.value)}
-                onKeyDown={keys(() => text.trim() && put([{ kind: 'paragraph', text: text.trim() }], '一段正文'))}
+                onKeyDown={event => keys(() => text.trim() && put([{ kind: 'paragraph', text: text.trim() }], '一段正文'))(event)}
                 placeholder={`写一段加到「${section.title}」末尾。数字请用登记结果，不要手填。`}
               />
               <div className={styles.popActions}>
@@ -692,7 +698,7 @@ export function PaperToolbar({
                 ref={focusQuietly}
                 value={tex}
                 onChange={e => setTex(e.target.value)}
-                onKeyDown={keys(() => tex.trim() && !problem && put([{ kind: 'formula', tex: tex.trim() }], '一个公式'))}
+                onKeyDown={event => keys(() => tex.trim() && !problem && put([{ kind: 'formula', tex: tex.trim() }], '一个公式'))(event)}
                 placeholder="LaTeX，例如 n_0=\frac{z^2p(1-p)}{d^2}"
               />
               <div className={styles.texPreview}>

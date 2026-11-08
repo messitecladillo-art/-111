@@ -215,3 +215,20 @@ test('a conversation keeps the name the user gave it; between two tabs the later
   threads.append([user('追问')]);
   assert.equal(threads.view('mia').threads[0].title, '另一个标签页起的名字', 'new messages leave the name alone');
 });
+
+test('refresh turns full-report running into reconcilable unknown without changing a live turn or ordinary chat',async()=>{
+  const owner='report-reload',run='3d863bce-f3c4-483f-ac10-2fab578dddb6';threads.bind(owner);
+  const full={...agent('候选稿生成中'),model:{service:'已选模型',step:1,status:'running',reportRunId:run}};
+  const ordinary={...agent('普通对话执行中'),model:{service:'已选模型',step:1,status:'running'}};
+  threads.append([full,ordinary]);
+  assert.equal(threads.find(full.id).model.status,'running');
+  const stored=JSON.parse(local.getItem(`evix.agent.threads.v1:${owner}`)).threads[0].messages;
+  assert.equal(stored.find(m=>m.id===full.id).model.status,'unknown');
+  assert.equal(stored.find(m=>m.id===ordinary.id).model.status,'running');
+  const fresh=await import('../components/agent/threads.ts?report-reload');fresh.threads.bind(owner);
+  assert.equal(fresh.threads.find(full.id).model.reportRunId,run);
+  assert.equal(fresh.threads.find(full.id).model.status,'unknown');
+  threads.patch(full.id,m=>({...m,model:{...m.model,status:'ready'}}));
+  assert.equal(threads.find(full.id).model.status,'ready');
+  assert.equal(JSON.parse(local.getItem(`evix.agent.threads.v1:${owner}`)).threads[0].messages.find(m=>m.id===full.id).model.status,'ready');
+});

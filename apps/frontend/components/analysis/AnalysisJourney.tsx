@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { JOURNEY_STATUS_LABELS, type JourneyModule } from '@/lib/analysis-journey';
 import { useContentReveal } from '@/components/motion/useWorkspaceMotion';
+import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
 import styles from './AnalysisJourney.module.css';
 
 type Props = {
@@ -21,7 +22,7 @@ export default function AnalysisJourney({ reading, readPhase, readName, dataset,
   useEffect(() => {
     const node = root.current;
     if (!node) return;
-    const observer = new IntersectionObserver(entries => setVisible(!!entries[0]?.isIntersecting && !document.hidden));
+    const observer = new IntersectionObserver(entries => setVisible(!!entries[entries.length - 1]?.isIntersecting && !document.hidden));
     observer.observe(node);
     const visibility = () => { if (document.hidden) setVisible(false); else { observer.unobserve(node); observer.observe(node); } };
     document.addEventListener('visibilitychange', visibility);
@@ -46,10 +47,12 @@ export default function AnalysisJourney({ reading, readPhase, readName, dataset,
     </header>
     <div className={styles.body} hidden={!expanded} data-activity={showActivity}>
       <div className={styles.scene}>
+        {reading && <div className={styles.readingWork}>
+          <ReportWorkstation inline kind="analysis" heading={readLabels[readPhase]} paused={paused || !visible || !expanded}
+            state={{ phase: readPhase === 'reading' ? 'preparing' : 'reviewing', detail: readName, completed: 0, total: 0 }} />
+        </div>}
         <div className={styles.landscape}>
-          <svg className={styles.route} viewBox="0 0 800 180" preserveAspectRatio="none" aria-hidden="true"><path d="M 80 65 C 200 65 160 130 280 130 S 420 45 520 45 S 640 120 720 120" className={styles.routeBase}/><path d="M 80 65 C 200 65 160 130 280 130 S 420 45 520 45 S 640 120 720 120" className={styles.routeFlow}/></svg>
           <div className={styles.stations}>{stageNames.map((name, index) => <button type="button" className={styles.station} key={name} disabled={index > 0 && !dataset} data-active={focus === index} data-ready={index === 0 ? !!dataset && !reading : index === 1 ? !!dataset && !setupIssue : index === 2 ? ready.length > 0 : ready.length > 0} onClick={() => onNavigate(targets[index])}>
-            <span className={styles.glyph} aria-hidden="true">{index === 0 ? <><i/><i/><i/></> : index === 1 ? <><b>✓</b><i/><i/></> : index === 2 ? <><i/><i/><i/><i/></> : <><i/><i/><i/></>}</span>
             <span className={styles.stationNumber}>0{index + 1}</span><strong>{name}</strong><small>{stageNotes[index]}</small>
           </button>)}</div>
         </div>

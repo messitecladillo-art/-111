@@ -6,6 +6,7 @@ import { useHostedSession } from './HostedSession';
 import { HostedReceipt, LoginRequired } from './HostedFrame';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 import ModelRoutingSettings from '@/components/agent/ModelRoutingSettings';
+import { MODEL_SERVICES_UPDATED } from '@/lib/agent/model-routing';
 
 type Form = { label: string; provider: ServiceProvider; baseUrl: string; model: string; maxOutputTokens: string; capabilities: ServiceCapability[] };
 const blank = (): Form => ({ label: '', provider: 'openai', baseUrl: PROVIDER_BASES.openai, model: '', maxOutputTokens: '1024', capabilities: ['questionnaire', 'research', 'report', 'defense'] });
@@ -18,6 +19,7 @@ function ServicePanel() {
   const [tab, setTab] = useState<'routing' | 'connections' | null>(null);
   const auth = useHostedSession(), [services, setServices] = useState<Service[]>([]), [form, setForm] = useState<Form>(blank), [editing, setEditing] = useState<Service | null>(null), [key, setKey] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState(''), [uncertain, setUncertain] = useState(false);
   const activeTab = tab ?? (loading || !services.length ? 'connections' : 'routing');
+  const changed=()=>{const ownerId=auth.session?.user?.id;if(ownerId)window.dispatchEvent(new CustomEvent(MODEL_SERVICES_UPDATED,{detail:{ownerId,identityEpoch:auth.identityEpoch}}));};
   const epoch = useRef(0), pending = useRef<{ method: string; path: string; body: Record<string, unknown> } | null>(null);
   const directory = useKeyedListMotion<HTMLElement>({ ids: services.map(service => service.id), activeId: editing?.id, enabled: !loading });
   const reload = useCallback(async () => { const n = ++epoch.current; setLoading(true); try { const rows = parseCollection(await hostedRequest('/api/services'), 'services', parseService, 8); if (n === epoch.current) setServices(rows); } catch (e) { if (n === epoch.current) setError(errorMessage(e)); } finally { if (n === epoch.current) setLoading(false); } }, []);
@@ -36,11 +38,11 @@ function ServicePanel() {
       pending.current = { method: editing ? 'PUT' : 'POST', path: editing ? `/api/services/${editing.id}` : '/api/services', body: { label: form.label.trim(), provider: form.provider, baseUrl: form.baseUrl, model: form.model.trim(), maxOutputTokens, capabilities: form.capabilities, ...(key ? { apiKey: key } : {}), ...(editing ? { expectedRevision: editing.revision } : {}), idempotencyKey: crypto.randomUUID() } };
     }
     setBusy(true);
-    try { const operation = pending.current; parseService(await auth.mutate(operation.path, operation.body, operation.method)); pending.current = null; setUncertain(false); setEditing(null); setForm(blank()); setNotice('服务配置已保存。回到项目后可以生成问卷建议。'); await reload(); }
+    try { const operation = pending.current; parseService(await auth.mutate(operation.path, operation.body, operation.method)); pending.current = null; setUncertain(false); setEditing(null); setForm(blank()); setNotice('服务配置已保存。各研究步骤可以选择这个命名服务。'); await reload(); changed(); }
     catch (e) { setError(errorMessage(e)); if(e instanceof HostedApiError && e.status>=400 && e.status<500){pending.current=null;setUncertain(false);if(e.status===409)void reload();}else setUncertain(true); }
     finally { setKey(''); setBusy(false); }
   }
-  async function remove(service: Service) { if (!window.confirm(`移除“${service.label}”的密钥配置？后续调用将无法使用它；已发送的请求不保证撤回。`)) return; setBusy(true); setError(''); try { await auth.mutate(`/api/services/${service.id}`, { expectedRevision: service.revision, idempotencyKey: crypto.randomUUID() }, 'DELETE'); if (editing?.id === service.id) { setEditing(null); setForm(blank()); setKey(''); } setNotice('服务配置已移除。'); await reload(); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); } }
+  async function remove(service: Service) { if (!window.confirm(`移除“${service.label}”的密钥配置？后续调用将无法使用它；已发送的请求不保证撤回。`)) return; setBusy(true); setError(''); try { await auth.mutate(`/api/services/${service.id}`, { expectedRevision: service.revision, idempotencyKey: crypto.randomUUID() }, 'DELETE'); if (editing?.id === service.id) { setEditing(null); setForm(blank()); setKey(''); } setNotice('服务配置已移除。'); await reload(); changed(); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); } }
   return <div><div className="hosted-actions" role="tablist" aria-label="模型设置" style={{ marginBottom: 24 }}>
     <button type="button" role="tab" id="model-connections-tab" aria-selected={activeTab === 'connections'} aria-controls="model-connections-panel" className={activeTab === 'connections' ? 'hosted-primary' : 'hosted-secondary'} onClick={() => setTab('connections')}>服务接入</button>
     <button type="button" role="tab" id="model-routing-tab" aria-selected={activeTab === 'routing'} aria-controls="model-routing-panel" className={activeTab === 'routing' ? 'hosted-primary' : 'hosted-secondary'} onClick={() => setTab('routing')}>任务分工</button>

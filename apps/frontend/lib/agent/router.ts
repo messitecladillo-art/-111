@@ -62,7 +62,7 @@ export type AgentAction =
   /** Forges a complete National First Prize pack for any topic or archetype into design, dataset, and report. */
   | { type: 'loadBenchmark'; benchmarkId: string }
   /** Runs the 00–06 full-workflow LLM multi-chapter report generation pipeline (26 sections + 4 ledgers + 6-advisor self-repair). */
-  | { type: 'generateFullReport'; topic: string; mode?: 'plan' | 'demonstration' | 'empirical' }
+  | { type: 'generateFullReport'; topic: string; mode?: 'plan' | 'demonstration' | 'empirical'; modelBinding?:ModelConsentBinding; inputRevision?:string }
   /** Stores a session-scoped LLM API key in browser sessionStorage for direct full-report generation. */
   | { type: 'setApiKey'; apiKey: string }
   /** Inserts text/code/chart-reading paragraphs produced in an interactive studio card into a blueprint section. */
@@ -116,7 +116,7 @@ const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打�
 export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
   { name: '全报告', args: '任意课题或留空', line: 'AI 全流程自动生成 26 节国奖级全报告（00–06 技能包 · 事实锁死 · 六大顾问自愈）', words: ['fullreport', 'autoreport'] },
-  { name: '密钥', args: 'sk-...', line: '绑定当前会话大模型 API Key（DeepSeek / OpenAI）用于全报告自动生成', words: ['apikey', 'key'] },
+  { name: '密钥', line: '打开个人模型服务，安全配置报告模型', words: ['apikey', 'key'] },
   { name: '铸造', args: '任意课题或留空', line: '生成一套教学模拟研究：问卷、模拟作答，以及在模拟数据上实际计算的结果与报告', words: ['forge', 'award', 'benchmark', 'demo'] },
   { name: '备赛', line: '正大杯备赛八个阶段与下一步', words: ['coach', 'guide'] },
   { name: '绘图', args: '图题或维度', line: '把已登记结果画成图（5 类图型 · 4 套配色 · 可编辑标签）', words: ['plot', 'chart'] },
@@ -244,54 +244,22 @@ function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
 }
 
 function buildFullReportTurn(ctx: RouterContext, rawTopic = ''): AgentTurn {
-  const topic = rawTopic.trim() || ctx.projectTitle?.trim() || '当前参赛研究课题';
+  const topic=rawTopic.trim()||ctx.projectTitle?.trim()||'当前研究课题';
+  const action:AgentAction={type:'generateFullReport',topic:rawTopic.trim()||ctx.projectTitle?.trim()||''};
   return {
-    lines: [
-      [t('已就绪：'), t('全流程 Agent 自动生成全报告（00–06 技能包全闭环）', 'strong'), t('。')],
-      [t(`目标课题：「${topic}」 · 覆盖 9 章 `, 'dim'), t('26 节', 'gold'), t('（Wave 1 主体与实证 22 节并发拟稿 → Wave 2 结论/3W1H 建议/局限/摘要 4 节综合拟稿）。', 'dim')],
-    ],
-    cards: [{
-      kind: 'tool',
-      title: '全流程自动生成契约 · 00–06 市调科研融合技能包',
-      lines: [
-        [t('00 全流程门禁', 'teal'), t('　锁定 demonstration/empirical 模式，自动构建《结论证据表》《文献核验表》《统计结果表》《图表登记表》四张交接台账', 'dim')],
-        [t('01–04 证据锁死', 'teal'), t('　项目已登记的结果，或在教学模拟数据上实际计算的结果；正文数字只能以占位符 {F编号} / {G编号} / {R编号} 引用', 'dim')],
-        [t('05 两阶段撰稿', 'teal'), t('　调用大模型并发撰写叙述性章节，不得自造任何统计数字；未登记的分析整段拒收', 'dim')],
-        [t('06 六顾问审稿', 'teal'), t('　设/证/统/图/写/交 六位顾问审稿，问题段落交回模型修订（因果误读、OR 误读、稳健性误读、漏引图表）', 'dim')],
-      ],
-      links: [
-        { label: `立即生成「${topic.slice(0, 14)}」全报告`, action: { type: 'generateFullReport', topic: rawTopic.trim() || ctx.projectTitle?.trim() || '' }, primary: true },
-        say('换一个课题：社区助餐服务', '/全报告 城市社区助餐服务的使用体验、满意度与持续使用意愿调查'),
-        say('换一个课题：大学生 AI 学习工具', '/全报告 大学生使用 AI 学习工具的体验、规范认知与持续使用意愿调查'),
-      ],
-    }],
-    chips: [
-      recommend({ label: '立即启动 AI 全报告生成', action: { type: 'generateFullReport', topic: rawTopic.trim() || ctx.projectTitle?.trim() || '' } }),
-      say('/铸造'),
-      say('/印鉴'),
-    ],
+    lines:[[t('从当前项目资料生成'),t('可审阅的报告候选稿','strong'),t('。')],[t(`课题：「${topic}」；主体章节与综合章节分阶段起草，完成后检查再采纳。`,'dim')]],
+    cards:[{kind:'tool',title:'本轮生成计划',lines:[
+      [t('输入与模式','teal'),t('　使用当前问卷、数据与登记结果；研究计划、教学模拟和项目实证明确分开。','dim')],
+      [t('检查与修订','teal'),t('　逐项记录已通过、待复核和未执行检查，展示实际修改前后的正文。','dim')],
+      [t('原稿保护','teal'),t('　生成过程中原稿保留；比较、锁定章节后决定是否采纳为草稿。','dim')],
+      [t('交付边界','teal'),t('　完整度检查不代表独立审稿或文件验收；最终导出仍需复核。','dim')],
+    ],links:[{label:'查看生成计划',action,primary:true}]}],
+    chips:[recommend({label:'查看生成计划',action}),say('/写报告'),say('/提交')],
   };
 }
 
-function buildApiKeyTurn(rawKey = ''): AgentTurn {
-  const cleaned = rawKey.trim();
-  if (!cleaned) {
-    return {
-      lines: [
-        [t('用法：发送 '), t('/密钥 sk-...', 'teal'), t(' 即可将你的 DeepSeek / OpenAI 兼容 API Key 绑定至当前浏览器会话（仅存于本地 sessionStorage，不入库）。')],
-        [t('本地开发环境已默认接入 .env.local 中的 DEEPSEEK_API_KEY，可直接运行 ', 'dim'), t('/全报告', 'teal'), t('。', 'dim')],
-      ],
-      chips: [recommend(say('/全报告')), say('/帮助')],
-    };
-  }
-  return {
-    lines: [
-      [t('已将会话 API Key（'), t(`${cleaned.slice(0, 6)}…${cleaned.slice(-4)}`, 'gold'), t('）绑定至当前浏览器。')],
-      [t('现在可直接点击下方按钮或发送 ', 'dim'), t('/全报告 ‹你的课题›', 'teal'), t(' 启动 26 节全流程自动撰稿。', 'dim')],
-    ],
-    act: { type: 'setApiKey', apiKey: cleaned },
-    chips: [recommend(say('/全报告')), say('/铸造')],
-  };
+function buildApiKeyTurn(): AgentTurn {
+  return {lines:[[t('请在个人模型服务中配置密钥，并启用报告能力。不要把密钥写入对话。','dim')]],chips:[{label:'打开模型服务',action:{type:'open',room:'services'},primary:true}]};
 }
 
 function nextStep(ctx: RouterContext): AgentTurn {
@@ -497,7 +465,7 @@ function slash(body: string, ctx: RouterContext): Routed {
   switch (command.name) {
     case '下一步': return { turn: nextStep(ctx) };
     case '全报告': return { turn: buildFullReportTurn(ctx, arg) };
-    case '密钥': return { turn: buildApiKeyTurn(arg) };
+    case '密钥': return { turn: buildApiKeyTurn() };
     case '铸造': return { turn: buildDemoTurn(ctx, arg) };
     case '备赛': return { turn: buildCoachTurn(ctx) };
     case '绘图': return { turn: buildChartStudioTurn(ctx, arg) };

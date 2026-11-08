@@ -39,7 +39,7 @@ function sharedSource(dataset,interpretationPending){
   const initializer=declaration?.declarationList.declarations.find(d=>ts.isIdentifier(d.name)&&d.name.text==='shared')?.initializer;
   assert.ok(initializer&&ts.isCallExpression(initializer));
   const code=compile('const select='+initializer.arguments[0].getText(lab));
-  return new Function('dataset','interpretationPending','missing',`${code};return select();`)(dataset,interpretationPending,{codes:[],error:null});
+  return new Function('dataset','interpretationPending','missing','retainedSnapshot',`${code};return select();`)(dataset,interpretationPending,{codes:[],error:null},null);
 }
 const sourceHash='c'.repeat(64);
 const number=(id,variable)=>({...newQuestion(id,variable),text:'合成数值',type:'number',choices:[],min:0,max:30});

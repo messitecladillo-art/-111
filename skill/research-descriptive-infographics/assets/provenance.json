@@ -1,0 +1,17 @@
+{
+  "schema": "GeneratedVisual/v1",
+  "asset": "respondent-profile-concept.png",
+  "sha256": "ff400022b80715db5cda78e950e0f5ac0839a2bdfa1b8c68cdc9a394bf9035c1",
+  "producer": "built-in image_gen",
+  "generatedAt": "2026-11-08T18:56:55.994184+00:00",
+  "visualMode": "competition_submission",
+  "contentClass": "conceptual",
+  "dataClassification": "simulated",
+  "dataOrigin": "internally specified teaching example; not collected respondents",
+  "review": "User approved illustration quality and layout; requested removal of face-level explanation labels, which were removed through imagegen edit",
+  "use": "One Hubei-themed card example only; not a default geometry or palette",
+  "references": "No source screenshots copied or embedded",
+  "edits": "Removed top-right label and footer text; kept original categories, figures and drawings",
+  "sampleSize": 1000,
+  "formalStatisticalValidation": "not performed; production graph should bind frozen result values"
+}

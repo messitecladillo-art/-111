@@ -1,14 +1,15 @@
 'use client';
 
-import { useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { awardCases } from '@/data/award-cases';
 import { useWorkbenchTheme } from '@/components/workbench/shell-kit';
 import { keywordBursts, type Burst } from '@/lib/topic-lab/burst';
 import { awardCaseRecords } from '@/lib/topic-lab/evaluate';
 import { buildTermMap } from '@/lib/topic-lab/network';
-import { FORMAT_LABELS, mergeRecords, parseLiterature, type LitFormat, type LitRecord } from '@/lib/topic-lab/parse';
+import { FORMAT_LABELS, mergeRecords, parseLiterature, type LitRecord } from '@/lib/topic-lab/parse';
 import { SOURCE_LABELS, buildTermIndex, defaultSource, parseThesaurus, type TermSource } from '@/lib/topic-lab/terms';
 import { corpusYears, termTrend, type TermTrend } from '@/lib/topic-lab/trend';
+import { createLiteratureWorkspaceSnapshot, verifyLiteratureWorkspaceSnapshot, literatureEvidenceReference, MAX_LITERATURE_WORKSPACE_BYTES, type LiteratureWorkspaceSnapshot, type LiteratureCorpus, type LiteratureFileReport } from '@/lib/topic-lab/workspace';
 import BurstView from './BurstView';
 import Dandelion from './Dandelion';
 import KeywordMap from './KeywordMap';
@@ -18,8 +19,8 @@ import WordCloud from './WordCloud';
 import { fmtInt, pct } from './shared';
 import styles from './TopicLab.module.css';
 
-type FileReport = { name: string; format: LitFormat | 'unknown'; records: number; skipped: number; warnings: string[] };
-type Corpus = { kind: 'import' | 'library'; lists: LitRecord[][]; files: FileReport[] };
+type FileReport = LiteratureFileReport;
+type Corpus = LiteratureCorpus;
 type View = 'cloud' | 'map' | 'burst' | 'papers' | 'timeline' | 'studio';
 const VIEWS: Array<{ id: View; label: string; hint: string }> = [
   { id: 'cloud', label: '词云', hint: '高频主题' },
@@ -29,7 +30,7 @@ const VIEWS: Array<{ id: View; label: string; hint: string }> = [
   { id: 'timeline', label: '时间脉络', hint: '年份 × 被引' },
   { id: 'studio', label: '选题工作台', hint: '空白 · 证据画像' },
 ];
-const MAX_BYTES = 80 * 1024 * 1024;
+const MAX_BYTES = MAX_LITERATURE_WORKSPACE_BYTES;
 
 async function readText(file: File): Promise<string> {
   const buf = await file.arrayBuffer();
@@ -39,7 +40,7 @@ async function readText(file: File): Promise<string> {
   return utf8.replace(/^﻿/, '');
 }
 
-export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff) => void }) {
+export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapshot }: { onUseTopic?: (h: TopicHandoff) => void; initialSnapshot?: LiteratureWorkspaceSnapshot | null; onSnapshot?: (snapshot: LiteratureWorkspaceSnapshot | null) => void }) {
   const theme = useWorkbenchTheme();
   const [corpus, setCorpus] = useState<Corpus | null>(null);
   const [busy, setBusy] = useState('');
@@ -56,6 +57,51 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
   const [basket, setBasket] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const epoch = useRef(0), mounted = useRef(true), restoring = useRef(true), publishedHash = useRef<string | null>(null);
+  const onSnapshotRef = useRef(onSnapshot);
+  const [restoreBusy, setRestoreBusy] = useState(true);
+  const [saved, setSaved] = useState<{ inputs: unknown[]; snapshot: LiteratureWorkspaceSnapshot } | null>(null);
+  const snapshotInputs = [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket];
+  const currentSnapshot = saved && saved.inputs.every((input, i) => Object.is(input, snapshotInputs[i])) ? saved.snapshot : null;
+  const evidence = useMemo(() => currentSnapshot ? literatureEvidenceReference(currentSnapshot) : undefined, [currentSnapshot]);
+
+  useEffect(() => { onSnapshotRef.current = onSnapshot; }, [onSnapshot]);
+  useEffect(() => { mounted.current = true; const fence = epoch; return () => { mounted.current = false; fence.current++; }; }, []);
+  useEffect(() => {
+    if (!restoring.current && initialSnapshot?.snapshotHash === publishedHash.current) return;
+    const token = ++epoch.current; restoring.current = true; setRestoreBusy(true); setSaved(null); setBusy('');
+    void (async () => {
+      try {
+        const snapshot = initialSnapshot ? await verifyLiteratureWorkspaceSnapshot(initialSnapshot) : null;
+        if (!mounted.current || epoch.current !== token) return;
+        setCorpus(snapshot?.corpus ?? null); setSource(snapshot?.settings.source ?? null);
+        setMinDf(snapshot?.settings.minDf ?? 2); setMaxTerms(snapshot?.settings.maxTerms ?? 100);
+        setResolution(snapshot?.settings.resolution ?? 1); setColorBy(snapshot?.settings.colorBy ?? 'cluster');
+        setThesaurus(snapshot?.settings.thesaurus ?? ''); setThesaurusDraft(snapshot?.settings.thesaurus ?? '');
+        setGamma(snapshot?.settings.gamma ?? 1); setView(snapshot?.settings.view ?? 'cloud'); setBasket(snapshot?.settings.basket ?? []);
+        publishedHash.current = snapshot?.snapshotHash ?? null; setImportError('');
+        restoring.current = false; setRestoreBusy(false);
+      } catch (error) {
+        if (!mounted.current || epoch.current !== token) return;
+        setCorpus(null); setImportError(error instanceof Error ? error.message : '文献快照无法恢复。');
+        // Keep failed restoration fenced until the user explicitly clears or imports.
+        setRestoreBusy(false);
+      }
+    })();
+  }, [initialSnapshot]);
+  useEffect(() => {
+    if (restoring.current || restoreBusy) return;
+    let cancelled = false; const token = epoch.current;
+    void createLiteratureWorkspaceSnapshot(corpus, { source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket }).then(snapshot => {
+      if (cancelled || !mounted.current || epoch.current !== token) return;
+      setSaved({ inputs: [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket], snapshot });
+      if (publishedHash.current !== snapshot.snapshotHash) {
+        publishedHash.current = snapshot.snapshotHash;
+        try { onSnapshotRef.current?.(snapshot); } catch (error) { setImportError(error instanceof Error ? error.message : '浏览器未能保存文献快照。'); }
+      }
+    }).catch(error => { if (!cancelled && mounted.current && epoch.current === token) setImportError(error instanceof Error ? error.message : '文献快照无法保存。'); });
+    return () => { cancelled = true; };
+  }, [corpus, source, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view, basket, restoreBusy]);
 
   const merged = useMemo(() => corpus ? mergeRecords(corpus.lists) : null, [corpus]);
   const records = useMemo(() => merged?.records ?? [], [merged]);
@@ -93,23 +139,35 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
     if (!files.length) return;
     const total = files.reduce((s, f) => s + f.size, 0);
     if (total > MAX_BYTES) { setImportError(`文件合计超过 ${MAX_BYTES / 1024 / 1024} MB，请分批导出。`); return; }
+    const token = ++epoch.current; restoring.current = false; setRestoreBusy(false);
     setImportError(''); setBusy(`正在解析 ${files.length} 个文件…`);
     const lists: LitRecord[][] = [], reports: FileReport[] = [];
     for (const f of files) {
       try {
-        const rep = parseLiterature(await readText(f));
+        const raw = await readText(f);
+        if (!mounted.current || epoch.current !== token) return;
+        const rep = parseLiterature(raw);
         lists.push(rep.records); reports.push({ name: f.name, format: rep.format, records: rep.records.length, skipped: rep.skipped, warnings: rep.warnings });
       } catch {
+        lists.push([]);
         reports.push({ name: f.name, format: 'unknown', records: 0, skipped: 0, warnings: ['读取失败，文件可能已损坏。'] });
       }
     }
-    setBusy('');
-    setCorpus(prev => prev?.kind === 'import' ? { kind: 'import', lists: [...prev.lists, ...lists], files: [...prev.files, ...reports] } : { kind: 'import', lists, files: reports });
+    if (!mounted.current || epoch.current !== token) return;
+    const next: Corpus = corpus?.kind === 'import' ? { kind: 'import', lists: [...corpus.lists, ...lists], files: [...corpus.files, ...reports] } : { kind: 'import', lists, files: reports };
+    try {
+      await createLiteratureWorkspaceSnapshot(next, { source: null, minDf, maxTerms, resolution, colorBy, thesaurus, gamma, view: 'cloud', basket: [] });
+      if (!mounted.current || epoch.current !== token) return;
+      setBusy(''); setCorpus(next);
+    } catch (error) {
+      if (mounted.current && epoch.current === token) { setBusy(''); setImportError(error instanceof Error ? error.message : '导入记录无法保存。'); }
+      return;
+    }
     setSource(null); setBasket([]);
     if (lists.some(l => l.length)) setView('cloud');
   }
-  const loadLibrary = () => { setCorpus({ kind: 'library', lists: [awardCaseRecords(awardCases)], files: [] }); setSource(null); setMinDf(2); setBasket([]); setView('cloud'); };
-  const clear = () => { setCorpus(null); setBasket([]); setSource(null); setThesaurus(''); setThesaurusDraft(''); };
+  const loadLibrary = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus({ kind: 'library', lists: [awardCaseRecords(awardCases)], files: [] }); setSource(null); setMinDf(2); setBasket([]); setView('cloud'); };
+  const clear = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus(null); setBasket([]); setSource(null); setThesaurus(''); setThesaurusDraft(''); };
   const onDrop = (e: DragEvent) => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length) void addFiles(e.dataTransfer.files); };
 
   const hiddenInput = <input ref={fileInput} type="file" multiple accept=".txt,.ris,.bib,.enw,.net,.nbib,.ciw,text/plain" className={styles.srOnly} tabIndex={-1} aria-hidden="true" onChange={e => { if (e.target.files) void addFiles(e.target.files); e.target.value = ''; }} />;
@@ -123,7 +181,7 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
         <span>Web of Science 纯文本 · RIS · BibTeX · RefWorks · EndNote</span>
         <button type="button" className={styles.primaryButton} onClick={() => fileInput.current?.click()} disabled={!!busy}>{busy || '选择文献文件'}</button>
         <button type="button" className={styles.linkButton} onClick={loadLibrary}>试用内置题名索引（{awardCases.length} 项）</button>
-        <small>仅在本浏览器解析；刷新后需重新导入。</small>
+        <small>{restoreBusy ? '正在核对项目文献快照…' : onSnapshot ? '仅在本浏览器解析，文献快照由当前项目保存。' : '仅在本浏览器解析；当前宿主未配置快照保存。'}</small>
         {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
         {corpus && !records.length && <p className={styles.errorLine} role="alert">没有读到有效记录：{corpus.files.map(f => `${f.name}（${f.warnings[0] ?? '0 条'}）`).join('；')}</p>}
       </div>
@@ -138,6 +196,7 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
 
   return <div className={styles.lab}>
     {hiddenInput}
+    {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
     <div className={styles.corpusBar}>
       <div className={styles.corpusMain}>
         <span className={styles.eyebrowSmall}>{corpus.kind === 'library' ? '示例语料 · 内置获奖案例索引' : '文献语料'}</span>
@@ -195,7 +254,7 @@ export default function TopicLab({ onUseTopic }: { onUseTopic?: (h: TopicHandoff
         {view === 'burst' && <BurstView dataNote={dataNote} theme={theme} index={index} records={records} cy={cy} basket={basket} onToggle={toggle} gamma={gamma} onGamma={setGamma} keywordBursts={topBursts} />}
         {view === 'papers' && <PaperNetwork dataNote={dataNote} records={records} index={index} theme={theme} basket={basket} basketLabels={basketLabels} />}
         {view === 'timeline' && <Dandelion dataNote={dataNote} records={records} index={index} map={map} theme={theme} basket={basket} basketLabels={basketLabels} clusterNames={clusterNames} />}
-        {view === 'studio' && <TopicStudio index={index} map={map} cy={cy} trends={trends} bursts={bursts} lastYear={lastYear} basket={basket} setBasket={setBasket} synonyms={thes.synonyms} theme={theme} corpusLabel={corpusLabel} onUseTopic={onUseTopic} />}
+        {view === 'studio' && <TopicStudio index={index} map={map} cy={cy} trends={trends} bursts={bursts} lastYear={lastYear} basket={basket} setBasket={setBasket} synonyms={thes.synonyms} theme={theme} corpusLabel={corpusLabel} evidence={evidence} onUseTopic={onUseTopic} />}
       </>}
     </div>
     {basket.length > 0 && view !== 'studio' && <div className={styles.basketDock} role="status">

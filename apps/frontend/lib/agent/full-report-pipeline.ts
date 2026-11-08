@@ -11,15 +11,16 @@
  * - 04-科研图表制作：章节图表块登记与受控图表引用占位符 {G1}..{Gm}（自动展开为 [[图:id]] / [[表:id]]）；
  * - 05-报告论证与写作：两阶段（Wave 1 主体与实证章节并发拟稿 -> Wave 2 摘要与结论3W1H综合拟稿）
  *   大模型事实锁死生成流水线，配合非统计符号预清洗器（避免题号 Q1、R² 等被误判为自造数字丢段）；
- * - 06-Word编排与成果验收：生成后自动运行 benchmarkReport + 六大顾问（设/证/统/图/写/交）体检与自愈返修闭环。
+ * - 06-Word编排与成果验收：运行本地规则检查及有限内容返修；独立审稿、文件导出、渲染和提交门禁另行验收。
  */
 
-import type { EditorContent, ReportSection } from '../editor-model.ts';
-import type { Questionnaire } from '../questionnaire.ts';
+import { createEditorContent, parseEditorContent, type EditorContent, type ReportSection } from '../editor-model.ts';
+import { ANALYSIS_PLANS, parseQuestionnaire, type Questionnaire } from '../questionnaire.ts';
+import type { DatasetValue } from '../canvas/execute.ts';
 import { type BenchmarkResult, benchmarkReport } from '../report-benchmark.ts';
-import { blueprintNode, blueprintOutline, matchBlueprintNode } from '../report-blueprint.ts';
+import { blueprintNode, matchBlueprintNode } from '../report-blueprint.ts';
 import { METHOD_LABELS, suggestedNode, targetSection } from '../report-placement.ts';
-import type { ReportBlock, ResultSnapshot } from '../research-quality.ts';
+import { verifyResearchQuality, type ReportBlock, type ResultSnapshot } from '../research-quality.ts';
 import { ADVISORS, type AdvisorReading, advisorForNode, advisorReading, sectionIssues } from './advisors.ts';
 import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline } from './draft.ts';
 import { buildDemoPack, decomposeTopic, noteDrafting, type DemoBlueprint, type DemoPack } from './demo-study.ts';
@@ -27,6 +28,140 @@ import { standingFindings, type ResultsView } from './router.ts';
 
 export type ProjectResearchMode = 'plan' | 'demonstration' | 'empirical';
 export type ProjectDataStatus = 'planned' | 'collected' | 'verified' | 'synthetic';
+
+export type FullReportPack = Omit<DemoPack, 'dataset'> & { dataset: DatasetValue | null };
+export type FullReportBase = Pick<FullReportPack, 'design' | 'dataset' | 'report'>;
+export type FullReportProjectScope = { projectId: string; runId: string; inputRevision: string };
+export type FullReportSectionRequest = {
+  prompt: string;
+  nodeId: string;
+  wave: 1 | 2;
+  attempt: number;
+  purpose: 'draft' | 'revision';
+  signal?: AbortSignal;
+};
+export type FullReportUsage = { prompt: number; completion: number; total: number };
+export type FullReportSectionGenerator = (request: FullReportSectionRequest) => Promise<{ content: string; usage?: FullReportUsage }>;
+export type FullReportRevision = {
+  id: string;
+  nodeId: string;
+  sectionId: string;
+  before: string;
+  after: string;
+  reason: string;
+  checkIds: string[];
+  kind: 'model_revision' | 'finishing';
+};
+export type FullReportQuality = {
+  status: 'draft' | 'needs_review' | 'blocked';
+  deliverable: false;
+  checks: { id: string; label: string; status: 'pass' | 'warning' | 'failed' | 'not_run'; detail: string }[];
+  blockers: string[];
+};
+
+/** Stable, safe error codes are part of the server/UI contract. Provider response bodies never enter them. */
+export class FullReportInputError extends Error {
+  code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'FullReportInputError';
+    this.code = code;
+  }
+}
+const PROVIDER_MESSAGES: Record<string, string> = {
+  provider_auth: '模型服务鉴权失败，请检查已保存的服务配置。',
+  provider_quota: '模型服务额度不足，本次运行已停止继续发起请求。',
+  provider_rate_limit: '模型服务触发限流，本次运行已停止继续发起请求。',
+  service_version_conflict: '模型服务配置版本已变化，请重新检查配置后运行。',
+  outcome_unknown: '模型调用结果未知，可能已产生费用；请先核对服务记录。',
+  provider_failed: '模型服务调用失败，本节保留原稿或待补写说明。',
+  invalid_provider_response: '模型服务未返回可识别的响应，本次调用结果需核对。',
+  content_rejected: '模型返回的正文未通过本地内容检查。',
+  run_stopped: '本次运行已停止继续调用模型，本节保留原稿或待补写说明。',
+  network_outcome_unknown: '模型调用结果未知，可能已产生费用；请先核对服务记录。',
+  invalid_server_receipt: '模型服务回执无效，调用结果与费用需要核对。',
+  invalid_report_input: '报告输入未通过服务校验，本次运行已停止。',
+  input_revision_changed: '项目输入版本已变化，本次运行已停止。',
+  unauthorized: '当前模型服务授权已失效，本次运行已停止。',
+  forbidden: '当前账号没有该模型服务的使用权限，本次运行已停止。',
+  model_service_unavailable: '当前模型服务不可用，本次运行已停止。',
+};
+export class FullReportProviderError extends Error {
+  code: string;
+  unknown: boolean;
+  status?: number;
+  constructor(code: string, options: { unknown?: boolean; status?: number } = {}) {
+    const safeCode = Object.hasOwn(PROVIDER_MESSAGES, code) ? code : 'provider_failed';
+    super(PROVIDER_MESSAGES[safeCode]);
+    this.name = 'FullReportProviderError';
+    this.code = safeCode;
+    this.unknown = options.unknown === true || ['outcome_unknown', 'network_outcome_unknown', 'invalid_server_receipt'].includes(safeCode);
+    this.status = Number.isInteger(options.status) && options.status! >= 400 && options.status! <= 599 ? options.status : undefined;
+  }
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException('本次运行已取消。', 'AbortError');
+}
+
+/** Provenance checks establish consistency of registered input; they do not certify fieldwork or statistical validity. */
+export async function validateFullReportBase(
+  base: FullReportBase | undefined,
+  mode: ProjectResearchMode,
+  project?: FullReportProjectScope,
+): Promise<void> {
+  if (!['plan', 'demonstration', 'empirical'].includes(mode)) throw new FullReportInputError('invalid_mode', '请选择有效的研究模式。');
+  if (project && (![project.projectId, project.runId, project.inputRevision].every(v => typeof v === 'string' && v.trim() && v.length <= 200))) {
+    throw new FullReportInputError('invalid_project_scope', '项目、运行和输入版本标识不完整。');
+  }
+  if (!base) {
+    if (mode === 'demonstration') return;
+    throw new FullReportInputError('base_required', '研究计划和实证报告须提供当前项目的问卷与报告底座。');
+  }
+  try {
+    parseQuestionnaire(JSON.stringify(base.design));
+    parseEditorContent(structuredClone(base.report));
+  } catch {
+    throw new FullReportInputError('invalid_base', '项目问卷或报告结构无效，请重新载入项目。');
+  }
+  const results = base.report.quality?.results ?? [];
+  const dataset = base.dataset;
+  if (dataset !== null) {
+    if (!dataset || !['simulated', 'user_provided'].includes(dataset.kind)
+      || typeof dataset.sourceHash !== 'string' || !/^[a-f0-9]{64}$/u.test(dataset.sourceHash)
+      || !dataset.table || !Array.isArray(dataset.table.headers) || !dataset.table.headers.length
+      || !Array.isArray(dataset.table.rows) || !dataset.table.rows.length
+      || !dataset.table.headers.every(h => typeof h === 'string')
+      || !dataset.table.rows.every(row => Array.isArray(row) && row.length === dataset.table.headers.length && row.every(cell => typeof cell === 'string'))) {
+      throw new FullReportInputError('invalid_dataset', '数据集结构或来源指纹不完整，请重新登记数据。');
+    }
+  }
+  if (mode === 'demonstration') {
+    if (dataset?.kind !== 'simulated' || results.some(r => r.classification !== 'simulated')) {
+      throw new FullReportInputError('mode_conflict', '教学演示仅接受明确标记的模拟数据与模拟结果。');
+    }
+  } else if (dataset?.kind === 'simulated' || results.some(r => r.classification === 'simulated')) {
+    throw new FullReportInputError('mode_conflict', '模拟数据不能用于研究计划或实证报告模式，请明确选择教学演示。');
+  }
+  if (mode === 'empirical') {
+    if (!project || /^(?:local|demo|demonstration)(?:$|[-_:])/iu.test(project.projectId)) {
+      throw new FullReportInputError('saved_project_required', '实证报告须绑定已保存的项目和当前输入版本。');
+    }
+    if (dataset?.kind !== 'user_provided' || !results.length) {
+      throw new FullReportInputError('empirical_evidence_required', '实证报告须提供真实数据集及已登记的分析结果。');
+    }
+  }
+  if (results.length) {
+    if (!dataset || results.some(r => r.sourceHash !== dataset.sourceHash)) {
+      throw new FullReportInputError('source_hash_mismatch', '分析结果与当前数据的来源指纹不一致，请重新登记计算结果。');
+    }
+    try {
+      await verifyResearchQuality(base.report.quality!);
+    } catch {
+      throw new FullReportInputError('result_hash_mismatch', '分析结果指纹校验未通过，请重新登记计算结果。');
+    }
+  }
+}
 
 /** 00-市调研究全流程：四张跨阶段交接台账 */
 export type ClaimLedgerRow = {
@@ -36,8 +171,8 @@ export type ClaimLedgerRow = {
   sourceId: string;
   locator: string;
   resultIds: string[];
-  confidence: 'high' | 'medium';
-  status: 'verified' | 'demonstration_only' | 'planned';
+  confidence: 'high' | 'medium' | 'unassessed';
+  status: 'verified' | 'demonstration_only' | 'planned' | 'needs_review';
   boundary: string;
 };
 
@@ -128,10 +263,14 @@ export type SectionGenerationTrace = {
   durationMs: number;
   tokens?: { prompt: number; completion: number; total: number };
   error?: string;
+  errorCode?: string;
+  httpStatus?: number;
+  outcomeUnknown?: boolean;
 };
 
 export type FullReportGenerationResult = {
-  pack: DemoPack;
+  pack: FullReportPack;
+  project?: FullReportProjectScope;
   topic: DemoBlueprint;
   report: EditorContent;
   contract: SkillPackContract;
@@ -140,6 +279,8 @@ export type FullReportGenerationResult = {
   benchmarkAfterRepair: BenchmarkResult;
   advisorsAfterRepair: AdvisorReading[];
   repairsApplied: string[];
+  revisions: FullReportRevision[];
+  quality: FullReportQuality;
   summary: {
     totalSectionsGenerated: number;
     llmSuccessCount: number;
@@ -147,6 +288,10 @@ export type FullReportGenerationResult = {
     totalDroppedParagraphs: number;
     totalFactsCited: number;
     totalTokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    usageReported: boolean;
+    fallbackCount: number;
     totalDurationMs: number;
     finalScore: number;
     advisorPassCount: number;
@@ -312,16 +457,16 @@ export function sanitizeModelParagraph(raw: string): string {
  * 构建《市调科研融合技能包·中文版》00–04 阶段的四张核心证据台账与调查设计矩阵
  */
 export function buildSkillPackContract(
-  pack: DemoPack,
+  pack: FullReportPack,
   topic: DemoBlueprint,
   mode: ProjectResearchMode = 'demonstration',
 ): SkillPackContract {
-  const dataStatus: ProjectDataStatus = mode === 'empirical' ? 'verified' : mode === 'demonstration' ? 'synthetic' : 'planned';
+  const dataStatus: ProjectDataStatus = mode === 'empirical' ? 'collected' : mode === 'demonstration' ? 'synthetic' : 'planned';
   const results = pack.report.quality?.results ?? [];
   const findings = pack.report.quality?.findings ?? [];
   const refs = pack.report.references ?? [];
 
-  const designMatrix: DesignMatrixRow[] = [
+  const designMatrix: DesignMatrixRow[] = mode === 'demonstration' ? [
     {
       rqId: 'RQ1',
       question: `「${topic.shortTitle}」中${topic.groupA}与${topic.groupB}的${topic.statusConstruct}是否不同？`,
@@ -349,26 +494,33 @@ export function buildSkillPackContract(
       analysisMethod: 'Spearman 秩相关检验',
       boundary: '陈述性意愿不等于实际行为，相关系数不直接等同于因果效应',
     },
-  ];
+  ] : pack.design.questions.filter(q => q.researchQuestion.trim() || q.construct.trim()).map((q, idx) => ({
+    rqId: `RQ${idx + 1}`,
+    question: q.researchQuestion || '研究问题尚未登记',
+    decisionMeaning: q.decisionUse || '决策用途尚未登记',
+    construct: q.construct || '构念尚未登记',
+    itemIds: [q.variable || q.id],
+    analysisMethod: ANALYSIS_PLANS[q.analysis],
+    boundary: '由当前问卷设计登记；分析方法适用性、抽样覆盖和推断范围仍需审查。',
+  }));
 
-  const statsLedger: StatsLedgerRow[] = results.map((r, idx) => {
-    const rqId = r.method === 'sampling-frame' || r.method === 'crosstab' ? 'RQ1' : r.method === 'alpha' || r.method === 'means' || r.method === 'groups' ? 'RQ2' : 'RQ3';
+  const statsLedger: StatsLedgerRow[] = results.map(r => {
+    const rqId = designMatrix.find(row => row.itemIds.some(id => r.variables?.includes(id)))?.rqId ?? '尚未映射';
     const primaryMetric = r.metrics[0];
-    const secondaryMetric = r.metrics[1];
+    const inference = r.receipt?.inference?.primary;
+    const effect = inference?.effect;
+    const interval = effect?.interval;
     return {
       resultId: r.id,
       rqId,
       method: r.method,
       sampleN: r.n,
       estimate: primaryMetric ? `${primaryMetric.label}=${primaryMetric.value ?? 'N/A'}` : `n=${r.n}`,
-      ci95:
-        r.receipt?.inference?.primary?.effect?.interval
-          ? `[${r.receipt.inference.primary.effect.interval.lower}, ${r.receipt.inference.primary.effect.interval.upper}]`
-          : '按方法回执记录',
-      pValue: r.metrics.find(m => /p/i.test(m.label))?.value?.toString() ?? '见检验回执',
-      effectSize: secondaryMetric ? `${secondaryMetric.label}=${secondaryMetric.value ?? 'N/A'}` : '见表内指标',
-      assumptionCheck: r.warnings[0] ?? '满足基本统计前提',
-      figureId: `FIG-${idx + 1}`,
+      ci95: interval ? `[${interval.lower}, ${interval.upper}]` : '未登记置信区间',
+      pValue: typeof inference?.p === 'number' ? String(inference.p) : '未登记检验 p 值',
+      effectSize: effect ? `${effect.name}=${effect.value ?? '未估计'}` : '未登记效应量',
+      assumptionCheck: r.warnings.length ? r.warnings.join('；') : '未独立核验统计前提；无警告不代表前提成立',
+      figureId: pack.report.report.flatMap(s => s.blocks ?? []).find(b => b.evidenceId === r.id && (b.kind === 'chart' || b.kind === 'table'))?.id ?? '',
       dataMode: dataStatus,
     };
   });
@@ -410,7 +562,7 @@ export function buildSkillPackContract(
               : ref.verification === 'metadata_only'
                 ? 'metadata_only'
                 : 'rejected',
-          supportedClaim: `支撑「${topic.shortTitle}」研究背景、方法学规范或构念操作化定义`,
+          supportedClaim: '具体论点与原文支持关系尚待逐条核对',
           limitation: '外部文献结论受其原有时空与样本约束，仅作理论与方法参照',
         }))
       : refSectionLines.map((line, idx) => {
@@ -420,13 +572,13 @@ export function buildSkillPackContract(
             sourceId: `REF-${idx + 1}`,
             citationIndex: idx + 1,
             title: clean,
-            authors: clean.split('.')[0] ?? '权威文献作者',
-            year: yearMatch ? yearMatch[0] : '2024',
-            venue: '期刊/制度文献',
+            authors: '',
+            year: yearMatch ? yearMatch[0] : '',
+            venue: '',
             // A line in the reference list is a citation as written, not a checked one.
             verificationStatus: 'metadata_only' as const,
-            supportedClaim: `支撑「${topic.shortTitle}」研究背景、方法学规范或构念操作化定义`,
-            limitation: '外部文献结论受其原有时空与样本约束，仅作理论与方法参照',
+            supportedClaim: '仅记录原有参考文献文本，尚未核验其元数据或论点',
+            limitation: '未核验条目不能作为已核验引文交给模型引用',
           };
         });
 
@@ -434,11 +586,11 @@ export function buildSkillPackContract(
     claimId: `CLM-${idx + 1}`,
     statement: `${f.title}：${f.interpretation}`,
     evidenceType: 'statistical_result',
-    sourceId: f.evidenceIds[0] ?? 'RES-1',
+    sourceId: f.evidenceIds[0] ?? '',
     locator: `统计结果快照 ${f.evidenceIds.join(', ')}`,
     resultIds: [...f.evidenceIds],
-    confidence: 'high',
-    status: mode === 'empirical' ? 'verified' : 'demonstration_only',
+    confidence: 'unassessed',
+    status: mode === 'empirical' ? 'needs_review' : mode === 'plan' ? 'planned' : 'demonstration_only',
     boundary: f.scope,
   }));
 
@@ -447,9 +599,13 @@ export function buildSkillPackContract(
   if (unverifiedRefs.length > 0) {
     contractNotes.push(`存在 ${unverifiedRefs.length} 条未核验文献，不得直接支撑正式结论。`);
   }
-  if (claimLedger.some(c => c.resultIds.length === 0)) {
-    contractNotes.push('存在未绑定统计结果快照的核心结论。');
+  const evidenceIds = new Set(results.map(r => r.id));
+  const missingBindings = claimLedger.some(c => !c.resultIds.length || c.resultIds.some(id => !evidenceIds.has(id)));
+  if (missingBindings) {
+    contractNotes.push('存在未绑定当前统计结果快照的核心结论。');
   }
+  if (!designMatrix.length) contractNotes.push('当前问卷尚未登记研究问题与构念映射。');
+  contractNotes.push('台账检查仅检查登记的一致性；统计假设、文献原文和结论支持关系未在本流水线中独立核验。');
   if (mode === 'demonstration') {
     contractNotes.push('当前处于 demonstration（教学模拟演示）模式：全报告自动声明【教学模拟数据】，不将合成样本包装为真实调查发现。');
   }
@@ -463,7 +619,7 @@ export function buildSkillPackContract(
     literatureLedger,
     statsLedger,
     figureLedger,
-    contractPassed: unverifiedRefs.length === 0 && claimLedger.every(c => c.resultIds.length > 0),
+    contractPassed: designMatrix.length > 0 && unverifiedRefs.length === 0 && !missingBindings,
     contractNotes,
   };
 }
@@ -478,7 +634,7 @@ type SectionTokenMap = {
  * 为指定章节构建三类受控占位符：
  * - {F1}..{Fn}: 登记结果中的精确数字与统计量
  * - {G1}..{Gm}: 本节已挂载的图表引用锚点（展开为 [[图:blockId]] 或 [[表:blockId]]）
- * - {R1}..{Rk}: 已核验参考文献的顺序编码锚点（展开为 [1]..[10]）
+ * - {R1}..{Rk}: 已登记为核验的参考文献稳定锚点（展开为 [[引:referenceId]]）
  */
 export function buildSectionTokens(
   held: NonNullable<ResultsView>,
@@ -528,19 +684,10 @@ export function buildSectionTokens(
   });
 
   const structuredRefs = (content.references ?? []).filter(r => r.verification === 'verified');
-  const refSectionLines = content.report
-    .filter(s => /参考文献/u.test(s.title))
-    .flatMap(s => s.body.split(/\r?\n/u).map(l => l.trim()).filter(Boolean));
-  const references: { id: string; text: string; value: string }[] = structuredRefs.length
-    ? structuredRefs.slice(0, 10).map((r, i) => ({
+  const references: { id: string; text: string; value: string }[] = structuredRefs.slice(0, 10).map((r, i) => ({
         id: `R${i + 1}`,
         text: `${r.authors}（${r.year}）《${r.title}》[${r.source}]`,
-        value: `[${i + 1}]`,
-      }))
-    : refSectionLines.slice(0, 10).map((line, i) => ({
-        id: `R${i + 1}`,
-        text: line.replace(/^\s*\[\d+\]\s*/u, ''),
-        value: `[${i + 1}]`,
+        value: `[[引:${r.id}]]`,
       }));
 
   return { facts: mergedFacts, exhibits, references };
@@ -562,15 +709,18 @@ export function buildFullReportSectionPrompt(input: {
   const outline = isSynthesis ? reportOutline(input.content, input.nodeId, 5000) : undefined;
   const methods = [...new Set(input.held.results.map(r => r.method))];
   const registered = (family: RegExp) => methods.some(m => family.test(m));
-  const planSection = PLAN_NODE.test(input.nodeId);
-  const pending = awaitsResults(input.nodeId, input.held.results);
+  const planSection = input.contract.mode === 'plan' || PLAN_NODE.test(input.nodeId);
+  const pending = input.contract.mode === 'plan' || awaitsResults(input.nodeId, input.held.results);
   const owner = advisorForNode(input.nodeId);
   const analyses = methods.map(m => METHOD_LABELS[m] ?? m);
 
   const specificRules: string[] = [];
+  if (input.contract.mode === 'plan') {
+    specificRules.push('当前是研究计划：全部调查、分析与行动均作为拟开展事项，不能把目标样本当成已回收样本，不能声称已经发现、验证或完成调查；摘要只概述研究问题、拟采用方法和待验证的预期用途。');
+  }
   if (input.nodeId === 'abstract') {
     specificRules.push(
-      '本节为全篇【摘要】：用四到五段交代研究背景与核心问题、调查设计与样本（样本量、回收率用对应的 {F编号}）、核心统计发现（用对应的 {F编号}）及对策建议；最后一段单独以“关键词：”开头，列出五到七个中文关键词，用顿号分隔。',
+      '本节为全篇【摘要】：交代研究背景与核心问题、已登记的设计与证据边界；有实际结果才归纳发现，缺少结果则明确写待验证；最后一段单独以“关键词：”开头，列出五到七个中文关键词，用顿号分隔。',
     );
   } else if ((input.nodeId === 'intro.literature' || input.nodeId === 'intro.background') && input.tokens.references.length) {
     specificRules.push('在观点处用 references 里的占位符（{R1}、{R2} 等）标注出处，让文献服务于问题提出；不得杜撰文献或其结论。');
@@ -603,7 +753,7 @@ export function buildFullReportSectionPrompt(input: {
     ...(registered(/regress|logit|logistic|probit|ols/iu) ? ['OR（优势比）只写成“优势（odds）是参照组的多少倍”，不写成“概率是多少倍”；'] : []),
     ...(registered(/^sampling-frame$/u)
       ? []
-      : ['资料中没有登记抽样框：不用“随机抽样、分层抽样、整群抽样、多阶段抽样、系统抽样、PPS 抽样”等名称描述本次样本，如实写成便利样本或配额样本，外推须谨慎；']),
+      : ['资料中没有登记抽样框：不用“随机抽样、分层抽样、整群抽样、多阶段抽样、系统抽样、PPS 抽样”等名称声称已完成抽样，不推定采用过便利或配额抽样；如实写明抽样方式与覆盖范围待确认，外推须谨慎；']),
     ...(registered(/cluster|kmeans/iu) ? ['不用参与聚类的输入变量做显著性检验来自证分群有效；'] : []),
   ];
   const material = {
@@ -612,8 +762,8 @@ export function buildFullReportSectionPrompt(input: {
     analyses,
     project: {
       title: input.content.title || input.design?.title || input.contract.topic.title,
-      objective: input.design?.objective || `围绕「${input.contract.topic.shortTitle}」开展循证调查研究`,
-      population: input.design?.population || `${input.contract.topic.region}内的${input.contract.topic.groupA}与${input.contract.topic.groupB}`,
+      objective: input.design?.objective || '研究目标尚未提供',
+      population: input.design?.population || '目标人群尚未提供',
     },
     designMatrix: input.contract.designMatrix,
     facts: input.tokens.facts.map(({ id, text }) => ({ id, text })),
@@ -686,6 +836,23 @@ export function tidyComparisons(text: string): string {
     .replace(/[=＝]\s*([<＜>＞])/gu, '$1');
 }
 
+/** Catch concrete context substitutions; a valid numeric token alone does not establish the sentence it is used in. */
+function mismatchedFactContext(text: string, facts: readonly Fact[]): string | null {
+  for (const match of text.matchAll(/\{(F\d+)\}/gu)) {
+    const fact = facts.find(f => f.id === match[1]);
+    if (!fact) continue;
+    const prefix = text.slice(0, match.index).split(/[。；！？\n]/u).at(-1) ?? '';
+    const immediate = prefix.split(/[，,]/u).at(-1) ?? '';
+    if (/有效回收率|回收比例/u.test(fact.text)
+      && /占比|比例|比率|百分比|率/u.test(prefix)
+      && !/回收率|回收比例/u.test(prefix)) return '把回收率用于其他人群或指标的比例';
+    const totalSample = /有效样本|总样本|样本总数|参与分析的样本/u.test(fact.text) && !/中「[^」]+」/u.test(fact.text);
+    if (totalSample && /(?:其中|某组|该组|子组|组内|选择「[^」]+」|「[^」]+」(?:组|人群|受访者))[^。；]*$/u.test(immediate)
+      && !/全部|总体|总样本/u.test(immediate)) return '把分析总样本数用于未登记的分组人数';
+  }
+  return null;
+}
+
 /**
  * 解析并校验模型返回的章节段落，将 {F编号}、{G编号}、{R编号} 展开为真实受控内容
  */
@@ -696,7 +863,7 @@ export function parseAndHydrateSectionDraft(
    * What the section may claim: the registered methods, whether the section sets out the plan, and whether it is a
    * results section still awaiting its results, where an analysis may be named as planned but not as done.
    */
-  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean; labels?: readonly string[] },
+  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean; labels?: readonly string[]; mode?: ProjectResearchMode },
 ): {
   paragraphs: string[];
   /** The kept paragraphs as the model wrote them, placeholders unexpanded: what a revision round starts from. */
@@ -738,7 +905,7 @@ export function parseAndHydrateSectionDraft(
   const citedReferences = new Set<string>();
   let droppedParagraphs = 0;
 
-  for (const row of rows.slice(0, 10)) {
+  for (const row of rows.slice(0, 8)) {
     const rawText = typeof (row as { text?: unknown })?.text === 'string' ? (row as { text: string }).text : '';
     if (!rawText.trim()) {
       droppedParagraphs++;
@@ -757,10 +924,17 @@ export function parseAndHydrateSectionDraft(
       .some(m => { const v = factMap.get(m[1]) ?? ''; return !/%$/u.test(v) && !(Number(v) >= 0 && Number(v) <= 1 && /\./u.test(v)); });
     const planned = !!context && (context.planSection || (!!context.pending && PLANNED.test(withoutPlaceholders)));
     const unbacked = context && !planned ? unbackedAnalyses(withoutPlaceholders, context.methods) : [];
+    const mismatched = mismatchedFactContext(sanitized, tokens.facts);
+    const completedPlan = context?.mode === 'plan'
+      && /(?:本次调查|本研究|调查结果|统计结果|检验结果|模型结果).{0,20}(?:已经|已完成|已回收|已收集|表明|显示|证实|证明|发现)/u.test(withoutPlaceholders);
     const reason = unknownToken
       ? '引用了不存在的占位符'
       : misbound
         ? '比率处引用了不是比率的数字'
+        : mismatched
+        ? mismatched
+        : completedPlan
+        ? '研究计划不能声称已完成调查或得到结果'
         : FACT_AS_EXHIBIT.test(sanitized)
         ? '把数字当作图表引用（“见…”“…所示”只能跟图表 {G编号}）'
         : DIGIT_RE.test(numbersOnly)
@@ -803,25 +977,54 @@ export function parseAndHydrateSectionDraft(
 /**
  * 调用兼容 OpenAI / DeepSeek Chat Completions 接口生成单节草稿
  */
+function validUsage(value: unknown): FullReportUsage | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const usage = value as Partial<FullReportUsage>;
+  if (![usage.prompt, usage.completion, usage.total].every(n => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0)) return undefined;
+  if (usage.prompt! + usage.completion! !== usage.total) return undefined;
+  return { prompt: usage.prompt!, completion: usage.completion!, total: usage.total! };
+}
+
+function providerHttpError(status: number): FullReportProviderError {
+  const code = status === 401 || status === 403 ? 'provider_auth'
+    : status === 402 ? 'provider_quota'
+    : status === 429 ? 'provider_rate_limit'
+    : status === 409 || status === 412 ? 'service_version_conflict'
+    : status >= 500 || status === 408 ? 'outcome_unknown' : 'provider_failed';
+  return new FullReportProviderError(code, { status, unknown: status >= 500 || status === 408 });
+}
+
+/** A service exception is never allowed to carry its raw message or response into progress events. */
+function safeProviderError(error: unknown): FullReportProviderError {
+  if (error instanceof FullReportProviderError) return new FullReportProviderError(error.code, { unknown: error.unknown, status: error.status });
+  return new FullReportProviderError('outcome_unknown', { unknown: true });
+}
+
+function stopsDispatch(error: FullReportProviderError): boolean {
+  return error.unknown || !!(error.status && (error.status >= 500 || [401, 402, 403, 408, 409, 412, 429].includes(error.status)))
+    || ['provider_auth', 'provider_quota', 'provider_rate_limit', 'service_version_conflict', 'outcome_unknown',
+    'invalid_report_input', 'input_revision_changed', 'unauthorized', 'forbidden', 'model_service_unavailable'].includes(error.code);
+}
+
 export async function callLlmForSection(
   prompt: string,
   config: LlmProviderConfig,
   fetcher: typeof globalThis.fetch = globalThis.fetch,
-): Promise<{ content: string; usage?: { prompt: number; completion: number; total: number } }> {
+  signal?: AbortSignal,
+): Promise<{ content: string; usage?: FullReportUsage }> {
+  throwIfAborted(signal);
   const baseUrl = (config.baseUrl ?? 'https://api.deepseek.com/v1').replace(/\/+$/u, '');
-  const model = config.model ?? 'deepseek-chat';
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), config.timeoutMs ?? 60_000);
-
+  const abort = () => controller.abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, config.timeoutMs ?? 60_000);
   try {
     const res = await fetcher(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
-        model,
+        model: config.model ?? 'deepseek-chat',
         temperature: config.temperature ?? 0.2,
         response_format: { type: 'json_object' },
         max_tokens: 2400,
@@ -829,28 +1032,31 @@ export async function callLlmForSection(
       }),
       signal: controller.signal,
     });
+    throwIfAborted(signal);
+    if (timedOut) throw new FullReportProviderError('outcome_unknown', { unknown: true });
     if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`LLM HTTP ${res.status}: ${errText.slice(0, 200)}`);
+      // Cancel the body without reading it: upstream errors can contain credentials and prompt fragments.
+      await res.body?.cancel().catch(() => undefined);
+      throw providerHttpError(res.status);
     }
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    const data = await res.json() as {
+      choices?: { message?: { content?: unknown } }[];
+      usage?: { prompt_tokens?: unknown; completion_tokens?: unknown; total_tokens?: unknown };
     };
-    const content = data.choices?.[0]?.message?.content ?? '';
-    if (!content.trim()) throw new Error('LLM returned empty content');
+    throwIfAborted(signal);
+    if (timedOut) throw new FullReportProviderError('outcome_unknown', { unknown: true });
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || content.length > 150_000) throw new FullReportProviderError('invalid_provider_response', { unknown: true });
     return {
       content,
-      usage: data.usage
-        ? {
-            prompt: data.usage.prompt_tokens ?? 0,
-            completion: data.usage.completion_tokens ?? 0,
-            total: data.usage.total_tokens ?? 0,
-          }
-        : undefined,
+      usage: validUsage(data.usage ? { prompt: data.usage.prompt_tokens, completion: data.usage.completion_tokens, total: data.usage.total_tokens } : undefined),
     };
+  } catch (error) {
+    throwIfAborted(signal);
+    throw safeProviderError(error);
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
   }
 }
 
@@ -865,12 +1071,29 @@ export function finalizeReport(
   fallbackSections: Map<string, string>,
   /** The blueprint sections this run drafted: only they are finished here; the author's other sections stay as they are. */
   drafted?: ReadonlySet<string>,
-): { content: EditorContent; repairs: string[] } {
+  mode?: ProjectResearchMode,
+): { content: EditorContent; repairs: string[]; revisions: FullReportRevision[] } {
   const repairs: string[] = [];
+  const revisions: FullReportRevision[] = [];
   const ours = (sec: ReportSection) => !drafted || drafted.has(matchBlueprintNode(sec.title)?.id ?? '');
+  const change = (section: ReportSection, after: string, reason: string, checkId: string): ReportSection => {
+    if (after === section.body) return section;
+    repairs.push(reason);
+    revisions.push({
+      id: `finishing-${revisions.length + 1}-${section.id}`,
+      nodeId: matchBlueprintNode(section.title)?.id ?? section.id,
+      sectionId: section.id,
+      before: section.body,
+      after,
+      reason,
+      checkIds: [checkId],
+      kind: 'finishing',
+    });
+    return { ...section, body: after };
+  };
   let reportSections: ReportSection[] = content.report.map(s => ({
     ...s,
-    blocks: s.blocks ? [...s.blocks] : undefined,
+    ...(s.blocks ? { blocks: [...s.blocks] } : {}),
   }));
 
   // 1. A writable section with no prose takes its fallback.
@@ -881,8 +1104,7 @@ export function finalizeReport(
     const prose = (text: string) => text.split(/\r?\n/u).some(line => line.trim() && !/^\s*【教学模拟数据[^】]*】\s*$/u.test(line));
     const hasProse = prose(sec.body) || (sec.blocks ?? []).some(b => b.kind === 'paragraph' && prose(b.text));
     if (!hasProse && fallbackSections.has(node.id)) {
-      repairs.push(`章节「${sec.title}」回填样板段落`);
-      return { ...sec, body: fallbackSections.get(node.id)! };
+      return change(sec, fallbackSections.get(node.id)!, `章节「${sec.title}」保留原稿或待补写说明`, 'section_content');
     }
     return sec;
   });
@@ -895,24 +1117,20 @@ export function finalizeReport(
       .map(b => `[[${b.kind === 'chart' ? '图' : '表'}:${b.id}]]`)
       .filter(token => !sec.body.includes(token) && !(sec.blocks ?? []).some(b => b.kind === 'paragraph' && b.text.includes(token)));
     if (!missingTokens.length) return sec;
-    repairs.push(`章节「${sec.title}」补齐图表引用 ${missingTokens.join('、')}`);
     const prefix = /^\s*【教学模拟数据[^】]*】/u.test(sec.body)
       ? sec.body.replace(/^(\s*【教学模拟数据[^】]*】[^\n]*\n?)/u, `$1本节统计证据见${missingTokens.join('与')}。\n`)
       : `本节统计证据见${missingTokens.join('与')}。\n${sec.body}`;
-    return { ...sec, body: prefix };
+    return change(sec, prefix, `章节「${sec.title}」补齐图表引用 ${missingTokens.join('、')}`, 'figure_references');
   });
 
   // 3. A section resting on simulated results says so.
   const simulatedIds = new Set((content.quality?.results ?? []).filter(r => r.classification === 'simulated').map(r => r.id));
-  if (simulatedIds.size > 0) {
+  if (simulatedIds.size > 0 || mode === 'demonstration') {
     reportSections = reportSections.map(sec => {
       const usesSimulated = (sec.blocks ?? []).some(b => b.evidenceId && simulatedIds.has(b.evidenceId));
-      if (usesSimulated && ours(sec) && !/【教学模拟数据/u.test(sec.body + sec.source)) {
-        repairs.push(`章节「${sec.title}」补齐【教学模拟数据】声明`);
-        return {
-          ...sec,
-          body: `【教学模拟数据：以下统计结果用于方法与流程演示，不作为实际调查结论】\n${sec.body}`,
-        };
+      if ((usesSimulated || mode === 'demonstration') && ours(sec) && !/【教学模拟数据/u.test(sec.body)) {
+        return change(sec, `【教学模拟数据：以下统计结果用于方法与流程演示，不作为实际调查结论】\n${sec.body}`,
+          `章节「${sec.title}」补齐【教学模拟数据】声明`, 'simulation_disclosure');
       }
       return sec;
     });
@@ -924,6 +1142,7 @@ export function finalizeReport(
       report: reportSections,
     },
     repairs,
+    revisions,
   };
 }
 
@@ -957,356 +1176,330 @@ export type FullReportProgressEvent = {
   trace?: SectionGenerationTrace;
   topic?: DemoBlueprint;
   contract?: SkillPackContract;
-  pack?: DemoPack;
+  pack?: FullReportPack;
   report?: EditorContent;
   repairsApplied?: string[];
+  revisions?: FullReportRevision[];
+  quality?: FullReportQuality;
+  project?: FullReportProjectScope;
   completed: number;
   total: number;
 };
 
+function fullReportQuality(
+  mode: ProjectResearchMode,
+  contract: SkillPackContract,
+  traces: readonly SectionGenerationTrace[],
+  benchmark: BenchmarkResult,
+  halted: FullReportProviderError | null,
+): FullReportQuality {
+  const success = traces.filter(t => t.status === 'llm_generated').length;
+  const fallback = traces.length - success;
+  const blockers: string[] = [];
+  if (halted) blockers.push(halted.message);
+  if (!success) blockers.push('本次运行未形成通过内容检查的模型正文。');
+  if (fallback) blockers.push(`仍有 ${fallback} 节保留原稿或待补写说明，需要逐节处理。`);
+  const unverified = contract.literatureLedger.filter(r => r.verificationStatus !== 'verified').length;
+  const checks: FullReportQuality['checks'] = [
+    { id: 'input_mode', label: '研究模式与输入', status: 'pass', detail: mode === 'plan' ? '使用当前研究计划；未自动生成模拟数据。' : mode === 'demonstration' ? '仅使用明确标记的教学模拟数据。' : '使用绑定到当前项目的非模拟数据与登记结果。' },
+    { id: 'result_integrity', label: '登记结果一致性', status: contract.statsLedger.length ? 'pass' : 'not_run', detail: contract.statsLedger.length ? '已核对结果分类、来源指纹一致性及结果载荷 SHA-256；不证明原始调查真实性或统计方法正确。' : '尚无分析结果，不适用结果指纹检查。' },
+    { id: 'generated_content', label: '模型正文生成', status: success === 0 ? 'failed' : fallback ? 'warning' : 'pass', detail: `通过内容检查 ${success} 节；回填或待补写 ${fallback} 节。保留原稿不计入模型产出。` },
+    { id: 'evidence_ledger', label: '证据台账登记', status: contract.contractPassed ? 'pass' : 'warning', detail: contract.contractPassed ? '登记映射和已有绑定通过结构检查，仍需审查论点与证据是否相符。' : contract.contractNotes.join(' ') },
+    { id: 'literature_registration', label: '文献登记状态', status: unverified || !contract.literatureLedger.length ? 'warning' : 'pass', detail: unverified ? `有 ${unverified} 条未核验文献；未交给模型作为已核验引文。` : contract.literatureLedger.length ? '仅沿用项目已有的核验标记；本次未重新查阅原文。' : '没有已登记文献，不能宣称文献核验已完成。' },
+    { id: 'provider_outcome', label: '模型调用状态', status: halted ? 'failed' : 'pass', detail: halted ? halted.message : '未触发全程熔断；费用以服务记录为准。' },
+    ...benchmark.checks.map(check => ({ id: `report_${check.id}`, label: check.label, status: check.status === 'pass' ? 'pass' as const : check.status === 'fail' ? 'failed' as const : check.status === 'partial' ? 'warning' as const : 'not_run' as const, detail: check.detail })),
+    { id: 'statistical_review', label: '统计前提独立复核', status: 'not_run', detail: '未独立复算数据、抽样设计、模型适用性与统计前提。' },
+    { id: 'literature_verification', label: '文献原文核验', status: 'not_run', detail: '本次未打开文献原文核对具体论点、页码与适用边界。' },
+    { id: 'independent_review', label: '独立内容审查', status: 'not_run', detail: '尚未由独立审稿流程检查论证、遗漏和事实解释。' },
+    { id: 'export_files', label: '成果文件导出', status: 'not_run', detail: '尚未导出并检查 Word、PDF 或其他提交文件。' },
+    { id: 'render_review', label: '渲染版面检查', status: 'not_run', detail: '尚未逐页检查排版、图表、分页和参考文献显示。' },
+    { id: 'submission_gate', label: '正式提交验收', status: 'not_run', detail: '尚未核对适用赛规、匿名要求和项目 handoff；当前产物只能作为草稿。' },
+  ];
+  return {
+    status: halted || !success ? 'blocked' : checks.some(c => c.status === 'failed' || c.status === 'warning') ? 'needs_review' : 'draft',
+    deliverable: false,
+    checks,
+    blockers,
+  };
+}
+
 /**
- * 全流程 Agent 自动生成全报告主入口：
- * 1. 执行 00–04 阶段底座铸造与四张交接台账生成；
- * 2. Wave 1：并发调用 LLM 生成全部主体与实证章节（{F编号}/{G编号}/{R编号} 事实锁死）；
- * 3. Wave 2：基于 Wave 1 真实章节大纲，调用 LLM 生成调查结论、3W1H 对策建议、局限展望与全篇摘要；
- * 4. 执行 06 阶段六大顾问（设/证/统/图/写/交）体检与自动返修闭环，确保 100/100 交付品质。
+ * Draft a captured project snapshot, then perform bounded content revisions and observable finishing changes.
+ * A returned report is a draft. Paid requests with uncertain outcomes are never automatically repeated.
  */
 export async function generateFullReportWithAgent(input: {
   topic?: string;
   existingDesign?: Questionnaire | null;
   existingReport?: EditorContent | null;
-  /**
-   * A project to write in: its questionnaire, its data, and its report with the results already placed. Without it the
-   * pipeline writes over its own simulated teaching package. Sections not asked for keep everything they hold.
-   */
-  base?: { design: Questionnaire; dataset: DemoPack['dataset']; report: EditorContent };
+  base?: FullReportBase;
   mode?: ProjectResearchMode;
-  llm: LlmProviderConfig;
+  llm?: LlmProviderConfig;
+  sectionGenerator?: FullReportSectionGenerator;
+  signal?: AbortSignal;
+  project?: FullReportProjectScope;
+  concurrency?: number;
   sectionNodes?: readonly string[];
   onProgress?: (event: FullReportProgressEvent) => void;
   fetcher?: typeof globalThis.fetch;
 }): Promise<FullReportGenerationResult> {
   const startedAt = Date.now();
-  const design = input.base?.design ?? input.existingDesign;
-  const topic = decomposeTopic(input.topic, design);
-  // Without a project, the pipeline writes up a teaching simulation whose every result the analysis engine computed.
-  const pack: DemoPack = input.base
-    ? { blueprint: topic, design: input.base.design, dataset: input.base.dataset, report: input.base.report }
-    : await buildDemoPack(input.topic, design);
-  // The pack's results are simulated, so the report is a teaching demonstration whatever mode was asked for: a
-  // simulated sample is never written up as a plan's targets or as verified findings.
-  const packResults = pack.report.quality?.results ?? [];
-  const mode: ProjectResearchMode =
-    packResults.length && packResults.every(r => r.classification === 'simulated') ? 'demonstration' : (input.mode ?? 'demonstration');
+  const signal = input.signal;
+  throwIfAborted(signal);
+  // Capture before the first await: neither the caller's current project nor a progress listener can edit this run.
+  const topicText = input.topic;
+  const project = input.project ? structuredClone(input.project) : undefined;
+  const supplied = input.base ? structuredClone(input.base)
+    : input.existingDesign ? { design: structuredClone(input.existingDesign), dataset: null, report: structuredClone(input.existingReport ?? createEditorContent()) } : undefined;
+  const mode: ProjectResearchMode = input.mode ?? (supplied ? supplied.dataset?.kind === 'simulated' ? 'demonstration' : supplied.dataset ? 'empirical' : 'plan' : 'demonstration');
+  const wantedNodes = new Set(input.sectionNodes ?? [...WAVE_1_SECTION_NODES, ...WAVE_2_SYNTHESIS_NODES]);
+  const allowedNodes = new Set([...WAVE_1_SECTION_NODES, ...WAVE_2_SYNTHESIS_NODES]);
+  if (!wantedNodes.size || [...wantedNodes].some(n => !allowedNodes.has(n))) throw new FullReportInputError('invalid_sections', '请选择有效且非空的报告章节。');
+  await validateFullReportBase(supplied, mode, project);
+  throwIfAborted(signal);
+  const llm = input.llm ? { ...input.llm } : undefined;
+  const service = input.sectionGenerator;
+  if (!service && (!llm || !llm.apiKey.trim())) throw new FullReportInputError('provider_required', '请选择已配置的模型服务。');
+  const design = supplied?.design;
+  const topic = decomposeTopic(topicText, design);
+  const pack: FullReportPack = supplied ? { ...supplied, blueprint: topic } : await buildDemoPack(topicText);
+  if (!supplied) await validateFullReportBase(pack, mode, project);
+  throwIfAborted(signal);
   const contract = buildSkillPackContract(pack, topic, mode);
-
-  // Preserve baseline verified prose as fallback in case a network timeout occurs on a single section
   const existingByNode = new Map<string, ReportSection>();
   const fallbackSections = new Map<string, string>();
-  for (const sec of pack.report.report) {
-    const node = matchBlueprintNode(sec.title);
-    if (node) {
-      existingByNode.set(node.id, sec);
-      // An empty section is no fallback: the generic note below says plainly that it has no text yet.
-      if (sec.body.trim()) fallbackSections.set(node.id, sec.body);
-    }
+  for (const section of pack.report.report) {
+    const node = matchBlueprintNode(section.title);
+    if (!node) continue;
+    existingByNode.set(node.id, section);
+    if (section.body.trim()) fallbackSections.set(node.id, section.body);
   }
-  // Ensure every blueprint node in WAVE_1 + WAVE_2 has a deterministic fallback paragraph
-  for (const nodeId of [...WAVE_1_SECTION_NODES, ...WAVE_2_SYNTHESIS_NODES]) {
+  for (const nodeId of wantedNodes) {
     if (!fallbackSections.has(nodeId)) {
-      const bNode = blueprintNode(nodeId);
-      fallbackSections.set(
-        nodeId,
-        `【教学模拟数据】本节「${bNode.title}」尚无正文：模型没有返回可用段落。本节应写：${bNode.purpose}。`,
-      );
+      const node = blueprintNode(nodeId);
+      fallbackSections.set(nodeId, `${mode === 'demonstration' ? '【教学模拟数据】' : mode === 'plan' ? '【研究计划·待补写】' : '【实证草稿·待补写】'}本节「${node.title}」尚无可用模型正文。本节应写：${node.purpose}。`);
     }
   }
-
   const results = pack.report.quality?.results ?? [];
-  const held: NonNullable<ResultsView> = {
-    results,
-    findings: pack.report.quality?.findings ?? [],
-    pending: false,
-    placed: results.map(r => r.id),
-  };
+  const held: NonNullable<ResultsView> = { results, findings: pack.report.quality?.findings ?? [], pending: mode === 'plan', placed: results.map(r => r.id) };
   const methods = [...new Set(results.map(r => r.method))];
   const labels = categoryLabels(results, pack.design);
-  // The kept paragraphs of each drafted section as the model wrote them, with the facts they cite: a revision starts here.
   const drafted = new Map<string, { drafts: string[]; tokens: SectionTokenMap }>();
-
-  const wantedNodes = input.sectionNodes
-    ? new Set(input.sectionNodes)
-    : new Set([...WAVE_1_SECTION_NODES, ...WAVE_2_SYNTHESIS_NODES]);
-
   const wave1Nodes = WAVE_1_SECTION_NODES.filter(n => wantedNodes.has(n));
   const wave2Nodes = WAVE_2_SYNTHESIS_NODES.filter(n => wantedNodes.has(n));
   const totalNodes = wave1Nodes.length + wave2Nodes.length;
   let completedNodes = 0;
-
-  // Materialize the complete multi-chapter blueprint structure (chapters + all wanted sections + references + appendices)
-  const outlineItems = blueprintOutline({ nodes: [...wantedNodes] }).filter(
-    item => item.node.kind !== 'references' && item.node.kind !== 'appendix',
-  );
-  const backMatterSections = pack.report.report.filter(sec => {
-    const node = matchBlueprintNode(sec.title);
-    return node?.kind === 'references' || node?.kind === 'appendix' || /^(参考文献|附录)/u.test(sec.title);
-  });
-
-  // A project keeps its own report: sections asked for are cleared for drafting (their figures, tables and formulas stay),
-  // a missing one is added where the blueprint puts it, and every other section stays as it is.
-  let baseReport: EditorContent | null = null;
-  if (input.base) {
-    let working = input.base.report;
-    for (const nodeId of wantedNodes) working = targetSection(working, nodeId).content;
-    baseReport = {
-      ...working,
-      report: working.report.map(sec => {
-        const node = matchBlueprintNode(sec.title);
-        return node && wantedNodes.has(node.id) ? { ...sec, body: '', blocks: sec.blocks?.filter(b => b.kind !== 'paragraph') } : sec;
-      }),
-    };
-  }
-  const materializedSections: ReportSection[] = baseReport ? baseReport.report : [
-    ...outlineItems.map(({ node, title }) => {
-      const existing = existingByNode.get(node.id);
-      const nonParagraphBlocks = (existing?.blocks ?? []).filter(b => b.kind !== 'paragraph');
-      return {
-        id: existing?.id ?? `bp-${node.id}`,
-        title,
-        body: wantedNodes.has(node.id) ? '' : existing?.body ?? '',
-        source: existing?.source ?? '',
-        blocks: nonParagraphBlocks.length ? nonParagraphBlocks : undefined,
-      };
-    }),
-    ...backMatterSections,
-  ];
-
-  let workingReport: EditorContent = baseReport ?? {
-    ...pack.report,
-    report: materializedSections,
+  let workingReport = pack.report;
+  for (const nodeId of wantedNodes) workingReport = targetSection(workingReport, nodeId).content;
+  workingReport = {
+    ...workingReport,
+    report: workingReport.report.map(section => wantedNodes.has(matchBlueprintNode(section.title)?.id ?? '')
+      ? { ...section, body: '', ...(section.blocks ? { blocks: section.blocks.filter(b => b.kind !== 'paragraph') } : {}) } : section),
   };
-
-  input.onProgress?.({
-    phase: 'contract',
-    completed: 0,
-    total: totalNodes,
-    topic,
-    contract,
-    pack: { ...pack, report: workingReport },
-    report: workingReport,
-  });
-
+  const emit = (event: FullReportProgressEvent) => {
+    throwIfAborted(signal);
+    input.onProgress?.(structuredClone({ ...event, ...(project ? { project } : {}) }));
+    throwIfAborted(signal);
+  };
+  emit({ phase: 'contract', completed: 0, total: totalNodes, topic, contract, pack: { ...pack, report: workingReport }, report: workingReport });
+  const requestedConcurrency = input.concurrency ?? llm?.concurrency ?? 3;
+  const concurrency = Number.isFinite(requestedConcurrency) ? Math.max(1, Math.min(6, Math.floor(requestedConcurrency))) : 3;
   const traces: SectionGenerationTrace[] = [];
-  const concurrency = input.llm.concurrency ?? 5;
-
-  const commitSectionToReport = (
-    nodeId: string,
-    title: string,
-    body: string,
-    wave: 1 | 2,
-    trace: SectionGenerationTrace,
-  ) => {
-    let sectionId = `bp-${nodeId}`;
-    const source =
-      trace.status === 'repaired_fallback'
-        ? '教学模拟样板正文（模型没有返回可用段落）'
-        : `证见全流程 Agent · 模型${wave === 1 ? '实时' : '综合'}拟稿（绑定 ${trace.citedFacts.length} 项事实）`;
+  const revisions: FullReportRevision[] = [];
+  const usageObservations: { nodeId: string; usage?: FullReportUsage }[] = [];
+  let halted: FullReportProviderError | null = null;
+  const nodeTokens = (nodeId: string): FullReportUsage | undefined => {
+    const known = usageObservations.filter(o => o.nodeId === nodeId && o.usage).map(o => o.usage!);
+    return known.length ? known.reduce((sum, u) => ({ prompt: sum.prompt + u.prompt, completion: sum.completion + u.completion, total: sum.total + u.total }), { prompt: 0, completion: 0, total: 0 }) : undefined;
+  };
+  const invoke = async (request: Omit<FullReportSectionRequest, 'signal'>) => {
+    throwIfAborted(signal);
+    if (halted) throw new FullReportProviderError('run_stopped');
+    const observation: { nodeId: string; usage?: FullReportUsage } = { nodeId: request.nodeId };
+    usageObservations.push(observation);
+    try {
+      const response = service ? await service({ ...request, signal }) : await callLlmForSection(request.prompt, llm!, input.fetcher, signal);
+      throwIfAborted(signal);
+      if (!response || typeof response.content !== 'string' || response.content.length > 150_000) throw new FullReportProviderError('invalid_provider_response', { unknown: true });
+      observation.usage = validUsage(response.usage);
+      return response.content;
+    } catch (error) {
+      throwIfAborted(signal);
+      const safe = safeProviderError(error);
+      if (stopsDispatch(safe)) halted ??= safe;
+      throw safe;
+    }
+  };
+  const contextFor = (nodeId: string) => ({ methods, planSection: mode === 'plan' || PLAN_NODE.test(nodeId), pending: mode === 'plan' || awaitsResults(nodeId, results), labels, mode });
+  const commit = (nodeId: string, wave: 1 | 2, body: string, trace: SectionGenerationTrace) => {
+    throwIfAborted(signal);
+    let sectionId = '';
     workingReport = {
       ...workingReport,
-      report: workingReport.report.map(sec => {
-        const node = matchBlueprintNode(sec.title);
-        if (node?.id === nodeId) {
-          sectionId = sec.id;
-          // The drafting note travels with the progress event and the trace; the section's printed source stays the
-          // author's, since a submission does not print how it was drafted (the AI-use appendix says that).
-          return { ...sec, body };
-        }
-        return sec;
+      report: workingReport.report.map(section => {
+        if (matchBlueprintNode(section.title)?.id !== nodeId) return section;
+        sectionId = section.id;
+        const original = existingByNode.get(nodeId);
+        return trace.status === 'repaired_fallback' && original
+          ? { ...section, body, ...(original.blocks ? { blocks: structuredClone(original.blocks) } : {}) }
+          : { ...section, body };
       }),
     };
     completedNodes++;
-    input.onProgress?.({
-      phase: wave === 1 ? 'wave1' : 'wave2',
-      nodeId,
-      sectionId,
-      title,
-      body,
-      source,
-      trace,
-      report: workingReport,
-      completed: completedNodes,
-      total: totalNodes,
-    });
+    emit({ phase: wave === 1 ? 'wave1' : 'wave2', nodeId, sectionId, title: trace.title, body,
+      source: trace.status === 'repaired_fallback' ? '保留原稿或待补写说明（不计入模型产出）' : `全流程 Agent · ${wave === 1 ? '章节' : '综合'}拟稿（待审查）`,
+      trace, report: workingReport, completed: completedNodes, total: totalNodes });
   };
-
-  const draftOneSection = async (nodeId: string, wave: 1 | 2): Promise<{ nodeId: string; body: string; trace: SectionGenerationTrace }> => {
-    const secStart = Date.now();
+  const draftOneSection = async (nodeId: string, wave: 1 | 2): Promise<SectionGenerationTrace> => {
+    throwIfAborted(signal);
+    const start = Date.now();
     const title = blueprintNode(nodeId).title;
     const tokens = buildSectionTokens(held, workingReport, nodeId, pack.design);
-    const prompt = buildFullReportSectionPrompt({
-      nodeId,
-      content: workingReport,
-      design: pack.design,
-      held,
-      contract,
-      tokens,
-    });
-
-    let lastError: Error | null = null;
+    const prompt = buildFullReportSectionPrompt({ nodeId, content: workingReport, design: pack.design, held, contract, tokens });
+    let failure = new FullReportProviderError(halted ? 'run_stopped' : 'content_rejected');
     let feedback = '';
-    const context = { methods, planSection: PLAN_NODE.test(nodeId), pending: awaitsResults(nodeId, results), labels };
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    let rawParagraphs = 0;
+    const dropReasons: string[] = [];
+    for (let attempt = 1; attempt <= 2 && !halted; attempt++) {
+      let raw: string;
       try {
-        const llmRes = await callLlmForSection(prompt + feedback, input.llm, input.fetcher);
-        const hydrated = parseAndHydrateSectionDraft(llmRes.content, tokens, context);
-        if (hydrated.paragraphs.length > 0) {
-          drafted.set(nodeId, { drafts: hydrated.drafts, tokens });
-          const body = hydrated.paragraphs.join('\n');
-          const trace: SectionGenerationTrace = {
-            nodeId,
-            title,
-            wave,
-            advisor: advisorForNode(nodeId)?.id ?? null,
-            status: 'llm_generated',
-            rawParagraphs: hydrated.paragraphs.length + hydrated.droppedParagraphs,
-            keptParagraphs: hydrated.paragraphs.length,
-            droppedParagraphs: hydrated.droppedParagraphs,
-            dropReasons: hydrated.dropReasons,
-            citedFacts: hydrated.citedFacts,
-            citedExhibits: hydrated.citedExhibits,
-            citedReferences: hydrated.citedReferences,
-            durationMs: Date.now() - secStart,
-            tokens: llmRes.usage,
-          };
-          commitSectionToReport(nodeId, title, body, wave, trace);
-          return { nodeId, body, trace };
-        }
-        lastError = new Error(`All paragraphs dropped: ${hydrated.dropReasons.join('; ')}`);
-        // The second attempt is told why the first was refused.
-        feedback = `\n【上一稿全部段落被丢弃，原因：${[...new Set(hydrated.dropReasons)].join('；')}。请严格按规则重写。】`;
-      } catch (err) {
-        lastError = err as Error;
+        raw = await invoke({ prompt: prompt + feedback, nodeId, wave, attempt, purpose: 'draft' });
+      } catch (error) {
+        throwIfAborted(signal);
+        failure = safeProviderError(error);
+        break; // A provider failure is not evidence that repeating a paid request is safe.
       }
+      throwIfAborted(signal);
+      let hydrated: ReturnType<typeof parseAndHydrateSectionDraft>;
+      try {
+        hydrated = parseAndHydrateSectionDraft(raw, tokens, contextFor(nodeId));
+      } catch {
+        dropReasons.push('章节返回内容不是有效的段落结构');
+        feedback = '\n上一稿不符合 JSON 段落结构，请按规定输出 paragraphs 数组。';
+        continue; // The response was received: only a known content rejection may request a rewrite.
+      }
+      rawParagraphs += hydrated.paragraphs.length + hydrated.droppedParagraphs;
+      dropReasons.push(...hydrated.dropReasons);
+      if (!hydrated.paragraphs.length) {
+        feedback = `\n上一稿全部段落被拒收：${[...new Set(hydrated.dropReasons)].join('；') || '没有正文'}。请按规则重写。`;
+        continue;
+      }
+      drafted.set(nodeId, { drafts: hydrated.drafts, tokens });
+      const trace: SectionGenerationTrace = {
+        nodeId, title, wave, advisor: advisorForNode(nodeId)?.id ?? null, status: 'llm_generated',
+        rawParagraphs, keptParagraphs: hydrated.paragraphs.length, droppedParagraphs: dropReasons.length, dropReasons,
+        citedFacts: hydrated.citedFacts, citedExhibits: hydrated.citedExhibits, citedReferences: hydrated.citedReferences,
+        durationMs: Date.now() - start, tokens: nodeTokens(nodeId),
+      };
+      commit(nodeId, wave, hydrated.paragraphs.join('\n'), trace);
+      return trace;
     }
-
-    const fallbackBody = fallbackSections.get(nodeId) ?? '';
     const trace: SectionGenerationTrace = {
-      nodeId,
-      title,
-      wave,
-      advisor: advisorForNode(nodeId)?.id ?? null,
-      status: 'repaired_fallback',
-      rawParagraphs: 0,
-      keptParagraphs: fallbackBody ? fallbackBody.split(/\n+/u).filter(Boolean).length : 0,
-      droppedParagraphs: 0,
-      citedFacts: [],
-      citedExhibits: [],
-      citedReferences: [],
-      durationMs: Date.now() - secStart,
-      error: lastError?.message ?? 'Unknown error',
+      nodeId, title, wave, advisor: advisorForNode(nodeId)?.id ?? null, status: 'repaired_fallback',
+      rawParagraphs, keptParagraphs: 0, droppedParagraphs: dropReasons.length, dropReasons,
+      citedFacts: [], citedExhibits: [], citedReferences: [], durationMs: Date.now() - start,
+      tokens: nodeTokens(nodeId), error: failure.message, errorCode: failure.code, httpStatus: failure.status, outcomeUnknown: failure.unknown,
     };
-    commitSectionToReport(nodeId, title, fallbackBody, wave, trace);
-    return { nodeId, body: fallbackBody, trace };
+    commit(nodeId, wave, fallbackSections.get(nodeId) ?? '', trace);
+    return trace;
   };
-
-  // Wave 1: Generate all body and empirical sections concurrently
-  const wave1Outputs = await runWithConcurrency(wave1Nodes, concurrency, nodeId => draftOneSection(nodeId, 1));
-  traces.push(...wave1Outputs.map(o => o.trace));
-
-  // Wave 2: Generate synthesis sections (findings, suggestions, limits, abstract) using the real Wave 1 outline
-  const wave2Outputs = await runWithConcurrency(wave2Nodes, Math.min(concurrency, 4), nodeId => draftOneSection(nodeId, 2));
-  traces.push(...wave2Outputs.map(o => o.trace));
-
-  // Stage 06: the report check reads each drafted section on its own. A flagged section goes back to the model, with the
-  // problems named, for up to two rounds; a revision is kept only when it leaves fewer of them. Nothing is patched by
-  // string replacement, and the score reported is the score of the text as it stands.
+  traces.push(...await runWithConcurrency(wave1Nodes, concurrency, nodeId => draftOneSection(nodeId, 1)));
+  throwIfAborted(signal);
+  traces.push(...await runWithConcurrency(wave2Nodes, Math.min(concurrency, 4), nodeId => draftOneSection(nodeId, 2)));
+  throwIfAborted(signal);
   const benchmarkBeforeRepair = benchmarkReport(workingReport);
-  const revisionTokens: number[] = [];
-  // A missing caption belongs to an exhibit, not to the prose, so it is not the writer's to revise.
-  const flagged = (content: EditorContent, sectionId: string) => sectionIssues(content, sectionId, benchmarkReport).filter(i => i.check.id !== 'captions');
-  const reviseSection = async (nodeId: string): Promise<string | null> => {
-    const cleared: string[] = [];
-    let title = '';
-    for (let round = 0; round < REVISION_ROUNDS; round++) {
+  const flagged = (content: EditorContent, sectionId: string) => sectionIssues(content, sectionId, benchmarkReport).filter(issue => issue.check.id !== 'captions');
+  const revisionNotes: string[] = [];
+  const reviseSection = async (nodeId: string): Promise<void> => {
+    for (let round = 1; round <= REVISION_ROUNDS; round++) {
+      throwIfAborted(signal);
+      if (halted) return;
       const entry = drafted.get(nodeId);
       const section = workingReport.report.find(s => matchBlueprintNode(s.title)?.id === nodeId);
-      if (!entry || !section) break;
-      title = section.title;
+      const trace = traces.find(t => t.nodeId === nodeId);
+      if (!entry || !section || !trace) return;
       const issues = flagged(workingReport, section.id);
-      if (!issues.length) break;
+      if (!issues.length) return;
+      let raw: string;
       try {
-        const problems = issues.map(i => `${i.check.label}：${i.check.detail}`);
-        const llmRes = await callLlmForSection(buildRevisionPrompt(section.title, entry.drafts, problems, entry.tokens), input.llm, input.fetcher);
-        revisionTokens.push(llmRes.usage?.total ?? 0);
-        const revised = parseAndHydrateSectionDraft(llmRes.content, entry.tokens, {
-          methods,
-          planSection: PLAN_NODE.test(nodeId),
-          pending: awaitsResults(nodeId, results),
-          labels,
-        });
-        if (!revised.paragraphs.length) continue;
-        const candidate: EditorContent = {
-          ...workingReport,
-          report: workingReport.report.map(s => (s.id === section.id ? { ...s, body: revised.paragraphs.join('\n') } : s)),
-        };
-        const left = flagged(candidate, section.id);
-        if (left.length >= issues.length) continue;
-        workingReport = candidate;
-        drafted.set(nodeId, { drafts: revised.drafts, tokens: entry.tokens });
-        cleared.push(...issues.filter(i => !left.some(l => l.check.id === i.check.id)).map(i => i.check.label));
-      } catch {
-        break;
+        raw = await invoke({ prompt: buildRevisionPrompt(section.title, entry.drafts, issues.map(i => `${i.check.label}：${i.check.detail}`), entry.tokens), nodeId, wave: trace.wave, attempt: round, purpose: 'revision' });
+      } catch (error) {
+        throwIfAborted(signal);
+        const failure = safeProviderError(error);
+        trace.error = failure.message;
+        trace.errorCode = failure.code;
+        trace.httpStatus = failure.status;
+        trace.outcomeUnknown = failure.unknown;
+        return;
+      } finally {
+        trace.tokens = nodeTokens(nodeId);
       }
+      throwIfAborted(signal);
+      let revised: ReturnType<typeof parseAndHydrateSectionDraft>;
+      try { revised = parseAndHydrateSectionDraft(raw, entry.tokens, contextFor(nodeId)); } catch { continue; }
+      trace.droppedParagraphs += revised.droppedParagraphs;
+      trace.dropReasons = [...(trace.dropReasons ?? []), ...revised.dropReasons];
+      if (!revised.paragraphs.length) continue;
+      const after = revised.paragraphs.join('\n');
+      const candidate: EditorContent = { ...workingReport, report: workingReport.report.map(s => s.id === section.id ? { ...s, body: after } : s) };
+      const left = flagged(candidate, section.id);
+      if (after === section.body || left.length >= issues.length || left.some(issue => !issues.some(previous => previous.check.id === issue.check.id))) continue;
+      const cleared = issues.filter(issue => !left.some(l => l.check.id === issue.check.id));
+      const reason = `章节「${section.title}」按审稿意见修订：${cleared.map(i => i.check.label).join('、')}`;
+      throwIfAborted(signal);
+      revisions.push({ id: `revision-${revisions.length + 1}-${section.id}`, nodeId, sectionId: section.id, before: section.body, after, reason, checkIds: cleared.map(i => i.check.id), kind: 'model_revision' });
+      workingReport = candidate;
+      drafted.set(nodeId, { drafts: revised.drafts, tokens: entry.tokens });
+      trace.keptParagraphs = revised.paragraphs.length;
+      trace.citedFacts = revised.citedFacts;
+      trace.citedExhibits = revised.citedExhibits;
+      trace.citedReferences = revised.citedReferences;
+      revisionNotes.push(reason);
     }
-    return cleared.length ? `章节「${title}」按审稿意见修订：${[...new Set(cleared)].join('、')}` : null;
   };
-  const revisionNotes = (await runWithConcurrency([...drafted.keys()], concurrency, reviseSection)).filter((n): n is string => !!n);
-  // The AI appendix says which model drafted the narrative and how its numbers were bound, in place of "not yet drafted".
-  if (traces.some(t => t.status === 'llm_generated')) {
-    workingReport = noteDrafting(workingReport, `叙述性章节由大语言模型（${input.llm.model || 'deepseek-chat'}）在证见全报告流水线中起草：模型只能以占位符引用已登记结果中的数字，数字由程序回填；未登记的分析、汉字数量与无出处的数字会被整段拒收；起草后由报告体检检查常见误读，问题段落交回模型修订。`);
+  await runWithConcurrency([...drafted.keys()], concurrency, reviseSection);
+  throwIfAborted(signal);
+  if (traces.some(trace => trace.status === 'llm_generated')) {
+    const before = workingReport;
+    workingReport = noteDrafting(workingReport, `叙述性章节由大语言模型（${llm?.model || (service ? '所选报告模型' : 'deepseek-chat')}）在证见全报告流水线中起草：数字由登记结果占位符回填，本地规则检查可能遗漏语义错误；问题段落仅作有限内容返修。当前产物为草稿，独立审稿、文献原文核验、文件导出、逐页渲染与正式提交验收尚未完成。`);
+    for (const section of workingReport.report) {
+      const previous = before.report.find(s => s.id === section.id);
+      if (previous && previous.body !== section.body) revisions.push({ id: `disclosure-${section.id}`, nodeId: matchBlueprintNode(section.title)?.id ?? section.id, sectionId: section.id, before: previous.body, after: section.body, reason: '更新本次实际模型参与及尚未完成的验收说明', checkIds: ['ai_disclosure'], kind: 'finishing' });
+    }
   }
-  const { content: repairedReport, repairs: finishing } = finalizeReport(workingReport, fallbackSections, wantedNodes);
-  const repairs = [...revisionNotes, ...finishing];
-  input.onProgress?.({
-    phase: 'repair',
-    completed: completedNodes,
-    total: totalNodes,
-    repairsApplied: repairs,
-    report: repairedReport,
-  });
+  const finished = finalizeReport(workingReport, fallbackSections, wantedNodes, mode);
+  revisions.push(...finished.revisions);
+  const repairedReport = finished.content;
+  const repairs = [...revisionNotes, ...finished.repairs];
   const benchmarkAfterRepair = benchmarkReport(repairedReport);
   const advisorsAfterRepair = ADVISORS.map(advisor => advisorReading(advisor, benchmarkAfterRepair));
-
-  const totalParagraphsWritten = traces.reduce((acc, t) => acc + t.keptParagraphs, 0);
-  const totalDroppedParagraphs = traces.reduce((acc, t) => acc + t.droppedParagraphs, 0);
-  const allFacts = new Set(traces.flatMap(t => t.citedFacts));
-  const totalTokens = traces.reduce((acc, t) => acc + (t.tokens?.total ?? 0), 0) + revisionTokens.reduce((a, b) => a + b, 0);
-  const advisorPassCount = advisorsAfterRepair.filter(a => a.issues.length === 0).length;
-
-  input.onProgress?.({ phase: 'done', completed: totalNodes, total: totalNodes });
-
-  return {
-    pack: { ...pack, report: repairedReport },
-    topic,
-    report: repairedReport,
-    contract,
-    traces,
-    benchmarkBeforeRepair,
-    benchmarkAfterRepair,
-    advisorsAfterRepair,
-    repairsApplied: repairs,
+  const quality = fullReportQuality(mode, contract, traces, benchmarkAfterRepair, halted);
+  emit({ phase: 'repair', completed: completedNodes, total: totalNodes, repairsApplied: repairs, revisions, quality, report: repairedReport });
+  const knownUsage = usageObservations.reduce((sum, observation) => ({
+    prompt: sum.prompt + (observation.usage?.prompt ?? 0), completion: sum.completion + (observation.usage?.completion ?? 0), total: sum.total + (observation.usage?.total ?? 0),
+  }), { prompt: 0, completion: 0, total: 0 });
+  const successful = traces.filter(trace => trace.status === 'llm_generated');
+  const result: FullReportGenerationResult = {
+    pack: { ...pack, report: repairedReport }, topic, report: repairedReport, contract, traces,
+    ...(project ? { project } : {}), benchmarkBeforeRepair, benchmarkAfterRepair, advisorsAfterRepair,
+    repairsApplied: repairs, revisions, quality,
     summary: {
       totalSectionsGenerated: traces.length,
-      llmSuccessCount: traces.filter(t => t.status === 'llm_generated').length,
-      totalParagraphsWritten,
-      totalDroppedParagraphs,
-      totalFactsCited: allFacts.size,
-      totalTokens,
+      llmSuccessCount: successful.length,
+      totalParagraphsWritten: successful.reduce((sum, trace) => sum + trace.keptParagraphs, 0),
+      totalDroppedParagraphs: traces.reduce((sum, trace) => sum + trace.droppedParagraphs, 0),
+      totalFactsCited: new Set(successful.flatMap(trace => trace.citedFacts.map(fact => `${trace.nodeId}:${fact}`))).size,
+      totalTokens: knownUsage.total,
+      promptTokens: knownUsage.prompt,
+      completionTokens: knownUsage.completion,
+      usageReported: usageObservations.length > 0 && usageObservations.every(observation => !!observation.usage),
+      fallbackCount: traces.length - successful.length,
       totalDurationMs: Date.now() - startedAt,
       finalScore: benchmarkAfterRepair.score,
-      advisorPassCount,
+      advisorPassCount: advisorsAfterRepair.filter(advisor => advisor.issues.length === 0).length,
       advisorTotalCount: advisorsAfterRepair.length,
-      revisedSections: revisionNotes.length,
+      revisedSections: new Set(revisions.filter(revision => revision.kind === 'model_revision').map(revision => revision.nodeId)).size,
     },
   };
+  emit({ phase: 'done', completed: totalNodes, total: totalNodes, quality, revisions });
+  return result;
 }

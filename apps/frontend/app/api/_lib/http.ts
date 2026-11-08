@@ -1,11 +1,17 @@
 export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly headers?: HeadersInit;
   constructor(
-    public readonly status: number,
-    public readonly code: string,
+    status: number,
+    code: string,
     message: string,
-    public readonly headers?: HeadersInit,
+    headers?: HeadersInit,
   ) {
     super(message);
+    this.status = status;
+    this.code = code;
+    this.headers = headers;
   }
 }
 
