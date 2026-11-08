@@ -29,6 +29,7 @@ import { createEditorContent, type EditorContent } from "@/lib/editor-model";
 import type { ProjectView } from "@/lib/agent/illumination";
 import type { EditingStudioHandle } from '@/components/editors/EditingStudio';
 import type { SectionRevisionProposal, RevisionApplyResult } from '@/lib/agent/section-revision';
+import type { ArtifactRecord } from '@/lib/agent/artifact-library';
 import type { ReportRunScope } from '@/lib/agent/report-work';
 import { buildDemoPack, type DemoPack } from "@/lib/agent/demo-study";
 import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
@@ -585,7 +586,7 @@ function CanvasPanel({ dataset, design, projectId }: { dataset: DatasetValue | n
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
 export function useWorkbenchModules(observeReport = false, projectId: string|null = null) {
-  const { session, identityEpoch, loading, isCurrentAccount } = useHostedSession();
+  const { session, identityEpoch, loading, isCurrentAccount, isCurrentIdentity } = useHostedSession();
   const draftOwner = observeReport && !loading && session ? (session.authenticated && session.user?.id ? session.user.id : 'guest') : null;
   const identityScope=JSON.stringify(['workspace',session?.user?.id??null,identityEpoch]);
   const workspaceScope=JSON.stringify([identityScope,projectId]);
@@ -599,6 +600,10 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     if(!currentScope()||loading||!scope.owner||!isCurrentAccount(scope.owner,scope.epoch)||scope.project!==projectId)return {ok:false,reason:'登录或项目已变化，请重新确认。'};
     return revisionEditor.current?.reviseSection(proposal,scope)??{ok:false,reason:'编辑器尚未就绪。'};
   },[currentScope,loading,isCurrentAccount,projectId]);
+  const applyArtifact=useCallback((record:ArtifactRecord,targetSection:string|null):RevisionApplyResult=>{
+    if(!currentScope()||loading||!session||!isCurrentIdentity(session.authenticated?session.user?.id??null:null,identityEpoch))return {ok:false,reason:'登录或项目已变化，请重新选择成果。'};
+    return revisionEditor.current?.applyArtifact(record,targetSection)??{ok:false,reason:'编辑器尚未就绪，请打开报告。'};
+  },[currentScope,loading,session,isCurrentIdentity,identityEpoch]);
   const storedDraft=useMemo(()=>draftOwner&&typeof window!=='undefined'?readReportDraft(draftOwner,projectId):null,[draftOwner,projectId]);
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(workspaceScope,identityScope);
   const datasetChanged=useCallback((value:DatasetValue|null)=>{if(currentScope())handoffs.setDataset(value);},[handoffs,currentScope]);
@@ -709,7 +714,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     };
     return Object.fromEntries(Object.entries(entries).map(([key,panel])=>[key,cloneElement(panel as ReactElement,{key:`${workspaceScope}:${(panel as ReactElement).key??key}`})])) as Record<WorkbenchPanel,ReactNode>;
   }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion]);
-  return {panels,view,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection};
+  return {panels,view,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection,applyArtifact};
 }
 
 export default function EviXPlatform() {

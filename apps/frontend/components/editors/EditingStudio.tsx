@@ -1,6 +1,7 @@
 "use client";
 
 import { applyFigureChange, type FigureTweak } from '@/lib/agent/figure-tweak';
+import { applyArtifactToReport, type ArtifactRecord } from '@/lib/agent/artifact-library';
 import { applySectionRevision, type RevisionSnapshot, type SectionRevisionProposal, type RevisionApplyResult } from '@/lib/agent/section-revision';
 import type { ReportRunScope } from '@/lib/agent/report-work';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
@@ -44,7 +45,8 @@ import { createReportPermissionGuard } from '@/lib/report-permission';
 
 export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; readOnly?: boolean; onSnapshot: (content: EditorContent) => void; onSave: () => void };
 export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean;
-  readRevisionSnapshot: () => RevisionSnapshot; reviseSection: (proposal: SectionRevisionProposal, scope: ReportRunScope) => RevisionApplyResult };
+  readRevisionSnapshot: () => RevisionSnapshot; reviseSection: (proposal: SectionRevisionProposal, scope: ReportRunScope) => RevisionApplyResult;
+  applyArtifact:(record:ArtifactRecord,sectionId:string|null)=>RevisionApplyResult };
 
 export { createReportPermissionGuard } from '@/lib/report-permission';
 
@@ -297,6 +299,15 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   }
   useImperativeHandle(controllerRef,()=>({
     readRevisionSnapshot(){ return { content: current.current, version: revisionVersion.current, inputVersion: revisionInputVersion }; },
+    applyArtifact(record:ArtifactRecord,targetSection:string|null):RevisionApplyResult {
+      if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||phase==='loading'||revisionComposing.current)return {ok:false,reason:'编辑器正在处理其他操作，请稍后再使用成果。'};
+      try{
+        const next=applyArtifactToReport(current.current,record,targetSection);
+        if(next===current.current)return {ok:false,reason:'这件成果已经在本节中。'};
+        if(!edit(next))return {ok:false,reason:'本次没有写入，当前报告已保留。'};
+        if(targetSection)setSectionId(targetSection);setMode('report');setMessage('已使用成果架中的独立版本，可撤销。');return {ok:true};
+      }catch(error){return {ok:false,reason:error instanceof Error?error.message:'未能使用这件成果。'};}
+    },
     reviseSection(proposal:SectionRevisionProposal,scope:ReportRunScope):RevisionApplyResult {
       if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||phase==='loading'||revisionComposing.current) return {ok:false,reason:'编辑器正在处理其他操作，请稍后再确认。'};
       if(consumedRevisions.current.has(proposal.id)) return {ok:false,reason:'这份修订已处理，不会重复写入。'};

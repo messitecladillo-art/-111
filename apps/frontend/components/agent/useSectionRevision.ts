@@ -22,7 +22,7 @@ type Options = {
 };
 
 /** Scope changes invalidate candidates permanently, including leaving and returning to the same conversation. */
-export function useSectionRevision(options: Options): SectionRevisionProps {
+export function useSectionRevision(options: Options): SectionRevisionProps & { artifactCandidate: SectionRevisionProposal | null } {
   const env = useRef(options), epoch = useRef(0), wait = useRef(0), busy = useRef(false), composingRef = useRef(false);
   const scopeKey = JSON.stringify(options.scope);
   const [scopeState, setScopeState] = useState({ key: scopeKey, epoch: 0 });
@@ -96,6 +96,7 @@ export function useSectionRevision(options: Options): SectionRevisionProps {
     } finally { if (wait.current === ticket) busy.current = false; }
   };
   return {
+    artifactCandidate: shown.phase==='ready'||shown.phase==='applied'?shown.proposal:null,
     section: shown.prepared ? { id: shown.prepared.anchor.sectionId, title: (JSON.parse(shown.prepared.anchor.section) as { title: string }).title } : section ? { id: section.id, title: section.title } : null, phase: shown.phase,
     original: shown.prepared?.original ?? (section ? revisionProse(section) : []), proposed: shown.proposal?.paragraphs ?? [], evidence: shown.prepared?.evidence ?? [],
     serviceLabel: shown.serviceLabel ?? (options.service ? `${options.service.label} · ${options.service.model} · v${options.service.revision}` : null),

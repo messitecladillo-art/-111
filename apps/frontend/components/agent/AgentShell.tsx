@@ -24,6 +24,9 @@ import { lookupTurn, route, standingFindings, toolTurn, type AgentAction, type A
 import { readChatTurn, sendChatTurn } from './chat-client';
 import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
+import ArtifactShelf, { ArtifactShelfLauncher } from './ArtifactShelf';
+import { useArtifactLibrary } from './useArtifactLibrary';
+import { artifactScope, sectionRevisionArtifact } from '@/lib/agent/artifact-library';
 import SectionRevision from './SectionRevision';
 import { useSectionRevision } from './useSectionRevision';
 import { reportWorkState, sameReportRunScope, type ReportRunScope } from '@/lib/agent/report-work';
@@ -130,7 +133,7 @@ function savedPanelWidth(): number | null {
 export default function AgentShell() {
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
-  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount } = useHostedSession();
+  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount, isCurrentIdentity } = useHostedSession();
   const [accountNotice, setAccountNotice] = useState('');
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
@@ -144,7 +147,7 @@ export default function AgentShell() {
     return { owner: owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch) ? owner : null, epoch: identityEpoch,
       thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
   }, [owner, identityEpoch, isCurrentAccount]);
-  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection } = useWorkbenchModules(true, projectId);
+  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact } = useWorkbenchModules(true, projectId);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
   const preparingReport = useRef<{ id: string; scope: ReportRunScope } | null>(null);
@@ -321,6 +324,39 @@ export default function AgentShell() {
     mountEditor: () => setVisited(v => v.includes('editor') ? v : [...v, 'editor']),
     openSettings: openRevisionSettings, mutate, disabled: !!liveWriting?.active || !!visibleCandidate, disabledReason: visibleCandidate ? '请先采纳或关闭整稿候选，再修订当前报告。' : undefined, readDisabled: () => !!activeReportRun.current || !!preparingReport.current,
   });
+
+  const [artifactOpen,setArtifactOpen]=useState(false),[artifactNotice,setArtifactNotice]=useState<string|null>(null);
+  const draftWriter=useRef<{scope:string;write:(text:string)=>boolean}|null>(null);
+  const artifactThreadId=`${thread?.id??''}`;
+  const artifactProjectId=projectId==null?null:`${projectId}`;
+  const composerScope=useMemo(()=>JSON.stringify([owner,identityEpoch,artifactThreadId,artifactProjectId]),[owner,identityEpoch,artifactThreadId,artifactProjectId]);
+  const registerDraftWriter=useCallback((write:(text:string)=>boolean)=>{
+    const registration={scope:composerScope,write};draftWriter.current=registration;
+    return()=>{if(draftWriter.current===registration)draftWriter.current=null;};
+  },[composerScope]);
+  const readArtifactCurrent=useCallback(()=>{
+    const b=threads.view(owner),t=b.threads.find(item=>item.id===b.active),actualProject=t?t.projectId:b.draftProject;
+    const fresh=!!owner&&isCurrentIdentity(owner==='guest'?null:owner,identityEpoch)&&(b.active??'')===artifactThreadId&&actualProject===artifactProjectId;
+    return {scope:fresh?artifactScope(owner!,artifactProjectId):null,content:readRevisionSnapshot()?.content??view.report,sectionId:pickedSection,blocked:!!activeReportRun.current||!!preparingReport.current||!!visibleCandidate};
+  },[owner,identityEpoch,isCurrentIdentity,artifactThreadId,artifactProjectId,readRevisionSnapshot,view.report,pickedSection,visibleCandidate]);
+  const prefillArtifactCommand=useCallback((text:string)=>{
+    const captured=readArtifactCurrent().scope,registration=draftWriter.current;if(!captured||!registration)return;
+    setArtifactNotice(null);setCopilotOpen(true);if(stage==='advisors')setStage('chat');
+    window.requestAnimationFrame(()=>{if(readArtifactCurrent().scope!==captured||draftWriter.current!==registration)return;if(registration.scope!==composerScope||!registration.write(text))setArtifactNotice('输入框暂时无法加入指令，请保留现有草稿后重试。');});
+  },[readArtifactCurrent,stage,setStage,composerScope]);
+  const stableArtifactCandidate=useMemo(()=>visibleCandidate?.result&&!visibleCandidate.pending&&!visibleCandidate.failed?{id:visibleCandidate.runId,report:visibleCandidate.preview}:null,[visibleCandidate]);
+  const sectionArtifactCandidate=useMemo(()=>revision.artifactCandidate?{id:revision.artifactCandidate.id,seed:sectionRevisionArtifact(revision.artifactCandidate)}:null,[revision.artifactCandidate]);
+  const artifacts=useArtifactLibrary({owner,projectId,content:view.report,candidate:stableArtifactCandidate,sectionCandidate:sectionArtifactCandidate,selectedSectionId:pickedSection,readCurrent:readArtifactCurrent,apply:applyArtifact,onSay:prefillArtifactCommand});
+  const examplePending=useRef(false);
+  const addInfographicExample=useCallback(async()=>{
+    const captured=readArtifactCurrent().scope;if(!captured||examplePending.current)return;
+    const existing=artifacts.items.find(item=>item.origin==='内置示例');if(existing){artifacts.onSelect(existing.id);return;}
+    examplePending.current=true;setArtifactNotice(null);
+    try{const response=await fetch('/research-visuals/respondent-profile-concept.png');if(!response.ok)throw Error('示例素材暂时无法读取。');const blob=await response.blob();if(readArtifactCurrent().scope!==captured)return;await artifacts.onImport(new File([blob],'湖北主题受访者画像图.png',{type:'image/png'}),'diagram',{origin:'内置示例',classification:'simulated'});}
+    catch(error){if(readArtifactCurrent().scope===captured)setArtifactNotice(error instanceof Error?error.message:'示例素材未能加入。');}
+    finally{examplePending.current=false;}
+  },[readArtifactCurrent,artifacts]);
+  const openArtifactShelf=()=>{setVisited(v=>v.includes('editor')?v:[...v,'editor']);setArtifactOpen(v=>!v);};
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, [setCanvasReturn]);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
@@ -996,6 +1032,7 @@ export default function AgentShell() {
           <span className={styles.workState} data-busy={!!running || looking || !!liveWriting?.active} role="status">
             <i aria-hidden="true" />{liveWriting?.active ? `实时撰稿中 · ${liveWriting.completed}/${liveWriting.total} 节` : running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
           </span>
+          <ArtifactShelfLauncher count={artifacts.count} open={artifactOpen} onClick={openArtifactShelf} />
           <span className={styles.spacer} />
           {(spent.inputTokens > 0 || spent.outputTokens > 0) && <span className={styles.meter} title="这段对话里，服务商报告的输入 / 输出 token 合计">
             {thousands(spent.inputTokens + spent.outputTokens)} tokens<small><b data-dir="in">↑{thousands(spent.inputTokens)}</b><b data-dir="out">↓{thousands(spent.outputTokens)}</b></small>
@@ -1109,19 +1146,20 @@ export default function AgentShell() {
               <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
             </div>}
         </div>
-        <Composer onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
+        <Composer onDraftWriter={registerDraftWriter} onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
           services={services} serviceId={chatService?.id ?? ''} onService={id => prefer('research', id)}
           mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
         </div>
       </main>
 
-      <section className={styles.panel} hidden={!panel && !output && !inspecting} aria-label={here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
-        data-inspector={inspecting || undefined} style={{ ['--panel-w' as string]: `${inspecting ? INSPECTOR : panelWidth}px` }}>
-        {inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}
+      <section className={styles.panel} hidden={!panel && !output && !inspecting && !artifactOpen} aria-label={artifactOpen ? '成果架' : here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
+        data-inspector={inspecting || artifactOpen || undefined} style={{ ['--panel-w' as string]: `${artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth}px` }}>
+        {artifactOpen && <ArtifactShelf {...artifacts} error={artifacts.error??artifactNotice} onClose={()=>setArtifactOpen(false)} onExample={()=>void addInfographicExample()} />}
+        {!artifactOpen && inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}
           advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} revision={<SectionRevision {...revision} />} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
-        {here && <header className={styles.panelHead}>
+        {!artifactOpen && here && <header className={styles.panelHead}>
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>
           {lit && <span className={styles.panelLight}><LightBar score={lit.score} /><b>{percent(lit.score)}</b>{lit.summary}</span>}
           <span className={styles.spacer} />
@@ -1130,9 +1168,9 @@ export default function AgentShell() {
             title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
         </header>}
-        {output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} onSay={agent.send}
+        {!artifactOpen && output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} onSay={agent.send}
           figure={deferredView.report ? figureOf(deferredView.report, output) : null} visualStyle={deferredView.report?.visualStyle} />}
-        <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel}>
+        <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel || artifactOpen}>
           {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
           {/* The report editor stays mounted, hidden, while the report fills the centre: the paper shows its content and the
               toolbar writes through it. */}
