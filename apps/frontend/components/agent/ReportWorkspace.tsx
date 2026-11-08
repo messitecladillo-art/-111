@@ -403,7 +403,7 @@ export function PaperToolbar({
   };
 
   return (
-    <div className={styles.toolbarWrap}>
+    <div className={styles.toolbarWrap} data-report-toolbar>
       <div className={styles.toolbar} role="toolbar" aria-label="报告排版与生成工具栏">
         {TOOLS.map(tool => (
           <button

@@ -181,7 +181,12 @@ export default function AgentShell() {
   const pickSection = useCallback((id: string) => {
     setPickedSection(id);
     const box = paperRef.current, target = box?.querySelector<HTMLElement>(`[data-report-section="${CSS.escape(id)}"]`);
-    if (box && target) box.scrollTo({ top: box.scrollTop + target.getBoundingClientRect().top - box.getBoundingClientRect().top - 24, behavior: 'smooth' });
+    if (box && target) {
+      const bounds = box.getBoundingClientRect(), toolbar = box.querySelector<HTMLElement>('[data-report-toolbar]');
+      const inset = Math.max(24, (toolbar?.getBoundingClientRect().bottom ?? bounds.top) - bounds.top + 16);
+      box.scrollTo({ top: Math.max(0, box.scrollTop + target.getBoundingClientRect().top - bounds.top - inset),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    }
   }, []);
   const choreo = useLiveReportChoreography(paperRef, paperContent, pickSection);
   // In the report, [ and ] step to the previous and next section, as a reader pages through.
