@@ -633,8 +633,8 @@ export function buildFullReportSectionPrompt(input: {
     '你是正大杯全国大学生市场调查与分析大赛的报告撰稿助手，按《市调科研融合技能包》规范撰写报告章节。\n' +
     `当前撰写章节：「${section.title}」（节点 ID：${section.node}）。\n` +
     '【规则一：数字只来自资料】\n' +
-    '1. 统计数字、样本量、百分比、均值、检验值、自由度、信度系数、回收率等，一律写成 {F编号}（如“有效样本{F2}份，有效回收率{F1}”）。占位符只代表数字本身，百分比已带 %；单位（份、人、分）写在占位符之后。\n' +
-    '2. 引用图表写 {G编号}（如“见{G1}”）；引用文献写 {R编号}（如“既有研究指出{R1}”）。\n' +
+    '1. 统计数字、样本量、百分比、均值、检验值、自由度、信度系数、回收率等，一律写成 {F编号}（如“有效样本{F2}份，有效回收率{F1}”）。占位符只代表数字本身，百分比已带 %；单位（份、人、分）写在占位符之后。以“<”开头的数字（如 <0.001）已带比较符，写“p{F3}”或“p 值{F3}”，不写“小于{F3}”“为{F3}”。\n' +
+    '2. 引用图表写 {G编号}（如“见{G1}”“如{G1}所示”）；“见”“所示”只跟图表，不跟数字 {F编号}，数字要放进句子里说明它是什么。引用文献写 {R编号}（如“既有研究指出{R1}”）。\n' +
     '3. 占位符以外不得出现阿拉伯数字，也不得用汉字写数量（如“一点八倍”“十四个百分点”“百分之三十”“四成”）；差值、倍数等派生数字一律不写。题号、维度数、序号写成汉字（如“题一至题十二”“五维量表”“一是、二是”）。违反的段落整段丢弃。\n' +
     '【规则二：只写已登记的分析】\n' +
     (planSection
@@ -665,10 +665,26 @@ export function buildRevisionPrompt(title: string, drafts: readonly string[], pr
   return (
     `你是同一份调查报告的审稿修订助手。下面是「${title}」一节的段落，数字仍以 {F编号}、{G编号}、{R编号} 占位。审稿发现以下问题：\n` +
     problems.map((p, i) => `${i + 1}. ${p}`).join('\n') +
-    '\n请只改出问题的句子，其余原样保留；不新增资料中没有的数字、分析或结论。占位符规则不变：占位符以外不得出现阿拉伯数字，也不得用汉字写数量。\n' +
+    '\n请只改出问题的句子，其余原样保留；不新增资料中没有的数字、分析或结论。占位符规则不变：占位符以外不得出现阿拉伯数字，也不得用汉字写数量；“见”“所示”只跟图表 {G编号}。\n' +
     '只输出严格合法的 JSON 对象：{"paragraphs":[{"text":"段落正文"}]}，不要输出任何额外解释。\n' +
     `资料 JSON：${JSON.stringify(material)}`
   );
+}
+
+/** A number pointed to as if it were a table or figure: "见{F3}", "（见{F5}、{F6}）", "{F3}所示水平". */
+const FACT_AS_EXHIBIT = /(?:见|参见|详见|参照)\s*\{F\d+\}|\{F\d+\}\s*所示/u;
+
+/**
+ * A cited value that prints with its own sign ("<0.001") after a comparison word reads "小于<0.001": the sign goes,
+ * the word stays ("为<0.001" becomes "小于0.001", "p=<0.001" becomes "p<0.001").
+ */
+export function tidyComparisons(text: string): string {
+  return text
+    .replace(/(小于|低于|不足|不到)\s*[<＜]\s*/gu, '$1')
+    .replace(/(大于|高于|超过)\s*[>＞]\s*/gu, '$1')
+    .replace(/(均为|均是|为|是)\s*[<＜]\s*(?=\d)/gu, (_, word: string) => (word.startsWith('均') ? '均小于' : '小于'))
+    .replace(/([<＜>＞])\s*\1/gu, '$1')
+    .replace(/[=＝]\s*([<＜>＞])/gu, '$1');
 }
 
 /**
@@ -746,6 +762,8 @@ export function parseAndHydrateSectionDraft(
       ? '引用了不存在的占位符'
       : misbound
         ? '比率处引用了不是比率的数字'
+        : FACT_AS_EXHIBIT.test(sanitized)
+        ? '把数字当作图表引用（“见…”“…所示”只能跟图表 {G编号}）'
         : DIGIT_RE.test(numbersOnly)
         ? '占位符之外写了阿拉伯数字'
         : CN_QUANTITY.test(numbersOnly)
@@ -765,9 +783,9 @@ export function parseAndHydrateSectionDraft(
       else if (refMap.has(id)) citedReferences.add(id);
     }
 
-    const hydrated = sanitized.replace(PLACEHOLDER_RE, (_, id: string) => {
+    const hydrated = tidyComparisons(sanitized.replace(PLACEHOLDER_RE, (_, id: string) => {
       return factMap.get(id) ?? exhibitMap.get(id) ?? refMap.get(id) ?? '';
-    });
+    }));
     paragraphs.push(hydrated);
     drafts.push(sanitized);
   }

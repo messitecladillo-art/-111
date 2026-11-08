@@ -9,6 +9,7 @@ import {
   generateFullReportWithAgent,
   parseAndHydrateSectionDraft,
   sanitizeModelParagraph,
+  tidyComparisons,
   unbackedAnalyses,
 } from '../lib/agent/full-report-pipeline.ts';
 import { decomposeContestTopic, forgeNationalAwardPack } from '../lib/agent/hanchao-benchmark.ts';
@@ -154,6 +155,21 @@ test('a rate bound to a count is refused: the share must be a share', () => {
   const wrong = parseAndHydrateSectionDraft(draft('实回收有效样本{F2}份，有效回收率为{F2}。'), tokens, results);
   assert.deepEqual(wrong.dropReasons, ['比率处引用了不是比率的数字']);
   assert.equal(parseAndHydrateSectionDraft(draft('有效样本为{F2}份。'), tokens, results).paragraphs.length, 1, 'a count where a count belongs is fine');
+});
+
+test('a number is never pointed to as if it were a table or figure, and a cited bound keeps one comparison', () => {
+  for (const text of ['回归结果（见{F2}）仅作关联描述。', 'p 值小于{F1}所示水平。']) {
+    const out = parseAndHydrateSectionDraft(draft(text), tokens, results);
+    assert.deepEqual(out.dropReasons, ['把数字当作图表引用（“见…”“…所示”只能跟图表 {G编号}）'], text);
+  }
+  assert.equal(parseAndHydrateSectionDraft(draft('有效样本{F2}份，见{G1}。'), tokens, results).paragraphs.length, 1, 'an exhibit may be pointed to');
+  // A p-value prints with its own sign: "小于" before it would read "小于<0.001".
+  const bound = { ...tokens, facts: [...tokens.facts, { id: 'F3', text: '检验的 p 值为 <0.001', value: '<0.001' }] };
+  assert.equal(parseAndHydrateSectionDraft(draft('两组差异的 p 值小于{F3}。'), bound, results).paragraphs[0], '两组差异的 p 值小于0.001。');
+  assert.equal(tidyComparisons('p值均为<0.001'), 'p值均小于0.001');
+  assert.equal(tidyComparisons('p=<0.001，ρ为0.851'), 'p<0.001，ρ为0.851');
+  assert.equal(tidyComparisons('（p<<0.001）'), '（p<0.001）');
+  assert.equal(tidyComparisons('p<0.001，F 为187.53'), 'p<0.001，F 为187.53', 'a plain bound and other values are left alone');
 });
 
 test('a registered category may carry digits in its name; other digits are still refused', () => {

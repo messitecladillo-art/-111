@@ -58,10 +58,21 @@ export function draftSection(nodeId: string): DraftSection {
     needs: node.needs.slice(0, 8).map(n => clip(n.label, 40)), length: node.length ? [node.length[0], node.length[1]] : null };
 }
 
-const numeric = (cell: unknown): number | null => {
-  const n = typeof cell === 'number' ? cell : typeof cell === 'string' && cell.trim() !== '' ? Number(cell) : NaN;
-  return Number.isFinite(n) ? n : null;
-};
+// A number as a table prints it: a typographic minus, a bound ("<0.001"), a share ("53.5%").
+const PRINTED_NUMBER = /^[<>＜＞≤≥]?\s*[−-]?\d+(?:\.\d+)?\s*[%％]?$/u;
+// A cell a table leaves empty.
+const EMPTY_CELL = /^[—–-]?$/u;
+/** A cell's value as a fact cites it, or null when the cell is not a number. */
+function cellValue(header: string, cell: unknown): string | null {
+  const share = /[%％]/u.test(header);
+  if (typeof cell === 'number') return Number.isFinite(cell) ? `${factNumber(header, cell)}${share ? '%' : ''}` : null;
+  if (typeof cell !== 'string') return null;
+  const text = cell.trim().replace(/\s+/gu, '');
+  if (!PRINTED_NUMBER.test(text)) return null;
+  if (/^[<>＜＞≤≥]/u.test(text) || /[−%％]/u.test(text)) return text;
+  const n = Number(text);
+  return Number.isFinite(n) ? `${factNumber(header, n)}${share ? '%' : ''}` : null;
+}
 
 /**
  * The facts a draft may cite: for each registered result, its method and effective sample, its statistics and the
@@ -84,16 +95,23 @@ export function draftFacts(held: NonNullable<ResultsView>, nodeId: string): Fact
   return facts.map((f, i) => ({ id: `F${i + 1}`, ...f }));
 }
 
+/**
+ * A row's numbers as facts, under a label the model can read: the row's name, then its other words each under its
+ * column ("答案完全重复（判定标准：…；处理：仅标记）"), so a short column that changes the meaning, such as how a
+ * screening rule was applied, is never clipped away behind a long one.
+ */
 function rowFacts(r: ResultSnapshot, row: ResultSnapshot['rows'][number], title: string, add: (text: string, value: string) => void) {
-  const label = row.filter(cell => typeof cell === 'string' && numeric(cell) === null).join('·');
-  if (!label) return;
+  const words = row.flatMap((cell, i) => typeof cell === 'string' && !EMPTY_CELL.test(cell.trim()) && cellValue(r.headers[i] ?? '', cell) === null ? [{ cell: tidy(cell), header: r.headers[i] ?? '' }] : []);
+  if (!words.length) return;
+  const notes = words.slice(1).map(w => `${w.header ? `${tidy(w.header)}：` : ''}${clip(w.cell, 16)}`);
+  const label = notes.length ? `${clip(words[0].cell, 24)}（${notes.join('；')}）` : clip(words[0].cell, 30);
   let shown = 0;
   row.forEach((cell, i) => {
-    const n = numeric(cell), header = r.headers[i] ?? '';
-    if (n === null || shown >= 2 || !header) return;
+    const header = r.headers[i] ?? '', value = header ? cellValue(header, cell) : null;
+    if (value === null || shown >= 2) return;
     shown++;
-    const share = /%|％/u.test(header), name = header.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim(), value = `${factNumber(header, n)}${share ? '%' : ''}`;
-    add(`「${title}」中「${clip(label, 30)}」的${name}为 ${value}`, value);
+    const name = header.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim();
+    add(`「${title}」中「${label}」的${name}为 ${value}`, value);
   });
 }
 

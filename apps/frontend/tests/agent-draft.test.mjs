@@ -20,12 +20,25 @@ test('facts carry the numbers of registered results, the section’s own first, 
   assert.deepEqual(facts[0], { id: 'F1', text: '「受访者构成」：频数分析，有效样本 212（共 240），教学模拟数据', value: '212' }, 'a result of this section comes first');
   assert.ok(facts.some(f => f.text === '「受访者构成」的有效类别数为 2' && f.value === '2'));
   assert.ok(facts.some(f => f.text === '「受访者构成」中「女」的有效样本占比为 54.24%' && f.value === '54.24%'), 'a share keeps its percent sign');
-  assert.ok(facts.some(f => f.text === '「年级差异」中「大一·满意」的频数为 20'));
+  assert.ok(facts.some(f => f.text === '「年级差异」中「大一（列类别：满意）」的频数为 20'));
   assert.ok(facts.some(f => f.text === '「城区居民抽样框」的计划有效样本为 300'), 'a frame gives its planned sample');
   assert.ok(!facts.some(f => /缺失/.test(f.text)), 'a statistic without a value is not a fact');
   assert.ok(facts.every((f, i) => f.id === `F${i + 1}` && f.text.length <= 160));
   const many = { ...held, results: Array.from({ length: 30 }, (_, i) => result(`结果${i}`, 'frequency')) };
   assert.equal(draftFacts(many, 'sample.profile').length, 80, 'at most eighty');
+});
+
+test('a row keeps every column that changes what its number means, and numbers as tables print them count', () => {
+  // A screening rule that only flags its rows: the model must read "仅标记", or it writes the sample as cut by it.
+  const screening = result('问卷质量筛查', 'quality-control', { headers: ['规则', '判定标准', '标记份数', '处理'], rows: [['答案完全重复', '除编号、时间、时长和 IP 列外所有答案相同的第 2 份及以后', 522, '仅标记']], metrics: [] });
+  const regression = result('回归估计', 'regression', { headers: ['变量', '非标准化系数 B', '标准误', 'p'], rows: [['（截距）', '−1.778', 0.098, '<0.001'], ['适口性', '0.396', '—', '<0.001']], metrics: [] });
+  const facts = draftFacts({ ...held, results: [screening, regression] }, 'data.cleaning');
+  const flagged = facts.find(f => f.value === '522');
+  assert.match(flagged.text, /「答案完全重复（判定标准：.+；处理：仅标记）」的标记份数为 522/u);
+  assert.ok(facts.some(f => f.text === '「回归估计」中「（截距）」的非标准化系数 B为 −1.778' && f.value === '−1.778'), 'a typographic minus is a number, not part of the name');
+  assert.ok(facts.some(f => f.text === '「回归估计」中「（截距）」的标准误为 0.098'));
+  assert.ok(facts.some(f => f.text === '「回归估计」中「适口性」的非标准化系数 B为 0.396'));
+  assert.ok(facts.some(f => f.text === '「回归估计」中「适口性」的p为 <0.001' && f.value === '<0.001'), 'a bound is cited as printed; an empty cell is skipped');
 });
 
 test('the request names the section, the project, the facts and the findings, and never the data', () => {
