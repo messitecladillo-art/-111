@@ -53,6 +53,9 @@ test('a results paragraph may not claim an analysis no registered result comes f
     assert.match(out.dropReasons[0], /未登记的分析/u, text);
   }
   assert.deepEqual(unbackedAnalyses(claims[0], ['logistic']), [], 'a registered model backs its own claims');
+  // The platform registers factor analysis as its validity check: that result backs KMO and loadings.
+  assert.deepEqual(unbackedAnalyses(claims[2], ['validity']), []);
+  assert.deepEqual(unbackedAnalyses(claims[2], ['alpha']), ['因子分析或 KMO 检验']);
   // A design section names the analyses the study means to run.
   assert.equal(parseAndHydrateSectionDraft(draft(claims[0]), tokens, { ...results, planSection: true }).paragraphs.length, 1);
   assert.ok(PLAN_NODE.test('design.methods') && !PLAN_NODE.test('drivers.model'));

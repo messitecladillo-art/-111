@@ -214,7 +214,7 @@ const ANALYSIS_CLAIMS: readonly { name: string; words: RegExp; methods: RegExp }
     words: /回归(?:模型|分析|系数|方程|结果)|[Ll]ogit|[Ll]ogistic|[Pp]robit|优势比|比值比|发生比|(?<![A-Za-z])OR(?![A-Za-z])|边际效应|方差膨胀|VIF|共线性|平行线假定|伪\s*R/u,
     methods: /regress|logit|logistic|probit|ols/iu,
   },
-  { name: '因子分析或 KMO 检验', words: /因子分析|因子载荷|公因子|KMO|Bartlett|球形检验|主成分/iu, methods: /factor|kmo|efa|cfa|pca/iu },
+  { name: '因子分析或 KMO 检验', words: /因子分析|因子载荷|公因子|KMO|Bartlett|球形检验|主成分/iu, methods: /factor|kmo|efa|cfa|pca|validity/iu },
   { name: '聚类分析', words: /聚类|K-?means|轮廓系数/iu, methods: /cluster|kmeans/iu },
 ];
 /** Sections that set out the plan: an analysis named there is one the study means to run, not a result it reports. */

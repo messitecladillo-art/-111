@@ -133,4 +133,5 @@ export function resultPlaced(content: EditorContent, r: ResultSnapshot): boolean
 export const METHOD_LABELS: Record<string, string> = {
   frequency: '频数分析', crosstab: '交叉分析与卡方检验', groups: '分组均值比较', numeric: '数值描述', pearson: 'Pearson 相关', spearman: 'Spearman 相关',
   alpha: '信度分析', 'quality-control': '问卷质量筛查', 'sampling-frame': '抽样设计',
+  validity: '因子分析（效度）', regression: '线性回归', logistic: 'Logistic 回归', ipa: '重要性—表现分析（IPA）', cluster: '聚类分析', ahp: '层次分析（AHP）',
 };
