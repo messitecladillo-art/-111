@@ -2,6 +2,7 @@
 
 import type { EditorContent } from '@/lib/editor-model';
 import PaperPages, { type LiveReviewState, type LiveTypingState } from './PaperPages';
+import type { ReportWorkState } from '@/lib/agent/report-work';
 
 export type { LiveReviewState, LiveTypingState } from './PaperPages';
 /** Which export the preview stands for; both are set in the same competition layout, so the pages are the same. */
@@ -18,6 +19,7 @@ export default function ReportPaper({
   onPick,
   label = '报告书实时预览',
   writingActive = false,
+  workState = null,
   typingState = null,
   reviewState = null,
   formatScanSectionId = null,
@@ -31,6 +33,7 @@ export default function ReportPaper({
   onPick?: (sectionId: string) => void;
   label?: string;
   writingActive?: boolean;
+  workState?: ReportWorkState | null;
   typingState?: LiveTypingState | null;
   reviewState?: LiveReviewState | null;
   formatScanSectionId?: string | null;
@@ -46,6 +49,7 @@ export default function ReportPaper({
       docFormat={docFormat}
       activeSectionId={activeSectionId ?? null}
       writingActive={writingActive}
+      workState={workState}
       typingState={typingState}
       reviewState={reviewState}
       formatScanSectionId={formatScanSectionId}

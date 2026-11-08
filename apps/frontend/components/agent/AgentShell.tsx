@@ -36,6 +36,7 @@ import CursorTrail from './CursorTrail';
 import ReportPaper, { type DocFormatMode } from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
 import { ReportLiveTheater, useLiveReportChoreography } from './ReportLiveTheater';
+import { reportWorkState, ReportRunFence, sameReportRunScope, type ReportRunScope } from '@/lib/agent/report-work';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
@@ -123,7 +124,7 @@ export default function AgentShell() {
   const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark, setLiveReport } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
-  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount } = useHostedSession();
+  const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount, isCurrentIdentity } = useHostedSession();
   const [accountNotice, setAccountNotice] = useState('');
   // Conversations belong to whoever is signed in; they are bound once the session is known and never shown to another.
   const owner = accountLoading ? null : account?.authenticated && account.user?.id ? account.user.id : 'guest';
@@ -140,12 +141,21 @@ export default function AgentShell() {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
   const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
-  const [liveWriting, setLiveWriting] = useState<LiveWritingStatus | null>(null);
+  const reportRuns = useMemo(() => new ReportRunFence(), []);
+  const [writingEnvelope, setWritingEnvelope] = useState<{ scope: ReportRunScope; status: LiveWritingStatus } | null>(null);
+  const reportProject = thread ? thread.projectId : book.draftProject;
+  const displayScope: ReportRunScope = { owner, epoch: identityEpoch, thread: thread?.id ?? null, project: reportProject };
+  const liveWriting = writingEnvelope && sameReportRunScope(writingEnvelope.scope, displayScope) ? writingEnvelope.status : null;
+  useEffect(() => {
+    const scope: ReportRunScope = { owner, epoch: identityEpoch, thread: thread?.id ?? null, project: reportProject };
+    return () => reportRuns.cancelScope(scope);
+  }, [owner, identityEpoch, thread?.id, reportProject, reportRuns]);
+  useEffect(() => () => reportRuns.cancel(), [reportRuns]);
   const autoHydratedRef = useRef(false);
   const autoFollowRef = useRef(true);
   const toggleAutoFollow = useCallback(() => {
     autoFollowRef.current = !autoFollowRef.current;
-    setLiveWriting(prev => (prev ? { ...prev, autoFollow: autoFollowRef.current } : null));
+    setWritingEnvelope(prev => prev ? { ...prev, status: { ...prev.status, autoFollow: autoFollowRef.current } } : null);
   }, []);
   // Before any report exists in this browser the paper shows the blank template, as the editor would open it.
   const [blankReport] = useState(createEditorContent);
@@ -289,6 +299,13 @@ export default function AgentShell() {
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
   const latest = useRef({ panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection });
   useEffect(() => { latest.current = { panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection }; });
+  const readReportScope = useCallback((): ReportRunScope => {
+    const current = latest.current;
+    const currentBook = threads.view(current.owner);
+    const currentThread = currentBook.threads.find(t => t.id === currentBook.active);
+    return { owner: current.owner, epoch: current.identityEpoch, thread: currentThread?.id ?? null,
+      project: currentThread ? currentThread.projectId : currentBook.draftProject };
+  }, []);
   // When entering the middle report canvas on an untouched skeleton, automatically hydrate the full 9-chapter 26-section
   // standard report so the canvas renders complete A4 pages, TOC, three-line tables, and built-in SVG figures.
   // The sample replaces the questionnaire and the data, so it fills only a project that holds neither.
@@ -624,6 +641,12 @@ export default function AgentShell() {
           break;
         }
         case 'generateFullReport': {
+          if (reportRuns.active) { say([span('当前报告正在生成，请等待本次返回。', 'dim')]); break; }
+          const identity = readReportScope();
+          const identityOwner = identity.owner === 'guest' ? null : identity.owner;
+          if (!identity.owner || !isCurrentIdentity(identityOwner, identity.epoch)) {
+            say([span('登录状态尚未确认，请等待服务连接后再试。', 'dim')]); break;
+          }
           const topicLabel = action.topic.trim() || latest.current.report?.title || latest.current.design?.title || '当前参赛研究课题';
           let sessionKey = '';
           try {
@@ -634,19 +657,6 @@ export default function AgentShell() {
           // Focus the middle report canvas immediately so the user watches the report being written in real time
           setStage('paper');
           closePanel();
-          setLiveWriting({
-            active: true,
-            phase: 'contract',
-            completed: 0,
-            total: 26,
-            paragraphs: 0,
-            facts: 0,
-            lastSectionId: null,
-            lastSectionTitle: '正在初始化 9 章 26 节蓝图与四张证据台账…',
-            topicTitle: topicLabel,
-            autoFollow: autoFollowRef.current,
-          });
-
           const waitingMsg: Message = {
             ...stamp(),
             role: 'agent',
@@ -670,8 +680,32 @@ export default function AgentShell() {
             },
           };
           threads.append([waitingMsg]);
+          // append may create the first conversation; bind only after its stable ID exists.
+          const requestScope = readReportScope();
+          const ticket = reportRuns.start(requestScope, () => {
+            setWritingEnvelope(prev => prev && sameReportRunScope(prev.scope, requestScope)
+              ? { ...prev, status: { ...prev.status, active: false, phase: 'error' } } : prev);
+            if (isCurrentIdentity(identityOwner, identity.epoch)) {
+              mark(waitingMsg.id, 'unknown');
+              replace(waitingMsg.id, { lines: [[span('已离开本次报告任务，停止接收后续内容。外部调用结果待核对。', 'dim')]] });
+            }
+          });
+          if (!ticket) break;
+          const currentRun = () => reportRuns.accepts(ticket, readReportScope()) && isCurrentIdentity(identityOwner, identity.epoch);
+          const setLiveWriting = (change: LiveWritingStatus | ((prev: LiveWritingStatus | null) => LiveWritingStatus | null)) => {
+            if (!currentRun()) return;
+            setWritingEnvelope(prev => {
+              const previous = prev && sameReportRunScope(prev.scope, ticket.scope) ? prev.status : null;
+              const status = typeof change === 'function' ? change(previous) : change;
+              return status ? { scope: ticket.scope, status } : null;
+            });
+          };
+          setLiveWriting({ active: true, phase: 'contract', completed: 0, total: 0, paragraphs: 0, facts: 0,
+            lastSectionId: null, lastSectionTitle: '等待接收章节计划与研究材料', topicTitle: topicLabel,
+            autoFollow: autoFollowRef.current });
           void fetch('/api/agent/full-report', {
             method: 'POST',
+            signal: ticket.controller.signal,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               topic: action.topic.trim() || undefined,
@@ -681,8 +715,10 @@ export default function AgentShell() {
             }),
           })
             .then(async res => {
+              if (!currentRun()) return;
               if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
+                if (!currentRun()) return;
                 throw new Error(errData?.message || `HTTP ${res.status}`);
               }
               const contentType = res.headers.get('content-type') ?? '';
@@ -696,8 +732,9 @@ export default function AgentShell() {
                 let buffer = '';
                 while (true) {
                   const { value, done } = await reader.read();
-                  if (done) break;
-                  buffer += decoder.decode(value, { stream: true });
+                  if (!currentRun()) { await reader.cancel(); return; }
+                  buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+                  if (done && buffer.trim()) buffer += '\n';
                   const lines = buffer.split('\n');
                   buffer = lines.pop() ?? '';
                   for (const line of lines) {
@@ -710,7 +747,7 @@ export default function AgentShell() {
                         active: true,
                         phase: 'wave1',
                         completed: 0,
-                        total: evt.total ?? 26,
+                        total: evt.total ?? 0,
                         paragraphs: 0,
                         facts: 0,
                         lastSectionId: null,
@@ -726,7 +763,7 @@ export default function AgentShell() {
                         active: true,
                         phase: evt.phase === 'wave2' ? 'wave2' : 'wave1',
                         completed: evt.completed ?? (prev?.completed ?? 0) + 1,
-                        total: evt.total ?? prev?.total ?? 26,
+                        total: evt.total ?? prev?.total ?? 0,
                         paragraphs: runningParagraphs,
                         facts: citedFactsSet.size,
                         lastSectionId: evt.sectionId ?? null,
@@ -774,9 +811,11 @@ export default function AgentShell() {
                       throw new Error(evt.message || '全报告流式生成中断');
                     }
                   }
+                  if (done) break;
                 }
               } else {
                 finalData = await res.json();
+                if (!currentRun()) return;
               }
 
               if (!finalData?.ok || !finalData?.pack) {
@@ -850,7 +889,8 @@ export default function AgentShell() {
               });
             })
             .catch(err => {
-              setLiveWriting(prev => (prev ? { ...prev, active: false } : null));
+              if (!currentRun()) return;
+              setLiveWriting(prev => (prev ? { ...prev, active: false, phase: 'error' } : null));
               mark(waitingMsg.id, 'failed', 'DeepSeek · 00-06 全流程引擎', 1);
               replace(waitingMsg.id, {
                 lines: [
@@ -860,7 +900,7 @@ export default function AgentShell() {
                   { label: '重试 /全报告', action: { type: 'say', text: `/全报告 ${action.topic}`.trim() }, primary: true },
                 ],
               });
-            });
+            }).finally(() => reportRuns.finish(ticket));
           break;
         }
         case 'loadBenchmark':
@@ -923,7 +963,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport, choreo]);
+  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, setLiveReport, choreo, reportRuns, readReportScope, isCurrentIdentity]);
 
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {
@@ -1140,6 +1180,7 @@ export default function AgentShell() {
             onPick={setPickedSection}
             label="报告实时排版"
             writingActive={!!liveWriting?.active}
+            workState={reportWorkState(liveWriting)}
             typingState={choreo.typingState}
             reviewState={choreo.reviewState}
             formatScanSectionId={choreo.formatScanSectionId}
