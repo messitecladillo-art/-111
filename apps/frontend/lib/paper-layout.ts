@@ -16,7 +16,20 @@ export const PAGE = {
 
 /** Word sets one line of 宋体 with Times New Roman at 1.296 em; at the profile's 1.25 lines that is 19.44 pt for 12 pt text. */
 export const WORD_SINGLE = 1.296;
+/** An empty paragraph's line comes from the Latin font alone: Times New Roman's 1.15 em (17.25 pt at 12 pt, 1.25 lines). */
+export const WORD_LATIN_SINGLE = 1.15;
 export const lineAt = (sizePt: number, multiple = 1.25) => Number((sizePt * WORD_SINGLE * multiple).toFixed(3));
+const AUTOSPACE = /(\p{Script=Han})(?=[A-Za-z0-9Ͱ-Ͽ])|([A-Za-z0-9Ͱ-Ͽ])(?=\p{Script=Han})/gu;
+/**
+ * Word's automatic space between Chinese and Latin letters or digits, on by default in a Chinese document: a quarter
+ * em (measured: 3 pt in 12 pt text, 2.25 pt in 9 pt), the width of a Times New Roman space. It is set as a real space,
+ * which behaves as Word's does at a line's edges: it hangs at the end of a line and never opens one. Punctuation,
+ * superscripts and text that already has a space take none.
+ */
+export function autospace(text: string): string {
+  return text.replace(AUTOSPACE, '$1$2 ');
+}
+
 /** The main text's page limit in the sourced profile: title, abstract, contents and body pages all count. */
 export const MAIN_PAGE_LIMIT = 65;
 
@@ -33,6 +46,12 @@ export type FlowBox = {
   lead?: number;
   /** The break before the box is a page break inside a section, which also drops that space; a new section keeps it. */
   hardBreak?: boolean;
+  /**
+   * The part of the box's last line below its text: what a line spacing of more than one line adds. Word lets it hang
+   * past the page's last line, so a line fits when its text does (measured: a page's last line ends up to 2.7 pt below
+   * the margin when the spacing adds 3.9 pt).
+   */
+  tail?: number;
 };
 export type PageSlice = { start: number; end: number; first: number; last: number };
 
@@ -48,18 +67,19 @@ export function paginate(boxes: readonly FlowBox[], pageHeight: number): PageSli
   const pages: PageSlice[] = [];
   const n = boxes.length;
   const bottom = (k: number) => boxes[k].top + boxes[k].height;
+  const tail = (k: number) => Math.max(0, boxes[k].tail ?? 0);
   let i = 0, offset = 0, natural = false;
   for (let guard = 0; i < n && guard < 100000; guard++) {
     const lead = offset === 0 && (natural || (boxes[i].breakBefore && boxes[i].hardBreak)) ? Math.min(boxes[i].lead ?? 0, boxes[i].height) : 0;
     const start = boxes[i].top + offset + lead, limit = start + pageHeight;
     let j = i;
-    while (j < n && (j === i || !boxes[j].breakBefore) && bottom(j) <= limit + EPS) j++;
+    while (j < n && (j === i || !boxes[j].breakBefore) && bottom(j) - tail(j) <= limit + EPS) j++;
     if (j >= n || (j > i && boxes[j].breakBefore)) {
       pages.push({ start, end: j >= n ? bottom(n - 1) : boxes[j].top, first: i, last: j - 1 });
       i = j; offset = 0; natural = false;
       continue;
     }
-    const inside = (boxes[j].splits?.() ?? []).filter(c => boxes[j].top + c <= limit + EPS && (j > i || c > offset + EPS));
+    const inside = (boxes[j].splits?.() ?? []).filter(c => boxes[j].top + c - tail(j) <= limit + EPS && (j > i || c > offset + EPS));
     if (inside.length) {
       const cut = Math.max(...inside);
       pages.push({ start, end: boxes[j].top + cut, first: i, last: j });

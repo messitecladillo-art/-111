@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { blockLabel, numberedCaption, referenceSegments, type BlockLabel } from '@/lib/report-numbering';
 import { columnWeights, isExhibitNote, presentResult, sectionNotes, sourceLine, sourcePlacement, tableSpans } from '@/lib/report-tables';
 import { splitInlineMath } from '@/lib/inline-math';
+import { autospace } from '@/lib/paper-layout';
 import { Formula, Tex } from '../math/Tex';
 import styles from './PaperBlocks.module.css';
 
@@ -18,10 +19,13 @@ type Citations = ReadonlyMap<string, number>;
 const INLINE_XREF_RE = /((?:附?[图表]|式)\s*[（(]?[0-9]+(?:[\-－—.][0-9]+)?[)）]?|\[\s*\d+(?:\s*[,，、\-–—]\s*\d+)*\s*\])/gu;
 
 function renderRichPlainRun(
-  text: string,
+  source: string,
   keyPrefix: string,
   labelToBlockId: ReadonlyMap<string, string>,
 ) {
+  // Spaced before it is cut into references, so "图 4-3可知" gets Word's space after the reference too; a reference
+  // still matches with a space inside it ("图4-1" becomes "图 4-1").
+  const text = autospace(source);
   const parts: ReactNode[] = [];
   let last = 0;
   let idx = 0;
@@ -79,7 +83,8 @@ export function PaperText({ text, labels, citations }: { text: string; labels: L
       labelToBlockId.set(v.label.replace(/\s+/gu, ''), k);
     }
   }
-  return <>{referenceSegments(text, labels, citations).map((segment, i) => {
+  const segments = referenceSegments(text, labels, citations);
+  return <>{segments.map((segment, i) => {
     if (segment.missing) {
       return <mark key={i} className={styles.broken} title={segment.cite ? '对应的参考文献已删除，导出前请重新插入引用' : '对应的图、表或公式已删除或类型不符，导出前请重新插入引用'}>{segment.text}</mark>;
     }
@@ -89,16 +94,20 @@ export function PaperText({ text, labels, citations }: { text: string; labels: L
     }
     const directBlockId = labelToBlockId.get(segment.text) ?? labelToBlockId.get(segment.text.replace(/\s+/gu, ''));
     if (directBlockId) {
+      // Word's space between the reference's number and the Chinese text after it ("图 4-3 可知").
+      const spaced = autospace(segment.text.slice(-1) + (segments[i + 1]?.text.charAt(0) ?? '')).length > 2;
       return (
-        <span
-          key={i}
-          className={styles.xrefPill}
-          data-xref-source={directBlockId}
-          data-xref-label={segment.text}
-          title={`交叉引用：${segment.text}（悬停或点击查看图表双端连线）`}
-        >
-          {segment.text}
-        </span>
+        <Fragment key={i}>
+          <span
+            className={styles.xrefPill}
+            data-xref-source={directBlockId}
+            data-xref-label={segment.text}
+            title={`交叉引用：${segment.text}（悬停或点击查看图表双端连线）`}
+          >
+            {segment.text}
+          </span>
+          {spaced ? ' ' : null}
+        </Fragment>
       );
     }
     return splitInlineMath(segment.text).map((part, j) =>
@@ -123,9 +132,11 @@ export function Figure({ result, column, accent,figure,visualStyle }: { result: 
   return state.error ? <p className={styles.error}>{state.error}</p> : <div className={styles.figure} role="img" aria-label={result.title} dangerouslySetInnerHTML={{ __html: state.svg! }}/>;
 }
 
-export function ResultTable({ result,figure,wordColumns=false }: { result: ResultSnapshot;figure?:ReportFigure;
+export function ResultTable({ result,figure,wordColumns=false,noteApart=false }: { result: ResultSnapshot;figure?:ReportFigure;
   /** Columns as wide as the Word export sets them, so cells wrap where they wrap in Word. */
-  wordColumns?: boolean }) {
+  wordColumns?: boolean;
+  /** The caller sets the table's note as a paragraph of its own, as the Word export does. */
+  noteApart?: boolean }) {
   const table = figure ? {headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>typeof cell==='number'?String(Number(cell.toFixed(figure.style.decimals))):cell??'—')),note:figure.note} : presentResult(result), spans = figure ? null : tableSpans(result, table);
   // Merged cells (a sampling frame's parent units) span their children's rows, as in Word.
   const span = (r: number, c: number) => spans ? spans[r][c] : 1;
@@ -135,11 +146,11 @@ export function ResultTable({ result,figure,wordColumns=false }: { result: Resul
     <div className={styles.tableScroll} tabIndex={0} role="region" aria-label={result.title}>
       <table className={styles.table} style={weights ? { tableLayout: 'fixed' } : undefined}>
         {weights && <colgroup>{weights.map((w, i) => <col key={i} style={{ width: `${(100 * w / total).toFixed(3)}%` }} />)}</colgroup>}
-        <thead><tr>{table.headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
-        <tbody>{table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => !span(r, c) ? null : c === 0 ? <th key={c} scope="row" rowSpan={span(r, c)}>{cell}</th> : <td key={c} rowSpan={span(r, c)}>{cell}</td>)}</tr>)}</tbody>
+        <thead><tr>{table.headers.map((h, i) => <th key={i} scope="col">{autospace(h)}</th>)}</tr></thead>
+        <tbody>{table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => !span(r, c) ? null : c === 0 ? <th key={c} scope="row" rowSpan={span(r, c)}>{autospace(String(cell))}</th> : <td key={c} rowSpan={span(r, c)}>{autospace(String(cell))}</td>)}</tr>)}</tbody>
       </table>
     </div>
-    {table.note && <p className={styles.small}>{table.note}</p>}
+    {table.note && !noteApart && <p className={styles.small}>{autospace(table.note)}</p>}
   </>;
 }
 

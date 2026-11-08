@@ -27,19 +27,23 @@ export const Tex = memo(function Tex({ tex, className }: { tex: string; classNam
   return <span className={className ? `${styles.inline} ${className}` : styles.inline} dangerouslySetInnerHTML={{ __html: html }} />;
 });
 
-/** A display equation with an optional label and equation number, and a “copy LaTeX” action. */
-export const Formula = memo(function Formula({ tex, label, number, copyable = true, compact = false }: { tex: string; label?: ReactNode; number?: string; copyable?: boolean; compact?: boolean }) {
+/**
+ * A display equation with an optional label and equation number, and a “copy LaTeX” action. `print` sets it as the
+ * Word export does on the page: no frame or padding, the formula centred on the text width, the number in full-width
+ * brackets at the right margin.
+ */
+export const Formula = memo(function Formula({ tex, label, number, copyable = true, compact = false, print = false }: { tex: string; label?: ReactNode; number?: string; copyable?: boolean; compact?: boolean; print?: boolean }) {
   const html = useMemo(() => renderTex(tex, true), [tex]);
   const [copied, setCopied] = useState(false);
   const name = typeof label === 'string' ? label : number ? `公式 ${number}` : '';
   async function copy() {
     try { await navigator.clipboard.writeText(tex); setCopied(true); window.setTimeout(() => setCopied(false), 1400); } catch { setCopied(false); }
   }
-  return <figure className={styles.formula} data-compact={compact || undefined}>
+  return <figure className={styles.formula} data-compact={compact || undefined} data-print={print || undefined}>
     {label && <figcaption>{label}</figcaption>}
     <div className={styles.body}>
       <div className={styles.math} tabIndex={0} aria-label={name ? `${name}（公式）` : '公式'} dangerouslySetInnerHTML={{ __html: html }} />
-      {number && <span className={styles.number}>({number})</span>}
+      {number && <span className={styles.number}>{print ? `（${number}）` : `(${number})`}</span>}
     </div>
     {copyable && <button type="button" className={styles.copy} onClick={() => void copy()} aria-label={`复制 LaTeX${name ? `：${name}` : ''}`}>{copied ? '已复制' : 'LaTeX'}</button>}
   </figure>;

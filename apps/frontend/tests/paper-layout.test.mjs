@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PAGE, folio, lineAt, lineSplits, paginate } from '../lib/paper-layout.ts';
+import { PAGE, autospace, folio, lineAt, lineSplits, paginate } from '../lib/paper-layout.ts';
 
 // Boxes laid one after another, as the measured flow gives them.
 const flow = specs => {
   let top = 0;
-  return specs.map(spec => { const box = { top, height: spec.h, breakBefore: !!spec.br, keepNext: !!spec.keep, hardBreak: !!spec.hard, lead: spec.lead ?? 0, splits: spec.splits }; top += spec.h; return box; });
+  return specs.map(spec => { const box = { top, height: spec.h, breakBefore: !!spec.br, keepNext: !!spec.keep, hardBreak: !!spec.hard, lead: spec.lead ?? 0, tail: spec.tail, splits: spec.splits }; top += spec.h; return box; });
 };
 
 test('the page is the sourced A4 layout and the type metrics are the ones Word renders', () => {
@@ -52,6 +52,35 @@ test('space before a box is dropped at the top of a page after a natural or in-s
   // A page break inside a section (the list of figures after the contents) drops it.
   const inside = paginate(flow([{ h: 90 }, { h: 30, lead: 12, br: true, hard: true }]), 100);
   assert.equal(inside[1].start, 90 + 12);
+});
+
+test('a last line fits when its text does: the line spacing below it may hang past the margin, as in Word', () => {
+  // 12 pt text at 1.25 lines is 19.44 pt a line, of which 3.888 pt is spacing below the text.
+  const tail = 19.44 - 12 * 1.296;
+  // A 4-line paragraph that overruns the page by 2.3 pt still fits whole: its last line's text ends inside the page.
+  const whole = paginate(flow([{ h: 622.12 }, { h: 77.76 + 0.1, tail }]), 697.9);
+  assert.equal(whole.length, 1);
+  // Without the hanging spacing it would not.
+  assert.equal(paginate(flow([{ h: 622.12 }, { h: 77.86 }]), 697.9).length, 2);
+  // Inside a paragraph the same holds for the line a page ends on.
+  const bottoms = [1, 2, 3, 4, 5, 6].map(n => n * 19.44);
+  const pages = paginate(flow([{ h: 642 }, { h: 6 * 19.44, tail, splits: () => lineSplits(bottoms) }]), 697.9);
+  assert.ok(Math.abs(pages[0].end - 642 - 3 * 19.44) < 1e-6, 'three lines fit: the third line ends 2.4 pt below the page, its text inside it');
+  const strict = paginate(flow([{ h: 642 }, { h: 6 * 19.44, splits: () => lineSplits(bottoms) }]), 697.9);
+  assert.ok(Math.abs(strict[0].end - 642 - 2 * 19.44) < 1e-6);
+});
+
+test('a Chinese character and a letter or digit next to it are a quarter em apart, as Word spaces them', () => {
+  assert.equal(autospace('有效样本641份'), '有效样本 641 份');
+  assert.equal(autospace('Spearman ρ为0.908'), 'Spearman ρ 为 0.908');
+  assert.equal(autospace('采用Welch检验'), '采用 Welch 检验');
+  // Text that already has a space, punctuation and superscripts take none.
+  assert.equal(autospace('表 3-1；样本 641 份'), '表 3-1；样本 641 份');
+  assert.equal(autospace('占50.5%，'), '占 50.5%，');
+  assert.equal(autospace('χ²为'), 'χ²为');
+  assert.equal(autospace('（2025）年'), '（2025）年');
+  // Spacing twice changes nothing.
+  assert.equal(autospace(autospace('有效样本641份')), '有效样本 641 份');
 });
 
 test('a box taller than a page with no break point is cut across pages', () => {

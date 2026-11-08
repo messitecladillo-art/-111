@@ -45,6 +45,10 @@
 .flow p { margin: 0; }
 .para { text-indent: var(--indent, 24pt); white-space: pre-wrap; }
 .flush { text-indent: 0; white-space: pre-wrap; }
+/* An empty paragraph takes its height from the Latin font, as Word sets the paragraph mark: Times New Roman's line is
+   1.15 em, so at 1.25 lines it is 17.25 pt, not the 19.44 pt of a line with Chinese text (measured: 23.28 pt with the
+   6 pt before). */
+.blank { line-height: 17.25pt; }
 .blank::before { content: "\00a0"; }
 .hint { background: #fbf6e9; box-shadow: inset 2px 0 #e2c27a; }
 .keywords { font-family: "Times New Roman", SimHei, "Heiti SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-weight: 700; }
@@ -59,11 +63,14 @@
 .coverTitle { padding-bottom: 18pt; font-size: 22pt; font-weight: 700; line-height: 47.52pt; text-align: center; }
 .coverSubtitle { padding-top: 6pt; font-size: 14pt; line-height: 27.216pt; text-align: center; }
 
-.entry { display: flex; align-items: baseline; padding-left: calc((var(--level, 1) - 1) * 12pt); text-align: left; text-indent: 0; cursor: pointer; }
-.entryText { flex: 0 1 auto; }
-.leader { flex: 1 1 auto; min-inline-size: 12pt; margin: 0 3pt; border-bottom: 1.2px dotted #000; transform: translateY(-.3em); }
-.entryPage { flex: none; font-variant-numeric: tabular-nums; }
-.entry[data-linked="true"] { background: rgba(15, 118, 110, .08); }
+/* A contents line as Word sets one: the title runs on at full width, and the page number sits at the right end of its
+   last line, with the leader filling the space between; only a number that no longer fits there moves to a line of its
+   own. The leader runs out from under the number and the title covers it. */
+.entry { overflow: hidden; margin-left: calc((var(--level, 1) - 1) * 12pt); background: #fff; text-align: left; text-indent: 0; cursor: pointer; }
+.entryText { position: relative; z-index: 1; background: inherit; }
+.entryPage { position: relative; float: right; background: inherit; font-variant-numeric: tabular-nums; }
+.entryPage::before { content: "........................................................................................................................................................................................................"; position: absolute; right: 100%; letter-spacing: .12em; white-space: nowrap; pointer-events: none; }
+.entry[data-linked="true"] { background: #ecf4f3; }
 
 .ref { padding-left: 10mm; text-indent: -10mm; }
 .refNo { display: inline-block; min-inline-size: 10mm; text-indent: 0; }
@@ -76,10 +83,14 @@
 .table { font-size: 10.5pt; line-height: 13.608pt; text-indent: 0; }
 .table > div { overflow: visible; }
 .table table { inline-size: 100%; min-inline-size: 0; border-collapse: collapse; border-top: 1.5pt solid #000; border-bottom: 1.5pt solid #000; font-size: 10.5pt; line-height: 13.608pt; text-align: center; font-variant-numeric: tabular-nums; }
-.table table thead th { padding: 1.5pt 3pt; border-bottom: .75pt solid #000; font-weight: 400; white-space: normal; }
-.table table td, .table table tbody th { padding: 1.5pt 3pt; font-weight: 400; white-space: normal; }
+/* Cells as Word sets the export's tables: the default table style's 5.4 pt (108 twips) at each side, the cell text's
+   1.5 pt before and after; the header row bold, which Word synthesises for 宋体. */
+.table table thead th { padding: 1.5pt 5.4pt; border-bottom: .75pt solid #000; font-weight: 700; font-synthesis: weight; white-space: normal; }
+.table table td, .table table tbody th { padding: 1.5pt 5.4pt; font-weight: 400; white-space: normal; }
 .table p { margin: 0 !important; padding: 2pt 0 6pt; color: #000; font-size: 9pt; line-height: 11.664pt; text-align: left !important; text-indent: 0 !important; }
 .small { font-size: 9pt; line-height: 11.664pt; text-align: left; text-indent: 0; }
+/* The section note's style: 9 pt at 1.08 lines (Word's 260/240), measured 12.6 pt from line to line. */
+.note { font-size: 9pt; line-height: 12.636pt; text-align: left; text-indent: 0; }
 .equation { padding: 3pt 0; line-height: 15.552pt; text-indent: 0; }
 .error { color: #b42318; }
 

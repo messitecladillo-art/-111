@@ -4,7 +4,7 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyn
 import { createPortal } from 'react-dom';
 import { ADVISORS, ADVISOR_TONES, advisorForNode, exhibitAdvisor } from '@/lib/agent/advisors';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
-import { MAIN_PAGE_LIMIT, PAGE, folio, lineSplits, paginate, type FlowBox, type PageSlice, type PageStyle } from '@/lib/paper-layout';
+import { MAIN_PAGE_LIMIT, PAGE, WORD_LATIN_SINGLE, WORD_SINGLE, autospace, folio, lineSplits, paginate, type FlowBox, type PageSlice, type PageStyle } from '@/lib/paper-layout';
 import { formatReference, referenceNumbers, unfinishedReference } from '@/lib/references';
 import { writtenLines } from '@/lib/report-benchmark';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
@@ -20,7 +20,7 @@ import css from './PaperPages.module.css';
 export type LiveTypingState = { sectionId: string; visibleBody: string };
 export type LiveReviewState = { sectionId: string; badPhrase: string; goodPhrase: string; reason: string; step: 'flag' | 'rewrite' | 'done'; typedGood: string };
 
-type Kind = 'cover' | 'title' | 'special' | 'entry' | 'heading' | 'para' | 'ref' | 'figure' | 'caption' | 'table' | 'equation' | 'small' | 'review';
+type Kind = 'cover' | 'title' | 'special' | 'entry' | 'heading' | 'para' | 'ref' | 'figure' | 'caption' | 'table' | 'equation' | 'small' | 'note' | 'review';
 type Item = {
   key: string;
   kind: Kind;
@@ -52,10 +52,13 @@ type Catalog = { activeKey: string | null; onHover?: (attr: 'xref' | 'cite', id:
 type RenderCtx = { onPage: boolean; folioOf: (anchor: string) => string; catalog: Catalog };
 const MEASURE: RenderCtx = { onPage: false, folioOf: () => '00', catalog: { activeKey: null } };
 
-/** Space before and after each kind of paragraph in points, as the Word export's styles set it. */
+/**
+ * Space before and after each kind of paragraph in points, as the Word export's styles set it: `small` is the source
+ * line's style (资料来源: single lines, 2 pt before), `note` the section note's (注释: 1.08 lines, 6 pt before and after).
+ */
 const SPACING: Record<Kind, [number, number]> = {
   cover: [0, 0], title: [0, 14], special: [6, 0], entry: [0, 0], heading: [6, 0], para: [6, 0], ref: [0, 0],
-  figure: [12, 0], caption: [3, 6], table: [0, 0], equation: [0, 0], small: [2, 6], review: [6, 6],
+  figure: [12, 0], caption: [3, 6], table: [0, 0], equation: [0, 0], small: [2, 6], note: [6, 6], review: [6, 6],
 };
 /** The gap each box opens with: the larger of its own space before and the space after the box above it. */
 function withGaps(items: Item[]): Item[] {
@@ -126,24 +129,28 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
         onMouseEnter={onPage && act.blockId ? () => catalog.onHover?.('xref', act.blockId!) : undefined}
         onClick={onPage ? () => (act.blockId ? catalog.onClick?.('xref', act.blockId) : act.sectionId && catalog.onPick?.(act.sectionId)) : undefined}
       >
-        <span className={css.entryText}>{title}</span>
-        <span className={css.leader} aria-hidden="true" />
+        <span className={css.entryText}>{autospace(title)}</span>
         <span className={css.entryPage}>{folioOf(anchor)}</span>
       </p>
     ),
   });
   let tocDone = false;
+  // Word closes each list with the paragraph that holds the end of its field: an empty line of the body text.
+  const fieldEnd = (key: string): Item => ({ key, kind: 'para', style: 'front', render: () => <p className={`${css.flush} ${css.blank}`} /> });
   const toc = ({ headings, tables, figures }: Listing, prefix = '') => {
     if (!options.includeToc) return;
     items.push({ key: `${prefix}toc`, kind: 'special', style: 'front', breakBefore: true, keepNext: true, render: () => <p className={css.special}>目录</p> });
     for (const h of headings) items.push(entry(`${prefix}toc:${h.anchor}`, h.level, h.title, h.anchor, { sectionId: h.sectionId }));
+    items.push(fieldEnd(`${prefix}toc:end`));
     if (tables.length) {
       items.push({ key: `${prefix}lot`, kind: 'special', style: 'front', breakBefore: true, hardBreak: true, keepNext: true, render: () => <p className={css.special}>表目录</p> });
       for (const t of tables) items.push(entry(`${prefix}lot:${t.anchor}`, 1, t.title, t.anchor, { blockId: t.blockId }));
+      items.push(fieldEnd(`${prefix}lot:end`));
     }
     if (figures.length) {
       items.push({ key: `${prefix}lof`, kind: 'special', style: 'front', breakBefore: !tables.length, hardBreak: !tables.length, keepNext: true, before: tables.length ? 24 : 6, render: () => <p className={css.special}>图目录</p> });
       for (const f of figures) items.push(entry(`${prefix}lof:${f.anchor}`, 1, f.title, f.anchor, { blockId: f.blockId }));
+      items.push(fieldEnd(`${prefix}lof:end`));
     }
   };
   const mainListing = listingOf(main);
@@ -168,7 +175,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
       const records = s.body.split('\n\n');
       records.forEach((record, r) => out.push({
         ...base, key: `g:${s.id}:${r}`, kind: 'para', split: 'lines',
-        render: () => <p className={css.flush}>{record.split('\n').map((line, i) => <Fragment key={i}>{i ? <br /> : null}{rich(line)}</Fragment>)}{r === records.length - 1 && s.source ? <><br />来源 / 说明：{s.source}</> : null}</p>,
+        render: () => <p className={css.flush}>{record.split('\n').map((line, i) => <Fragment key={i}>{i ? <br /> : null}{rich(line)}</Fragment>)}{r === records.length - 1 && s.source ? <><br />来源 / 说明：{autospace(s.source)}</> : null}</p>,
       }));
       return out;
     }
@@ -198,7 +205,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
     });
     if (part === 'references') cited.order.forEach((ref, n) => out.push({
       ...base, key: `r:${s.id}:${ref.id}`, kind: 'ref', split: 'lines',
-      render: ({ onPage }) => <p className={css.ref} data-cite-target={onPage ? String(citations.get(ref.id) ?? n + 1) : undefined}><span className={css.refNo}>[{n + 1}]</span>{unfinishedReference(ref) ? <em className={css.unfinished}>尚未填写题名</em> : formatReference(ref)}</p>,
+      render: ({ onPage }) => <p className={css.ref} data-cite-target={onPage ? String(citations.get(ref.id) ?? n + 1) : undefined}><span className={css.refNo}>[{n + 1}]</span>{unfinishedReference(ref) ? <em className={css.unfinished}>尚未填写题名</em> : autospace(formatReference(ref))}</p>,
     }));
 
     const blocks = s.blocks ?? [];
@@ -206,7 +213,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
     blocks.forEach((block, index) => {
       const label = blockLabel(labels, s.id, block.id);
       if (block.kind === 'formula') {
-        out.push({ ...base, key: `b:${block.id}`, kind: 'equation', render: ({ onPage }) => <div className={css.equation} data-xref-target={onPage ? block.id : undefined} data-xref-label={label?.reference ?? ''}><Formula tex={block.text || '\\text{（空公式）}'} number={label?.number} copyable={false} compact /></div> });
+        out.push({ ...base, key: `b:${block.id}`, kind: 'equation', render: ({ onPage }) => <div className={css.equation} data-xref-target={onPage ? block.id : undefined} data-xref-label={label?.reference ?? ''}><Formula tex={block.text || '\\text{（空公式）}'} number={label?.number} copyable={false} compact print /></div> });
         return;
       }
       if (isExhibitNote(blocks, index)) {
@@ -215,7 +222,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
         if (placed) {
           let line = '';
           try { line = sourceLine(resultFor(content.quality, exhibit.evidenceId)); } catch { line = ''; }
-          if (line) out.push({ ...base, advisor: exhibitOwner, key: `ns:${block.id}`, kind: 'small', render: () => <p className={css.small}>{line}</p> });
+          if (line) out.push({ ...base, advisor: exhibitOwner, key: `ns:${block.id}`, kind: 'small', render: () => <p className={css.small}>{autospace(line)}</p> });
         }
         return;
       }
@@ -239,17 +246,18 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
       if (block.kind === 'chart') {
         out.push({ ...exhibit, key: `f:${block.id}`, kind: 'figure', keepNext: true, render: ({ onPage }) => <div className={css.figure} {...target(onPage)}><Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle} /></div> });
         out.push({ ...exhibit, key: `c:${block.id}`, anchor: `x:${block.id}`, kind: 'caption', keepNext: source || noted || !!figure?.note, render: () => <p className={css.caption}>{rich(caption)}</p> });
-        if (figure?.note) out.push({ ...exhibit, key: `fn:${block.id}`, kind: 'small', keepNext: source || noted, render: () => <p className={css.small}>{figure!.note}</p> });
+        if (figure?.note) out.push({ ...exhibit, key: `fn:${block.id}`, kind: 'small', keepNext: source || noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
       } else {
         const rows = (figure ? figure.table.rows.length : result.rows.length) + 1;
         out.push({ ...exhibit, key: `c:${block.id}`, anchor: `x:${block.id}`, kind: 'caption', keepNext: true, before: 12, after: 3, render: () => <p className={css.tableCaption}>{rich(caption)}</p> });
-        out.push({ ...exhibit, key: `t:${block.id}`, kind: 'table', keepNext: rows <= 16 && source, split: rows > 16 ? 'rows' : undefined, render: ({ onPage }) => <div className={css.table} {...target(onPage)}><ResultTable result={result} figure={figure} wordColumns /></div> });
+        out.push({ ...exhibit, key: `t:${block.id}`, kind: 'table', keepNext: rows <= 16 && (source || noted || !!figure?.note), split: rows > 16 ? 'rows' : undefined, render: ({ onPage }) => <div className={css.table} {...target(onPage)}><ResultTable result={result} figure={figure} wordColumns noteApart /></div> });
+        if (figure?.note) out.push({ ...exhibit, key: `tn:${block.id}`, kind: 'small', keepNext: source || noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
       }
-      if (source) out.push({ ...exhibit, key: `s:${block.id}`, kind: 'small', render: () => <p className={css.small}>{sourceLine(result)}</p> });
+      if (source) out.push({ ...exhibit, key: `s:${block.id}`, kind: 'small', render: () => <p className={css.small}>{autospace(sourceLine(result))}</p> });
     });
     const notes = sectionNotes(used);
-    if (notes) out.push({ ...base, advisor: exhibitOwner, key: `sn:${s.id}`, kind: 'small', render: () => <p className={css.small}>{notes}</p> });
-    if (s.source) out.push({ ...base, key: `src:${s.id}`, kind: 'small', render: () => <p className={css.small}>来源 / 说明：{s.source}</p> });
+    if (notes) out.push({ ...base, advisor: exhibitOwner, key: `sn:${s.id}`, kind: 'note', render: () => <p className={css.note}>{autospace(notes)}</p> });
+    if (s.source) out.push({ ...base, key: `src:${s.id}`, kind: 'small', render: () => <p className={css.small}>来源 / 说明：{autospace(s.source)}</p> });
     if (live.review?.sectionId === s.id) {
       const review = live.review;
       out.push({
@@ -268,7 +276,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
 
   const cover = (): Item => ({
     key: 'cover', kind: 'cover', style: 'cover', breakBefore: true,
-    render: () => <div className={css.cover}><p className={css.coverTitle}>{content.title || '未命名研究'}</p>{content.subtitle && <p className={css.coverSubtitle}>{content.subtitle}</p>}</div>,
+    render: () => <div className={css.cover}><p className={css.coverTitle}>{autospace(content.title || '未命名研究')}</p>{content.subtitle && <p className={css.coverSubtitle}>{autospace(content.subtitle)}</p>}</div>,
   });
   if (options.includeCover) items.push(cover());
   let bodyStarted = false;
@@ -278,7 +286,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
     const style: PageStyle = preliminary ? 'front' : 'body';
     const breakBefore = preliminary || !(part === 'body' && bodyStarted);
     const flow = sectionFlow(s, style);
-    if (!options.includeCover && !items.length) flow.unshift({ key: 'title', kind: 'title', style, sectionId: s.id, render: () => <p className={css.title}>{content.title || '未命名研究'}</p> });
+    if (!options.includeCover && !items.length) flow.unshift({ key: 'title', kind: 'title', style, sectionId: s.id, render: () => <p className={css.title}>{autospace(content.title || '未命名研究')}</p> });
     flow[0].breakBefore = breakBefore;
     items.push(...flow);
     if (!preliminary) bodyStarted = true;
@@ -305,19 +313,43 @@ const sameLayout = (a: Layout | null, b: Layout) => !!a && a.items === b.items &
   && a.pages.every((p, i) => Math.abs(p.start - b.pages[i].start) < 0.5 && Math.abs(p.end - b.pages[i].end) < 0.5 && p.first === b.pages[i].first && p.last === b.pages[i].last)
   && a.tops.every((t, i) => Math.abs(t - b.tops[i]) < 0.5 && Math.abs(a.heights[i] - b.heights[i]) < 0.5);
 
-/** Where a paragraph's lines end, from its box's top: the midpoint between one line's ink and the next line's. */
+/**
+ * Where a paragraph's lines end, from its box's top: the midpoint between one line's ink and the next line's. Only the
+ * visible text is read: a range over the box would also return the paragraph's own block rectangle, one "line" as tall
+ * as the paragraph, and a paragraph read as one line could never end a page.
+ */
 function lineBreaks(el: HTMLElement): number[] {
   const box = el.getBoundingClientRect();
   const range = document.createRange();
-  range.selectNodeContents(el);
+  const rects: DOMRect[] = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.textContent?.trim()) continue;
+    // A formula's hidden MathML copy (for screen readers) is laid out in a math font whose line box spans several
+    // lines of text; read as text it would merge those lines into one.
+    if (node.parentElement?.closest('.katex-mathml, math')) continue;
+    range.selectNodeContents(node);
+    rects.push(...Array.from(range.getClientRects()));
+  }
   const lines: { top: number; bottom: number }[] = [];
-  for (const r of Array.from(range.getClientRects()).filter(r => r.width > 0.5 && r.height > 0.5).sort((a, b) => a.top - b.top)) {
+  for (const r of rects.filter(r => r.width > 0.5 && r.height > 0.5).sort((a, b) => a.top - b.top)) {
     const line = lines.find(l => r.top < l.bottom - 1 && r.bottom > l.top + 1);
     if (line) { line.top = Math.min(line.top, r.top); line.bottom = Math.max(line.bottom, r.bottom); }
     else lines.push({ top: r.top, bottom: r.bottom });
   }
   lines.sort((a, b) => a.top - b.top);
   return lineSplits(lines.map((l, k) => (k + 1 < lines.length ? (l.bottom + lines[k + 1].top) / 2 : box.bottom) - box.top));
+}
+/**
+ * What a paragraph's line spacing adds below its last line's text, which Word lets hang past the page's last line. An
+ * empty paragraph's line is the Latin font's (1.15 em), a line with Chinese text 1.296 em.
+ */
+function lineTail(el: HTMLElement): number {
+  const p = el.firstElementChild;
+  if (!(p instanceof HTMLParagraphElement)) return 0;
+  const style = getComputedStyle(p), line = parseFloat(style.lineHeight), size = parseFloat(style.fontSize);
+  const single = p.textContent?.trim() ? WORD_SINGLE : WORD_LATIN_SINGLE;
+  return Number.isFinite(line) && Number.isFinite(size) ? Math.max(0, line - size * single) : 0;
 }
 /** Where a long table may end a page: after any body row but the last, the header staying with the first row. */
 function rowBreaks(el: HTMLElement): number[] {
@@ -372,7 +404,7 @@ export default function PaperPages({
     for (const el of boxes) { const r = el.getBoundingClientRect(); tops.push(r.top - origin); heights.push(r.height); }
     const flow: FlowBox[] = items.map((item, k) => ({
       top: tops[k], height: heights[k], breakBefore: !!item.breakBefore, keepNext: !!item.keepNext, hardBreak: !!item.hardBreak,
-      lead: (item.gap ?? 0) * (96 / 72),
+      lead: (item.gap ?? 0) * (96 / 72), tail: lineTail(boxes[k]),
       splits: item.split ? () => (item.split === 'rows' ? rowBreaks(boxes[k]) : lineBreaks(boxes[k])) : undefined,
     }));
     const next = { items, tops, heights, pages: paginate(flow, PAGE.contentHeight) };
@@ -403,7 +435,9 @@ export default function PaperPages({
     const map = new Map<string, string>();
     if (layout) layout.items.forEach((item, k) => {
       if (!item.anchor) return;
-      const at = layout.pages.findIndex(p => layout.tops[k] >= p.start - 0.5 && layout.tops[k] < p.end);
+      // The first page that ends below the box's top holds its first line. (A page that opens with the box after a
+      // break starts below the box's top, where its dropped space before would have been.)
+      const at = layout.pages.findIndex(p => layout.tops[k] < p.end - 0.5);
       if (at >= 0) map.set(item.anchor, folios[at]);
     });
     return map;
@@ -449,9 +483,12 @@ export default function PaperPages({
   const over = mainPages > MAIN_PAGE_LIMIT;
 
   const boxClass = (item: Item) => `${css.box} ${item.sectionId && item.sectionId === activeSectionId ? css.active : ''} ${item.sectionId && item.sectionId === formatScanSectionId ? css.scan : ''}`;
+  // The contents are measured with the page numbers they will print: a number one digit wider can wrap a line. The
+  // numbers come from the body's pages, which the contents' own length never moves, so a second pass settles them.
+  const measureCtx = useMemo<RenderCtx>(() => ({ ...MEASURE, folioOf: anchor => anchorPages.get(anchor) || '00' }), [anchorPages]);
   const measurer = mounted ? createPortal(
     <div ref={measureRef} className={`${css.flow} ${css.measure}`} style={{ '--indent': indent } as CSSProperties} aria-hidden="true">
-      {items.map(item => <div key={item.key} className={css.box} style={item.gap ? { paddingTop: `${item.gap}pt` } : undefined}>{item.render(MEASURE)}</div>)}
+      {items.map(item => <div key={item.key} className={css.box} style={item.gap ? { paddingTop: `${item.gap}pt` } : undefined}>{item.render(measureCtx)}</div>)}
     </div>,
     document.body,
   ) : null;
