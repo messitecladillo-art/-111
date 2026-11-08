@@ -351,6 +351,8 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
   const [mode,setMode]=useState<"advisor"|"readiness"|"topics">("advisor");
   const [topicsOpened,setTopicsOpened]=useState(false);
   const requestEpoch=useRef(0);
+  const manualEdit=useRef(false),pendingIncoming=useRef<DiagnosisBriefSource|null>(null);
+  const [pendingSource,setPendingSource]=useState<DiagnosisBriefSource|null>(null);
   const [form, setForm] = useState({
     title: "",
     decisionOwner: "",
@@ -360,18 +362,27 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
     problem: "",
     evidenceStatus: "",
   });
+  const loadIncoming=useCallback((source:DiagnosisBriefSource)=>{
+    if(source.schemaVersion===2&&!evidenceCurrent(source.literature)){pendingIncoming.current=null;setPendingSource(null);setError('文献语料或参数已变化，请重新选择文献方案。');return false;}
+    requestEpoch.current++;setSubmitting(false);setError('');setResult(null);setResultSource(null);
+    manualEdit.current=false;pendingIncoming.current=null;setPendingSource(null);
+    setForm({...source.input});setTopicEvidence(source.schemaVersion===2?source.literature:null);setMode(current=>current==='topics'?'topics':'readiness');
+    return true;
+  },[evidenceCurrent]);
   /* eslint-disable react-hooks/set-state-in-effect -- Consume scoped host commands without remounting this editor; revoke only a changed evidence version. */
   useEffect(()=>{
-    if(!incomingSource)return;
-    if(incomingSource.schemaVersion===2&&!evidenceCurrent(incomingSource.literature)){setError('文献语料或参数已变化，请重新选择文献方案。');return;}
-    requestEpoch.current++;setSubmitting(false);setError('');setResult(null);setResultSource(null);
-    setForm({...incomingSource.input});setTopicEvidence(incomingSource.schemaVersion===2?incomingSource.literature:null);setMode(current=>current==='topics'?'topics':'readiness');
-  },[incomingSource,evidenceCurrent]);
+    if(!incomingSource){pendingIncoming.current=null;setPendingSource(null);return;}
+    if(incomingSource.schemaVersion===2&&!evidenceCurrent(incomingSource.literature)){pendingIncoming.current=null;setPendingSource(null);setError('文献语料或参数已变化，请重新选择文献方案。');return;}
+    const source=parseDiagnosisBriefSource(incomingSource);
+    if(manualEdit.current){pendingIncoming.current=source;setPendingSource(source);return;}
+    loadIncoming(source);
+  },[incomingSource,evidenceCurrent,loadIncoming]);
   useEffect(()=>{if(requestedMode){setMode(requestedMode.mode);if(requestedMode.mode==='topics')setTopicsOpened(true);}},[requestedMode]);
   useEffect(()=>{if(topicEvidence&&!evidenceCurrent(topicEvidence)){requestEpoch.current++;setSubmitting(false);setTopicEvidence(null);setResult(null);setResultSource(null);onBriefSource?.(null);setError('文献语料或参数已变化，请重新核对基于文献的选题。');}},[literature,topicEvidence,onBriefSource,evidenceCurrent]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const update = (field: keyof typeof form, value: string) => {
+    manualEdit.current=true;
     requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setTopicEvidence(null);setError('');onBriefSource?.(null);
     setForm((current) => ({ ...current, [field]: value }));
   };
@@ -381,6 +392,7 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
     let evidence:LiteratureEvidenceReference|null=null;
     try{if(topic.evidence){evidence=parseLiteratureEvidenceReference(topic.evidence);if(!evidenceCurrent(evidence))throw Error('文献语料或参数已变化，请重新生成选题画像。');}}
     catch(failure){setError(failure instanceof Error?failure.message:'文献证据无效。');return;}
+    manualEdit.current=false;pendingIncoming.current=null;setPendingSource(null);
     requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setError('');onBriefSource?.(null);
     setTopicEvidence(evidence);
     setForm(current=>({...current,title:topic.title,decisionOwner:topic.decisionOwner||current.decisionOwner,population:topic.population??current.population,geography:topic.geography??current.geography,problem:topic.problem??current.problem,evidenceStatus:"proposed"}));
@@ -390,6 +402,7 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    manualEdit.current=true;
     setSubmitting(true);
     setError("");
     setResult(null);
@@ -420,11 +433,12 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
       <div className="diagnose-modes" role="tablist" aria-label="诊断类型">
         {([["advisor","选题顾问","热点线索 · 地区资源 · 研究切口"],["readiness","项目诊断","检查证据缺口与下一步"],["topics","文献图谱","领域结构 · 研究空白 · 证据画像"]] as const).map(([id,label,hint])=><button key={id} type="button" role="tab" id={`dg-tab-${id}`} aria-selected={mode===id} aria-controls={`dg-panel-${id}`} tabIndex={mode===id?0:-1} onClick={()=>openMode(id)} onKeyDown={event=>{if(!["ArrowRight","ArrowLeft","Home","End"].includes(event.key))return;event.preventDefault();const order=["advisor","readiness","topics"] as const;const index=order.indexOf(id);const next=event.key==="Home"?order[0]:event.key==="End"?order[2]:order[(index+(event.key==="ArrowRight"?1:2))%3];openMode(next);document.getElementById(`dg-tab-${next}`)?.focus();}}><strong>{label}</strong><small>{hint}</small></button>)}
       </div>
+      {pendingSource&&<div className="hosted-notice" role="status"><p>有新的研究简介。载入后将替换当前表单。</p><button type="button" className="secondary-button" onClick={()=>{const source=pendingIncoming.current;if(source)loadIncoming(source);}}>载入新研究简介</button></div>}
       <div role="tabpanel" id="dg-panel-advisor" aria-labelledby="dg-tab-advisor" hidden={mode!=="advisor"}><TopicAdvisor onUseTopic={applyTopic} renderEnhancement={context=><TopicModelProposal {...context} catalogVersion={topicCatalog.contentVersion} onUseTopic={applyTopic}/>}/></div>
       <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic} initialSnapshot={literature} onSnapshot={onLiterature}/>}</div>
       <div role="tabpanel" id="dg-panel-readiness" aria-labelledby="dg-tab-readiness" hidden={mode!=="readiness"}>
       <div className="diagnose-grid">
-        <form className="diagnose-form" onSubmit={submit} aria-busy={submitting}>
+        <form className="diagnose-form" onSubmit={submit} onCompositionStart={()=>{manualEdit.current=true;}} aria-busy={submitting}>
           <fieldset disabled={submitting}>
             <div className="form-grid two-cols">
               <label><span>项目名称</span><input required value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="例如：银发人群智能出行研究" /></label>
