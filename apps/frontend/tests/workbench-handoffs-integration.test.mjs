@@ -7,6 +7,8 @@ import * as shared from '../../../packages/evi-x-shared/src/index.ts';
 import * as questionnaireLibrary from '../lib/questionnaire-library.ts';
 import * as resultRegistration from '../lib/result-registration.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
+import * as reportRun from '../lib/agent/report-run.ts';
+import * as editorModel from '../lib/editor-model.ts';
 import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test-harness.mjs';
 import { questionnaireRepositoryModule, questionnairePersistence } from './helpers/questionnaire-repository.mjs';
 import { questionnaireProposalRepositoryModule, questionnaireProposalContract } from './helpers/questionnaire-proposals.mjs';
@@ -50,6 +52,7 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
         queued.push(() => { previous?.cleanup?.(); cells[at].cleanup = fn(); });
       }
     },
+    cloneElement:(element,props)=>({...element,props:{...element.props,...props},key:props.key??element.key}),
     createContext: () => ({ Provider: 'ContextProvider' }),
     useContext: () => null,
   };
@@ -58,6 +61,9 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
   const jsx = (type, values, key) => ({ type, props: values ?? {}, key });
   const imports = {
     '@/lib/result-registration': resultRegistration,
+    '@/lib/agent/report-run':reportRun,
+    '@/lib/editor-model':editorModel,
+    '@/lib/agent/report-draft':{readReportDraft:()=>null,readReportVersions:()=>[],saveReportDraft(){},flushReportDraft:()=>true,archiveReportDraft:()=>true},
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'next/link': moduleStub('Link'),
     'next/dynamic': { __esModule: true, default: loader => {
@@ -344,4 +350,69 @@ test('workbench shell retains visited panel subtrees and stable keys across navi
     assert.equal(node.props.hidden, node.key !== 'design');
   }
   screen.unmount();
+});
+
+function agentModules(){
+  const auth=session();auth.session.authenticated=true;auth.loading=false;
+  const drafts=new Map(),archives=[],write={allowed:true};let pending;
+  const key=(owner,project)=>JSON.stringify([owner,project]);
+  const screen=mount('../components/EviXPlatform.tsx',{fallback:true,internal:'({projectId})=>useWorkbenchModules(true,projectId)',props:{projectId:projectA},mocks:{
+    '@/components/hosted/HostedSession':{useHostedSession:()=>auth},
+    '@/data/control-plane-contract.generated':{PROJECT_STAGES:[],GATE_NAMES:[]},
+    '@/lib/agent/report-draft':{
+      readReportDraft:(owner,project)=>drafts.get(key(owner,project))??null,readReportVersions:()=>[],
+      archiveReportDraft:(owner,project,content)=>{if(!write.allowed)return false;archives.push({owner,project,content});return true;},
+      saveReportDraft:(owner,content,project)=>{pending={owner,project,content};},
+      flushReportDraft:()=>{if(!write.allowed)return false;if(pending)drafts.set(key(pending.owner,pending.project),pending.content);pending=null;return true;},
+    },
+  }});
+  return {screen,auth,drafts,archives,write};
+}
+test('agent project A/B/A preserves research sources and never reactivates a callback from the earlier visit',async()=>{
+  const {screen}=agentModules();await screen.settle();
+  const oldResult=screen.tree.panels.analysis.props.onResultSnapshot;
+  const oldData=screen.tree.panels.analysis.props.onDatasetChange;
+  const design={design:{...shared.newQuestionnaire(),title:'A的问卷'},pending:false};
+  const data={name:'A.csv',sourceHash:'a'.repeat(64),kind:'user_provided',table:{headers:['x'],rows:[['2']],delimiter:',',skippedBlankLines:0},missingCodes:[],lineage:[]};
+  screen.tree.panels.design.props.onSnapshot(design);oldData(data);await screen.settle();
+  const stableData=screen.tree.panels.analysis.props.onDatasetChange,stableDesign=screen.tree.panels.design.props.onSnapshot;
+  screen.tree.setLiveReport({...editorModel.createEditorContent(),title:'A的原稿'});await screen.settle();
+  assert.equal(screen.tree.panels.analysis.props.onDatasetChange,stableData);assert.equal(screen.tree.panels.design.props.onSnapshot,stableDesign,'publishing a report must not churn child snapshot effects');
+  screen.update({projectId:projectB});await screen.settle();assert.equal(screen.tree.reportSource.dataset,null);
+  screen.update({projectId:projectA});await screen.settle();
+  assert.equal(screen.tree.reportSource.design.title,'A的问卷');assert.equal(screen.tree.reportSource.dataset.name,'A.csv');assert.equal(screen.tree.reportSource.report.title,'A的原稿');
+  oldResult(result('stale-result'));oldData({...data,name:'过时数据'});await screen.settle();
+  assert.equal(screen.tree.view.resultPending,false);assert.equal(screen.tree.reportSource.dataset.name,'A.csv');screen.unmount();
+});
+test('handled data deliveries do not replay on a later project visit and old acknowledgements cannot clear new deliveries',async()=>{
+  const {screen}=agentModules();await screen.settle();
+  screen.tree.panels.silicon.props.onSendToAnalysis(dataset());await screen.settle();
+  const firstId=screen.tree.panels.analysis.props.datasetTransfer.id,oldAck=screen.tree.panels.analysis.props.onDatasetTransferHandled;
+  assert.equal(screen.tree.reportSource.inputPending,true);
+  screen.tree.panels.silicon.props.onSendToAnalysis(dataset());await screen.settle();
+  assert.notEqual(screen.tree.panels.analysis.props.datasetTransfer.id,firstId);
+  oldAck();await screen.settle();assert.ok(screen.tree.panels.analysis.props.datasetTransfer);
+  screen.tree.panels.analysis.props.onDatasetTransferHandled();await screen.settle();assert.equal(screen.tree.reportSource.inputPending,false);
+  screen.update({projectId:projectB});await screen.settle();screen.update({projectId:projectA});await screen.settle();assert.equal(screen.tree.panels.analysis.props.datasetTransfer,null);screen.unmount();
+});
+test('candidate adoption saves an original and rejects conflicts/storage failure before changing research state',async()=>{
+  const {screen,archives,write}=agentModules();await screen.settle();
+  const expected=screen.tree.reportSource;
+  const pack={design:shared.newQuestionnaire(),dataset:null,report:{...editorModel.createEditorContent(),title:'新候选稿'}};
+  write.allowed=false;assert.equal(screen.tree.applyCandidate(pack,expected),'storage_failed');await screen.settle();assert.notEqual(screen.tree.reportSource.report.title,'新候选稿');
+  write.allowed=true;assert.equal(screen.tree.applyCandidate(pack,expected),'applied');await screen.settle();
+  assert.equal(archives.length,1);assert.equal(archives[0].content.title,expected.report.title);
+  assert.equal(screen.tree.reportSource.report.title,'新候选稿');assert.equal(screen.tree.applyCandidate(pack,expected),'conflict');
+  const latest=screen.tree.reportSource;assert.equal(screen.tree.restoreReportVersion(expected.report,latest),'applied');await screen.settle();assert.equal(screen.tree.reportSource.report.title,expected.report.title);assert.equal(screen.tree.reportSource.design.title,pack.design.title);screen.unmount();
+});
+
+test('queued report inserts and figure edits block candidate adoption until the editor consumes them',async()=>{
+  const {screen}=agentModules();await screen.settle();
+  const before=screen.tree.reportSource,pack={design:shared.newQuestionnaire(),dataset:null,report:before.report};
+  screen.tree.sendToReport({id:'queued-insert',section:section('用户补充段落')});await screen.settle();
+  assert.equal(screen.tree.reportSource.inputPending,true);assert.equal(screen.tree.applyCandidate(pack,before),'conflict');
+  screen.tree.panels.editor.props.onReportInsertHandled();await screen.settle();assert.equal(screen.tree.reportSource.inputPending,false);
+  screen.tree.tweakFigure({id:'queued-figure'});await screen.settle();
+  assert.equal(screen.tree.reportSource.inputPending,true);assert.equal(screen.tree.applyCandidate(pack,before),'conflict');
+  screen.tree.panels.editor.props.onFigureTweakHandled();await screen.settle();assert.equal(screen.tree.reportSource.inputPending,false);screen.unmount();
 });

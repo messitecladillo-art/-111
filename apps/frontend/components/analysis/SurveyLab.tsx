@@ -33,7 +33,7 @@ import {collectionEvidenceSection,qualityEvidenceSection,qualityLineageStep,tran
 import QualityPanel from './QualityPanel';
 export type {DatasetTransfer} from '@/lib/survey-collection';
 
-type Dataset = { table: SurveyTable; name: string; hash: string; kind: "simulated" | "user_provided"; silicon?: boolean; collection?:CollectionOrigin; quality?:QualityOrigin; encoding: string; identity:DatasetIdentity; importDetails?:SpreadsheetReady['result']; savDetails?:SavReady['data']; platform?:PlatformMappingReady; platformSourceSignature?:string|null };
+type Dataset = { lineage?:string[]; table: SurveyTable; name: string; hash: string; kind: "simulated" | "user_provided"; silicon?: boolean; collection?:CollectionOrigin; quality?:QualityOrigin; encoding: string; identity:DatasetIdentity; importDetails?:SpreadsheetReady['result']; savDetails?:SavReady['data']; platform?:PlatformMappingReady; platformSourceSignature?:string|null };
 const format = (n: number | null | undefined, digits = 3) => n === null || n === undefined ? "—" : n.toLocaleString("zh-CN", { maximumFractionDigits: digits });
 const pct = (n: number, denominator: number) => denominator ? `${(n / denominator * 100).toFixed(1)}%` : "—";
 const SOURCES = [
@@ -48,7 +48,9 @@ function saveText(content: string, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function SurveyLab({designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetChange,onEvidenceProposal,onResultSnapshot,onReportInsert}:{designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetChange?:(value:DatasetValue|null)=>void;onEvidenceProposal?:(section:ReportSection)=>void;onResultSnapshot?:(result:ResultSnapshot,figures?:ReportFigure[],visualStyle?:ProjectVisualStyle)=>void;onReportInsert?:(insert:ReportInsert)=>void}={}) {
+export default function SurveyLab({initialDataset=null,designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetTransferHandled,onDatasetChange,onEvidenceProposal,onResultSnapshot,onReportInsert}:{initialDataset?:DatasetValue|null;designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetTransferHandled?:()=>void;onDatasetChange?:(value:DatasetValue|null)=>void;onEvidenceProposal?:(section:ReportSection)=>void;onResultSnapshot?:(result:ResultSnapshot,figures?:ReportFigure[],visualStyle?:ProjectVisualStyle)=>void;onReportInsert?:(insert:ReportInsert)=>void}={}) {
+  const [initialSnapshot]=useState(()=>initialDataset?structuredClone(initialDataset):null);
+  const [retainedSnapshot,setRetainedSnapshot]=useState(initialSnapshot);
   const [mapping,setMapping]=useState<Mapping|null>(null);
   const [linkState,setLinkState]=useState<{signature:string;link:ResearchLink|null}>({signature:'',link:null});
   const [datasetSession,setDatasetSession] = useState(0);
@@ -56,19 +58,19 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const [journeySnapshot, setJourneySnapshot] = useState<JourneySnapshot | null>(null);
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [originalDataset,setOriginalDataset]=useState<Dataset|null>(null);
-  const [delimiter, setDelimiter] = useState<Delimiter>(",");
+  const [delimiter, setDelimiter] = useState<Delimiter>(initialSnapshot?.table.delimiter??",");
   const [encoding, setEncoding] = useState("utf-8");
   const [paste, setPaste] = useState("");
   const [reading, setReading] = useState(false);
   const [readPhase, setReadPhase] = useState<'reading' | 'checking' | 'identity'>('reading');
   const [readName, setReadName] = useState('');
-  const [importOpen, setImportOpen] = useState(true);
+  const [importOpen, setImportOpen] = useState(!initialSnapshot);
   const [importFormat, setImportFormat] = useState<'text' | 'xlsx' | 'sav'>('text');
   const textSettings = useRef<HTMLDetailsElement>(null);
   const [error, setError] = useState("");
   const [calculationError, setCalculationError] = useState<{ signature: string; message: string } | null>(null);
   const [notice, setNotice] = useState("");
-  const [missingText, setMissingText] = useState("");
+  const [missingText, setMissingText] = useState(initialSnapshot?.missingCodes.join(";")??"");
   const [routingPolicy,setRoutingPolicy]=useState<RoutingPolicy>("strict");
   const [routingApproval,setRoutingApproval]=useState<string|null>(null);
   const [section, setSection] = useState<"data" | "mapping" | "recipes" | "reliability" | "advanced">("data");
@@ -98,7 +100,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   const missing = useMemo(() => { try { return { codes: parseMissingCodes(missingText), error: "" }; } catch (e) { return { codes: [], error: (e as Error).message }; } }, [missingText]);
   const profile = useMemo(() => dataset && !missing.error ? profileSurvey(dataset.table, missing.codes) : null, [dataset, missing]);
   // The research canvas reads the same in-memory table; it never stores the rows.
-  const shared = useMemo<DatasetValue|null>(() => dataset && !interpretationPending && !dataset.platform ? { name: dataset.name, sourceHash: dataset.hash, kind: dataset.kind, table: dataset.table, missingCodes: missing.error ? [] : missing.codes, lineage: [...(dataset.quality ? [qualityLineageStep(dataset.quality)] : []), ...(missing.error ? ['「数据分析」中的缺失代码设置有误，画布未继承'] : [])] } : null, [dataset, missing,interpretationPending]);
+  const shared = useMemo<DatasetValue|null>(() => dataset && !interpretationPending && !dataset.platform ? { name: dataset.name, sourceHash: dataset.hash, kind: dataset.kind, table: dataset.table, missingCodes: missing.error ? [] : missing.codes, lineage: [...(dataset.lineage??[]), ...(dataset.quality ? [qualityLineageStep(dataset.quality)] : []), ...(missing.error ? ['「数据分析」中的缺失代码设置有误，画布未继承'] : [])] } : dataset?null:retainedSnapshot, [dataset, missing,interpretationPending,retainedSnapshot]);
   useLayoutEffect(() => { onDatasetChange?.(shared); }, [shared, onDatasetChange]);
   const mappingKey=canonical({dataset:dataset?.identity||null,mapping:mapping&&dataset?mappingSignature(mapping,dataset.identity):mapping,confirmed:!!mapping&&!!dataset&&mappingCurrent(mapping,dataset.identity,mappingStale),stale:mappingStale});
   const approvalKey=canonical({mappingKey,missingText,policy:routingPolicy});
@@ -157,17 +159,24 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
     return () => window.removeEventListener("beforeunload", onUnload);
   }, [dataset,mapping]);
   useEffect(() => () => { readEpoch.current++; }, []);
+  // Restore a retained project table once at mount; keep its shared snapshot during async identity validation.
+  useEffect(()=>{
+    if(!initialSnapshot)return;
+    let active=true;const epoch=readEpoch.current;
+    void datasetIdentity(initialSnapshot.sourceHash,'utf-8',initialSnapshot.table).then(identity=>{
+      if(!active||readEpoch.current!==epoch)return;
+      setDataset({table:initialSnapshot.table,name:initialSnapshot.name,hash:initialSnapshot.sourceHash,kind:initialSnapshot.kind,encoding:'utf-8',identity,lineage:initialSnapshot.lineage});
+      setRetainedSnapshot(null);
+    }).catch(()=>{if(active&&readEpoch.current===epoch)setError('保留的数据暂未完成解析，请重新导入原表。');});
+    return()=>{active=false;};
+  },[initialSnapshot]);
+
   // A lab handoff is read once per id, after mount, through the same path as a pasted CSV.
   const handledTransfer = useRef("");
-  useEffect(() => {
-    if (!datasetTransfer || handledTransfer.current === datasetTransfer.id) return;
-    const timer = window.setTimeout(() => { handledTransfer.current = datasetTransfer.id; void readData(undefined, false, datasetTransfer); }, 0);
-    return () => window.clearTimeout(timer);
-    // readData reads current state when it runs; only a new handoff should trigger it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasetTransfer]);
+
 
   function adopt(next: Dataset,keepOriginal=false) {
+    setRetainedSnapshot(null);
     if(!keepOriginal)setOriginalDataset(null);
     setImportOpen(false);
     setRoutingApproval(null);setRoutingPolicy('strict');
@@ -176,7 +185,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   }
   async function readData(file?: File, sample = false, handoff?: DatasetTransfer) {
     if (reading && !handoff) return;
-    if (dataset && !window.confirm("替换当前分析数据？原始文件不会改动。请先下载需要保留的分析记录。")) return;
+    if ((dataset||retainedSnapshot) && !window.confirm("替换当前分析数据？原始文件不会改动。请先下载需要保留的分析记录。")) {if(handoff)onDatasetTransferHandled?.();return;}
     const epoch = ++readEpoch.current;
     setReadSource('text'); setReading(true); setReadPhase(file ? 'reading' : 'checking'); setReadName(handoff ? handoff.name : sample ? '12 行教学模拟数据' : file?.name || '粘贴的 CSV 文本'); setError(""); setNotice("");
     try {
@@ -209,9 +218,18 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
       if(quality)setMissingText(quality.missingCodes.join(';'));
       if(collection){setMapping({design:collection.design,assignments:suggestAssignments(collection.design,identity),confirmed:null,sourceSignature:snapshotSignature({design:collection.design,pending:false})});setSection('mapping');setNotice(`已读取 ${table.rows.length} 份${collection.classification==='synthetic'?'合成验收':'回收'}答卷，问卷固定为发布 v${collection.questionnaireRevision}。请核对本版变量对应。`);}
       if (silicon) setNotice(`已按模拟数据载入：表中含 ${SILICON_ORIGIN_COLUMN} 标记列，来自硅基样本。可用于演练分析流程。`);
-    } catch (e) { if (epoch === readEpoch.current) setError(e instanceof Error ? e.message : "无法读取数据；原有分析未被替换。"); }
+      if(handoff)onDatasetTransferHandled?.();
+    } catch (e) { if (epoch === readEpoch.current) {setError(e instanceof Error ? e.message : "无法读取数据；原有分析未被替换。");if(handoff)onDatasetTransferHandled?.();} }
     finally { if (epoch === readEpoch.current) setReading(false); }
   }
+  useEffect(() => {
+    if (!datasetTransfer || handledTransfer.current === datasetTransfer.id) return;
+    const timer = window.setTimeout(() => { handledTransfer.current = datasetTransfer.id; void readData(undefined, false, datasetTransfer); }, 0);
+    return () => window.clearTimeout(timer);
+    // readData reads current state when it runs; only a new handoff should trigger it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datasetTransfer]);
+
   async function adoptSpreadsheet(data:SpreadsheetReady,signal:AbortSignal):Promise<boolean>{
     if(signal.aborted)return false;
     const epoch=++readEpoch.current;
@@ -251,7 +269,7 @@ export default function SurveyLab({designSnapshot=null,designTransfer=null,datas
   function restoreOriginal(){if(!originalDataset)return;readEpoch.current++;const source=originalDataset;adopt(source);setSection('mapping');setNotice('已返回原表，请重新确认分析口径。');}
   function clear() {
     if (!window.confirm("清空当前标签页的分析数据和设置？不会删除原始文件。")) return;
-    setImportOpen(true);setOriginalDataset(null);
+    setRetainedSnapshot(null);setImportOpen(true);setOriginalDataset(null);
     setRoutingApproval(null);setRoutingPolicy("strict");
     setRecipeCandidates([]);setJourneySnapshot(null);setMapping(previous=>previous?{...previous,confirmed:null}:null);
     readEpoch.current++; setReading(false); setDataset(null); setResult(null); setSelected([]); setReverse([]); setDetail(null); setPaste(""); setError(""); setCalculationError(null); setConstruct(""); setMissingText(""); setMinText("1"); setMaxText("5"); setEncoding("utf-8"); setDelimiter(","); setSection("data"); setInterpretation("numeric"); setNotice("已清空本页数据和设置；原始文件未改变。");

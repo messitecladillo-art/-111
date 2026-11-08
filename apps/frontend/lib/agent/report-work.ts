@@ -2,7 +2,7 @@ import type { PageSlice } from '../paper-layout';
 
 export type LiveWritingStatus = {
   active: boolean;
-  phase: 'contract' | 'wave1' | 'wave2' | 'repair' | 'done' | 'error';
+  phase: 'contract' | 'wave1' | 'wave2' | 'repair' | 'done' | 'error' | 'failed' | 'cancelled';
   completed: number;
   total: number;
   paragraphs: number;
@@ -24,10 +24,10 @@ const count = (n: number) => Number.isSafeInteger(n) && n >= 0 ? n : 0;
 
 /** Only actual progress receipts supply counts. A completed report replaces this screen-only view. */
 export function reportWorkState(live: LiveWritingStatus | null): ReportWorkState | null {
-  if (!live || live.phase === 'done' || (!live.active && live.phase !== 'error')) return null;
+  if (!live || live.phase === 'done' || (!live.active && live.phase !== 'error' && live.phase !== 'failed')) return null;
   const total = live.phase === 'contract' ? 0 : count(live.total);
   const completed = total ? Math.min(count(live.completed), total) : 0;
-  if (live.phase === 'error') return { phase: 'error', detail: '已写入的内容保留，可在对话中查看原因。', completed, total };
+  if (live.phase === 'error' || live.phase === 'failed') return { phase: 'error', detail: '当前内容已保留，可在对话中查看原因。', completed, total };
   if (live.phase === 'contract') return { phase: 'preparing', detail: '等待接收章节计划与研究材料', completed: 0, total: 0 };
   if (live.phase === 'repair') return { phase: 'reviewing', detail: '正在核对表述与已登记的研究结果', completed, total };
   return {

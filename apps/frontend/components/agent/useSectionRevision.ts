@@ -18,7 +18,7 @@ type Options = {
   readScope: () => ReportRunScope; readSnapshot: () => RevisionSnapshot | null;
   apply: (proposal: SectionRevisionProposal, scope: ReportRunScope) => RevisionApplyResult;
   mountEditor: () => void; openSettings: () => void;
-  mutate: Parameters<typeof sendDraft>[0]; disabled?: boolean; readDisabled?: () => boolean;
+  mutate: Parameters<typeof sendDraft>[0]; disabled?: boolean; disabledReason?: string; readDisabled?: () => boolean;
 };
 
 /** Scope changes invalidate candidates permanently, including leaving and returning to the same conversation. */
@@ -46,8 +46,8 @@ export function useSectionRevision(options: Options): SectionRevisionProps {
   const shown = visible ? state : empty(scopeState.epoch);
   const snapshot = options.readSnapshot();
   const section = snapshot?.content.report.find(s => s.id === options.sectionId) ?? null;
-  const staleReason = options.disabled && shown.prepared ? '报告任务正在执行，请等待结束后重新核对候选。' : shown.prepared && snapshot ? revisionProblem(shown.prepared.anchor, snapshot, options.design, options.readScope()) : shown.prepared ? '编辑器尚未就绪。' : null;
-  const baseReason = !options.scope.owner ? '登录后使用自己的报告模型服务。' : !options.service ? '请在模型设置中选择报告拟稿服务。' : options.disabled ? '请等待当前报告任务结束。' : !section ? '请先在报告中选择章节。' : null;
+  const staleReason = options.disabled && shown.prepared ? options.disabledReason ?? '报告任务正在执行，请等待结束后重新核对候选。' : shown.prepared && snapshot ? revisionProblem(shown.prepared.anchor, snapshot, options.design, options.readScope()) : shown.prepared ? '编辑器尚未就绪。' : null;
+  const baseReason = !options.scope.owner ? '登录后使用自己的报告模型服务。' : !options.service ? '请在模型设置中选择报告拟稿服务。' : options.disabled ? options.disabledReason ?? '请等待当前报告任务结束。' : !section ? '请先在报告中选择章节。' : null;
   const update = (next: State) => { stateRef.current = next; setState(next); };
   const current = (s: State) => s.epoch === epoch.current && !!s.prepared && sameReportRunScope(s.prepared.anchor.scope, env.current.readScope());
   const problem = (s: State) => {

@@ -9,6 +9,9 @@ import * as mapping from '../lib/questionnaire-mapping.ts';
 import * as revision from '../lib/questionnaire-revision.ts';
 import * as journey from '../lib/analysis-journey.ts';
 import * as survey from '../lib/survey-analysis.ts';
+import * as importMetadata from '../lib/survey-import-metadata.ts';
+import * as siliconExport from '../lib/silicon/export.ts';
+import * as collection from '../lib/survey-collection.ts';
 
 // Production handlers and effects; native focus, IME and layout need browser acceptance.
 const ts = createRequire(import.meta.url)('typescript');
@@ -113,7 +116,7 @@ test('progress totals and navigation follow actual ready, stale and failed modul
 function surveyScreen(initialProps = {}) {
   const components = ['AnalysisRecipeBoard', 'AdvancedMethods', 'ResearchFlow', 'QuestionnaireMapping', 'RoutingAudit', 'SpreadsheetImportPanel', 'SavImportPanel', 'PlatformMappingPanel', 'QualityPanel', 'AnalysisJourney'];
   const mocks = Object.fromEntries(components.map(name => [`./${name}`, { default: name }]));
-  return mount('../components/analysis/SurveyLab.tsx', { ...mocks, './SurveyLab.module.css': styles, '@/components/math/Tex': { Tex: 'Tex' }, '@/lib/survey-analysis': survey, '@/lib/questionnaire-mapping': mapping, '@/lib/analysis-journey': journey, '@/lib/research-quality': {}, '@/lib/report-figure': {}, '@/lib/research-flow': {}, '@/lib/routing-evidence': {}, '@/lib/analysis-summary': {}, '@/lib/silicon/export': {}, '@/lib/platform-analysis-dataset': {}, '@/lib/survey-import-metadata': {}, '@/lib/survey-collection': {} }, initialProps);
+  return mount('../components/analysis/SurveyLab.tsx', { ...mocks, './SurveyLab.module.css': styles, '@/components/math/Tex': { Tex: 'Tex' }, '@/lib/survey-analysis': survey, '@/lib/questionnaire-mapping': mapping, '@/lib/analysis-journey': journey, '@/lib/research-quality': {}, '@/lib/report-figure': {}, '@/lib/research-flow': {}, '@/lib/routing-evidence': {}, '@/lib/analysis-summary': {}, '@/lib/silicon/export': siliconExport, '@/lib/platform-analysis-dataset': {}, '@/lib/survey-import-metadata': importMetadata, '@/lib/survey-collection': collection }, initialProps);
 }
 
 test('accepting a questionnaire before data import retains direct navigation both ways', async () => {
@@ -166,9 +169,9 @@ test('format tabs preserve mounted import panels and CSV input while busy work s
   screen.unmount();
 });
 
-function studioScreen() {
+function studioScreen(overrides = {}) {
   const design = questionnaire.exampleQuestionnaire(), drafts = new Map(), snapshots = [];
-  const props = { localOnly: true, hosted: { initialDesign: design, writable: true, cacheKey: 'ui-test', savedFingerprint: library.parseQuestionnaireLibraryContent(design).serialized, savedBinding: null, onLoaded() {} }, onSnapshot: snapshot => snapshots.push(snapshot) };
+  const props = { localOnly: true, hosted: { initialDesign: design, writable: true, cacheKey: 'ui-test', savedFingerprint: library.parseQuestionnaireLibraryContent(design).serialized, savedBinding: null, onLoaded() {} }, onSnapshot: snapshot => snapshots.push(snapshot),...overrides };
   const screen = mount('../components/design/QuestionnaireStudio.tsx', { '@/lib/questionnaire': questionnaire, './QuestionnaireStudio.module.css': styles, './QuestionBlocks': { default: 'QuestionBlocks' }, './QuestionnairePlatformExport': { default: 'PlatformExport' }, '../research/ResearchMaterialLibrary': { default: 'MaterialLibrary' }, '@/lib/research-materials': {}, '@/lib/questionnaire-mapping': mapping, './DiagnosisBriefProposal': { default: 'DiagnosisProposal' }, './QuestionnaireLibrary': { default: 'QuestionnaireLibrary' }, '@/lib/questionnaire-library': library, '@/lib/questionnaire-revision': revision, '../hosted/HostedSession': { useHostedSession: () => ({ session: { user: { id: 'ui-user' } }, getDraft: key => drafts.get(key), cacheDraft: (key, value) => drafts.set(key, value), setUnsaved() {} }) } }, props);
   return { screen, get snapshot() { return snapshots.at(-1); } };
 }
@@ -204,4 +207,37 @@ test('editing a disclosed variable still updates the design, preview and undo hi
   nodes(s.screen.tree).find(n => n.props?.['aria-label'] === '预览方式').props.onChange({ target: { value: 'route' } }); await s.screen.settle();
   assert.match(label(s.screen.tree), /不保存答卷、不替代预试/);
   s.screen.unmount();
+});
+
+
+test('retained project questionnaire hydrates once and a later prop does not replace edits',async()=>{
+  const design=questionnaire.exampleQuestionnaire();design.title='项目A已编辑问卷';
+  const s=studioScreen({hosted:undefined,initialDesign:design});await s.screen.settle();
+  assert.equal(s.snapshot.design.title,design.title);
+  const different=questionnaire.exampleQuestionnaire();different.title='不应覆盖当前编辑';
+  s.screen.update({initialDesign:different});await s.screen.settle();
+  assert.equal(s.snapshot.design.title,design.title);s.screen.unmount();
+});
+test('retained dataset never publishes an empty snapshot while its identity is restored',async()=>{
+  const initialDataset={name:'项目A原表.csv',sourceHash:'c'.repeat(64),kind:'user_provided',table:survey.parseSurveyCsv('x,y\n1,2\n3,4'),missingCodes:['99'],lineage:['质控：保留既有记录']};
+  const published=[];const screen=surveyScreen({initialDataset,onDatasetChange:value=>published.push(value)});
+  await screen.settle();await tick();await screen.settle();
+  assert.ok(published.length>0);assert.ok(published.every(value=>value!==null));
+  assert.equal(published.at(-1).sourceHash,initialDataset.sourceHash);
+  assert.deepEqual(published.at(-1).table.rows,initialDataset.table.rows);
+  assert.deepEqual([...published.at(-1).missingCodes],['99']);assert.deepEqual([...published.at(-1).lineage],initialDataset.lineage);
+  screen.update({initialDataset:{...initialDataset,name:'其他传入表'}});await screen.settle();
+  assert.equal(published.at(-1).name,'项目A原表.csv');screen.unmount();
+});
+test('unmount during retained dataset validation cannot publish a late result',async()=>{
+  const initialDataset={name:'项目A.csv',sourceHash:'d'.repeat(64),kind:'user_provided',table:survey.parseSurveyCsv('x\n1'),missingCodes:[],lineage:[]};
+  const published=[];const screen=surveyScreen({initialDataset,onDatasetChange:value=>published.push(value)});
+  await screen.settle();screen.unmount();const count=published.length;await tick();assert.equal(published.length,count);
+});
+
+test('failed data delivery is acknowledged so it cannot block report actions permanently',async()=>{
+  let handled=0;
+  const screen=surveyScreen({datasetTransfer:{id:'bad-transfer',name:'损坏.csv',csv:'a,b\n"unclosed',origin:{kind:'silicon'}},onDatasetTransferHandled:()=>{handled++;}});
+  await screen.settle();await new Promise(resolve=>setTimeout(resolve,20));await screen.settle();
+  assert.equal(handled,1);screen.unmount();
 });

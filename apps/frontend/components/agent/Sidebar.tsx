@@ -189,7 +189,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
         </div>}
         <button type="button" className={styles.account} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title={email}>
           <span className={styles.accountAvatar} aria-hidden="true">{(email[0] ?? '?').toUpperCase()}</span>
-          <span className={styles.accountText}><b>{email}</b><small>今日 {thousands(todayTokens)} tokens</small></span>
+          <span className={styles.accountText}><b>{email}</b><small>今日已记录 {thousands(todayTokens)} tokens</small></span>
           <Icon name="more" />
         </button>
       </div> : <>
