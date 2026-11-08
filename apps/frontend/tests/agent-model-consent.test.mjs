@@ -52,6 +52,7 @@ function harness() {
   const activeCalls = new Map();
   const first = deferred(), receipt = deferred();
   let storedPreferences = {research:A,questionnaire:A,report:A};
+  let storedSteps = {};
   const current = { owner: ALICE, identityEpoch: 1, generation: { account: 'ready', lists: { state: 'ready', services: [service(A), service(B)] }, start: () => ({ lines: [[{text: 'questionnaire consent'}]] }) },
     chatService: service(A), reportService: service(A), chatMode: 'model', panel: null, light: { overall: 0, rooms: [] }, traces: [], held: { results: [], findings: [], placed: [], pending: false }, plan: null,
     report: { title: 'Synthetic report', report: [] }, liveReport: { quality: { results: [] } }, design: null,
@@ -65,7 +66,8 @@ function harness() {
     find(id) { return all().find(m => m.id === id); }, threadOf: home,
     remove(id) { book().threads = book().threads.filter(t => t.id !== id); if (book().active === id) book().active = null; },
   };
-  const globals = { ...chat, ...routing, getModelPreferences: () => storedPreferences, latest, threads, consented: {current: new Set()}, crypto,
+  const globals = { ...chat, ...routing, getModelPreferences: () => storedPreferences,
+    getStageModelPreferences: () => ({ schemaVersion: 2, tasks: storedPreferences, steps: storedSteps }), latest, threads, consented: {current: new Set()}, crypto,
     startCall:(id,owner,epoch)=>{activeCalls.set(id,{owner,epoch});callEvents.push(['start',id]);},
     finishCall:id=>{activeCalls.delete(id);callEvents.push(['finish',id]);},
     console, setTimeout, clearTimeout, Date, JSON, Promise, Set, Map,
@@ -89,12 +91,24 @@ function harness() {
   const confirm = card => agent.answer(card.message.id, 'confirmed', card.card.confirm.action);
   return { current, latest, posts, drafts, tools, navigation, threads, first, receipt, agent, cards, confirm, all, activeCalls, callEvents,
     chooseStored(id) { storedPreferences = {research:id,questionnaire:id,report:id}; },
+    chooseStep(call, id) { storedSteps = { ...storedSteps, [call]: id }; },
     choose(id, revision=1) { storedPreferences = {research:id,questionnaire:id,report:id}; current.chatService = service(id, revision); current.reportService = service(id, revision); current.generation.lists.services = [current.chatService, service(id===A?B:A)]; },
     switchAccount() { activeOwner = BOB; current.owner = BOB; current.identityEpoch++; },
     async flush() { await tick(); await tick(); },
     readyFirst(actions=[]) { const req=posts[0]; first.resolve({id:req.idempotencyKey,status:'ready',reply:'synthetic reply',step:1,message:req.message,actions,droppedActions:0}); },
   };
 }
+
+test('a per-call chat override controls the service dispatched while capability defaults remain unchanged', async () => {
+  const s = harness();
+  s.chooseStep('research.conversation', B);
+  s.agent.send('比较研究方向');
+  const consent = s.cards().at(-1);
+  assert.equal(consent.card.confirm.action.modelBinding.serviceId, B);
+  s.confirm(consent);
+  await s.flush();
+  assert.equal(s.posts[0].serviceId, B);
+});
 
 test('old chat consent cannot dispatch a changed service or changed revision', async () => {
   for (const [id, revision] of [[B,1],[A,2]]) {

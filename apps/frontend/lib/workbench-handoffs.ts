@@ -6,6 +6,7 @@ import type { DesignSnapshot, DesignTransfer } from './questionnaire-mapping.ts'
 import type { ResultSnapshot } from './research-quality.ts';
 import type { ResultRegistration } from './result-registration.ts';
 import type { DatasetTransfer } from './survey-collection.ts';
+import type { LiteratureWorkspaceSnapshot } from './topic-lab/workspace.ts';
 
 /** Delivery identity is independent of any business ID inside the payload. */
 export type Envelope<T> = Readonly<{ deliveryId: string; payload: T }>;
@@ -25,6 +26,7 @@ export type WorkbenchSnapshot = Readonly<{
   scope: string;
   design: DesignSnapshot | null;
   dataset: DatasetValue | null;
+  literature: LiteratureWorkspaceSnapshot | null;
   pending: WorkbenchPending;
 }>;
 export type WorkbenchHandoffs = Readonly<{
@@ -34,6 +36,7 @@ export type WorkbenchHandoffs = Readonly<{
   acknowledge: (channel: WorkbenchChannel, deliveryId: string) => boolean;
   setDesign: (snapshot: DesignSnapshot | null) => void;
   setDataset: (dataset: DatasetValue | null) => void;
+  setLiterature: (snapshot: LiteratureWorkspaceSnapshot | null) => void;
 }>;
 export type WorkbenchHandoffOptions = {
   /** Test seam; the factory must return a fresh delivery ID on each call. */
@@ -67,6 +70,7 @@ export function createWorkbenchHandoffs(
     scope,
     design: null,
     dataset: null,
+    literature: null,
     pending: Object.freeze({
       design: null,
       dataset: null,
@@ -113,6 +117,10 @@ export function createWorkbenchHandoffs(
     setDataset(value: DatasetValue | null) {
       if (snapshot.dataset === value) return;
       update({ ...snapshot, dataset: snapshotValue(value) });
+    },
+    setLiterature(value: LiteratureWorkspaceSnapshot | null) {
+      if (snapshot.literature === value || value && snapshot.literature?.snapshotHash === value.snapshotHash) return;
+      update({ ...snapshot, literature: snapshotValue(value) });
     },
   });
 }

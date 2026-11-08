@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { parseKnowledgeLookup } from '../lib/knowledge/api-contracts.ts';
 import { knownTopicAgentRejection } from '../lib/topic-agent/index.ts';
+import { resolveStageModelRoute } from '../lib/agent/model-routing.ts';
 
 // Exercise the real component handlers/effects with bounded API promises; no live provider.
 const ts = createRequire(import.meta.url)('typescript');
@@ -49,6 +50,7 @@ function mount(options = {}) {
     useState(init) { const index = at++; cells[index] ??= { value: typeof init === 'function' ? init() : init }; const cell = cells[index]; return [cell.value, next => { cell.value = typeof next === 'function' ? next(cell.value) : next; dirty = true; }]; },
     useRef(init) { const index = at++; cells[index] ??= { current: init }; return cells[index]; },
     useEffect(fn, deps) { effect(fn, deps, effects); }, useLayoutEffect(fn, deps) { effect(fn, deps, layouts); },
+    useSyncExternalStore(_subscribe, getSnapshot) { return getSnapshot(); },
   };
   function effect(fn, deps, queue) { const index = at++, previous = cells[index]; if (!previous || deps.some((value, i) => !Object.is(value, previous.deps[i]))) { const cell = cells[index] = { deps }; queue.push(() => { previous?.cleanup?.(); cell.cleanup = fn(); }); } }
   const jsx = (type, values, key) => ({ type, props: values, key });
@@ -61,6 +63,7 @@ function mount(options = {}) {
     '@/lib/topic-advisor/parse': { stableStringify: value => JSON.stringify(canonical(value)) },
     '@/lib/topic-advisor/client-bundle': { TOPIC_BUNDLE: { catalog: { patterns: [{ id: 'topic-1' }] } } },
     '@/lib/topic-proposal': { TOPIC_SOURCE_VERSIONS: versions, topicGeographyLabel: profile => profile.city },
+    '@/lib/agent/model-routing': { getStageModelPreferences: () => options.modelPreferences ?? {schemaVersion:2,tasks:{},steps:{}}, getServerStageModelPreferences: () => ({schemaVersion:2,tasks:{},steps:{}}), subscribeModelPreferences: () => () => {}, resolveStageModelRoute, setStageModelPreference: (_owner, call, id) => { options.modelPreferences = {...(options.modelPreferences ?? {schemaVersion:2,tasks:{},steps:{}}), steps:{...options.modelPreferences?.steps,[call]:id}}; } },
     '@/lib/topic-agent': {
       TOPIC_AGENT_SOURCE_VERSIONS: versions,
       async runLocalTopicAgent(input) { localCalls.push(structuredClone(input)); return options.local ? options.local(input) : makeTurn(input, ++turnCount); },

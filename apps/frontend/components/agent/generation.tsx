@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { parseCollection, parseProject, parseService, type Project, type Proposal, type Service } from '@evix/shared';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { downloadQuestionnaire, hostedRequest, HostedApiError } from '@/components/hosted/api-client';
@@ -13,7 +13,7 @@ import type { RoomId } from '@/lib/agent/rooms';
 import { QUESTION_TYPES } from '@/lib/questionnaire';
 import { isDefiniteGenerationRejection, prepareQuestionnaireGeneration, type QuestionnaireGenerationRequest } from '@/lib/questionnaire-proposals';
 import { stamp, threads } from './threads';
-import { getModelPreferences, getServerModelPreferences, resolveModelRoute, setModelPreference, subscribeModelPreferences, type ModelPreferences, type ModelTask } from '@/lib/agent/model-routing';
+import { getModelPreferences, getServerModelPreferences, getStageModelPreferences, getServerStageModelPreferences, resolveStageModelRoute, setModelPreference, setStageModelPreference, subscribeModelPreferences, MODEL_SERVICES_UPDATED, type ModelPreferences, type ModelTask } from '@/lib/agent/model-routing';
 import styles from './AgentShell.module.css';
 
 /**
@@ -83,6 +83,8 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const owner = session?.authenticated ? session.user?.id ?? '' : '';
   const account: Generation['account'] = loading ? 'loading' : owner ? 'ready' : 'guest';
   const [lists, setLists] = useState<Lists>(EMPTY);
+  const liveRouting=useRef({owner,identityEpoch,lists});
+  useLayoutEffect(()=>{liveRouting.current={owner,identityEpoch,lists};},[owner,identityEpoch,lists]);
   const preferences = useSyncExternalStore(subscribeModelPreferences, () => getModelPreferences(owner), getServerModelPreferences);
   const prefer = useCallback((task: ModelTask, serviceId: string | null) => setModelPreference(owner, task, serviceId), [owner]);
   // Another account never sees the previous account's projects or services, nor its choice of service.
@@ -97,8 +99,10 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   // error when the user asks, and a failing request is never retried in a loop. Calls made before the state catches
   // up (two effects in one commit) share the read already under way.
   const reading = useRef(false);
+  const queuedRefresh=useRef(false), latestLoad=useRef<(retry?:boolean)=>void>(()=>{});
   const load = useCallback((retry = false) => {
-    if (!owner || reading.current || (retry ? lists.state === 'loading' : lists.state !== 'idle')) return;
+    if (!owner || (!retry && lists.state !== 'idle')) return;
+    if(reading.current){queuedRefresh.current=true;return;}
     const epoch = identityEpoch, current = () => isCurrentAccount(owner, epoch);
     reading.current = true;
     setLists(value => ({ ...value, state: 'loading', error: '' }));
@@ -107,8 +111,15 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
         if (current()) setLists({ state: 'ready', projects: parseCollection(projects, 'projects', parseProject), services: parseCollection(services, 'services', parseService, 8).filter(s => s.capabilities.includes('questionnaire') || s.capabilities.includes('research') || s.capabilities.includes('report')), error: '' });
       })
       .catch(failure => { if (current()) setLists(value => ({ ...value, state: 'error', error: reason(failure) })); })
-      .finally(() => { reading.current = false; });
+      .finally(() => { reading.current = false;if(queuedRefresh.current){queuedRefresh.current=false;latestLoad.current(true);} });
   }, [owner, identityEpoch, isCurrentAccount, lists.state]);
+  useLayoutEffect(()=>{latestLoad.current=load;},[load]);
+  useEffect(()=>{
+    if(typeof window==='undefined'||!owner)return;
+    const refresh=(event:Event)=>{const scope=(event as CustomEvent<{ownerId?:string;identityEpoch?:number}>).detail;if(scope?.ownerId===owner&&scope.identityEpoch===identityEpoch)load(true);};
+    window.addEventListener(MODEL_SERVICES_UPDATED,refresh);
+    return()=>window.removeEventListener(MODEL_SERVICES_UPDATED,refresh);
+  },[owner,identityEpoch,load]);
 
   const start = useCallback((brief: string): AgentTurn => account === 'guest'
     ? { lines: [[t('起草问卷要调用你自己的模型服务，结果存进你的项目，所以需要先登录。')], [t('登录后再说一次，我会先请你确认要发送的内容。', 'dim')]],
@@ -146,6 +157,12 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const submit = useCallback((messageId: string, input: { brief: string; projectId: string; serviceId: string }) => {
     const brief = input.brief.trim(), project = lists.projects.find(p => p.id === input.projectId), service = lists.services.find(s => s.id === input.serviceId);
     if (lock.current || !owner || !brief || brief.length > BRIEF_LIMIT || !project || !service) return;
+    const routeStillConfirmed=()=>{
+      const live=liveRouting.current;
+      const selected=resolveStageModelRoute('survey.questionnaire',live.lists.services,getStageModelPreferences(owner)).service;
+      return live.owner===owner&&live.identityEpoch===identityEpoch&&live.lists.state==='ready'&&selected?.id===service.id&&selected.revision===service.revision;
+    };
+    if(!routeStillConfirmed())return;
     lock.current = true;
     setBusy(true);
     const epoch = identityEpoch, current = () => isCurrentAccount(owner, epoch);
@@ -164,6 +181,7 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
         release();
         return;
       }
+      if(!routeStillConfirmed()) { if(current())notStarted(job.id,'问卷模型或版本已变化，请重新确认后起草。本次没有调用模型。');release();return; }
       let request: QuestionnaireGenerationRequest;
       try { request = prepareQuestionnaireGeneration(service, brief, revision, true); }
       catch (failure) { if (current()) notStarted(job.id, reason(failure)); release(); return; }
@@ -195,9 +213,11 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
 /** The double frame: what is sent, where it is saved, and which service runs it. Nothing runs until 起草 (y). */
 export function ConsentCard({ messageId, card, at }: { messageId: string; card: Consent; at: number }) {
   const g = useContext(GenerationContext);
+  const auth=useHostedSession();
+  const routeOwner=auth.session?.authenticated?auth.session.user?.id??null:null;
+  const routePreferences=useSyncExternalStore(subscribeModelPreferences,()=>getStageModelPreferences(routeOwner),getServerStageModelPreferences);
   const [brief, setBrief] = useState(card.brief);
   const [projectId, setProjectId] = useState('');
-  const [serviceId, setServiceId] = useState('');
   // The conversation's project is followed as it changes, so filing it elsewhere moves the default with it.
   const filed = useSyncExternalStore(threads.subscribe, () => threads.projectOf(messageId), () => null);
   const ref = useRef<HTMLDivElement>(null), open = card.state === 'open';
@@ -208,7 +228,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   const { projects } = g.lists, services = g.lists.services.filter(s => s.capabilities.includes('questionnaire'));
   // The conversation's own project comes first, as the preferred service does.
   const project = [projectId, filed].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
-  const service = resolveModelRoute('questionnaire', services, serviceId ? { questionnaire: serviceId } : g.preferences).service?.id ?? '';
+  const service = resolveStageModelRoute('survey.questionnaire', services, routePreferences).service?.id ?? '';
   const ready = open && g.account === 'ready' && g.lists.state === 'ready' && !!brief.trim() && brief.length <= BRIEF_LIMIT && !!project && !!service && !g.busy;
   const submit = () => { if (ready) g.submit(messageId, { brief, projectId: project, serviceId: service }); };
   const key = (event: KeyboardEvent) => {
@@ -232,7 +252,7 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
               : <span className={styles.fieldNote}>还没有项目。<Link href="/projects">新建项目 ↗</Link></span>}
           </label>
           <label className={styles.field}><span>模型服务</span>
-            {services.length ? <select value={service} onChange={event => { setServiceId(event.target.value); g.prefer('questionnaire', event.target.value); }}><option value="" disabled>请选择问卷起草模型</option>{services.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model} · v{s.revision}</option>)}</select>
+            {services.length ? <select value={service} onChange={event => setStageModelPreference(routeOwner, 'survey.questionnaire', event.target.value || null)}><option value="" disabled>请选择问卷起草模型</option>{services.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model} · v{s.revision}</option>)}</select>
               : <span className={styles.fieldNote}>还没有能起草问卷的模型服务。<Link href="/services">接入模型 ↗</Link></span>}
           </label>
         </>}

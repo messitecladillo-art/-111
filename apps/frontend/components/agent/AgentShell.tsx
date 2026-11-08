@@ -52,7 +52,10 @@ import Sidebar from './Sidebar';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
 import type { Service } from '@evix/shared';
-import { eligibleModelServices, getModelPreferences, matchesModelConsent, resolveModelRoute, type ModelConsentBinding, type ModelTask } from '@/lib/agent/model-routing';
+import { eligibleModelServices, getStageModelPreferences, getServerStageModelPreferences, matchesModelConsent, resolveStageModelRoute, setDefaultModelPreference, setStageModelPreference, subscribeModelPreferences, type ModelConsentBinding, type ModelTask } from '@/lib/agent/model-routing';
+import { MODEL_CALL_IDS, type ModelCallId, type ResearchStageId } from '@/lib/agent/research-stages';
+import type { JourneyModelRoute } from './ResearchJourney';
+import ResearchWorkspace from './ResearchWorkspace';
 
 /**
  * A sentence's later steps: what the tools found, which ran already, the service the user agreed to, and `after`, the
@@ -98,7 +101,6 @@ const EMPTY_MESSAGES: Message[] = [];
 const PANEL_KEY = 'evix.agent.panel-width.v1';
 // Gutters: the canvas padding on the right and the margins between floating panels (see AgentShell.module.css).
 const RAIL = 52, SIDEBAR = 264, GUTTERS = 24, MIN_PANEL = 480, MIN_TALK = 360, INSPECTOR = 248;
-const SUGGESTIONS = ['下一步做什么', '/全报告', '/铸造', '/绘图', '/编程', '/撰稿', '/印鉴'];
 const GROUPS = (Object.keys(ROOM_GROUPS) as RoomGroup[]).filter(g => g !== 'lobby');
 
 /** The panel width remembered in this browser, if any; a width is a convenience only. */
@@ -147,7 +149,7 @@ export default function AgentShell() {
     return { owner: owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch) ? owner : null, epoch: identityEpoch,
       thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
   }, [owner, identityEpoch, isCurrentAccount]);
-  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact } = useWorkbenchModules(true, projectId);
+  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research } = useWorkbenchModules(true, projectId);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
   const preparingReport = useRef<{ id: string; scope: ReportRunScope } | null>(null);
@@ -246,6 +248,7 @@ export default function AgentShell() {
   const sideOpen = crowded ? sideBeside : sideAlone;
   const setSideOpen = crowded ? setSideBeside : setSideAlone;
   const [expanded, setExpanded] = useState(false);
+  const [artifactOpen,setArtifactOpen]=useState(false),[artifactNotice,setArtifactNotice]=useState<string|null>(null);
   // The panel takes seven tenths of the room beside the sidebar, or the width last dragged to, and always leaves the
   // conversation its minimum. Widths are read through stores so the first client render matches the server's.
   const savedWidth = useSyncExternalStore(subscribeNothing, savedPanelWidth, () => null);
@@ -294,11 +297,14 @@ export default function AgentShell() {
     if (inputRef.current?.offsetParent === null) flushSync(() => setExpanded(false));
     inputRef.current?.focus();
   }, []);
-  const go = useCallback((id: RoomId) => { if (currentPanel() !== id) window.location.hash = id; }, []);
+  const go = useCallback((id: RoomId) => {
+    if (id === 'services') { setArtifactOpen(false); setExpanded(true); }
+    if (currentPanel() !== id) window.location.hash = id;
+  }, []);
   const closePanel = useCallback(() => { window.location.hash = ''; }, []);
   const pick = (id: RoomId) => { focusPicked.current = true; setRailMenu(null); go(id); };
   const generation = useGeneration(publishProposal, go);
-  const { account: generationAccount, load: loadLists, lists, preferences, prefer } = generation;
+  const { account: generationAccount, load: loadLists, lists } = generation;
   // Projects and services fill the sidebar and the composer's menus as soon as an account is known.
   useEffect(() => { if (generationAccount === 'ready') loadLists(); }, [generationAccount, loadLists]);
   // Talking with a model is the user's choice, for this visit; every conversation asks once before its first sentence goes.
@@ -309,15 +315,32 @@ export default function AgentShell() {
   const chatMode = modeHere && modeHere.owner === owner ? modeHere.mode : storedMode;
   const setChatMode = useCallback((mode: ChatMode) => { setModeHere({ owner, mode }); writeMode(owner, mode); }, [owner]);
   const consented = useRef(new Set<string>());
-  const chatService = resolveModelRoute('research', lists.services, preferences).service;
-  const reportService = resolveModelRoute('report', lists.services, preferences).service;
+  const stagePreferences=useSyncExternalStore(subscribeModelPreferences,()=>getStageModelPreferences(owner),getServerStageModelPreferences);
+  const chatService = resolveStageModelRoute('research.conversation', lists.services, stagePreferences).service;
+  const reportService = resolveStageModelRoute('report.revision', lists.services, stagePreferences).service;
+  const journeyModelRoutes = useMemo<Partial<Record<ModelCallId, JourneyModelRoute>>>(() => Object.fromEntries(MODEL_CALL_IDS.map(call => {
+    const selected = resolveStageModelRoute(call, lists.services, stagePreferences);
+    const source: JourneyModelRoute['source'] = selected.reason === 'stale_selection' || selected.reason === 'no_eligible' || selected.reason === 'unselected'
+      ? selected.reason : selected.selectionSource === 'step' ? 'step' : selected.selectionSource === 'capability' ? 'task'
+        : selected.selectionSource === 'default' ? 'default' : 'only_eligible';
+    return [call, { selectedServiceId: stagePreferences.steps[call] ?? null, effectiveServiceId: selected.service?.id ?? null, source }];
+  })), [lists.services, stagePreferences]);
+  const openResearchStage = useCallback((id: ResearchStageId) => {
+    research.open(id);
+    const destinations: Record<ResearchStageId, RoomId> = {
+      topic: 'diagnose', diagnosis: 'diagnose', literature: 'diagnose', questionnaire: 'design', sampling: 'sampling',
+      pilot: 'silicon', collection: 'workspace', quality: 'analysis', analysis: 'analysis', findings: 'editor', report: 'editor',
+      review: 'preflight', export: 'preflight', defense: 'defense',
+    };
+    go(destinations[id]);
+  }, [go, research]);
 
   const revisionScope = useCallback((): ReportRunScope => {
     const b = threads.view(owner), t = b.threads.find(item => item.id === b.active);
     if (!owner || owner === 'guest' || !isCurrentAccount(owner, identityEpoch)) return { owner: null, epoch: identityEpoch, thread: t?.id ?? null, project: t ? t.projectId : b.draftProject };
     return { owner, epoch: identityEpoch, thread: t?.id ?? null, project: t ? t.projectId : b.draftProject };
   }, [owner, identityEpoch, isCurrentAccount]);
-  const openRevisionSettings = useCallback(() => { window.location.hash = 'services'; }, []);
+  const openRevisionSettings = useCallback(() => go('services'), [go]);
   const revision = useSectionRevision({
     sectionId: pickedSection, scope: { owner: owner === 'guest' ? null : owner, epoch: identityEpoch, thread: thread?.id ?? null, project: projectId }, service: reportService, design: view.design,
     readScope: revisionScope, readSnapshot: readRevisionSnapshot, apply: reviseSection,
@@ -325,7 +348,6 @@ export default function AgentShell() {
     openSettings: openRevisionSettings, mutate, disabled: !!liveWriting?.active || !!visibleCandidate, disabledReason: visibleCandidate ? '请先采纳或关闭整稿候选，再修订当前报告。' : undefined, readDisabled: () => !!activeReportRun.current || !!preparingReport.current,
   });
 
-  const [artifactOpen,setArtifactOpen]=useState(false),[artifactNotice,setArtifactNotice]=useState<string|null>(null);
   const draftWriter=useRef<{scope:string;write:(text:string)=>boolean}|null>(null);
   const artifactThreadId=`${thread?.id??''}`;
   const artifactProjectId=projectId==null?null:`${projectId}`;
@@ -414,7 +436,7 @@ export default function AgentShell() {
 
   const agent = useMemo(() => {
     // Read the store synchronously at dispatch: a selection can change before the next effect updates `latest`.
-    const currentService = (task: ModelTask) => resolveModelRoute(task, latest.current.generation.lists.services, getModelPreferences(latest.current.owner)).service;
+    const currentService = (task: ModelTask, call?:ModelCallId) => resolveStageModelRoute(call??(task==='research'?'research.conversation':task==='questionnaire'?'survey.questionnaire':'report.draft'), latest.current.generation.lists.services, getStageModelPreferences(latest.current.owner)).service;
     // Commands always run here, in the browser; other sentences go to the model when the user has chosen to talk with one.
     const send = (raw: string) => {
       const text = raw.trim();
@@ -730,7 +752,7 @@ export default function AgentShell() {
         case 'generateFullReport': {
           if (activeReportRun.current || preparingReport.current) { say([span('当前已有候选稿任务在准备或生成，请等待完成或取消运行。', 'dim')]); break; }
           const current = latest.current;
-          const service = currentService('report');
+          const service = currentService('report','report.full');
           if (!current.owner || current.owner === 'guest' || current.generation.account !== 'ready' || !service || !current.csrfToken) {
             say([span('生成候选稿需要登录并在模型设置中选择可用的报告服务。', 'dim')]); go('services'); break;
           }
@@ -760,7 +782,7 @@ export default function AgentShell() {
             try {
               const inputRevision = await fullReportInputRevision({ topic, mode, base });
               if (preparingReport.current !== preparation || !sameReportRunScope(requestScope, readReportScope()) || reportSourceKey(latest.current.reportSource) !== sourceKey) return;
-              const selected = currentService('report');
+              const selected = currentService('report','report.full');
               if (!selected || selected.id !== service.id || selected.revision !== service.revision) { say([span('报告模型配置已变化，请重新点击生成并核对服务。', 'dim')]); return; }
               if (!matchesModelConsent(action.modelBinding, callOwner, callEpoch, service) || action.inputRevision !== inputRevision) {
                 threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('发送前核对本次任务：')]], cards: [{ kind: 'confirm', title: `${REPORT_MODES[mode]} · ${service.label} · ${service.model} · v${service.revision}`,
@@ -971,8 +993,7 @@ export default function AgentShell() {
           <p id="agent-account-note" className={styles.menuNote} aria-hidden="true">{email}</p>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('workspace'); setRailMenu(null); }}>项目门户</button>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('services'); setRailMenu(null); }}>模型服务</button>
-          <Link role="menuitem" className={styles.menuItem} href="/agent/workspace">对话工作区 ↗</Link>
-          <Link role="menuitem" className={styles.menuItem} href="/workspace">经典工作台 ↗</Link>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { closePanel(); setStage('chat'); setRailMenu(null); }}>研究路线</button>
           {/* Signing out asks first when this tab still holds unsaved drafts. */}
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}>退出登录</button>
         </div>}
@@ -1040,6 +1061,7 @@ export default function AgentShell() {
           <span className={styles.modelTag} title={chatMode === 'model' ? '对话由这个模型服务回答；在输入框的菜单里更换' : '指令模式：不调用模型；在输入框的菜单里可以改用模型对话'}>
             {chatMode === 'model' ? chatService ? `${chatService.label} · ${chatService.model}` : '未选模型' : '指令模式'}
           </span>
+          <button type="button" className={styles.chip} onClick={() => go('services')} aria-label="模型配置">模型配置</button>
           <button type="button" className={styles.codeToggle} aria-pressed={showCode} onClick={() => setShowCode(!showCode)}
             title={showCode ? '隐藏每项结果背后的代码' : '显示每项结果背后可复现的 Python 代码：负责编程的同学打开，其他人保持关闭即可'}><Icon name="code" />显示代码</button>
           {exportThread && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
@@ -1136,19 +1158,18 @@ export default function AgentShell() {
           <button type="button" className={styles.iconButton} aria-label="收起证见 AI" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
         </div>}
         <div ref={scrollRef} className={styles.scroll}>
-          {messages.length ? <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />
-            : <div className={styles.empty}>
-              <div className={styles.emptyMark}><BrandMark size={44} /></div>
-              <h1>我们要研究什么？</h1>
-              <p>{chatMode === 'model'
-                ? `对话由「${chatService?.label ?? '模型服务'}」回答：每段对话第一次发送前请你确认；它看不到原始数据，项目里的数字以工具读到的为准。`
-                : '对话是指令模式：听得懂命令和常用说法，听不懂会直说，不编造。在模型菜单里可以改用你自己的模型服务对话。'}</p>
-              <div className={styles.suggestions}>{SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => agent.send(s)}>{s}</button>)}</div>
-            </div>}
+          <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
+            owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
+            modelRoutes={journeyModelRoutes} defaultServiceId={stagePreferences.defaultServiceId ?? null}
+            onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
+            onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}
+            onOpenSettings={() => go('services')} onOpenStage={openResearchStage}
+            onTopic={research.topic} literature={research.literature} onLiterature={research.setLiterature} />
+          {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />}
         </div>
         <Composer onDraftWriter={registerDraftWriter} onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
           projects={projects} projectId={projectId} onProject={threads.setProject}
-          services={services} serviceId={chatService?.id ?? ''} onService={id => prefer('research', id)}
+          services={services} serviceId={chatService?.id ?? ''} onService={id => setStageModelPreference(owner, 'research.conversation', id || null)}
           mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
         </div>
       </main>
@@ -1163,7 +1184,7 @@ export default function AgentShell() {
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>
           {lit && <span className={styles.panelLight}><LightBar score={lit.score} /><b>{percent(lit.score)}</b>{lit.summary}</span>}
           <span className={styles.spacer} />
-          {panel !== 'overview' && <Link className={styles.panelLink} href={`/workspace#${panel}`}>在经典工作台打开 ↗</Link>}
+          {panel !== 'overview' && <button type="button" className={styles.codeToggle} onClick={() => setExpanded(true)}><Icon name="edit" />展开编辑</button>}
           <button type="button" className={styles.iconButton} aria-pressed={expanded} aria-label={expanded ? '还原，显示对话' : '铺满，暂时收起对话'}
             title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
