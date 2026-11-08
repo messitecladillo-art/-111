@@ -21,7 +21,7 @@ import {
   buildChartStudioTurn,
   buildCoachTurn,
   buildCodeStudioTurn,
-  buildHanchaoTurn,
+  buildDemoTurn,
   buildWritingStudioTurn,
   type ChartStudioCardData,
   type CodeStudioCardData,
@@ -117,12 +117,11 @@ export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
   { name: '全报告', args: '任意课题或留空', line: 'AI 全流程自动生成 26 节国奖级全报告（00–06 技能包 · 事实锁死 · 六大顾问自愈）', words: ['fullreport', 'autoreport'] },
   { name: '密钥', args: 'sk-...', line: '绑定当前会话大模型 API Key（DeepSeek / OpenAI）用于全报告自动生成', words: ['apikey', 'key'] },
-  { name: '铸造', args: '任意课题或留空', line: '通用国奖全链条铸造引擎（任意选题 → 12题量表·641样本·6模型·100分报告）', words: ['forge', 'award', 'benchmark'] },
-  { name: '汉超', args: '样板或课题', line: '八大国奖范式对标账本与「汉超」308页全链条素材检视', words: ['hanchao'] },
-  { name: '备赛', line: '参赛者八阶全周期领航员与卡点诊断', words: ['coach', 'guide'] },
-  { name: '绘图', args: '图题或维度', line: '交互式出版级统计制图工坊（5 类图型 · 4 套国奖透镜 · 数据自由编辑）', words: ['plot', 'chart'] },
-  { name: '编程', args: '方法或语言', line: 'Python / R / SPSS / LaTeX 三线表可复现统计编程工坊', words: ['code', 'script'] },
-  { name: '撰稿', args: '章节或模板', line: '国奖循证撰稿、事实胶囊注入与 5W1H 答辩手卡工坊', words: ['compose', 'polish'] },
+  { name: '铸造', args: '任意课题或留空', line: '生成一套教学模拟研究：问卷、模拟作答，以及在模拟数据上实际计算的结果与报告', words: ['forge', 'award', 'benchmark', 'demo'] },
+  { name: '备赛', line: '正大杯备赛八个阶段与下一步', words: ['coach', 'guide'] },
+  { name: '绘图', args: '图题或维度', line: '把已登记结果画成图（5 类图型 · 4 套配色 · 可编辑标签）', words: ['plot', 'chart'] },
+  { name: '编程', args: '方法或语言', line: 'Python / R / SPSS 分析脚本与 LaTeX 三线表（取自已登记结果）', words: ['code', 'script'] },
+  { name: '撰稿', args: '章节或模板', line: '章节写作模板、事实胶囊注入与合规体检', words: ['compose', 'polish'] },
   { name: '照度', line: '各模块的证据完整度', words: ['status'] },
   { name: '印鉴', line: '生成九门循证核验码与四阶证据摘要', words: ['seal', 'certificate'] },
   { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
@@ -256,14 +255,14 @@ function buildFullReportTurn(ctx: RouterContext, rawTopic = ''): AgentTurn {
       title: '全流程自动生成契约 · 00–06 市调科研融合技能包',
       lines: [
         [t('00 全流程门禁', 'teal'), t('　锁定 demonstration/empirical 模式，自动构建《结论证据表》《文献核验表》《统计结果表》《图表登记表》四张交接台账', 'dim')],
-        [t('01–04 证据锁死', 'teal'), t('　12 题全映射量表 · 641 行样本 · 6 项 SHA-256 统计快照 · 受控占位符 {F1}..{F77} / {G1}..{G6} / {R1}..{R3}', 'dim')],
-        [t('05 两阶段撰稿', 'teal'), t('　调用 DeepSeek 并发撰写 26 节正文（约 120 段、2.2 万字），严禁自造任何统计数字', 'dim')],
-        [t('06 六顾问自愈', 'teal'), t('　设/证/统/图/写/交 六大顾问终审自愈（防因果误读、OR 误读、稳健性误读、漏引图表），确保 100/100 交付', 'dim')],
+        [t('01–04 证据锁死', 'teal'), t('　项目已登记的结果，或在教学模拟数据上实际计算的结果；正文数字只能以占位符 {F编号} / {G编号} / {R编号} 引用', 'dim')],
+        [t('05 两阶段撰稿', 'teal'), t('　调用大模型并发撰写叙述性章节，不得自造任何统计数字；未登记的分析整段拒收', 'dim')],
+        [t('06 六顾问审稿', 'teal'), t('　设/证/统/图/写/交 六位顾问审稿，问题段落交回模型修订（因果误读、OR 误读、稳健性误读、漏引图表）', 'dim')],
       ],
       links: [
-        { label: `立即生成「${topic.slice(0, 14)}」全报告（26节）`, action: { type: 'generateFullReport', topic: rawTopic.trim() || ctx.projectTitle?.trim() || '' }, primary: true },
-        say('切换课题：智慧养老终端调查', '/全报告 银发数智·适老跃迁：城市老年群体智慧医疗终端使用障碍与无障碍服务优化调查'),
-        say('切换课题：高校AIGC治理', '/全报告 智启未来：高校学生生成式AI辅助学习采纳机制与学术规范治理调查'),
+        { label: `立即生成「${topic.slice(0, 14)}」全报告`, action: { type: 'generateFullReport', topic: rawTopic.trim() || ctx.projectTitle?.trim() || '' }, primary: true },
+        say('换一个课题：社区助餐服务', '/全报告 城市社区助餐服务的使用体验、满意度与持续使用意愿调查'),
+        say('换一个课题：大学生 AI 学习工具', '/全报告 大学生使用 AI 学习工具的体验、规范认知与持续使用意愿调查'),
       ],
     }],
     chips: [
@@ -499,8 +498,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '下一步': return { turn: nextStep(ctx) };
     case '全报告': return { turn: buildFullReportTurn(ctx, arg) };
     case '密钥': return { turn: buildApiKeyTurn(arg) };
-    case '铸造':
-    case '汉超': return { turn: buildHanchaoTurn(ctx, arg) };
+    case '铸造': return { turn: buildDemoTurn(ctx, arg) };
     case '备赛': return { turn: buildCoachTurn(ctx) };
     case '绘图': return { turn: buildChartStudioTurn(ctx, arg) };
     case '编程': return { turn: buildCodeStudioTurn(ctx, arg) };
@@ -534,7 +532,7 @@ const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|�
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
 const SEAL = /印鉴|九门印鉴|核验印鉴|循证印鉴|核验码/u;
 const FULL_REPORT = /(?:自动|一键|全流程|ai|大模型).{0,6}(?:生成|起草|撰写|写)(?:整份|全篇|完整|全套|全)?报告|(?:生成|起草|撰写)全报告/iu;
-const HANCHAO = /铸造|国奖标准|全链条产出|汉超|蒜鸟|武汉城市足球|国奖标杆|标杆样板|双轨赛道/u;
+const DEMO = /铸造|教学模拟研究|全链条演示|国奖标杆|标杆样板/u;
 const COACH = /备赛|参赛指南|八阶|国奖路线|怎么拿国奖/u;
 const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
 const CODE_STUDIO = /^(?:打开)?(?:编程|写代码|统计编程|代码工坊|三线表代码|复现代码|python代码|r代码|spss代码)(?:工坊)?$|生成.*(?:python|r语言|spss|latex).*代码/iu;
@@ -563,7 +561,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
   if (SEAL.test(input)) return { turn: sealStatus(ctx) };
   if (FULL_REPORT.test(input)) return { turn: buildFullReportTurn(ctx, input.replace(FULL_REPORT, '').trim()) };
-  if (HANCHAO.test(input)) return { turn: buildHanchaoTurn(ctx, input) };
+  if (DEMO.test(input)) return { turn: buildDemoTurn(ctx, input) };
   if (COACH.test(input)) return { turn: buildCoachTurn(ctx) };
   if (PLOT_STUDIO.test(input)) return { turn: buildChartStudioTurn(ctx, input) };
   if (CODE_STUDIO.test(input)) return { turn: buildCodeStudioTurn(ctx, input) };

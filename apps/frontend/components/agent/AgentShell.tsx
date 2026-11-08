@@ -300,12 +300,14 @@ export default function AgentShell() {
       paperContent.report.some(s => /写作提示】/u.test(s.body));
     if (isBareSkeleton) {
       autoHydratedRef.current = true;
-      loadBenchmark('current');
-      window.setTimeout(() => {
-        if (latest.current.liveReport) {
-          choreo.playFullTheaterShowcase(latest.current.liveReport);
-        }
-      }, 260);
+      // The teaching simulation is computed here (its analyses run in a fraction of a second); the showcase plays once
+      // the computed report is in place.
+      void loadBenchmark('current').then(loaded => {
+        if (!loaded) return;
+        window.setTimeout(() => {
+          if (latest.current.liveReport) choreo.playFullTheaterShowcase(latest.current.liveReport);
+        }, 260);
+      });
     }
   }, [stage, paperContent, loadBenchmark, choreo, deferredView]);
   const agent = useMemo(() => {
@@ -703,7 +705,7 @@ export default function AgentShell() {
                     if (!trimmed) continue;
                     const evt = JSON.parse(trimmed);
                     if (evt.type === 'init' && evt.pack) {
-                      loadBenchmark(action.topic.trim() || 'current', evt.pack);
+                      void loadBenchmark(action.topic.trim() || 'current', evt.pack);
                       setLiveWriting(prev => ({
                         active: true,
                         phase: 'wave1',
@@ -712,7 +714,7 @@ export default function AgentShell() {
                         paragraphs: 0,
                         facts: 0,
                         lastSectionId: null,
-                        lastSectionTitle: '9 章 26 节蓝图与 6 项统计图表已就位，DeepSeek 正在并发落笔…',
+                        lastSectionTitle: '报告蓝图与已登记的结果已就位，模型正在并发起草…',
                         topicTitle: evt.topic?.shortTitle || prev?.topicTitle || topicLabel,
                         autoFollow: autoFollowRef.current,
                       }));
@@ -781,7 +783,7 @@ export default function AgentShell() {
                 throw new Error(finalData?.message || '未收到完整报告数据包');
               }
 
-              loadBenchmark(action.topic.trim() || 'current', finalData.pack);
+              void loadBenchmark(action.topic.trim() || 'current', finalData.pack);
               const s = finalData.summary;
               if (!s) throw new Error('未收到完整报告数据包');
               const firstSectionId = finalData.pack.report?.report?.[0]?.id ?? 'sec-abstract';
@@ -862,33 +864,37 @@ export default function AgentShell() {
           break;
         }
         case 'loadBenchmark':
-          loadBenchmark(action.benchmarkId);
           setStage('paper');
           closePanel();
-          window.setTimeout(() => {
-            if (latest.current.liveReport) {
-              choreo.playFullTheaterShowcase(latest.current.liveReport);
+          void loadBenchmark(action.benchmarkId).then(loaded => {
+            if (!loaded) {
+              say([span('教学模拟研究没有生成成功，当前工作区未作改动。')]);
+              return;
             }
-          }, 220);
-          say(
-            [
-              span('已为您全链条铸造国奖标准成果包并呈现在中间报告画布（课题参数：'),
-              span(`「${action.benchmarkId === 'current' ? '当前项目选题' : action.benchmarkId}」`, 'strong'),
-              span(' · 12 题全映射量表 · '),
-              span('641 行', 'gold'),
-              span('双轨合成样本 · '),
-              span('6 项', 'gold'),
-              span('SHA-256 统计快照 · '),
-              span('4 条', 'gold'),
-              span('确认发现 · 100/100 基准分正文与 8 页路演分镜）。四室照度已 100% 点亮。'),
-            ],
-            [
-              { label: '查看九门金石印鉴', action: { type: 'say', text: '/印鉴' }, primary: true },
-              { label: '/绘图', action: { type: 'say', text: '/绘图' } },
-              { label: '/编程', action: { type: 'say', text: '/编程' } },
-              { label: '/撰稿', action: { type: 'say', text: '/撰稿' } },
-            ],
-          );
+            window.setTimeout(() => {
+              const report = latest.current.liveReport;
+              if (report) choreo.playFullTheaterShowcase(report);
+              const results = report?.quality?.results ?? [];
+              const kept = results.find(r => r.method === 'quality-control')?.n;
+              say(
+                [
+                  span('已生成教学模拟研究并放进中间报告画布：'),
+                  span(`「${report?.title ?? action.benchmarkId}」`, 'strong'),
+                  span(' · 问卷 12 题'),
+                  ...(kept ? [span(' · 筛查后保留 '), span(`${kept} 份`, 'gold'), span('模拟作答')] : []),
+                  span(' · '),
+                  span(`${results.length} 项`, 'gold'),
+                  span('结果由分析引擎在模拟数据上计算并登记。叙述性章节留空，可用 /全报告 交给模型起草。'),
+                ],
+                [
+                  { label: '/全报告', action: { type: 'say', text: '/全报告' }, primary: true },
+                  { label: '/绘图', action: { type: 'say', text: '/绘图' } },
+                  { label: '/编程', action: { type: 'say', text: '/编程' } },
+                  { label: '/撰稿', action: { type: 'say', text: '/撰稿' } },
+                ],
+              );
+            }, 220);
+          });
           break;
         case 'insertStudioBlock': {
           const cleanParagraphs = action.paragraphs.filter(p => typeof p === 'string' && p.trim()).slice(0, 12);
@@ -1104,10 +1110,12 @@ export default function AgentShell() {
             onInstantForge={topic => agent.perform({ type: 'loadBenchmark', benchmarkId: topic || 'current' })}
             onPlayChoreography={() => {
               if ((paperContent.quality?.results?.length ?? 0) === 0) {
-                loadBenchmark('current');
-                window.setTimeout(() => {
-                  if (latest.current.liveReport) choreo.playFullTheaterShowcase(latest.current.liveReport);
-                }, 220);
+                void loadBenchmark('current').then(loaded => {
+                  if (!loaded) return;
+                  window.setTimeout(() => {
+                    if (latest.current.liveReport) choreo.playFullTheaterShowcase(latest.current.liveReport);
+                  }, 220);
+                });
               } else {
                 choreo.playFullTheaterShowcase(paperContent);
               }

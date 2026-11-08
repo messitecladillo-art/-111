@@ -25,7 +25,7 @@ import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel
 import type { ReactNode } from "react";
 import type { EditorContent } from "@/lib/editor-model";
 import type { ProjectView } from "@/lib/agent/illumination";
-import { forgeNationalAwardPack } from "@/lib/agent/hanchao-benchmark";
+import { buildDemoPack, type DemoPack } from "@/lib/agent/demo-study";
 import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -575,7 +575,7 @@ function CanvasPanel({ dataset, design }: { dataset: DatasetValue | null; design
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string, customPack?: import("@/lib/agent/hanchao-benchmark").HanchaoBenchmarkPack) => void; setLiveReport: (content: EditorContent) => void } {
+export function useWorkbenchModules(observeReport = false): { panels: Record<WorkbenchPanel, ReactNode>; view: ProjectView; publishProposal: (proposal: AgentQuestionnaireProposal) => void; sendToReport: (insert: import("@/lib/report-insert").ReportInsert) => void; tweakFigure: (tweak: FigureTweak) => void; loadBenchmark: (id: string, customPack?: DemoPack) => Promise<boolean>; setLiveReport: (content: EditorContent) => void } {
   const { session, identityEpoch, loading } = useHostedSession();
   // The agent keeps its report draft in this browser, for whoever is signed in; the classic workbench does not.
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
@@ -599,12 +599,17 @@ export function useWorkbenchModules(observeReport = false): { panels: Record<Wor
   // Until the editor has opened in this visit, the stored draft stands for the report.
   const report=edited&&edited.owner===draftOwner?edited.content:storedDraft;
   const reportChanged=useCallback((content:EditorContent)=>{setReport({owner:draftOwner,content});if(draftOwner)saveReportDraft(draftOwner,content);},[draftOwner]);
-  const loadBenchmark = useCallback((id: string, customPack?: import("@/lib/agent/hanchao-benchmark").HanchaoBenchmarkPack) => {
-    const pack = customPack ?? forgeNationalAwardPack(id === 'current' ? undefined : id, exchange.design?.design ?? null);
+  // A teaching simulation for the topic: its questionnaire, its screened answers, and a report whose results the
+  // analysis engine computed on them. A pack the full-report pipeline already built is loaded as it is.
+  const loadBenchmark = useCallback(async (id: string, customPack?: DemoPack) => {
+    let pack: DemoPack;
+    try { pack = customPack ?? await buildDemoPack(id === 'current' ? undefined : id, exchange.design?.design ?? null); }
+    catch { return false; }
     handoffs.setDesign({ design: pack.design, pending: false });
     handoffs.setDataset(pack.dataset);
     reportChanged(pack.report);
     setBenchmarkEpoch(e => e + 1);
+    return true;
   }, [handoffs, exchange.design, reportChanged]);
   const dataset=exchange.dataset;
   const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==="simulated",hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith("质控"))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);

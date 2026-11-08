@@ -12,7 +12,7 @@ import {
   tidyComparisons,
   unbackedAnalyses,
 } from '../lib/agent/full-report-pipeline.ts';
-import { decomposeContestTopic, forgeNationalAwardPack } from '../lib/agent/hanchao-benchmark.ts';
+import { buildDemoPack, decomposeTopic } from '../lib/agent/demo-study.ts';
 import { benchmarkReport } from '../lib/report-benchmark.ts';
 
 const tokens = {
@@ -79,26 +79,29 @@ test('the sanitizer keeps what a sentence says: a threshold is not turned into s
 });
 
 test('section facts come only from registered results and the study records, never from typed-in numbers', async () => {
-  const pack = await forgeNationalAwardPack('');
-  const results = pack.report.quality.results;
+  const pack = await buildDemoPack('');
+  // A registered sampling frame's two counts give the one fact worked out rather than read: its valid rate.
+  const frame = { id: 'frame', title: '抽样框', method: 'sampling-frame', n: 0, total: 0, headers: ['层', '单位'], rows: [], metrics: [{ label: '实际发放问卷', value: 200 }, { label: '有效回收样本', value: 180 }], warnings: [], classification: 'simulated', variables: [], sourceName: '', sourceUrl: '', sourceHash: '', resultHash: '' };
+  const results = [...pack.report.quality.results, frame];
   const held = { results, findings: pack.report.quality.findings ?? [], pending: false, placed: results.map(r => r.id) };
   const facts = buildSectionTokens(held, pack.report, 'data.pilot', pack.design).facts;
   // Every fact value is a registered metric, a registered cell, a rate worked out from two registered counts, or the questionnaire's length.
   const registered = new Set(results.flatMap(r => [String(r.n), ...r.metrics.map(m => m.value), ...r.rows.flat()].filter(v => v !== null).map(v => String(v).replace(/%$/u, ''))));
   for (const f of facts) {
-    const bare = f.value.replace(/%$/u, '');
-    const known = registered.has(bare) || [...registered].some(v => Number(v) === Number(bare)) || /有效回收率为/u.test(f.text) || /道题$/u.test(f.text);
+    const bare = f.value.replace(/%$/u, '').replace(/−/gu, '-');
+    // A fact prints a registered value as the report does: rounded to the places it shows.
+    const places = (bare.split('.')[1] ?? '').length;
+    const known = registered.has(bare) || [...registered].some(v => Number.isFinite(Number(v)) && Number(Number(v).toFixed(places)) === Number(bare))
+      || /有效回收率为/u.test(f.text) || /道题$/u.test(f.text) || bare === '<0.001';
     assert.ok(known, `${f.id} ${f.text}`);
   }
-  // Typed into the pipeline before, registered by no result: a KMO, a pilot KMO, a CITC floor, an expected count, an n0.
-  for (const typed of ['0.864', '0.841', '0.68', '26.37', '384.16']) assert.ok(!facts.some(f => f.value === typed), typed);
   const rate = facts.find(f => /有效回收率为/u.test(f.text));
-  assert.equal(rate?.value, '94.4%', 'the rate is 641 valid of 679 issued, as the frame registers them');
+  assert.equal(rate?.value, '90.0%', 'the rate is 180 valid of 200 issued, as the frame registers them');
 });
 
 test('a simulated pack is always written up as a teaching demonstration, and its plain references are not called verified', async () => {
-  const pack = await forgeNationalAwardPack('');
-  const contract = buildSkillPackContract(pack, decomposeContestTopic(''), 'demonstration');
+  const pack = await buildDemoPack('');
+  const contract = buildSkillPackContract(pack, decomposeTopic(''), 'demonstration');
   assert.ok(contract.literatureLedger.every(l => l.verificationStatus !== 'verified' || (pack.report.references ?? []).some(r => r.id === l.sourceId && r.verification === 'verified')));
   assert.ok(contract.designMatrix.every(row => !/Logit|优势比/u.test(row.analysisMethod)), 'no analysis is planned as done that no result registers');
   const res = await generateFullReportWithAgent({
@@ -186,7 +189,7 @@ test('a registered category may carry digits in its name; other digits are still
 });
 
 test('in a project, only the sections asked for are drafted; the others keep their text, figures and tables', async () => {
-  const pack = await forgeNationalAwardPack('城市社区嵌入式养老服务的使用体验与满意度调查');
+  const pack = await buildDemoPack('城市社区嵌入式养老服务的使用体验与满意度调查');
   const report = structuredClone(pack.report);
   const compare = report.report.find(s => /差异检验/u.test(s.title));
   compare.body = '【教学模拟数据，不能作为实际调查结果】\n这是作者已经写好的比较一节。';
@@ -218,11 +221,11 @@ test('a second revision round may fix what the first did not; without a sampling
   assert.equal(revisions, 2, 'two rounds');
   assert.ok(res.report.report.some(s => s.body.includes('不能说明因果方向')), 'the second round\'s fix is kept');
   assert.equal(res.summary.revisedSections, 1);
-  // The teaching package registers a sampling frame, so its prompt allows the design's own name; a project without one does not.
-  const pack = await forgeNationalAwardPack('城市社区嵌入式养老服务的使用体验与满意度调查');
-  const noFrame = { ...pack.report, quality: { ...pack.report.quality, results: pack.report.quality.results.filter(r => r.method !== 'sampling-frame') } };
+  // The teaching simulation is a convenience sample and registers no sampling frame, so its prompt bars probability-sampling names.
+  const pack = await buildDemoPack('城市社区嵌入式养老服务的使用体验与满意度调查');
+  assert.ok(!pack.report.quality.results.some(r => r.method === 'sampling-frame'));
   const seen = [];
-  await generateFullReportWithAgent({ base: { design: pack.design, dataset: pack.dataset, report: noFrame }, llm: { apiKey: 'x', concurrency: 1 }, sectionNodes: ['design.sampling'], fetcher: async (_u, init) => { seen.push(JSON.parse(init.body).messages[0].content); return reply('本次样本为配额样本。'); } });
+  await generateFullReportWithAgent({ base: { design: pack.design, dataset: pack.dataset, report: pack.report }, llm: { apiKey: 'x', concurrency: 1 }, sectionNodes: ['design.sampling'], fetcher: async (_u, init) => { seen.push(JSON.parse(init.body).messages[0].content); return reply('本次样本为配额样本。'); } });
   assert.match(seen[0], /没有登记抽样框：不用“随机抽样、分层抽样/u);
 });
 

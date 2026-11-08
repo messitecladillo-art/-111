@@ -29,7 +29,7 @@ function buildPureChartSvg(options: {
   annotation: string;
   points: Array<{ label: string; primary: number; secondary?: number; note?: string }>;
 }): string {
-  const pal = STUDIO_PALETTES[options.paletteId] ?? STUDIO_PALETTES['hanchao-pitch'];
+  const pal = STUDIO_PALETTES[options.paletteId] ?? STUDIO_PALETTES['pitch-green'];
   const W = 720;
   const H = 390;
   const padL = 68;
@@ -183,7 +183,31 @@ function triggerDownload(filename: string, content: string, mime = 'text/plain;c
 
 /* ──────────────── 1. Chart Studio Card ──────────────── */
 
+/** The chart studio draws registered results only; before there are any, it says where they come from. */
 export function ChartStudioView({
+  data,
+  onAction,
+}: {
+  data: ChartStudioCardData;
+  onAction: (action: AgentAction) => void;
+}) {
+  if (!data.datasets.length) {
+    return (
+      <div className={styles.studioWrap}>
+        <p className={styles.studioEmpty}>
+          还没有可画的结果。图表工坊只画项目已登记的分析结果：先在数据分析里运行并登记，或生成一套教学模拟研究。
+        </p>
+        <div className={styles.studioActions}>
+          <button type="button" className={styles.studioPrimaryBtn} onClick={() => onAction({ type: 'say', text: '/铸造' })}>生成教学模拟研究</button>
+          <button type="button" className={styles.studioSecondaryBtn} onClick={() => onAction({ type: 'say', text: '/结果' })}>查看结果清单</button>
+        </div>
+      </div>
+    );
+  }
+  return <ChartStudioEditor data={data} onAction={onAction} />;
+}
+
+function ChartStudioEditor({
   data,
   onAction,
 }: {
@@ -235,10 +259,7 @@ export function ChartStudioView({
   };
 
   const handleAddPoint = () => {
-    setCustomPoints(prev => [
-      ...prev,
-      { label: `自定义维度 ${prev.length + 1}`, primary: 4.1, secondary: 3.8, note: '新增观测' },
-    ]);
+    setCustomPoints(prev => [...prev, { label: `新的类别 ${prev.length + 1}`, primary: 0 }]);
   };
 
   const handleRemovePoint = (idx: number) => {
@@ -266,13 +287,15 @@ export function ChartStudioView({
     const summaryLine = customPoints
       .map(p => `${p.label}为 ${p.primary}${activeSpec.unit}${p.secondary !== undefined ? `（对比组 ${p.secondary}${activeSpec.unit}）` : ''}`)
       .join('，');
+    // Numbers changed in the studio are no longer the registered result's: the inserted text says so.
+    const edited = JSON.stringify(customPoints.map(p => [p.label, p.primary, p.secondary ?? null])) !== JSON.stringify(activeSpec.points.map(p => [p.label, p.primary, p.secondary ?? null]));
     onAction({
       type: 'insertStudioBlock',
       node: activeSpec.targetNode,
       title: customTitle || activeSpec.title,
       paragraphs: [
         `${customTitle || activeSpec.title}`,
-        `由制图工坊统计结果可知（${activeSpec.sourceLabel}）：${summaryLine}。核心诊断结论：${customAnnotation || activeSpec.annotation}`,
+        `据已登记结果（${activeSpec.sourceLabel}）：${summaryLine}。${customAnnotation || activeSpec.annotation}${edited ? '【注意：以上数值在制图工坊中改动过，与登记结果不一致，定稿前请核对。】' : ''}`,
       ],
     });
     setPushedMsg('已将该图表标题与统计读数写入报告对应章节，可在右侧报告中查看。');

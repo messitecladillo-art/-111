@@ -22,12 +22,7 @@ import { METHOD_LABELS, suggestedNode, targetSection } from '../report-placement
 import type { ReportBlock, ResultSnapshot } from '../research-quality.ts';
 import { ADVISORS, type AdvisorReading, advisorForNode, advisorReading, sectionIssues } from './advisors.ts';
 import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline } from './draft.ts';
-import {
-  type ContestTopicBlueprint,
-  type HanchaoBenchmarkPack,
-  decomposeContestTopic,
-  forgeNationalAwardPack,
-} from './hanchao-benchmark.ts';
+import { buildDemoPack, decomposeTopic, noteDrafting, type DemoBlueprint, type DemoPack } from './demo-study.ts';
 import { standingFindings, type ResultsView } from './router.ts';
 
 export type ProjectResearchMode = 'plan' | 'demonstration' | 'empirical';
@@ -95,7 +90,7 @@ export type DesignMatrixRow = {
 export type SkillPackContract = {
   mode: ProjectResearchMode;
   dataStatus: ProjectDataStatus;
-  topic: ContestTopicBlueprint;
+  topic: DemoBlueprint;
   designMatrix: DesignMatrixRow[];
   claimLedger: ClaimLedgerRow[];
   literatureLedger: LiteratureLedgerRow[];
@@ -136,8 +131,8 @@ export type SectionGenerationTrace = {
 };
 
 export type FullReportGenerationResult = {
-  pack: HanchaoBenchmarkPack;
-  topic: ContestTopicBlueprint;
+  pack: DemoPack;
+  topic: DemoBlueprint;
   report: EditorContent;
   contract: SkillPackContract;
   traces: SectionGenerationTrace[];
@@ -317,8 +312,8 @@ export function sanitizeModelParagraph(raw: string): string {
  * 构建《市调科研融合技能包·中文版》00–04 阶段的四张核心证据台账与调查设计矩阵
  */
 export function buildSkillPackContract(
-  pack: HanchaoBenchmarkPack,
-  topic: ContestTopicBlueprint,
+  pack: DemoPack,
+  topic: DemoBlueprint,
   mode: ProjectResearchMode = 'demonstration',
 ): SkillPackContract {
   const dataStatus: ProjectDataStatus = mode === 'empirical' ? 'verified' : mode === 'demonstration' ? 'synthetic' : 'planned';
@@ -329,30 +324,30 @@ export function buildSkillPackContract(
   const designMatrix: DesignMatrixRow[] = [
     {
       rqId: 'RQ1',
-      question: `「${topic.shortTitle}」中${topic.groupA}与${topic.groupB}在四分类参与状态上是否存在显著结构分化？`,
-      decisionMeaning: '决定运力与运营预算采取「无差别铺开」还是「双轨分层靶向投放」',
-      construct: '双轨受众身份 × 参与转化状态',
+      question: `「${topic.shortTitle}」中${topic.groupA}与${topic.groupB}的${topic.statusConstruct}是否不同？`,
+      decisionMeaning: '决定服务资源是统一投放，还是按人群分别安排',
+      construct: `${topic.groupConstruct} × ${topic.statusConstruct}`,
       itemIds: ['Q1', 'Q2', 'Q8'],
-      analysisMethod: '分层 PPS 抽样设计 + 列联表 Pearson χ² 检验与 Cramér’s V 效应量',
+      analysisMethod: '列联表 Pearson χ² 检验与 Cramér’s V 效应量',
       boundary: '横截面列联检验仅反映群体分布关联，不作个体动态跃迁轨迹推断',
     },
     {
       rqId: 'RQ2',
-      question: `五维核心体验感知量表是否具备跨群组测量信度，哪些体验维度构成高重要—低表现的履约痛点？`,
-      decisionMeaning: '识别亟待优先攻坚的工程与服务短板，避免在低敏感环节过度投入',
-      construct: '五维体验感知（核心品质、场景互动、数字预约、线下履约、社群认同）',
+      question: `${topic.scaleConstruct}是否可靠，哪些方面重要而表现偏低？`,
+      decisionMeaning: '找出应优先改进的服务短板，避免在不敏感的环节过度投入',
+      construct: `五个方面的体验（${topic.dimensions.map(d => d.short).join('、')}）`,
       itemIds: ['Q3', 'Q4', 'Q5', 'Q6', 'Q7'],
-      analysisMethod: 'Cronbach α 内部一致性检验 + 五维均值排序 + 独立样本 Welch t 检验',
-      boundary: '均值差与 t 检验受限于样本覆盖范围，外推至非抽样片区前需重估权重',
+      analysisMethod: 'Cronbach α 内部一致性检验 + 均值比较（Welch t / Welch F）+ 重要性—表现分析',
+      boundary: '均值差异受限于样本覆盖范围，外推到样本以外的人群前需重新评估',
     },
     {
       rqId: 'RQ3',
-      question: `整体满意度、双轨协同支持度与复购留存及口碑推荐意愿之间的关联强度如何？`,
-      decisionMeaning: '量化体验改善与机制协同对二次消费闭环的边际带动潜力',
-      construct: '协同机制支持度、整体满意度与复购留存意愿',
+      question: `${topic.overallSatConstruct}、${topic.mechanismConstruct}与${topic.conversionConstruct}之间的关联有多强？`,
+      decisionMeaning: '判断改善体验与推行机制对持续使用的带动潜力',
+      construct: `${topic.mechanismConstruct}、${topic.overallSatConstruct}与${topic.conversionConstruct}`,
       itemIds: ['Q9', 'Q10', 'Q11', 'Q12'],
       analysisMethod: 'Spearman 秩相关检验',
-      boundary: '陈述性偏好（意愿）不等于实际复购流水，相关系数不直接等同于因果效应',
+      boundary: '陈述性意愿不等于实际行为，相关系数不直接等同于因果效应',
     },
   ];
 
@@ -505,12 +500,11 @@ export function buildSectionTokens(
     }
   }
   if (design?.questions.length) extraFacts.push({ text: `正式问卷共 ${design.questions.length} 道题`, value: String(design.questions.length) });
-  const mergedFacts: Fact[] = [...baseFacts];
-  for (const ef of extraFacts) {
-    if (mergedFacts.length < 80 && !mergedFacts.some(f => f.text === ef.text)) {
-      mergedFacts.push({ id: `F${mergedFacts.length + 1}`, ...ef });
-    }
-  }
+  // The study's own records come first: a long list of results would otherwise fill the eighty places before them.
+  const mergedFacts: Fact[] = [...extraFacts, ...baseFacts.map(({ text, value }) => ({ text, value }))]
+    .filter((f, i, all) => all.findIndex(g => g.text === f.text) === i)
+    .slice(0, 80)
+    .map((f, i) => ({ id: `F${i + 1}`, ...f }));
 
   // Provide current section exhibits first, then report-wide core exhibits so synthesis/diagnosis sections can cite {G1}..{Gn}
   const targetSec = content.report.find(s => matchBlueprintNode(s.title)?.id === nodeId);
@@ -956,9 +950,9 @@ export type FullReportProgressEvent = {
   body?: string;
   source?: string;
   trace?: SectionGenerationTrace;
-  topic?: ContestTopicBlueprint;
+  topic?: DemoBlueprint;
   contract?: SkillPackContract;
-  pack?: HanchaoBenchmarkPack;
+  pack?: DemoPack;
   report?: EditorContent;
   repairsApplied?: string[];
   completed: number;
@@ -980,7 +974,7 @@ export async function generateFullReportWithAgent(input: {
    * A project to write in: its questionnaire, its data, and its report with the results already placed. Without it the
    * pipeline writes over its own simulated teaching package. Sections not asked for keep everything they hold.
    */
-  base?: { design: Questionnaire; dataset: HanchaoBenchmarkPack['dataset']; report: EditorContent };
+  base?: { design: Questionnaire; dataset: DemoPack['dataset']; report: EditorContent };
   mode?: ProjectResearchMode;
   llm: LlmProviderConfig;
   sectionNodes?: readonly string[];
@@ -989,9 +983,11 @@ export async function generateFullReportWithAgent(input: {
 }): Promise<FullReportGenerationResult> {
   const startedAt = Date.now();
   const design = input.base?.design ?? input.existingDesign;
-  const topic = decomposeContestTopic(input.topic, design);
-  const forged = await forgeNationalAwardPack(input.topic, design);
-  const pack: HanchaoBenchmarkPack = input.base ? { ...forged, design: input.base.design, dataset: input.base.dataset, report: input.base.report } : forged;
+  const topic = decomposeTopic(input.topic, design);
+  // Without a project, the pipeline writes up a teaching simulation whose every result the analysis engine computed.
+  const pack: DemoPack = input.base
+    ? { blueprint: topic, design: input.base.design, dataset: input.base.dataset, report: input.base.report }
+    : await buildDemoPack(input.topic, design);
   // The pack's results are simulated, so the report is a teaching demonstration whatever mode was asked for: a
   // simulated sample is never written up as a plan's targets or as verified findings.
   const packResults = pack.report.quality?.results ?? [];
@@ -1260,6 +1256,10 @@ export async function generateFullReportWithAgent(input: {
     return cleared.length ? `章节「${title}」按审稿意见修订：${[...new Set(cleared)].join('、')}` : null;
   };
   const revisionNotes = (await runWithConcurrency([...drafted.keys()], concurrency, reviseSection)).filter((n): n is string => !!n);
+  // The AI appendix says which model drafted the narrative and how its numbers were bound, in place of "not yet drafted".
+  if (traces.some(t => t.status === 'llm_generated')) {
+    workingReport = noteDrafting(workingReport, `叙述性章节由大语言模型（${input.llm.model || 'deepseek-chat'}）在证见全报告流水线中起草：模型只能以占位符引用已登记结果中的数字，数字由程序回填；未登记的分析、汉字数量与无出处的数字会被整段拒收；起草后由报告体检检查常见误读，问题段落交回模型修订。`);
+  }
   const { content: repairedReport, repairs: finishing } = finalizeReport(workingReport, fallbackSections, wantedNodes);
   const repairs = [...revisionNotes, ...finishing];
   input.onProgress?.({
