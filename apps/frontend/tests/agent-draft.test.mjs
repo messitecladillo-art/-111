@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createEditorContent } from '../lib/editor-model.ts';
 import { blueprintSections } from '../lib/report-blueprint.ts';
-import { draftableNode, draftFacts, draftLine, draftRequest, draftSection, draftText, parseDraftReceipt, sectionText } from '../lib/agent/draft.ts';
+import { draftableNode, draftFacts, factNumber, draftLine, draftRequest, draftSection, draftText, parseDraftReceipt, sectionText } from '../lib/agent/draft.ts';
 import { reportPlan, sectionState } from '../lib/agent/report-plan.ts';
 import { illuminate } from '../lib/agent/illumination.ts';
 import { route } from '../lib/agent/router.ts';
@@ -157,4 +157,15 @@ test('the outline reads callouts and citations, names untitled sections, and yie
   const request = draftRequest({ nodeId: 'abstract', held, content, design: null, service: { id: 's', revision: 1 } }).request;
   assert.ok(new TextEncoder().encode(JSON.stringify(request)).length <= 34000);
   assert.ok(request.outline.length >= 20 && request.outline.every(o => o.excerpt.length < 400), 'every section kept, excerpts shortened');
+});
+
+test('a fact prints its number as the report does: p below 0.001 as "<0.001", never scientific notation', () => {
+  assert.equal(factNumber('p 值', 6.211e-47), '<0.001');
+  assert.equal(factNumber('显著性', 0.0004), '<0.001');
+  assert.equal(factNumber('p', 0.0123), '0.012');
+  assert.equal(factNumber('Cramér V', 0.09234), '0.092');
+  assert.equal(factNumber('F', 187.5432), '187.54');
+  assert.equal(factNumber('均值', 4.3), '4.3');
+  assert.equal(factNumber('n', 641), '641');
+  assert.ok(!/e[-+]/u.test(factNumber('系数', 1.2e-9)), 'no scientific notation for tiny values either');
 });

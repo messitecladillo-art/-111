@@ -10,7 +10,7 @@ import { blueprintNode, matchBlueprintNode, type BlueprintNode } from '../report
 import { suggestedNode } from '../report-placement.ts';
 import { literalText } from '../report-templates.ts';
 import type { ResultSnapshot } from '../research-quality.ts';
-import { figure, isFrame, methodName, standingFindings, type Line, type ResultsView, type Span } from './router.ts';
+import { isFrame, methodName, standingFindings, type Line, type ResultsView, type Span } from './router.ts';
 
 /** `text` is what the model reads; `value` is what takes the place of its placeholder in the draft. */
 export type Fact = { id: string; text: string; value: string };
@@ -29,6 +29,17 @@ export type DraftParagraph = { text: string; facts: string[] };
 export type DraftReceipt = { id: string; status: DraftStatus; node: string; paragraphs: DraftParagraph[]; droppedParagraphs: number; errorCode: string | null; usage: TokenUsage | null };
 
 export const MAX_FACTS = 80;
+/**
+ * A number as a report prints it, so a cited fact reads like the readings around it: a p-value below 0.001 as
+ * "<0.001", other values under 1 to three decimals, larger ones to two, whole numbers as they are; never in
+ * scientific notation.
+ */
+export function factNumber(label: string, value: number): string {
+  if (Number.isInteger(value)) return String(value);
+  if (/(^|[^a-z])p(\s*值|$|[^a-z])|显著性|sig/iu.test(label) && Math.abs(value) < 0.001) return '<0.001';
+  const fixed = Math.abs(value) < 1 ? value.toFixed(3) : value.toFixed(2);
+  return fixed.replace(/(\.\d*?)0+$/u, '$1').replace(/\.$/u, '');
+}
 const PLACEHOLDER = /\{(F[1-9][0-9]{0,2})\}/gu;
 const DIGIT = /[0-9０-９]/u;
 const clip = (text: string, limit: number) => text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
@@ -65,7 +76,7 @@ export function draftFacts(held: NonNullable<ResultsView>, nodeId: string): Fact
     const title = clip(r.title, 40);
     if (!isFrame(r)) add(`「${title}」：${methodName(r)}，有效样本 ${r.n}（共 ${r.total}）${r.classification === 'simulated' ? '，教学模拟数据' : ''}`, String(r.n));
     for (const m of r.metrics.slice(0, 4)) if (m.value !== null && Number.isFinite(m.value)) {
-      const share = /[%％]/u.test(m.label), name = m.label.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim(), value = `${figure(m.value)}${share ? '%' : ''}`;
+      const share = /[%％]/u.test(m.label), name = m.label.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim(), value = `${factNumber(m.label, m.value)}${share ? '%' : ''}`;
       add(`「${title}」的${name}为 ${value}`, value);
     }
     if (!isFrame(r)) for (const row of r.rows.slice(0, 6)) rowFacts(r, row, title, add);
@@ -81,7 +92,7 @@ function rowFacts(r: ResultSnapshot, row: ResultSnapshot['rows'][number], title:
     const n = numeric(cell), header = r.headers[i] ?? '';
     if (n === null || shown >= 2 || !header) return;
     shown++;
-    const share = /%|％/u.test(header), name = header.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim(), value = `${figure(n)}${share ? '%' : ''}`;
+    const share = /%|％/u.test(header), name = header.replace(/\s*[（(]\s*[%％]\s*[)）]/gu, '').trim(), value = `${factNumber(header, n)}${share ? '%' : ''}`;
     add(`「${title}」中「${clip(label, 30)}」的${name}为 ${value}`, value);
   });
 }

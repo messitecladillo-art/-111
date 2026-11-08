@@ -1132,7 +1132,7 @@ export async function generateFullReportWithAgent(input: {
         const hydrated = parseAndHydrateSectionDraft(llmRes.content, tokens, context);
         if (hydrated.paragraphs.length > 0) {
           drafted.set(nodeId, { drafts: hydrated.drafts, tokens });
-          const body = hydrated.paragraphs.join('\n\n');
+          const body = hydrated.paragraphs.join('\n');
           const trace: SectionGenerationTrace = {
             nodeId,
             title,
@@ -1214,7 +1214,7 @@ export async function generateFullReportWithAgent(input: {
       if (!revised.paragraphs.length) return null;
       const candidate: EditorContent = {
         ...workingReport,
-        report: workingReport.report.map(s => (s.id === section.id ? { ...s, body: revised.paragraphs.join('\n\n') } : s)),
+        report: workingReport.report.map(s => (s.id === section.id ? { ...s, body: revised.paragraphs.join('\n') } : s)),
       };
       const left = flagged(candidate);
       if (left.length >= issues.length) return null;
