@@ -8,6 +8,7 @@ import { awardCases, awardCaseLibraryNotice } from '@/data/award-cases';
 import type { Burst } from '@/lib/topic-lab/burst';
 import { EMPTY_FEASIBILITY, STATUS_LABELS, evaluateTopic, gapCandidates, matchTitleTerms, risingTerms, type Feasibility, type Status, type TopicEvaluation } from '@/lib/topic-lab/evaluate';
 import type { TermMap } from '@/lib/topic-lab/network';
+import type { LiteratureEvidenceReference } from '@/lib/topic-lab/workspace';
 import { termKey, type TermIndex } from '@/lib/topic-lab/terms';
 import { SIGNAL_LABELS, type CorpusYears, type TermTrend } from '@/lib/topic-lab/trend';
 import EvidenceTree from './EvidenceTree';
@@ -16,15 +17,15 @@ import { ExportButton, PIVOT, clusterColor, fmtInt, fmtP, pct } from './shared';
 const trendWord = (t: TermTrend | null) => !t || t.signal === 'insufficient' ? '' : t.signal === 'rising' ? '（近期上升）' : t.signal === 'falling' ? '（近期下降）' : '';
 import styles from './TopicLab.module.css';
 
-export type TopicHandoff = { title: string; decisionOwner: string };
+export type TopicHandoff = { title: string; decisionOwner: string; evidence: LiteratureEvidenceReference };
 type Props = {
   index: TermIndex; map: TermMap; cy: CorpusYears; trends: Map<string, TermTrend>; bursts: Map<string, Burst>; lastYear: number | null;
-  basket: string[]; setBasket: (next: string[]) => void; synonyms: Map<string, string>; theme: Theme; corpusLabel: string; onUseTopic?: (h: TopicHandoff) => void;
+  basket: string[]; setBasket: (next: string[]) => void; synonyms: Map<string, string>; theme: Theme; corpusLabel: string; evidence?: LiteratureEvidenceReference; onUseTopic?: (h: TopicHandoff) => void;
 };
 type Saved = { id: number; ev: TopicEvaluation };
 const MAX_COMPARE = 4;
 
-export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, basket, setBasket, synonyms, theme, corpusLabel, onUseTopic }: Props) {
+export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, basket, setBasket, synonyms, theme, corpusLabel, evidence, onUseTopic }: Props) {
   const label = (key: string) => index.terms.get(key)?.label ?? key;
   const clusters = useMemo(() => new Map(map.nodes.map(n => [n.key, n.cluster])), [map]);
   const centrality = useMemo(() => new Map(map.nodes.map(n => [n.key, n.centrality])), [map]);
@@ -43,13 +44,14 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
   const [saved, setSaved] = useState<Saved[]>([]);
   const [copied, setCopied] = useState('');
   const treeRef = useRef<SVGSVGElement>(null);
-  const stamp = JSON.stringify([title, terms, feas]);
+  const stamp = JSON.stringify([title, terms, feas, evidence?.corpusHash, evidence?.parameterHash]);
   const stale = result !== null && result.stamp !== stamp;
 
   const toggleBasket = (keys: string[]) => { const all = keys.every(k => basket.includes(k)); setBasket(all ? basket.filter(k => !keys.includes(k)) : [...basket, ...keys.filter(k => !basket.includes(k))]); };
   const detect = () => { const found = matchTitleTerms(index, title, synonyms); setTerms(prev => [...new Set([...found, ...prev.filter(k => !index.terms.has(k))])]); };
   const addTerm = (raw: string) => { const k = synonyms.get(termKey(raw)) ?? termKey(raw); if (k && !terms.includes(k)) setTerms([...terms, k]); setCustom(''); };
   const run = () => {
+    if (!evidence) return;
     const ev = evaluateTopic({ title, terms, feasibility: feas }, { index, cy, cases: awardCases, bursts, centrality, lastYear });
     setResult({ ev, stamp }); setCopied('');
   };
@@ -163,7 +165,7 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
           <ChoiceGroup legend="能取得一手数据（问卷、访谈、观察）吗？" name="tl-primary" value={feas.primaryData} onChange={v => setFeas({ ...feas, primaryData: v as Feasibility['primaryData'] })} tone={theme} options={[{ value: 'yes', label: '能' }, { value: 'unsure', label: '不确定' }, { value: 'no', label: '不能' }]} />
           <ChoiceGroup legend="涉及未成年人、病患或敏感信息吗？" name="tl-sensitive" value={feas.sensitive} onChange={v => setFeas({ ...feas, sensitive: v as Feasibility['sensitive'] })} tone={theme} options={[{ value: 'no', label: '不涉及' }, { value: 'unsure', label: '不确定' }, { value: 'yes', label: '涉及' }]} />
         </fieldset>
-        <button type="submit" className={styles.primaryButton} disabled={!title.trim()}>生成证据画像</button>
+        <button type="submit" className={styles.primaryButton} disabled={!title.trim() || !evidence}>生成证据画像</button>
       </form>
     </section>
   </div>
@@ -183,7 +185,7 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
           <button type="button" className={styles.secondaryButton} disabled={saved.length >= MAX_COMPARE || saved.some(s => s.ev.title === result.ev.title && JSON.stringify(s.ev.terms) === JSON.stringify(result.ev.terms))} onClick={() => setSaved([...saved, { id: Date.now(), ev: result.ev }])}>{saved.length >= MAX_COMPARE ? `最多对比 ${MAX_COMPARE} 个` : '加入对比'}</button>
           <button type="button" className={styles.secondaryButton} onClick={() => copy(result.ev)}>复制为 Markdown</button>
           <ExportButton onExport={() => exportTree(result.ev)} label="导出画像 SVG" />
-          {onUseTopic && <button type="button" className={styles.secondaryButton} onClick={() => onUseTopic({ title: result.ev.title, decisionOwner: feas.decisionOwner })}>带入准备度诊断</button>}
+          {onUseTopic && <button type="button" className={styles.secondaryButton} disabled={!evidence || stale} onClick={() => { if (evidence && !stale) onUseTopic({ title: result.ev.title, decisionOwner: feas.decisionOwner, evidence }); }}>带入准备度诊断</button>}
           {copied && <span className={styles.muted} role="status">{copied}</span>}
         </div>
       </div>}

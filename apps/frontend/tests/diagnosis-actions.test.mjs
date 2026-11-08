@@ -1,16 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {stripTypeScriptTypes} from 'node:module';
 import {DIAGNOSIS_ACTIONS,prepareDiagnosisBrief,applyDiagnosisBrief} from '../lib/diagnosis-actions.ts';
 import {newQuestionnaire,exampleQuestionnaire,parseQuestionnaire,questionnaireIssues} from '../lib/questionnaire.ts';
 
 const source=(patch={},id='diagnosis-1')=>({id,input:{title:'校园出行服务研究',problem:'了解通勤学生的服务需求，支持服务中心比较两种拟议改进方案。',decisionOwner:'校园交通服务中心',population:'本校本学期有通勤需求的在读学生',geography:'校园及相邻生活区',stage:'problem_framing',evidenceStatus:'proposed',...patch}});
 const copy=value=>structuredClone(value);
 function frozen(value){Object.freeze(value);for(const child of Object.values(value))if(child&&typeof child==='object'&&!Object.isFrozen(child))frozen(child);return value;}
-const diagnosisUrl=new URL('../app/api/_lib/diagnosis.ts',import.meta.url);
-const diagnosisSource=readFileSync(diagnosisUrl,'utf8').replace('"@/data/control-plane-contract.generated"',JSON.stringify(new URL('../data/control-plane-contract.generated.ts',import.meta.url).href));
-const {diagnoseProject,EVIDENCE_STATUSES}=await import('data:text/javascript;base64,'+Buffer.from(stripTypeScriptTypes(diagnosisSource)).toString('base64'));
+import {diagnoseProject,EVIDENCE_STATUSES} from '../lib/project-diagnosis.ts';
 
 test('preview owns a deterministic exact snapshot and preserves raw source text',()=>{
   const s=source(),d=newQuestionnaire(),p=prepareDiagnosisBrief(s,d),snapshot=JSON.stringify(p);

@@ -56,13 +56,16 @@ import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/wo
 import DiagnosisActions from "@/components/DiagnosisActions";
 import CompetitionCalendar from '@/components/overview/CompetitionCalendar';
 import ResearchPipeline from '@/components/overview/ResearchPipeline';
-import type { DiagnosisBriefInput, DiagnosisBriefSource } from '@/lib/diagnosis-actions';
+import { parseDiagnosisBriefSource, type DiagnosisBriefInput, type DiagnosisBriefSource } from '@/lib/diagnosis-actions';
 import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
 import type { DatasetValue } from '@/lib/canvas/execute';
 import { archiveReportDraft, flushReportDraft, readReportDraft, readReportVersions, saveReportDraft } from '@/lib/agent/report-draft';
 import { hasUserResearchSource, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
 import type { FullReportPack } from '@/lib/agent/full-report-pipeline';
 import type { FigureTweak } from '@/lib/agent/figure-tweak';
+import { literatureEvidenceReference, type LiteratureWorkspaceSnapshot, type LiteratureEvidenceReference } from '@/lib/topic-lab/workspace';
+import { parseLiteratureEvidenceReference, literatureEvidenceReferencesEqual } from '@/lib/topic-lab/evidence-reference';
+import type { ResearchStageId } from '@/lib/agent/research-stages';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -335,15 +338,21 @@ async function apiRequest(path: string, init?: RequestInit) {
   }
 }
 
-export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:DiagnosisBriefSource|null)=>void}={}) {
+export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,literature,onLiterature}:{onBriefSource?:(source:DiagnosisBriefSource|null)=>void;incomingSource?:DiagnosisBriefSource|null;requestedMode?:{id:string;mode:'advisor'|'readiness'|'topics'};literature?:LiteratureWorkspaceSnapshot|null;onLiterature?:(snapshot:LiteratureWorkspaceSnapshot|null)=>void}={}) {
   const theme = useWorkbenchTheme();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [resultSource,setResultSource]=useState<DiagnosisBriefSource|null>(null);
+  const [topicEvidence,setTopicEvidence]=useState<LiteratureEvidenceReference|null>(null);
+  const liveLiterature=useRef(literature);
+  useLayoutEffect(()=>{liveLiterature.current=literature;},[literature]);
+  const evidenceCurrent=useCallback((evidence:LiteratureEvidenceReference)=>!!liveLiterature.current&&literatureEvidenceReferencesEqual(evidence,literatureEvidenceReference(liveLiterature.current)),[]);
   const [mode,setMode]=useState<"advisor"|"readiness"|"topics">("advisor");
   const [topicsOpened,setTopicsOpened]=useState(false);
   const requestEpoch=useRef(0);
+  const manualEdit=useRef(false),pendingIncoming=useRef<DiagnosisBriefSource|null>(null);
+  const [pendingSource,setPendingSource]=useState<DiagnosisBriefSource|null>(null);
   const [form, setForm] = useState({
     title: "",
     decisionOwner: "",
@@ -353,15 +362,39 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
     problem: "",
     evidenceStatus: "",
   });
+  const loadIncoming=useCallback((source:DiagnosisBriefSource)=>{
+    if(source.schemaVersion===2&&!evidenceCurrent(source.literature)){pendingIncoming.current=null;setPendingSource(null);setError('文献语料或参数已变化，请重新选择文献方案。');return false;}
+    requestEpoch.current++;setSubmitting(false);setError('');setResult(null);setResultSource(null);
+    manualEdit.current=false;pendingIncoming.current=null;setPendingSource(null);
+    setForm({...source.input});setTopicEvidence(source.schemaVersion===2?source.literature:null);setMode(current=>current==='topics'?'topics':'readiness');
+    return true;
+  },[evidenceCurrent]);
+  /* eslint-disable react-hooks/set-state-in-effect -- Consume scoped host commands without remounting this editor; revoke only a changed evidence version. */
+  useEffect(()=>{
+    if(!incomingSource){pendingIncoming.current=null;setPendingSource(null);return;}
+    if(incomingSource.schemaVersion===2&&!evidenceCurrent(incomingSource.literature)){pendingIncoming.current=null;setPendingSource(null);setError('文献语料或参数已变化，请重新选择文献方案。');return;}
+    const source=parseDiagnosisBriefSource(incomingSource);
+    if(manualEdit.current){pendingIncoming.current=source;setPendingSource(source);return;}
+    loadIncoming(source);
+  },[incomingSource,evidenceCurrent,loadIncoming]);
+  useEffect(()=>{if(requestedMode){setMode(requestedMode.mode);if(requestedMode.mode==='topics')setTopicsOpened(true);}},[requestedMode]);
+  useEffect(()=>{if(topicEvidence&&!evidenceCurrent(topicEvidence)){requestEpoch.current++;setSubmitting(false);setTopicEvidence(null);setResult(null);setResultSource(null);onBriefSource?.(null);setError('文献语料或参数已变化，请重新核对基于文献的选题。');}},[literature,topicEvidence,onBriefSource,evidenceCurrent]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const update = (field: keyof typeof form, value: string) => {
-    requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setError('');onBriefSource?.(null);
+    manualEdit.current=true;
+    requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setTopicEvidence(null);setError('');onBriefSource?.(null);
     setForm((current) => ({ ...current, [field]: value }));
   };
   useEffect(()=>()=>{requestEpoch.current++;},[]);
   const openMode=(next:"advisor"|"readiness"|"topics")=>{setMode(next);if(next==="topics")setTopicsOpened(true);};
-  const applyTopic=(topic:{title:string;decisionOwner:string;population?:string;geography?:string;problem?:string})=>{
+  const applyTopic=(topic:{title:string;decisionOwner:string;population?:string;geography?:string;problem?:string;evidence?:LiteratureEvidenceReference})=>{
+    let evidence:LiteratureEvidenceReference|null=null;
+    try{if(topic.evidence){evidence=parseLiteratureEvidenceReference(topic.evidence);if(!evidenceCurrent(evidence))throw Error('文献语料或参数已变化，请重新生成选题画像。');}}
+    catch(failure){setError(failure instanceof Error?failure.message:'文献证据无效。');return;}
+    manualEdit.current=false;pendingIncoming.current=null;setPendingSource(null);
     requestEpoch.current++;setSubmitting(false);setResult(null);setResultSource(null);setError('');onBriefSource?.(null);
+    setTopicEvidence(evidence);
     setForm(current=>({...current,title:topic.title,decisionOwner:topic.decisionOwner||current.decisionOwner,population:topic.population??current.population,geography:topic.geography??current.geography,problem:topic.problem??current.problem,evidenceStatus:"proposed"}));
     setMode("readiness");
     requestAnimationFrame(()=>document.getElementById("diagnose")?.scrollIntoView({behavior:"smooth",block:"start"}));
@@ -369,6 +402,7 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    manualEdit.current=true;
     setSubmitting(true);
     setError("");
     setResult(null);
@@ -380,9 +414,9 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
         method: "POST",
         body: JSON.stringify(input),
       });
-      if(epoch!==requestEpoch.current)return;
+      if(epoch!==requestEpoch.current||topicEvidence&&!evidenceCurrent(topicEvidence))return;
       setResult(normalizeDiagnosis(payload));
-      setResultSource({id:crypto.randomUUID(),input:input as DiagnosisBriefInput});
+      setResultSource(parseDiagnosisBriefSource({id:crypto.randomUUID(),input:input as DiagnosisBriefInput,...(topicEvidence?{schemaVersion:2,literature:topicEvidence}:{})}));
     } catch (requestError) {
       if(epoch===requestEpoch.current)setError(requestError instanceof Error ? requestError.message : "诊断服务暂时不可用");
     } finally {
@@ -399,11 +433,12 @@ export function DiagnosisPanel({onBriefSource}:{onBriefSource?:(source:Diagnosis
       <div className="diagnose-modes" role="tablist" aria-label="诊断类型">
         {([["advisor","选题顾问","热点线索 · 地区资源 · 研究切口"],["readiness","项目诊断","检查证据缺口与下一步"],["topics","文献图谱","领域结构 · 研究空白 · 证据画像"]] as const).map(([id,label,hint])=><button key={id} type="button" role="tab" id={`dg-tab-${id}`} aria-selected={mode===id} aria-controls={`dg-panel-${id}`} tabIndex={mode===id?0:-1} onClick={()=>openMode(id)} onKeyDown={event=>{if(!["ArrowRight","ArrowLeft","Home","End"].includes(event.key))return;event.preventDefault();const order=["advisor","readiness","topics"] as const;const index=order.indexOf(id);const next=event.key==="Home"?order[0]:event.key==="End"?order[2]:order[(index+(event.key==="ArrowRight"?1:2))%3];openMode(next);document.getElementById(`dg-tab-${next}`)?.focus();}}><strong>{label}</strong><small>{hint}</small></button>)}
       </div>
+      {pendingSource&&<div className="hosted-notice" role="status"><p>有新的研究简介。载入后将替换当前表单。</p><button type="button" className="secondary-button" onClick={()=>{const source=pendingIncoming.current;if(source)loadIncoming(source);}}>载入新研究简介</button></div>}
       <div role="tabpanel" id="dg-panel-advisor" aria-labelledby="dg-tab-advisor" hidden={mode!=="advisor"}><TopicAdvisor onUseTopic={applyTopic} renderEnhancement={context=><TopicModelProposal {...context} catalogVersion={topicCatalog.contentVersion} onUseTopic={applyTopic}/>}/></div>
-      <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic}/>}</div>
+      <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic} initialSnapshot={literature} onSnapshot={onLiterature}/>}</div>
       <div role="tabpanel" id="dg-panel-readiness" aria-labelledby="dg-tab-readiness" hidden={mode!=="readiness"}>
       <div className="diagnose-grid">
-        <form className="diagnose-form" onSubmit={submit} aria-busy={submitting}>
+        <form className="diagnose-form" onSubmit={submit} onCompositionStart={()=>{manualEdit.current=true;}} aria-busy={submitting}>
           <fieldset disabled={submitting}>
             <div className="form-grid two-cols">
               <label><span>项目名称</span><input required value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="例如：银发人群智能出行研究" /></label>
@@ -606,6 +641,22 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
   },[currentScope,loading,session,isCurrentIdentity,identityEpoch]);
   const storedDraft=useMemo(()=>draftOwner&&typeof window!=='undefined'?readReportDraft(draftOwner,projectId):null,[draftOwner,projectId]);
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(workspaceScope,identityScope);
+  const [topicInput,setTopicInput]=useState<{scope:string;source:DiagnosisBriefSource}|null>(null);
+  const [diagnosisMode,setDiagnosisMode]=useState<{scope:string;id:string;mode:'advisor'|'readiness'|'topics'}|null>(null);
+  const receiveTopic=useCallback((source:DiagnosisBriefSource)=>{
+    if(!currentScope())return;
+    const parsed=parseDiagnosisBriefSource(source),live=handoffs.getSnapshot().literature;
+    if(parsed.schemaVersion===2&&(!live||!literatureEvidenceReferencesEqual(parsed.literature,literatureEvidenceReference(live))))throw Error('文献证据版本已变化，请重新核对研究简介。');
+    setTopicInput({scope:workspaceScope,source:parsed});handoffs.publish('brief',parsed);
+  },[currentScope,handoffs,workspaceScope]);
+  const receiveLiterature=useCallback((snapshot:LiteratureWorkspaceSnapshot|null)=>{
+    if(!currentScope())return;
+    const pending=handoffs.getSnapshot().pending.brief;
+    if(pending?.payload.schemaVersion===2&&(!snapshot||!literatureEvidenceReferencesEqual(pending.payload.literature,literatureEvidenceReference(snapshot))))handoffs.acknowledge('brief',pending.deliveryId);
+    handoffs.setLiterature(snapshot);
+  },[currentScope,handoffs]);
+  const openResearch=useCallback((stage:ResearchStageId)=>{if(!currentScope()||!['topic','diagnosis','literature'].includes(stage))return;setDiagnosisMode({scope:workspaceScope,id:crypto.randomUUID(),mode:stage==='literature'?'topics':stage==='diagnosis'?'readiness':'advisor'});},[currentScope,workspaceScope]);
+  const research=useMemo(()=>({topic:receiveTopic,literature:exchange.literature,setLiterature:receiveLiterature,open:openResearch}),[receiveTopic,exchange.literature,receiveLiterature,openResearch]);
   const datasetChanged=useCallback((value:DatasetValue|null)=>{if(currentScope())handoffs.setDataset(value);},[handoffs,currentScope]);
   const designChanged=useCallback((snapshot:DesignSnapshot)=>{if(currentScope())handoffs.setDesign(snapshot);},[handoffs,currentScope]);
   const revisionInputVersion=useMemo(()=>({dataset:exchange.dataset,design:exchange.design,pending:[exchange.pending.design,exchange.pending.dataset,exchange.pending.result],token:crypto.randomUUID()}),[exchange.dataset,exchange.design,exchange.pending.design,exchange.pending.dataset,exchange.pending.result]);
@@ -707,14 +758,14 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} projectId={projectId} />,
       silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{if(!currentScope())return;handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio key={`${workspaceScope}:${benchmarkEpoch}`} initialDesign={exchange.design?.design??null} localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={designChanged} onAnalyze={snapshot=>{if(!currentScope())return;handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
-      diagnose: <DiagnosisPanel onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
+      diagnose: <DiagnosisPanel incomingSource={topicInput?.scope===workspaceScope?topicInput.source:null} requestedMode={diagnosisMode?.scope===workspaceScope?diagnosisMode:undefined} literature={exchange.literature} onLiterature={receiveLiterature} onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
     };
     return Object.fromEntries(Object.entries(entries).map(([key,panel])=>[key,cloneElement(panel as ReactElement,{key:`${workspaceScope}:${(panel as ReactElement).key??key}`})])) as Record<WorkbenchPanel,ReactNode>;
-  }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion]);
-  return {panels,view,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection,applyArtifact};
+  }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion,topicInput,diagnosisMode,receiveLiterature]);
+  return {panels,view,research,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection,applyArtifact};
 }
 
 export default function EviXPlatform() {

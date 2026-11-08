@@ -1,0 +1,23 @@
+.workspace { --rw-accent: var(--c-accent,#0f766e); padding: 16px 0 24px; color: var(--c-fg,#171a19); }
+.options { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:0 28px 16px; font-size:13px; color:var(--c-dim,#68716d); }
+.options label, .access label { display:flex; align-items:center; gap:8px; }
+.workspace input[type=checkbox] { width:16px; height:16px; min-height:0; padding:0; margin:0; flex:0 0 16px; accent-color:var(--rw-accent); }
+.profile,.advisor,.result,.confirm,.candidates { margin:0 28px 20px; padding:18px; border:1px solid var(--c-line,#e4e8e6); border-radius:12px; background:var(--c-raise,#fff); }
+.intakeResults :is(.advisor,.result,.confirm,.candidates) { margin-left:0; margin-right:0; }
+.workspace summary { cursor:pointer; font-weight:500; }
+.profileGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.profileGrid label,.confirm label { display:grid; gap:8px; font-size:13px; margin-bottom:12px; }
+.profileGrid input,.confirm input { width:100%; min-width:0; min-height:40px; padding:8px 10px; border:1px solid var(--c-line,#d2d9d6); border-radius:7px; font:inherit; color:inherit; background:var(--c-bg,#fff); }
+.profile fieldset { border:0; padding:0; margin:14px 0 0; }
+.profile legend { font-size:13px; margin-bottom:12px; }
+.access { display:flex; flex-wrap:wrap; gap:12px 16px; font-size:12px; }
+.workspace h3 { margin:0 0 14px; font-size:17px; font-weight:600; }
+.candidates article { padding:16px 0; border-top:1px solid var(--c-line,#e4e8e6); }
+.candidates h4 { margin:0 0 8px; font-size:16px; line-height:1.65; }
+.workspace p,.workspace li { font-size:14px; line-height:1.8; }
+.candidates button,.confirm button,.result button { border:1px solid var(--c-line,#d2d9d6); border-radius:7px; min-height:38px; padding:8px 14px; background:var(--c-bg,#fff); color:var(--rw-accent); font:inherit; font-size:13px; cursor:pointer; margin-right:8px; }
+.candidates button:hover,.confirm button:hover,.result button:hover { border-color:var(--rw-accent); }
+.workspace :is(button,input):focus-visible { outline:2px solid var(--rw-accent); outline-offset:3px; }
+.workspace code { display:block; font-size:11px; overflow-wrap:anywhere; margin:10px 0; }
+.error { color:var(--c-warn,#a94c28); margin:0 28px 16px; }
+@media(max-width:680px) { .profileGrid { grid-template-columns:1fr; } .profile,.advisor,.result,.confirm,.candidates { margin-left:16px; margin-right:16px; } .options { padding-left:16px; padding-right:16px; } }
