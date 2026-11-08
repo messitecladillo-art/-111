@@ -116,6 +116,11 @@ test('correlation written as causation and undeclared simulated data are both fl
   let report = benchmarkReport(content);
   assert.equal(check(report, 'causal').status, 'partial');
   assert.equal(check(report, 'simulated').status, 'fail');
+  // A causal verb in another sentence, or under a negation, is no causal reading of the correlation.
+  for (const honest of ['补贴应按档位设计，避免统一补贴造成错配。整体满意度与持续意愿的相关系数为 0.898。', '相关系数只描述关联，不能说明满意度导致复游。']) {
+    const other = { ...content, report: [section('s', '一、分析', honest)] };
+    assert.equal(check(benchmarkReport(other), 'causal').status, 'pass', honest);
+  }
   content.report[0].body = '【教学模拟数据，不能作为实际调查结果】\n' + body;
   report = benchmarkReport(content);
   assert.equal(check(report, 'simulated').status, 'pass');
@@ -238,6 +243,8 @@ test('cluster self-validation, cross-sectional evolution, simulated robustness a
   // The disclaimer the advice asks for names the method it refuses; it is not a claim.
   content.report = [section('d', '（三）抽样设计', '通过线上公开链接自愿作答招募，本次样本属便利样本，不借用随机抽样名称，也并非分层抽样，外推须谨慎。')];
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'na');
+  content.report = [section('d', '（三）抽样设计', '本次通过线上公开链接自愿作答，属便利样本，故不借用随机抽样、分层抽样、整群抽样等名称描述本次样本。')];
+  assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'na', 'a negated list is one disclaimer');
   content.report = [section('d', '（三）抽样设计', '本次通过线上公开链接自愿作答，采用分层抽样获取样本，并非整群抽样。')];
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'fail', 'a stated claim still counts, beside a negated one');
 });

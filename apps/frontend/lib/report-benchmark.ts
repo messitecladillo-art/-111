@@ -263,7 +263,11 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     !recommendation ? '还没有写出对策建议。' : `${actor ? '写明' : '缺少'}执行主体，${metric ? '写明' : '缺少'}评估指标。`, fixIfMissing('conclusion.suggestions'));
   const limits = /局限|不足之处|研究不足|适用边界|外推|未来研究|研究展望/.test(proseText);
   add('limitations', 'actions', '说明研究局限', limits ? 1 : 0, limits ? '说明了研究局限或适用边界。' : '没有说明样本、测量或方法上的局限。', fixIfMissing('conclusion.limits'));
-  const causal = paragraphs.filter(l => /相关|关联/.test(l) && /导致|造成|决定了|引起了|使得/.test(l));
+  // Read sentence by sentence: "避免统一补贴造成错配" beside a correlation in the next sentence is no causal reading of
+  // it, and "不能说明…导致…" is the caution itself. A correlation and a causal verb in one sentence is.
+  const causalSentence = (sentence: string) => /相关|关联/.test(sentence)
+    && /导致|造成|决定了|引起了|使得/.test(sentence.replace(/(?:不|未|并非|而非|不能|无法)[^。；，,]{0,6}(?:导致|造成|决定了|引起了|使得)/gu, ''));
+  const causal = paragraphs.filter(l => l.split(/(?<=[。；！？!?])/u).some(causalSentence));
   add('causal', 'actions', '相关不写成因果', prose.length ? (causal.length === 0 ? 1 : causal.length === 1 ? 0.5 : 0) : null,
     causal.length ? `${causal.length} 段在相关性结果旁使用了因果措辞，如「${causal[0].slice(0, 24)}…」。` : '没有发现把相关写成因果的措辞。');
   // Misreadings a reviewer catches in survey reports. They only take away: writing about a method correctly earns nothing,
@@ -297,7 +301,8 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const onlineRecruiting = /问卷星|网络发放|线上发放|线上链接|朋友圈|社交媒体|社群转发|便利抽样|滚雪球|自愿作答|自愿参与/u;
   // "不借用随机抽样名称" is the disclaimer the advice asks for: a sampling name under a negation is not a claim.
   const samplingNames = /随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样/u;
-  const negatedSampling = /(?:未|不|没有|并未|并非|而非|不能|不再|无)(?:使用|借用|采用|称为|称作|属于|是|写成|冠以)?[^。；，,]{0,4}(?:随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样)/gu;
+  // The negation covers a whole list: "不借用随机抽样、分层抽样、整群抽样等名称".
+  const negatedSampling = /(?:未|不|没有|并未|并非|而非|不能|不再|无)(?:使用|借用|采用|称为|称作|属于|是|写成|冠以)?[^。；，,]{0,4}(?:随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样)(?:\s*[、和与及或]\s*(?:随机抽样|分层抽样|整群抽样|多阶段抽样|系统抽样))*/gu;
   misuse('samplingWording', '抽样名称与实际招募一致', samplingNames,
     l => samplingNames.test(l.replace(negatedSampling, '')) && !samplingTable && onlineRecruiting.test(sampling.flatMap(s => s.lines).join('\n') + '\n' + l),
     '线上公开链接、自愿作答和转发招募属于便利或配额方式，不能借用随机抽样的名称；确有抽样框时附上各阶段抽样框表。', 'design');
