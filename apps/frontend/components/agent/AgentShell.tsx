@@ -24,6 +24,8 @@ import { lookupTurn, route, standingFindings, toolTurn, type AgentAction, type A
 import { readChatTurn, sendChatTurn } from './chat-client';
 import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
+import SectionRevision from './SectionRevision';
+import { useSectionRevision } from './useSectionRevision';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
@@ -121,7 +123,7 @@ function savedPanelWidth(): number | null {
  * address hash, so a module that moves the user on (analysis sending a result to the report) moves the panel too.
  */
 export default function AgentShell() {
-  const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark, setLiveReport } = useWorkbenchModules(true);
+  const { panels, view, publishProposal, sendToReport, tweakFigure, loadBenchmark, setLiveReport, readRevisionSnapshot, reviseSection } = useWorkbenchModules(true);
   const knowledge = useKnowledge();
   const theme = useThemePreference('light');
   const { session: account, loading: accountLoading, error: sessionError, logout, refresh, mutate, identityEpoch, isCurrentAccount, isCurrentIdentity } = useHostedSession();
@@ -202,6 +204,7 @@ export default function AgentShell() {
   // A result opened beside the conversation, while no module holds the panel and the result is known in this visit.
   const output = !panel && outputId ? held?.results.find(r => r.id === outputId) ?? null : null;
   const [visited, setVisited] = useState<RoomId[]>([]);
+  if (stage === 'paper' && !visited.includes('editor')) setVisited([...visited, 'editor']);
   if (panel && panel !== 'overview' && !visited.includes(panel)) setVisited([...visited, panel]);
   const [railMenu, setRailMenu] = useState<'modules' | 'account' | null>(null);
   // Workbench modules are laid out for a whole screen. While a panel is open on a screen under 1680px the sidebar folds to
@@ -277,6 +280,19 @@ export default function AgentShell() {
   const consented = useRef(new Set<string>());
   const chatService = resolveModelRoute('research', lists.services, preferences).service;
   const reportService = resolveModelRoute('report', lists.services, preferences).service;
+
+  const revisionScope = useCallback((): ReportRunScope => {
+    const b = threads.view(owner), t = b.threads.find(item => item.id === b.active);
+    if (!owner || owner === 'guest' || !isCurrentAccount(owner, identityEpoch)) return { owner: null, epoch: identityEpoch, thread: t?.id ?? null, project: t ? t.projectId : b.draftProject };
+    return { owner, epoch: identityEpoch, thread: t?.id ?? null, project: t ? t.projectId : b.draftProject };
+  }, [owner, identityEpoch, isCurrentAccount]);
+  const openRevisionSettings = useCallback(() => { window.location.hash = 'services'; }, []);
+  const revision = useSectionRevision({
+    sectionId: pickedSection, scope: { ...displayScope, owner: owner === 'guest' ? null : owner }, service: reportService, design: view.design,
+    readScope: revisionScope, readSnapshot: readRevisionSnapshot, apply: reviseSection,
+    mountEditor: () => setVisited(v => v.includes('editor') ? v : [...v, 'editor']),
+    openSettings: openRevisionSettings, mutate, disabled: !!liveWriting?.active, readDisabled: () => reportRuns.active,
+  });
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, [setCanvasReturn]);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
@@ -1231,7 +1247,7 @@ export default function AgentShell() {
       <section className={styles.panel} hidden={!panel && !output && !inspecting} aria-label={here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
         data-inspector={inspecting || undefined} style={{ ['--panel-w' as string]: `${inspecting ? INSPECTOR : panelWidth}px` }}>
         {inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}
-          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} />}
+          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} revision={<SectionRevision {...revision} />} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {here && <header className={styles.panelHead}>
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>

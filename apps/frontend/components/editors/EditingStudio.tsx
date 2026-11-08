@@ -1,6 +1,8 @@
 "use client";
 
 import { applyFigureChange, type FigureTweak } from '@/lib/agent/figure-tweak';
+import { applySectionRevision, type RevisionSnapshot, type SectionRevisionProposal, type RevisionApplyResult } from '@/lib/agent/section-revision';
+import type { ReportRunScope } from '@/lib/agent/report-work';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import { ACCENTS, applyReportFrame, createEditorContent, EDITOR_LIMITS, EDITOR_SIZE_LABEL, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
@@ -41,7 +43,8 @@ import type { Questionnaire } from '@/lib/questionnaire';
 import { createReportPermissionGuard } from '@/lib/report-permission';
 
 export type ProjectEditorBinding = { initialContent: EditorContent; status: string; projectId?: string; readOnly?: boolean; onSnapshot: (content: EditorContent) => void; onSave: () => void };
-export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean };
+export type EditingStudioHandle = { appendSection: (section: ReportSection) => boolean; appendResult:(result:ResultSnapshot)=>boolean;
+  readRevisionSnapshot: () => RevisionSnapshot; reviseSection: (proposal: SectionRevisionProposal, scope: ReportRunScope) => RevisionApplyResult };
 
 export { createReportPermissionGuard } from '@/lib/report-permission';
 
@@ -68,7 +71,7 @@ function subscribeNarrowScreen(listener: () => void) {
 }
 const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
 
-export default function EditingStudio({localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,figureTweak,onFigureTweakHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
+export default function EditingStudio({revisionInputVersion="standalone",localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,figureTweak,onFigureTweakHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{revisionInputVersion?:string;localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
   /** A local draft to start from; `savedInBrowser` says the caller keeps the draft in this browser as it changes. */
   initialContent?:EditorContent|null;savedInBrowser?:boolean;
   /** A figure changed in the conversation; applied once as an undoable step. */
@@ -83,7 +86,14 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
   if (permissionVersion.readOnly !== readOnly) setPermissionVersion({ readOnly, epoch: permissionEpoch });
   useLayoutEffect(() => { permission.current.update(readOnly); }, [readOnly]);
   const canMutate = useCallback(() => !readOnly && permission.current.allows(permissionEpoch), [readOnly, permissionEpoch]);
-  const [content, setContent] = useState<EditorContent>(()=>projectBinding?.initialContent ?? initialContent ?? createEditorContent());
+  const revisionVersion = useRef(0), consumedRevisions = useRef(new Set<string>()), revisionComposing = useRef(false);
+  const [content, setContentState] = useState<EditorContent>(()=>projectBinding?.initialContent ?? initialContent ?? createEditorContent());
+  const setContent = useCallback((next: EditorContent) => { revisionVersion.current++; setContentState(next); }, []);
+  useEffect(() => {
+    const start = () => { revisionComposing.current = true; }, end = () => { revisionComposing.current = false; };
+    document.addEventListener('compositionstart', start, true); document.addEventListener('compositionend', end, true);
+    return () => { document.removeEventListener('compositionstart', start, true); document.removeEventListener('compositionend', end, true); };
+  }, []);
   // The agent shell reads the report it hosts to light the report room; it never writes through this.
   useEffect(() => { onContentChange?.(content); }, [content, onContentChange]);
   const reportSettings = content.reportFormat ?? DEFAULT_REPORT_SETTINGS;
@@ -165,7 +175,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     current.current = draft.content; setContent(draft.content); setPast([]); setFuture([]);
     setSectionId(draft.content.report[0].id); setSlideId(draft.content.slides[0].id);
     setSaveTime(new Date(draft.updatedAt).toLocaleTimeString("zh-CN")); setPhase("saved"); blocked.current = false; setMessage("");
-  }, [resetVersions, setRecord, acknowledgeSaved]);
+  }, [resetVersions, setRecord, acknowledgeSaved, setContent]);
   const connect = useCallback(async (sessionEstablished = false) => {
     if(localOnly)return;
     if (identityTransition.current || busy.current || versionOperation.current) return;
@@ -285,7 +295,19 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     if (!blocked.current && !busy.current) setPhase("ready");
     return true;
   }
-  useImperativeHandle(controllerRef,()=>({appendResult(result:ResultSnapshot){
+  useImperativeHandle(controllerRef,()=>({
+    readRevisionSnapshot(){ return { content: current.current, version: revisionVersion.current, inputVersion: revisionInputVersion }; },
+    reviseSection(proposal:SectionRevisionProposal,scope:ReportRunScope):RevisionApplyResult {
+      if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||phase==='loading'||revisionComposing.current) return {ok:false,reason:'编辑器正在处理其他操作，请稍后再确认。'};
+      if(consumedRevisions.current.has(proposal.id)) return {ok:false,reason:'这份修订已处理，不会重复写入。'};
+      try {
+        const next=applySectionRevision({content:current.current,version:revisionVersion.current,inputVersion:revisionInputVersion},questionnaire,scope,proposal);
+        if(!edit(next))return {ok:false,reason:'编辑器未接受修订，原文已保留。'};
+        consumedRevisions.current.add(proposal.id);setSectionId(proposal.anchor.sectionId);setMode('report');
+        setMessage('已采纳本节修订，图表与来源保留。可撤销。');return {ok:true};
+      }catch(error){return {ok:false,reason:error instanceof Error?error.message:'未采纳修订，原文已保留。'};}
+    },
+    appendResult(result:ResultSnapshot){
     if(!canMutate()||identityTransition.current||busy.current||versionOperation.current||phase==='loading')return false;
     try{const next=appendQualityResult(current.current,result);if(next!==current.current&&!edit(next))return false;setQualityOpen(true);return true;}catch(error){setMessage((error as Error).message);return false;}
   },appendSection(proposal:ReportSection){
@@ -305,7 +327,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(current.current);if(!blocked.current)setPhase('ready');setQualityOpen(true);onResultHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
-  },[resultProposal,resultFigures,resultVisualStyle,onResultHandled,phase,identityFrozen,canMutate]);
+  },[resultProposal,resultFigures,resultVisualStyle,onResultHandled,phase,identityFrozen,canMutate,setContent]);
   // Content sent from a workbench module (sampling design, sample size) lands in its blueprint section as one undoable step.
   useEffect(()=>{
     if(!canMutate()||!reportInsert||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
@@ -324,7 +346,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     onReportInsertHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
-  },[reportInsert,onReportInsertHandled,phase,identityFrozen,canMutate]);
+  },[reportInsert,onReportInsertHandled,phase,identityFrozen,canMutate,setContent]);
   useEffect(()=>{
     if(!canMutate()||!figureTweak||phase==='loading'||phase==='saving'||identityFrozen||identityTransition.current)return;
     const timer=window.setTimeout(()=>{
@@ -341,7 +363,7 @@ export default function EditingStudio({localOnly=false,projectBinding,controller
     onFigureTweakHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
-  },[figureTweak,onFigureTweakHandled,phase,identityFrozen,canMutate]);
+  },[figureTweak,onFigureTweakHandled,phase,identityFrozen,canMutate,setContent]);
   function undo() {
     if(!canMutate())return;
     const previous = past[past.length - 1]; if (!previous) return;
