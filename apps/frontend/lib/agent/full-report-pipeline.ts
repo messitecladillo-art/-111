@@ -20,7 +20,7 @@ import { type BenchmarkResult, benchmarkReport } from '../report-benchmark.ts';
 import { blueprintNode, blueprintOutline, matchBlueprintNode } from '../report-blueprint.ts';
 import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
 import type { ReportBlock, ResultSnapshot } from '../research-quality.ts';
-import { ADVISORS, type AdvisorReading, advisorReading, sectionIssues } from './advisors.ts';
+import { ADVISORS, type AdvisorReading, advisorForNode, advisorReading, sectionIssues } from './advisors.ts';
 import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline } from './draft.ts';
 import {
   type ContestTopicBlueprint,
@@ -119,6 +119,8 @@ export type SectionGenerationTrace = {
   nodeId: string;
   title: string;
   wave: 1 | 2;
+  /** The advisor whose skill wrote the section: its rules were in the prompt, and the canvas marks the section in its colour. */
+  advisor: string | null;
   status: 'llm_generated' | 'repaired_fallback';
   rawParagraphs: number;
   keptParagraphs: number;
@@ -554,6 +556,7 @@ export function buildFullReportSectionPrompt(input: {
   const registered = (family: RegExp) => methods.some(m => family.test(m));
   const planSection = PLAN_NODE.test(input.nodeId);
   const pending = awaitsResults(input.nodeId, input.held.results);
+  const owner = advisorForNode(input.nodeId);
   const analyses = methods.map(m => METHOD_LABELS[m] ?? m);
 
   const specificRules: string[] = [];
@@ -622,6 +625,7 @@ export function buildFullReportSectionPrompt(input: {
       : `资料 analyses 列出了本研究已登记的全部分析（${analyses.join('、') || '暂无'}）。没有列出的分析（如回归模型、Logit、优势比、边际效应、方差膨胀因子、因子分析、KMO、聚类）不得声称做过，也不得给出其结果或诊断，写到这类分析的段落整段丢弃。\n`) +
     '【规则三：防误读红线】\n' +
     redLines.map((rule, i) => `${i + 1}. ${rule}`).join('\n') +
+    (owner ? `\n【本节负责顾问】「${owner.name}」（技能 ${owner.skill}）：${owner.line} 写作规则：${owner.rules.join('；')}。` : '') +
     '\n【写作体例】\n' +
     '中文学术调查报告语体，先亮核心判断、再摆证据、最后交代适用边界；写三到五段，每段一百到二百二十字。\n' +
     (specificRules.length ? `【本节专项要求】\n${specificRules.join('\n')}\n` : '') +
@@ -1089,6 +1093,7 @@ export async function generateFullReportWithAgent(input: {
             nodeId,
             title,
             wave,
+            advisor: advisorForNode(nodeId)?.id ?? null,
             status: 'llm_generated',
             rawParagraphs: hydrated.paragraphs.length + hydrated.droppedParagraphs,
             keptParagraphs: hydrated.paragraphs.length,
@@ -1116,6 +1121,7 @@ export async function generateFullReportWithAgent(input: {
       nodeId,
       title,
       wave,
+      advisor: advisorForNode(nodeId)?.id ?? null,
       status: 'repaired_fallback',
       rawParagraphs: 0,
       keptParagraphs: fallbackBody ? fallbackBody.split(/\n+/u).filter(Boolean).length : 0,

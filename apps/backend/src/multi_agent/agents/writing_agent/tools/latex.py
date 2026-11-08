@@ -66,17 +66,17 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
         r"\usepackage[top=25.4mm,bottom=25.4mm,left=31.8mm,right=31.8mm]{geometry}",
         r"\usepackage{amsmath,amssymb,booktabs,array,caption,setspace}",
         r"\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{}",
-        r"\setstretch{1.25}", r"\setlength{\emergencystretch}{5em}", r"\setlength{\parskip}{0.5\baselineskip}",
+        r"\setstretch{1.25}", r"\setlength{\emergencystretch}{5em}", r"\setlength{\parskip}{6bp}",
         "\\setlength{\\parindent}{" + str(settings["firstLineChars"]) + "em}",
         r"\setlength{\heavyrulewidth}{1.5bp}", r"\setlength{\lightrulewidth}{0.75bp}",
         r"\renewcommand{\arraystretch}{1.2}",
-        r"\DeclareCaptionFont{reportcaption}{\fontsize{12bp}{14.4bp}\selectfont}",
+        r"\DeclareCaptionFont{reportcaption}{\fontsize{12bp}{15.552bp}\selectfont}",
         r"\captionsetup{font=reportcaption,labelsep=quad,justification=centering,singlelinecheck=false}",
-        r"\ctexset{section={format=\fontsize{15bp}{18.75bp}\selectfont\heiti},subsection={format=\fontsize{14bp}{17.5bp}\selectfont\heiti},subsubsection={format=\fontsize{12bp}{15bp}\selectfont\songti}}",
+        r"\ctexset{section={format=\fontsize{15bp}{19.44bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsection={format=\fontsize{14bp}{18.144bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsubsection={format=\fontsize{12bp}{15.552bp}\selectfont\songti,beforeskip=6bp,afterskip=1sp}}",
         r"\setcounter{secnumdepth}{-1}",
         "\\pagestyle{" + ("plain" if settings["numberPages"] else "empty") + "}",
         r"\begin{document}",
-        r"\fontsize{12bp}{14.4bp}\selectfont",
+        r"\fontsize{12bp}{15.552bp}\selectfont",
     ]
     if r"\begin{tikzpicture}" in content:
         lines[3:3] = [r"\usepackage{pgfplots}", r"\pgfplotsset{compat=1.18}"]

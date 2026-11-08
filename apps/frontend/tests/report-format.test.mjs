@@ -14,6 +14,11 @@ test('sourced report output has exact A4, margins, East Asian fonts and line-rel
     const found=style(styles,id);assert.equal(found.length,1,`${id} must be unambiguous`);assert.match(found[0],new RegExp(`w:eastAsia="${font}"`));assert.match(found[0],/w:ascii="Times New Roman"/,'Latin text and numbers use Times New Roman');assert.match(found[0],new RegExp(`<w:sz w:val="${size}"`));
   }
   assert.match(style(styles,'Normal')[0],/w:beforeLines="50"/);assert.match(style(styles,'Normal')[0],/w:line="300"/);
+  // Styles with their own space before keep it: Word would otherwise let Normal's half line win over their points.
+  for(const id of ['ReportTableText','ReportFigure','ReportFigureCaption','ReportTableCaption','ReportSource','ReportCoverTitle','TOC1','ReportReferenceItem']){
+    const found=style(styles,id);if(!found.length)continue;
+    assert.match(found[0],/w:beforeLines="0"/,`${id} keeps its own spacing`);assert.match(found[0],/\sw:before="\d+"/,`${id} states its spacing in points`);
+  }
   assert.match(style(styles,'Title')[0],/w:line="240"/);assert.match(style(styles,'Title')[0],/w:beforeAutospacing="(?:1|true)"/);assert.match(style(styles,'Title')[0],/w:afterAutospacing="(?:1|true)"/);
   assert.match(xml,/TOC /);assert.match(xml,/w:fmt="upperRoman"/);assert.match(xml,/w:fmt="decimal"/);assert.match(xml,/w:start="1"/);
   assert.doesNotMatch(await zip.file('docProps/core.xml').async('string'),/证见|EVI-X/);

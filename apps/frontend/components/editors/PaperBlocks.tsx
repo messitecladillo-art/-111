@@ -5,13 +5,13 @@ import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { blockLabel, numberedCaption, referenceSegments, type BlockLabel } from '@/lib/report-numbering';
-import { isExhibitNote, presentResult, sectionNotes, sourceLine, sourcePlacement, tableSpans } from '@/lib/report-tables';
+import { columnWeights, isExhibitNote, presentResult, sectionNotes, sourceLine, sourcePlacement, tableSpans } from '@/lib/report-tables';
 import { splitInlineMath } from '@/lib/inline-math';
 import { Formula, Tex } from '../math/Tex';
 import styles from './PaperBlocks.module.css';
 
 type Labels = Map<string, BlockLabel>;
-const ACCENT: Record<EditorContent['accent'], string> = { teal: '#0F766E', blue: '#234E80', burgundy: '#8A3449' };
+export const ACCENT: Record<EditorContent["accent"], string> = { teal: '#0F766E', blue: '#234E80', burgundy: '#8A3449' };
 
 type Citations = ReadonlyMap<string, number>;
 
@@ -123,14 +123,18 @@ export function Figure({ result, column, accent,figure,visualStyle }: { result: 
   return state.error ? <p className={styles.error}>{state.error}</p> : <div className={styles.figure} role="img" aria-label={result.title} dangerouslySetInnerHTML={{ __html: state.svg! }}/>;
 }
 
-export function ResultTable({ result,figure }: { result: ResultSnapshot;figure?:ReportFigure }) {
+export function ResultTable({ result,figure,wordColumns=false }: { result: ResultSnapshot;figure?:ReportFigure;
+  /** Columns as wide as the Word export sets them, so cells wrap where they wrap in Word. */
+  wordColumns?: boolean }) {
   const table = figure ? {headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>typeof cell==='number'?String(Number(cell.toFixed(figure.style.decimals))):cell??'—')),note:figure.note} : presentResult(result), spans = figure ? null : tableSpans(result, table);
   // Merged cells (a sampling frame's parent units) span their children's rows, as in Word.
   const span = (r: number, c: number) => spans ? spans[r][c] : 1;
+  const weights = wordColumns ? columnWeights(table) : null, total = weights?.reduce((a, w) => a + w, 0) ?? 1;
   return <>
     {/* Cells keep one line; a table wider than the preview scrolls sideways instead of breaking every cell. */}
     <div className={styles.tableScroll} tabIndex={0} role="region" aria-label={result.title}>
-      <table className={styles.table}>
+      <table className={styles.table} style={weights ? { tableLayout: 'fixed' } : undefined}>
+        {weights && <colgroup>{weights.map((w, i) => <col key={i} style={{ width: `${(100 * w / total).toFixed(3)}%` }} />)}</colgroup>}
         <thead><tr>{table.headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
         <tbody>{table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => !span(r, c) ? null : c === 0 ? <th key={c} scope="row" rowSpan={span(r, c)}>{cell}</th> : <td key={c} rowSpan={span(r, c)}>{cell}</td>)}</tr>)}</tbody>
       </table>

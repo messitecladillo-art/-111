@@ -43,6 +43,29 @@ export const ADVISORS: readonly Advisor[] = [
     rules: ['附上 AI 工具使用说明与数据、代码说明', '导出后逐页检查目录、跨页、字体与插图', '检查没做就写没做，不用"全部通过"代替记录'] },
 ];
 
+/** Each advisor's colour where its share of the report is marked on the canvas. Screen only: never exported. */
+export const ADVISOR_TONES: Readonly<Record<string, string>> = {
+  design: '#2F7D6B', evidence: '#3A6EA5', modeling: '#6B5BA8', figures: '#96620F', writing: '#B4566E', delivery: '#5B6B7A',
+};
+
+const advisorById = (id: string) => ADVISORS.find(a => a.id === id) ?? null;
+/**
+ * The advisor whose skill writes a part of the report: a blueprint section's id, or a part ('abstract', 'references',
+ * 'appendix'). Its rules go into that section's drafting prompt, and the canvas marks the section in its colour.
+ * Every chart and table, wherever it stands, is the figures advisor's.
+ */
+export function advisorForNode(nodeId: string | null | undefined): Advisor | null {
+  if (!nodeId) return null;
+  if (nodeId === 'intro.literature' || nodeId === 'references') return advisorById('evidence');
+  if (nodeId.startsWith('design.') || nodeId === 'data.pilot') return advisorById('design');
+  if (nodeId.startsWith('data.') || nodeId.startsWith('compare.') || nodeId.startsWith('drivers.') || nodeId === 'diagnosis.evaluation') return advisorById('modeling');
+  if (nodeId.startsWith('sample.')) return advisorById('figures');
+  if (nodeId === 'appendix' || nodeId.startsWith('appendix.')) return advisorById('delivery');
+  if (nodeId === 'abstract' || /^(?:intro|diagnosis|plan|conclusion)\./u.test(nodeId)) return advisorById('writing');
+  return null;
+}
+export const exhibitAdvisor = (): Advisor => advisorById('figures')!;
+
 export type AdvisorReading = { advisor: Advisor; issues: BenchmarkCheck[]; checked: number; passed: number };
 
 /** What an advisor finds in a report check: its checks that apply, those that pass, and those still to fix. */

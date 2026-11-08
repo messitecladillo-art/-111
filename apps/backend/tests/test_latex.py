@@ -53,7 +53,7 @@ def test_safe_subset_and_metadata_escaping():
     source = latex.build_source(title, "line\nnext", SAFE, OPTIONS)
     assert r"\textbackslash{}input\{secret\}\% \# \& \$ \_ \textasciicircum{} \textasciitilde{}" in source
     assert r"\setlength{\heavyrulewidth}{1.5bp}" in source and r"\setlength{\lightrulewidth}{0.75bp}" in source
-    assert r"\fontsize{12bp}{14.4bp}" in source and r"\fontsize{15bp}{18.75bp}" in source and r"\fontsize{16bp}{20bp}" in source
+    assert r"\fontsize{12bp}{15.552bp}" in source and r"\fontsize{15bp}{19.44bp}" in source and r"\fontsize{16bp}{20bp}" in source and r"\setlength{\parskip}{6bp}" in source
     assert source.count(r"\begin{document}") == 1 and source.endswith("\\end{document}\n")
     assert "fontset=auto" not in source and "line next" in source
     assert source.splitlines().index("% BODY START") < source.splitlines().index("% BODY END")

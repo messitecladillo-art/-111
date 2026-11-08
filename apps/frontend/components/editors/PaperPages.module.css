@@ -1,0 +1,116 @@
+/* The page and its type as the competition layout sets them, measured against Word's rendering of the export:
+   A4; text area 146.4 × 246.2 mm; 宋体 12 pt on 19.44 pt lines; 6 pt before a paragraph; 黑体 15 / 14 pt headings.
+   Screen marks (advisor bars, the plugin dock, the status line) stay outside the text area and never move the flow. */
+
+.viewer { position: relative; display: grid; justify-items: center; gap: 14px; inline-size: 100%; }
+
+/* —— Advisor plugins —— */
+.dock { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; inline-size: min(100%, 880px); padding: 6px 8px; border: 1px solid var(--c-line, #e4e8e6); border-radius: 16px; background: color-mix(in srgb, var(--c-raise, #fcfdfc) 94%, transparent); backdrop-filter: blur(10px); box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 10px 24px -16px rgba(23, 26, 25, .35); font: 12px/1.2 system-ui, -apple-system, "Microsoft YaHei", sans-serif; }
+.plugin { --tone: #5b6b7a; display: inline-flex; align-items: center; gap: 6px; block-size: 28px; padding: 0 10px 0 4px; border: 1px solid var(--c-line, #e4e8e6); border-radius: 999px; background: var(--c-raise, #fff); color: var(--c-ink, #171a19); font: inherit; cursor: pointer; transition: border-color .15s ease, background-color .15s ease, color .15s ease; }
+.plugin i { display: inline-grid; place-items: center; inline-size: 20px; block-size: 20px; border-radius: 50%; background: var(--tone); color: #fff; font-style: normal; font-weight: 700; font-size: 11px; }
+.plugin small { color: var(--c-dim, #6b7370); font-size: 11px; font-variant-numeric: tabular-nums; }
+.plugin:hover { border-color: var(--tone); }
+.plugin:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+.plugin[aria-pressed="true"] { background: color-mix(in srgb, var(--tone) 10%, #fff); border-color: var(--tone); color: var(--tone); }
+.plugin[data-active] { border-color: var(--tone); color: var(--tone); }
+.plugin[data-active] small { color: var(--tone); }
+.plugin[data-active] i { animation: plugin-pulse 1.6s ease-in-out infinite; }
+@keyframes plugin-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tone) 45%, transparent); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone) 0%, transparent); } }
+.dockGap { flex: 1; }
+.markToggle { display: inline-flex; align-items: center; gap: 5px; color: var(--c-dim, #6b7370); cursor: pointer; user-select: none; }
+.markToggle input { inline-size: 14px; block-size: 14px; margin: 0; padding: 0; accent-color: var(--c-primary, #1a4a35); }
+
+/* —— Pages —— */
+.pagesFrame { position: relative; flex: none; }
+.pages { position: absolute; top: 0; left: 0; display: grid; gap: 18px; inline-size: 210mm; transform-origin: 0 0; }
+.page { position: relative; inline-size: 210mm; block-size: 297mm; flex: none; background: #fff; border-radius: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, .08), 0 10px 30px -14px rgba(23, 26, 25, .3); }
+.page[aria-busy="true"] { background: linear-gradient(90deg, #f6f8f7, #fff, #f6f8f7); }
+.body { position: absolute; top: 25.4mm; left: 31.8mm; overflow: hidden; }
+.slice { will-change: transform; }
+.folio { position: absolute; inset-inline: 0; bottom: 12.7mm; color: #000; font: 12pt/15.552pt "Times New Roman", SimSun, "Songti SC", serif; text-align: center; }
+
+/* An advisor's share: a bar in the left margin beside it, its tag where the share begins. */
+.mark { --tone: #5b6b7a; position: absolute; left: 24.8mm; inline-size: 3px; border-radius: 2px; background: var(--tone); opacity: .7; transition: opacity .2s ease; pointer-events: none; }
+.mark[data-dim] { opacity: .1; }
+.mark[data-live] { opacity: 1; animation: mark-live 1.4s ease-in-out infinite; }
+@keyframes mark-live { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tone) 40%, transparent); } 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 0%, transparent); } }
+.markTag { position: absolute; top: -1px; right: 7px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 3px; border-radius: 999px; background: color-mix(in srgb, var(--tone) 10%, #fff); color: var(--tone); font: 600 10px/1.2 system-ui, -apple-system, "Microsoft YaHei", sans-serif; white-space: nowrap; }
+.markTag[data-pending] { background: #fff; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 35%, transparent); color: color-mix(in srgb, var(--tone) 70%, #6b7370); }
+.markTag i { display: inline-grid; place-items: center; inline-size: 14px; block-size: 14px; border-radius: 50%; background: var(--tone); color: #fff; font-style: normal; font-size: 9px; }
+
+/* —— The flow: one type system for the measured copy and the pages —— */
+.flow { inline-size: 146.4mm; color: #000; font-family: "Times New Roman", SimSun, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", serif; font-size: 12pt; line-height: 19.44pt; text-align: justify; overflow-wrap: anywhere; font-synthesis: none; }
+.measure { position: fixed; top: 0; left: -100000px; visibility: hidden; pointer-events: none; contain: layout style; }
+.box { position: relative; display: flow-root; }
+.flow p { margin: 0; }
+.para { text-indent: var(--indent, 24pt); white-space: pre-wrap; }
+.flush { text-indent: 0; white-space: pre-wrap; }
+.blank::before { content: "\00a0"; }
+.hint { background: #fbf6e9; box-shadow: inset 2px 0 #e2c27a; }
+.keywords { font-family: "Times New Roman", SimHei, "Heiti SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-weight: 700; }
+
+.h1, .h2, .special, .coverTitle { font-family: "Times New Roman", SimHei, "Heiti SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-weight: 400; }
+.h1 { font-size: 15pt; line-height: 24.3pt; text-align: left; text-indent: 0; }
+.h2 { font-size: 14pt; line-height: 22.68pt; text-align: left; text-indent: 0; }
+.h3 { text-align: left; text-indent: 0; }
+.special { font-size: 14pt; line-height: 22.68pt; text-align: center; text-indent: 0; }
+.title { font-size: 16pt; font-weight: 700; line-height: 20.736pt; text-align: center; text-indent: 0; }
+.cover { padding-top: 210pt; text-align: center; }
+.coverTitle { padding-bottom: 18pt; font-size: 22pt; font-weight: 700; line-height: 47.52pt; text-align: center; }
+.coverSubtitle { padding-top: 6pt; font-size: 14pt; line-height: 27.216pt; text-align: center; }
+
+.entry { display: flex; align-items: baseline; padding-left: calc((var(--level, 1) - 1) * 12pt); text-align: left; text-indent: 0; cursor: pointer; }
+.entryText { flex: 0 1 auto; }
+.leader { flex: 1 1 auto; min-inline-size: 12pt; margin: 0 3pt; border-bottom: 1.2px dotted #000; transform: translateY(-.3em); }
+.entryPage { flex: none; font-variant-numeric: tabular-nums; }
+.entry[data-linked="true"] { background: rgba(15, 118, 110, .08); }
+
+.ref { padding-left: 10mm; text-indent: -10mm; }
+.refNo { display: inline-block; min-inline-size: 10mm; text-indent: 0; }
+.unfinished { color: #b42318; font-style: normal; }
+
+.figure { line-height: 15.552pt; text-indent: 0; }
+.figure svg { display: block; inline-size: 100%; block-size: auto; }
+.caption { text-align: center; text-indent: 0; }
+.tableCaption { text-align: center; text-indent: 0; }
+.table { font-size: 10.5pt; line-height: 13.608pt; text-indent: 0; }
+.table > div { overflow: visible; }
+.table table { inline-size: 100%; min-inline-size: 0; border-collapse: collapse; border-top: 1.5pt solid #000; border-bottom: 1.5pt solid #000; font-size: 10.5pt; line-height: 13.608pt; text-align: center; font-variant-numeric: tabular-nums; }
+.table table thead th { padding: 1.5pt 3pt; border-bottom: .75pt solid #000; font-weight: 400; white-space: normal; }
+.table table td, .table table tbody th { padding: 1.5pt 3pt; font-weight: 400; white-space: normal; }
+.table p { margin: 0 !important; padding: 2pt 0 6pt; color: #000; font-size: 9pt; line-height: 11.664pt; text-align: left !important; text-indent: 0 !important; }
+.small { font-size: 9pt; line-height: 11.664pt; text-align: left; text-indent: 0; }
+.equation { padding: 3pt 0; line-height: 15.552pt; text-indent: 0; }
+.error { color: #b42318; }
+
+/* Cross-references print as plain text and citations as plain superscripts in Word, so on the page they keep those
+   metrics exactly: no padding, border, margin or size change. Colour and an underline that takes no room mark them. */
+.flow [data-xref-source] { display: inline; padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: none; color: #0f766e; font: inherit !important; letter-spacing: inherit; text-indent: 0; box-shadow: inset 0 -1px 0 rgba(15, 118, 110, .35); transform: none !important; }
+.flow sup[data-cite-source] { display: inline; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; color: #0f766e; font-size: .65em !important; font-weight: inherit !important; line-height: 0 !important; vertical-align: super; transform: none !important; }
+.flow [data-xref-source]:hover, .flow [data-xref-source][data-xref-active="true"],
+.flow sup[data-cite-source]:hover, .flow sup[data-cite-source][data-xref-active="true"] { background: rgba(198, 139, 44, .2); color: #0f766e; box-shadow: inset 0 -2px 0 #c68b2c; }
+
+/* —— Live writing: the caret, the review note, the section in hand —— */
+.caret { display: inline-block; inline-size: 2px; block-size: 1.05em; margin-left: 1px; vertical-align: -.12em; background: #0f766e; animation: caret-blink 1s steps(1) infinite; }
+@keyframes caret-blink { 50% { opacity: 0; } }
+.review { padding: 6pt 8pt; border: 1px solid #f0c9a8; border-radius: 6px; background: #fff8f1; font: 12px/1.6 system-ui, -apple-system, "Microsoft YaHei", sans-serif; text-align: left; text-indent: 0; }
+.review b { margin-right: 6px; color: #9a4b16; }
+.review del { color: #b42318; }
+.review ins { background: #e8f5ef; color: #0f766e; text-decoration: none; }
+.active { background: rgba(15, 118, 110, .045); }
+.scan { animation: format-scan 1.2s ease-in-out infinite; }
+@keyframes format-scan { 50% { background: rgba(198, 139, 44, .1); } }
+.box[data-dim="true"] { opacity: .32; transition: opacity .2s ease; }
+
+/* —— Status: pages against the limit, and the scale —— */
+.status { position: sticky; bottom: 10px; z-index: 4; justify-self: end; display: flex; align-items: center; gap: 10px; margin-right: 8px; padding: 4px 6px 4px 12px; border: 1px solid var(--c-line, #e4e8e6); border-radius: 999px; background: color-mix(in srgb, var(--c-raise, #fcfdfc) 94%, transparent); backdrop-filter: blur(10px); box-shadow: 0 8px 20px -14px rgba(23, 26, 25, .4); color: var(--c-dim, #6b7370); font: 12px/1 system-ui, -apple-system, "Microsoft YaHei", sans-serif; font-variant-numeric: tabular-nums; }
+.status[data-over] { border-color: #e7a59a; color: #b42318; }
+.zoom { display: inline-flex; gap: 2px; }
+.zoom button { min-inline-size: 26px; block-size: 24px; padding: 0 6px; border: 0; border-radius: 999px; background: transparent; color: var(--c-ink, #171a19); font: inherit; cursor: pointer; }
+.zoom button:hover { background: var(--c-hover, #eef2f0); }
+.zoom button:focus-visible { outline: 2px solid var(--c-primary, #1a4a35); outline-offset: 1px; }
+.zoom button[aria-pressed="true"] { color: var(--c-primary, #1a4a35); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .plugin[data-active] i, .mark[data-live], .caret, .scan { animation: none; }
+}

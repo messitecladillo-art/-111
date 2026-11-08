@@ -128,9 +128,16 @@ export async function buildDocx(content: EditorContent, inputOptions: ReportForm
   if(content.reportFrame)await addFrameToWord(archive,content.reportFrame,sectionKinds);
   const styleXml=await archive.file('word/styles.xml')!.async('string');
   archive.file('word/styles.xml',styleXml.replace(/<w:style\b[\s\S]*?<\/w:style>/g,block=>{
-    if(!/w:styleId="(?:Normal|ReportReference|ReportSpecialHeading|ReportCaption|Heading[1-5])"/.test(block))return block;
+    // A style that sets its own space before (table text, captions, figures, notes, contents, the cover) states that
+    // it is not line-relative: an inherited beforeLines would otherwise win over its points, as Word resolves them.
+    if(!/w:styleId="(?:Normal|ReportReference|ReportSpecialHeading|ReportCaption|Heading[1-5])"/.test(block))return block.replace(/<w:spacing\b([^>]*\sw:before="[^"]*"[^>]*)\/>/,(_match,attrs:string)=>`<w:spacing${attrs} w:beforeLines="0"/>`);
     return block.replace(/<w:spacing\b([^>]*)\/>/,(_match,attrs:string)=>`<w:spacing${attrs.replace(/\s+w:before="[^"]*"/g,'')} w:beforeLines="50"/>`);
   }));
+  // A paragraph that sets its own space before in points states that it is not line-relative, as its style would say.
+  for(const name of Object.keys(archive.files).filter(n=>/^word\/(?:document|footer\d+|header\d+)\.xml$/.test(n))){
+    const xml=await archive.file(name)!.async('string');
+    archive.file(name,xml.replace(/<w:spacing\b(?![^>]*w:beforeLines)([^>]*\sw:before="[^"]*"[^>]*?)\/>/g,(_m,attrs:string)=>`<w:spacing${attrs} w:beforeLines="0"/>`));
+  }
   if(ctx.math.length){
     // docx cannot write Office Math, so formulas travel as placeholder runs and are swapped in here.
     const documentXml=insertMath(await archive.file('word/document.xml')!.async('string'),ctx.math);

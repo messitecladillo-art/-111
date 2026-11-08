@@ -145,15 +145,15 @@ export function buildLatexSource(input: LatexCompileInput): string {
     '\\usepackage[top=25.4mm,bottom=25.4mm,left=31.8mm,right=31.8mm]{geometry}',
     '\\usepackage{amsmath,amssymb,booktabs,array,caption,setspace}',
     '\\IfFontExistsTF{Times New Roman}{\\setmainfont{Times New Roman}}{}',
-    '\\setstretch{1.25}', '\\setlength{\\emergencystretch}{5em}', '\\setlength{\\parskip}{0.5\\baselineskip}',
+    '\\setstretch{1.25}', '\\setlength{\\emergencystretch}{5em}', '\\setlength{\\parskip}{6bp}',
     `\\setlength{\\parindent}{${o.firstLineChars}em}`,
     '\\setlength{\\heavyrulewidth}{1.5bp}', '\\setlength{\\lightrulewidth}{0.75bp}',
     '\\renewcommand{\\arraystretch}{1.2}',
-    '\\DeclareCaptionFont{reportcaption}{\\fontsize{12bp}{14.4bp}\\selectfont}',
+    '\\DeclareCaptionFont{reportcaption}{\\fontsize{12bp}{15.552bp}\\selectfont}',
     '\\captionsetup{font=reportcaption,labelsep=quad,justification=centering,singlelinecheck=false}',
-    '\\ctexset{section={format=\\fontsize{15bp}{18.75bp}\\selectfont\\heiti},subsection={format=\\fontsize{14bp}{17.5bp}\\selectfont\\heiti},subsubsection={format=\\fontsize{12bp}{15bp}\\selectfont\\songti}}',
+    '\\ctexset{section={format=\\fontsize{15bp}{19.44bp}\\selectfont\\heiti,beforeskip=6bp,afterskip=1sp},subsection={format=\\fontsize{14bp}{18.144bp}\\selectfont\\heiti,beforeskip=6bp,afterskip=1sp},subsubsection={format=\\fontsize{12bp}{15.552bp}\\selectfont\\songti,beforeskip=6bp,afterskip=1sp}}',
     '\\setcounter{secnumdepth}{-1}', `\\pagestyle{${o.numberPages ? 'plain' : 'empty'}}`, '\\begin{document}',
-    '\\fontsize{12bp}{14.4bp}\\selectfont',
+    '\\fontsize{12bp}{15.552bp}\\selectfont',
   ];
   if(input.body.includes('\\begin{tikzpicture}'))lines.splice(3,0,'\\usepackage{pgfplots}','\\pgfplotsset{compat=1.18}');
   if(input.figures?.length){if(!input.visualStyle)throw Error('图形缺少配色版本。');lines.splice(3,0,'\\usepackage{tikz}');lines.splice(lines.indexOf('\\begin{document}'),0,...figureTexPreamble(input.figures,input.visualStyle));}

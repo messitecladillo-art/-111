@@ -130,7 +130,7 @@ export function ReportLiveTheater({
   beams: SynapseBeam[];
 }) {
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
-  const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: 1200, h: 1600 });
+  const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: 320, h: 1600 });
 
   useEffect(() => {
     const container = paperRef.current;
@@ -140,8 +140,10 @@ export function ReportLiveTheater({
     const updatePosition = () => {
       const caret = container.querySelector<HTMLElement>('[data-typing-caret="true"]');
       const cRect = container.getBoundingClientRect();
+      // The overlay covers the visible width only: sized from scrollWidth it counted its own width and never shrank,
+      // which left the paper stage scrolling sideways.
       setStageSize({
-        w: Math.max(container.scrollWidth, cRect.width, 800),
+        w: Math.max(container.clientWidth, 320),
         h: Math.max(container.scrollHeight, cRect.height, 1000),
       });
       if (caret && robotVisible) {

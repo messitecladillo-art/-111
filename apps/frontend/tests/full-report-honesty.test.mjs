@@ -130,6 +130,20 @@ test('a flagged section goes back to the model once; the revision is kept becaus
   for (const boilerplate of ['借鉴了既有权威文献', '有效回收率为 94.4%。', '季度脉冲监测指标']) assert.ok(!all.includes(boilerplate), boilerplate);
 });
 
+test('each section is written under its advisor: the advisor\'s skill and rules are in its prompt and its trace names it', async () => {
+  const prompts = [];
+  const fetcher = async (_url, init) => {
+    prompts.push(JSON.parse(init.body).messages[0].content);
+    return new Response(JSON.stringify({ choices: [{ message: { content: draft('本节说明分层抽样的设计思路与各层的入样安排。') } }] }), { status: 200 });
+  };
+  const res = await generateFullReportWithAgent({ llm: { apiKey: 'sk-test-mock', concurrency: 2 }, sectionNodes: ['design.sampling', 'compare.tests'], fetcher });
+  const sampling = prompts.find(p => p.includes('节点 ID：design.sampling'));
+  assert.match(sampling, /【本节负责顾问】「调查设计顾问」（技能 market-research-design）/u);
+  assert.match(sampling, /不借用随机抽样的名称/u, 'the advisor\'s own rule is in the prompt');
+  assert.match(prompts.find(p => p.includes('节点 ID：compare.tests')), /「统计建模顾问」/u);
+  assert.deepEqual(Object.fromEntries(res.traces.map(t => [t.nodeId, t.advisor])), { 'design.sampling': 'design', 'compare.tests': 'modeling' });
+});
+
 test('a revision that leaves the problem standing is not kept', async () => {
   const fetcher = async () =>
     new Response(JSON.stringify({ choices: [{ message: { content: draft('整体满意度与复游推荐意愿相关，说明满意度导致了复游意愿上升，见{G1}。') } }] }), { status: 200 });

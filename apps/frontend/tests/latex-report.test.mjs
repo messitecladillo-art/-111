@@ -59,11 +59,11 @@ test('main and appendix exports keep distinct parts and preserve chosen chapter 
   assert.throws(() => generateLatexBody({ ...content, report: content.report.filter(s=>s.id!=='a') }), /附录/);
 });
 
-// Frozen hashes generated independently by evix_api.latex.build_source (2026-10-11).
+// Frozen hashes generated independently by evix_api.latex.build_source (2026-11-08, Word-measured line and paragraph spacing).
 const parity = [
-  { input: { title:'合成研究 A&B_1', subtitle:'标签 % # $ { } \\ ^ ~', body:'\\section{摘要}\n合成结果。\\par\n\\[ \\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i \\]', options:{part:'main',includeCover:true,includeToc:true,firstLineChars:2,numberPages:true} }, hash:'2513889ce995061eecfc03eb90c9f5a9984459bd2ecfda68cf263657f366f024' },
-  { input: { title:'附录',subtitle:'',body:'\\section{补充材料}\n\\begin{tabular}{cc}\\toprule 变量 & 数值 \\\\ \\midrule A & 12 \\\\ \\bottomrule\\end{tabular}',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'fc2d4e8b503ad1a1ef19486bd292d3d39fa1f3f1c0c687918f31d694055f4efa' },
-  { input: { title:'CR normalization',subtitle:'',body:'% comment\r\\section{Newline}\r\nText\\par',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'c5d1675edd73eb5d22019d7f5c995bc0ee64891ebb2b6af0e6ad9895a2003748' },
+  { input: { title:'合成研究 A&B_1', subtitle:'标签 % # $ { } \\ ^ ~', body:'\\section{摘要}\n合成结果。\\par\n\\[ \\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i \\]', options:{part:'main',includeCover:true,includeToc:true,firstLineChars:2,numberPages:true} }, hash:'d5e622ec629f793374565fe3896bf3c346e11887348fd982a54adfaabc964ff8' },
+  { input: { title:'附录',subtitle:'',body:'\\section{补充材料}\n\\begin{tabular}{cc}\\toprule 变量 & 数值 \\\\ \\midrule A & 12 \\\\ \\bottomrule\\end{tabular}',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'0a3e7e40e159d7cc2c22d1b1b353ea998e0275a7fb6dcbd1b654070c1e39d361' },
+  { input: { title:'CR normalization',subtitle:'',body:'% comment\r\\section{Newline}\r\nText\\par',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'d9d048b2e765063d09317ec176ae7ac697b65639193e5f0015c6a090c6b9fd66' },
 ];
 test('full source matches independent backend golden fixtures byte for byte', async () => {
   for (const {input,hash} of parity) assert.equal(await latexSha256(buildLatexSource(input)),hash);
@@ -73,9 +73,9 @@ test('trusted layout fixes A4, Chinese body, three lines and centered columns wi
   const source = buildLatexSource(parity[0].input);
   assert.ok(source.includes('a4paper')); assert.ok(source.includes('top=25.4mm,bottom=25.4mm,left=31.8mm,right=31.8mm'));
   assert.ok(source.includes('\\heavyrulewidth}{1.5bp}')); assert.ok(source.includes('\\lightrulewidth}{0.75bp}'));
-  assert.ok(source.includes('\\fontsize{12bp}{14.4bp}')); assert.ok(source.includes('\\setcounter{secnumdepth}{-1}'));
-  assert.ok(source.includes('\\DeclareCaptionFont{reportcaption}{\\fontsize{12bp}{14.4bp}\\selectfont}'));
-  assert.ok(source.includes('\\fontsize{16bp}{20bp}')); assert.ok(source.includes('\\fontsize{15bp}{18.75bp}'));
+  assert.ok(source.includes('\\fontsize{12bp}{15.552bp}')); assert.ok(source.includes('\\setlength{\\parskip}{6bp}')); assert.ok(source.includes('\\setcounter{secnumdepth}{-1}'));
+  assert.ok(source.includes('\\DeclareCaptionFont{reportcaption}{\\fontsize{12bp}{15.552bp}\\selectfont}'));
+  assert.ok(source.includes('\\fontsize{16bp}{20bp}')); assert.ok(source.includes('\\fontsize{15bp}{19.44bp}'));
   assert.ok(!source.includes('EVI-X')); assert.ok(!source.includes('fontset=auto'));
   assert.ok(source.includes('\\pagenumbering{Roman}')); assert.ok(source.includes('\\pagenumbering{arabic}'));
   assert.ok(LATEX_INSERTS.table.includes('\\begin{tabular}{ccc}'));
