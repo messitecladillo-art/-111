@@ -19,6 +19,7 @@ import type { FigurePlan } from './report-figures.ts';
 import type { ReportInsert } from './report-insert.ts';
 import { ADVANCED_NODES } from './report-placement.ts';
 import { digestText, snapshotRecipe } from './research-quality.ts';
+import { exhibitName } from './report-templates.ts';
 
 export type AdvancedSpec =
   | { method: 'validity'; items: number[] }
@@ -244,9 +245,10 @@ export async function advancedInsert(run: AdvancedRun, source: { name: string; h
     { kind: 'paragraph', text: run.writing.text },
     ...run.writing.formulas.map(tex => ({ kind: 'formula' as const, tex })),
     { kind: 'paragraph', text: run.writing.where },
-    { kind: 'table', result, caption: table.caption },
+    // Exhibits are named "…表" and "…图", the project's naming (research-chart-production).
+    { kind: 'table', result, caption: exhibitName(table.caption, 'table') },
     { kind: 'paragraph', text: table.note },
-    ...(run.chart ? [{ kind: 'figure' as const, result, caption: run.chart.caption }] : []),
+    ...(run.chart ? [{ kind: 'figure' as const, result, caption: exhibitName(run.chart.caption, 'chart') }] : []),
     // The reading cites the table (and figure) above it: "@N" names the insert's own item N, resolved when the insert is applied.
     { kind: 'paragraph', text: `由${cites}可知，${run.writing.reading}` },
   ] };

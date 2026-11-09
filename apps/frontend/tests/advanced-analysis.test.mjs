@@ -61,7 +61,7 @@ test('the write-up goes into its blueprint section as one insert whose reading c
   const tableBlock = applied.blocks.find(b => b.kind === 'table'), chartBlock = applied.blocks.find(b => b.kind === 'chart'), reading = applied.blocks.at(-1);
   assert.ok(reading.text.startsWith(`由[[表:${tableBlock.id}]]和[[图:${chartBlock.id}]]可知，`), 'the "@N" placeholders became the table and figure blocks');
   assert.equal(chartBlock.evidenceId, tableBlock.evidenceId, 'the figure is drawn from the table\'s own result');
-  assert.equal(chartBlock.text, '满意度影响因素的回归系数及其 95% 置信区间');
+  assert.equal(chartBlock.text, '满意度影响因素的回归系数及其 95% 置信区间图');
   assert.deepEqual(danglingReferences(applied.content), []);
   assert.ok(section.body.startsWith('【教学模拟数据，不能作为实际调查结果】'), 'simulated numbers are declared where they land');
 });

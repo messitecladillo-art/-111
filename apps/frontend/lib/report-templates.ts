@@ -53,18 +53,30 @@ export function variableLabel(name: string): string {
 /** A variable name for running text (literal; see `literal`). */
 const variable = (r: ResultSnapshot, i: number) => r.variables?.[i] ? literal(variableLabel(r.variables[i])) : '';
 
-/** A caption in report style, from the analysed variables; the registered title when they are unknown. */
-export function resultCaption(r: ResultSnapshot): string {
+/**
+ * The project's naming of exhibits (research-chart-production, chosen by the user): a figure's name ends in "图" and a
+ * table's in "表", never twice ("…流程图图"). A name that already ends so is kept as written.
+ */
+export function exhibitName(text: string, kind: 'chart' | 'table'): string {
+  const t = text.trim(), suffix = kind === 'chart' ? '图' : '表';
+  return !t || t.endsWith(suffix) ? t : `${t}${suffix}`;
+}
+
+/**
+ * A caption in report style, from the analysed variables, named for what it is: 分布图, 对比图, 相关系数图 for figures;
+ * 交叉表, 统计表, 信度分析表 for tables. The registered title, so named, when the variables are unknown.
+ */
+export function resultCaption(r: ResultSnapshot, kind: 'chart' | 'table' = 'table'): string {
   const [a, b] = [0, 1].map(i => r.variables?.[i] ? captionText(variableLabel(r.variables[i])) : '');
-  const title = captionText(r.title);
+  const chart = kind === 'chart', title = exhibitName(captionText(r.title), kind);
   switch (r.method) {
-    case 'frequency': return a ? `受访者${a}分布` : title;
-    case 'crosstab': return a && b ? `不同${a}受访者的${b}分布` : title;
-    case 'groups': return a && b ? `不同${a}受访者的${b}比较` : title;
-    case 'numeric': return a ? `${a}的分布` : title;
-    case 'pearson': case 'spearman': return a && b ? `${a}与${b}的相关分析` : title;
-    case 'alpha': return a ? `${a}量表信度分析` : title;
-    case 'quality-control': return '问卷有效性筛查';
+    case 'frequency': return a ? `受访者${a}分布${chart ? '图' : '表'}` : title;
+    case 'crosstab': return a && b ? (chart ? `不同${a}受访者的${b}分布图` : `${a}与${b}交叉表`) : title;
+    case 'groups': return a && b ? (chart ? `不同${a}受访者的${b}对比图` : `不同${a}受访者的${b}统计表`) : title;
+    case 'numeric': return a ? (chart ? `${a}的分布图` : `${a}描述统计表`) : title;
+    case 'pearson': case 'spearman': return a && b ? (chart ? `${a}与${b}的相关系数图` : `${a}与${b}的相关分析表`) : title;
+    case 'alpha': return a ? `${a}量表信度分析表` : title;
+    case 'quality-control': return '问卷有效性筛查表';
     default: return title;
   }
 }

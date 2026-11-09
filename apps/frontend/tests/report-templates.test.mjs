@@ -9,7 +9,7 @@ import { runRecipe } from '../lib/analysis-recipes.ts';
 import { parseResultSnapshot, resultPayload, digestText, snapshotRecipe } from '../lib/research-quality.ts';
 import { blueprintSections, matchBlueprintNode } from '../lib/report-blueprint.ts';
 import { danglingReferences, reportLabels, resolveReferences } from '../lib/report-numbering.ts';
-import { methodIntro, readingParagraph, resultCaption, variableLabel } from '../lib/report-templates.ts';
+import { exhibitName, methodIntro, readingParagraph, resultCaption, variableLabel } from '../lib/report-templates.ts';
 import { defaultColumn, placeResult, sectionForNode, suggestedExhibits, suggestedNode } from '../lib/report-placement.ts';
 import { splitInlineMath } from '../lib/inline-math.ts';
 import { seededRandom } from '../lib/sampling-core.ts';
@@ -51,12 +51,19 @@ test('question labels become variable names and captions in report style', () =>
   assert.equal(variableLabel('3、您每周使用几次？'), '您每周使用几次');
   assert.equal(variableLabel('第5题：月收入'), '月收入');
   assert.equal(variableLabel('2023年收入'), '2023年收入', 'a year is not a question number');
-  assert.equal(resultCaption(r.gender), '受访者性别分布');
-  assert.equal(resultCaption(r.cross), '不同年龄组受访者的使用频次分布');
-  assert.equal(resultCaption(r.groups), '不同常用设施受访者的满意度得分比较');
-  assert.equal(resultCaption(r.walk), '步行时间（分钟）的分布');
-  assert.equal(resultCaption(r.corr), '步行时间（分钟）与每月花费的相关分析');
-  assert.equal(resultCaption({ ...r.gender, variables: undefined }), '问题gender', 'without variables the registered title is used');
+  // Figures are named "…图" and tables "…表" (the project's naming; research-chart-production).
+  assert.equal(resultCaption(r.gender), '受访者性别分布表');
+  assert.equal(resultCaption(r.gender, 'chart'), '受访者性别分布图');
+  assert.equal(resultCaption(r.cross, 'chart'), '不同年龄组受访者的使用频次分布图');
+  assert.equal(resultCaption(r.cross), '年龄组与使用频次交叉表');
+  assert.equal(resultCaption(r.groups, 'chart'), '不同常用设施受访者的满意度得分对比图');
+  assert.equal(resultCaption(r.groups), '不同常用设施受访者的满意度得分统计表');
+  assert.equal(exhibitName('服务流程图', 'chart'), '服务流程图', 'never 流程图图');
+  assert.equal(resultCaption(r.walk), '步行时间（分钟）描述统计表');
+  assert.equal(resultCaption(r.walk, 'chart'), '步行时间（分钟）的分布图');
+  assert.equal(resultCaption(r.corr), '步行时间（分钟）与每月花费的相关分析表');
+  assert.equal(resultCaption(r.corr, 'chart'), '步行时间（分钟）与每月花费的相关系数图');
+  assert.equal(resultCaption({ ...r.gender, variables: undefined }), '问题gender表', 'without variables the registered title is used, named as a table');
 });
 
 test('reading paragraphs state the pattern and the full test, with symbols as formulas and no causal claims', () => {
@@ -100,7 +107,7 @@ test('labels from data stay literal text, and negative numbers take a true minus
   assert.deepEqual(mathOf(text), [], 'no formula comes from data');
   assert.ok(text.includes('“路径［［表:y］］\\$1\\$”'), 'dollars from data are escaped');
   assert.equal(splitInlineMath(text).map(p => p.text).join(''), text.replace(/\\\$/g, '$'), 'escaped dollars print as dollars');
-  assert.equal(resultCaption(tricky), '受访者设施［［图:x］］ ＄5分布');
+  assert.equal(resultCaption(tricky), '受访者设施［［图:x］］ ＄5分布表');
   assert.deepEqual(danglingReferences({ ...createEditorContent(), report: [{ id: 's', title: '一、甲', body: text, source: '' }] }), []);
   const negative = { ...r.corr, metrics: [{ label: 'Pearson r', value: -0.4 }, { label: 'p 值（双侧）', value: 0.01 }, { label: '95% CI 下限', value: -0.55 }, { label: '95% CI 上限', value: -0.22 }] };
   const corr = readingParagraph(negative, {});
@@ -144,7 +151,7 @@ test('a result goes to its blueprint section with one exhibit and a reading para
   assert.equal(matchBlueprintNode(section.title).id, 'compare.tests');
   assert.deepEqual(section.blocks.map(b => b.kind), ['paragraph', 'formula', 'formula', 'paragraph', 'chart', 'paragraph']);
   const chart = section.blocks.find(b => b.kind === 'chart');
-  assert.equal(chart.text, '不同年龄组受访者的使用频次分布');
+  assert.equal(chart.text, '不同年龄组受访者的使用频次分布图');
   assert.equal(chart.valueColumn, 3);
   assert.ok(section.blocks.at(-1).text.startsWith(`由[[图:${chart.id}]]可知`));
   assert.deepEqual(danglingReferences(placed.content), []);

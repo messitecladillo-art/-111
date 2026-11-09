@@ -106,7 +106,7 @@ export function placeResult(content: EditorContent, resultId: string, options: {
   if (intro && !shown) blocks.push(block('paragraph', intro.text), ...intro.formulas.map(f => block('formula', f)), block('paragraph', intro.where));
   const refs: ResultRefs = {};
   for (const kind of options.exhibits ?? suggestedExhibits(r)) {
-    const exhibit = block(kind, resultCaption(r), r.id, kind === 'chart' ? defaultColumn(r) : 1);
+    const exhibit = block(kind, resultCaption(r, kind), r.id, kind === 'chart' ? defaultColumn(r) : 1);
     blocks.push(exhibit);
     refs[kind === 'chart' ? 'figure' : 'table'] = exhibit.id;
   }
