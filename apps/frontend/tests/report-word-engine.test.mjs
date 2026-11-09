@@ -178,6 +178,10 @@ test('categories read in their natural order: rating scales, numbered bands, "�
   assert.deepEqual(categoryOrder(['满意', '一般', '非常满意', '不满意', '非常不满意']), { labels: ['非常不满意', '不满意', '一般', '满意', '非常满意'], ordinal: true });
   assert.deepEqual(categoryOrder(['经常', '从不', '偶尔']).labels, ['从不', '偶尔', '经常']);
   assert.deepEqual(categoryOrder(['25–34岁', '18–24岁', '50岁及以上', '35–49岁']).labels, ['18–24岁', '25–34岁', '35–49岁', '50岁及以上']);
+  // Two bands that both carry a number are in order too; two named answers, or a number with a word, are not reordered.
+  assert.deepEqual(categoryOrder(['71 岁及以上老年人', '60–70 岁老年人']), { labels: ['60–70 岁老年人', '71 岁及以上老年人'], ordinal: true });
+  assert.deepEqual(categoryOrder(['女', '男']), { labels: ['女', '男'], ordinal: false });
+  assert.deepEqual(categoryOrder(['10 次', '从不']).ordinal, false);
   assert.deepEqual(categoryOrder(['其他', '健身路径', '篮球场']), { labels: ['健身路径', '篮球场', '其他'], ordinal: false });
   assert.equal(scaleScores(['男', '女', '其他']), null);
   assert.equal(scaleScores(['不满意', '比较不满意', '一般']), null, 'two answers on the same step are not one scale');

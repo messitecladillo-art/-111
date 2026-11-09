@@ -29,12 +29,13 @@ const firstSeen = <T>(values: T[]) => [...new Set(values)];
 const fixed = (v: string | number | null, digits: number) => numeric(v) === null ? '—' : (v as number).toFixed(digits);
 /**
  * Ordered categories such as age bands or frequencies sort by their leading number ("18–24岁" before "25–34岁");
- * at most one label without a number ("从不") goes first. Anything else keeps its registered order.
+ * at most one label without a number ("从不") goes first, and only among three or more. Two bands that both carry a
+ * number ("60–70 岁", "71 岁及以上") are ordered too. Anything else keeps its registered order.
  */
 export function naturalOrder(labels: string[]): string[] {
   const lead = (s: string) => { const m = /\d+(?:\.\d+)?/.exec(s); return m ? Number(m[0]) : null; };
   const unnumbered = labels.filter(l => lead(l) === null);
-  if (labels.length < 3 || unnumbered.length > 1 || labels.length - unnumbered.length < 2) return labels;
+  if (labels.length < 2 || unnumbered.length > (labels.length < 3 ? 0 : 1) || labels.length - unnumbered.length < 2) return labels;
   return [...unnumbered, ...labels.filter(l => lead(l) !== null).sort((a, b) => lead(a)! - lead(b)!)];
 }
 
