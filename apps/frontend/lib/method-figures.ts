@@ -96,24 +96,37 @@ export function screePlot(eigenvalues: readonly number[], accent: string): Figur
 }
 
 /** Each attribute at (performance, importance), split by the two lines into the four IPA quadrants, each named. */
-export function ipaPlot(points: readonly { name: string; importance: number; performance: number }[], lines: { importance: number; performance: number }, accent: string, importanceAxis = '重要性'): FigurePlan {
+export function ipaPlot(points: readonly { name: string; importance: number; performance: number }[], lines: { importance: number; performance: number }, ink: FigureInk, importanceAxis = '重要性'): FigurePlan {
   if (points.length < 2) throw Error('IPA 至少需要两个属性。');
+  const accent = inkPrimary(ink), act = inkOpposite(ink);
   const xs = [...points.map(p => p.performance), lines.performance], ys = [...points.map(p => p.importance), lines.importance];
   const span = (v: number[]) => (Math.max(...v) - Math.min(...v)) || 1;
   const bx = niceBounds(Math.min(...xs) - span(xs) * 0.12, Math.max(...xs) + span(xs) * 0.12), by = niceBounds(Math.min(...ys) - span(ys) * 0.12, Math.max(...ys) + span(ys) * 0.12);
-  // Quadrant names sit just inside the corners, clear of the axes and their ticks.
-  const x0 = bx.min + (bx.max - bx.min) * 0.02, x1 = bx.max - (bx.max - bx.min) * 0.02, y0 = by.min + (by.max - by.min) * 0.03, y1 = by.max - (by.max - by.min) * 0.03;
-  const corner = (x: number, y: number, name: string, align: 'left' | 'right') => ({ value: [x, y], label: { show: true, formatter: name, ...small, color: AXIS, fontWeight: 'bold' as const, align, verticalAlign: y > lines.importance ? 'top' as const : 'bottom' as const } });
-  const quadrants: SeriesOption = {
-    type: 'scatter', clip: false, silent: true, symbolSize: 0, z: 1,
-    data: [corner(x0, y1, '重点改进', 'left'), corner(x1, y1, '继续保持', 'right'), corner(x0, y0, '低优先', 'left'), corner(x1, y0, '过度投入', 'right')],
+  // The two dividing lines and the quadrant names are drawn as plain lines and text in one custom series: zero-size
+  // scatter symbols (the former label carriers) wrote matrix(0,0,0,0,…) transforms, and Word drops an SVG holding one.
+  const quadrants: CustomSeriesOption = {
+    type: 'custom', silent: true, z: 1, data: [[0]],
+    renderItem: (params, api) => {
+      const area = (params as unknown as { coordSys: { x: number; y: number; width: number; height: number } }).coordSys;
+      const at = api.coord([lines.performance, lines.importance]), dash = { stroke: AXIS, lineWidth: 1.5, lineDash: [6, 5] };
+      const label = (x: number, y: number, text: string, align: 'left' | 'right', verticalAlign: 'top' | 'bottom') =>
+        ({ type: 'text', x, y, style: { text, fill: AXIS, fontSize: 20, fontFamily: FONT, fontWeight: 'bold', align, verticalAlign } });
+      const left = area.x + 10, right = area.x + area.width - 10, top = area.y + 8, bottom = area.y + area.height - 8;
+      return { type: 'group', children: [
+        { type: 'line', shape: { x1: at[0], y1: area.y, x2: at[0], y2: area.y + area.height }, style: dash },
+        { type: 'line', shape: { x1: area.x, y1: at[1], x2: area.x + area.width, y2: at[1] }, style: dash },
+        label(left, top, '重点改进', 'left', 'top'), label(right, top, '继续保持', 'right', 'top'),
+        label(left, bottom, '低优先', 'left', 'bottom'), label(right, bottom, '过度投入', 'right', 'bottom'),
+      ] } as unknown as Group;
+    },
   };
+  // An attribute that matters more than average but performs below it is where to act: it takes the opposite hue.
+  const urgent = (p: { importance: number; performance: number }) => p.importance >= lines.importance && p.performance < lines.performance;
   const attributes: SeriesOption = {
-    type: 'scatter', clip: false, z: 3, symbolSize: 18, itemStyle: { color: accent, borderColor: '#FFFFFF', borderWidth: 2 },
-    data: points.map(p => ({ value: [p.performance, p.importance], name: p.name })),
+    type: 'scatter', clip: false, z: 3, symbolSize: 18,
+    data: points.map(p => ({ value: [p.performance, p.importance], name: p.name, itemStyle: { color: urgent(p) ? act : accent, borderColor: '#FFFFFF', borderWidth: 2 } })),
     label: { show: true, position: 'right', ...small, color: INK, formatter: (p: { name: string }) => p.name },
     labelLayout: { hideOverlap: false, moveOverlap: 'shiftY' },
-    markLine: { silent: true, symbol: 'none', lineStyle: { color: AXIS, type: 'dashed', width: 1.5 }, label: { show: false }, data: [{ xAxis: lines.performance }, { yAxis: lines.importance }] },
   };
   return { kind: 'quadrant', height: 620, option: {
     ...base(), grid: grid({ top: 40, bottom: 48, left: 32, right: 48 }),
@@ -302,7 +315,7 @@ export function methodFigure(r: { method: string; headers: readonly string[]; me
     case 'quadrant': {
       const names = heads.filter(h => h !== '分界线');
       return ipaPlot(names.map(name => ({ name, importance: pick(name, '重要性'), performance: pick(name, '表现') })), { importance: pick('分界线', '重要性'), performance: pick('分界线', '表现') },
-        accent, r.headers[1]?.startsWith('隐性') ? '隐性重要性（标准化系数）' : '重要性');
+        ink, r.headers[1]?.startsWith('隐性') ? '隐性重要性（标准化系数）' : '重要性');
     }
     case 'profile': {
       // A cluster's label is "第 j 类｜变量"; the variable is everything after the first separator.

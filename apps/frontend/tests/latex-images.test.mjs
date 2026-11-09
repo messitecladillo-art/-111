@@ -15,6 +15,18 @@ test('a table keeps centred columns while it fits, and wraps only its widest col
   assert.match(wide, /c$/u, 'a short numeric column stays centred');
 });
 
+test('no report figure carries a degenerate transform, which makes Word drop the whole picture', async () => {
+  const { figureSVG } = await import('../lib/report-figures.ts');
+  const pack = await buildDemoPack('城市社区助餐服务的使用体验、满意度与持续使用意愿调查');
+  const charts = pack.report.report.flatMap(s => s.blocks ?? []).filter(b => b.kind === 'chart');
+  assert.ok(charts.length >= 10);
+  for (const block of charts) {
+    const r = pack.report.quality.results.find(x => x.id === block.evidenceId);
+    const svg = await figureSVG(r, block.valueColumn, { schema: 'FigurePalette/v1', primary: '#293652', secondary: '#C39045', opposite: '#A65A3A', source: 'cover' });
+    assert.doesNotMatch(svg, /matrix\(0,0,0,0[,)]|scale\(0[ ,)]/u, `${r.title}: a zero-size transform`);
+  }
+});
+
 test('every chart is embedded as the product rendering; inline formulas are typeset', async () => {
   const pack = await buildDemoPack('城市社区助餐服务的使用体验、满意度与持续使用意愿调查');
   const content = { ...pack.report, latex: undefined };
