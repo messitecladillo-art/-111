@@ -5,7 +5,8 @@
  * it as report SVG.
  */
 import type { CustomSeriesOption, SeriesOption } from 'echarts';
-import { AXIS, FONT, INK, accentScale, base, categoryAxis, grid, legend, lowerTitle, minus, small, valueAxis, type FigurePlan } from './report-figures.ts';
+import { AXIS, FONT, INK, base, categoryAxis, categoryColors, grid, inkOpposite, inkPrimary, legend, lowerTitle, minus, small, valueAxis, type FigurePlan } from './report-figures.ts';
+import type { FigureInk } from './figure-palette.ts';
 
 const clamp = (v: number, low: number, high: number) => Math.min(high, Math.max(low, Math.round(v)));
 type Group = ReturnType<NonNullable<CustomSeriesOption['renderItem']>>;
@@ -123,9 +124,9 @@ export function ipaPlot(points: readonly { name: string; importance: number; per
 }
 
 /** Each cluster's centre on every standardized variable, as grouped bars about the overall mean (zero). */
-export function clusterProfilePlot(centers: readonly (readonly number[])[], sizes: readonly number[], variables: readonly string[], accent: string): FigurePlan {
+export function clusterProfilePlot(centers: readonly (readonly number[])[], sizes: readonly number[], variables: readonly string[], ink: FigureInk): FigurePlan {
   if (centers.length < 2 || centers.some(c => c.length !== variables.length)) throw Error('聚类中心与变量不对应，无法作图。');
-  const colours = accentScale(accent, centers.length);
+  const colours = categoryColors(ink, centers.length, false);
   return { kind: 'profile', height: clamp(380 + 18 * variables.length, 420, 680), option: {
     ...base(), legend, grid: grid({ top: 56, bottom: 24 }),
     xAxis: categoryAxis([...variables], false),
@@ -138,8 +139,8 @@ export function clusterProfilePlot(centers: readonly (readonly number[])[], size
   } };
 }
 
-// The one second hue: the low side of a scale with a real midpoint (disagreement on a rating, a negative correlation).
-const OPPOSITE = '#A65A3A', NEUTRAL = '#C9CDD2';
+// The neutral answer of a rating scale; the low side of a scale with a real midpoint takes the ink's opposite hue.
+const NEUTRAL = '#C9CDD2';
 const mixHex = (a: string, b: string, t: number) => {
   const c = (h: string) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   return `#${c(a).map((v, i) => Math.round(v + (c(b)[i] - v) * t).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
@@ -151,9 +152,9 @@ const SHAPES = ['circle', 'rect', 'diamond', 'triangle', 'pin', 'roundRect'] as 
  * shade and shape, named in the legend), a grey bar spanning the groups' means. Position on a common scale carries
  * the comparison, so the axis need not start at zero.
  */
-export function dotPlot(dimensions: readonly string[], groups: readonly { label: string; n: number }[], means: readonly (readonly number[])[], accent: string): FigurePlan {
+export function dotPlot(dimensions: readonly string[], groups: readonly { label: string; n: number }[], means: readonly (readonly number[])[], ink: FigureInk): FigurePlan {
   if (dimensions.length < 2 || groups.length < 2 || means.some(row => row.length !== groups.length || !row.every(Number.isFinite))) throw Error('均值与分组不对应，无法作图。');
-  const colours = accentScale(accent, groups.length), all = means.flat(), bounds = niceBounds(Math.min(...all) - 0.15, Math.max(...all) + 0.15);
+  const colours = categoryColors(ink, groups.length, false), all = means.flat(), bounds = niceBounds(Math.min(...all) - 0.15, Math.max(...all) + 0.15);
   const spans: CustomSeriesOption = {
     type: 'custom', silent: true, z: 1, data: means.map((row, i) => [i, Math.min(...row), Math.max(...row)]),
     renderItem: (_params, api) => {
@@ -177,7 +178,8 @@ export function dotPlot(dimensions: readonly string[], groups: readonly { label:
  * Rating items as diverging stacked bars: agreement to the right of the neutral answer, disagreement to the left, the
  * neutral share split across the centre line. Items run from the most to the least favourable.
  */
-export function likertPlot(items: readonly string[], levels: readonly number[], shares: readonly (readonly number[])[], accent: string): FigurePlan {
+export function likertPlot(items: readonly string[], levels: readonly number[], shares: readonly (readonly number[])[], ink: FigureInk): FigurePlan {
+  const accent = inkPrimary(ink), OPPOSITE = inkOpposite(ink);
   if (items.length < 2 || levels.length < 2 || shares.some(row => row.length !== levels.length)) throw Error('作答比例与等级不对应，无法作图。');
   const mid = (levels[0] + levels.at(-1)!) / 2, below = levels.filter(l => l < mid), above = levels.filter(l => l > mid), neutral = levels.indexOf(mid);
   const favour = (row: readonly number[]) => row.reduce((s, v, i) => s + (levels[i] > mid ? v : 0), 0);
@@ -219,8 +221,8 @@ const onFillInk = (fill: string) => {
  * A correlation matrix as the lower triangle of a heat map on a scale centred at zero: positive in the accent,
  * negative in the opposite hue, each cell labelled with its coefficient. Rows are numbered as in the table.
  */
-export function correlationPlot(variables: readonly string[], rho: (a: number, b: number) => number, accent: string): FigurePlan {
-  const m = variables.length;
+export function correlationPlot(variables: readonly string[], rho: (a: number, b: number) => number, ink: FigureInk): FigurePlan {
+  const m = variables.length, accent = inkPrimary(ink), OPPOSITE = inkOpposite(ink);
   if (m < 3) throw Error('至少需要 3 个变量。');
   const deep = mixHex(accent, '#000000', 0.15), cells: [number, number, number][] = [];
   for (let i = 1; i < m; i++) for (let j = 0; j < i; j++) cells.push([j, i - 1, rho(i, j)]);
@@ -284,8 +286,8 @@ export const canChart = (r: { method: string; metrics: readonly { label: string 
   r.method !== 'sampling-frame' && (!ADVANCED.has(r.method) || carriesFigure(r));
 
 /** The figure a method's result carries, or null when the result is of another method or carries none. */
-export function methodFigure(r: { method: string; headers: readonly string[]; metrics: readonly { label: string; value: number | null }[] }, accent: string): FigurePlan | null {
-  const kind = FIGURE_OF[r.method], parts = r.metrics.map(m => ({ head: m.label.slice(0, m.label.lastIndexOf(SEP)), field: m.label.slice(m.label.lastIndexOf(SEP) + 1), value: m.value }));
+export function methodFigure(r: { method: string; headers: readonly string[]; metrics: readonly { label: string; value: number | null }[] }, ink: FigureInk): FigurePlan | null {
+  const accent = inkPrimary(ink), kind = FIGURE_OF[r.method], parts = r.metrics.map(m => ({ head: m.label.slice(0, m.label.lastIndexOf(SEP)), field: m.label.slice(m.label.lastIndexOf(SEP) + 1), value: m.value }));
   if (!carriesFigure(r) || parts.some(p => p.value === null || !p.head)) return null;
   const pick = (head: string, field: string) => parts.find(p => p.head === head && p.field === field)?.value as number;
   const heads = [...new Set(parts.map(p => p.head))];
@@ -307,20 +309,20 @@ export function methodFigure(r: { method: string; headers: readonly string[]; me
       const split = r.metrics.map(m => ({ head: m.label.slice(0, m.label.indexOf(SEP)), field: m.label.slice(m.label.indexOf(SEP) + 1), value: m.value as number }));
       const clusters = [...new Set(split.map(p => p.head))], variables = [...new Set(split.filter(p => p.field !== '人数').map(p => p.field))];
       const value = (head: string, field: string) => split.find(p => p.head === head && p.field === field)?.value as number;
-      return clusterProfilePlot(clusters.map(c => variables.map(v => value(c, v))), clusters.map(c => value(c, '人数')), variables, accent);
+      return clusterProfilePlot(clusters.map(c => variables.map(v => value(c, v))), clusters.map(c => value(c, '人数')), variables, ink);
     }
     case 'dots': {
       const groups = parts.filter(p => p.head === '人数').map(p => ({ label: p.field, n: p.value as number })), dimensions = heads.filter(h => h !== '人数');
-      return dotPlot(dimensions, groups, dimensions.map(d => groups.map(g => pick(d, g.label))), accent);
+      return dotPlot(dimensions, groups, dimensions.map(d => groups.map(g => pick(d, g.label))), ink);
     }
     case 'likert': {
       const levels = [...new Set(parts.map(p => Number.parseInt(p.field, 10)))];
-      return likertPlot(heads, levels, heads.map(h => levels.map(l => pick(h, `${l} 分`))), accent);
+      return likertPlot(heads, levels, heads.map(h => levels.map(l => pick(h, `${l} 分`))), ink);
     }
     case 'correlation': {
       const pairs = heads.map(h => h.split(PAIR)), variables = [...new Set(pairs.flat())];
       if (pairs.some(p => p.length !== 2)) return null;
-      return correlationPlot(variables, (a, b) => pick(`${variables[Math.min(a, b)]}${PAIR}${variables[Math.max(a, b)]}`, 'ρ'), accent);
+      return correlationPlot(variables, (a, b) => pick(`${variables[Math.min(a, b)]}${PAIR}${variables[Math.max(a, b)]}`, 'ρ'), ink);
     }
   }
 }

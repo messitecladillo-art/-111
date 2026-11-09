@@ -13,9 +13,10 @@ import { DEFAULT_REPORT_OPTIONS, reportHeadingLevel, reportPart } from '@/lib/re
 import { blockLabel, numberedCaption, reportLabels } from '@/lib/report-numbering';
 import { isExhibitNote, sectionNotes } from '@/lib/report-tables';
 import { pageArtDataUrl } from '@/lib/page-art';
+import { figureInk } from '@/lib/figure-palette';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { Formula } from '../math/Tex';
-import { ACCENT, Figure, PaperText, ResultTable } from './PaperBlocks';
+import { Figure, PaperText, ResultTable } from './PaperBlocks';
 import css from './PaperPages.module.css';
 import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
 import { reportWorkPlacement, type ReportWorkState } from '@/lib/agent/report-work';
@@ -243,7 +244,7 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
       const exhibit = { ...base, advisor: exhibitOwner };
       const target = (onPage: boolean) => (onPage ? { 'data-xref-target': block.id, 'data-xref-label': label?.reference ?? '', 'data-xref-caption': caption } : {});
       if (block.kind === 'chart') {
-        out.push({ ...exhibit, key: `f:${block.id}`, kind: 'figure', keepNext: true, render: ({ onPage }) => <div className={css.figure} {...target(onPage)}><Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle} /></div> });
+        out.push({ ...exhibit, key: `f:${block.id}`, kind: 'figure', keepNext: true, render: ({ onPage }) => <div className={css.figure} {...target(onPage)}><Figure result={result} column={block.valueColumn} accent={figureInk(content)} figure={figure} visualStyle={content.visualStyle} /></div> });
         out.push({ ...exhibit, key: `c:${block.id}`, anchor: `x:${block.id}`, kind: 'caption', keepNext: noted || !!figure?.note, render: () => <p className={css.caption}>{rich(caption)}</p> });
         if (figure?.note) out.push({ ...exhibit, key: `fn:${block.id}`, kind: 'small', keepNext: noted, render: () => <p className={css.small}>{autospace(figure!.note!)}</p> });
       } else {

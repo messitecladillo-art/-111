@@ -134,3 +134,13 @@ def test_the_compiler_writes_the_cover_next_to_the_source(settings, tmp_path, mo
     seen.clear()
     latex.LatexCompiler(settings).compile("题目", "", BODY, {**OPTIONS, "includeCover": False}, cover_image=value)
     assert "cover-image.jpg" not in seen[0]
+
+
+def test_a_figure_palette_is_three_upper_case_hex_colours_of_a_version_three_draft():
+    palette = {"schema": "FigurePalette/v1", "primary": "#293652", "secondary": "#C39045", "opposite": "#A65A3A", "source": "cover"}
+    validate_report_visuals({"version": 3, "figurePalette": palette})
+    for bad in ({**palette, "primary": "#293652;"}, {**palette, "primary": "#29365c"}, {**palette, "source": "ai"}, {**palette, "extra": 1}):
+        with pytest.raises(ApiError):
+            validate_report_visuals({"version": 3, "figurePalette": bad})
+    with pytest.raises(ApiError):
+        validate_report_visuals({"version": 2, "figurePalette": palette})

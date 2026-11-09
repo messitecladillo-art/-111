@@ -11,6 +11,7 @@ import type { CustomSeriesOption, EChartsOption, SeriesOption } from 'echarts';
 import type { ResultSnapshot } from './research-quality.ts';
 import { assertTrueVector } from './svg-safety.ts';
 import { canChart, methodFigure } from './method-figures.ts';
+import type { FigureInk } from './figure-palette.ts';
 import { categoryOrder, crosstabOrder, groupRows } from './report-tables.ts';
 
 /** Every figure is this wide; at the full text width (14.64 cm) 22 px text prints at about 9.5 pt. */
@@ -34,6 +35,21 @@ export function accentScale(accent: string, k: number): string[] {
     const t = -dark + (dark + light) * i / (k - 1);
     return t < 0 ? mix(accent, '#000000', -t) : mix(accent, '#FFFFFF', t);
   });
+}
+/** The main colour of an ink: the accent, or the palette's primary. */
+export const inkPrimary = (ink: FigureInk) => (typeof ink === 'string' ? ink : ink.primary);
+/** The other side of a scale with a real midpoint (disagreement, negative correlation). */
+export const inkOpposite = (ink: FigureInk) => (typeof ink === 'string' ? '#A65A3A' : ink.opposite);
+/**
+ * Colours of k categories. Ordered ones (a rating scale, numbered bands) are one hue's lightness ramp; unordered ones
+ * take the palette's hues in turn, then their tints. With an accent alone every set is its ramp, as before.
+ */
+export function categoryColors(ink: FigureInk, k: number, ordinal: boolean): string[] {
+  const primary = inkPrimary(ink);
+  if (ordinal) return accentScale(primary, k).reverse();
+  if (typeof ink === 'string') return accentScale(primary, k);
+  const hues = [ink.primary, ink.secondary, ink.opposite];
+  return Array.from({ length: k }, (_, i) => (i < hues.length ? hues[i] : mix(hues[i % hues.length], '#FFFFFF', Math.min(0.75, 0.4 + 0.2 * (Math.floor(i / hues.length) - 1)))));
 }
 const luminance = (hex: string) => {
   const [r, g, b] = channels(hex).map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
@@ -91,8 +107,8 @@ function bars(labels: string[], values: number[], header: string, accent: string
 }
 
 /** A composition of two to four answers: a ring in shades of the accent, with the sample size at its centre. */
-function ring(labels: string[], values: number[], shares: number[], total: number, ordinal: boolean, accent: string): FigurePlan {
-  const height = 420, colors = ordinal ? accentScale(accent, labels.length).reverse() : accentScale(accent, labels.length);
+function ring(labels: string[], values: number[], shares: number[], total: number, ordinal: boolean, ink: FigureInk): FigurePlan {
+  const height = 420, colors = categoryColors(ink, labels.length, ordinal);
   return { kind: 'ring', height, option: {
     ...base(), color: colors,
     series: [{
@@ -106,14 +122,14 @@ function ring(labels: string[], values: number[], shares: number[], total: numbe
   } };
 }
 
-function frequency(r: ResultSnapshot, column: number, accent: string): FigurePlan {
+function frequency(r: ResultSnapshot, column: number, ink: FigureInk): FigurePlan {
   const at = new Map(r.rows.map(row => [String(row[0]), numeric(row[column])!]));
   const order = at.size === r.rows.length ? categoryOrder([...at.keys()]) : { labels: r.rows.map(row => String(row[0])), ordinal: false };
   const values = order.labels.map(label => at.get(label)!), sum = values.reduce((a, b) => a + b, 0);
   const counts = r.rows.reduce((a, row) => a + (numeric(row[1]) ?? 0), 0);
   if (order.labels.length >= 2 && order.labels.length <= 4 && (column === 1 || column === 2) && sum > 0 && values.every(v => v >= 0))
-    return ring(order.labels, values, values.map(v => v / sum * 100), counts, order.ordinal, accent);
-  return bars(order.labels, values, r.headers[column], accent);
+    return ring(order.labels, values, values.map(v => v / sum * 100), counts, order.ordinal, ink);
+  return bars(order.labels, values, r.headers[column], inkPrimary(ink));
 }
 
 type Cells = { rows: string[]; cols: string[]; colsOrdinal: boolean; at: Map<string, (string | number | null)[]>; rowTotals: number[] };
@@ -129,8 +145,8 @@ const cell = (c: Cells, row: string, col: string, index: number) => numeric(c.at
 const withN = (c: Cells) => c.rows.map((row, i) => `${row}（n = ${c.rowTotals[i]}）`);
 
 /** Row shares as 100 % stacked bars: each group's answers side by side, read against the same 0–100 scale. */
-function stacked(c: Cells, accent: string): FigurePlan {
-  const colors = c.colsOrdinal ? accentScale(accent, c.cols.length).reverse() : accentScale(accent, c.cols.length);
+function stacked(c: Cells, ink: FigureInk): FigurePlan {
+  const colors = categoryColors(ink, c.cols.length, c.colsOrdinal);
   return { kind: 'stacked', height: rowsHeight(c.rows.length, 64, 150), option: {
     ...base(), color: colors, legend,
     grid: grid({ top: 64, right: 32 }),
@@ -171,8 +187,8 @@ function heatmap(c: Cells, accent: string): FigurePlan {
 }
 
 /** Counts (or expected counts) of a crosstab as grouped bars, one shade per column category. */
-function grouped(c: Cells, accent: string, column: number, header: string): FigurePlan {
-  const colors = c.colsOrdinal ? accentScale(accent, c.cols.length).reverse() : accentScale(accent, c.cols.length);
+function grouped(c: Cells, ink: FigureInk, column: number, header: string): FigurePlan {
+  const colors = categoryColors(ink, c.cols.length, c.colsOrdinal);
   const integer = c.rows.every(row => c.cols.every(col => Number.isInteger(cell(c, row, col, column))));
   return { kind: 'grouped', height: 480, option: {
     ...base(), color: colors, legend,
@@ -275,10 +291,11 @@ function box(r: ResultSnapshot, accent: string): FigurePlan | null {
 }
 
 /** The figure for a result and the value column the author picked. */
-export function figurePlan(r: ResultSnapshot, column: number, accent: string): FigurePlan {
+export function figurePlan(r: ResultSnapshot, column: number, ink: FigureInk): FigurePlan {
+  const accent = inkPrimary(ink);
   if (!/^#[0-9A-Fa-f]{6}$/.test(accent)) throw Error('图表颜色无效。');
   // An advanced method's result carries its own figure (lib/method-figures.ts), whatever column is picked.
-  const method = methodFigure(r, accent);
+  const method = methodFigure(r, ink);
   if (method) return method;
   // An advanced result without its own figure (AHP, or one whose figure did not fit) is never drawn as bars of its table.
   if (!canChart(r)) throw Error(`“${r.title}”没有可画的图，请改用表格。`);
@@ -291,19 +308,19 @@ export function figurePlan(r: ResultSnapshot, column: number, accent: string): F
     // blocks, which holds no numbers) shows row shares.
     if (cells && (column === 2 || column === 4)) {
       if (r.rows.some(row => numeric(row[column]) === null)) throw Error('图表所选列含缺失或非数值，请改用表格。');
-      return grouped(cells, accent, column, r.headers[column]);
+      return grouped(cells, ink, column, r.headers[column]);
     }
-    if (cells) return cells.cols.length > 6 ? heatmap(cells, accent) : stacked(cells, accent);
+    if (cells) return cells.cols.length > 6 ? heatmap(cells, accent) : stacked(cells, ink);
   }
   if (r.method === 'numeric') { const plan = box(r, accent); if (plan) return plan; throw Error(`“${r.title}”缺少五数概括，无法作箱线图，请改用表格。`); }
   const values = r.rows.map(row => numeric(row[column]));
   if (values.some(v => v === null)) throw Error('图表所选列含缺失或非数值，请改用表格。');
   if (values.length > 30 || values.some(v => Math.abs(v!) > 1e12)) throw Error('图表类别或数值范围过大，请分拆或转换计量单位。');
   if (r.method === 'groups' && r.headers[1] === 'n' && r.headers[2] === '均值') return means(r, column, accent);
-  if (r.method === 'frequency' && r.headers[1] === '频数') return frequency(r, column, accent);
+  if (r.method === 'frequency' && r.headers[1] === '频数') return frequency(r, column, ink);
   return bars(r.rows.map(row => String(row[0])), values as number[], r.headers[column], accent);
 }
-export const figureOption = (r: ResultSnapshot, column: number, accent: string) => figurePlan(r, column, accent).option;
+export const figureOption = (r: ResultSnapshot, column: number, ink: FigureInk) => figurePlan(r, column, ink).option;
 
 /** Width and height written on an SVG root, which Word and the preview use to keep the figure's proportions. */
 export function svgSize(svg: string): { width: number; height: number } {
@@ -314,8 +331,8 @@ export function svgSize(svg: string): { width: number; height: number } {
 }
 
 /** Server-rendered SVG with ECharts' interaction styles removed, checked against the vector-asset rules. */
-export async function figureSVG(r: ResultSnapshot, column: number, accent: string): Promise<string> {
-  return planSVG(figurePlan(r, column, accent));
+export async function figureSVG(r: ResultSnapshot, column: number, ink: FigureInk): Promise<string> {
+  return planSVG(figurePlan(r, column, ink));
 }
 
 /** Any figure plan as report SVG, through the same cleaning and vector check as a result's figure. */

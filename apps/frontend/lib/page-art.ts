@@ -10,6 +10,8 @@
  * portrait: an image is placed whole, never stretched or cropped. Kept in step with the backend's page_art.py.
  */
 
+import { paletteFromPixels, type FigurePalette } from './figure-palette.ts';
+
 export type PageArtMime = 'image/jpeg' | 'image/png';
 export type CoverImage = { schema: 'CoverImage/v1'; mime: PageArtMime; data: string; widthPx: number; heightPx: number; note: string };
 export type FrameImage = { schema: 'FrameImage/v1'; mime: 'image/png'; data: string; widthPx: number; heightPx: number; note: string };
@@ -134,12 +136,19 @@ async function base64Of(blob: Blob) {
  * pixels wide, A4 at 300 dpi), lowering the quality until it fits. A file that is not A4 portrait is refused rather
  * than cropped or stretched.
  */
-export async function coverImageFromFile(file: File, note: string): Promise<CoverImage> {
+export async function coverImageFromFile(file: File, note: string): Promise<{ cover: CoverImage; palette: FigurePalette }> {
   const { canvas } = await decode(file, 'cover');
+  // The figures' colours come from the cover: its pixels at a small size are enough to find its hues.
+  const sample = document.createElement('canvas');
+  sample.width = 120; sample.height = Math.round(120 * canvas.height / canvas.width);
+  const small = sample.getContext('2d');
+  if (!small) return fail('浏览器无法处理这张图片。');
+  small.drawImage(canvas, 0, 0, sample.width, sample.height);
+  const palette = paletteFromPixels(small.getImageData(0, 0, sample.width, sample.height).data);
   for (const quality of [0.92, 0.86, 0.8, 0.72, 0.62]) {
     const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
     if (!blob || blob.size > PAGE_ART_LIMITS.cover.bytes) continue;
-    return parseCoverImage({ schema: 'CoverImage/v1', mime: 'image/jpeg', data: await base64Of(blob), widthPx: canvas.width, heightPx: canvas.height, note });
+    return { cover: parseCoverImage({ schema: 'CoverImage/v1', mime: 'image/jpeg', data: await base64Of(blob), widthPx: canvas.width, heightPx: canvas.height, note }), palette };
   }
   return fail('封面图压缩后仍超过 1 MB，请换一张细节少一些或尺寸小一些的图。');
 }

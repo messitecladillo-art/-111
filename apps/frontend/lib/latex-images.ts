@@ -3,7 +3,8 @@
  * figure — the same SVG the Word export embeds — rasterized to a PNG for XeLaTeX, which cannot read SVG. A clear PNG
  * at print size is a formal figure (research-chart-production); its numbers come from the registered result only.
  */
-import { ACCENTS, type EditorContent } from './editor-model.ts';
+import type { EditorContent } from './editor-model.ts';
+import { figureInk } from './figure-palette.ts';
 import { LATEX_IMAGE_LIMITS, type LatexCompileInput, type LatexImage } from './latex-report.ts';
 import { figureSVG } from './report-figures.ts';
 import { resultFor } from './research-quality.ts';
@@ -29,7 +30,7 @@ export async function latexImages(content: EditorContent, input: LatexCompileInp
   for (const key of ids) {
     // A key is "result id#plotted column" (see latexChartExhibits); the figure is the one the Word export draws.
     const at = key.lastIndexOf('#'), r = resultFor(content.quality, key.slice(0, at)), column = Number(key.slice(at + 1));
-    const svg = await figureSVG(r, column || 1, `#${ACCENTS[content.accent]}`);
+    const svg = await figureSVG(r, column || 1, figureInk(content));
     let png = await toPng(svg, 1600);
     if (png.bytes.length > LATEX_IMAGE_LIMITS.bytes) png = await toPng(svg, 1200);
     if (png.bytes.length > LATEX_IMAGE_LIMITS.bytes) throw Error(`“${r.title}”的图过大，无法嵌入 PDF。`);

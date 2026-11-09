@@ -1,6 +1,7 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import type { FigurePalette } from '@/lib/figure-palette';
 import { pageArtDataUrl, coverImageFromFile, frameImageFromFile, type CoverImage, type FrameImage } from '@/lib/page-art';
 import {
   evaluateReportFormat, REPORT_FORMAT_PROFILES, reportFormatNotices,
@@ -14,7 +15,9 @@ type Props = {
   sections: readonly { title: string }[];
   /** The whole-page cover made with the report-cover skill; it replaces the system-set title page. */
   coverImage?: CoverImage;
-  onCoverImage?: (cover: CoverImage | undefined) => void;
+  onCoverImage?: (cover: CoverImage | undefined, palette?: FigurePalette) => void;
+  /** The figures' colours, taken from the cover. */
+  figurePalette?: FigurePalette;
   /** The transparent page frame made with the report-frame skill; it lies behind every page after the cover. */
   frameImage?: FrameImage;
   onFrameImage?: (frame: FrameImage | undefined) => void;
@@ -25,7 +28,7 @@ const TRACKS = ['自主选题', '企业命题'];
 const STAGES = ['知识赛', '校赛', '企业命题赛', '省赛', '全国赛初赛', '全国赛决赛'];
 
 /** One piece of skill-made page art: a thumbnail, what it does, and upload / replace / remove. */
-function ArtRow<T extends CoverImage | FrameImage>({ id, label, art, accept, hint, detail, warning, onFile, onRemove }: { id: string; label: string; art?: T; accept: string; hint: string; detail: (art: T) => string; warning?: string; onFile: (file: File) => Promise<void>; onRemove: () => void }) {
+function ArtRow<T extends CoverImage | FrameImage>({ id, label, art, accept, hint, detail, warning, extra, onFile, onRemove }: { id: string; label: string; art?: T; accept: string; hint: string; detail: (art: T) => string; warning?: string; extra?: ReactNode; onFile: (file: File) => Promise<void>; onRemove: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const pick = async (file: File | undefined) => {
@@ -41,6 +44,7 @@ function ArtRow<T extends CoverImage | FrameImage>({ id, label, art, accept, hin
     <div className={styles.coverText}>
       <strong>{label}</strong>
       <p>{art ? detail(art) : hint}</p>
+      {art && extra}
       {warning && <p className={styles.coverWarn}>{warning}</p>}
       {error && <p className={styles.coverWarn} role="alert">{error}</p>}
     </div>
@@ -52,7 +56,7 @@ function ArtRow<T extends CoverImage | FrameImage>({ id, label, art, accept, hin
 }
 
 /** A selected layout and an applicable competition rule have separate receipts. */
-export default function ReportFormatPanel({ value, onChange, sections, coverImage, onCoverImage, frameImage, onFrameImage }: Props) {
+export default function ReportFormatPanel({ value, onChange, sections, coverImage, onCoverImage, figurePalette, frameImage, onFrameImage }: Props) {
   const id = useId();
   const evaluation = evaluateReportFormat(value);
   const notices = reportFormatNotices(sections);
@@ -113,7 +117,8 @@ export default function ReportFormatPanel({ value, onChange, sections, coverImag
         hint="上传用报告封面技能生成的整页封面（A4 竖版 JPEG / PNG，题名画在图中）。未上传时使用标题页。"
         detail={art => `整页铺满 A4 封面，画布、Word 与 LaTeX 一致；系统不再另排标题。${art.widthPx}×${art.heightPx} 像素。`}
         warning={!value.options.includeCover && coverImage ? '「标题页」未勾选，导出时不含封面。' : ''}
-        onFile={file => coverImageFromFile(file, `封面图「${file.name.slice(0, 120)}」由报告封面技能整页生成，题名字形在图中；作者已逐字核对。`).then(onCoverImage)} />}
+        onFile={file => coverImageFromFile(file, `封面图「${file.name.slice(0, 120)}」由报告封面技能整页生成，题名字形在图中；作者已逐字核对。`).then(({ cover, palette }) => onCoverImage(cover, palette))}
+        extra={figurePalette && <p className={styles.palette}>图表配色取自封面{([['主色', figurePalette.primary], ['辅色', figurePalette.secondary], ['反向', figurePalette.opposite]] as const).map(([name, hex]) => <span key={name} className={styles.swatch} title={`${name} ${hex}`}><i style={{ background: hex }} />{name}</span>)}</p>} />}
       {onFrameImage && <ArtRow id={id + '-frame-image'} label="页框图" art={frameImage} accept="image/png" onRemove={() => onFrameImage(undefined)}
         hint="上传用报告页框技能生成的透明 A4 PNG；装饰只在页边，正文区与页码区必须完全透明。"
         detail={art => `铺在封面之后的每一页，正文版心不变；画布、Word 与 LaTeX 一致。${art.widthPx}×${art.heightPx} 像素。`}

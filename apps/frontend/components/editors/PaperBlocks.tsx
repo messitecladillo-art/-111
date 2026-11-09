@@ -1,5 +1,6 @@
 'use client';
 
+import { figureInk, type FigureInk } from '@/lib/figure-palette';
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import {figureFor,reportFigureSVG,defaultProjectVisualStyle,type ReportFigure,type ProjectVisualStyle} from '@/lib/report-figure';
@@ -117,9 +118,9 @@ export function PaperText({ text, labels, citations }: { text: string; labels: L
 }
 
 /** The same server-style SVG figure the Word export embeds. */
-export function Figure({ result, column, accent,figure,visualStyle }: { result: ResultSnapshot; column: number; accent: string;figure?:ReportFigure;visualStyle?:ProjectVisualStyle }) {
+export function Figure({ result, column, accent,figure,visualStyle }: { result: ResultSnapshot; column: number; accent: FigureInk;figure?:ReportFigure;visualStyle?:ProjectVisualStyle }) {
   const [state, setState] = useState<{ key: string; svg?: string; error?: string }>({ key: '' });
-  const key = `${result.resultHash}:${column}:${accent}:${JSON.stringify(figure)}:${JSON.stringify(visualStyle)}`;
+  const key = `${result.resultHash}:${column}:${JSON.stringify(accent)}:${JSON.stringify(figure)}:${JSON.stringify(visualStyle)}`;
   useEffect(() => {
     let alive = true;
     import('@/lib/report-figures')
@@ -172,7 +173,7 @@ export default function PaperBlocks({ section, content, labels, citations }: { s
     const caption = numberedCaption(bLabel, block.text || result.title);
     return <figure key={block.id} className={styles.block} data-xref-target={block.id} data-xref-label={bLabel?.reference ?? ''} data-xref-caption={caption}>
       {block.kind === 'table' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}
-      {block.kind === 'chart' ? <Figure result={result} column={block.valueColumn} accent={ACCENT[content.accent]} figure={figure} visualStyle={content.visualStyle}/> : <ResultTable result={result} figure={figure}/>}
+      {block.kind === 'chart' ? <Figure result={result} column={block.valueColumn} accent={figureInk(content)} figure={figure} visualStyle={content.visualStyle}/> : <ResultTable result={result} figure={figure}/>}
       {block.kind === 'chart' && <figcaption className={styles.caption}><PaperText text={caption} labels={labels}/></figcaption>}
       {block.kind==='chart'&&figure?.note&&<p className={styles.small}>{figure.note}</p>}
     </figure>;

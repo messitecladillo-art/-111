@@ -675,7 +675,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       if(!edit(next))return false;
       setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
     }}/>}
-    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report} coverImage={content.coverImage} onCoverImage={cover=>{if(!canMutate())return;edit(applyCoverImage(current.current,cover));}} frameImage={content.frameImage} onFrameImage={frame=>{if(!canMutate())return;edit(applyFrameImage(current.current,frame));}}/></fieldset> }
+    {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report} coverImage={content.coverImage} onCoverImage={(cover,palette)=>{if(!canMutate())return;edit(applyCoverImage(current.current,cover,palette));}} figurePalette={content.figurePalette} frameImage={content.frameImage} onFrameImage={frame=>{if(!canMutate())return;edit(applyFrameImage(current.current,frame));}}/></fieldset> }
     {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>{setQualityOpen(true);setToolsOpen(false);qualityToggleRef.current?.focus();}}/>}
     </div>
     <div id="editor-quality" hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>

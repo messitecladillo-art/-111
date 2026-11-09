@@ -162,7 +162,7 @@ def validate_report_visuals(content):
     if not isinstance(content, dict) or type(content.get('version')) is not int or content['version'] not in (1, 2, 3):
         raise ApiError()
     version = content['version']
-    visual_keys = ('visualStyle', 'figures', 'reportFrame', 'coverImage', 'frameImage')
+    visual_keys = ('visualStyle', 'figures', 'reportFrame', 'coverImage', 'frameImage', 'figurePalette')
     if version != 3 and any(key in content for key in visual_keys):
         raise ApiError()
     style = _visual_style(content['visualStyle']) if 'visualStyle' in content else None
@@ -204,4 +204,10 @@ def validate_report_visuals(content):
         if 'reportFrame' in content:
             raise ApiError()
         frame_image_bytes(content['frameImage'])
+    if 'figurePalette' in content:
+        palette = content['figurePalette']
+        if not isinstance(palette, dict) or set(palette) != {'schema', 'primary', 'secondary', 'opposite', 'source'} or palette['schema'] != 'FigurePalette/v1' or palette['source'] not in ('cover', 'manual'):
+            raise ApiError()
+        if not all(isinstance(palette[k], str) and re.fullmatch(r'#[0-9A-F]{6}', palette[k]) for k in ('primary', 'secondary', 'opposite')):
+            raise ApiError()
     return content

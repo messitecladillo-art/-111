@@ -231,7 +231,7 @@ def references_content(value):
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references", "visualStyle", "figures", "reportFrame", "coverImage", "frameImage"))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references", "visualStyle", "figures", "reportFrame", "coverImage", "frameImage", "figurePalette"))
     if "references" in x:
         references_content(x["references"])
     if type(x["version"]) is not int or x["version"] not in (1, 2, 3) or x["accent"] not in ("teal", "blue", "burgundy"):

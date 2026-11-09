@@ -1,3 +1,4 @@
+import {figureInk} from './figure-palette.ts';
 import {chartData, resultFor, verifyResearchQuality, findingNeedsReview, findingSignature, type ReportBlock, type ResultSnapshot, type SlideObject} from './research-quality.ts';
 import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
@@ -80,7 +81,6 @@ export function insertMath(documentXml:string,math:readonly MathSlot[]):string{
   return slot.display?`<m:oMathPara><m:oMathParaPr><m:jc m:val="center"/></m:oMathParaPr>${slot.omml}</m:oMathPara>`:slot.omml;
  });
 }
-const ACCENT_HEX:Record<EditorContent['accent'],string>={teal:'#0F766E',blue:'#234E80',burgundy:'#8A3449'};
 export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview,context?:WordContext){
  const {Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,BorderStyle,WidthType,ImageRun,VerticalAlign,VerticalMergeType}=await import('docx');
  const {figureSVG,svgSize}=await import('./report-figures.ts');
@@ -119,7 +119,7 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
   const noted=isExhibitNote(blocks,index+1);
   const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where,ctx.citations));
   if(b.kind==='chart'){
-   const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,ACCENT_HEX[c.accent]);
+   const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,figureInk(c));
    // Figures share one width and size their height to the content; Word keeps the same proportions.
    const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
@@ -187,10 +187,10 @@ export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,obj
    else if(o.kind==='chart'&&(await import('./method-figures.ts')).carriesFigure(r)){
     if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');
     const {figureSVG}=await import('./report-figures.ts');
-    await addSvgFigure(slide,await figureSVG(r,o.valueColumn,/^#[0-9a-fA-F]{6}$/.test(o.color)?o.color:'#2F6B4F'),{...box,h:box.h-.4},renderSvg);
+    await addSvgFigure(slide,await figureSVG(r,o.valueColumn,c.figurePalette??(/^#[0-9a-fA-F]{6}$/.test(o.color)?o.color:'#2F6B4F')),{...box,h:box.h-.4},renderSvg);
    }
    else if(o.kind==='chart'&&!(await import('./method-figures.ts')).canChart(r))throw Error(`“${r.title}”没有可画的图，请在幻灯片中改用表格。`);
-   else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
+   else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');const categoryColors=c.figurePalette?(await import('./report-figures.ts')).categoryColors:null;slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:c.figurePalette&&categoryColors?categoryColors(c.figurePalette,5,false).map(h=>h.slice(1)):[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
    else{assertTableRows(r);const rows=[r.headers,...r.rows],fs=Math.max(14,o.fontSize),rowH=fs*1.45/72;if(rows.length>15||r.headers.length>8||rows.length*rowH>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');const none={type:'solid' as const,pt:0,color:'FFFFFF'};const cells=rows.map((row,i)=>row.map(cell=>{fitText(figureCell(cell,figure),box.w/r.headers.length-.1,rowH,fs);return{text:figureCell(cell,figure),options:{bold:i===0,align:'center' as const,border:[i===0?{type:'solid' as const,pt:1.5,color:'000000'}:none,none,i===0?{type:'solid' as const,pt:.75,color:'000000'}:i===rows.length-1?{type:'solid' as const,pt:1.5,color:'000000'}:none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}};}));slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});}
    const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:r.method==='ahp'?`${r.title} · ${r.sourceName}`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
    slide.addText(caption,{x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
