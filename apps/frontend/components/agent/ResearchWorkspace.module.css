@@ -20,4 +20,8 @@
 .workspace :is(button,input):focus-visible { outline:2px solid var(--rw-accent); outline-offset:3px; }
 .workspace code { display:block; font-size:11px; overflow-wrap:anywhere; margin:10px 0; }
 .error { color:var(--c-warn,#a94c28); margin:0 28px 16px; }
+.literature { margin: 0 0 18px; min-width: 0; }
+.literature > summary { padding: 10px 0; font-weight: 650; }
+.literature > summary small { margin-left: 8px; font-weight: 400; color: var(--c-dim,#68716d); }
+.literatureMap { margin-top: 10px; border: 0; padding: 6px 0; background: transparent; color: var(--rw-accent); font: inherit; cursor: pointer; }
 @media(max-width:680px) { .profileGrid { grid-template-columns:1fr; } .profile,.advisor,.result,.confirm,.candidates { margin-left:16px; margin-right:16px; } .options { padding-left:16px; padding-right:16px; } }

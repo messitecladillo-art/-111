@@ -1164,7 +1164,7 @@ export default function AgentShell() {
             onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
             onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}
             onOpenSettings={() => go('services')} onOpenStage={openResearchStage}
-            onTopic={research.topic} literature={research.literature} onLiterature={research.setLiterature} />
+            onTopic={research.topic} onRetractTopic={research.retractTopic} literature={research.literature} onLiterature={research.setLiterature} />
           {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />}
         </div>
         <Composer onDraftWriter={registerDraftWriter} onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}

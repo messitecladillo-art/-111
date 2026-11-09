@@ -10,12 +10,14 @@ import { emptyResearchWorkspaceDraft, readResearchWorkspace, writeResearchWorksp
 import { proposeTopicProfile } from '@/lib/topic-agent';
 import { ACCESS_OPTIONS } from '@/lib/topic-advisor/types';
 import { regionPath } from '@/lib/topic-advisor/regions';
-import type { TopicProjectDocument } from '@/lib/topic-project';
+import { emptyTopicProject, parseTopicProjectDocument, type TopicProjectDocument } from '@/lib/topic-project';
+import { buildLiteratureStudy, emptyLiteratureStudy, type LiteratureStudy } from '@/lib/agent/literature-study';
 import { literatureWorkspaceReceipt, literatureEvidenceReference, type LiteratureWorkspaceSnapshot } from '@/lib/topic-lab/workspace';
 import { literatureEvidenceReferencesEqual } from '@/lib/topic-lab/evidence-reference';
 import TopicAgent from '@/components/topic-advisor/TopicAgent';
 import RegionPicker from '@/components/topic-advisor/RegionPicker';
 import ResearchJourney, { type JourneyModelRoute, type ResearchJourneyStep } from './ResearchJourney';
+import LiteratureStudyPanel from './LiteratureStudyPanel';
 import styles from './ResearchWorkspace.module.css';
 
 export type ResearchWorkspaceProps = {
@@ -25,10 +27,17 @@ export type ResearchWorkspaceProps = {
   onModelCallChange: (call: ModelCallId, id: string | null) => void;
   onOpenSettings: () => void; onOpenStage: (stage: ResearchStageId) => void;
   onTopic: (source: DiagnosisBriefSource) => void;
+  onRetractTopic: (sourceId: string) => void;
   literature: LiteratureWorkspaceSnapshot | null; onLiterature: (value: LiteratureWorkspaceSnapshot | null) => void;
 };
 type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
+const LITERATURE_TOPIC = 'literature-study/v1';
+
+function hasAdoptedEvidence(selection: TopicProjectDocument, study?: LiteratureStudy) {
+  return selection.brief.sources.every(source =>
+    study?.evidence.some(entry => entry.id === source.id && entry.quote === source.snippet));
+}
 
 /** One browser-owned research draft. Mounted beside the same workbench editors, never their replacement. */
 export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
@@ -37,6 +46,12 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [saved, setSaved] = useState(false), [conflict, setConflict] = useState(false);
   const [proposal, setProposal] = useState<TopicProjectDocument | null>(null);
+  const confirmPanel = useRef<HTMLElement>(null);
+  const literaturePanel = useRef<HTMLDetailsElement>(null);
+  const literatureProposal = proposal?.provenance.catalogVersion === LITERATURE_TOPIC ? proposal.selected?.id : null;
+  const adoptedLiterature = draft.selected?.provenance.catalogVersion === LITERATURE_TOPIC ? draft.selected : null;
+  const adoptedEvidenceCurrent = !adoptedLiterature || hasAdoptedEvidence(adoptedLiterature, draft.literatureStudy);
+  useEffect(() => { if (literatureProposal) confirmPanel.current?.scrollIntoView({ block: 'start' }); }, [literatureProposal]);
   const [literatureResult, setLiteratureResult] = useState<{ value: LiteratureReceipt; source: LiteratureWorkspaceSnapshot; selection: TopicProjectDocument } | null>(null);
   const [literatureBusy, setLiteratureBusy] = useState(false);
   const receipt = literatureResult?.source === literature && literatureResult.selection === draft.selected ? literatureResult.value : null;
@@ -74,9 +89,60 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
     edit.current++; setSaved(false); setDraft(value => ({ ...fn(value), updatedAt: new Date().toISOString() }));
   };
   const changeResearchInput = (fn: (value: ResearchWorkspaceDraft) => ResearchWorkspaceDraft) => {
+    retractAdoptedTopic();
     job.current++; literatureJob.current++; setProposal(null); setReceipt(null); setBusy(false); setLiteratureBusy(false);
     update(value => ({ ...fn(value), intake: null, selected: null, diagnosis: null }));
   };
+
+  function retractAdoptedTopic() {
+    const value = checkpoint.current?.value;
+    if (value?.selected?.provenance.catalogVersion === LITERATURE_TOPIC && value.diagnosis) {
+      latest.current.onRetractTopic(value.diagnosis.source.id);
+    }
+  }
+
+  function changeLiteratureStudy(study: LiteratureStudy) {
+    if (!ready || busy || conflict || !current()) return;
+    if (literatureProposal) setProposal(null);
+    if (adoptedLiterature && !hasAdoptedEvidence(adoptedLiterature, study)) retractAdoptedTopic();
+    update(value => ({ ...value, literatureStudy: study }));
+  }
+
+  function chooseLiteratureTopic(candidateId: string) {
+    if (!ready || busy || conflict || !current()) return;
+    try {
+      const study = draft.literatureStudy;
+      if (!study || study.executedFor !== draft.direction.trim()) throw Error('研究方向或资料已更新，请重新运行文献分析。');
+      const result = buildLiteratureStudy(study, draft.direction);
+      const candidate = result.candidates.find(item => item.id === candidateId);
+      if (!candidate || result.stages.find(item => item.id === 'reviewer')?.status !== 'done') throw Error('请先完成原文依据核对。');
+      const sources = candidate.evidenceIds.map(id => {
+        const entry = study.evidence.find(item => item.id === id);
+        const paper = entry && study.papers.find(item => item.id === entry.paperId);
+        if (!entry || !paper) throw Error('选题引用的原文依据已变化。');
+        return { id, title: paper.title, url: '', locator: `PDF 第 ${entry.page} 页 · ${paper.filename} · SHA-256 ${paper.id}`,
+          coverage: 'reference' as const, publishedAt: '', retrievedAt: '', snippet: entry.quote };
+      });
+      const base = emptyTopicProject(draft.profile.referenceDate);
+      const title = Array.from(candidate.title).slice(0, 100).join('');
+      const scope = Array.from(draft.direction.trim()).slice(0, 180).join('');
+      const questions: Record<string, string> = {
+        replicate: `在「${scope}」的实际样本中，按文献给出的指标重测，结果能否复现？`,
+        compare: `在「${scope}」中，能否用统一指标比较两项研究的方法？`,
+        limits: `在「${scope}」中，改变文献所述的一个条件后，结果会如何变化？`,
+      };
+      const region = draft.profile.regionRef ? regionPath(draft.profile.regionRef).map(item => item.name) : [draft.profile.region, draft.profile.city];
+      setProposal(parseTopicProjectDocument({ ...base, schemaVersion: draft.profile.schemaVersion === 2 ? 2 : 1, profile: draft.profile,
+        selected: { kind: 'custom', id: `literature-${crypto.randomUUID()}`, title },
+        brief: { ...base.brief, title, geography: [...new Set(region.filter(Boolean))].join(' · '),
+          decision: '判断是否开展这项研究，并确定预试方案。',
+          questions: [{ id: 'literature-question', text: questions[candidate.id] ?? `在「${scope}」中，如何验证文献提出的研究问题？` }], evidencePlan: candidate.design,
+          unknowns: [candidate.caveat], sources },
+        provenance: { catalogVersion: LITERATURE_TOPIC, modelVersion: 'local-rules/v1', sourceIds: sources.map(item => item.id) },
+      }));
+      setError('');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : '无法带入文献选题。'); }
+  }
 
   useEffect(() => {
     alive.current = true;
@@ -121,6 +187,7 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const attachLiterature = (snapshot: LiteratureWorkspaceSnapshot, selection: TopicProjectDocument) => {
     const held = checkpoint.current;
     if (!current() || latest.current.literature !== snapshot || held?.value.selected !== selection) return;
+    if (selection.provenance.catalogVersion === LITERATURE_TOPIC) return;
     const diagnosis = held.value.diagnosis ?? prepareTopicDiagnosis(selection);
     const source = withLiterature(diagnosis.source, snapshot);
     if (source !== diagnosis.source) update(value => ({ ...value, diagnosis: { ...diagnosis, source } }));
@@ -152,6 +219,7 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
       const profile = proposeTopicProfile(draft.profile, direction)?.profile ?? draft.profile;
       const intake = await prepareResearchIntake(direction, profile, projectId);
       if (!current() || attempt !== job.current) return;
+      retractAdoptedTopic();
       update(value => ({ ...value, profile, direction, intake, selected: null, diagnosis: null }));
     } catch (reason) { if (current() && attempt === job.current) setError(reason instanceof Error ? reason.message : '选题准备失败。'); }
     finally { if (current() && attempt === job.current) setBusy(false); }
@@ -160,17 +228,25 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   function confirmTopic() {
     if (!proposal || !current() || conflict) return;
     try {
-      const diagnosis = draft.autoAdvance ? prepareTopicDiagnosis(proposal) : null;
+      const diagnosis = draft.autoAdvance || literatureProposal ? prepareTopicDiagnosis(proposal) : null;
       // Explicit acceptance affects this draft only. Cloud topic version/Gate decisions remain independent.
-      update(value => ({ ...value, selected: structuredClone(proposal), diagnosis }));
+      const selected = literatureProposal && proposal.selected ? { ...proposal, selected: { ...proposal.selected, title: proposal.brief.title } } : proposal;
+      retractAdoptedTopic();
+      update(value => ({ ...value, selected: structuredClone(selected), diagnosis: draft.autoAdvance ? diagnosis : null }));
       setProposal(null); setError('');
-      if (diagnosis) props.onTopic(diagnosis.source);
+      if (draft.autoAdvance && diagnosis && !literatureProposal) props.onTopic(diagnosis.source);
     } catch (reason) { setError(reason instanceof Error ? reason.message : '请补全研究范围。'); }
   }
 
   function continueStep(stage: ResearchStageId) {
+    if (stage === 'literature' && draft.literatureStudy?.papers.length && literaturePanel.current) {
+      literaturePanel.current.open = true;
+      literaturePanel.current.scrollIntoView({ block: 'start' });
+      return;
+    }
     if (stage === 'diagnosis' && draft.selected && !draft.diagnosis) {
-      try { const diagnosis = prepareTopicDiagnosis(draft.selected); update(value => ({ ...value, diagnosis })); props.onTopic(diagnosis.source); setError(''); }
+      if (!adoptedEvidenceCurrent) { setError('选题所用摘录已撤回，请重新核对并采纳。'); return; }
+      try { const diagnosis = prepareTopicDiagnosis(draft.selected); update(value => ({ ...value, diagnosis })); if (!adoptedLiterature) props.onTopic(diagnosis.source); setError(''); }
       catch (reason) { setError(reason instanceof Error ? reason.message : '诊断输入不完整。'); }
       return;
     }
@@ -188,9 +264,10 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   function sendBrief() {
     if (!current() || !draft.diagnosis) return;
     try {
+      if (!adoptedEvidenceCurrent) throw Error('选题所用摘录已撤回，请重新核对并采纳。');
       let source = draft.diagnosis.source;
       if (source.schemaVersion === 2 && (!literature || !literatureEvidenceReferencesEqual(source.literature, literatureEvidenceReference(literature)))) throw Error('文献语料或参数已变化，请先重新分析后再发送研究简介。');
-      if (receipt?.status === 'ready' && literature) source = withLiterature(source, literature);
+      if (!adoptedLiterature && receipt?.status === 'ready' && literature) source = withLiterature(source, literature);
       props.onTopic(source); props.onOpenStage('questionnaire'); setError('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : '研究简介来源已变化。'); }
   }
@@ -198,7 +275,7 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const steps: ResearchJourneyStep[] = RESEARCH_STAGES.map(stage => {
     if (stage.id === 'topic') return { id: stage.id, status: busy ? 'running' : draft.selected ? 'completed' : draft.intake?.status === 'ready' ? 'awaiting_confirmation' : draft.intake ? 'needs_input' : 'ready', actionLabel: draft.selected ? '编辑选题' : '选题顾问' };
     if (stage.id === 'diagnosis') return { id: stage.id, status: draft.diagnosis ? 'completed' : draft.selected ? 'ready' : 'idle', actionLabel: '查看诊断' };
-    if (stage.id === 'literature') return { id: stage.id, status: literatureBusy ? 'running' : receipt?.status === 'ready' ? 'completed' : draft.selected ? 'needs_input' : 'idle', detail: receipt?.status === 'ready' ? `已分析 ${receipt.summary.records} 条记录；词云与图谱共用当前语料。` : draft.selected ? '导入文献题录后，自动分析关键词、词云与关联图谱。' : undefined, actionLabel: '文献图谱' };
+    if (stage.id === 'literature') return { id: stage.id, status: literatureBusy ? 'running' : receipt?.status === 'ready' ? 'completed' : draft.selected ? 'needs_input' : 'idle', detail: draft.literatureStudy?.papers.length ? `${draft.literatureStudy.papers.length} 篇原文 · ${draft.literatureStudy.evidence.length} 条已确认摘录` : receipt?.status === 'ready' ? `已分析 ${receipt.summary.records} 条记录。` : draft.selected ? '导入文献题录查看词云与关联图谱。' : undefined, actionLabel: draft.literatureStudy?.papers.length ? '查看原文证据' : '文献图谱' };
     return { id: stage.id, status: 'idle', actionLabel: stage.availability === 'planned' ? undefined : '打开编辑' };
   });
 
@@ -224,6 +301,12 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
     <ResearchJourney direction={draft.direction} onDirectionChange={direction => changeResearchInput(value => ({ ...value, direction }))} onStart={direction => void start(direction)} steps={steps}
       services={props.services} modelRoutes={props.modelRoutes} defaultServiceId={props.defaultServiceId} onDefaultServiceChange={props.onDefaultServiceChange} onModelCallChange={props.onModelCallChange}
       onOpenSettings={props.onOpenSettings} onStepAction={continueStep} busy={busy} disabled={!ready || conflict} afterIntake={<div className={styles.intakeResults}>
+    <details className={styles.literature} ref={literaturePanel}>
+      <summary>选题与文献研究 <small>原文摘录 · 文献对照 · 候选选题</small></summary>
+      <LiteratureStudyPanel value={draft.literatureStudy ?? emptyLiteratureStudy()} direction={draft.direction}
+        disabled={!ready || busy || conflict} onChange={changeLiteratureStudy} onAdopt={chooseLiteratureTopic} />
+      <button type="button" className={styles.literatureMap} onClick={() => props.onOpenStage('literature')}>打开文献图谱与词云</button>
+    </details>
     {draft.intake && !draft.selected && <div className={styles.candidates} aria-label="选题候选">
       <h3>先选一个值得深入的方向</h3>
       {!!draft.intake.missing.length && <ul>{draft.intake.missing.map((item, index) => <li key={index}>{item}</li>)}</ul>}
@@ -233,12 +316,17 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
         catch (reason) { setError(reason instanceof Error ? reason.message : '请重新生成当前选题候选。'); }
       }}>选择并完善</button></article>)}
     </div>}
-    {proposal && <section className={styles.confirm} aria-label="确认选题">
+    {proposal && <section ref={confirmPanel} className={styles.confirm} aria-label="确认选题">
       <h3>确认研究范围</h3>
       {([['title', '题目'], ['decisionOwner', '决策主体'], ['population', '调查人群'], ['geography', '调查地区'], ['decision', '要支持的决定']] as const).map(([key, label]) => <label key={key}>{label}<input value={proposal.brief[key]} maxLength={key === 'decision' ? 600 : key === 'population' ? 200 : 120} onChange={event => patchBrief(key, event.target.value)} /></label>)}
       <button type="button" onClick={confirmTopic}>确认选题并继续</button><button type="button" onClick={() => setProposal(null)}>返回比较</button>
     </section>}
-    {draft.diagnosis && <section className={styles.result} aria-label="选题诊断结果"><h3>{draft.diagnosis.source.input.title}</h3><ul>{draft.diagnosis.result?.nextSteps.map(item => <li key={item.code}>{item.action}</li>)}</ul><button type="button" onClick={sendBrief}>将研究简介送入问卷</button></section>}
+    {adoptedLiterature && <details className={styles.result}>
+      <summary>已采纳选题的文献依据</summary>
+      {!adoptedEvidenceCurrent && <p role="status">所用摘录已撤回。重新核对并采纳后，方可将研究简介送入问卷。</p>}
+      {adoptedLiterature.brief.sources.map(source => <article key={source.id}><h4>{source.title}</h4><p>{source.locator}</p><blockquote>{source.snippet}</blockquote></article>)}
+    </details>}
+    {draft.diagnosis && <section className={styles.result} aria-label="选题诊断结果"><h3>{draft.diagnosis.source.input.title}</h3><ul>{draft.diagnosis.result?.nextSteps.map(item => <li key={item.code}>{item.action}</li>)}</ul><button type="button" disabled={!adoptedEvidenceCurrent} onClick={sendBrief}>将研究简介送入问卷</button></section>}
     {receipt?.status === 'ready' && <details className={styles.result}><summary>文献分析回执 · {receipt.summary.records} 条</summary><p>共现节点 {receipt.map.nodes.length} · 论文网络节点 {receipt.papers.nodes.length}</p><code>{receipt.resultHash}</code><button type="button" onClick={() => props.onOpenStage('literature')}>查看词云与图谱</button></details>}
     <details className={styles.advisor}><summary>与选题顾问继续推敲</summary><TopicAgent profile={draft.profile} projectId={projectId} cacheNamespace={`research:${projectId ?? 'local'}`} readOnly={!ready || conflict}
       onProfileChange={profile => changeResearchInput(value => ({ ...value, profile }))}

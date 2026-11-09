@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { parseDiagnosisBriefSource } from '../lib/diagnosis-actions.ts';
 import { literatureEvidenceReference } from '../lib/topic-lab/workspace.ts';
+import { emptyLiteratureStudy } from '../lib/agent/literature-study.ts';
 import { literatureEvidenceReferencesEqual } from '../lib/topic-lab/evidence-reference.ts';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
@@ -33,6 +34,7 @@ test('editing research input invalidates old proposal, selected topic, diagnosis
   const job = { current: 8 }, literatureJob = { current: 3 }, events = [];
   let draft = { direction: '旧方向', profile: {}, intake: { id: 'old' }, selected: { id: 'old' }, diagnosis: { id: 'old' } };
   const change = load('changeResearchInput', { job, literatureJob,
+    retractAdoptedTopic: () => {},
     setProposal: value => events.push(['proposal', value]), setReceipt: value => events.push(['receipt', value]),
     setBusy: value => events.push(['busy', value]), setLiteratureBusy: value => events.push(['literatureBusy', value]),
     update: fn => { draft = fn(draft); } });
@@ -104,6 +106,7 @@ function componentHarness({ owner = 'owner-old', projectId = 'project-old', read
     '@/lib/topic-advisor/types': { ACCESS_OPTIONS: [] }, '@/lib/topic-advisor/regions': { regionPath: () => [] },
     '@/lib/topic-lab/workspace': { literatureWorkspaceReceipt: async () => { throw Error('Unexpected literature compute'); }, literatureEvidenceReference },
     '@/lib/topic-lab/evidence-reference': { literatureEvidenceReferencesEqual },
+    '@/lib/agent/literature-study': { emptyLiteratureStudy },
     './ResearchJourney': { default: 'ResearchJourney' }, '@/components/topic-advisor/TopicAgent': { default: 'TopicAgent' }, '@/components/topic-advisor/RegionPicker': { default: 'RegionPicker' },
   };
   const exports = {};

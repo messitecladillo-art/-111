@@ -7,6 +7,7 @@ import { MAX_LITERATURE_WORKSPACE_BYTES, parseLiteratureWorkspaceSnapshot, verif
 import { parseDiagnosisBriefSource, type DiagnosisBriefSource } from '../diagnosis-actions.ts';
 import { diagnoseProject, type DiagnosisResult } from '../project-diagnosis.ts';
 import type { ResearchIntake } from './research-intake.ts';
+import { LITERATURE_STUDY_LIMITS, parseLiteratureStudy, type LiteratureStudy } from './literature-study.ts';
 
 export type ResearchWorkspaceDraft = {
   schemaVersion: 1;
@@ -16,6 +17,7 @@ export type ResearchWorkspaceDraft = {
   selected: TopicProjectDocument | null;
   diagnosis: { source: DiagnosisBriefSource; result?: DiagnosisResult | null } | null;
   literature: LiteratureWorkspaceSnapshot | null;
+  literatureStudy?: LiteratureStudy;
   autoAdvance: boolean;
   updatedAt: string;
 };
@@ -31,7 +33,7 @@ export interface ResearchWorkspaceStorage {
 export class ResearchWorkspaceConflictError extends Error {
   constructor() { super('研究草稿已有更新，请先读取当前版本；原记录没有被覆盖。'); this.name = 'ResearchWorkspaceConflictError'; }
 }
-export const MAX_RESEARCH_WORKSPACE_BYTES = MAX_LITERATURE_WORKSPACE_BYTES + 2 * 1024 * 1024;
+export const MAX_RESEARCH_WORKSPACE_BYTES = MAX_LITERATURE_WORKSPACE_BYTES + 2 * 1024 * 1024 + LITERATURE_STUDY_LIMITS.bytes;
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
 function fail(message: string): never { throw Error(`研究草稿：${message}`); }
@@ -101,7 +103,7 @@ export function emptyResearchWorkspaceDraft(direction = ''): ResearchWorkspaceDr
     literature: null, autoAdvance: true, updatedAt: new Date().toISOString() };
 }
 export function parseResearchWorkspaceDraft(value: unknown): ResearchWorkspaceDraft {
-  const x = object(value, ['schemaVersion', 'direction', 'intake', 'selected', 'diagnosis', 'literature', 'updatedAt'], ['autoAdvance', 'profile']);
+  const x = object(value, ['schemaVersion', 'direction', 'intake', 'selected', 'diagnosis', 'literature', 'updatedAt'], ['autoAdvance', 'profile', 'literatureStudy']);
   if (x.schemaVersion !== 1 || (x.autoAdvance !== undefined && typeof x.autoAdvance !== 'boolean')) fail('版本或自动继续选项无效。');
   const updatedAt = text(x.updatedAt, 50);
   if (!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/u.test(updatedAt) || !Number.isFinite(Date.parse(updatedAt))) fail('更新时间无效。');
@@ -111,6 +113,10 @@ export function parseResearchWorkspaceDraft(value: unknown): ResearchWorkspaceDr
   const meta = { ...parsed, literature: null };
   if (new TextEncoder().encode(stableStringify(meta)).byteLength > 2 * 1024 * 1024
     || new TextEncoder().encode(stableStringify(parsed)).byteLength > MAX_RESEARCH_WORKSPACE_BYTES) fail('超过浏览器草稿大小限制。');
+  if (Object.hasOwn(x, 'literatureStudy')) {
+    parsed.literatureStudy = parseLiteratureStudy(x.literatureStudy);
+    if (new TextEncoder().encode(stableStringify(parsed)).byteLength > MAX_RESEARCH_WORKSPACE_BYTES) fail('超过浏览器草稿大小限制。');
+  }
   return structuredClone(parsed);
 }
 export async function verifyResearchWorkspaceDraft(value: unknown): Promise<ResearchWorkspaceDraft> {

@@ -649,6 +649,12 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     if(parsed.schemaVersion===2&&(!live||!literatureEvidenceReferencesEqual(parsed.literature,literatureEvidenceReference(live))))throw Error('文献证据版本已变化，请重新核对研究简介。');
     setTopicInput({scope:workspaceScope,source:parsed});handoffs.publish('brief',parsed);
   },[currentScope,handoffs,workspaceScope]);
+  const retractTopic=useCallback((sourceId:string)=>{
+    if(!currentScope())return;
+    const pending=handoffs.getSnapshot().pending.brief;
+    if(pending?.payload.id===sourceId)handoffs.acknowledge('brief',pending.deliveryId);
+    setTopicInput(value=>value?.scope===workspaceScope&&value.source.id===sourceId?null:value);
+  },[currentScope,handoffs,workspaceScope]);
   const receiveLiterature=useCallback((snapshot:LiteratureWorkspaceSnapshot|null)=>{
     if(!currentScope())return;
     const pending=handoffs.getSnapshot().pending.brief;
@@ -656,7 +662,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     handoffs.setLiterature(snapshot);
   },[currentScope,handoffs]);
   const openResearch=useCallback((stage:ResearchStageId)=>{if(!currentScope()||!['topic','diagnosis','literature'].includes(stage))return;setDiagnosisMode({scope:workspaceScope,id:crypto.randomUUID(),mode:stage==='literature'?'topics':stage==='diagnosis'?'readiness':'advisor'});},[currentScope,workspaceScope]);
-  const research=useMemo(()=>({topic:receiveTopic,literature:exchange.literature,setLiterature:receiveLiterature,open:openResearch}),[receiveTopic,exchange.literature,receiveLiterature,openResearch]);
+  const research=useMemo(()=>({topic:receiveTopic,retractTopic,literature:exchange.literature,setLiterature:receiveLiterature,open:openResearch}),[receiveTopic,retractTopic,exchange.literature,receiveLiterature,openResearch]);
   const datasetChanged=useCallback((value:DatasetValue|null)=>{if(currentScope())handoffs.setDataset(value);},[handoffs,currentScope]);
   const designChanged=useCallback((snapshot:DesignSnapshot)=>{if(currentScope())handoffs.setDesign(snapshot);},[handoffs,currentScope]);
   const revisionInputVersion=useMemo(()=>({dataset:exchange.dataset,design:exchange.design,pending:[exchange.pending.design,exchange.pending.dataset,exchange.pending.result],token:crypto.randomUUID()}),[exchange.dataset,exchange.design,exchange.pending.design,exchange.pending.dataset,exchange.pending.result]);

@@ -9,6 +9,7 @@ import * as resultRegistration from '../lib/result-registration.ts';
 import * as mapping from '../lib/questionnaire-mapping.ts';
 import * as reportRun from '../lib/agent/report-run.ts';
 import * as editorModel from '../lib/editor-model.ts';
+import { parseDiagnosisBriefSource } from '../lib/diagnosis-actions.ts';
 import { externalStoreHook, workbenchHookModule } from './helpers/workbench-test-harness.mjs';
 import { questionnaireRepositoryModule, questionnairePersistence } from './helpers/questionnaire-repository.mjs';
 import { questionnaireProposalRepositoryModule, questionnaireProposalContract } from './helpers/questionnaire-proposals.mjs';
@@ -357,6 +358,7 @@ function agentModules(){
   const drafts=new Map(),archives=[],write={allowed:true};let pending;
   const key=(owner,project)=>JSON.stringify([owner,project]);
   const screen=mount('../components/EviXPlatform.tsx',{fallback:true,internal:'({projectId})=>useWorkbenchModules(true,projectId)',props:{projectId:projectA},mocks:{
+    '@/lib/diagnosis-actions':{parseDiagnosisBriefSource},
     '@/components/hosted/HostedSession':{useHostedSession:()=>auth},
     '@/data/control-plane-contract.generated':{PROJECT_STAGES:[],GATE_NAMES:[]},
     '@/lib/agent/report-draft':{
@@ -394,6 +396,19 @@ test('handled data deliveries do not replay on a later project visit and old ack
   oldAck();await screen.settle();assert.ok(screen.tree.panels.analysis.props.datasetTransfer);
   screen.tree.panels.analysis.props.onDatasetTransferHandled();await screen.settle();assert.equal(screen.tree.reportSource.inputPending,false);
   screen.update({projectId:projectB});await screen.settle();screen.update({projectId:projectA});await screen.settle();assert.equal(screen.tree.panels.analysis.props.datasetTransfer,null);screen.unmount();
+});
+test('retracting a research topic clears only its own unconsumed brief and diagnosis input',async()=>{
+  const {screen}=agentModules();await screen.settle();
+  const first={...brief('旧选题'),id:'topic-first'},current={...brief('当前选题'),id:'topic-current'};
+  screen.tree.research.topic(first);await screen.settle();
+  screen.tree.research.topic(current);await screen.settle();
+  screen.tree.research.retractTopic(first.id);await screen.settle();
+  assert.equal(screen.tree.panels.design.props.briefSource.id,current.id);
+  assert.equal(screen.tree.panels.diagnose.props.incomingSource.id,current.id);
+  screen.tree.research.retractTopic(current.id);await screen.settle();
+  assert.equal(screen.tree.panels.design.props.briefSource??null,null);
+  assert.equal(screen.tree.panels.diagnose.props.incomingSource,null);
+  screen.unmount();
 });
 test('candidate adoption saves an original and rejects conflicts/storage failure before changing research state',async()=>{
   const {screen,archives,write}=agentModules();await screen.settle();
