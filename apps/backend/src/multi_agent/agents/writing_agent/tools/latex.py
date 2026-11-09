@@ -1,6 +1,6 @@
 from ..services.report_frame_template import checked_frame, frame_tex_preamble
 from ..services.report_figure_template import figure_tex_preamble
-from ..services.page_art import FRAME_IMAGE_FILE, cover_image_bytes, cover_image_file, cover_image_titlepage, frame_image_bytes, frame_image_preamble
+from ..services.page_art import image_size, FRAME_IMAGE_FILE, cover_image_bytes, cover_image_file, cover_image_titlepage, frame_image_bytes, frame_image_preamble
 """Bounded project-scoped XeLaTeX export of a closed, body-only TeX subset."""
 import base64
 from decimal import Decimal, ROUND_HALF_UP, localcontext
@@ -19,9 +19,9 @@ from shared.errors import ApiError
 from shared.contracts import object_fields, text
 
 MAX_BODY = 120000
-MAX_PDF = 4 * 1024 * 1024
+MAX_PDF = 8 * 1024 * 1024
 MAX_LOG = 1024 * 1024
-MAX_FILES = 12 * 1024 * 1024
+MAX_FILES = 32 * 1024 * 1024
 ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular array figure tikzpicture axis".split())
 COMMANDS = frozenset((
     "section subsection subsubsection paragraph subparagraph par newline linebreak textbf textit emph textrm textsf texttt textnormal underline textsuperscript textsubscript "
@@ -37,7 +37,7 @@ COMMANDS = frozenset((
     "to mapsto rightarrow leftarrow leftrightarrow Rightarrow Leftarrow Leftrightarrow iff implies uparrow downarrow "
     "ldots cdots vdots ddots dots langle rangle lvert rvert lVert rVert vert Vert lceil rceil lfloor rfloor "
     "quad qquad enspace thinspace negthinspace displaystyle textstyle scriptstyle scriptscriptstyle limits nolimits underbrace overbrace underset overset binom dbinom tbinom not hbar ell Re Im angle triangle square degree "
-    "begin end addplot definecolor ResearchFigure"
+    "begin end addplot definecolor ResearchFigure ResearchImage"
 ).split())
 SYMBOLS = frozenset("\\%&#_${},;:!()[] ")
 
@@ -59,7 +59,37 @@ def normalize_body(content):
     return content.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None):
+# Method figures embedded as the product's renderings; byte-identical with the frontend's LATEX_IMAGE_PREAMBLE.
+IMAGE_PREAMBLE = [r"\usepackage{graphicx}", r"\newcommand{\ResearchImage}[1]{\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{exhibit-#1.png}}"]
+IMAGE_LIMITS = {"count": 24, "bytes": 700_000, "total": 8_000_000}
+
+
+def checked_images(images):
+    """Validated PNG bytes of the embedded method figures: their header states their size, nothing else is read."""
+    if images is None:
+        return []
+    if not isinstance(images, list) or not 1 <= len(images) <= IMAGE_LIMITS["count"]:
+        raise ApiError()
+    out, total = [], 0
+    for image in images:
+        x = object_fields(image, ("mime", "data", "widthPx", "heightPx"))
+        if x["mime"] != "image/png" or not isinstance(x["data"], str) or len(x["data"]) > -(-IMAGE_LIMITS["bytes"] // 3) * 4 or not re.fullmatch(r"[A-Za-z0-9+/]+={0,2}", x["data"]):
+            raise ApiError()
+        try:
+            raw = base64.b64decode(x["data"], validate=True)
+        except ValueError:
+            raise ApiError() from None
+        size = image_size(raw, "image/png")
+        if not size or size != (x["widthPx"], x["heightPx"]) or not 200 <= size[0] <= 4000 or not 100 <= size[1] <= 4000:
+            raise ApiError()
+        total += len(raw)
+        out.append(raw)
+    if total > IMAGE_LIMITS["total"]:
+        raise ApiError()
+    return out
+
+
+def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None, images=None):
     """Keep byte-identical with the frontend generator; source is always returned by API."""
     frame = checked_frame(frame, visual_style)
     lines = [
@@ -71,6 +101,7 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
         "\\setlength{\\parindent}{" + str(settings["firstLineChars"]) + "em}",
         r"\setlength{\heavyrulewidth}{1.5bp}", r"\setlength{\lightrulewidth}{0.75bp}",
         r"\renewcommand{\arraystretch}{1.2}",
+        r"\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}",
         r"\DeclareCaptionFont{reportcaption}{\fontsize{12bp}{15.552bp}\selectfont}",
         r"\captionsetup{font=reportcaption,labelsep=quad,justification=centering,singlelinecheck=false}",
         r"\ctexset{section={format=\fontsize{15bp}{19.44bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsection={format=\fontsize{14bp}{18.144bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsubsection={format=\fontsize{12bp}{15.552bp}\selectfont\songti,beforeskip=6bp,afterskip=1sp}}",
@@ -95,6 +126,8 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
         lines[3:3] = [r"\usepackage{tikz}"]
     if frame_image:
         lines[-2:-2] = frame_image_preamble()
+    if images:
+        lines[-2:-2] = IMAGE_PREAMBLE
     if frame and frame['layout'] != 'none':
         lines[-2:-2] = frame_tex_preamble(frame)
         if 'cover' in frame['appliesTo'] and not cover:
@@ -137,7 +170,7 @@ def chart_display_number(value):
     return format(rounded, "f").rstrip("0").rstrip(".")
 
 
-def validate_body(content, figure_count=0):
+def validate_body(content, figure_count=0, image_count=0):
     text(content, MAX_BODY)
     content = normalize_body(content)
     def fail(message, position):
@@ -199,7 +232,7 @@ def validate_body(content, figure_count=0):
             end += 1
         if end == len(content): fail("图表配置尚未闭合。", position)
         value = content[position + 1:end]
-        pattern = r"width=13cm,height=8cm,ybar,bar width=12pt,xtick=\{(?P<ticks>[0-9,]+)\},xticklabels=\{(?P<labels>.*?)\},x tick label style=\{rotate=35,anchor=east\},ylabel=\{(?P<ylabel>.*?)\},enlarge x limits=0\.12,nodes near coords,point meta=explicit symbolic"
+        pattern = r"width=13cm,height=8cm,ybar,bar width=12pt,xtick=\{(?P<ticks>[0-9,]+)\},xticklabels=\{(?P<labels>.*?)\},x tick label style=\{rotate=35,anchor=east\},ylabel=\{(?P<ylabel>.*?)\},enlarge x limits=0\.12,nodes near coords,point meta=explicit symbolic(?P<base>,ymin=0|,ymax=0)?"
         match = re.fullmatch(pattern, value, re.S)
         if not match: fail("图表仅支持固定的柱状图坐标轴配置。", position)
         ticks = match["ticks"].split(",")
@@ -265,7 +298,8 @@ def validate_body(content, figure_count=0):
                         i, entry["ticks"] = axis_options(i)
                         entry["plots"] = 0
                     if name in ("tabular", "array"):
-                        _, i = argument(i, r"c{1,12}", "表格须使用 1 至 12 个居中列，例如 {ccc}。")
+                        # Centred columns, or centred wrapping columns of a fixed width (C{30mm}).
+                        _, i = argument(i, r"(?:c|C\{[1-9][0-9]?mm\}){1,12}", "表格须使用 1 至 12 个居中列，例如 {ccc}。")
                     stack.append(entry)
                 else:
                     if not stack or stack[-1]["name"] != name: fail("环境起止不匹配。", start)
@@ -282,6 +316,10 @@ def validate_body(content, figure_count=0):
                 i, count = plot_coordinates(i)
                 stack[-1]["plots"] += 1
                 if count != stack[-1]["ticks"] or stack[-1]["plots"] > 1: fail("图表类别与数值坐标不匹配。", start)
+            elif command == "ResearchImage":
+                value, i = argument(i, r"(?:0|[1-9][0-9]{0,2})", "方法图引用须为已登记编号。")
+                if not 0 <= int(value) < image_count:
+                    fail("方法图引用不在本次图形版本中。", start)
             elif command == "ResearchFigure":
                 value, i = argument(i, r"(?:0|[1-9][0-9]{0,2})", "图形引用须为已登记编号。")
                 if not 0 <= int(value) < figure_count:
@@ -419,11 +457,12 @@ class LatexCompiler:
         self.settings = settings
         self.slots = threading.BoundedSemaphore(settings.latex_concurrency)
 
-    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None):
+    def compile(self, title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None, images=None):
         cover_image = cover_image if settings["includeCover"] else None
-        source = build_source(title, subtitle, content, settings, frame, figures, visual_style, cover_image, frame_image)
+        pngs = checked_images(images)
+        source = build_source(title, subtitle, content, settings, frame, figures, visual_style, cover_image, frame_image, images)
         result = {"status": "error", "source": source, "sourceHash": hashlib.sha256(source.encode("utf-8")).hexdigest(), "pdfBase64": None, "diagnostics": [], "engine": None}
-        try: validate_body(content, len(figures or []))
+        try: validate_body(content, len(figures or []), len(pngs))
         except UnsafeBody as error:
             result["diagnostics"] = [diagnostic(error.message, error.line)]; return result
         executable = self.settings.latex_compiler
@@ -440,6 +479,8 @@ class LatexCompiler:
                     (directory / cover_image_file(cover_image)).write_bytes(cover_image_bytes(cover_image))
                 if frame_image:
                     (directory / FRAME_IMAGE_FILE).write_bytes(frame_image_bytes(frame_image))
+                for k, png in enumerate(pngs):
+                    (directory / f"exhibit-{k}.png").write_bytes(png)
                 deadline = time.monotonic() + self.settings.latex_timeout_seconds
                 log = ""
                 for _ in range(2):
@@ -448,7 +489,7 @@ class LatexCompiler:
                         result["diagnostics"] = [compiler_diagnostic(log, source)]; return result
                 pdf = directory / "document.pdf"
                 if not pdf.is_file() or not 4 < pdf.stat().st_size <= MAX_PDF or not pdf.read_bytes().startswith(b"%PDF-"):
-                    result["diagnostics"] = [diagnostic("编译器未生成有效 PDF，或 PDF 超过 4 MiB。")]; return result
+                    result["diagnostics"] = [diagnostic("编译器未生成有效 PDF，或 PDF 超过 8 MiB。")]; return result
                 result.update(status="compiled", pdfBase64=base64.b64encode(pdf.read_bytes()).decode("ascii"))
                 if "Overfull" in log: result["diagnostics"].append(diagnostic("部分内容超出行宽，请检查长公式或表格。", severity="warning"))
                 if "Missing character" in log: result["diagnostics"].append(diagnostic("当前字体缺少部分字符，请检查 PDF 中的符号。", severity="warning"))

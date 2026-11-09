@@ -27,6 +27,8 @@ class LatexService:
         cover_image = data.get('coverImage')
         if cover_image is not None:
             domain.cover_image_bytes(cover_image)
+        images = data.get('images')
+        domain.checked_images(images)
         frame_image = data.get('frameImage')
         if frame_image is not None:
             if frame is not None:
@@ -52,7 +54,7 @@ class LatexService:
         session.commit()
         result = await asyncio.to_thread(
             self.compiler.compile, data['title'], data['subtitle'], data['body'],
-            format_options, frame, figures, visual_style, cover_image, frame_image,
+            format_options, frame, figures, visual_style, cover_image, frame_image, images,
         )
         current_user = check_session(session)
         self.owned_project(session, current_user, project_id)

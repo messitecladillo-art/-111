@@ -172,8 +172,8 @@ test('a result placed again from the catalogue goes to its method section, with 
   assert.throws(() => placeResult(placed, placed.quality.results[0].id), /高级方法的结果请在/, 'never rewritten from its table alone');
 });
 
-test('a report holding every advanced method still exports to LaTeX: formulas on the allowed list, method figures as captioned notes', async () => {
-  const { generateLatexBody } = await import('../lib/latex-report.ts');
+test('a report holding every advanced method still exports to LaTeX: formulas on the allowed list, method figures embedded', async () => {
+  const { generateLatexBody, latexChartExhibits } = await import('../lib/latex-report.ts');
   let content = report();
   for (const spec of [
     { method: 'validity', items: [0, 1, 2, 3, 4, 5] }, { method: 'regression', outcome: 6, predictors: [0, 3] },
@@ -181,7 +181,9 @@ test('a report holding every advanced method still exports to LaTeX: formulas on
     { method: 'cluster', variables: [0, 3, 6], k: 3 }, { method: 'ahp', criteria: ['器材', '环境', '服务'], matrix: [[1, 3, 2], [1 / 3, 1, 1 / 2], [1 / 2, 2, 1]] },
   ]) content = applyReportInsert(content, await advancedInsert(runAdvanced(spec, table, ['99']), { name: '教学模拟问卷', hash: 'a'.repeat(64), simulated: true })).content;
   const body = generateLatexBody(content);
-  assert.equal((body.match(/此图为方法图/g) ?? []).length, 5, 'five method figures, each kept as a captioned figure');
+  const embedded = body.match(/\\ResearchImage\{\d+\}/g) ?? [];
+  assert.ok(embedded.length >= 5 && embedded.length === latexChartExhibits(content).length, 'the five method figures (and every other chart) are embedded renderings');
+  assert.doesNotMatch(body, /此图为方法图/u, 'no placeholder in place of a figure');
   assert.doesNotMatch(body, /\\(?:boldsymbol|fbox|parbox)\b/u);
   if (process.env.EVIX_LATEX_BODY) (await import('node:fs')).writeFileSync(process.env.EVIX_LATEX_BODY, body);
 });

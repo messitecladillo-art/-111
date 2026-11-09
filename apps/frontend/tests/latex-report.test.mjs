@@ -61,9 +61,9 @@ test('main and appendix exports keep distinct parts and preserve chosen chapter 
 
 // Frozen hashes generated independently by evix_api.latex.build_source (2026-11-08, Word-measured line and paragraph spacing).
 const parity = [
-  { input: { title:'合成研究 A&B_1', subtitle:'标签 % # $ { } \\ ^ ~', body:'\\section{摘要}\n合成结果。\\par\n\\[ \\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i \\]', options:{part:'main',includeCover:true,includeToc:true,firstLineChars:2,numberPages:true} }, hash:'d5e622ec629f793374565fe3896bf3c346e11887348fd982a54adfaabc964ff8' },
-  { input: { title:'附录',subtitle:'',body:'\\section{补充材料}\n\\begin{tabular}{cc}\\toprule 变量 & 数值 \\\\ \\midrule A & 12 \\\\ \\bottomrule\\end{tabular}',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'0a3e7e40e159d7cc2c22d1b1b353ea998e0275a7fb6dcbd1b654070c1e39d361' },
-  { input: { title:'CR normalization',subtitle:'',body:'% comment\r\\section{Newline}\r\nText\\par',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'d9d048b2e765063d09317ec176ae7ac697b65639193e5f0015c6a090c6b9fd66' },
+  { input: { title:'合成研究 A&B_1', subtitle:'标签 % # $ { } \\ ^ ~', body:'\\section{摘要}\n合成结果。\\par\n\\[ \\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_i \\]', options:{part:'main',includeCover:true,includeToc:true,firstLineChars:2,numberPages:true} }, hash:'c3808764e7290501c9b41fb3457269564c0219e3eaddb9f933163b89aff99cb1' },
+  { input: { title:'附录',subtitle:'',body:'\\section{补充材料}\n\\begin{tabular}{cc}\\toprule 变量 & 数值 \\\\ \\midrule A & 12 \\\\ \\bottomrule\\end{tabular}',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'c5730f668cb426c26939c7ffc431d00dd485b3b3c91e97a21825d3a28622b753' },
+  { input: { title:'CR normalization',subtitle:'',body:'% comment\r\\section{Newline}\r\nText\\par',options:{part:'appendix',includeCover:false,includeToc:false,firstLineChars:0,numberPages:false} },hash:'05a9123867ca4088834ac8c72a032093cfc79ab3f5b80cb321c25e582fb1f8ab' },
 ];
 test('full source matches independent backend golden fixtures byte for byte', async () => {
   for (const {input,hash} of parity) assert.equal(await latexSha256(buildLatexSource(input)),hash);

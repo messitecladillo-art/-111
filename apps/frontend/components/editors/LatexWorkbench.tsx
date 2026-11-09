@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { parseEditorContent, type EditorContent } from '../../lib/editor-model';
+import { browserSvgToPng, latexCompilePayload, latexImages, latexSourceFiles } from '../../lib/latex-images';
 import { approvedLatexSource, previewLatexSource, createLatexCompileGuard, decodeLatexPdf, generateLatexBody, insertLatexSnippet, LATEX_INSERTS, LATEX_LIMITS, latexCompileInput, latexCompileKey, latexLineSelection, latexReportKey, latexSha256, parseLatexCompileReceipt, type LatexDiagnostic } from '../../lib/latex-report';
 import { useHostedSession } from '../hosted/HostedSession';
 import PdfPreview from './PdfPreview';
@@ -10,9 +11,16 @@ import styles from './LatexWorkbench.module.css';
 type Props = { content: EditorContent; onChange: (content: EditorContent) => void; projectId?: string; onSave?: () => void; disabled?: boolean };
 type Preview = { url: string; inputKey: string; sourceHash: string; title: string };
 function filename(title: string) { return title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 100) || '研究报告'; }
-function downloadSource(source: string, title: string) {
-  const url = URL.createObjectURL(new Blob([source], { type: 'text/x-tex;charset=utf-8' }));
-  const link = document.createElement('a'); link.href = url; link.download = `${filename(title)}.tex`; link.click();
+/** The source alone, or with the images it includes (cover, frame, method figures) as one zip. */
+async function downloadSource(source: string, title: string, files: { name: string; bytes: Uint8Array }[]) {
+  let blob = new Blob([source], { type: 'text/x-tex;charset=utf-8' }), name = `${filename(title)}.tex`;
+  if (files.length) {
+    const { default: JSZip } = await import('jszip'), zip = new JSZip();
+    zip.file(name, source); for (const file of files) zip.file(file.name, file.bytes);
+    blob = await zip.generateAsync({ type: 'blob' }); name = `${filename(title)}-LaTeX.zip`;
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.download = name; link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
@@ -82,7 +90,10 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
     abort.current = controller; setBusy(true); setError(''); setNotice(''); setDiagnostics([]);
     const accepts = () => alive.current && guard.current.accepts(ticket, current.current.projectId ?? '', current.current.inputKey);
     try {
-      const raw = await mutate(`/api/projects/${encodeURIComponent(projectId)}/report/latex/compile`, input, 'POST', { maxBytes: LATEX_LIMITS.responseBytes, timeoutMs: LATEX_LIMITS.timeoutMs, signal: controller.signal });
+      // Method figures travel as the product's renderings of them, drawn here from the registered results.
+      const payload = latexCompilePayload(input, await latexImages(content, input, browserSvgToPng));
+      if (!accepts()) return;
+      const raw = await mutate(`/api/projects/${encodeURIComponent(projectId)}/report/latex/compile`, payload, 'POST', { maxBytes: LATEX_LIMITS.responseBytes, timeoutMs: LATEX_LIMITS.timeoutMs, signal: controller.signal });
       if (!accepts()) return;
       const receipt = await parseLatexCompileReceipt(raw, source);
       if (!accepts()) return;
@@ -95,8 +106,8 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
       } else setNotice(receipt.status === 'unavailable' ? '编译服务暂未启用，可先导出源码。' : '编译未完成，请检查下方诊断。');
     } catch (e) { if (accepts()) setError(e instanceof Error ? e.message : '编译请求失败，请重试。'); }
     finally { if (alive.current && abort.current === controller) { abort.current = null; setBusy(false); } }
-  }, [content.latex, input, inputKey, mutate, projectId, source, sourceError]);
-  async function exportSource(){const target={projectId,inputKey};try{const receipt=await approvedLatexSource(input);if(!alive.current||current.current.projectId!==target.projectId||current.current.inputKey!==target.inputKey||receipt.inputKey!==target.inputKey)return;downloadSource(receipt.source,content.title);}catch(error){if(alive.current)setError(error instanceof Error?error.message:'源码未能导出。');}}
+  }, [content, input, inputKey, mutate, projectId, source, sourceError]);
+  async function exportSource(){const target={projectId,inputKey};try{const receipt=await approvedLatexSource(input);if(!alive.current||current.current.projectId!==target.projectId||current.current.inputKey!==target.inputKey||receipt.inputKey!==target.inputKey)return;const images=await latexImages(content,input,browserSvgToPng);if(!alive.current||current.current.inputKey!==target.inputKey)return;await downloadSource(receipt.source,content.title,latexSourceFiles(input,images));}catch(error){if(alive.current)setError(error instanceof Error?error.message:'源码未能导出。');}}
   const cancel = () => { guard.current.cancel(); abort.current?.abort(); abort.current = null; setBusy(false); setNotice('已停止等待，可继续编辑。'); };
 
   return <section className={styles.workbench} aria-label="LaTeX 排版工作台">

@@ -144,22 +144,38 @@ def test_full_report_capacity_matches_browser_limits():
 
 def generated_latex(fixture):
     platform=Path(__file__).resolve().parents[2]/'frontend'
-    script="import {parseEditorContent} from './lib/editor-model.ts';import {generateLatexBody,buildLatexSource} from './lib/latex-report.ts';let t='';for await(const c of process.stdin)t+=c;const c=parseEditorContent(JSON.parse(t)),body=generateLatexBody(c);const input={title:c.title,subtitle:c.subtitle,body,options:c.reportFormat.options};process.stdout.write(JSON.stringify({body,source:buildLatexSource(input)}));"
+    # Charts are embedded as the product's renderings (\ResearchImage{k}); the source counts the charts the body names.
+    script="import {parseEditorContent} from './lib/editor-model.ts';import {generateLatexBody,buildLatexSource,latexChartExhibits} from './lib/latex-report.ts';let t='';for await(const c of process.stdin)t+=c;const c=parseEditorContent(JSON.parse(t)),body=generateLatexBody(c),charts=latexChartExhibits(c);const input={title:c.title,subtitle:c.subtitle,body,options:c.reportFormat.options,...(charts.length?{figureImages:charts}:{})};process.stdout.write(JSON.stringify({body,charts:charts.length,source:buildLatexSource(input)}));"
     process=subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script],cwd=platform,input=json.dumps(fixture,ensure_ascii=False),capture_output=True,text=True,encoding='utf-8',timeout=30)
     assert process.returncode==0,process.stderr
     return json.loads(process.stdout)
 
 
 @pytest.mark.parametrize('accent', ['teal','blue','burgundy'])
-def test_generated_vector_chart_table_closed_language_and_source_byte_parity(accent):
+def test_generated_chart_table_closed_language_and_source_byte_parity(accent):
     value=v2();value['accent']=accent
     value['quality']['results'][0]['rows']=[[r'A,{x}%\\[]',0],['中文😀 ~^_ #&$',-2.5]]
     value['report'][0]['blocks'].append({'id':'b2','kind':'chart','text':'分布图','evidenceId':'r1','valueColumn':1})
     generated=generated_latex(value)
-    latex.validate_body(generated['body'])
-    assert latex.build_source(value['title'],value['subtitle'],generated['body'],value['reportFormat']['options'])==generated['source']
-    assert r'\usepackage{pgfplots}' in generated['source'] and r'\pgfplotsset{compat=1.18}' in generated['source']
+    assert generated['charts']>=1
+    latex.validate_body(generated['body'],0,generated['charts'])
+    images=[png_image(1600,960)]*generated['charts']
+    assert latex.build_source(value['title'],value['subtitle'],generated['body'],value['reportFormat']['options'],images=images)==generated['source']
+    assert all(line in generated['source'] for line in latex.IMAGE_PREAMBLE) and r'\usepackage{pgfplots}' not in generated['source']
     assert generated['body'].count(r'\toprule[1.5bp]')==1 and generated['body'].count(r'\midrule[0.75bp]')==1
+
+
+def png_image(width,height):
+    import base64
+    raw=b"\x89PNG\r\n\x1a\n"+(13).to_bytes(4,"big")+b"IHDR"+width.to_bytes(4,"big")+height.to_bytes(4,"big")+b"\x08\x02\x00\x00\x00"
+    return {"mime":"image/png","data":base64.b64encode(raw).decode(),"widthPx":width,"heightPx":height}
+
+
+def pgf_body(values):
+    """A bar chart in the compiler's one accepted pgfplots form, its labels rounded as the validator demands."""
+    ticks=','.join(str(i) for i in range(len(values)));labels=','.join('{%s}'%chr(65+i) for i in range(len(values)))
+    points=' '.join(f'({i},{repr(v)}) [{latex.chart_display_number(v)}]' for i,v in enumerate(values))
+    return '\\begin{figure}[htbp]\n\\centering\n\\definecolor{ResearchAccent}{HTML}{0F766E}\n\\begin{tikzpicture}\n\\begin{axis}[width=13cm,height=8cm,ybar,bar width=12pt,xtick={%s},xticklabels={%s},x tick label style={rotate=35,anchor=east},ylabel={数值},enlarge x limits=0.12,nodes near coords,point meta=explicit symbolic]\n\\addplot[fill=ResearchAccent,draw=ResearchAccent] coordinates {%s};\n\\end{axis}\n\\end{tikzpicture}\n\\caption{分布}\n\\end{figure}'%(ticks,labels,points)
 
 
 def pgf_fixture():
@@ -243,11 +259,10 @@ def test_section_finding_references_ts_python_parity():
         assert not receipt['ok']
 
 
-def test_fractional_pgf_generated_display_rounding_matches_js_binary64():
+def test_fractional_pgf_display_rounding_matches_js_binary64():
+    # Generated reports embed charts as images; a pgfplots chart written in the body is still held to exact labels.
     values=[1/3,-1/3,1.0625,-1.0625,0.0005,-0.0005,0.000499999999,-0.000499999999,1.2345,-1.2345,999999999999.999,-999999999999.999,1e12,-1e12,5e-324,-5e-324]
-    value=v2();value['quality']['results'][0]['rows']=[[f'中文⅓😀 第{i} _{{x}},[] %',v]for i,v in enumerate(values)]
-    value['report'][0]['blocks']=[{'id':'fraction-chart','kind':'chart','text':'三位显示验收','evidenceId':'r1','valueColumn':1}]
-    body=generated_latex(value)['body']
+    body=pgf_body(values)
     assert '(0,0.3333333333333333) [0.333]' in body
     assert '(1,-0.3333333333333333) [-0.333]' in body
     assert '(2,1.0625) [1.063]' in body and '(3,-1.0625) [-1.063]' in body
@@ -256,9 +271,8 @@ def test_fractional_pgf_generated_display_rounding_matches_js_binary64():
 
 @pytest.mark.parametrize('label',['0.334','0.332','0.3330000000000001','0.3330','3.33e-1','-0.333','\\input{file}','nan'])
 def test_fractional_pgf_display_cannot_forge_value_or_execute_text(settings,monkeypatch,label):
-    value=v2();value['quality']['results'][0]['rows']=[['⅓中文😀',1/3]]
-    value['report'][0]['blocks']=[{'id':'c','kind':'chart','text':'分布','evidenceId':'r1','valueColumn':1}]
-    body=generated_latex(value)['body']
+    value=v2()
+    body=pgf_body([1/3])
     monkeypatch.setattr(latex,'run_pass',lambda *_:pytest.fail('forged chart reached compiler'))
     receipt=latex.LatexCompiler(settings).compile('合成','',body.replace('[0.333]',f'[{label}]'),value['reportFormat']['options'])
     assert receipt['status']=='error' and receipt['pdfBase64'] is None
