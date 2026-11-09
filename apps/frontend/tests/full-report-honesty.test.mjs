@@ -65,6 +65,7 @@ test('a results paragraph may not claim an analysis no registered result comes f
   const awaiting = { ...results, pending: true };
   assert.equal(parseAndHydrateSectionDraft(draft('本节分析结果尚未登记，拟以复游推荐意愿为被解释变量构建有序 Logit 模型，并计划检验平行线假定。'), tokens, awaiting).paragraphs.length, 1);
   assert.equal(parseAndHydrateSectionDraft(draft(claims[1]), tokens, awaiting).paragraphs.length, 0);
+  assert.equal(parseAndHydrateSectionDraft(draft('本轮模拟数据的拟合结果通过了方差膨胀因子检验。'), tokens, awaiting).paragraphs.length, 0);
   assert.equal(awaitsResults('drivers.model', []), true);
   assert.equal(awaitsResults('design.methods', []), false, 'a plan section is not a results section');
 });
@@ -84,7 +85,7 @@ test('section facts come only from registered results and the study records, nev
   const frame = { id: 'frame', title: '抽样框', method: 'sampling-frame', n: 0, total: 0, headers: ['层', '单位'], rows: [], metrics: [{ label: '实际发放问卷', value: 200 }, { label: '有效回收样本', value: 180 }], warnings: [], classification: 'simulated', variables: [], sourceName: '', sourceUrl: '', sourceHash: '', resultHash: '' };
   const results = [...pack.report.quality.results, frame];
   const held = { results, findings: pack.report.quality.findings ?? [], pending: false, placed: results.map(r => r.id) };
-  const facts = buildSectionTokens(held, pack.report, 'data.pilot', pack.design).facts;
+  const facts = buildSectionTokens(held, pack.report, 'design.sampling', pack.design).facts;
   // Every fact value is a registered metric, a registered cell, a rate worked out from two registered counts, or the questionnaire's length.
   const registered = new Set(results.flatMap(r => [String(r.n), ...r.metrics.map(m => m.value), ...r.rows.flat()].filter(v => v !== null).map(v => String(v).replace(/%$/u, ''))));
   for (const f of facts) {
@@ -97,6 +98,7 @@ test('section facts come only from registered results and the study records, nev
   }
   const rate = facts.find(f => /有效回收率为/u.test(f.text));
   assert.equal(rate?.value, '90.0%', 'the rate is 180 valid of 200 issued, as the frame registers them');
+  assert.ok(!buildSectionTokens(held, pack.report, 'data.pilot', pack.design).facts.some(f => /有效回收率为/u.test(f.text)));
 });
 
 test('explicit empirical mode never silently falls back to simulation; demonstration remains explicit and honest', async () => {
@@ -165,7 +167,7 @@ test('a rate bound to a count is refused: the share must be a share', () => {
 });
 
 test('a number is never pointed to as if it were a table or figure, and a cited bound keeps one comparison', () => {
-  for (const text of ['回归结果（见{F2}）仅作关联描述。', 'p 值小于{F1}所示水平。']) {
+  for (const text of ['回归结果（见{F2}）仅作关联描述。', 'p 值小于{F1}所示水平。', '相关系数介于{F2}所载区间内。']) {
     const out = parseAndHydrateSectionDraft(draft(text), tokens, results);
     assert.deepEqual(out.dropReasons, ['把数字当作图表引用（“见…”“…所示”只能跟图表 {G编号}）'], text);
   }
@@ -177,6 +179,46 @@ test('a number is never pointed to as if it were a table or figure, and a cited 
   assert.equal(tidyComparisons('p=<0.001，ρ为0.851'), 'p<0.001，ρ为0.851');
   assert.equal(tidyComparisons('（p<<0.001）'), '（p<0.001）');
   assert.equal(tidyComparisons('p<0.001，F 为187.53'), 'p<0.001，F 为187.53', 'a plain bound and other values are left alone');
+});
+
+test('teaching drafts reject assertions about unperformed fieldwork and screening', () => {
+  const context = { ...results, mode: 'demonstration', pilotPending: true, screening: ['直线作答', '注意力题', '重复答案'], duplicatesMarked: true };
+  const rejected = parseAndHydrateSectionDraft(draft(
+    '本次调查采用线上公开链接、自愿作答的方式，属于便利性样本。',
+    '预调查对体验量表计算内部一致性系数，结果见{G1}。',
+    '筛查环节按作答时长、逻辑一致性、反向题一致性等规则剔除无效问卷。',
+  ), tokens, context);
+  assert.deepEqual(rejected.dropReasons, [
+    '教学模拟不能声称开展过真人调查或招募', '未登记预调查结果，不能声称已经执行', '描述了未登记的模拟数据筛查规则',
+  ]);
+  for (const claim of [
+    '本次研究通过线上公开链接发放问卷，受访者自主填写。',
+    '调查问卷通过线上链接发放，由受访者自主填写。',
+    '检查作答时长和逻辑一致性，随后保留合格样本。',
+    '按答案完全重复规则剔除无效问卷。',
+    '建议后续扩大样本，调查问卷已通过线上链接发放。',
+  ]) assert.equal(parseAndHydrateSectionDraft(draft(claim), tokens, context).paragraphs.length, 0, claim);
+  const retained = parseAndHydrateSectionDraft(draft(
+    '后续拟采用线上链接招募，并安排真实预测试。',
+    '本轮教学模拟按直线作答和注意力题剔除无效记录。',
+    '本轮教学模拟未按作答时长剔除记录。',
+    '预调查按以下计划开展，先按体验量表计算内部一致性。',
+    '预测试形成后，拟据此调整问卷。',
+    '重复答案仅标记，按直线作答剔除无效记录。',
+  ), tokens, context);
+  assert.equal(retained.paragraphs.length, 6);
+});
+
+test('fieldwork sections cannot borrow figures and result numbers from the main survey', async () => {
+  const pack = await buildDemoPack('武汉高校生成式AI学习工具的使用体验调查');
+  const held = { results: pack.report.quality.results, findings: [], placed: [], pending: false };
+  for (const node of ['design.sampling', 'design.schedule', 'data.pilot']) {
+    const scoped = buildSectionTokens(held, pack.report, node, pack.design);
+    assert.equal(scoped.exhibits.length, 0, node);
+    assert.ok(scoped.facts.every(fact => fact.text.startsWith('正式问卷共')), node);
+  }
+  assert.equal(awaitsResults('data.pilot', held.results), true);
+  assert.ok(buildSectionTokens(held, pack.report, 'conclusion.findings', pack.design).exhibits.length > 0);
 });
 
 test('a registered category may carry digits in its name; other digits are still refused', () => {

@@ -363,12 +363,13 @@ export const PLAN_NODE = /^(?:intro|design)\./u;
 const REVISION_ROUNDS = 2;
 /** Sections that report results: without a registered result of their own they may only say what is still to come. */
 const EVIDENCE_NODES = new Set(['data.testing', 'sample.profile', 'sample.descriptive', 'compare.tests', 'drivers.model', 'diagnosis.evaluation']);
+const FIELDWORK_NODES = new Set(['design.sampling', 'design.schedule', 'data.pilot']);
 /** Words that put an analysis in the future: such a sentence plans the analysis, it does not report it. */
-const PLANNED = /拟|计划|将(?:采用|构建|估计|报告|检验|开展)|尚未登记|待(?:估计|补|登记|完成)/u;
+const PLANNED = /(?<!模)拟(?!合)|计划|将(?:采用|构建|估计|报告|检验|开展)|尚未登记|待(?:估计|补|登记|完成)/u;
 
 /** A results section with no registered result of its own: it may set out the analysis it still needs, as a plan. */
 export function awaitsResults(nodeId: string, results: readonly ResultSnapshot[]): boolean {
-  return EVIDENCE_NODES.has(nodeId) && !results.some(r => suggestedNode(r) === nodeId);
+  return (EVIDENCE_NODES.has(nodeId) || nodeId === 'data.pilot') && !results.some(r => suggestedNode(r) === nodeId);
 }
 
 /**
@@ -642,11 +643,15 @@ export function buildSectionTokens(
   nodeId: string,
   design?: Questionnaire | null,
 ): SectionTokenMap {
-  const baseFacts = draftFacts(held, nodeId);
+  const scoped = FIELDWORK_NODES.has(nodeId)
+    ? { ...held, results: held.results.filter(result => suggestedNode(result) === nodeId) }
+    : held;
+  const evidenceIds = new Set(scoped.results.map(result => result.id));
+  const baseFacts = draftFacts(scoped, nodeId);
   // Facts the study's own records give beyond each result's metrics: a frame's valid rate, worked out from the two
   // counts it registers, and the questionnaire's length. Nothing is typed in here: without a record there is no fact.
   const extraFacts: Omit<Fact, 'id'>[] = [];
-  for (const r of held.results) {
+  for (const r of scoped.results) {
     if (r.method !== 'sampling-frame') continue;
     const issued = r.metrics.find(m => /^(?:实际发放问卷|实发问卷|实际发放)$/u.test(m.label))?.value;
     const valid = r.metrics.find(m => /^(?:有效回收样本|有效回收)$/u.test(m.label))?.value;
@@ -669,6 +674,7 @@ export function buildSectionTokens(
     const isOwn = sec.id === targetSec?.id;
     for (const b of sec.blocks ?? []) {
       if (b.kind === 'chart' || b.kind === 'table') {
+        if (FIELDWORK_NODES.has(nodeId) && !evidenceIds.has(b.evidenceId)) continue;
         allExhibitBlocks.push({ block: b, secTitle: sec.title, isOwn });
       }
     }
@@ -717,6 +723,9 @@ export function buildFullReportSectionPrompt(input: {
   const specificRules: string[] = [];
   if (input.contract.mode === 'plan') {
     specificRules.push('当前是研究计划：全部调查、分析与行动均作为拟开展事项，不能把目标样本当成已回收样本，不能声称已经发现、验证或完成调查；摘要只概述研究问题、拟采用方法和待验证的预期用途。');
+  }
+  if (input.contract.mode === 'demonstration') {
+    specificRules.push('本轮分析的是模拟调查。线上链接、自愿参与、访问和预测试只写成后续计划；模拟数据的质量筛查仅按已登记的规则及处理方式描述。');
   }
   if (input.nodeId === 'abstract') {
     specificRules.push(
@@ -769,7 +778,7 @@ export function buildFullReportSectionPrompt(input: {
     facts: input.tokens.facts.map(({ id, text }) => ({ id, text })),
     exhibits: input.tokens.exhibits.map(({ id, text }) => ({ id, text })),
     references: input.tokens.references.map(({ id, text }) => ({ id, text })),
-    findings: standingFindings(input.held).slice(0, 12).map(f => ({
+    findings: (FIELDWORK_NODES.has(input.nodeId) ? [] : standingFindings(input.held)).slice(0, 12).map(f => ({
       title: f.title,
       interpretation: f.interpretation,
       scope: f.scope,
@@ -821,7 +830,33 @@ export function buildRevisionPrompt(title: string, drafts: readonly string[], pr
 }
 
 /** A number pointed to as if it were a table or figure: "见{F3}", "（见{F5}、{F6}）", "{F3}所示水平". */
-const FACT_AS_EXHIBIT = /(?:见|参见|详见|参照)\s*\{F\d+\}|\{F\d+\}\s*所示/u;
+const FACT_AS_EXHIBIT = /(?:见|参见|详见|参照)\s*[（(]?\s*\{F\d+\}|\{F\d+\}\s*所(?:示|载|列|述|绘|给出)/u;
+const COMPLETED_RECRUITMENT = /(?:本次|此次|实际|本研究的?)(?:正式)?(?:调查|招募|发放|回收)(?:的方式)?\s*(?:已|采用|使用|通过|采取|系|为)[^。！？；]{0,45}(?:线上|线下|公开链接|受访者|自愿作答|招募渠道)|(?:线上公开链接|线下拦截|现场招募|自愿作答)[^。！？；]{0,30}(?:是|为)主要(?:触达|招募|发放|回收)方式/u;
+const RECRUITMENT_CHANNEL = /(?:通过|采用|经由)(?:[^，。！？；]{0,12})(?:线上|线下|公开链接|微信群|现场)[^，。！？；]{0,24}(?:发放|投放|招募|回收)/u;
+const COMPLETED_PILOT = /(?:本次|此次)?(?:预调查|预调研|预测试)(?:的?(?:对象|样本|结果))?\s*(?:已经|已|按|对[^。！？；]{0,35}(?:计算|筛查|进行了)|与[^。！？；]{0,20}一致|属于|形成)|经此环节[^。！？；]{0,35}得到[^。！？；]{0,15}(?:初步)?检验/u;
+const SCREENING_RULES = [/时长|答题时间/u, /逻辑一致|逻辑矛盾|逻辑校验/u, /反向题[^。！？；]{0,15}(?:一致|矛盾)|反向题与正问/u];
+const FUTURE_FIELDWORK = /后续|(?<!模)拟(?!合)|计划|建议|将(?:采用|通过|进行|开展|安排|按|发放|招募)|(?:预调查|预调研|预测试)(?:完成|形成)后/u;
+const COMPLETION_CUE = /已经|已(?:按|通过|使用|完成|实施|回收|发放|剔除|形成|获得|进行|开展)|过后|结果(?:显示|表明)/u;
+const DUPLICATE_ANSWER = /答案(?:完全)?重复|重复答案|重复答卷/u;
+
+function simulatedFieldworkIssue(text: string, pilotPending: boolean, screening: readonly string[], duplicatesMarked: boolean): string {
+  for (const clause of text.split(/[。！？；\n]/u)) {
+    const futureOnly = FUTURE_FIELDWORK.test(clause) && !COMPLETION_CUE.test(clause);
+    if (!futureOnly && (COMPLETED_RECRUITMENT.test(clause) || RECRUITMENT_CHANNEL.test(clause))) {
+      return '教学模拟不能声称开展过真人调查或招募';
+    }
+    if (!futureOnly && pilotPending && COMPLETED_PILOT.test(clause)) return '未登记预调查结果，不能声称已经执行';
+    const claimsScreening = /筛查|筛选|剔除|清理|核查|检查/u.test(clause)
+      && /剔除|排除|筛掉|保留|按[^。！？；]{0,42}(?:规则|标准)|逐份/u.test(clause);
+    if (!claimsScreening || futureOnly || /(?:未|没有)(?:做|用|采用|按|执行|剔除|排除)/u.test(clause)) continue;
+    if (SCREENING_RULES.some(rule => rule.test(clause) && !screening.some(label => rule.test(label)))) {
+      return '描述了未登记的模拟数据筛查规则';
+    }
+    if (duplicatesMarked && DUPLICATE_ANSWER.test(clause) && /剔除|排除|筛掉/u.test(clause)
+      && !/仅(?:作)?标记|保留.*重复/u.test(clause)) return '将仅标记的重复答卷写成了剔除';
+  }
+  return '';
+}
 
 /**
  * A cited value that prints with its own sign ("<0.001") after a comparison word reads "小于<0.001": the sign goes,
@@ -863,7 +898,7 @@ export function parseAndHydrateSectionDraft(
    * What the section may claim: the registered methods, whether the section sets out the plan, and whether it is a
    * results section still awaiting its results, where an analysis may be named as planned but not as done.
    */
-  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean; labels?: readonly string[]; mode?: ProjectResearchMode },
+  context?: { methods: readonly string[]; planSection: boolean; pending?: boolean; labels?: readonly string[]; mode?: ProjectResearchMode; pilotPending?: boolean; screening?: readonly string[]; duplicatesMarked?: boolean },
 ): {
   paragraphs: string[];
   /** The kept paragraphs as the model wrote them, placeholders unexpanded: what a revision round starts from. */
@@ -927,6 +962,8 @@ export function parseAndHydrateSectionDraft(
     const mismatched = mismatchedFactContext(sanitized, tokens.facts);
     const completedPlan = context?.mode === 'plan'
       && /(?:本次调查|本研究|调查结果|统计结果|检验结果|模型结果).{0,20}(?:已经|已完成|已回收|已收集|表明|显示|证实|证明|发现)/u.test(withoutPlaceholders);
+    const fieldworkIssue = context?.mode === 'demonstration'
+      ? simulatedFieldworkIssue(withoutPlaceholders, context.pilotPending ?? false, context.screening ?? [], context.duplicatesMarked ?? false) : '';
     const reason = unknownToken
       ? '引用了不存在的占位符'
       : misbound
@@ -935,6 +972,8 @@ export function parseAndHydrateSectionDraft(
         ? mismatched
         : completedPlan
         ? '研究计划不能声称已完成调查或得到结果'
+        : fieldworkIssue
+        ? fieldworkIssue
         : FACT_AS_EXHIBIT.test(sanitized)
         ? '把数字当作图表引用（“见…”“…所示”只能跟图表 {G编号}）'
         : DIGIT_RE.test(numbersOnly)
@@ -1329,7 +1368,11 @@ export async function generateFullReportWithAgent(input: {
       throw safe;
     }
   };
-  const contextFor = (nodeId: string) => ({ methods, planSection: mode === 'plan' || PLAN_NODE.test(nodeId), pending: mode === 'plan' || awaitsResults(nodeId, results), labels, mode });
+  const screeningRows = results.find(result => result.method === 'quality-control')?.rows ?? [];
+  const screening = screeningRows.map(row => String(row[0] ?? ''));
+  const duplicatesMarked = screeningRows.some(row => DUPLICATE_ANSWER.test(String(row[0] ?? '')) && row[3] === '仅标记');
+  const pilotPending = awaitsResults('data.pilot', results);
+  const contextFor = (nodeId: string) => ({ methods, planSection: mode === 'plan' || PLAN_NODE.test(nodeId), pending: mode === 'plan' || awaitsResults(nodeId, results), labels, mode, pilotPending, screening, duplicatesMarked });
   const commit = (nodeId: string, wave: 1 | 2, body: string, trace: SectionGenerationTrace) => {
     throwIfAborted(signal);
     let sectionId = '';
