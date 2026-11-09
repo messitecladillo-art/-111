@@ -65,10 +65,10 @@ export async function readLiteraturePdf(file: File, signal: AbortSignal, range?:
       throw new LiteraturePdfError('无法识别 PDF 文件，请选择有效的 PDF 原文。');
     }
     // PDF.js transfers the buffer to its worker. Hash the original bytes first.
-    const [digest, pdfjs] = await Promise.all([crypto.subtle.digest('SHA-256', data), import('pdfjs-dist')]);
+    const [digest, pdfjs] = await Promise.all([crypto.subtle.digest('SHA-256', data), import('pdfjs-dist/legacy/build/pdf.mjs')]);
     lifetime.signal.throwIfAborted();
     const id = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
-    // The legacy worker bundles the parser's typed-array polyfills. Own its lifetime to keep parsing off the UI thread.
+    // Both legacy modules include the compatibility shims needed by the message protocol.
     const workerUrl = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url);
     port = new Worker(workerUrl, { type: 'module' });
     port.addEventListener('error', () => lifetime.abort(new LiteraturePdfError('PDF 读取组件加载失败，请重试。')), { once: true });
