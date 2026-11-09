@@ -288,9 +288,19 @@ function generator(seed: number) {
     x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
     return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
   };
+  // A standard normal from twelve uniforms (Irwin–Hall): only additions, which IEEE 754 makes the same in every
+  // engine. Math.log and Math.cos need not be correctly rounded, and a last-bit difference between Node and a browser
+  // once changed a rounded answer, so a topic's simulation differed by one respondent between them.
   const normal = () => {
-    const u = Math.max(next(), 1e-12), v = next();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    let sum = 0;
+    for (let k = 0; k < 12; k++) sum += next();
+    return sum - 6;
+  };
+  /** The items in an order drawn from the generator (Fisher–Yates), the same in every engine. */
+  const shuffle = <T,>(items: readonly T[]) => {
+    const out = [...items];
+    for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(next() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+    return out;
   };
   const pick = (weights: readonly number[]) => {
     const total = weights.reduce((a, b) => a + b, 0);
@@ -298,7 +308,7 @@ function generator(seed: number) {
     for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) return i; }
     return weights.length - 1;
   };
-  return { next, normal, pick };
+  return { next, normal, pick, shuffle };
 }
 
 const likertOf = (value: number) => String(Math.min(5, Math.max(1, Math.round(value))));
@@ -316,7 +326,7 @@ export function simulateDemoResponses(bp: DemoBlueprint, design: Questionnaire, 
   const issued = options.issued ?? 600 + Math.floor(rng.next() * 81);
   // Tendencies of this topic's population, drawn once: where each aspect sits and how strongly it moves with
   // general satisfaction. Two aspects are drawn lower than the rest, as most services have a weak spot or two.
-  const weak = [0, 1, 2, 3, 4].sort(() => rng.next() - 0.5).slice(0, 2);
+  const weak = rng.shuffle([0, 1, 2, 3, 4]).slice(0, 2);
   const centre = [0, 1, 2, 3, 4].map(i => (weak.includes(i) ? 2.9 + rng.next() * 0.5 : 3.6 + rng.next() * 0.6));
   const loading = [0, 1, 2, 3, 4].map(() => 0.65 + rng.next() * 0.35);
   const groupTilt = [0, 1, 2, 3, 4].map(() => (rng.next() - 0.5) * 0.5);

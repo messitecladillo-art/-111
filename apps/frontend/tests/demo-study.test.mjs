@@ -31,6 +31,12 @@ test('a teaching simulation: its questionnaire maps every question, its answers 
   assert.equal(pack.dataset.kind, 'simulated');
   const rows = pack.dataset.table.rows;
   assert.ok(rows.length >= 400, `${rows.length} rows kept`);
+  // One topic, one simulation in every engine: the simulator uses only arithmetic IEEE 754 fixes exactly (no Math.log or
+  // Math.cos, no random-comparator sort). This fingerprint was produced in Node and in the browser alike.
+  const raw = (await import('../lib/agent/demo-study.ts')).buildDemoStudy;
+  assert.equal((await raw('城市社区助餐服务的使用体验、满意度与持续使用意愿调查')).dataset.sourceHash.slice(0, 16), '21796f08a535951d');
+  const simulator = (await import('node:fs')).readFileSync(new URL('../lib/agent/demo-study.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(simulator.replace(/\/\/[^\n]*/gu, ''), /Math\.(log|cos|sin|exp|pow|tan|atan)\b|\.sort\(\(\) =>/u);
   const distinct = new Set(rows.map(r => r.join('|'))).size;
   assert.ok(distinct >= rows.length * 0.97, `${distinct} distinct of ${rows.length}`);
   assert.match(pack.dataset.lineage.at(-1), /质控：剔除注意力题未通过与直线作答 \d+ 份，答案完全重复的答卷仅标记、未剔除；保留 \d+ \/ \d+ 份/u);
