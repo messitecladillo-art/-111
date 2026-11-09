@@ -17,6 +17,7 @@ from multi_agent.agents.contracts import (
     AgentTool, RunStatus, StepExecutor, StepRequest, ToolCall, ToolResult,
 )
 from multi_agent.prompt_registry import MAX_TASK_BYTES, build_messages
+from shared.errors import ProviderFailure
 
 
 StateT = TypeVar("StateT", bound=AgentRunState)
@@ -140,6 +141,10 @@ class InternalWorkflow(Generic[StateT]):
                 state.status = RunStatus.READY
             state.step_results[step] = value
             state.completed_steps.append(step)
+        except ProviderFailure:
+            # The durable caller must distinguish rejection from an unresolved
+            # external call before it records the execution outcome.
+            raise
         except Exception as exc:
             # Tool/provider exception messages can contain keys, URLs or raw PII.
             state.status = RunStatus.FAILED

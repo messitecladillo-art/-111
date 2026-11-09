@@ -303,7 +303,7 @@ export default function AgentShell() {
   }, []);
   const closePanel = useCallback(() => { window.location.hash = ''; }, []);
   const pick = (id: RoomId) => { focusPicked.current = true; setRailMenu(null); go(id); };
-  const generation = useGeneration(publishProposal, go);
+  const generation = useGeneration(publishProposal, go, projectId);
   const { account: generationAccount, load: loadLists, lists } = generation;
   // Projects and services fill the sidebar and the composer's menus as soon as an account is known.
   useEffect(() => { if (generationAccount === 'ready') loadLists(); }, [generationAccount, loadLists]);
@@ -330,7 +330,7 @@ export default function AgentShell() {
     const destinations: Record<ResearchStageId, RoomId> = {
       topic: 'diagnose', diagnosis: 'diagnose', literature: 'diagnose', questionnaire: 'design', sampling: 'sampling',
       pilot: 'silicon', collection: 'workspace', quality: 'analysis', analysis: 'analysis', findings: 'editor', report: 'editor',
-      review: 'preflight', export: 'preflight', defense: 'defense',
+      review: 'preflight', export: 'editor', defense: 'defense',
     };
     go(destinations[id]);
   }, [go, research]);
@@ -1164,7 +1164,20 @@ export default function AgentShell() {
             onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
             onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}
             onOpenSettings={() => go('services')} onOpenStage={openResearchStage}
-            onTopic={research.topic} onRetractTopic={research.retractTopic} literature={research.literature} onLiterature={research.setLiterature} />
+            onTopic={research.topic} onRetractTopic={research.retractTopic} literature={research.literature} onLiterature={research.setLiterature}
+            onLiteratureToReport={lines => {
+              sendToReport({ id: crypto.randomUUID(), node: 'appendix.data', source: '选题研读资料',
+                items: lines.map(text => ({ kind: 'paragraph', text })) });
+              go('editor');
+            }}
+            onDraftQuestionnaire={({ input }, destination) => {
+              if (destination !== readReportScope().project) return;
+              const brief = [input.title, input.problem, `决策主体：${input.decisionOwner}`,
+                `调查对象：${input.population}`, `地区：${input.geography}`].join('\n');
+              threads.append([{ ...stamp(), role: 'agent', turn: generation.start(brief, destination) }]);
+            }}
+            simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
+              startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }} />
           {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />}
         </div>
         <Composer onDraftWriter={registerDraftWriter} onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}

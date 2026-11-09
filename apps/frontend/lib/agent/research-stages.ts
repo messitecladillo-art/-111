@@ -39,5 +39,5 @@ export const RESEARCH_STAGES: readonly ResearchStage[] = Object.freeze([
   { id: 'report', label: '报告写作', description: '使用现有章节起草、修订或整稿候选路径；整稿每轮绑定一个服务。', execution: 'model', modelCalls: ['report.draft', 'report.revision', 'report.full'], availability: 'available' },
   { id: 'review', label: '一致性审查', description: '运行现有确定性检查，保留人工审阅；完整后台 Reviewer 执行器尚未接通。', execution: 'deterministic', modelCalls: [], availability: 'partial' },
   { id: 'export', label: '成果导出', description: '导出当前成果并核对格式、来源和匿名要求。', execution: 'deterministic', modelCalls: [], availability: 'partial' },
-  { id: 'defense', label: '答辩准备', description: '整理已有证据和答辩材料；自动模型答辩流程尚未接入。', execution: 'unavailable', modelCalls: [], availability: 'planned' },
+  { id: 'defense', label: '答辩准备', description: '用已有证据练习陈述、回答追问和检查用时。', execution: 'manual', modelCalls: [], availability: 'manual' },
 ].map(stage => Object.freeze({ ...stage, modelCalls: Object.freeze(stage.modelCalls) })) as ResearchStage[]);

@@ -374,7 +374,11 @@ const csvOf = (table: SurveyTable) => [table.headers, ...table.rows].map(row => 
 /** The questionnaire and the raw simulated answers for a topic. */
 export async function buildDemoStudy(topic = '', existingDesign?: Questionnaire | null): Promise<DemoStudy> {
   const blueprint = decomposeTopic(topic, existingDesign);
-  const design = buildDemoQuestionnaire(blueprint);
+  return simulateDemoStudy(blueprint, buildDemoQuestionnaire(blueprint));
+}
+
+/** Generate answers for the questionnaire shown at the teaching simulation checkpoint. */
+export async function simulateDemoStudy(blueprint: DemoBlueprint, design: Questionnaire): Promise<DemoStudy> {
   const { table } = simulateDemoResponses(blueprint, design);
   const dataset: DatasetValue = {
     name: `${blueprint.slug}_teaching_simulation.csv`,

@@ -31,7 +31,7 @@ test('workflow stages distinguish model calls from local/manual/unimplemented wo
     for (const call of stage.modelCalls) assert.ok(Object.hasOwn(MODEL_CALLS, call));
   }
   assert.deepEqual(MODEL_CALL_IDS, ['research.conversation', 'research.topic', 'survey.questionnaire', 'report.draft', 'report.revision', 'report.full']);
-  assert.equal(RESEARCH_STAGES.find(stage => stage.id === 'defense').availability, 'planned');
+  assert.equal(RESEARCH_STAGES.find(stage => stage.id === 'defense').availability, 'manual');
 });
 
 test('step override wins over capability default, global default and implicit selection', async () => {

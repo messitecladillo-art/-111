@@ -148,7 +148,14 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
 }
 /** One line of at most the width a box holds, shortened with an ellipsis; CJK characters take a full em, others about half. */
 export function oneLine(text:string,w:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));let used=0,out='';for(const c of text){const width=/[\u3000-\uffff]/.test(c)?1:.55;if(used+width>slots-1){return out+'…';}used+=width;out+=c;}return out;}
-function fitText(text:string,w:number,h:number,fs:number){const slots=Math.max(1,Math.floor(w*72/fs));const lines=text.split(/\r?\n/).reduce((n,l)=>n+Math.max(1,Math.ceil(Array.from(l).reduce((a,c)=>a+(/[\u3000-\uffff]/.test(c)?1:.55),0)/slots)),0);if(lines*fs*1.22>h*72)throw Error('文本超出对象尺寸，请扩大对象或分拆幻灯片。');}
+function textLines(text:string,w:number,fs:number){
+ const slots=Math.max(1,Math.floor(w*72/fs));
+ return text.split(/\r?\n/).reduce((count,line)=>{
+  const width=Array.from(line).reduce((sum,character)=>sum+(/[\u3000-\uffff]/.test(character)?1:.55),0);
+  return count+Math.max(1,Math.ceil(width/slots));
+ },0);
+}
+function fitText(text:string,w:number,h:number,fs:number){if(textLines(text,w,fs)*fs*1.22>h*72)throw Error('文本超出对象尺寸，请扩大对象或分拆幻灯片。');}
 async function addSvgFigure(slide:PptxGenJS.Slide,svg:string,box:{x:number;y:number;w:number;h:number;objectName:string},renderSvg:SvgPreviewRenderer){
  const png=await renderSvg(svg);if(png.length<8||![137,80,78,71,13,10,26,10].every((v,i)=>png[i]===v))throw Error('SVG 兼容预览不是有效 PNG。');
  // PptxGenJS4's Node path otherwise substitutes IMG_BROKEN. Patch only the
@@ -191,7 +198,18 @@ export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,obj
    }
    else if(o.kind==='chart'&&!(await import('./method-figures.ts')).canChart(r))throw Error(`“${r.title}”没有可画的图，请在幻灯片中改用表格。`);
    else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');const categoryColors=c.figurePalette?(await import('./report-figures.ts')).categoryColors:null;slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:c.figurePalette&&categoryColors?categoryColors(c.figurePalette,5,false).map(h=>h.slice(1)):[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
-   else{assertTableRows(r);const rows=[r.headers,...r.rows],fs=Math.max(14,o.fontSize),rowH=fs*1.45/72;if(rows.length>15||r.headers.length>8||rows.length*rowH>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');const none={type:'solid' as const,pt:0,color:'FFFFFF'};const cells=rows.map((row,i)=>row.map(cell=>{fitText(figureCell(cell,figure),box.w/r.headers.length-.1,rowH,fs);return{text:figureCell(cell,figure),options:{bold:i===0,align:'center' as const,border:[i===0?{type:'solid' as const,pt:1.5,color:'000000'}:none,none,i===0?{type:'solid' as const,pt:.75,color:'000000'}:i===rows.length-1?{type:'solid' as const,pt:1.5,color:'000000'}:none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}};}));slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});}
+   else {
+    assertTableRows(r);
+    const rows=[r.headers,...r.rows].map(row=>row.map(cell=>figureCell(cell,figure)));
+    const fs=Math.max(14,o.fontSize), cellWidth=box.w/r.headers.length-.1;
+    const rowH=rows.map(row=>Math.max(fs*1.45,Math.max(...row.map(cell=>textLines(cell,cellWidth,fs)))*fs*1.22+4)/72);
+    if(rows.length>15||r.headers.length>8||cellWidth<=0||rowH.reduce((sum,height)=>sum+height,0)>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');
+    const none={type:'solid' as const,pt:0,color:'FFFFFF'};
+    const rule=(pt:number)=>({type:'solid' as const,pt,color:'000000'});
+    const cells=rows.map((row,i)=>row.map(text=>({text,options:{bold:i===0,align:'center' as const,
+      border:[i===0?rule(1.5):none,none,i===0?rule(.75):i===rows.length-1?rule(1.5):none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}})));
+    slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});
+   }
    const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:r.method==='ahp'?`${r.title} · ${r.sourceName}`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
    slide.addText(caption,{x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
   }
