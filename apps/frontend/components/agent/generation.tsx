@@ -29,6 +29,7 @@ type ProposalCard = Extract<AgentCard, { kind: 'proposal' }>;
 type Lists = { state: 'idle' | 'loading' | 'ready' | 'error'; projects: Project[]; services: Service[]; error: string };
 export type Generation = {
   account: 'loading' | 'guest' | 'ready';
+  activeProjectId: string | null;
   lists: Lists;
   busy: boolean;
   /** Separate destinations for each existing model task; stores service references only. */
@@ -36,7 +37,7 @@ export type Generation = {
   prefer: (task: ModelTask, serviceId: string | null) => void;
   /** Reads the account's projects and services once. After a failure only a retry, asked for by the user, reads again. */
   load: (retry?: boolean) => void;
-  start: (brief: string) => AgentTurn;
+  start: (brief: string, projectId?: string) => AgentTurn;
   submit: (messageId: string, input: { brief: string; projectId: string; serviceId: string }) => void;
   cancel: (messageId: string) => void;
   reconcile: (messageId: string) => void;
@@ -78,7 +79,7 @@ const reply = (afterId: string, turn: AgentTurn) => threads.appendAfter(afterId,
 const GenerationContext = createContext<Generation | null>(null);
 export const GenerationProvider = GenerationContext.Provider;
 
-export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal) => void, openRoom: (room: RoomId) => void): Generation {
+export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal) => void, openRoom: (room: RoomId) => void, activeProjectId: string | null = null): Generation {
   const { session, loading, identityEpoch, isCurrentAccount, mutate } = useHostedSession();
   const owner = session?.authenticated ? session.user?.id ?? '' : '';
   const account: Generation['account'] = loading ? 'loading' : owner ? 'ready' : 'guest';
@@ -121,12 +122,12 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
     return()=>window.removeEventListener(MODEL_SERVICES_UPDATED,refresh);
   },[owner,identityEpoch,load]);
 
-  const start = useCallback((brief: string): AgentTurn => account === 'guest'
+  const start = useCallback((brief: string, projectId?: string): AgentTurn => account === 'guest'
     ? { lines: [[t('起草问卷要调用你自己的模型服务，结果存进你的项目，所以需要先登录。')], [t('登录后再说一次，我会先请你确认要发送的内容。', 'dim')]],
       chips: [{ label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true }] }
     : { lines: [[t('可以。我会先读取项目当前的问卷版本，再用你选的模型服务起草一份问卷建议。')],
         [t('发送给服务商的只有下面这段研究需求；费用按你的服务商用量计。结果存为项目里的模型提案，不改动现有问卷。', 'dim')]],
-      cards: [{ kind: 'consent', brief: brief.slice(0, BRIEF_LIMIT), state: 'open' }] }, [account]);
+      cards: [{ kind: 'consent', brief: brief.slice(0, BRIEF_LIMIT), state: 'open', ...(projectId ? { projectId } : {}) }] }, [account]);
 
   const finish = useCallback((jobId: string, projectId: string, proposal: Proposal, request: QuestionnaireGenerationRequest, service: { label: string; model: string }) => {
     if (proposal.status === 'ready' && proposal.design) {
@@ -157,6 +158,9 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   const submit = useCallback((messageId: string, input: { brief: string; projectId: string; serviceId: string }) => {
     const brief = input.brief.trim(), project = lists.projects.find(p => p.id === input.projectId), service = lists.services.find(s => s.id === input.serviceId);
     if (lock.current || !owner || !brief || brief.length > BRIEF_LIMIT || !project || !service) return;
+    const message = threads.find(messageId);
+    const consent = message?.role === 'agent' ? message.turn.cards?.find(card => card.kind === 'consent') : undefined;
+    if (consent?.state !== 'open' || (consent.projectId && consent.projectId !== project.id)) return;
     const routeStillConfirmed=()=>{
       const live=liveRouting.current;
       const selected=resolveStageModelRoute('survey.questionnaire',live.lists.services,getStageModelPreferences(owner)).service;
@@ -203,11 +207,15 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
 
   const cancel = useCallback((messageId: string) => patchCard(messageId, 'consent', card => ({ ...card, state: 'cancelled' })), []);
   const bring = useCallback((card: ProposalCard) => {
+    if (!owner || !isCurrentAccount(owner, identityEpoch)) return;
+    const book = threads.view(owner);
+    const active = book.threads.find(thread => thread.id === book.active);
+    if ((active ? active.projectId : book.draftProject) !== card.projectId) return;
     onProposal({ id: card.proposalId, serviceId: card.serviceId, serviceRevision: card.serviceRevision, model: card.model, design: card.design });
     openRoom('design');
-  }, [onProposal, openRoom]);
+  }, [onProposal, openRoom, owner, identityEpoch, isCurrentAccount]);
 
-  return useMemo(() => ({ account, lists, busy, preferences, prefer, load, start, submit, cancel, reconcile, bring }), [account, lists, busy, preferences, prefer, load, start, submit, cancel, reconcile, bring]);
+  return useMemo(() => ({ account, activeProjectId, lists, busy, preferences, prefer, load, start, submit, cancel, reconcile, bring }), [account, activeProjectId, lists, busy, preferences, prefer, load, start, submit, cancel, reconcile, bring]);
 }
 
 /** The double frame: what is sent, where it is saved, and which service runs it. Nothing runs until 起草 (y). */
@@ -227,7 +235,9 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
   if (!g) return null;
   const { projects } = g.lists, services = g.lists.services.filter(s => s.capabilities.includes('questionnaire'));
   // The conversation's own project comes first, as the preferred service does.
-  const project = [projectId, filed].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
+  const project = card.projectId
+    ? projects.find(p => p.id === card.projectId)?.id ?? ''
+    : [projectId, filed].find(id => projects.some(p => p.id === id)) ?? projects[0]?.id ?? '';
   const service = resolveStageModelRoute('survey.questionnaire', services, routePreferences).service?.id ?? '';
   const ready = open && g.account === 'ready' && g.lists.state === 'ready' && !!brief.trim() && brief.length <= BRIEF_LIMIT && !!project && !!service && !g.busy;
   const submit = () => { if (ready) g.submit(messageId, { brief, projectId: project, serviceId: service }); };
@@ -248,7 +258,9 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
         : g.lists.state !== 'ready' ? <p className={styles.fieldNote}>正在读取你的项目与模型服务…</p>
         : <>
           <label className={styles.field}><span>保存到项目</span>
-            {projects.length ? <select value={project} onChange={event => setProjectId(event.target.value)}>{projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
+            {projects.length ? <select value={project} disabled={!!card.projectId} onChange={event => setProjectId(event.target.value)}>
+              {!project && <option value="">当前项目不可用</option>}
+              {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
               : <span className={styles.fieldNote}>还没有项目。<Link href="/projects">新建项目 ↗</Link></span>}
           </label>
           <label className={styles.field}><span>模型服务</span>
@@ -289,7 +301,7 @@ export function ProposalView({ card }: { card: ProposalCard }) {
     <ol className={styles.proposalItems}>{d.questions.map(q => <li key={q.id}><span>{q.text}</span><small>{QUESTION_TYPES[q.type]}</small></li>)}</ol>
     <p className={styles.proposalFoot}>AI 拟议 · 尚未预测试 · {card.serviceLabel}（{card.model}）· 基于问卷 v{card.inputRevision}</p>
     <div className={styles.cardLinks}>
-      <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} disabled={!g} onClick={() => g?.bring(card)}>带入问卷设计审阅 →</button>
+      <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} disabled={g?.activeProjectId !== card.projectId} onClick={() => g?.bring(card)}>带入问卷设计审阅 →</button>
       <Link className={styles.chip} href={`/projects/${encodeURIComponent(card.projectId)}`}>在项目中打开 ↗</Link>
       <button type="button" className={styles.chip} onClick={() => downloadQuestionnaire(d, `${(d.title || '问卷提案').replace(/[\\/:*?"<>|]/g, '-')}.json`)}>下载 JSON</button>
     </div>

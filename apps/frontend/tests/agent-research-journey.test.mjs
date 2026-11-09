@@ -35,11 +35,11 @@ function nodes(element) {
 const find = (tree, predicate) => nodes(tree).find(predicate);
 const html = overrides => renderToStaticMarkup(Journey(props(overrides)));
 
-test('workflow shows named effective route, honest local/manual/planned states, and confirmation checkpoint', () => {
+test('workflow shows named effective route, honest local and manual states, and confirmation checkpoint', () => {
   const markup = html();
   assert.match(markup, /我的研究模型 · 继承设置/);
   assert.match(markup, /本地处理 · 无需模型/);
-  assert.match(markup, /待接入/);
+  assert.match(markup, /真实材料 · 人工参与/);
   assert.match(markup, /待你确认/);
   assert.match(markup, /由你确认/);
   assert.doesNotMatch(markup, /后台|Data 执行器|API Key|密钥/);

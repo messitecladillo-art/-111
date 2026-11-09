@@ -59,7 +59,7 @@ export type AgentAction =
   | { type: 'adopt'; node: string; paragraphs: string[]; cited: string[] }
   /** Reads the receipt of a draft whose outcome was unclear, filling it from the facts it was sent with; never calls the model again. */
   | { type: 'checkDraft'; draft: string; message: string; node: string; facts: { id: string; text: string; value: string }[] }
-  /** Forges a complete National First Prize pack for any topic or archetype into design, dataset, and report. */
+  /** Loads a labelled teaching study with computed results. */
   | { type: 'loadBenchmark'; benchmarkId: string }
   /** Runs the 00–06 full-workflow LLM multi-chapter report generation pipeline (26 sections + 4 ledgers + 6-advisor self-repair). */
   | { type: 'generateFullReport'; topic: string; mode?: 'plan' | 'demonstration' | 'empirical'; modelBinding?:ModelConsentBinding; inputRevision?:string }
@@ -115,7 +115,7 @@ export type Command = { name: string; args?: string; line: string; words: readon
 const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打开${r.name}`, words: [r.id] }));
 export const COMMANDS: readonly Command[] = [
   { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
-  { name: '全报告', args: '任意课题或留空', line: 'AI 全流程自动生成 26 节国奖级全报告（00–06 技能包 · 事实锁死 · 六大顾问自愈）', words: ['fullreport', 'autoreport'] },
+  { name: '全报告', args: '课题或留空', line: '根据当前研究资料起草报告候选稿，保留逐节回执供审阅', words: ['fullreport', 'autoreport'] },
   { name: '密钥', line: '打开个人模型服务，安全配置报告模型', words: ['apikey', 'key'] },
   { name: '铸造', args: '任意课题或留空', line: '生成一套教学模拟研究：问卷、模拟作答，以及在模拟数据上实际计算的结果与报告', words: ['forge', 'award', 'benchmark', 'demo'] },
   { name: '备赛', line: '正大杯备赛八个阶段与下一步', words: ['coach', 'guide'] },

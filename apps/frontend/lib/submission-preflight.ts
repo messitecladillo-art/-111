@@ -133,6 +133,7 @@ async function inflate(bytes: Uint8Array, entry: Entry): Promise<Uint8Array> {
 
 const CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types";
 const REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships";
+const CORE_PROPERTIES_REL = `${REL_NS}/metadata/core-properties`;
 const OFFICE_RELS = new Set(["http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument", "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"]);
 const WORD_NS = new Set(["http://schemas.openxmlformats.org/wordprocessingml/2006/main", "http://purl.oclc.org/ooxml/wordprocessingml/main"]);
 const PPT_NS = new Set(["http://schemas.openxmlformats.org/presentationml/2006/main", "http://purl.oclc.org/ooxml/presentationml/main"]);
@@ -280,7 +281,8 @@ export async function inspectSubmissionLocal(buffer: ArrayBuffer, name: string, 
           const { Id, Type, Target, TargetMode } = tag.attrs;
           if (!Id || !Type || !Target || seen.has(Id) || (TargetMode && !["Internal", "External"].includes(TargetMode))) fail("relationship_invalid", "Office 关系 ID、目标或类型缺失或重复。", entry.name);
           seen.add(Id); const location = `${entry.name}#${Id}`;
-          if (active(Type)) add({ level: "error", code: "active_content_present", message: "关系记录指向嵌入程序、控件或外部模板，请移除。", location });
+          // OPC core metadata uses "package" in its namespace, not as the relationship's role.
+          if (Type !== CORE_PROPERTIES_REL && active(Type)) add({ level: "error", code: "active_content_present", message: "关系记录指向嵌入程序、控件或外部模板，请移除。", location });
           if (TargetMode === "External") {
             const web = /^https?:\/\//i.test(Target) && /\/hyperlink$/i.test(Type);
             add({ level: web ? "warning" : "error", code: web ? "external_web_relationships_present" : "external_local_or_identity_relationships", message: web ? "发现网页外链，请核对来源及公开范围。" : "发现文件、邮件或主动外部关系，请移除并核对身份残留。", location });

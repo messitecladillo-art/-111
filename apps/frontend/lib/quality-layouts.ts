@@ -53,7 +53,7 @@ export function composeQualitySlide(slide:Slide,layout:QualityLayout,quality:Res
     addText(slide.body,72,38,21,49,20,ink);
   }else if(layout==='comparison'&&result){
     addText(slide.title,7,13,86,13,32,ink,true);
-    const compact=result.rows.length<=4;
+    const compact=result.rows.length<=4&&result.rows.every(row=>row.every(cell=>String(cell).length<=12));
     objects.push(makeSlideObject('table',{evidenceId,x:7,y:27,width:86,height:compact?25:44,fontSize:16,color:ink}));
     const explanationY=compact?60:74,explanationH=compact?30:17;
     if(compact)addText('如何理解这组结果',10,54,83,5,19,teal,true);

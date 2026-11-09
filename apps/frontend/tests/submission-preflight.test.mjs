@@ -69,7 +69,21 @@ test("real project native Word/PPT exports retain originals and initial checks c
   for (const [format, build] of [["docx", buildDocx], ["pptx", buildPptx]]) {
     const bytes = await (await build(createEditorContent())).arrayBuffer(), original = digest(bytes), report = await inspect(bytes, `合成导出.${format}`);
     assert.notEqual(report.status, "incomplete", JSON.stringify(report.findings)); assert.equal(report.sha256, original); assert.equal(digest(bytes), original);
+    assert.ok(!codes(report).includes("active_content_present"), JSON.stringify(report.findings));
   }
+});
+test("core properties remain scanned and do not mask an embedded package relationship", async () => {
+  const list = parts("docx", [
+    { name: "docProps/core.xml", body: `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator>张三</dc:creator></cp:coreProperties>` },
+    { name: "word/embeddings/object.xml", body: "<r/>" },
+  ]);
+  const packageType = NS.office.replace(/officeDocument$/, "package");
+  list[1].body = list[1].body.replace("</Relationships>", `<Relationship Id="core" Type="${NS.rel}/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="embed" Type="${packageType}" Target="word/embeddings/object.xml"/></Relationships>`);
+  const report = await inspect(await zip(list));
+  assert.equal(report.status, "issues_found");
+  assert.ok(codes(report).includes("identity_metadata"));
+  assert.ok(codes(report).includes("forbidden_identity_term"));
+  assert.deepEqual(report.findings.filter(f => f.code === "active_content_present").map(f => f.location), ["_rels/.rels#embed"]);
 });
 test("split runs, NFKC, Cf, whitespace, entities, filenames and XML attributes detected", async () => {
   const list = addWord('<w:p><w:r><w:t>测试</w:t></w:r><w:r><w:t>大\u200b学</w:t></w:r></w:p><w:p><w:r><w:t>张  </w:t></w:r><w:r><w:t>三</w:t></w:r></w:p><w:p name="ＡＢＣ" label="&#x5f20;&#19977;"/>');

@@ -24,4 +24,16 @@
 .literature > summary { padding: 10px 0; font-weight: 650; }
 .literature > summary small { margin-left: 8px; font-weight: 400; color: var(--c-dim,#68716d); }
 .literatureMap { margin-top: 10px; border: 0; padding: 6px 0; background: transparent; color: var(--rw-accent); font: inherit; cursor: pointer; }
+.simulation { margin: 0 0 18px; border: 1px solid var(--c-line,#e4e8e6); border-radius: 12px; background: var(--c-raise,#fff); }
+.simulation > summary { padding: 14px 18px; }
+.simulationBody { display: grid; gap: 12px; padding: 0 18px 18px; }
+.simulationBody p, .simulationBody ol, .simulationBody ul { margin: 0; }
+.simulationBody button { justify-self: start; min-height: 40px; border: 1px solid var(--c-line,#d2d9d6); border-radius: 8px; padding: 8px 14px; background: var(--c-bg,#fff); color: var(--rw-accent); font: inherit; font-size: 13px; }
+.simulationBody button:disabled { opacity: .55; }
+.simulationQuestions small { display: block; color: var(--c-dim,#68716d); }
+.simulationResult { display: grid; gap: 12px; }
+.simulationResult ol { display: grid; gap: 8px; padding: 0; list-style: none; }
+.simulationResult li { padding: 10px 12px; border-left: 2px solid var(--rw-accent); background: var(--c-bg,#fff); }
+.simulationResult li span { display: block; }
+.simulationActions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media(max-width:680px) { .profileGrid { grid-template-columns:1fr; } .profile,.advisor,.result,.confirm,.candidates { margin-left:16px; margin-right:16px; } .options { padding-left:16px; padding-right:16px; } }

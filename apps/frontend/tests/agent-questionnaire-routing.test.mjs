@@ -11,16 +11,18 @@ const ts = createRequire(import.meta.url)('typescript');
 const compiled = ts.transpileModule(fs.readFileSync(new URL('../components/agent/generation.tsx', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 const A = '11111111-1111-4111-8111-111111111111', B = '22222222-2222-4222-8222-222222222222';
 const OWNER = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', PROJECT = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const OTHER_PROJECT = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const service = (id, revision = 1) => ({ id, revision, label: `Synthetic ${id[0]}`, model: `synthetic-${id[0]}`, capabilities: ['questionnaire'] });
 const walk = v => v == null || typeof v !== 'object' ? [] : Array.isArray(v) ? v.flatMap(walk) : [v, ...walk(v.props?.children)];
 const text = v => v == null ? '' : Array.isArray(v) ? v.map(text).join('') : typeof v === 'object' ? text(v.props?.children) : String(v);
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve: value => resolve(value) }; };
 
-function harness() {
+function harness(boundProject = null) {
   let cursor = 0, dirty = true, generation, tree, sequence = 0;
+  let activeProject = PROJECT;
   let services = [service(A), service(B)];
   let preferences = { schemaVersion: 2, tasks: { questionnaire: A }, steps: { 'survey.questionnaire': A } };
-  const cells = [], effects = [], requests = [], heads = [], messages = [{ id: 'consent', role: 'agent', turn: { cards: [{ kind: 'consent', brief: 'Synthetic questionnaire request', state: 'open' }] } }];
+  const cells = [], effects = [], requests = [], heads = [], brought = [], messages = [{ id: 'consent', role: 'agent', turn: { cards: [{ kind: 'consent', brief: 'Synthetic questionnaire request', state: 'open', ...(boundProject ? { projectId: boundProject } : {}) }] } }];
   const head = deferred();
   const memo = (fn, deps) => { const i = cursor++, old = cells[i]; if (!old || deps.some((v, n) => !Object.is(v, old.deps[n]))) cells[i] = { deps, value: fn() }; return cells[i].value; };
   const hooks = {
@@ -36,6 +38,7 @@ function harness() {
     patch(id, fn) { const i = messages.findIndex(m => m.id === id); if (i >= 0) { messages[i] = fn(messages[i]); dirty = true; } },
     appendAfter(id, message) { const i = messages.findIndex(m => m.id === id); messages.splice(i + 1, 0, message); dirty = true; },
     file() {}, subscribe: () => () => {}, projectOf: () => PROJECT, find: id => messages.find(m => m.id === id),
+    view: () => ({ active: 'thread', threads: [{ id: 'thread', projectId: activeProject }] }),
   };
   const auth = { session: { authenticated: true, user: { id: OWNER } }, loading: false, identityEpoch: 1, isCurrentAccount: (id, epoch) => id === OWNER && epoch === 1, mutate() { throw Error('Unexpected transport'); } };
   const jsx = (type, props) => ({ type, props });
@@ -43,7 +46,7 @@ function harness() {
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'next/link': { default: 'a' },
     '@evix/shared': { parseCollection: (raw, key) => raw[key], parseProject: v => v, parseService: v => v },
     '@/components/hosted/HostedSession': { useHostedSession: () => auth },
-    '@/components/hosted/api-client': { hostedRequest: async path => path === '/api/projects' ? { projects: [{ id: PROJECT, title: 'Synthetic project' }] } : { services }, HostedApiError: class extends Error {}, downloadQuestionnaire() {} },
+    '@/components/hosted/api-client': { hostedRequest: async path => path === '/api/projects' ? { projects: [{ id: PROJECT, title: 'Synthetic project' }, { id: OTHER_PROJECT, title: 'Another synthetic project' }] } : { services }, HostedApiError: class extends Error {}, downloadQuestionnaire() {} },
     '@/components/hosted/questionnaire-repository': { createQuestionnaireRepository: project => ({ head: () => { heads.push(project); return head.promise; } }) },
     '@/components/hosted/questionnaire-proposal-repository': { QuestionnaireProposalError: class extends Error {}, createQuestionnaireProposalRepository: project => ({ generate: async (request, current) => { if (!current()) return undefined; requests.push({ project, ...structuredClone(request) }); return { status: 'failed', errorCode: 'synthetic_no_provider' }; } }) },
     '@/lib/questionnaire-proposals': { prepareQuestionnaireGeneration, isDefiniteGenerationRejection },
@@ -54,7 +57,7 @@ function harness() {
   vm.runInNewContext(compiled, { exports, require: name => imports[name] ?? { default: new Proxy({}, { get: (_target, key) => String(key) }) }, crypto, setTimeout, clearTimeout, Date, Map, Set, Promise });
   function render() {
     cursor = 0; dirty = false;
-    generation = exports.useGeneration(() => {}, () => {});
+    generation = exports.useGeneration(proposal => brought.push(proposal), () => {}, activeProject);
     const card = messages[0].turn.cards[0];
     tree = exports.ConsentCard({ messageId: 'consent', card, at: 0 });
     while (effects.length) effects.shift()();
@@ -62,13 +65,15 @@ function harness() {
   async function flush() { for (let n = 0; n < 25; n++) { if (dirty) render(); await new Promise(r => setImmediate(r)); } }
   const cards = () => messages.flatMap(m => m.turn.cards ?? []);
   return {
-    flush, requests, heads, head, cards,
+    flush, requests, heads, head, cards, brought,
+    changeProject(id) { activeProject = id; dirty = true; },
+    bring(projectId) { generation.bring({ projectId, proposalId: 'original-proposal', design: {} }); },
     choose(id) { preferences = { ...preferences, steps: { ...preferences.steps, 'survey.questionnaire': id } }; dirty = true; },
     async revision(id, value) { services = services.map(s => s.id === id ? service(id, value) : s); generation.load(true); await flush(); },
     selected() { return walk(tree).find(n => n.type === 'select' && n.props.children?.some?.(v => v?.props?.children === '请选择问卷起草模型'))?.props.value; },
     submit() { const button = walk(tree).find(n => n.type === 'button' && /^(?:确认并)?起草/.test(text(n))); assert.ok(button, 'actual consent button exists'); assert.equal(button.props.disabled, false); button.props.onClick(); },
     // A DOM event from before the store notification must also be checked at entry.
-    staleSubmit(id) { generation.submit('consent', { brief: 'Synthetic questionnaire request', projectId: PROJECT, serviceId: id }); },
+    staleSubmit(id, projectId = PROJECT) { generation.submit('consent', { brief: 'Synthetic questionnaire request', projectId, serviceId: id }); },
   };
 }
 
@@ -94,4 +99,13 @@ test('a stable explicit survey override is the actual request destination with i
 test('a stale consent event cannot acquire a head read for a no-longer-selected service', async () => {
   const h = harness(); await h.flush(); h.choose(B); h.staleSubmit(A); await h.flush();
   assert.equal(h.heads.length, 0); assert.equal(h.requests.length, 0);
+});
+
+test('a research handoff cannot change its project at dispatch or move its proposal across projects', async () => {
+  const h = harness(PROJECT); await h.flush();
+  h.staleSubmit(A, OTHER_PROJECT); await h.flush();
+  assert.equal(h.heads.length, 0);
+  h.bring(PROJECT); assert.equal(h.brought.length, 1);
+  h.changeProject(OTHER_PROJECT); // Deliberately call before rerender to exercise the live project guard.
+  h.bring(PROJECT); assert.equal(h.brought.length, 1);
 });

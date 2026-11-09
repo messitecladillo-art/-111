@@ -12,12 +12,14 @@ import { ACCESS_OPTIONS } from '@/lib/topic-advisor/types';
 import { regionPath } from '@/lib/topic-advisor/regions';
 import { emptyTopicProject, parseTopicProjectDocument, type TopicProjectDocument } from '@/lib/topic-project';
 import { buildLiteratureStudy, emptyLiteratureStudy, type LiteratureStudy } from '@/lib/agent/literature-study';
+import { adoptedLiteratureLines } from '@/lib/agent/literature-handoff';
 import { literatureWorkspaceReceipt, literatureEvidenceReference, type LiteratureWorkspaceSnapshot } from '@/lib/topic-lab/workspace';
 import { literatureEvidenceReferencesEqual } from '@/lib/topic-lab/evidence-reference';
 import TopicAgent from '@/components/topic-advisor/TopicAgent';
 import RegionPicker from '@/components/topic-advisor/RegionPicker';
 import ResearchJourney, { type JourneyModelRoute, type ResearchJourneyStep } from './ResearchJourney';
 import LiteratureStudyPanel from './LiteratureStudyPanel';
+import ResearchSimulationPanel, { type ResearchSimulationHost } from './ResearchSimulationPanel';
 import styles from './ResearchWorkspace.module.css';
 
 export type ResearchWorkspaceProps = {
@@ -28,7 +30,10 @@ export type ResearchWorkspaceProps = {
   onOpenSettings: () => void; onOpenStage: (stage: ResearchStageId) => void;
   onTopic: (source: DiagnosisBriefSource) => void;
   onRetractTopic: (sourceId: string) => void;
+  onDraftQuestionnaire?: (source: DiagnosisBriefSource, projectId: string) => void;
+  onLiteratureToReport?: (lines: string[]) => void;
   literature: LiteratureWorkspaceSnapshot | null; onLiterature: (value: LiteratureWorkspaceSnapshot | null) => void;
+  simulation?: ResearchSimulationHost;
 };
 type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
@@ -51,6 +56,11 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const literatureProposal = proposal?.provenance.catalogVersion === LITERATURE_TOPIC ? proposal.selected?.id : null;
   const adoptedLiterature = draft.selected?.provenance.catalogVersion === LITERATURE_TOPIC ? draft.selected : null;
   const adoptedEvidenceCurrent = !adoptedLiterature || hasAdoptedEvidence(adoptedLiterature, draft.literatureStudy);
+  const diagnosisSource = draft.diagnosis?.source;
+  const diagnosisEvidenceCurrent = adoptedEvidenceCurrent && (diagnosisSource?.schemaVersion !== 2
+    || !!literature && literatureEvidenceReferencesEqual(diagnosisSource.literature, literatureEvidenceReference(literature)));
+  const sourceLines = adoptedLiterature && adoptedEvidenceCurrent && draft.literatureStudy
+    ? adoptedLiteratureLines(adoptedLiterature, draft.literatureStudy) : [];
   useEffect(() => { if (literatureProposal) confirmPanel.current?.scrollIntoView({ block: 'start' }); }, [literatureProposal]);
   const [literatureResult, setLiteratureResult] = useState<{ value: LiteratureReceipt; source: LiteratureWorkspaceSnapshot; selection: TopicProjectDocument } | null>(null);
   const [literatureBusy, setLiteratureBusy] = useState(false);
@@ -272,10 +282,19 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
     } catch (reason) { setError(reason instanceof Error ? reason.message : '研究简介来源已变化。'); }
   }
 
+  const workbench = props.simulation?.source;
+  const data = workbench?.dataset;
+  const results = data ? workbench?.report?.quality?.results.filter(item => item.sourceHash === data.sourceHash
+    && (item.classification === 'simulated') === (data.kind === 'simulated')) ?? [] : [];
+  const quality = results.find(item => item.method === 'quality-control');
+  const analyses = results.filter(item => item.method !== 'quality-control');
   const steps: ResearchJourneyStep[] = RESEARCH_STAGES.map(stage => {
     if (stage.id === 'topic') return { id: stage.id, status: busy ? 'running' : draft.selected ? 'completed' : draft.intake?.status === 'ready' ? 'awaiting_confirmation' : draft.intake ? 'needs_input' : 'ready', actionLabel: draft.selected ? '编辑选题' : '选题顾问' };
     if (stage.id === 'diagnosis') return { id: stage.id, status: draft.diagnosis ? 'completed' : draft.selected ? 'ready' : 'idle', actionLabel: '查看诊断' };
-    if (stage.id === 'literature') return { id: stage.id, status: literatureBusy ? 'running' : receipt?.status === 'ready' ? 'completed' : draft.selected ? 'needs_input' : 'idle', detail: draft.literatureStudy?.papers.length ? `${draft.literatureStudy.papers.length} 篇原文 · ${draft.literatureStudy.evidence.length} 条已确认摘录` : receipt?.status === 'ready' ? `已分析 ${receipt.summary.records} 条记录。` : draft.selected ? '导入文献题录查看词云与关联图谱。' : undefined, actionLabel: draft.literatureStudy?.papers.length ? '查看原文证据' : '文献图谱' };
+    if (stage.id === 'literature') return { id: stage.id, status: literatureBusy ? 'running' : receipt?.status === 'ready' || adoptedLiterature && adoptedEvidenceCurrent ? 'completed' : draft.selected ? 'needs_input' : 'idle', detail: draft.literatureStudy?.papers.length ? `${draft.literatureStudy.papers.length} 篇原文 · ${draft.literatureStudy.evidence.length} 条已确认摘录` : receipt?.status === 'ready' ? `已分析 ${receipt.summary.records} 条记录。` : draft.selected ? '导入文献题录查看词云与关联图谱。' : undefined, actionLabel: draft.literatureStudy?.papers.length ? '查看原文证据' : '文献图谱' };
+    if (stage.id === 'quality' && quality) return { id: stage.id, status: 'ready', detail: `同一数据来源已登记质控结果，保留 ${quality.n} / ${quality.total} 份。`, actionLabel: '查看分析工作台' };
+    if (stage.id === 'analysis' && analyses.length) return { id: stage.id, status: 'ready', detail: `已有 ${analyses.length} 项同源统计结果${data?.kind === 'simulated' ? '（教学模拟）' : ''}。`, actionLabel: '查看分析工作台' };
+    if (stage.id === 'report' && results.length) return { id: stage.id, status: 'ready', detail: '已登记计算结果，打开报告继续审阅与写作。', actionLabel: '打开报告' };
     return { id: stage.id, status: 'idle', actionLabel: stage.availability === 'planned' ? undefined : '打开编辑' };
   });
 
@@ -325,8 +344,20 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
       <summary>已采纳选题的文献依据</summary>
       {!adoptedEvidenceCurrent && <p role="status">所用摘录已撤回。重新核对并采纳后，方可将研究简介送入问卷。</p>}
       {adoptedLiterature.brief.sources.map(source => <article key={source.id}><h4>{source.title}</h4><p>{source.locator}</p><blockquote>{source.snippet}</blockquote></article>)}
+      {!!sourceLines.length && props.onLiteratureToReport && <button type="button" onClick={() => {
+        if (current()) props.onLiteratureToReport?.(sourceLines);
+      }}>将文献定位写入数据附录</button>}
     </details>}
-    {draft.diagnosis && <section className={styles.result} aria-label="选题诊断结果"><h3>{draft.diagnosis.source.input.title}</h3><ul>{draft.diagnosis.result?.nextSteps.map(item => <li key={item.code}>{item.action}</li>)}</ul><button type="button" disabled={!adoptedEvidenceCurrent} onClick={sendBrief}>将研究简介送入问卷</button></section>}
+    {draft.diagnosis && <section className={styles.result} aria-label="选题诊断结果"><h3>{draft.diagnosis.source.input.title}</h3><ul>{draft.diagnosis.result?.nextSteps.map(item => <li key={item.code}>{item.action}</li>)}</ul>
+      <button type="button" disabled={!diagnosisEvidenceCurrent} onClick={sendBrief}>将研究简介送入问卷</button>
+      {projectId && props.onDraftQuestionnaire && <button type="button" disabled={!diagnosisEvidenceCurrent || !ready || busy || conflict} onClick={() => {
+        if (current() && diagnosisEvidenceCurrent && diagnosisSource) props.onDraftQuestionnaire?.(diagnosisSource, projectId);
+      }}>用研究简介起草问卷</button>}
+    </section>}
+    {props.simulation && draft.selected && adoptedEvidenceCurrent && <ResearchSimulationPanel
+      key={JSON.stringify(draft.selected.brief)}
+      topic={draft.selected} host={props.simulation} sourceLines={sourceLines} disabled={!ready || busy || conflict}
+      canSave={!!owner && owner !== 'guest'} />}
     {receipt?.status === 'ready' && <details className={styles.result}><summary>文献分析回执 · {receipt.summary.records} 条</summary><p>共现节点 {receipt.map.nodes.length} · 论文网络节点 {receipt.papers.nodes.length}</p><code>{receipt.resultHash}</code><button type="button" onClick={() => props.onOpenStage('literature')}>查看词云与图谱</button></details>}
     <details className={styles.advisor}><summary>与选题顾问继续推敲</summary><TopicAgent profile={draft.profile} projectId={projectId} cacheNamespace={`research:${projectId ?? 'local'}`} readOnly={!ready || conflict}
       onProfileChange={profile => changeResearchInput(value => ({ ...value, profile }))}

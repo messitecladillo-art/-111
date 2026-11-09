@@ -142,11 +142,32 @@ def test_full_report_capacity_matches_browser_limits():
     with pytest.raises(ApiError):report_content({**value,'slides':[{**value['slides'][-1],'id':f'p{i}'} for i in range(41)]})
 
 
-def generated_latex(fixture):
+def generated_latex(fixture, *, render_images=False):
     platform=Path(__file__).resolve().parents[2]/'frontend'
     # Charts are embedded as the product's renderings (\ResearchImage{k}); the source counts the charts the body names.
-    script="import {parseEditorContent} from './lib/editor-model.ts';import {generateLatexBody,buildLatexSource,latexChartExhibits} from './lib/latex-report.ts';let t='';for await(const c of process.stdin)t+=c;const c=parseEditorContent(JSON.parse(t)),body=generateLatexBody(c),charts=latexChartExhibits(c);const input={title:c.title,subtitle:c.subtitle,body,options:c.reportFormat.options,...(charts.length?{figureImages:charts}:{})};process.stdout.write(JSON.stringify({body,charts:charts.length,source:buildLatexSource(input)}));"
-    process=subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script],cwd=platform,input=json.dumps(fixture,ensure_ascii=False),capture_output=True,text=True,encoding='utf-8',timeout=30)
+    script = """
+import {parseEditorContent} from './lib/editor-model.ts';
+import {generateLatexBody,buildLatexSource,latexChartExhibits} from './lib/latex-report.ts';
+let text='';
+for await(const chunk of process.stdin)text+=chunk;
+const content=parseEditorContent(JSON.parse(text)),body=generateLatexBody(content),charts=latexChartExhibits(content);
+const input={title:content.title,subtitle:content.subtitle,body,options:content.reportFormat.options,
+  ...(charts.length?{figureImages:charts}:{})};
+const output={body,charts:charts.length,source:buildLatexSource(input)};
+if(process.argv[1]==='render-images'){
+  const {default:sharp}=await import('sharp');
+  const {latexImages,latexCompilePayload}=await import('./lib/latex-images.ts');
+  const images=await latexImages(content,input,async(svg,width)=>{
+    const {data,info}=await sharp(Buffer.from(svg)).resize({width}).flatten({background:'#fff'})
+      .png().toBuffer({resolveWithObject:true});
+    return {bytes:data,width:info.width,height:info.height};
+  });
+  output.payload=latexCompilePayload(input,images);
+}
+process.stdout.write(JSON.stringify(output));
+"""
+    mode = "render-images" if render_images else "source-only"
+    process=subprocess.run(['node','--experimental-strip-types','--input-type=module','-e',script,mode],cwd=platform,input=json.dumps(fixture,ensure_ascii=False),capture_output=True,text=True,encoding='utf-8',timeout=30)
     assert process.returncode==0,process.stderr
     return json.loads(process.stdout)
 
@@ -220,22 +241,38 @@ def test_generated_pgf_rejects_file_expression_custom_keys_or_unbounded_variants
     assert result['status']=='error' and result['pdfBase64'] is None
 
 
-def test_real_xelatex_generated_chart_and_centered_three_line_table(settings):
+def test_real_xelatex_generated_chart_and_centered_three_line_table(settings, tmp_path):
     import base64
+    import io
     import os
+    from pypdf import PdfReader
+
     executable=os.getenv('EVIX_TEST_LATEX_COMPILER')
     if not executable:pytest.skip('Explicit existing XeLaTeX path required')
     value=v2();value['title']='合成质量验收';value['quality']['results'][0]['sourceName']='合成参考'
-    value['report'][0]['blocks'].append({'id':'b2','kind':'chart','text':'渠道频数','evidenceId':'r1','valueColumn':1})
-    generated=generated_latex(value);settings.latex_compiler=executable
-    receipt=latex.LatexCompiler(settings).compile(value['title'],value['subtitle'],generated['body'],value['reportFormat']['options'])
+    value['report'][0]['blocks'].append({'id':'b2','kind':'chart','text':'渠道频数图','evidenceId':'r1','valueColumn':1})
+    generated=generated_latex(value, render_images=True);settings.latex_compiler=executable
+    payload = generated["payload"]
+    assert len(payload["images"]) == generated["charts"] == 1
+    receipt=latex.LatexCompiler(settings).compile(
+        payload["title"], payload["subtitle"], payload["body"], payload["options"], images=payload["images"],
+    )
     assert receipt['status']=='compiled',receipt['diagnostics']
     pdf=base64.b64decode(receipt['pdfBase64'])
     assert pdf.startswith(b'%PDF-') and 1000<len(pdf)<=latex.MAX_PDF
-    artifact=Path(__file__).resolve().parents[3]/'.collab/runs/20261014-quality-vector/backend'
-    (artifact/'real-quality.pdf').write_bytes(pdf)
-    (artifact/'real-quality.tex').write_text(receipt['source'],encoding='utf-8')
-    (artifact/'real-quality-receipt.json').write_text(json.dumps({k:v for k,v in receipt.items()if k not in ('pdfBase64','source')},ensure_ascii=False,indent=2),encoding='utf-8')
+    assert receipt["source"] == generated["source"]
+    assert all(marker in receipt["source"] for marker in (
+        r"\newcolumntype{C}", r"\toprule[1.5bp]", r"\midrule[0.75bp]", r"\bottomrule[1.5bp]",
+    ))
+    reader = PdfReader(io.BytesIO(pdf))
+    assert any("渠道频数图" in page.extract_text() for page in reader.pages)
+    images = [object_ref for page in reader.pages
+              for object_ref in page["/Resources"].get("/XObject", {}).values()
+              if object_ref.get_object().get("/Subtype") == "/Image"]
+    assert len(images) == 1
+    (tmp_path/'real-quality.pdf').write_bytes(pdf)
+    (tmp_path/'real-quality.tex').write_text(receipt['source'],encoding='utf-8')
+    (tmp_path/'real-quality-receipt.json').write_text(json.dumps({k:v for k,v in receipt.items()if k not in ('pdfBase64','source')},ensure_ascii=False,indent=2),encoding='utf-8')
 
 
 
