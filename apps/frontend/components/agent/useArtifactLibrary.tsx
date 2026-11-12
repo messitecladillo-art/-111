@@ -27,6 +27,8 @@ const message = (error: unknown) => error instanceof Error ? error.message : '�
 const svgUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 const nameOf = (title: string) => (title.replace(/[<>:"/\\|?*\u0000-\u001f]/gu, '_').trim().slice(0, 100) || '素材');
 const plainText = (value: ArtifactValue) => value.type === 'text' ? [value.section.body, ...(value.section.blocks ?? []).filter(b => b.kind === 'paragraph').map(b => b.text)].filter(Boolean).join('\n') : value.type === 'block' ? value.block.text : '';
+const CLASSIFICATION_NAMES = { simulated: '模拟素材', public: '公开材料', user_provided: '用户提供', mixed: '混合材料', unclassified: '待分类' } as const;
+const IMAGE_NAMES: Record<string, string> = { 'image/png': 'PNG', 'image/jpeg': 'JPG', 'image/webp': 'WebP', 'image/svg+xml': 'SVG' };
 function table(headers: string[], rows: (string | number | null)[][]) { return <table><thead><tr>{headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table>; }
 /* Local data URLs intentionally bypass remote image optimisation. */
 /* eslint-disable @next/next/no-img-element */
@@ -219,6 +221,15 @@ export function useArtifactLibrary(options: ArtifactLibraryOptions) {
     {edit.record.value.type === 'file' && <label>替换图片<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={shown.busy} onChange={event => { const file = event.currentTarget.files?.[0]; if (file) importImage(file, edit.record.kind === 'cover' || edit.record.kind === 'diagram' ? edit.record.kind : 'file', edit.record); event.currentTarget.value = ''; }} /></label>}
     <div><button type="submit" disabled={shown.busy}>另存新版本</button><button type="button" disabled={shown.busy} onClick={() => patch(before => ({ ...before, edit: null }))}>取消编辑</button></div>
   </form> : chosen ? previewValue(chosen.value) : null;
-  const items: ArtifactShelfItem[] = shown.library.records.map(record => ({ id: record.id, familyId: record.familyId, kind: record.kind, title: record.title, version: record.version, status: record.status, origin: record.origin, updatedAt: record.updatedAt, detail: `${record.classification} · ${record.value.type === 'cover' ? '标题与副标题排版' : record.value.type === 'file' ? record.value.mime : record.kind} · ${record.hash.slice(0, 12)}`, canUse: record.value.type === 'file' || !!options.content && (record.value.type === 'cover' || record.value.type === 'frame' || !!options.selectedSectionId), canEdit: true, canExport: true, ...(record.value.type==='file'?{useLabel:'下载原图'}:{}) }));
-  return { items, selectedId: shown.selectedId, preview, busy: shown.busy, error: shown.error, onSelect, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, count: new Set(items.map(item => item.familyId)).size };
+  const items: ArtifactShelfItem[] = shown.library.records.map(record => ({
+    id: record.id, familyId: record.familyId, kind: record.kind, title: record.title,
+    version: record.version, status: record.status, origin: record.origin, updatedAt: record.updatedAt,
+    detail: [CLASSIFICATION_NAMES[record.classification], record.value.type === 'file' ? IMAGE_NAMES[record.value.mime] : record.value.type === 'cover' ? '标题与副标题' : ''].filter(Boolean).join(' · '),
+    fingerprint: record.hash,
+    canUse: record.value.type === 'file' || !!options.content && (record.value.type === 'cover' || record.value.type === 'frame' || !!options.selectedSectionId),
+    canEdit: true, canExport: true,
+    ...(record.value.type === 'file' ? { useLabel: '下载原图', useAction: 'download' as const, thumbnailUrl: record.value.dataUrl } : {}),
+  }));
+  const unavailableReason = !scope || options.readCurrent().scope !== scope ? '账号与项目尚未确认，请重新连接后操作素材。' : undefined;
+  return { items, selectedId: shown.selectedId, preview, busy: shown.busy, error: shown.error, unavailableReason, onSelect, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, count: new Set(items.map(item => item.familyId)).size };
 }

@@ -89,23 +89,28 @@ test('model overrides, checkpoint actions and optional steps dispatch controlled
   assert.deepEqual(calls, [['model', 'research.topic', 'service-a'], ['model', 'research.topic', null], ['default', null], ['optional', 'literature', true], ['action', 'topic']]);
 });
 
-test('central settings exposes default and every real model call without duplicating connection credentials', () => {
+function loadSettings(saved, calls = [], environment = {}) {
   const settingsSource = fs.readFileSync(new URL('../components/agent/ModelRoutingSettings.tsx', import.meta.url), 'utf8');
   const settingsCode = ts.transpileModule(settingsSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  const settingsBox = { exports: {} }, calls = [];
-  const saved = { schemaVersion: 2, defaultServiceId: service.id, tasks: {}, steps: { 'research.topic': 'removed' } };
-  vm.runInNewContext(settingsCode, { module: settingsBox, exports: settingsBox.exports, require(name) {
-    if (name === 'react') return { useId: () => 'settings-test', useCallback: fn => fn, useSyncExternalStore: (_subscribe, snapshot) => snapshot() };
+  const settingsBox = { exports: {} };
+  vm.runInNewContext(settingsCode, { module: settingsBox, exports: settingsBox.exports, document: environment.document, require(name) {
+    if (name === 'react') return { useId: () => 'settings-test', useCallback: fn => fn, useSyncExternalStore: (_subscribe, snapshot) => snapshot(), useRef: value => ({ current: value }), useLayoutEffect() {}, ...environment.hooks };
     if (name === 'react/jsx-runtime') return require(name);
     if (name === 'next/link') return { default: props => React.createElement('a', props) };
     if (name === '@/lib/agent/research-stages') return catalog;
     if (name === '@/lib/agent/model-routing') return { ...routing, getStageModelPreferences: () => saved,
       setDefaultModelPreference: (...args) => calls.push(['default', ...args]),
+      setModelPreference: (...args) => calls.push(['task', ...args]),
       setStageModelPreference: (...args) => calls.push(['step', ...args]) };
     if (name.endsWith('.module.css')) return { default: new Proxy({}, { get: (_target, key) => String(key) }) };
     throw Error(`Unapproved settings dependency: ${name}`);
   } });
-  const tree = settingsBox.exports.default({ owner: 'account-a', services: [service] });
+  return settingsBox.exports.default;
+}
+
+test('central settings exposes default and every real model call without duplicating connection credentials', () => {
+  const calls = [], Settings = loadSettings({ schemaVersion: 2, defaultServiceId: service.id, tasks: {}, steps: { 'research.topic': 'removed' } }, calls);
+  const tree = Settings({ owner: 'account-a', services: [service] });
   const markup = renderToStaticMarkup(tree);
   assert.match(markup, /默认模型/);
   assert.match(markup, /按步骤指定/);
@@ -115,6 +120,106 @@ test('central settings exposes default and every real model call without duplica
   find(tree, node => node.type === 'select' && node.props.id.endsWith('research.topic')).props.onChange({ target: { value: '' } });
   find(tree, node => node.type === 'select' && node.props.id.endsWith('-default')).props.onChange({ target: { value: service.id } });
   assert.deepEqual(calls, [['step', 'account-a', 'research.topic', null], ['default', 'account-a', service.id]]);
+});
+
+test('normal step overrides are collapsed while default and task choices remain directly editable', () => {
+  const completeService = { ...service, capabilities: ['research', 'questionnaire', 'report'] }, calls = [];
+  const Settings = loadSettings({ schemaVersion: 2, defaultServiceId: service.id, tasks: {}, steps: {} }, calls);
+  const tree = Settings({ owner: 'account-a', services: [completeService] });
+  const advanced = find(tree, node => node.type === 'details');
+  assert.ok(advanced);
+  assert.equal(advanced.props.open, undefined);
+  assert.equal(nodes(advanced).filter(node => node.type === 'select').length, catalog.MODEL_CALL_IDS.length);
+  assert.match(renderToStaticMarkup(tree), /6 \/ 6 个步骤已分配/);
+  assert.equal(find(tree, node => node.props?.role === 'status').props['data-ready'], true);
+  assert.equal(find(tree, node => node.type === 'section' && node.props['aria-labelledby']?.endsWith('-issues-title')), undefined);
+  const reportTask = find(tree, node => node.type === 'select' && node.props.id.endsWith('-report'));
+  reportTask.props.onChange({ target: { value: service.id } });
+  assert.deepEqual(calls, [['task', 'account-a', 'report', service.id]]);
+});
+
+test('a stale step override reduces readiness and remains repairable outside the collapsed settings', () => {
+  const completeService = { ...service, capabilities: ['research', 'questionnaire', 'report'] };
+  const Settings = loadSettings({ schemaVersion: 2, defaultServiceId: service.id, tasks: {}, steps: { 'report.full': 'removed' } });
+  const tree = Settings({ owner: 'account-a', services: [completeService] });
+  const advanced = find(tree, node => node.type === 'details');
+  const issues = find(tree, node => node.type === 'section' && node.props['aria-labelledby']?.endsWith('-issues-title'));
+  assert.ok(issues);
+  assert.ok(find(issues, node => node.type === 'select' && node.props.id.endsWith('report.full')));
+  assert.equal(find(advanced, node => node.type === 'select' && node.props.id.endsWith('report.full')), undefined);
+  assert.match(renderToStaticMarkup(tree), /5 \/ 6 个步骤已分配/);
+  assert.equal(find(tree, node => node.props?.role === 'status').props['data-ready'], false);
+  assert.equal(find(issues, node => node.type === 'select').props['aria-invalid'], true);
+});
+
+test('malformed preferences never appear ready and loading does not expose provisional failures', () => {
+  const completeService = { ...service, capabilities: ['research', 'questionnaire', 'report'] };
+  const Settings = loadSettings({ schemaVersion: 2, tasks: {}, steps: {}, invalid: true });
+  const tree = Settings({ owner: 'account-a', services: [completeService] });
+  assert.match(renderToStaticMarkup(tree), /0 \/ 6 个步骤已分配/);
+  assert.ok(find(tree, node => node.props?.role === 'alert'));
+  assert.equal(find(tree, node => node.props?.role === 'status').props['data-ready'], false);
+  const loading = Settings({ owner: 'account-a', services: [completeService], loading: true });
+  assert.match(renderToStaticMarkup(loading), /正在读取服务/);
+  assert.equal(find(loading, node => node.type === 'section' && node.props['aria-labelledby']?.endsWith('-issues-title')), undefined);
+  assert.equal(nodes(loading).filter(node => node.type === 'select').every(node => node.props.disabled), true);
+  const StaleSettings = loadSettings({ schemaVersion: 2, defaultServiceId: 'removed', tasks: { report: 'removed' }, steps: { 'research.topic': 'removed' } });
+  const reading = renderToStaticMarkup(StaleSettings({ owner: 'account-a', services: [], loading: true }));
+  assert.doesNotMatch(reading, /原选择已不可用|原模型已不可用|需要更新的步骤/);
+});
+
+test('repairing a stale step opens its new parent and hands focus to the same step after commit', () => {
+  const completeService = { ...service, capabilities: ['research', 'questionnaire', 'report'] };
+  const saved = { schemaVersion: 2, defaultServiceId: service.id, tasks: {}, steps: { 'report.full': 'removed' } };
+  const refs = [], calls = [], focused = [], effects = [], panel = { open: false };
+  let cursor = 0;
+  const Settings = loadSettings(saved, calls, { hooks: {
+    useRef(value) { return refs[cursor++] ??= { current: value }; },
+    useLayoutEffect(effect) { effects.push(effect); },
+  }, document: { getElementById(id) {
+    assert.equal(id, 'settings-test-report.full');
+    return { isConnected: true, focus(options) { assert.equal(panel.open, true); assert.equal(options.preventScroll, true); focused.push(id); }, scrollIntoView() {} };
+  } } });
+  function render() {
+    cursor = 0;
+    const tree = Settings({ owner: 'account-a', services: [completeService] });
+    find(tree, node => node.type === 'details').props.ref.current = panel;
+    effects.pop()();
+    return tree;
+  }
+  const tree = render();
+  find(tree, node => node.type === 'select' && node.props.id.endsWith('report.full')).props.onChange({ target: { value: service.id } });
+  saved.steps['report.full'] = service.id;
+  const repaired = render();
+  assert.equal(panel.open, true);
+  assert.deepEqual(focused, ['settings-test-report.full']);
+  assert.ok(find(find(repaired, node => node.type === 'details'), node => node.type === 'select' && node.props.id.endsWith('report.full')));
+  find(repaired, node => node.type === 'select' && node.props.id.endsWith('report.draft')).props.onChange({ target: { value: service.id } });
+  saved.steps['report.draft'] = service.id;
+  render();
+  assert.deepEqual(focused, ['settings-test-report.full'], 'normal step changes do not steal focus');
+  assert.deepEqual(calls, [['step', 'account-a', 'report.full', service.id], ['step', 'account-a', 'report.draft', service.id]]);
+});
+
+test('unused stale defaults and tasks stay invalid without overriding the effective step count', () => {
+  const completeService = { ...service, capabilities: ['research', 'questionnaire', 'report'] };
+  const allOverrides = Object.fromEntries(catalog.MODEL_CALL_IDS.map(call => [call, service.id]));
+  const reportOverrides = Object.fromEntries(catalog.MODEL_CALL_IDS.filter(call => call.startsWith('report.')).map(call => [call, service.id]));
+  const scenarios = [
+    { saved: { schemaVersion: 2, defaultServiceId: 'removed', tasks: {}, steps: allOverrides }, invalidControl: '-default' },
+    { saved: { schemaVersion: 2, defaultServiceId: service.id, tasks: { report: 'removed' }, steps: reportOverrides }, invalidControl: '-report' },
+  ];
+  for (const { saved, invalidControl } of scenarios) {
+    const Settings = loadSettings(saved), tree = Settings({ owner: 'account-a', services: [completeService] });
+    assert.match(renderToStaticMarkup(tree), /6 \/ 6 个步骤已分配/);
+    assert.equal(find(tree, node => node.props?.role === 'status').props['data-ready'], true);
+    assert.equal(find(tree, node => node.type === 'select' && node.props.id.endsWith(invalidControl)).props['aria-invalid'], true);
+    delete saved.steps['report.full'];
+    const uncovered = Settings({ owner: 'account-a', services: [completeService] });
+    assert.match(renderToStaticMarkup(uncovered), /5 \/ 6 个步骤已分配/);
+    assert.equal(find(uncovered, node => node.props?.role === 'status').props['data-ready'], false);
+    assert.ok(find(find(uncovered, node => node.type === 'section' && node.props['aria-labelledby']?.endsWith('-issues-title')), node => node.type === 'select' && node.props.id.endsWith('report.full')));
+  }
 });
 
 test('actual intake output precedes route cards; only the first three and active later stages are expanded', () => {
