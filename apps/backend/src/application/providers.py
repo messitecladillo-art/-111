@@ -4,6 +4,10 @@ from infrastructure.llm import ChatCompletionClient
 from multi_agent.agents.survey_agent.services.proposals import prompt
 
 class LiveProvider(ChatCompletionClient):
+    async def workflow_step(self, config, key, messages, limit=196608):
+        """One consented workflow call; outputs still require role/tool validation."""
+        return await self.complete_messages(config, key, messages, limit)
+
     async def topic_agent(self, config, key, message, selected):
         return await self.complete(config, key, message, 65536)
 

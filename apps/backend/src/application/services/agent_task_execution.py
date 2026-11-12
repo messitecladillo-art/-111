@@ -5,6 +5,7 @@ server code; unresolved calls are never automatically sent again.
 """
 import asyncio
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import timedelta, timezone
 import hashlib
 import inspect
@@ -13,12 +14,19 @@ import json
 from sqlalchemy import select, text as sql_text
 
 from infrastructure.database.models import AgentTaskExecution, now, new_id
-from multi_agent.workflow.orchestrator import WorkflowState, WorkflowStatus
+from multi_agent.workflow.orchestrator import PreparedStep, WorkflowState, WorkflowStatus
 from shared.contracts import integer
 from shared.errors import ApiError, ProviderFailure
 
 EXECUTION_TIMEOUT_SECONDS = 60
 EXECUTION_LEASE_SECONDS = 90
+
+
+@dataclass(frozen=True)
+class ExecutionPlan:
+    step: PreparedStep
+    timeout_seconds: int | None = None
+    lease_seconds: int | None = None
 
 
 def fingerprint(value):
@@ -71,9 +79,10 @@ def visible_task(view, row, execution):
 
 
 class DurableTaskExecution:
-    def __init__(self, *, load, save, view, engine, before_dispatch=None):
+    def __init__(self, *, load, save, view, engine, before_dispatch=None, prepare_override=None):
         self.load, self.save, self.view, self.engine = load, save, view, engine
         self.before_dispatch = before_dispatch
+        self.prepare_override = prepare_override
 
     def _reply(self, row, execution):
         return visible_task(self.view, row, execution)
@@ -122,7 +131,11 @@ class DurableTaskExecution:
             session.commit()
             return reply
         before = deepcopy(row.state)
-        prepared = self.engine.prepare_step(WorkflowState.from_dict(before))
+        execution_id = new_id()
+        plan = (self.prepare_override(row=row, user=user, session=session, data=data,
+                    check_session=check_session, execution_id=execution_id) if self.prepare_override else None)
+        plan = plan or ExecutionPlan(self.engine.prepare_step(WorkflowState.from_dict(before)))
+        prepared = plan.step
         if prepared.handler is None:
             if prepared.state.to_dict() != row.state:
                 self.save(row, prepared.state)
@@ -138,10 +151,10 @@ class DurableTaskExecution:
         frozen = prepared.state.to_dict()
         started = now()
         execution = AgentTaskExecution(
-            id=new_id(), task_id=task_id, project_id=project_id, created_by=user.id,
+            id=execution_id, task_id=task_id, project_id=project_id, created_by=user.id,
             base_revision=expected, claimed_revision=expected + 1,
             role=prepared.role.value, status='running', input_hash=fingerprint(before),
-            created_at=started, lease_expires_at=started + timedelta(seconds=EXECUTION_LEASE_SECONDS),
+            created_at=started, lease_expires_at=started + timedelta(seconds=plan.lease_seconds or EXECUTION_LEASE_SECONDS),
         )
         self.save(row, prepared.state)
         # INSERT trigger verifies the already-flushed task claim, even when the
@@ -154,7 +167,7 @@ class DurableTaskExecution:
         next_state, error_code, status, cancelled = None, None, 'completed', False
         result_hash = None
         try:
-            async with asyncio.timeout(EXECUTION_TIMEOUT_SECONDS):
+            async with asyncio.timeout(plan.timeout_seconds or EXECUTION_TIMEOUT_SECONDS):
                 invocation_state = WorkflowState.from_dict(deepcopy(frozen))
                 if inspect.iscoroutinefunction(prepared.handler) or inspect.iscoroutinefunction(getattr(prepared.handler, '__call__', None)):
                     result = await prepared.handler(invocation_state)

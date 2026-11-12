@@ -6,6 +6,8 @@ from infrastructure.database.models import AgentTask, AgentTaskExecution, Team, 
 from multi_agent.workflow.orchestrator import WorkflowError, WorkflowState, create_workflow
 from application.services.agent_task_execution import DurableTaskExecution, execution_view, latest_execution, visible_task
 from application.agent_model_bindings import freeze_model_bindings, validate_frozen_model_bindings, validate_role_bindings
+from application.services.workflow_models import WorkflowModels, SCOPE
+from infrastructure.database.models import Operation
 
 def _view(row: AgentTask) -> dict:
     validate_frozen_model_bindings(row.state.get('model_bindings'), owner_id=row.created_by, task_type=row.task_type)
@@ -19,12 +21,13 @@ def _save(row: AgentTask, state: WorkflowState) -> None:
 
 class AgentTaskService:
 
-    def __init__(self, *, owned_project, workflow_engine, owned_service=None):
+    def __init__(self, *, owned_project, workflow_engine, owned_service=None, model_runtime=None):
         self.owned_project = owned_project
         self.workflow_engine = workflow_engine
         self.owned_service = owned_service
+        self.models = WorkflowModels(load=self.load, owned_service=owned_service, **model_runtime) if model_runtime else None
         self.execution = DurableTaskExecution(load=self.load, save=_save, view=_view, engine=workflow_engine,
-                                             before_dispatch=self._validate_dispatch_models)
+            before_dispatch=self._validate_dispatch_models, prepare_override=self.models.prepare if self.models else None)
 
     def _service_resolver(self, session, user, *, lock=False):
         def resolve(service_id):
@@ -102,6 +105,30 @@ class AgentTaskService:
     async def advance_task(self, *, project_id: str, task_id: str, user, session, data, check_session):
         return await self.execution.advance(project_id=project_id, task_id=task_id, user=user,
             session=session, data=data, check_session=check_session)
+
+    def model_preview(self, *, project_id, task_id, user, session):
+        row = self.load(session=session, user=user, project_id=project_id, task_id=task_id)
+        if self.models is None:
+            raise ApiError(409, 'model_runtime_unavailable', '此部署尚未配置模型步骤执行器。')
+        result = self.models.preview(row=row, user=user, session=session)
+        session.commit()
+        return result
+
+    def model_calls(self, *, project_id, task_id, user, session):
+        row = self.load(session=session, user=user, project_id=project_id, task_id=task_id)
+        if row.created_by != user.id:
+            raise ApiError(403, 'model_bindings_owner_mismatch', '个人模型调用回执仅对使用者开放。')
+        rows = session.execute(select(Operation).where(Operation.user_id == user.id, Operation.scope == SCOPE,
+            Operation.response['taskId'].as_string() == task_id).order_by(Operation.response['startedAt'].as_string()).limit(100)).scalars().all()
+        result = []
+        for item in rows:
+            receipt = dict(item.response)
+            parent = session.get(AgentTaskExecution, receipt['executionId'])
+            if receipt['status'] == 'running' and (parent is None or parent.status != 'running' or parent.lease_expires_at <= now()):
+                receipt['status'], receipt['errorCode'] = 'outcome_unknown', 'model_call_requires_reconciliation'
+            result.append(receipt)
+        session.commit()
+        return {'calls': result}
 
     def cancel_task(self, *, project_id: str, task_id: str, user, session, data):
         return self.execution.cancel(project_id=project_id, task_id=task_id, user=user, session=session, data=data)
