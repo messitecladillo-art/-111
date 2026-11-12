@@ -301,13 +301,12 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const patchBrief = (key: keyof Pick<TopicProjectDocument['brief'], 'title' | 'decisionOwner' | 'population' | 'geography' | 'decision'>, value: string) => setProposal(old => old ? { ...old, brief: { ...old.brief, [key]: value } } : null);
 
   return <section className={styles.workspace} aria-label="研究推进">
+    <details className={styles.settings}>
+      <summary>团队与研究设置 <span role="status">{!ready ? '载入研究草稿…' : conflict ? '草稿待处理' : owner === 'guest' ? '本次访客会话' : saved ? '已保存在本浏览器' : '待保存'}</span></summary>
     <div className={styles.options}>
       <label><input type="checkbox" checked={draft.autoAdvance} disabled={!ready || busy} onChange={event => update(value => ({ ...value, autoAdvance: event.target.checked }))} />选题确认后自动诊断与文献分析</label>
-      <span role="status">{!ready ? '载入研究草稿…' : conflict ? '草稿待处理' : owner === 'guest' ? '本次访客会话' : saved ? '已保存在本浏览器' : '待保存'}</span>
     </div>
-    {error && <p role="alert" className={styles.error}>{error}</p>}
-    <details className={styles.profile}>
-      <summary>团队条件{draft.profile.city ? ` · ${draft.profile.city}` : ''}</summary>
+    <div className={styles.profile}>
       <div className={styles.profileGrid}>
         <RegionPicker regionRef={draft.profile.regionRef ?? null} region={draft.profile.region} city={draft.profile.city} scopeKey={`${owner}:${projectId}`} disabled={!ready || busy}
           onChange={ref => { const path = ref ? regionPath(ref) : []; changeResearchInput(value => ({ ...value, profile: { ...value.profile, schemaVersion: 2, regionRef: ref, region: path[0]?.name ?? '', city: path.find(item => item.level === 'prefecture')?.name ?? '' } })); }} />
@@ -316,7 +315,9 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
         <label>经费（元）<input type="number" min={0} max={99999999} value={draft.profile.budgetYuan ?? ''} disabled={!ready || busy} onChange={event => changeResearchInput(value => ({ ...value, profile: { ...value.profile, budgetYuan: event.target.value ? Number(event.target.value) : null } }))} /></label>
       </div>
       <fieldset><legend>确认能联系的人群或单位</legend><div className={styles.access}>{ACCESS_OPTIONS.map(option => <label key={option.id}><input type="checkbox" checked={draft.profile.access[option.id] === 'confirmed'} disabled={!ready || busy} onChange={event => changeResearchInput(value => ({ ...value, profile: { ...value.profile, access: { ...value.profile.access, [option.id]: event.target.checked ? 'confirmed' : 'possible' } } }))} />{option.label}</label>)}</div></fieldset>
+    </div>
     </details>
+    {error && <p role="alert" className={styles.error}>{error}</p>}
     <ResearchJourney direction={draft.direction} onDirectionChange={direction => changeResearchInput(value => ({ ...value, direction }))} onStart={direction => void start(direction)} steps={steps}
       services={props.services} modelRoutes={props.modelRoutes} defaultServiceId={props.defaultServiceId} onDefaultServiceChange={props.onDefaultServiceChange} onModelCallChange={props.onModelCallChange}
       onOpenSettings={props.onOpenSettings} onStepAction={continueStep} busy={busy} disabled={!ready || conflict} afterIntake={<div className={styles.intakeResults}>
