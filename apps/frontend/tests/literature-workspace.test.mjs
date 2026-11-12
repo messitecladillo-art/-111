@@ -4,6 +4,7 @@ import { createLiteratureWorkspaceSnapshot, verifyLiteratureWorkspaceSnapshot, p
 import { buildTermIndex, parseThesaurus } from '../lib/topic-lab/terms.ts';
 import { buildTermMap } from '../lib/topic-lab/network.ts';
 import { mergeRecords } from '../lib/topic-lab/parse.ts';
+import { DEFAULT_CLOUD_APPEARANCE } from '../lib/topic-lab/cloud-shapes.ts';
 
 export const record = (id = 'synthetic-original-id') => ({ id, title: `Synthetic ${id} literature`, authors: ['Synthetic Author'], year: 2024, source: 'Synthetic Journal', keywords: ['EVs', 'charging'], keywordsPlus: [], abstract: 'Synthetic metadata only, never a real source.', citations: 0, doi: `10.0000/${id}`, refs: ['doi:10.0000/base'], refLabels: ['Synthetic Foundation, 2020, DOI 10.0000/base'], format: 'wos' });
 export const corpus = () => ({ kind: 'import', lists: [[record(), record('second')]], files: [{ name: 'synthetic.wos.txt', format: 'wos', records: 2, skipped: 1, warnings: ['Synthetic skipped record warning'] }] });
@@ -29,6 +30,29 @@ test('hashes bind corpus and parameters while retaining separate view and term s
   assert.notEqual(a.corpusHash, (await createLiteratureWorkspaceSnapshot(changed, settings())).corpusHash);
   const forged = structuredClone(a); forged.corpus.lists[0][0].source = 'tampered source';
   await assert.rejects(verifyLiteratureWorkspaceSnapshot(forged), /指纹不一致/);
+});
+
+test('legacy v1 fingerprints remain valid without injecting appearance defaults', async () => {
+  // Captured from the integration baseline before appearance was introduced.
+  const legacy = { schema: 'literature-workspace/v1', corpus: null, settings: { ...DEFAULT_LITERATURE_SETTINGS }, corpusHash: '74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b', parameterHash: 'fee6c41657f2b1a9131958292fe1787280669e009a02d68b9af56ea3eaf95054', snapshotHash: '128045de35675ca57bc52953f3b72a0844e92e7a0257b3ce48f3c6d4b11b8f22' };
+  assert.equal(Object.hasOwn(legacy.settings, 'cloud'), false);
+  assert.deepEqual(await verifyLiteratureWorkspaceSnapshot(legacy), legacy);
+});
+
+test('cloud appearance persists without changing the term map or analysis parameter identity', async () => {
+  const a = await createLiteratureWorkspaceSnapshot(corpus(), settings());
+  const cloud = { ...DEFAULT_CLOUD_APPEARANCE, shape: 'crayfish', orientation: 'vertical', spacing: 'relaxed' };
+  const b = await createLiteratureWorkspaceSnapshot(corpus(), { ...settings(), cloud });
+  assert.deepEqual((await verifyLiteratureWorkspaceSnapshot(JSON.parse(JSON.stringify(b)))).settings.cloud, cloud);
+  assert.equal(a.corpusHash, b.corpusHash); assert.equal(a.parameterHash, b.parameterHash); assert.notEqual(a.snapshotHash, b.snapshotHash);
+  const ar = await literatureWorkspaceReceipt(a), br = await literatureWorkspaceReceipt(b);
+  assert.deepEqual(ar.map, br.map); assert.deepEqual(ar.parameters, br.parameters);
+  const forged = structuredClone(b); forged.settings.cloud.shape = 'leaf';
+  await assert.rejects(verifyLiteratureWorkspaceSnapshot(forged), /指纹不一致/);
+  await assert.rejects(createLiteratureWorkspaceSnapshot(corpus(), { ...settings(), cloud: { ...cloud, unsafe: true } }));
+  const accessor = { ...settings() }; Object.defineProperty(accessor, 'cloud', { enumerable: true, get() { throw Error('do not execute'); } });
+  await assert.rejects(createLiteratureWorkspaceSnapshot(corpus(), accessor), /访问器/);
+  await assert.rejects(createLiteratureWorkspaceSnapshot(corpus(), { ...settings(), unknownAppearance: cloud }), /未知字段/);
 });
 
 test('receipt reproduces the existing map with actual normalization and never claims full-text review', async () => {

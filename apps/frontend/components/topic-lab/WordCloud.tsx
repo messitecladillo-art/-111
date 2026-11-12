@@ -6,24 +6,39 @@ import type { Theme } from '@/components/workbench/shell-kit';
 import type { TermMap } from '@/lib/topic-lab/network';
 import type { TermTrend } from '@/lib/topic-lab/trend';
 import { layoutCloud } from '@/lib/topic-lab/wordcloud';
+import { CLOUD_SHAPES, cloudShapeAspectRatio, cloudShapePath, type CloudAppearance } from '@/lib/topic-lab/cloud-shapes';
+import WordCloudAppearance from './WordCloudAppearance';
 import { ExportButton, Legend, MAX_CLUSTER_COLORS, SANS, Tip, clearMeasureCache, clusterColor, fmtInt, fmtYear, pct, textWidth, trendGlyph, trendText, useElementWidth, yearBins } from './shared';
 import styles from './TopicLab.module.css';
+import appearanceStyles from './WordCloudAppearance.module.css';
 
-type Props = { dataNote: string; map: TermMap; trends: Map<string, TermTrend>; theme: Theme; basket: string[]; onToggle: (key: string) => void; colorBy: 'cluster' | 'year'; clusterNames: string[] };
+type Props = { dataNote: string; map: TermMap; trends: Map<string, TermTrend>; theme: Theme; basket: string[]; onToggle: (key: string) => void; colorBy: 'cluster' | 'year'; clusterNames: string[]; appearance: CloudAppearance; onAppearanceChange: (value: CloudAppearance) => void; projectPalette?: { title: string; colors: readonly string[] } };
+const HEX = /^#[0-9a-f]{6}$/i;
+function luminance(color: string) {
+  const channels = [1, 3, 5].map(offset => Number.parseInt(color.slice(offset, offset + 2), 16) / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
+  return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+}
 
-export default function WordCloud({ dataNote, map, trends, theme, basket, onToggle, colorBy, clusterNames }: Props) {
+export default function WordCloud({ dataNote, map, trends, theme, basket, onToggle, colorBy, clusterNames, appearance, onAppearanceChange, projectPalette }: Props) {
   const [frameRef, width] = useElementWidth<HTMLDivElement>();
   const [fontsReady, setFontsReady] = useState(0);
   const [tip, setTip] = useState<{ key: string; x: number; y: number; w: number } | null>(null);
   const [table, setTable] = useState(false);
+  const [chartSurface, setChartSurface] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
   useEffect(() => {
     let alive = true;
     document.fonts?.ready.then(() => { if (alive) { clearMeasureCache(); setFontsReady(n => n + 1); } });
     return () => { alive = false; };
   }, []);
-  // A small vocabulary gets a shorter frame instead of floating in empty space.
-  const height = Math.round(Math.min(560, Math.max(300, width * .56 * Math.min(1, Math.sqrt(map.nodes.length / 90)))));
+  useEffect(() => {
+    if (frameRef.current && projectPalette) setChartSurface(getComputedStyle(frameRef.current).getPropertyValue('--wb-solid').trim());
+  }, [frameRef, theme, projectPalette]);
+  // Free layout preserves the previous viewport. Shaped layouts get room for their natural ratio.
+  const height = appearance.shape === 'free'
+    ? Math.round(Math.min(560, Math.max(300, width * .56 * Math.min(1, Math.sqrt(map.nodes.length / 90)))))
+    : Math.round(Math.min(720, Math.max(340, width / cloudShapeAspectRatio(appearance))));
+  const shapeName = CLOUD_SHAPES.find(shape => shape.id === appearance.shape)?.label ?? '自由布局';
   const { placed, dropped } = useMemo(() => {
     if (!width) return { placed: [], dropped: [] };
     void fontsReady;
@@ -31,31 +46,49 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
     const maxFont = Math.max(30, Math.min(64, width / 13));
     // Small vocabularies get a larger floor so the cloud fills its frame; the √ scaling is unchanged.
     const minFont = (width < 520 ? 11 : 12) + (items.length <= 60 ? 4 : 0);
-    return layoutCloud(items, { width, height, minFont, maxFont, padding: 3, measure: (t, s) => ({ w: textWidth(t, s), h: s * 1.08 }) });
-  }, [map, width, height, fontsReady]);
+    const shaped = appearance.shape !== 'free';
+    // Canvas width measures advances, while SVG fallback fonts may extend beyond the nominal em.
+    // Reserve extra bearings around shaped text so a glyph never touches the silhouette edge.
+    return layoutCloud(items, { width, height, minFont, maxFont, appearance, measure: (t, s) => ({ w: textWidth(t, s) + (shaped ? 2 : 0), h: s * (shaped ? 1.36 : 1.08) + (shaped ? 2 : 0) }) });
+  }, [map, width, height, fontsReady, appearance]);
+  const outlinePath = useMemo(() => width && appearance.shape !== 'free' && appearance.outline ? cloudShapePath(appearance, width, height) : '', [appearance, width, height]);
   const bins = useMemo(() => yearBins(theme, map.nodes.map(n => n.meanYear)), [theme, map]);
   const byKey = useMemo(() => new Map(map.nodes.map(n => [n.key, n])), [map]);
-  const color = (key: string) => { const n = byKey.get(key)!; return colorBy === 'year' && bins ? bins.color(n.meanYear) : clusterColor(theme, n.cluster); };
+  const palette = useMemo(() => {
+    if (colorBy !== 'cluster' || !projectPalette) return [];
+    const surface = luminance(HEX.test(chartSurface) ? chartSurface : theme === 'dark' ? '#212125' : '#fffefa');
+    return [...new Set(projectPalette.colors.filter(c => HEX.test(c)).map(c => c.toLowerCase()))].filter(c => {
+      const l = luminance(c); return (Math.max(l, surface) + .05) / (Math.min(l, surface) + .05) >= 4.5;
+    }).slice(0, MAX_CLUSTER_COLORS);
+  }, [chartSurface, colorBy, projectPalette, theme]);
+  const neutral = palette.length ? theme === 'dark' ? '#aeb9c4' : '#526272' : clusterColor(theme, -1);
+  const clusterInk = (id: number) => palette.length ? palette[id] ?? neutral : clusterColor(theme, id);
+  const color = (key: string) => { const n = byKey.get(key)!; return colorBy === 'year' && bins ? bins.color(n.meanYear) : clusterInk(n.cluster); };
   const tipNode = tip ? byKey.get(tip.key) : null;
   const ranked = useMemo(() => [...map.nodes].sort((a, b) => b.df - a.df || a.key.localeCompare(b.key)), [map]);
+  const clusterSlots = palette.length || MAX_CLUSTER_COLORS, groupedClusters = Math.max(0, clusterNames.length - clusterSlots), hasUnconnected = map.nodes.some(n => n.cluster < 0);
+  const sharedLabel = [groupedClusters ? `其余 ${groupedClusters} 组` : '', hasUnconnected ? '未共现' : ''].filter(Boolean).join('及');
+  const colorTitle = palette.length ? `关键词聚类 · ${projectPalette!.title}` : '关键词聚类';
   const legendItems = colorBy === 'cluster'
-    ? [...clusterNames.slice(0, MAX_CLUSTER_COLORS).map((name, i) => ({ color: clusterColor(theme, i), label: `${i + 1} ${name}` })), ...(clusterNames.length > MAX_CLUSTER_COLORS ? [{ color: clusterColor(theme, 99), label: `其余 ${clusterNames.length - MAX_CLUSTER_COLORS} 个小聚类` }] : []), ...(map.nodes.some(n => n.cluster < 0) ? [{ color: clusterColor(theme, -1), label: '未共现' }] : [])]
+    ? [...clusterNames.slice(0, clusterSlots).map((name, i) => ({ color: clusterInk(i), label: `${i + 1} ${name}` })), ...(sharedLabel ? [{ color: neutral, label: sharedLabel }] : [])]
     : bins ? bins.labels.map((l, i) => ({ color: bins.colors[i], label: l })) : [];
-  const exportCloud = () => { if (svgRef.current) exportSvgElement(svgRef.current, `关键词词云-${stamp()}.svg`, { title: '关键词词云', legend: legendItems, notes: [`字号按出现篇数的平方根缩放；颜色 = ${colorBy === 'cluster' ? '关键词聚类（Louvain）' : '平均发表年份'}。共 ${placed.length} 个词${dropped.length ? `，另有 ${dropped.length} 个低频词因版面不足未显示` : ''}。`, dataNote] }); };
+  const exportCloud = () => { if (svgRef.current && placed.length) exportSvgElement(svgRef.current, `关键词词云-${stamp()}.svg`, { title: '关键词词云', legend: legendItems, notes: [`字号随出现篇数增大；颜色 = ${colorBy === 'cluster' ? colorTitle : '平均发表年份'}。共 ${placed.length} 个词${dropped.length ? `，另有 ${dropped.length} 个词未能放入当前版面` : ''}。`, `形状：${shapeName}；方向：${appearance.shape === 'free' || appearance.shape === 'circle' ? '—' : appearance.orientation === 'horizontal' ? '横向' : '纵向'}；间距：${({ compact: '紧凑', standard: '标准', relaxed: '舒展' })[appearance.spacing]}。`, dataNote] }); };
 
   return <div ref={frameRef} className={styles.viewBody}>
     <div className={styles.viewTools}>
-      <p className={styles.viewNote}>字号按出现篇数的平方根缩放（同字数时面积与篇数成正比）；悬停查看精确数字，点击加入选题篮。</p>
+      <p className={styles.viewNote}>字号随出现篇数增大，点击词语可加入选题篮。</p>
       <div className={styles.toolCluster}>
-      {!table && <ExportButton onExport={exportCloud} />}
+      {!table && placed.length > 0 && <ExportButton onExport={exportCloud} />}
       <div className={styles.segmented} role="group" aria-label="词云呈现方式">
         <button type="button" aria-pressed={!table} onClick={() => setTable(false)}>词云</button>
         <button type="button" aria-pressed={table} onClick={() => setTable(true)}>表格</button>
       </div>
       </div>
     </div>
+    {!table && <WordCloudAppearance value={appearance} onChange={value => { setTip(null); onAppearanceChange(value); }} />}
     {!table && <div className={styles.cloudFrame} style={{ height: height || 360 }} onPointerLeave={() => setTip(null)}>
-      {width > 0 && <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`关键词词云：显示 ${placed.length} 个词，最大的是 ${ranked.slice(0, 5).map(n => n.label).join('、')}`}>
+      {width > 0 && <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`关键词词云：${shapeName}，显示 ${placed.length} 个词${placed.length ? `，较大的词有 ${placed.slice(0, 5).map(n => n.label).join('、')}` : ''}`}>
+        {outlinePath && <path className={appearanceStyles.outline} d={outlinePath} style={palette.length ? { stroke: palette[0] } : undefined} fillRule="evenodd" aria-hidden="true" />}
         {placed.map(w => {
           const inBasket = basket.includes(w.key);
           return <g key={w.key} className={styles.cloudWord} data-active={tip?.key === w.key || undefined} onPointerMove={e => { const r = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect(); setTip({ key: w.key, x: e.clientX - r.left, y: e.clientY - r.top, w: r.width }); }} onClick={() => onToggle(w.key)}>
@@ -64,6 +97,7 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
           </g>;
         })}
       </svg>}
+      {width > 0 && !placed.length && <div className={appearanceStyles.empty} role="status">当前尺寸放不下这些词。{appearance.shape !== 'free' && <button type="button" onClick={() => onAppearanceChange({ ...appearance, shape: 'free' })}>返回自由布局</button>}</div>}
       <Tip at={tip}>{tipNode && <>
         <strong>{tipNode.label}</strong>
         <span>出现于 {fmtInt(tipNode.df)} 篇（{pct(tipNode.df / map.totalDocs)}）</span>
@@ -76,15 +110,15 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
     </div>}
     {!table && <div className={styles.legendRow}>
       {colorBy === 'cluster'
-        ? <Legend title="颜色 = 关键词聚类" items={legendItems} />
+        ? <Legend title={`颜色 = ${colorTitle}`} items={legendItems} />
         : bins && <Legend title="颜色 = 平均发表年份" items={legendItems} />}
-      {dropped.length > 0 && <p className={styles.dropNote}>{dropped.length} 个低频词因版面不足未显示，见“表格”。</p>}
     </div>}
-    {table && <TermTable map={map} trends={trends} basket={basket} onToggle={onToggle} ranked={ranked} clusterNames={clusterNames} theme={theme} />}
+    {!table && (appearance.shape !== 'free' || dropped.length > 0) && <div className={appearanceStyles.status}><span>已显示 {placed.length} / {map.nodes.length} 个词{dropped.length > 0 ? ' · 可减少显示词数或改用更宽的轮廓' : ''}</span><button type="button" onClick={() => setTable(true)}>查看全部词频</button></div>}
+    {table && <TermTable map={map} trends={trends} basket={basket} onToggle={onToggle} ranked={ranked} clusterNames={clusterNames} theme={theme} clusterInk={clusterInk} />}
   </div>;
 }
 
-export function TermTable({ map, trends, basket, onToggle, ranked, clusterNames, theme }: { map: TermMap; trends: Map<string, TermTrend>; basket: string[]; onToggle: (key: string) => void; ranked: TermMap['nodes']; clusterNames: string[]; theme: Theme }) {
+export function TermTable({ map, trends, basket, onToggle, ranked, clusterNames, theme, clusterInk }: { map: TermMap; trends: Map<string, TermTrend>; basket: string[]; onToggle: (key: string) => void; ranked: TermMap['nodes']; clusterNames: string[]; theme: Theme; clusterInk?: (cluster: number) => string }) {
   return <div className={styles.tableWrap}>
     <table className={styles.table}>
       <caption>按出现篇数排序的前 {ranked.length} 个词（共 {fmtInt(map.totalDocs)} 篇记录）</caption>
@@ -93,7 +127,7 @@ export function TermTable({ map, trends, basket, onToggle, ranked, clusterNames,
         const t = trends.get(n.key), inBasket = basket.includes(n.key);
         return <tr key={n.key}>
           <td>{i + 1}</td><th scope="row">{n.label}</th><td>{fmtInt(n.df)}</td><td>{pct(n.df / map.totalDocs)}</td><td>{fmtYear(n.meanYear)}</td>
-          <td>{n.cluster >= 0 ? <><i className={styles.swatch} style={{ background: clusterColor(theme, n.cluster) }} />{n.cluster + 1} {clusterNames[n.cluster]}</> : '—'}</td>
+          <td>{n.cluster >= 0 ? <><i className={styles.swatch} style={{ background: clusterInk?.(n.cluster) ?? clusterColor(theme, n.cluster) }} />{n.cluster + 1} {clusterNames[n.cluster]}</> : '—'}</td>
           <td title={trendText(t)}>{trendGlyph(t)} {t ? (t.signal === 'insufficient' ? '样本不足' : t.signal === 'rising' ? '显著上升' : t.signal === 'falling' ? '显著下降' : '无显著变化') : '—'}</td>
           <td><button type="button" className={styles.linkButton} aria-pressed={inBasket} onClick={() => onToggle(n.key)}>{inBasket ? '移出选题篮' : '加入选题篮'}<span className={styles.srOnly}>：{n.label}</span></button></td>
         </tr>;

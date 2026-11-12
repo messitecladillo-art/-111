@@ -10,6 +10,7 @@ import * as network from '../lib/topic-lab/network.ts';
 import * as burst from '../lib/topic-lab/burst.ts';
 import * as trend from '../lib/topic-lab/trend.ts';
 import * as evaluate from '../lib/topic-lab/evaluate.ts';
+import * as cloudShapes from '../lib/topic-lab/cloud-shapes.ts';
 
 const ts = createRequire(import.meta.url)('typescript');
 const compiled = ts.transpileModule(fs.readFileSync(new URL('../components/topic-lab/TopicLab.tsx', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -27,6 +28,7 @@ function mount(snapshot, overrides = {}) {
   };
   const jsx = (type, props) => ({ type, props });
   const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/data/award-cases': { awardCases: [] }, '@/components/workbench/shell-kit': { useWorkbenchTheme: () => 'light' }, '@/lib/topic-lab/workspace': { ...workspace, createLiteratureWorkspaceSnapshot: (c, s) => workspace.createLiteratureWorkspaceSnapshot(structuredClone(c), structuredClone(s)), ...overrides }, '@/lib/topic-lab/parse': parse, '@/lib/topic-lab/terms': terms, '@/lib/topic-lab/network': network, '@/lib/topic-lab/burst': burst, '@/lib/topic-lab/trend': trend, '@/lib/topic-lab/evaluate': evaluate, './shared': { fmtInt: String, pct: String } };
+  imports['@/lib/topic-lab/cloud-shapes'] = cloudShapes;
   const exports = {}; vm.runInNewContext(compiled, { exports, require: name => imports[name] ?? { default: name }, TextDecoder, TextEncoder, Map, Set });
   async function turn() { if (dirty) { cursor = 0; dirty = false; tree = exports.default(props); while (effects.length) effects.shift()(); } await new Promise(r => setImmediate(r)); }
   async function settle() { for (let n = 0; n < 40; n++) await turn(); }
@@ -68,5 +70,26 @@ test('a late hash cannot publish the previous project after restoration changes'
   await screen.waitFor(() => screen.restored('Synthetic beta.ris'), 'project B snapshot restoration before resolving the old hash');
   pending.resolve(a); await screen.settle();
   assert.match(text(screen.tree), /Synthetic beta.ris/); assert.ok(screen.published.every(s => s.corpusHash !== a.corpusHash));
+  screen.unmount();
+});
+
+test('shape editing survives snapshot recovery, and switching project restores the other project shape', async () => {
+  const make = async (name, shape) => {
+    const records = parse.parseLiterature(`TY  - JOUR\nTI  - ${name}\nPY  - 2024\nKW  - synthetic\nKW  - quality\nKW  - service\nER  -`).records;
+    return workspace.createLiteratureWorkspaceSnapshot({ kind: 'import', lists: [records], files: [{ name, format: 'ris', records: 1, skipped: 0, warnings: [] }] }, { ...workspace.DEFAULT_LITERATURE_SETTINGS, source: 'keywords', minDf: 1, cloud: { ...cloudShapes.DEFAULT_CLOUD_APPEARANCE, shape } });
+  };
+  const a = await make('Synthetic shape A', 'crayfish'), b = await make('Synthetic shape B', 'circle'), screen = mount(a);
+  const cloud = () => walk(screen.tree).find(n => n.type === './WordCloud');
+  await screen.waitFor(() => cloud()?.props.appearance.shape === 'crayfish', 'project A shape');
+  cloud().props.onAppearanceChange({ ...cloud().props.appearance, shape: 'leaf' });
+  await screen.waitFor(() => screen.published.some(s => s.settings.cloud?.shape === 'leaf'), 'leaf appearance snapshot');
+  const saved = screen.published.findLast(s => s.settings.cloud?.shape === 'leaf');
+  assert.equal(saved.parameterHash, a.parameterHash);
+  screen.change({ initialSnapshot: b });
+  await screen.waitFor(() => cloud()?.props.appearance.shape === 'circle', 'project B isolated shape');
+  screen.change({ initialSnapshot: saved });
+  await screen.waitFor(() => cloud()?.props.appearance.shape === 'leaf', 'restored A shape');
+  walk(screen.tree).find(n => n.type === 'button' && text(n) === '清除').props.onClick();
+  await screen.waitFor(() => screen.published.some(s => s.corpus === null && !s.settings.cloud), 'clear resets custom appearance');
   screen.unmount();
 });

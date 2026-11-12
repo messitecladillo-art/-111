@@ -5,12 +5,13 @@ import { buildTermIndex, defaultSource, parseThesaurus, type TermSource } from '
 import { buildTermMap } from './network.ts';
 import { paperGraph } from './papers.ts';
 import { keywordBursts } from './burst.ts';
+import { parseCloudAppearance, type CloudAppearance } from './cloud-shapes.ts';
 
 export const MAX_LITERATURE_WORKSPACE_BYTES = 80 * 1024 * 1024;
 export type LiteratureFileReport = { name: string; format: LitFormat | 'unknown'; records: number; skipped: number; warnings: string[] };
 export type LiteratureCorpus = { kind: 'import' | 'library'; lists: LitRecord[][]; files: LiteratureFileReport[] };
 export type LiteratureView = 'cloud' | 'map' | 'burst' | 'papers' | 'timeline' | 'studio';
-export type LiteratureSettings = { source: TermSource | null; minDf: number; maxTerms: number; resolution: number; colorBy: 'cluster' | 'year'; thesaurus: string; gamma: number; view: LiteratureView; basket: string[] };
+export type LiteratureSettings = { source: TermSource | null; minDf: number; maxTerms: number; resolution: number; colorBy: 'cluster' | 'year'; thesaurus: string; gamma: number; view: LiteratureView; basket: string[]; cloud?: CloudAppearance };
 export type LiteratureWorkspaceSnapshot = { schema: 'literature-workspace/v1'; corpus: LiteratureCorpus | null; settings: LiteratureSettings; corpusHash: string; parameterHash: string; snapshotHash: string };
 export type LiteratureEvidenceReference = { schema: 'literature-evidence/v1'; classification: 'metadata_analysis'; corpusHash: string; parameterHash: string; snapshotHash: string; sourceIds: string[]; selectedTerms: string[] };
 export const DEFAULT_LITERATURE_SETTINGS: LiteratureSettings = { source: null, minDf: 2, maxTerms: 100, resolution: 1, colorBy: 'cluster', thesaurus: '', gamma: 1, view: 'cloud', basket: [] };
@@ -18,10 +19,10 @@ const FORMATS = ['wos', 'ris', 'bibtex', 'refworks', 'endnote', 'library'];
 const SOURCES = ['keywords', 'keywords+plus', 'title', 'title+abstract'];
 const VIEWS = ['cloud', 'map', 'burst', 'papers', 'timeline', 'studio'];
 const fail = (message: string): never => { throw Error(`文献工作区：${message}`); };
-function object(value: unknown, keys: string[]): Record<string, unknown> {
+function object(value: unknown, keys: string[], optional: string[] = []): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) return fail('对象格式无效。');
   const descriptors = Object.getOwnPropertyDescriptors(value);
-  if (Reflect.ownKeys(descriptors).length !== keys.length || Reflect.ownKeys(descriptors).some(key => typeof key !== 'string' || !keys.includes(key) || !descriptors[key].enumerable || !Object.hasOwn(descriptors[key], 'value'))) return fail('包含未知字段或访问器。');
+  if (keys.some(key => !Object.hasOwn(descriptors, key)) || Reflect.ownKeys(descriptors).some(key => typeof key !== 'string' || !keys.includes(key) && !optional.includes(key) || !descriptors[key].enumerable || !Object.hasOwn(descriptors[key], 'value'))) return fail('包含未知字段或访问器。');
   return value as Record<string, unknown>;
 }
 function array<T>(value: unknown, parse: (v: unknown) => T): T[] {
@@ -46,10 +47,10 @@ function record(value: unknown): LitRecord {
   return parsed;
 }
 function settings(value: unknown): LiteratureSettings {
-  const s = object(value, ['source', 'minDf', 'maxTerms', 'resolution', 'colorBy', 'thesaurus', 'gamma', 'view', 'basket']);
+  const s = object(value, ['source', 'minDf', 'maxTerms', 'resolution', 'colorBy', 'thesaurus', 'gamma', 'view', 'basket'], ['cloud']);
   const basket = array(s.basket, text);
   if (new Set(basket).size !== basket.length) return fail('选题篮中存在重复词。');
-  return { source: s.source === null ? null : enumeration<TermSource>(s.source, SOURCES), minDf: number(s.minDf, 1, 20000), maxTerms: number(s.maxTerms, 1, 200), resolution: number(s.resolution, .1, 5, false), colorBy: enumeration<'cluster' | 'year'>(s.colorBy, ['cluster', 'year']), thesaurus: text(s.thesaurus), gamma: number(s.gamma, .1, 10, false), view: enumeration<LiteratureView>(s.view, VIEWS), basket };
+  return { source: s.source === null ? null : enumeration<TermSource>(s.source, SOURCES), minDf: number(s.minDf, 1, 20000), maxTerms: number(s.maxTerms, 1, 200), resolution: number(s.resolution, .1, 5, false), colorBy: enumeration<'cluster' | 'year'>(s.colorBy, ['cluster', 'year']), thesaurus: text(s.thesaurus), gamma: number(s.gamma, .1, 10, false), view: enumeration<LiteratureView>(s.view, VIEWS), basket, ...(Object.hasOwn(s, 'cloud') ? { cloud: parseCloudAppearance(s.cloud) } : {}) };
 }
 function corpus(value: unknown): LiteratureCorpus | null {
   if (value === null) return null;

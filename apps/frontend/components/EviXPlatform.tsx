@@ -1,4 +1,5 @@
 "use client";
+import type { ChartThemeId } from '@/lib/chart-types';
 
 import {
   FormEvent,
@@ -338,7 +339,7 @@ async function apiRequest(path: string, init?: RequestInit) {
   }
 }
 
-export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,literature,onLiterature}:{onBriefSource?:(source:DiagnosisBriefSource|null)=>void;incomingSource?:DiagnosisBriefSource|null;requestedMode?:{id:string;mode:'advisor'|'readiness'|'topics'};literature?:LiteratureWorkspaceSnapshot|null;onLiterature?:(snapshot:LiteratureWorkspaceSnapshot|null)=>void}={}) {
+export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,literature,onLiterature,projectPaletteId}:{onBriefSource?:(source:DiagnosisBriefSource|null)=>void;incomingSource?:DiagnosisBriefSource|null;requestedMode?:{id:string;mode:'advisor'|'readiness'|'topics'};literature?:LiteratureWorkspaceSnapshot|null;onLiterature?:(snapshot:LiteratureWorkspaceSnapshot|null)=>void;projectPaletteId?:ChartThemeId}={}) {
   const theme = useWorkbenchTheme();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -435,7 +436,7 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
       </div>
       {pendingSource&&<div className="hosted-notice" role="status"><p>有新的研究简介。载入后将替换当前表单。</p><button type="button" className="secondary-button" onClick={()=>{const source=pendingIncoming.current;if(source)loadIncoming(source);}}>载入新研究简介</button></div>}
       <div role="tabpanel" id="dg-panel-advisor" aria-labelledby="dg-tab-advisor" hidden={mode!=="advisor"}><TopicAdvisor onUseTopic={applyTopic} renderEnhancement={context=><TopicModelProposal {...context} catalogVersion={topicCatalog.contentVersion} onUseTopic={applyTopic}/>}/></div>
-      <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic} initialSnapshot={literature} onSnapshot={onLiterature}/>}</div>
+      <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic} initialSnapshot={literature} onSnapshot={onLiterature} projectPaletteId={projectPaletteId}/>}</div>
       <div role="tabpanel" id="dg-panel-readiness" aria-labelledby="dg-tab-readiness" hidden={mode!=="readiness"}>
       <div className="diagnose-grid">
         <form className="diagnose-form" onSubmit={submit} onCompositionStart={()=>{manualEdit.current=true;}} aria-busy={submitting}>
@@ -764,7 +765,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} projectId={projectId} />,
       silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{if(!currentScope())return;handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
       design: <QuestionnaireStudio key={`${workspaceScope}:${benchmarkEpoch}`} initialDesign={exchange.design?.design??null} localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={designChanged} onAnalyze={snapshot=>{if(!currentScope())return;handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
-      diagnose: <DiagnosisPanel incomingSource={topicInput?.scope===workspaceScope?topicInput.source:null} requestedMode={diagnosisMode?.scope===workspaceScope?diagnosisMode:undefined} literature={exchange.literature} onLiterature={receiveLiterature} onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
+      diagnose: <DiagnosisPanel projectPaletteId={report?.visualStyle?.paletteId} incomingSource={topicInput?.scope===workspaceScope?topicInput.source:null} requestedMode={diagnosisMode?.scope===workspaceScope?diagnosisMode:undefined} literature={exchange.literature} onLiterature={receiveLiterature} onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
