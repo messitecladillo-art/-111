@@ -53,11 +53,15 @@ class WorkflowState:
     summary: str = ""
     revision: int = 0
     agent_outputs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Application-owned routing metadata. Never passed to a specialist's prompt.
+    model_bindings: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
         value["status"] = self.status.value
         value["current_role"] = self.current_role.value if self.current_role else None
+        if self.model_bindings is None:
+            value.pop("model_bindings")
         return value
 
     @classmethod
@@ -171,7 +175,8 @@ def _copy_state(state: WorkflowState) -> WorkflowState:
             raise ValueError("Invalid workflow position")
         if (not isinstance(copied.requirements, dict) or not isinstance(copied.context, dict)
                 or not isinstance(copied.constraints, dict) or not isinstance(copied.retry_count, dict)
-                or not isinstance(copied.agent_outputs, dict)):
+                or not isinstance(copied.agent_outputs, dict)
+                or (copied.model_bindings is not None and not isinstance(copied.model_bindings, dict))):
             raise ValueError("Invalid workflow data")
         for values in (copied.input_artifact_refs, copied.artifact_refs, copied.evidence_refs,
                        copied.unresolved_questions, copied.errors):

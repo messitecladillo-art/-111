@@ -5,8 +5,10 @@ from shared.contracts import integer, text, uuid_string
 from infrastructure.database.models import AgentTask, AgentTaskExecution, Team, now
 from multi_agent.workflow.orchestrator import WorkflowError, WorkflowState, create_workflow
 from application.services.agent_task_execution import DurableTaskExecution, execution_view, latest_execution, visible_task
+from application.agent_model_bindings import freeze_model_bindings, validate_frozen_model_bindings, validate_role_bindings
 
 def _view(row: AgentTask) -> dict:
+    validate_frozen_model_bindings(row.state.get('model_bindings'), owner_id=row.created_by, task_type=row.task_type)
     return {'id': row.id, 'projectId': row.project_id, 'taskType': row.task_type, 'status': row.status, 'revision': row.revision, 'state': row.state, 'createdAt': row.created_at.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z'), 'updatedAt': row.updated_at.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')}
 
 def _save(row: AgentTask, state: WorkflowState) -> None:
@@ -17,10 +19,32 @@ def _save(row: AgentTask, state: WorkflowState) -> None:
 
 class AgentTaskService:
 
-    def __init__(self, *, owned_project, workflow_engine):
+    def __init__(self, *, owned_project, workflow_engine, owned_service=None):
         self.owned_project = owned_project
         self.workflow_engine = workflow_engine
-        self.execution = DurableTaskExecution(load=self.load, save=_save, view=_view, engine=workflow_engine)
+        self.owned_service = owned_service
+        self.execution = DurableTaskExecution(load=self.load, save=_save, view=_view, engine=workflow_engine,
+                                             before_dispatch=self._validate_dispatch_models)
+
+    def _service_resolver(self, session, user, *, lock=False):
+        def resolve(service_id):
+            if self.owned_service is None:
+                raise ApiError(409, 'model_service_unavailable', '模型服务尚未接入此任务。')
+            service = self.owned_service(session, user, service_id, lock=lock)
+            # A Session can retain a previously loaded object. Validate the
+            # current row while its lock is held, not an identity-map snapshot.
+            if lock:
+                session.refresh(service)
+            return service
+        return resolve
+
+    def _validate_dispatch_models(self, session, user, row, role):
+        snapshot = row.state.get('model_bindings')
+        if snapshot is None:
+            return
+        validate_frozen_model_bindings(snapshot, owner_id=row.created_by, task_type=row.task_type)
+        validate_role_bindings(snapshot, owner_id=user.id, role=role,
+                               resolve_service=self._service_resolver(session, user, lock=True))
 
     def load(self, *, session, user, project_id, task_id, lock=False):
         uuid_string(task_id)
@@ -36,6 +60,7 @@ class AgentTaskService:
         row = session.execute(query.execution_options(populate_existing=True)).scalar_one_or_none()
         if row is None:
             raise ApiError(404, 'not_found', '任务不存在。')
+        validate_frozen_model_bindings(row.state.get('model_bindings'), owner_id=row.created_by, task_type=row.task_type)
         return row
 
     async def create_task(self, *, project_id: str, user, session, data):
@@ -51,6 +76,11 @@ class AgentTaskService:
             state = create_workflow(project_id=project_id, task_type=text(data['taskType'], 32, 1), requirements=data['requirements'], context=context, input_artifact_refs=refs, constraints=constraints)
         except WorkflowError as exc:
             raise ApiError(422, 'invalid_task', str(exc)) from None
+        if 'modelPlan' in data:
+            if data['modelPlan'] is None:
+                raise ApiError(422, 'invalid_model_plan', '请提供完整的模型分工配置。')
+            state.model_bindings = freeze_model_bindings(data['modelPlan'], owner_id=user.id,
+                task_type=state.task_type, resolve_service=self._service_resolver(session, user))
         row = AgentTask(id=state.task_id, project_id=project_id, created_by=user.id, task_type=state.task_type, status=state.status.value, state=state.to_dict(), revision=0)
         session.add(row)
         session.commit()

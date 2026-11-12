@@ -71,8 +71,9 @@ def visible_task(view, row, execution):
 
 
 class DurableTaskExecution:
-    def __init__(self, *, load, save, view, engine):
+    def __init__(self, *, load, save, view, engine, before_dispatch=None):
         self.load, self.save, self.view, self.engine = load, save, view, engine
+        self.before_dispatch = before_dispatch
 
     def _reply(self, row, execution):
         return visible_task(self.view, row, execution)
@@ -128,6 +129,11 @@ class DurableTaskExecution:
             reply = self._reply(row, previous)
             session.commit()
             return reply
+
+        # Existing receipts and no-dispatch transitions remain readable without
+        # a live model configuration. Validate only a new, actual role claim.
+        if self.before_dispatch is not None:
+            self.before_dispatch(session, user, row, prepared.role)
 
         frozen = prepared.state.to_dict()
         started = now()

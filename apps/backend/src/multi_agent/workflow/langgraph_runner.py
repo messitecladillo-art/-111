@@ -26,6 +26,7 @@ class _State(TypedDict, total=False):
     summary: str
     revision: int
     agent_outputs: dict[str, dict[str, Any]]
+    model_bindings: dict[str, Any] | None
 
 
 class LangGraphRunner:
