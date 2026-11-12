@@ -142,7 +142,7 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
               {run.writing.formulas.map((tex, i) => <Formula key={i} tex={tex} copyable={false} compact />)}
               <p className={styles.where}><Prose text={run.writing.where} /></p>
               <p className={styles.caption}>{run.writing.table.caption}</p>
-              <div className={styles.tableWrap}><table><thead><tr>{run.writing.table.headers.map(h => <th key={h} scope="col">{h}</th>)}</tr></thead>
+              <div className={styles.tableWrap}><table><thead><tr>{run.writing.table.headers.map(h => { const n = /（n = \d+）$/u.exec(h)?.[0]; return <th key={h} scope="col">{n ? <>{h.slice(0, -n.length)}<span className={styles.headN}>{n}</span></> : h}</th>; })}</tr></thead>
                 <tbody>{run.writing.table.rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}</tbody></table></div>
               <p className={styles.tableNote}><Prose text={run.writing.table.note} /></p>
               {figure && <div className={styles.figure} role="img" aria-label={`${run.title}的图`} dangerouslySetInnerHTML={{ __html: figure }} />}

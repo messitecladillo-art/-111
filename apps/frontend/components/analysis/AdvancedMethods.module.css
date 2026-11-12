@@ -1,5 +1,5 @@
 /* 高级方法: method tiles, then the setup beside the write-up as the report will print it. */
-.panel { display: grid; gap: 16px; }
+.panel { display: grid; gap: 16px; container-type: inline-size; }
 .methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
 .method { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--wb-line); border-radius: var(--wb-radius, 10px); background: var(--wb-solid); color: var(--wb-text); text-align: left; cursor: pointer; }
 .method b { font-size: 14px; font-weight: 650; }
@@ -22,12 +22,19 @@
 .caption { text-align: center; font-weight: 600; }
 .tableWrap { overflow-x: auto; }
 .tableWrap table { width: 100%; border-collapse: collapse; border-top: 1.5px solid var(--wb-text); border-bottom: 1.5px solid var(--wb-text); font-size: 13px; }
-.tableWrap th { padding: 6px 8px; border-bottom: 1px solid var(--wb-text); font-weight: 600; text-align: center; white-space: nowrap; }
-.tableWrap td { padding: 5px 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.tableWrap th { padding: 6px 8px; border-bottom: 1px solid var(--wb-text); font-weight: 600; text-align: center; vertical-align: bottom; line-height: 1.45; }
+/* A group's size takes the header's last line, as in the LaTeX table, kept whole; a long group name may wrap above it. */
+.headN { display: block; color: var(--wb-muted); font-size: 12px; font-weight: 400; white-space: nowrap; }
+.tableWrap td { padding: 5px 8px; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Row labels may wrap, but never below a readable width; the numbers beside them keep to one line. */
+.tableWrap td:first-child { min-width: 9em; white-space: normal; line-height: 1.5; }
 .tableWrap td:first-child, .tableWrap th:first-child { text-align: left; }
 .figure { overflow: hidden; border: 1px solid var(--wb-line); border-radius: 8px; background: #fff; }
 .figure svg { display: block; width: 100%; height: auto; }
 .actions { display: flex; gap: 12px; align-items: center; justify-content: space-between; color: var(--wb-muted); font-size: 12.5px; }
 .error { color: var(--wb-danger, #b42318) !important; }
 .notice { color: var(--wb-accent) !important; font-size: 13px !important; }
+/* The write-up needs the room of a report page: beside the setup only when the panel itself is wide enough (the page
+   may be wide while the panel sits beside the sidebar), otherwise below it. */
+@container (max-width: 1080px) { .body { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .body { grid-template-columns: 1fr; } }
