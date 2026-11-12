@@ -61,6 +61,11 @@ const DESCRIPTION: Record<ResearchStageId, string> = {
   defense: '围绕现有证据准备讲述与追问。',
 };
 const CHECKPOINTS = new Set<ResearchStageId>(['topic', 'questionnaire', 'collection', 'export']);
+const DIRECTIONS = [
+  ['地方特产', '想研究家乡特产的消费人群、购买顾虑和品牌选择。'],
+  ['青年就业', '想研究年轻人的就业选择，以及他们需要什么支持。'],
+  ['AI 与学习', '想研究大学生使用 AI 后的学习习惯与实际体验。'],
+] as const;
 
 /** Controlled view: project state, model routing, execution and persistence belong to the Agent host. */
 export default function ResearchJourney({ direction, onDirectionChange, onStart, steps, services, modelRoutes, defaultServiceId,
@@ -99,7 +104,9 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
           const explicit = route?.selectedServiceId ?? null;
           const selectedMissing = !!explicit && !eligible.some(service => service.id === explicit);
           const effective = services.find(service => service.id === route?.effectiveServiceId);
-          return <div className={styles.modelRow} key={call}>
+          return <details className={styles.modelSettings} key={call}>
+            <summary data-missing={!effective}><span><strong>{definition.label}</strong>{effective ? `${effective.label}${route?.source === 'step' ? ' · 本步指定' : ' · 继承设置'}` : servicesLoading ? '正在读取模型…' : route?.source === 'stale_selection' ? '原选择已不可用，请重新选择' : '尚未选择可用模型'}</span><span aria-hidden="true">⌄</span></summary>
+            <div className={styles.modelRow}>
             <label htmlFor={`${id}-${call}`}>{definition.label}</label>
             <select id={`${id}-${call}`} value={explicit ?? ''} disabled={disabled || busy || servicesLoading || step.status === 'skipped'}
               aria-invalid={selectedMissing || route?.source === 'stale_selection' || undefined} aria-describedby={`${id}-${call}-effective`}
@@ -112,7 +119,8 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
               {servicesLoading ? '正在读取模型…' : effective ? `${effective.label}${route?.source === 'step' ? ' · 本步指定' : ' · 继承设置'}`
                 : route?.source === 'stale_selection' ? '原选择已不可用，请重新选择' : '尚未选择可用模型'}
             </p>
-          </div>;
+            </div>
+          </details>;
         })}</div> : <p className={styles.execution}>{stage.execution === 'deterministic' ? '本地处理 · 无需模型' : stage.execution === 'manual' ? '真实材料 · 人工参与' : '自动流程待接入'}</p>}
         {step.actionLabel && onStepAction && step.status !== 'skipped' && <button type="button" className={styles.stepAction}
           disabled={disabled || busy || step.status === 'running'} onClick={() => onStepAction(step.id)}>{step.actionLabel}<span aria-hidden="true">→</span></button>}
@@ -122,8 +130,8 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
 
   return <section className={styles.journey} aria-labelledby={`${id}-title`} aria-busy={busy}>
     <header className={styles.header}>
-      <div><h2 id={`${id}-title`}>研究路线</h2><p>从一个方向开始，逐步把问题变成有依据的成果。</p></div>
-      <button type="button" className={styles.textButton} onClick={onOpenSettings}>模型配置</button>
+      <div><span className={styles.eyebrow}>证见 · 研究助手</span><h1 id={`${id}-title`}>从一个想法，<br />走向有据可循的发现。</h1><p>告诉证见你的方向，一起找证据、做研究。</p></div>
+      <svg className={styles.researchMark} viewBox="0 0 120 120" fill="none" aria-hidden="true"><path d="M60 8 111 37v46l-51 29L9 83V37L60 8Z" /><path d="m60 26 35 20v37L60 103 25 83V46l35-20Z" /><path d="m60 43 21 12v25L60 92 39 80V55l21-12Z" /><path d="M9 37 60 66l51-29M60 66v46M25 46l35 20 35-20" /><circle cx="60" cy="66" r="5" /></svg>
     </header>
 
     <form className={styles.intake} onSubmit={submit}>
@@ -140,13 +148,15 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
           {defaultMissing && <option value={defaultServiceId!} disabled>原模型已不可用</option>}
           {services.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
         </select></label>
+        <button className={styles.textButton} type="button" onClick={onOpenSettings}>管理模型</button>
         <button className={styles.primary} type="submit" disabled={busy || disabled || !direction.trim()}>{busy ? '正在推进…' : '开始推进'}</button>
       </div>
     </form>
+    {!direction && <div className={styles.suggestions} role="group" aria-label="试试这些研究方向">{DIRECTIONS.map(([label, text]) => <button key={label} type="button" disabled={busy || disabled} onClick={() => onDirectionChange(text)}>{label}<span aria-hidden="true">↗</span></button>)}</div>}
     {afterIntake && <div className={styles.intakeOutput}>{afterIntake}</div>}
 
     <div className={styles.planHeading}>
-      <p aria-live="polite">{complete > 0 ? `已完成 ${complete} / ${planned} 步` : `${planned} 个研究步骤`}</p>
+      <p aria-live="polite"><b>研究路线</b>{complete > 0 ? `已完成 ${complete} / ${planned} 步` : `${planned} 个步骤`}</p>
       {(onEditPlan || steps.some(step => step.optional)) && <details className={styles.planEditor}><summary>调整路线</summary><div className={styles.planOptions}>
         {onEditPlan && <button type="button" className={styles.textButton} onClick={onEditPlan}>编辑研究计划</button>}
         {steps.filter(step => step.optional).map(step => <label key={step.id}><input type="checkbox" checked={step.status !== 'skipped'} disabled={disabled || busy || !onToggleOptional}

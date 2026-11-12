@@ -48,6 +48,11 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
   const scopeHeader = useRef<HTMLElement>(null);
   const reviewOutput = useRef<HTMLDivElement>(null);
   const pageText = useRef<HTMLTextAreaElement>(null);
+  const evidenceOutput = useRef<HTMLElement>(null);
+  const matrixOutput = useRef<HTMLElement>(null);
+  const topicsOutput = useRef<HTMLElement>(null);
+  const viewTabs = useRef<Partial<Record<Tab, HTMLButtonElement>>>({});
+  const pendingFocus = useRef<Tab | 'review' | null>(null);
   const upload = useRef<AbortController | null>(null);
   const reattach = useRef<string | null>(null);
   const urls = useRef(new Map<string, string>());
@@ -75,6 +80,25 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
   const locked = disabled || !!reading;
   const scopeConfirmed = confirmedScope?.value === value && confirmedScope.direction === direction.trim();
 
+  function focusOutput(target: Tab | 'review') {
+    const node = target === 'evidence' ? pageText.current ?? evidenceOutput.current
+      : target === 'matrix' ? matrixOutput.current : target === 'review' ? reviewOutput.current ?? topicsOutput.current : topicsOutput.current;
+    node?.focus({ preventScroll: true });
+    node?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }
+
+  useLayoutEffect(() => {
+    const target = pendingFocus.current;
+    if (!target) return;
+    pendingFocus.current = null;
+    focusOutput(target);
+  });
+
+  function showView(next: Tab, target: Tab | 'review' = next) {
+    if (tab === next) focusOutput(target);
+    else { pendingFocus.current = target; setTab(next); }
+  }
+
   function revise(next: LiteratureStudy) {
     const { executedFor: _pastRun, ...input } = next;
     void _pastRun;
@@ -84,7 +108,7 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
   function navigatePaper(next: StudyPaper, selectedPage = next.pages[0]?.page ?? 0) {
     setPaperId(next.id);
     setPageNumber(selectedPage);
-    setQuote('');
+    if (next.id !== paper?.id || selectedPage !== page?.page) setQuote('');
     setHighlight('');
   }
 
@@ -93,7 +117,7 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
     if (!source) return;
     navigatePaper(source, entry.page);
     setHighlight(entry.id);
-    setTab('evidence');
+    showView('evidence');
   }
 
   function attachOriginal(file: File, sourceId: string) {
@@ -194,6 +218,7 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
       onChange(parseLiteratureStudy({ ...value, executedFor: direction.trim() }));
       setRole('reviewer');
       setTab('topics');
+      pendingFocus.current = 'review';
       setError('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : '无法运行本轮分析。'); }
   }
@@ -208,14 +233,13 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
       const evidence = value.evidence.find(item => stage?.artifactIds.includes(item.id));
       if (evidence) { openEvidence(evidence); return; }
     }
-    setTab(selectedRole.tab);
-    if (selectedRole.id === 'reviewer') requestAnimationFrame(() => reviewOutput.current?.focus());
+    showView(selectedRole.tab, selectedRole.id === 'reviewer' ? 'review' : selectedRole.tab);
   }
 
   return <section className={styles.workbench} aria-label="选题与文献研究" aria-describedby={`${id}-mode`}>
     <header className={styles.header} ref={scopeHeader} tabIndex={-1} aria-label="研究范围">
-      <div><span className={styles.kicker}>EVI-X · 文献研究</span><h3>从原文证据到候选选题</h3>
-        <p>{direction.trim() || '在研究路线中填写方向，随后导入两篇相关文献。'}</p></div>
+      <div><span className={styles.kicker}>文献研究</span><h3>让选题有据可循</h3>
+        <p>{direction.trim() || '先在研究路线中填写一个方向。'}</p></div>
       <label className={styles.field}>领域
         <select value={value.domain} disabled={locked} onChange={event => revise({ ...value, domain: event.target.value as StudyDomain })}>
           {Object.entries(domains).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
@@ -223,32 +247,29 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
       </label>
     </header>
 
-    <div className={styles.team} role="group" aria-label="文献研究团队">
-      {roles.map((item, index) => {
-        const receipt = result?.stages.find(entry => entry.id === item.id);
-        const status = receipt?.status === 'done' ? '已完成' : receipt?.status === 'blocked' ? '待补充' : '待执行';
-        return <button className={styles.member} type="button" key={item.id} aria-pressed={role === item.id} onClick={() => setRole(item.id)}>
-          <span aria-hidden="true" className={styles.avatar} style={{ backgroundPosition: `${index * 25}% center` }} />
-          <strong>{item.name}</strong><span className={styles.domain}>{domains[value.domain]}</span>
-          <small data-status={receipt?.status ?? 'waiting'}>{status}</small>
-        </button>;
-      })}
+    <div className={styles.import}>
+      <div className={styles.materialStats}><span><strong>{value.papers.length}</strong> 篇文献</span><span><strong>{value.evidence.length}</strong> 条原文证据</span>{executed && <span><strong>{result?.candidates.length ?? 0}</strong> 个候选选题</span>}</div>
+      <input type="file" accept="application/pdf,.pdf" ref={input} hidden aria-label="导入文献 PDF 文件" onChange={event => void importPdf(event)} />
+      <button type="button" className={!value.papers.length ? styles.primary : undefined} disabled={locked} onClick={() => { reattach.current = null; input.current?.click(); }}><span aria-hidden="true">＋</span>导入文献 PDF</button>
     </div>
-    <div className={styles.handoff} aria-label={`${selectedRole.name}工作回执`}>
-      <div><strong>{selectedRole.name}</strong><p>{stage?.summary ?? selectedRole.task}</p>
-        {stage?.status === 'done' && <small>{selectedRole.id === 'reviewer' ? `已核对 ${stage.artifactIds.length} 项` : `已交付 ${stage.artifactIds.length} 项`} · 交给{roles[roles.indexOf(selectedRole) + 1]?.name ?? '用户确认'}</small>}</div>
-      <button type="button" onClick={showOutput}>{selectedRole.output}</button>
+    <div className={styles.runControls}>
+      {!!value.papers.length && !executed ? <label className={styles.scope}><input type="checkbox" checked={scopeConfirmed}
+        disabled={locked || !direction.trim()} onChange={event => setConfirmedScope(event.target.checked ? { value, direction: direction.trim() } : null)} />
+        已确认文献与当前研究方向相关</label> : <p id={`${id}-mode`} className={styles.mode}>本地规则分析 · 摘录由你确认 · 选题等待采纳</p>}
+      <button type="button" className={value.papers.length ? styles.primary : undefined} disabled={locked || !value.papers.length || (!scopeConfirmed && !executed) || !direction.trim()} onClick={run}>运行文献选题分析<span aria-hidden="true"> →</span></button>
     </div>
-
+    {!!value.papers.length && !executed && <p id={`${id}-mode`} className={styles.mode}>本地规则分析 · 摘录由你确认 · 选题等待采纳</p>}
     <div className={styles.toolbar}>
-      <div role="group" aria-label="文献研究视图" className={styles.tabs}>
-        {tabs.map(item => <button key={item.id} type="button" aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>)}
+      <div role="tablist" aria-label="文献研究视图" className={styles.tabs} onKeyDown={event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const current = tabs.findIndex(item => item.id === tab);
+        const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[tabs.length - 1] : tabs[(current + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        setTab(next.id); viewTabs.current[next.id]?.focus();
+      }}>
+        {tabs.map(item => <button key={item.id} ref={node => { viewTabs.current[item.id] = node ?? undefined; }} id={`${id}-tab-${item.id}`} type="button" role="tab" aria-selected={tab === item.id} aria-controls={`${id}-panel-${item.id}`} tabIndex={tab === item.id ? 0 : -1} onClick={() => setTab(item.id)}>{item.label}</button>)}
       </div>
-      <button type="button" className={styles.primary} disabled={locked || !value.papers.length || (!scopeConfirmed && !executed) || !direction.trim()} onClick={run}>运行文献选题分析</button>
     </div>
-    {!!value.papers.length && !executed && <label className={styles.scope}><input type="checkbox" checked={scopeConfirmed}
-      disabled={locked || !direction.trim()} onChange={event => setConfirmedScope(event.target.checked ? { value, direction: direction.trim() } : null)} />
-      我已确认这些文献与当前研究方向相关</label>}
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {reading && <div className={styles.busy} role="status">正在读取 {reading}<button type="button" onClick={() => {
       upload.current?.abort();
@@ -256,12 +277,12 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
       setReading('');
     }}>取消</button></div>}
 
-    {tab === 'evidence' && <>
-      <div className={styles.import}>
-        <div><strong>{value.papers.length} 篇文献 · {value.evidence.length} 条证据</strong><p>带文字层的 PDF · 在本浏览器读取</p></div>
-        <input type="file" accept="application/pdf,.pdf" ref={input} hidden aria-label="导入文献 PDF 文件" onChange={event => void importPdf(event)} />
-        <button type="button" disabled={locked} onClick={() => { reattach.current = null; input.current?.click(); }}>导入文献 PDF</button>
-      </div>
+    <section id={`${id}-panel-evidence`} role="tabpanel" aria-labelledby={`${id}-tab-evidence`} ref={evidenceOutput} tabIndex={-1} hidden={tab !== 'evidence'}>
+      {!value.papers.length && <div className={styles.zeroState}>
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M32 16c-8-5-16-6-24-4v37c8-2 16-1 24 4m0-37c8-5 16-6 24-4v37c-8-2-16-1-24 4V16Z"/><path d="m15 23 10 2m-10 6 10 2m14-8 10-2m-10 10 10-2"/></svg>
+        <h4>先放入与你的方向相关的文献</h4><p>带文字层的 PDF，在本浏览器读取。</p>
+        <ol><li><span>1</span>导入原文</li><li><span>2</span>确认页内摘录</li><li><span>3</span>对照文献，形成选题</li></ol>
+      </div>}
       <details className={styles.range}><summary>指定读取页码</summary>
         <div><label>起始页<input type="number" min="1" value={range.start} disabled={locked} onChange={e => setRange({ ...range, start: e.target.value })} /></label>
           <label>结束页<input type="number" min="1" value={range.end} disabled={locked} onChange={e => setRange({ ...range, end: e.target.value })} /></label></div>
@@ -319,35 +340,59 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
           }}>撤回摘录</button>
         </article>)}
       </div>}
-    </>}
+    </section>
 
-    {tab === 'matrix' && (result?.rows.length ? <div className={styles.tableWrap}>
+    <section id={`${id}-panel-matrix`} role="tabpanel" aria-labelledby={`${id}-tab-matrix`} ref={matrixOutput} tabIndex={-1} hidden={tab !== 'matrix'}>
+    {result?.rows.length ? <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="可横向滚动的文献对照表">
       <table aria-label="文献对照表"><thead><tr><th scope="col">文献</th>{Object.values(kinds).map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
         <tbody>{result.rows.map(row => <tr key={row.paper.id}><th scope="row">{row.paper.title}</th>
           {(Object.keys(kinds) as Kind[]).map(key => <td key={key}>{row.cells[key].length ? row.cells[key].map(entry =>
             <button key={entry.id} className={styles.reference} type="button" onClick={() => openEvidence(entry)}><span>{entry.quote}</span><small>第 {entry.page} 页 ↗</small></button>
           ) : <span className={styles.missing}>待补摘录</span>}</td>)}</tr>)}</tbody></table>
-    </div> : <p className={styles.empty}>确认摘录并运行分析后，在这里对照各篇文献。</p>)}
+    </div> : <div className={styles.empty}><h4>把分散的阅读，放到一起比较</h4><p>确认原文摘录并运行分析后，按问题、方法、结果和局限对照各篇文献。</p><button type="button" onClick={() => showView('evidence')}>去整理原文证据 →</button></div>}
+    </section>
 
-    {tab === 'topics' && <div className={styles.topics}>
+    <section id={`${id}-panel-topics`} role="tabpanel" aria-labelledby={`${id}-tab-topics`} ref={topicsOutput} tabIndex={-1} hidden={tab !== 'topics'}><div className={styles.topics}>
       {result && <div ref={reviewOutput} className={styles.review} tabIndex={-1} aria-label="证据核对结果">
         <strong>证据核对</strong><p>{result.stages.find(item => item.id === 'reviewer')?.summary}</p>
       </div>}
       {result?.issues.length ? <ul className={styles.issues}>{result.issues.map(item => <li key={item}>{item}</li>)}</ul> : null}
       {result?.candidates.map(candidate => <article className={styles.topic} key={candidate.id}>
         <span className={styles.kicker}>拟研究方向</span><h4>{candidate.title}</h4>
-        <p>{candidate.question}</p><p>{candidate.design}</p><small>{candidate.caveat}</small>
+        <dl className={styles.topicContent}>
+          <div><dt>研究问题</dt><dd>{candidate.question}</dd></div>
+          <div><dt>验证思路</dt><dd>{candidate.design}</dd></div>
+        </dl>
+        <details className={styles.topicDisclosure}><summary>适用条件</summary><p>{candidate.caveat}</p></details>
+        <details className={styles.topicDisclosure}><summary>原文依据 · {candidate.evidenceIds.length} 条</summary>
         <div className={styles.refs} aria-label="选题所用原文证据">{candidate.evidenceIds.map(evidenceId => {
           const entry = value.evidence.find(item => item.id === evidenceId);
           const source = entry && value.papers.find(item => item.id === entry.paperId);
           return entry && source ? <button className={styles.reference} type="button" key={entry.id} onClick={() => openEvidence(entry)}>
             {source.title} · 第 {entry.page} 页 · {kinds[entry.kind]} ↗
           </button> : null;
-        })}</div>
+        })}</div></details>
         <button type="button" disabled={locked || result.stages.find(item => item.id === 'reviewer')?.status !== 'done'} onClick={() => onAdopt(candidate.id)}>带入选题确认</button>
       </article>)}
-      {!result && <p className={styles.empty}>使用当前方向和已确认摘录运行分析，生成带原文依据的候选选题。</p>}
-    </div>}
-    <p id={`${id}-mode`} className={styles.mode}>本地规则分析 · 摘录由你确认 · 选题等待采纳</p>
+      {!result && <div className={styles.empty}><h4>选题从证据中生长</h4><p>先整理原文证据，再运行本地分析。候选选题会保留每一条引用。</p><button type="button" onClick={() => showView('evidence')}>去整理原文证据 →</button></div>}
+    </div></section>
+    <details className={styles.collaboration}>
+      <summary><span><strong>研究协作与交接</strong><span>{result ? `${result.stages.filter(item => item.status === 'done').length} / ${roles.length} 项本地流程已完成` : '查看五个角色的分工与成果'}</span></span><span aria-hidden="true">⌄</span></summary>
+      <div className={styles.team} role="group" aria-label="文献研究团队">
+        {roles.map((item, index) => {
+          const receipt = result?.stages.find(entry => entry.id === item.id);
+          const status = receipt?.status === 'done' ? '已完成' : receipt?.status === 'blocked' ? '待补充' : '待执行';
+          return <button className={styles.member} type="button" key={item.id} aria-pressed={role === item.id} onClick={() => setRole(item.id)}>
+            <span aria-hidden="true" className={styles.avatar} style={{ backgroundPosition: `${index * 25}% center` }} />
+            <span><strong>{item.name}</strong><small data-status={receipt?.status ?? 'waiting'}>{status}</small></span>
+          </button>;
+        })}
+      </div>
+      <div className={styles.handoff} aria-label={`${selectedRole.name}工作回执`}>
+        <div><strong>{selectedRole.name}</strong><p>{stage?.summary ?? selectedRole.task}</p>
+          {stage?.status === 'done' && <small>{selectedRole.id === 'reviewer' ? `已核对 ${stage.artifactIds.length} 项` : `已交付 ${stage.artifactIds.length} 项`} · 交给{roles[roles.indexOf(selectedRole) + 1]?.name ?? '用户确认'}</small>}</div>
+        <button type="button" onClick={showOutput}>{selectedRole.output}<span aria-hidden="true"> ↗</span></button>
+      </div>
+    </details>
   </section>;
 }

@@ -132,7 +132,8 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
       {nav ?? <>
       <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}><Icon name="edit" />新对话</button>
       {!wanted && <>
-        <p className={styles.sideLabel}>研究进度</p>
+        <details className={styles.sideGroup} open>
+        <summary>研究进度 <Icon name="down" /></summary>
         <ol className={styles.stages}>
           {stages.map(stage => {
             const state = stage.score === null ? 'unmeasured' : stage.score >= 0.999 ? 'done' : stage.score > 0 ? 'active' : 'empty';
@@ -145,13 +146,14 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
             </button></li>;
           })}
         </ol>
-        {outputs.length > 0 && <>
-          <p className={styles.sideLabel}>产出 <small>{outputs.length}</small></p>
+        </details>
+        {outputs.length > 0 && <details className={styles.sideGroup}>
+          <summary>分析产出 <small>{outputs.length}</small><Icon name="down" /></summary>
           {(allOutputs ? outputs : outputs.slice(0, 5)).map(output => <button key={output.id} type="button" className={styles.output} aria-current={openOutput === output.id ? 'true' : undefined} onClick={() => onOutput(output.id)} title={output.title}>
             <Icon name="chart" /><span>{output.title}<small>{output.detail}</small></span>
           </button>)}
           {outputs.length > 5 && <button type="button" className={styles.sideMore} onClick={() => setAllOutputs(!allOutputs)}>{allOutputs ? '收起' : `全部 ${outputs.length} 项`}</button>}
-        </>}
+        </details>}
       </>}
       {account === 'ready' && projects.length > 0 && <>
         <p className={styles.sideLabel}>项目</p>
