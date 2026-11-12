@@ -3,12 +3,12 @@ from fastapi import Depends, Request
 from evix_api.requests import body
 from application.services.agent_tasks import AgentTaskService
 
-def register_routes(app, *, db, auth, owned_project, session_user):
-    service = AgentTaskService(owned_project=owned_project, workflow_engine=app.state.workflow_engine)
+def register_routes(app, *, db, auth, owned_project, session_user, owned_service=None):
+    service = AgentTaskService(owned_project=owned_project, workflow_engine=app.state.workflow_engine, owned_service=owned_service)
 
     @app.post('/api/projects/{project_id}/agent-tasks', status_code=201)
     async def create_task(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
-        data = await body(request, ('taskType', 'requirements'), ('context', 'inputArtifactRefs', 'constraints'), limit=100000)
+        data = await body(request, ('taskType', 'requirements'), ('context', 'inputArtifactRefs', 'constraints', 'modelPlan'), limit=100000)
         return await service.create_task(project_id=project_id, user=user, session=session, data=data)
 
     @app.get('/api/projects/{project_id}/agent-tasks')
