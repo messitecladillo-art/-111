@@ -379,6 +379,17 @@ export default function AgentShell() {
     finally{examplePending.current=false;}
   },[readArtifactCurrent,artifacts]);
   const openArtifactShelf=()=>{setVisited(v=>v.includes('editor')?v:[...v,'editor']);setArtifactOpen(v=>!v);};
+  const artifactPanelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!artifactOpen) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const panelElement = artifactPanelRef.current;
+    const frame = requestAnimationFrame(() => panelElement?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true }));
+    return () => {
+      cancelAnimationFrame(frame);
+      if (previous?.isConnected && (document.activeElement === document.body || panelElement?.contains(document.activeElement))) previous.focus({ preventScroll: true });
+    };
+  }, [artifactOpen]);
 
   const openFromCanvas = useCallback((target: Section, nodeId: string, title: string) => { setCanvasReturn({ nodeId, title }); window.location.hash = target; }, [setCanvasReturn]);
   const showWorkbench = useCallback(() => { window.location.hash = lastModule; }, [lastModule]);
@@ -1055,17 +1066,20 @@ export default function AgentShell() {
           </span>
           <ArtifactShelfLauncher count={artifacts.count} open={artifactOpen} onClick={openArtifactShelf} />
           <span className={styles.spacer} />
-          {(spent.inputTokens > 0 || spent.outputTokens > 0) && <span className={styles.meter} title="这段对话里，服务商报告的输入 / 输出 token 合计">
-            {thousands(spent.inputTokens + spent.outputTokens)} tokens<small><b data-dir="in">↑{thousands(spent.inputTokens)}</b><b data-dir="out">↓{thousands(spent.outputTokens)}</b></small>
-          </span>}
-          <span className={styles.modelTag} title={chatMode === 'model' ? '对话由这个模型服务回答；在输入框的菜单里更换' : '指令模式：不调用模型；在输入框的菜单里可以改用模型对话'}>
-            {chatMode === 'model' ? chatService ? `${chatService.label} · ${chatService.model}` : '未选模型' : '指令模式'}
-          </span>
           <button type="button" className={styles.chip} onClick={() => go('services')} aria-label="模型配置">模型配置</button>
-          <button type="button" className={styles.codeToggle} aria-pressed={showCode} onClick={() => setShowCode(!showCode)}
-            title={showCode ? '隐藏每项结果背后的代码' : '显示每项结果背后可复现的 Python 代码：负责编程的同学打开，其他人保持关闭即可'}><Icon name="code" />显示代码</button>
-          {exportThread && <button type="button" className={styles.iconButton} aria-label="导出对话记录（Markdown）" title="导出对话记录：可作 AI 使用说明的附件"
-            onClick={exportThread}><Icon name="download" /></button>}
+          <details className={styles.topMore} onKeyDown={event => {
+            if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); }
+          }} onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false;
+          }}>
+            <summary aria-label="更多对话操作" title="更多对话操作"><Icon name="more" /></summary>
+            <div className={styles.topMenu}>
+              <p>{chatMode === 'model' ? chatService ? `${chatService.label} · ${chatService.model}` : '未选模型' : '指令模式'}</p>
+              {(spent.inputTokens > 0 || spent.outputTokens > 0) && <p>本次对话 {thousands(spent.inputTokens + spent.outputTokens)} tokens<br />输入 {thousands(spent.inputTokens)} · 输出 {thousands(spent.outputTokens)}</p>}
+              <button type="button" aria-pressed={showCode} onClick={event => { setShowCode(!showCode); event.currentTarget.closest('details')?.removeAttribute('open'); }}><Icon name="code" />{showCode ? '隐藏代码' : '显示代码'}</button>
+              {exportThread && <button type="button" onClick={event => { exportThread(); event.currentTarget.closest('details')?.removeAttribute('open'); }}><Icon name="download" />导出对话记录</button>}
+            </div>
+          </details>
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
         {stage === 'advisors' && <Advisors benchmark={paperBenchmark} hired={hired} onHire={setHired} />}
@@ -1158,6 +1172,8 @@ export default function AgentShell() {
           <button type="button" className={styles.iconButton} aria-label="收起证见 AI" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
         </div>}
         <div ref={scrollRef} className={styles.scroll}>
+          <details className={styles.researchDisclosure} open={!messages.length} data-fresh={!messages.length}>
+            <summary><span><Icon name="spark" />研究路线</span><small>选题 · 文献 · 问卷 · 分析</small><span className={styles.disclosureAction} /><Icon name="down" /></summary>
           <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
             owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
             modelRoutes={journeyModelRoutes} defaultServiceId={stagePreferences.defaultServiceId ?? null}
@@ -1178,6 +1194,7 @@ export default function AgentShell() {
             }}
             simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
               startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }} />
+          </details>
           {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />}
         </div>
         <Composer onDraftWriter={registerDraftWriter} onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
@@ -1187,7 +1204,8 @@ export default function AgentShell() {
         </div>
       </main>
 
-      <section className={styles.panel} hidden={!panel && !output && !inspecting && !artifactOpen} aria-label={artifactOpen ? '成果架' : here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
+      <section ref={artifactPanelRef} className={styles.panel} hidden={!panel && !output && !inspecting && !artifactOpen} aria-label={artifactOpen ? '成果架' : here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
+        onKeyDown={event => { if (artifactOpen && event.key === 'Escape') { event.stopPropagation(); setArtifactOpen(false); } }}
         data-inspector={inspecting || artifactOpen || undefined} style={{ ['--panel-w' as string]: `${artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth}px` }}>
         {artifactOpen && <ArtifactShelf {...artifacts} error={artifacts.error??artifactNotice} onClose={()=>setArtifactOpen(false)} onExample={()=>void addInfographicExample()} />}
         {!artifactOpen && inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}

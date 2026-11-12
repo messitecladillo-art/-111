@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useId, useSyncExternalStore } from 'react';
+import { useCallback, useId, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { Service } from '@evix/shared';
 import {
   eligibleModelServices,
@@ -16,7 +16,7 @@ import {
   subscribeModelPreferences,
   type ModelTask,
 } from '@/lib/agent/model-routing';
-import { MODEL_CALL_IDS, MODEL_CALLS } from '@/lib/agent/research-stages';
+import { MODEL_CALL_IDS, MODEL_CALLS, type ModelCallId } from '@/lib/agent/research-stages';
 import styles from './ModelRoutingSettings.module.css';
 
 export type ModelRoutingSettingsProps = {
@@ -43,14 +43,36 @@ function TaskIcon({ task }: { task: ModelTask }) {
 /** Account-scoped model references only; connecting services remains in the host's service editor. */
 export default function ModelRoutingSettings({ owner, services, loading = false, onManageServices }: ModelRoutingSettingsProps) {
   const id = useId();
+  const pendingStepFocus = useRef<ModelCallId | null>(null);
+  const overrides = useRef<HTMLDetailsElement>(null);
   const snapshot = useCallback(() => getStageModelPreferences(owner), [owner]);
   const preferences = useSyncExternalStore(subscribeModelPreferences, snapshot, getServerStageModelPreferences);
   const available = owner ? services : [];
   const routes = MODEL_TASKS.map(task => resolveModelRoute(task, available,
     preferences.tasks[task] ? { [task]: preferences.tasks[task] } : preferences.defaultServiceId ? { [task]: preferences.defaultServiceId } : {}));
-  const defaultMissing = !!preferences.defaultServiceId && !available.some(service => service.id === preferences.defaultServiceId);
-  const ready = routes.filter(route => route.service).length;
-  const summary = loading ? '正在读取服务…' : !owner ? '登录后设置' : ready === MODEL_TASKS.length ? '3 项任务已选择模型' : `${MODEL_TASKS.length - ready} 项任务待选择`;
+  const defaultMissing = !loading && !!preferences.defaultServiceId && !available.some(service => service.id === preferences.defaultServiceId);
+  const stepRoutes = MODEL_CALL_IDS.map(call => resolveStageModelRoute(call, available, preferences));
+  const ready = stepRoutes.filter(route => route.service).length;
+  const invalidSteps = !loading && owner ? stepRoutes.filter(route => route.reason === 'stale_selection') : [];
+  const normalSteps = stepRoutes.filter(route => !invalidSteps.includes(route));
+  const overrideCount = MODEL_CALL_IDS.filter(call => !!preferences.steps[call]).length;
+  const allReady = !loading && !!owner && ready === MODEL_CALL_IDS.length && !preferences.invalid;
+  const summary = loading ? '正在读取服务…' : !owner ? '登录后设置' : `${ready} / ${MODEL_CALL_IDS.length} 个步骤已分配`;
+
+  useLayoutEffect(() => {
+    const call = pendingStepFocus.current;
+    if (!call) return;
+    pendingStepFocus.current = null;
+    if (stepRoutes.find(route => route.stepId === call)?.reason === 'stale_selection') return;
+    const panel = overrides.current;
+    if (!panel) return;
+    panel.open = true;
+    const selection = document.getElementById(`${id}-${call}`);
+    if (selection?.isConnected) {
+      selection.focus({ preventScroll: true });
+      selection.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    }
+  });
 
   function manageAction(label: string) {
     return onManageServices
@@ -58,38 +80,67 @@ export default function ModelRoutingSettings({ owner, services, loading = false,
       : <Link className={styles.manage} href="/services">{label}<span aria-hidden="true">↗</span></Link>;
   }
 
+  function stepSelection(call: ModelCallId) {
+    const definition = MODEL_CALLS[call], route = stepRoutes.find(item => item.stepId === call)!;
+    const explicit = preferences.steps[call], eligible = eligibleModelServices(definition.capability, available);
+    const stale = !loading && !!explicit && !eligible.some(service => service.id === explicit);
+    const inherited = !explicit && route.service;
+    const inheritedLabel = inherited ? `${route.selectionSource === 'implicit' ? '自动选择' : '跟随设置'} · ${inherited.label}` : '跟随任务与默认设置';
+    return <article className={styles.step} key={call} data-invalid={route.reason === 'stale_selection' || undefined}>
+      <div className={styles.stepName}><h4 id={`${id}-${call}-title`}>{definition.label}</h4><span>{TASK_COPY[definition.capability].title}</span></div>
+      <div className={styles.selection}>
+        <label className={styles.srOnly} htmlFor={`${id}-${call}`}>{definition.label}使用模型</label>
+        <select id={`${id}-${call}`} value={explicit ?? ''} disabled={loading || !owner}
+          aria-invalid={!loading && !!owner && route.reason === 'stale_selection' || undefined}
+          aria-describedby={route.reason === 'stale_selection' ? `${id}-${call}-route` : undefined}
+          onChange={event => {
+            if (route.reason === 'stale_selection') pendingStepFocus.current = call;
+            setStageModelPreference(owner, call, event.target.value || null);
+          }}>
+          <option value="">{loading ? '正在读取服务…' : !owner ? '登录后选择模型' : inheritedLabel}</option>
+          {stale && <option value={explicit} disabled>原模型已不可用</option>}
+          {eligible.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
+        </select>
+        {route.reason === 'stale_selection' && !loading && owner && <p id={`${id}-${call}-route`} className={styles.routeWarning}>原选择已不可用，请重新选择。</p>}
+      </div>
+    </article>;
+  }
+
   return <section className={styles.settings} data-self-styled aria-labelledby={`${id}-title`} aria-busy={loading}>
     <header className={styles.header}>
       <div className={styles.intro}>
-        <h2 id={`${id}-title`}>按任务选择模型</h2>
-        <p>保存命名服务，设置默认模型与各步骤的选择。</p>
+        <h2 id={`${id}-title`}>为研究安排模型</h2>
+        <p>先选默认模型，需要时再为任务或步骤单独指定。</p>
       </div>
-      <p className={styles.summary} data-ready={!loading && !!owner && ready === MODEL_TASKS.length} role="status">{summary}</p>
+      <p className={styles.summary} data-ready={allReady} data-attention={!!owner && !loading && invalidSteps.length > 0 || undefined} role="status">{summary}</p>
     </header>
 
-    <div className={styles.taskList}>
-      <article className={styles.task} aria-labelledby={`${id}-default-title`}>
-        <div className={styles.taskCopy}><h3 id={`${id}-default-title`}>默认模型</h3><p>各步骤可继承默认设置，也可单独指定。</p></div>
-        <div className={styles.selection}><label htmlFor={`${id}-default`}>默认使用</label>
+    <div className={styles.body}>
+      <article className={styles.defaultModel} aria-labelledby={`${id}-default-title`}>
+        <div className={styles.taskCopy}><span className={styles.defaultBadge}>默认</span><h3 id={`${id}-default-title`}>默认模型</h3><p>没有单独指定的任务，优先使用它。</p></div>
+        <div className={styles.selection}><label className={styles.srOnly} htmlFor={`${id}-default`}>默认使用</label>
           <select id={`${id}-default`} value={preferences.defaultServiceId ?? ''} disabled={loading || !owner}
             aria-invalid={!loading && !!owner && defaultMissing || undefined}
             onChange={event => setDefaultModelPreference(owner, event.target.value || null)}>
-            <option value="">按任务分别选择</option>
+            <option value="">{loading ? '正在读取模型…' : '按任务分别选择'}</option>
             {defaultMissing && <option value={preferences.defaultServiceId!} disabled>原模型已不可用</option>}
             {available.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
           </select>
           {defaultMissing && <p className={styles.routeWarning}>原选择已不可用，请重新选择。</p>}
         </div>
       </article>
-      {routes.map(route => {
+      {preferences.invalid && !loading && owner && <p className={styles.invalidNotice} role="alert">模型选择记录无法读取，请重新设置模型。</p>}
+      <section className={styles.tasks} aria-labelledby={`${id}-tasks-title`}>
+        <div className={styles.sectionHeading}><h3 id={`${id}-tasks-title`}>按任务分配</h3><span>可单独指定</span></div>
+        <div className={styles.taskGrid}>{routes.map(route => {
         const task = route.task, copy = TASK_COPY[task], eligible = eligibleModelServices(task, available);
-        const selected = !loading ? route.service : null;
-        const stale = route.reason === 'stale_selection';
+        const selected = !loading && !preferences.invalid ? route.service : null;
+        const stale = !loading && (route.reason === 'stale_selection' || !!preferences.invalid);
         const needsService = route.reason === 'no_eligible' || stale;
-        const placeholder = loading ? '正在读取模型…' : !owner ? '登录后选择模型' : stale ? '请重新选择模型' : !eligible.length ? '暂无可用模型' : '请选择模型';
+        const inheritedLabel = selected && !preferences.tasks[task] ? `${preferences.defaultServiceId ? '使用默认' : '自动选择'} · ${selected.label}` : '继承默认模型';
         const guidance = stale
-          ? eligible.length ? '原先的服务已不可用，请重新选择模型。' : '原先的服务已不可用，连接服务后重新选择。'
-          : !eligible.length ? `先连接一个支持${copy.title}的模型服务。` : '从已连接的服务中，为这项任务选择模型。';
+          ? '原选择已不可用，请重新选择。'
+          : !eligible.length ? `尚无支持${copy.title}的服务。` : '请选择模型。';
 
         return <article key={task} className={styles.task} aria-labelledby={`${id}-${task}-title`}>
           <div className={styles.taskDetails}>
@@ -100,57 +151,42 @@ export default function ModelRoutingSettings({ owner, services, loading = false,
             </div>
           </div>
           <div className={styles.selection}>
-            <label htmlFor={`${id}-${task}`}>使用模型<span className={styles.srOnly}> · {copy.title}</span></label>
+            <label className={styles.srOnly} htmlFor={`${id}-${task}`}>使用模型 · {copy.title}</label>
             <select
               id={`${id}-${task}`}
               value={preferences.tasks[task] ?? ''}
               disabled={loading || !owner}
-              aria-describedby={`${id}-${task}-detail`}
+              aria-describedby={!selected ? `${id}-${task}-detail` : undefined}
               aria-invalid={!loading && !!owner && stale || undefined}
               onChange={event => setModelPreference(owner, task, event.target.value || null)}
             >
-              <option value="">{loading || !owner ? placeholder : '继承默认模型'}</option>
+              <option value="">{loading ? '正在读取模型…' : !owner ? '登录后选择模型' : inheritedLabel}</option>
               {stale && preferences.tasks[task] && <option value={preferences.tasks[task]} disabled>原模型已不可用</option>}
               {eligible.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
             </select>
-            {selected ? <p id={`${id}-${task}-detail`} className={styles.current}>
-              <span>当前模型</span><strong>{selected.label}</strong><span>{selected.model}</span><span className={styles.revision}>配置 v{selected.revision}</span>
-            </p> : <div id={`${id}-${task}-detail`} className={styles.guidance} data-attention={!loading && !!owner && needsService}>
-              <p>{loading ? '正在读取已连接的模型服务。' : !owner ? '登录后可选择并保存模型。' : guidance}</p>
+            {!selected && <div id={`${id}-${task}-detail`} className={styles.guidance} data-attention={!loading && !!owner && needsService}>
+              <p>{loading ? '正在读取服务…' : !owner ? '登录后可选择模型。' : guidance}</p>
               {!loading && !!owner && needsService && manageAction(stale && eligible.length ? '管理服务' : '连接服务')}
             </div>}
           </div>
         </article>;
-      })}
-    </div>
+      })}</div>
+      </section>
 
-    <div className={styles.taskList}>
-      <div className={styles.sectionHeading}><h3>按步骤指定</h3><p>修改只影响之后发起的调用。</p></div>
-      {MODEL_CALL_IDS.map(call => {
-        const definition = MODEL_CALLS[call], route = resolveStageModelRoute(call, available, preferences);
-        const explicit = preferences.steps[call], eligible = eligibleModelServices(definition.capability, available);
-        const stale = !!explicit && !eligible.some(service => service.id === explicit);
-        const inheritance = route.selectionSource === 'step' ? '本步指定' : route.selectionSource === 'capability' ? '继承任务设置' : '继承默认设置';
-        return <article className={styles.task} key={call}>
-          <div className={styles.taskCopy}><h3>{definition.label}</h3></div>
-          <div className={styles.selection}><label htmlFor={`${id}-${call}`}>使用模型</label>
-            <select id={`${id}-${call}`} value={explicit ?? ''} disabled={loading || !owner}
-              aria-invalid={!loading && !!owner && route.reason === 'stale_selection' || undefined}
-              aria-describedby={`${id}-${call}-route`} onChange={event => setStageModelPreference(owner, call, event.target.value || null)}>
-              <option value="">继承默认设置</option>
-              {stale && <option value={explicit} disabled>原模型已不可用</option>}
-              {eligible.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
-            </select>
-            <p id={`${id}-${call}-route`} className={route.reason === 'stale_selection' ? styles.routeWarning : styles.current}>
-              {loading ? '正在读取服务…' : !owner ? '登录后选择模型' : route.service ? `${route.service.label} · ${inheritance}` : route.reason === 'stale_selection' ? '原选择已不可用，请重新选择。' : '尚未选择可用模型'}
-            </p>
-          </div>
-        </article>;
-      })}
+      {invalidSteps.length > 0 && <section className={styles.issues} aria-labelledby={`${id}-issues-title`}>
+        <div className={styles.sectionHeading}><h3 id={`${id}-issues-title`}>需要更新的步骤</h3><span>{invalidSteps.length} 项选择已失效</span></div>
+        {invalidSteps.map(route => stepSelection(route.stepId))}
+      </section>}
+      <details className={styles.overrides} ref={overrides}>
+        <summary><span><strong>按步骤指定</strong><span>{preferences.invalid ? '模型选择记录需要更新' : overrideCount ? `${overrideCount} 个步骤已单独设置` : '所有步骤跟随任务与默认设置'}</span></span><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m7 4 6 6-6 6"/></svg></summary>
+        <div className={styles.stepList}>
+          {normalSteps.length ? normalSteps.map(route => stepSelection(route.stepId)) : <p className={styles.allIssues}>需更新的步骤已在上方列出。</p>}
+        </div>
+      </details>
     </div>
 
     <footer className={styles.footer}>
-      <p>{!owner ? '登录后，你的模型选择将按账号保存。' : '同一模型可用于多项任务，也可分别选择。'}</p>
+      <p>{!owner ? '登录后按账号保存选择。' : '修改只影响之后发起的调用。'}</p>
       {owner && manageAction('管理已连接的服务')}
     </footer>
   </section>;
