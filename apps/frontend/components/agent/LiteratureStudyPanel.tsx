@@ -108,7 +108,7 @@ export default function LiteratureStudyPanel({ value, direction, disabled, onCha
   function navigatePaper(next: StudyPaper, selectedPage = next.pages[0]?.page ?? 0) {
     setPaperId(next.id);
     setPageNumber(selectedPage);
-    setQuote('');
+    if (next.id !== paper?.id || selectedPage !== page?.page) setQuote('');
     setHighlight('');
   }
 

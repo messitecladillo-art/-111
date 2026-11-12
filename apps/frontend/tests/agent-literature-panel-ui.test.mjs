@@ -133,6 +133,38 @@ test('matrix evidence and role outputs navigate to visible panels and transfer f
   assert.equal(h.adopted.length, 0); h.unmount();
 });
 
+test('checking a citation on the same physical page preserves the exact quote and type draft', () => {
+  const h = harness({ value: corpus(true) }), draft = '研究方法：从两个校区招募参与者。';
+  h.quote().props.onChange({ target: { value: draft } });
+  h.find(node => node.type === 'select' && node.props.value === 'method').props.onChange({ target: { value: 'limitation' } }); h.render();
+  h.tab('matrix').props.onClick(); h.render();
+  walk(h.panel('matrix')).find(node => node.type === 'button' && text(node).includes('从两个校区招募参与者。')).props.onClick(); h.render();
+  assert.equal(h.panel('evidence').props.hidden, false);
+  assert.equal(h.quote().props.value, draft);
+  assert.ok(h.find(node => node.type === 'select' && node.props.value === 'limitation'));
+  assert.equal(h.focused.at(-1), 'PDF 页原文');
+  assert.equal(h.published.length, 0); assert.equal(h.adopted.length, 0); h.unmount();
+});
+
+test('changing the actual paper or physical page still clears an unconfirmed quote before it can be bound', () => {
+  const value = corpus(true);
+  value.papers[0].pages.push({ page: 3, text: '页三补充：新的研究内容。' });
+  const h = harness({ value });
+  h.quote().props.onChange({ target: { value: '研究方法：从两个校区招募参与者。' } }); h.render();
+  h.tab('matrix').props.onClick(); h.render();
+  walk(h.panel('matrix')).find(node => node.type === 'button' && text(node).includes('记录每次行程。')).props.onClick(); h.render();
+  assert.equal(h.quote().props.value, '');
+  assert.equal(h.button('确认原文证据').props.disabled, true);
+  assert.ok(h.find(node => node.type === 'textarea' && node.props.readOnly).props.value.includes('记录每次行程。'));
+  h.find(node => node.type === 'select' && node.props.value === B.id).props.onChange({ target: { value: A.id } }); h.render();
+  h.quote().props.onChange({ target: { value: '研究方法：从两个校区招募参与者。' } }); h.render();
+  h.find(node => node.type === 'select' && node.props.value === 2).props.onChange({ target: { value: '3' } }); h.render();
+  assert.equal(h.quote().props.value, '');
+  assert.equal(h.button('确认原文证据').props.disabled, true);
+  assert.equal(h.find(node => node.type === 'textarea' && node.props.readOnly).props.value, '页三补充：新的研究内容。');
+  assert.equal(h.published.length, 0); assert.equal(h.adopted.length, 0); h.unmount();
+});
+
 test('scope approval is bound to the exact materials and direction; only explicit run and adoption dispatch', () => {
   const h = harness({ value: corpus() });
   const checkbox = () => h.find(node => node.type === 'input' && node.props.type === 'checkbox');
