@@ -10,6 +10,8 @@ from shared.errors import ProviderFailure
 
 
 _CHAT_PROVIDERS = frozenset(("openai", "deepseek", "qwen", "compatible"))
+_WORKFLOW_MAX_MESSAGES = 16
+_WORKFLOW_MAX_BYTES = 262144
 
 
 class Completion(str):
@@ -64,6 +66,53 @@ def _request(config, key, message):
     if provider == "openai":
         payload["store"] = False
     return config["baseUrl"] + "/chat/completions", headers, payload
+
+
+def _workflow_messages(messages, key):
+    """A trusted system instruction followed only by bounded plain user data."""
+    if (type(key) is not str or not key or type(messages) is not list
+            or not 2 <= len(messages) <= _WORKFLOW_MAX_MESSAGES):
+        raise ProviderFailure("invalid_response")
+    result = []
+    for index, item in enumerate(messages):
+        if type(item) is not dict or any(type(name) is not str for name in item) or set(item) != {"role", "content"}:
+            raise ProviderFailure("invalid_response")
+        role, content = item["role"], item["content"]
+        if (type(role) is not str or role != ("system" if index == 0 else "user")
+                or type(content) is not str or not content.strip() or key in content):
+            raise ProviderFailure("invalid_response")
+        if len(content) > _WORKFLOW_MAX_BYTES:
+            raise ProviderFailure("input_too_large")
+        if any(ord(char) < 32 and char not in "\n\r\t" for char in content):
+            raise ProviderFailure("invalid_response")
+        result.append({"role": role, "content": content})
+    return result
+
+
+def _workflow_request(config, key, messages):
+    messages = _workflow_messages(messages, key)
+    # Reuse the existing provider, model path and destination checks; never
+    # downgrade an unsupported native provider to a compatible endpoint.
+    url, headers, payload = _request(config, key, messages[-1]["content"])
+    if config["provider"] == "anthropic":
+        payload["system"] = messages[0]["content"]
+        payload["messages"] = messages[1:]
+    elif config["provider"] == "gemini":
+        payload["systemInstruction"] = {"parts": [{"text": messages[0]["content"]}]}
+        payload["contents"] = [{"role": "user", "parts": [{"text": item["content"]}]} for item in messages[1:]]
+    else:
+        payload["messages"] = messages
+    return url, headers, payload
+
+
+def _contains_secret(value, key):
+    if isinstance(value, str):
+        return key in value
+    if isinstance(value, dict):
+        return any(_contains_secret(name, key) or _contains_secret(item, key) for name, item in value.items())
+    if isinstance(value, list):
+        return any(_contains_secret(item, key) for item in value)
+    return False
 
 
 def _anthropic_text(data):
@@ -138,8 +187,26 @@ def _response_text(provider, data):
 
 class ChatCompletionClient:
     async def complete(self, config, key, message, limit):
+        return await self._complete(config, key, message, limit, structured=False)
+
+    async def complete_messages(self, config, key, messages, limit):
+        """Preserve system/user separation without enabling tools or remote parts.
+
+        The caller must persist consent and a call receipt before invoking this
+        transport. A completion is not a verified research/tool result.
+        """
+        return await self._complete(config, key, messages, limit, structured=True)
+
+    async def _complete(self, config, key, content, limit, *, structured):
         try:
-            url, headers, payload = _request(config, key, message)
+            if structured:
+                if type(limit) is not int or not 1 <= limit <= _WORKFLOW_MAX_BYTES:
+                    raise ProviderFailure("input_too_large")
+                url, headers, payload = _workflow_request(config, key, content)
+                if key in url or _contains_secret(payload, key):
+                    raise ProviderFailure("invalid_response")
+            else:
+                url, headers, payload = _request(config, key, content)
             encoded = json.dumps(payload, ensure_ascii=False).encode()
             if len(encoded) > limit:
                 raise ProviderFailure("input_too_large")

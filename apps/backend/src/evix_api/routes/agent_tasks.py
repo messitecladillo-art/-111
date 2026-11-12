@@ -3,8 +3,9 @@ from fastapi import Depends, Request
 from evix_api.requests import body
 from application.services.agent_tasks import AgentTaskService
 
-def register_routes(app, *, db, auth, owned_project, session_user, owned_service=None):
-    service = AgentTaskService(owned_project=owned_project, workflow_engine=app.state.workflow_engine, owned_service=owned_service)
+def register_routes(app, *, db, auth, owned_project, session_user, owned_service=None, model_runtime=None):
+    service = AgentTaskService(owned_project=owned_project, workflow_engine=app.state.workflow_engine,
+                               owned_service=owned_service, model_runtime=model_runtime)
 
     @app.post('/api/projects/{project_id}/agent-tasks', status_code=201)
     async def create_task(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
@@ -21,9 +22,17 @@ def register_routes(app, *, db, auth, owned_project, session_user, owned_service
 
     @app.post('/api/projects/{project_id}/agent-tasks/{task_id}/advance')
     async def advance_task(project_id: str, task_id: str, request: Request, user=Depends(auth), session=Depends(db)):
-        data = await body(request, ('expectedRevision',))
+        data = await body(request, ('expectedRevision',), ('modelConsent',))
         return await service.advance_task(project_id=project_id, task_id=task_id, user=user, session=session,
             data=data, check_session=lambda current: session_user(request, current, lock=True))
+
+    @app.get('/api/projects/{project_id}/agent-tasks/{task_id}/model-preview')
+    def model_preview(project_id: str, task_id: str, user=Depends(auth), session=Depends(db)):
+        return service.model_preview(project_id=project_id, task_id=task_id, user=user, session=session)
+
+    @app.get('/api/projects/{project_id}/agent-tasks/{task_id}/model-calls')
+    def model_calls(project_id: str, task_id: str, user=Depends(auth), session=Depends(db)):
+        return service.model_calls(project_id=project_id, task_id=task_id, user=user, session=session)
 
     @app.get('/api/projects/{project_id}/agent-tasks/{task_id}/executions')
     def executions(project_id: str, task_id: str, user=Depends(auth), session=Depends(db)):

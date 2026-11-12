@@ -157,9 +157,10 @@ research_agent/
 - `evix_api/routes/agent_tasks.py` 提供任务接口，`application/services/agent_tasks.py` 处理任务事务；`agent_task_execution.py` 先提交单角色执行回执，再在事务外调用处理器，最后核对权限与版本写回。
 - `infrastructure/database/models/workflows.py` 中的 `AgentTask` 保存任务状态，`AgentTaskExecution` 保存执行回执；迁移到 `0010_agent_task_executions` 后使用。重复请求、结果未知和取消的处理见 [执行说明](docs/agent-execution.md)。写操作受项目成员权限控制。
 
-重要状态说明：五个公共入口和内部步骤、外层 LangGraph 路由和任务检查点已实现，
-但 `create_app` 当前没有默认注册实际模型步骤执行器。未配置的步骤明确阻塞，
-没有模拟成功兜底。Data 的真实文件校验/分析工具和产物存储仍须接入，不能把
+重要状态说明：五个公共入口和内部步骤、外层 LangGraph 路由和任务检查点已实现。
+默认部署可为带个人模型绑定且获得精确授权的任务装配模型步骤执行器，逐次调用先保存私有回执；
+未配置或未授权时明确阻塞，没有模拟成功兜底。调用装配与边界见[执行说明](docs/agent-execution.md)。
+Data 的真实文件校验/分析工具、产物存储和前端整篇报告入口仍须衔接，不能把
 “接口能创建任务”误认为“完整研究流程已经自动运行”。
 
 ### `src/infrastructure/`、`features/` 和 `shared/`

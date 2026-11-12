@@ -14,8 +14,8 @@
 
 调用方向为 `evix_api → application → multi_agent / infrastructure / features`。
 各角色通过工作流协作，共用技术能力通过 `infrastructure` 获取；架构测试会检查
-反向依赖、循环导入和跨角色引用。五个角色的模型处理器仍需接入，Data Agent 的
-完整统计分析能力尚未实现。
+反向依赖、循环导入和跨角色引用。个人模型绑定与逐次调用回执现已接入，执行前需要精确授权；
+Data Agent 的真实文件/统计工具及完整研究交付仍需接入，详见[执行说明](../../docs/agent-execution.md)。
 
 五个 Agent 已有独立的运行入口、内部工作流、运行状态和专属提示词/工具。
 接入方式与执行边界见 [多 Agent 开发说明](src/multi_agent/README.md)。

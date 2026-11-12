@@ -35,5 +35,7 @@ def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_c
     topic_projects.register_topic_projects(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation)
     reports.register_reports(app, auth=deps.auth, db=deps.db, owned_project=deps.owned_project, operation=deps.operation)
     latex.register_latex(app, settings=settings, auth=deps.auth, db=deps.db, owned_project=deps.owned_project)
-    agent_tasks.register_routes(app, db=deps.db, auth=deps.auth, owned_project=deps.owned_project, session_user=deps.session_user, owned_service=deps.owned_service)
+    agent_tasks.register_routes(app, db=deps.db, auth=deps.auth, owned_project=deps.owned_project,
+        session_user=deps.session_user, owned_service=deps.owned_service,
+        model_runtime={'settings': settings, 'provider': runtime.generator} if workflow_handlers is None else None)
     return app
