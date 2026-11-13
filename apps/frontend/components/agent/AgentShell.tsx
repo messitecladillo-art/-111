@@ -1176,6 +1176,7 @@ export default function AgentShell() {
             <summary><span><Icon name="spark" />研究路线</span><small>选题 · 文献 · 问卷 · 分析</small><span className={styles.disclosureAction} /><Icon name="down" /></summary>
           <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
             owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
+            execution={{ mutate, isCurrent: () => !!owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch), onProduced: artifacts.onProduced }}
             modelRoutes={journeyModelRoutes} defaultServiceId={stagePreferences.defaultServiceId ?? null}
             onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
             onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}

@@ -27,6 +27,7 @@ class ExecutionPlan:
     step: PreparedStep
     timeout_seconds: int | None = None
     lease_seconds: int | None = None
+    before_publish: object = None
 
 
 def fingerprint(value):
@@ -218,9 +219,16 @@ class DurableTaskExecution:
             if row.revision != receipt.claimed_revision or row.status != 'running' or row.state != frozen:
                 receipt.status, receipt.error_code, receipt.finished_at = 'discarded', 'execution_stale', now()
             else:
+                if plan.before_publish is not None:
+                    try:
+                        plan.before_publish(session, user, row)
+                    except ApiError:
+                        # Authorization and publication share the task/grant locks.
+                        # A revoked grant cannot publish a late, already paid result.
+                        status, error_code, next_state, result_hash = 'discarded', 'execution_authorization_changed', None, None
                 if next_state is None:
                     next_state = WorkflowState.from_dict(deepcopy(frozen))
-                    next_state.status = WorkflowStatus.BLOCKED if status == 'outcome_unknown' else WorkflowStatus.FAILED
+                    next_state.status = WorkflowStatus.BLOCKED if status in ('outcome_unknown', 'discarded') else WorkflowStatus.FAILED
                     next_state.errors.append(error_code)
                 self.save(row, next_state)
                 receipt.status, receipt.error_code, receipt.finished_at = status, error_code, now()

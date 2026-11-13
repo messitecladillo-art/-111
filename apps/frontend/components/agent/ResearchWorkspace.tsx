@@ -21,6 +21,8 @@ import ResearchJourney, { type JourneyModelRoute, type ResearchJourneyStep } fro
 import LiteratureStudyPanel from './LiteratureStudyPanel';
 import ResearchSimulationPanel, { type ResearchSimulationHost } from './ResearchSimulationPanel';
 import styles from './ResearchWorkspace.module.css';
+import WorkflowExecutionPanel from './WorkflowExecutionPanel';
+import { useWorkflowExecution, type WorkflowExecutionHost } from './useWorkflowExecution';
 
 export type ResearchWorkspaceProps = {
   owner: string | null; projectId: string | null; identityEpoch: number;
@@ -34,6 +36,7 @@ export type ResearchWorkspaceProps = {
   onLiteratureToReport?: (lines: string[]) => void;
   literature: LiteratureWorkspaceSnapshot | null; onLiterature: (value: LiteratureWorkspaceSnapshot | null) => void;
   simulation?: ResearchSimulationHost;
+  execution?: WorkflowExecutionHost;
 };
 type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
@@ -48,6 +51,10 @@ function hasAdoptedEvidence(selection: TopicProjectDocument, study?: LiteratureS
 export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const { owner, projectId, identityEpoch, literature } = props;
   const [draft, setDraft] = useState<ResearchWorkspaceDraft>(() => emptyResearchWorkspaceDraft());
+  const executionContext = { region: draft.profile.region, city: draft.profile.city, school: draft.profile.school, days: draft.profile.days, budgetYuan: draft.profile.budgetYuan };
+  const execution = useWorkflowExecution({ owner, projectId, epoch: identityEpoch, direction: draft.direction,
+    context: executionContext,
+    services: props.services, defaultServiceId: props.defaultServiceId, host: props.execution });
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [saved, setSaved] = useState(false), [conflict, setConflict] = useState(false);
   const [proposal, setProposal] = useState<TopicProjectDocument | null>(null);
@@ -289,6 +296,19 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
   const quality = results.find(item => item.method === 'quality-control');
   const analyses = results.filter(item => item.method !== 'quality-control');
   const steps: ResearchJourneyStep[] = RESEARCH_STAGES.map(stage => {
+    const task = execution.task;
+    if (execution.enabled && task) {
+      const mapping = { topic: 'research', diagnosis: 'research', questionnaire: 'survey', sampling: 'survey', analysis: 'data', report: 'writing' } as const;
+      const role = mapping[stage.id as keyof typeof mapping];
+      if (role) {
+        const output = task.state.agent_outputs[role];
+        const active = task.state.current_role === role;
+        return { id: stage.id, status: active && task.status === 'running' ? 'running' : active && task.status === 'blocked' ? 'blocked'
+          : task.status === 'needs_input' && task.state.awaiting_approval?.startsWith('approve_') && output ? 'awaiting_confirmation'
+          : output ? 'ready' : active && task.status === 'needs_input' ? 'needs_input' : 'idle',
+          detail: output ? '阶段提案已保留，可查看、修改或继续审阅。' : undefined, actionLabel: '打开编辑' };
+      }
+    }
     if (stage.id === 'topic') return { id: stage.id, status: busy ? 'running' : draft.selected ? 'completed' : draft.intake?.status === 'ready' ? 'awaiting_confirmation' : draft.intake ? 'needs_input' : 'ready', actionLabel: draft.selected ? '编辑选题' : '选题顾问' };
     if (stage.id === 'diagnosis') return { id: stage.id, status: draft.diagnosis ? 'completed' : draft.selected ? 'ready' : 'idle', actionLabel: '查看诊断' };
     if (stage.id === 'literature') return { id: stage.id, status: literatureBusy ? 'running' : receipt?.status === 'ready' || adoptedLiterature && adoptedEvidenceCurrent ? 'completed' : draft.selected ? 'needs_input' : 'idle', detail: draft.literatureStudy?.papers.length ? `${draft.literatureStudy.papers.length} 篇原文 · ${draft.literatureStudy.evidence.length} 条已确认摘录` : receipt?.status === 'ready' ? `已分析 ${receipt.summary.records} 条记录。` : draft.selected ? '导入文献题录查看词云与关联图谱。' : undefined, actionLabel: draft.literatureStudy?.papers.length ? '查看原文证据' : '文献图谱' };
@@ -318,9 +338,18 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
     </div>
     </details>
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    <ResearchJourney direction={draft.direction} onDirectionChange={direction => changeResearchInput(value => ({ ...value, direction }))} onStart={direction => void start(direction)} steps={steps}
+    <ResearchJourney direction={draft.direction} onDirectionChange={direction => changeResearchInput(value => ({ ...value, direction }))}
+      onStart={direction => { if (execution.enabled) void execution.start(direction, executionContext); else void start(direction); }}
+      onLocalStart={execution.enabled ? direction => { void start(direction); } : undefined} serverExecution={execution.enabled} steps={steps}
       services={props.services} modelRoutes={props.modelRoutes} defaultServiceId={props.defaultServiceId} onDefaultServiceChange={props.onDefaultServiceChange} onModelCallChange={props.onModelCallChange}
-      onOpenSettings={props.onOpenSettings} onStepAction={continueStep} busy={busy} disabled={!ready || conflict} afterIntake={<div className={styles.intakeResults}>
+      onOpenSettings={props.onOpenSettings} onStepAction={continueStep} busy={busy || execution.enabled && execution.busy} disabled={!ready || conflict || execution.enabled && execution.loading} afterIntake={<div className={styles.intakeResults}>
+    {execution.enabled && <WorkflowExecutionPanel task={execution.task} phasePreview={execution.phasePreview} grant={execution.grant} calls={execution.calls}
+      services={props.services} roleSelections={execution.roleSelections} canManage={execution.canManage}
+      busy={execution.busy} loading={execution.loading} error={execution.error} reconciling={execution.reconciling}
+      sourceChanged={execution.sourceChanged} restored={execution.restored} onAuthorize={execution.onAuthorize} onContinue={execution.onContinue}
+      onRefresh={execution.onRefresh} onCancel={execution.onCancel} onApprove={execution.onApprove} onRevise={execution.onRevise}
+      onRoleSelectionChange={execution.onRoleSelectionChange} onOpenSettings={props.onOpenSettings} onOpenAnalysis={() => props.onOpenStage('analysis')}
+      onNewTask={execution.onNewTask} />}
     <details className={styles.literature} ref={literaturePanel}>
       <summary>选题与文献研究 <small>原文摘录 · 文献对照 · 候选选题</small></summary>
       <LiteratureStudyPanel value={draft.literatureStudy ?? emptyLiteratureStudy()} direction={draft.direction}

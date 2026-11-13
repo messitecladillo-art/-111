@@ -182,6 +182,11 @@ export function useArtifactLibrary(options: ArtifactLibraryOptions) {
   }, [recordFor, onExport, patch, enqueue, current, persist]);
   const onArchive = useCallback((id: string) => { if (!recordFor(id)) return; void enqueue(target => updateArtifactLibrary(target, before => ({ ...before, revision: before.revision + 1, records: before.records.map(record => record.id === id ? { ...record, status: 'stored' } : record) }))); }, [recordFor, enqueue]);
   const onCapture = useCallback(() => { if (!current()) return; const live = env.current.readCurrent(); if (!live.content) return; const content = structuredClone(live.content); void enqueue(target => captureArtifacts(target, collectReportArtifacts(content, '手动收录当前报告', 'stored', true))); }, [current, enqueue]);
+  const onProduced = useCallback((seed: ArtifactSeed) => {
+    if (!current()) return;
+    const captured = structuredClone(seed);
+    void enqueue(target => captureArtifacts(target, [captured]));
+  }, [current, enqueue]);
   const importImage = useCallback((file: File, kind: 'cover'|'diagram'|'file', original?: ArtifactRecord, meta?: ArtifactImportMeta) => {
     if (!current()) return;
     void enqueue(async target => { const value = await readArtifactImage(file); if (!current() || original && selected.current !== original.id) return; await persist({ familyId: original?.familyId ?? `import:${crypto.randomUUID()}`, kind, title: value.name, origin: meta?.origin ?? (original ? '本地图片替换' : '本地图片导入'), status: 'stored', classification: meta?.classification ?? 'unclassified', value }, target, original?.id); });
@@ -231,5 +236,5 @@ export function useArtifactLibrary(options: ArtifactLibraryOptions) {
     ...(record.value.type === 'file' ? { useLabel: '下载原图', useAction: 'download' as const, thumbnailUrl: record.value.dataUrl } : {}),
   }));
   const unavailableReason = !scope || options.readCurrent().scope !== scope ? '账号与项目尚未确认，请重新连接后操作素材。' : undefined;
-  return { items, selectedId: shown.selectedId, preview, busy: shown.busy, error: shown.error, unavailableReason, onSelect, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, count: new Set(items.map(item => item.familyId)).size };
+  return { items, selectedId: shown.selectedId, preview, busy: shown.busy, error: shown.error, unavailableReason, onSelect, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, onProduced, count: new Set(items.map(item => item.familyId)).size };
 }
