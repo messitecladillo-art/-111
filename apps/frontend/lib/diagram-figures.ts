@@ -680,7 +680,8 @@ export function descriptiveInfographicSVG(r: ResultSnapshot, ink: FigureInk): st
   const items: PanelItem[] = r.rows.map(row => ({
     zone: String(row[0] ?? '指标').trim(),
     label: String(row[1] ?? '').trim(),
-    value: typeof row[2] === 'number' && Number.isFinite(row[2]) ? row[2] : (Number.isFinite(Number(row[2])) ? Number(row[2]) : null),
+    value: typeof row[2] === 'number' && Number.isFinite(row[2]) ? row[2]
+      : typeof row[2] === 'string' && row[2].trim() && Number.isFinite(Number(row[2])) ? Number(row[2]) : null,
     unit: String(row[3] ?? '').trim(),
   }));
 
@@ -692,7 +693,7 @@ export function descriptiveInfographicSVG(r: ResultSnapshot, ink: FigureInk): st
   const displayKpis: PanelItem[] = kpis.length
     ? kpis
     : [
-        { zone: 'KPI', label: '有效样本量 n', value: r.n || 0, unit: '份' },
+        { zone: 'KPI', label: '分析样本量 n', value: r.n > 0 ? r.n : null, unit: r.n > 0 ? '份' : '未登记' },
         { zone: 'KPI', label: '原始总样本', value: r.total || r.n || 0, unit: '份' },
         { zone: 'KPI', label: '涵盖分析维度', value: distBars.length + scoreBars.length, unit: '项指标' },
       ];
@@ -714,54 +715,48 @@ export function descriptiveInfographicSVG(r: ResultSnapshot, ink: FigureInk): st
     })
     .join('');
 
-  const leftRows = distBars.length
-    ? distBars
-    : [{ zone: '分布', label: '等待绑定频数分布结果', value: 100, unit: '%' }];
-  const maxDist = Math.max(100, ...leftRows.map(d => Math.abs(d.value ?? 0)));
+  const leftRows = distBars;
+  const maxDist = leftRows.every(row => row.unit === '%') ? 100 : Math.max(1, ...leftRows.map(d => Math.abs(d.value ?? 0)));
   const distSvg = leftRows
     .map((d, idx) => {
       const ry = 226 + idx * 42;
       const pct = d.value !== null ? Math.max(0, Math.min(1, d.value / maxDist)) : 0;
-      const barW = Math.max(6, Math.round(pct * 270));
       const fill = idx === 0 ? primary : idx === 1 ? secondary : mixHex(primary, '#94A3B8', 0.45);
-      const valLabel = d.value !== null ? `${Number.isInteger(d.value) ? d.value : d.value.toFixed(1)}${d.unit || '%'}` : d.unit;
+      const valLabel = d.value !== null ? `${Number.isInteger(d.value) ? d.value : d.value.toFixed(1)}${d.unit}` : (d.unit || '未登记');
       return `<g>
         <text x="44" y="${ry}" fill="${INK_DARK}" style="font-size:12px;font-family:${FONT_SANS};font-weight:600">${esc(d.label.slice(0, 16))}</text>
         <text x="464" y="${ry}" text-anchor="end" fill="${primary}" style="font-size:12px;font-family:${FONT_SANS};font-weight:700">${esc(valLabel)}</text>
-        <rect x="44" y="${ry + 7}" width="420" height="10" rx="5" fill="${softPrimary}"/>
+        ${d.value === null ? '' : `<rect x="44" y="${ry + 7}" width="420" height="10" rx="5" fill="${softPrimary}"/>
         <rect x="44" y="${ry + 7}" width="${Math.round(pct * 420)}" height="10" rx="5" fill="${fill}"/>
-        <circle cx="${(44 + Math.max(8, Math.round(pct * 420))).toFixed(1)}" cy="${ry + 12}" r="4.5" fill="#FFFFFF" stroke="${fill}" stroke-width="2"/>
-        ${barW ? '' : ''}
+        <circle cx="${(44 + Math.round(pct * 420)).toFixed(1)}" cy="${ry + 12}" r="4.5" fill="#FFFFFF" stroke="${fill}" stroke-width="2"/>`}
       </g>`;
     })
     .join('');
 
-  const rightRows = scoreBars.length
-    ? scoreBars
-    : [{ zone: '维度', label: '等待绑定五维量表均分', value: 3.8, unit: '/ 5.0' }];
+  const rightRows = scoreBars;
+  const scoreMax = Math.max(1, ...rightRows.map(row => Math.abs(row.value ?? 0)));
   const scoreSvg = rightRows
     .map((d, idx) => {
       const ry = 226 + idx * 42;
-      const ratio = d.value !== null ? Math.max(0, Math.min(1, d.value / 5)) : 0.6;
-      const barW = Math.max(8, Math.round(ratio * 260));
-      const isWeak = (d.value ?? 5) < 3.6;
-      const dotColor = isWeak ? opposite : primary;
-      const valLabel = d.value !== null ? `${d.value.toFixed(2)} ${d.unit || '/ 5'}` : d.unit;
+      const explicitScale = d.unit.match(/^\/\s*([\d.]+)$/u);
+      const scaleMax = explicitScale && Number(explicitScale[1]) > 0 ? Number(explicitScale[1]) : scoreMax;
+      const ratio = d.value !== null ? Math.max(0, Math.min(1, Math.abs(d.value) / scaleMax)) : 0;
+      const dotColor = primary;
+      const valLabel = d.value !== null ? `${d.value.toFixed(2)} ${d.unit}` : (d.unit || '未登记');
       return `<g>
         <text x="530" y="${ry}" fill="${INK_DARK}" style="font-size:12px;font-family:${FONT_SANS};font-weight:600">${esc(d.label.slice(0, 15))}</text>
         <text x="950" y="${ry}" text-anchor="end" fill="${dotColor}" style="font-size:12px;font-family:${FONT_SANS};font-weight:700">${esc(valLabel)}</text>
-        <line x1="530" y1="${ry + 12}" x2="950" y2="${ry + 12}" stroke="${RULE_LINE}" stroke-width="2" stroke-linecap="round"/>
+        ${d.value === null ? '' : `<line x1="530" y1="${ry + 12}" x2="950" y2="${ry + 12}" stroke="${RULE_LINE}" stroke-width="2" stroke-linecap="round"/>
         <line x1="530" y1="${ry + 12}" x2="${530 + Math.round(ratio * 420)}" y2="${ry + 12}" stroke="${dotColor}" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="${530 + Math.round(ratio * 420)}" cy="${ry + 12}" r="6" fill="${dotColor}" stroke="#FFFFFF" stroke-width="2"/>
-        ${barW ? '' : ''}
+        <circle cx="${530 + Math.round(ratio * 420)}" cy="${ry + 12}" r="6" fill="${dotColor}" stroke="#FFFFFF" stroke-width="2"/>`}
       </g>`;
     })
     .join('');
 
   const takeawayText =
     takeaways.map(t => `${t.label}${t.unit ? `：${t.unit}` : ''}`).join(' ｜ ')
-    || `基于当前已冻结统计结果（n = ${r.n}）自动合成：数据映射与图形几何经过确定性校验。`;
-  const badgeText = r.classification === 'simulated' ? '教学模拟统计信息图' : '实证统计复合信息图';
+    || (r.n > 0 ? `基于已登记分析结果（分析样本 n = ${r.n}）派生，须结合来源及其限制解读。` : '当前无调查统计结果，未生成样本分布或维度均值。');
+  const badgeText = r.n === 0 ? '概念布局 · 无调查数据' : r.classification === 'simulated' ? '教学模拟统计信息图' : '已登记结果派生图形';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}">
     <rect x="0" y="0" width="${width}" height="${totalHeight}" rx="14" fill="#FFFFFF" stroke="${RULE_LINE}" stroke-width="1"/>
@@ -776,12 +771,12 @@ export function descriptiveInfographicSVG(r: ResultSnapshot, ink: FigureInk): st
     ${kpiSvg}
     <rect x="28" y="180" width="454" height="296" rx="12" fill="#FFFFFF" stroke="${RULE_LINE}" stroke-width="1"/>
     <text x="44" y="204" fill="${INK_DARK}" style="font-size:13px;font-family:${FONT_SANS};font-weight:700">面板 A · 样本结构与频数分布占比</text>
-    ${distSvg}
+    ${distSvg || `<text x="44" y="240" fill="${INK_MUTED}" style="font-size:12px;font-family:${FONT_SANS}">尚无同源频数分布结果</text>`}
     <rect x="514" y="180" width="454" height="296" rx="12" fill="#FFFFFF" stroke="${RULE_LINE}" stroke-width="1"/>
     <text x="530" y="204" fill="${INK_DARK}" style="font-size:13px;font-family:${FONT_SANS};font-weight:700">面板 B · 核心维度表现与薄弱项对比</text>
-    ${rightRows.length ? scoreSvg : ''}
+    ${scoreSvg || `<text x="530" y="240" fill="${INK_MUTED}" style="font-size:12px;font-family:${FONT_SANS}">尚无同源维度均值结果</text>`}
     <rect x="28" y="490" width="${width - 56}" height="52" rx="10" fill="${softOpposite}" stroke="${opposite}" stroke-opacity="0.25" stroke-width="1"/>
-    <text x="44" y="512" fill="${opposite}" style="font-size:11px;font-family:${FONT_SANS};font-weight:700">核心统计读数（自动锁定冻结结果）</text>
+    <text x="44" y="512" fill="${opposite}" style="font-size:11px;font-family:${FONT_SANS};font-weight:700">来源与分析范围</text>
     <text x="44" y="530" fill="${INK_DARK}" style="font-size:11.5px;font-family:${FONT_SANS}">${esc(takeawayText.slice(0, 74))}</text>
   </svg>`;
 }

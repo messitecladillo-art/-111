@@ -5,6 +5,7 @@ export type BrainPresetId = 'deepseek' | 'openai' | 'qwen';
 
 export type BrainStatus = {
   available: boolean;
+  directGatewayEnabled?: boolean;
   provider: string;
   model: string;
   source: 'env' | 'offline';

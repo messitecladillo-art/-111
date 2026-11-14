@@ -8,6 +8,8 @@ the tool instead of silently analysing different data.
 """
 import math
 import re
+from copy import deepcopy
+from types import SimpleNamespace
 from statistics import mean, median, stdev
 
 from sqlalchemy import select
@@ -124,7 +126,12 @@ class SurveyDataTools:
                 release, design, responses, digest = _read(session, self.project_id, ref)
                 if digest != self.expected[ref]:
                     raise DataToolError('dataset_changed_since_consent')
-                loaded.append((ref, release, design, responses, digest))
+                # The fenced read rolls back and closes its Session. Copy the
+                # small, authorized inputs while attached; never leak expired ORM
+                # rows into later computation or keep a transaction across I/O.
+                source = SimpleNamespace(public_design=deepcopy(release.public_design), classification=release.classification, status=release.status)
+                rows = [SimpleNamespace(answers=deepcopy(item.answers), visibility=deepcopy(item.visibility)) for item in responses]
+                loaded.append((ref, source, deepcopy(design), rows, digest))
         return loaded
 
     def load_dataset(self, *, artifact_refs):

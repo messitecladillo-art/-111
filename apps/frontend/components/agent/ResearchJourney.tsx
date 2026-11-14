@@ -38,6 +38,8 @@ export type ResearchJourneyProps = {
   disabled?: boolean;
   servicesLoading?: boolean;
   afterIntake?: ReactNode;
+  onLocalStart?: (direction: string) => void;
+  serverExecution?: boolean;
 };
 
 const STATUS: Record<JourneyStepStatus, string> = {
@@ -70,7 +72,7 @@ const DIRECTIONS = [
 /** Controlled view: project state, model routing, execution and persistence belong to the Agent host. */
 export default function ResearchJourney({ direction, onDirectionChange, onStart, steps, services, modelRoutes, defaultServiceId,
   onDefaultServiceChange, onModelCallChange, onStepAction, onToggleOptional, onEditPlan, onOpenSettings,
-  busy = false, disabled = false, servicesLoading = false, afterIntake }: ResearchJourneyProps) {
+  busy = false, disabled = false, servicesLoading = false, afterIntake, onLocalStart, serverExecution = false }: ResearchJourneyProps) {
   const id = useId();
   const complete = steps.filter(step => step.status === 'completed').length;
   const planned = steps.filter(step => step.status !== 'skipped').length;
@@ -98,7 +100,7 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
           {confirmation && <span>由你确认</span>}{step.optional && <span>可选</span>}
           {stage.availability === 'planned' ? <span data-pending="true">待接入</span> : stage.availability === 'partial' ? <span>可辅助完成</span> : null}
         </div>
-        {stage.modelCalls.length ? <div className={styles.models}>{stage.modelCalls.map(call => {
+        {stage.modelCalls.length && !serverExecution ? <div className={styles.models}>{stage.modelCalls.map(call => {
           const definition = MODEL_CALLS[call], route = modelRoutes[call];
           const eligible = services.filter(service => service.capabilities.includes(definition.capability));
           const explicit = route?.selectedServiceId ?? null;
@@ -149,6 +151,7 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
           {services.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
         </select></label>
         <button className={styles.textButton} type="button" onClick={onOpenSettings}>管理模型</button>
+        {onLocalStart && <button className={styles.textButton} type="button" disabled={busy || disabled || !direction.trim()} onClick={() => onLocalStart(direction.trim())}>先本地整理</button>}
         <button className={styles.primary} type="submit" disabled={busy || disabled || !direction.trim()}>{busy ? '正在推进…' : '开始推进'}</button>
       </div>
     </form>

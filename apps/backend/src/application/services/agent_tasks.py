@@ -7,7 +7,11 @@ from multi_agent.workflow.orchestrator import WorkflowError, WorkflowState, crea
 from application.services.agent_task_execution import DurableTaskExecution, execution_view, latest_execution, visible_task
 from application.agent_model_bindings import freeze_model_bindings, validate_frozen_model_bindings, validate_role_bindings
 from application.services.workflow_models import WorkflowModels, SCOPE
-from infrastructure.database.models import Operation
+from application.services.workflow_grants import WorkflowGrants
+from application.idempotency import reserve_operation
+from infrastructure.database.models import Operation, User
+
+CREATE_SCOPE = 'workflow-task-create/v1'
 
 def _view(row: AgentTask) -> dict:
     validate_frozen_model_bindings(row.state.get('model_bindings'), owner_id=row.created_by, task_type=row.task_type)
@@ -21,11 +25,15 @@ def _save(row: AgentTask, state: WorkflowState) -> None:
 
 class AgentTaskService:
 
-    def __init__(self, *, owned_project, workflow_engine, owned_service=None, model_runtime=None):
+    def __init__(self, *, owned_project, workflow_engine, owned_service=None, model_runtime=None, settings=None):
         self.owned_project = owned_project
         self.workflow_engine = workflow_engine
         self.owned_service = owned_service
         self.models = WorkflowModels(load=self.load, owned_service=owned_service, **model_runtime) if model_runtime else None
+        self.settings = settings or (model_runtime or {}).get('settings')
+        self.grants = WorkflowGrants(settings=self.settings, models=self.models, load=self.load, owned_service=owned_service) if self.models else None
+        if self.models:
+            self.models.grants = self.grants
         self.execution = DurableTaskExecution(load=self.load, save=_save, view=_view, engine=workflow_engine,
             before_dispatch=self._validate_dispatch_models, prepare_override=self.models.prepare if self.models else None)
 
@@ -68,6 +76,17 @@ class AgentTaskService:
 
     async def create_task(self, *, project_id: str, user, session, data):
         self.owned_project(session, user, project_id, edit=True, lock=True)
+        creation = None
+        if 'idempotencyKey' in data:
+            if self.settings is None:
+                raise ApiError(409, 'task_creation_unavailable', '任务创建回执尚未配置。')
+            session.execute(select(User).where(User.id == user.id).with_for_update()).scalar_one()
+            creation, repeated = reserve_operation(self.settings, session, user, CREATE_SCOPE, {**data, 'projectId': project_id})
+            if repeated:
+                row = self.load(session=session, user=user, project_id=project_id, task_id=creation.response['taskId'])
+                result = visible_task(_view, row, latest_execution(session, row.id))
+                session.commit()
+                return result
         if not isinstance(data['requirements'], dict):
             raise ApiError()
         context = data.get('context', {})
@@ -86,8 +105,29 @@ class AgentTaskService:
                 task_type=state.task_type, resolve_service=self._service_resolver(session, user))
         row = AgentTask(id=state.task_id, project_id=project_id, created_by=user.id, task_type=state.task_type, status=state.status.value, state=state.to_dict(), revision=0)
         session.add(row)
+        if creation is not None:
+            creation.response = {'taskId': row.id, 'projectId': project_id}
         session.commit()
         return _view(row)
+
+    def creation_receipt(self, *, project_id, key, user, session):
+        uuid_string(key)
+        self.owned_project(session, user, project_id)
+        operation = session.get(Operation, (user.id, CREATE_SCOPE, key))
+        if operation is None or not operation.response or operation.response['projectId'] != project_id:
+            raise ApiError(404, 'task_creation_not_found', '暂未查到这次创建回执，请稍后核对。')
+        row = self.load(session=session, user=user, project_id=project_id, task_id=operation.response['taskId'])
+        result = visible_task(_view, row, latest_execution(session, row.id))
+        session.commit()
+        return result
+
+    def phase_preview(self, *, project_id, task_id, user, session):
+        row = self.load(session=session, user=user, project_id=project_id, task_id=task_id)
+        if self.grants is None:
+            raise ApiError(409, 'model_runtime_unavailable', '此部署尚未配置模型步骤执行器。')
+        result = self.grants.preview(row=row, user=user, session=session)
+        session.commit()
+        return result
 
     def list_tasks(self, *, project_id: str, user, session):
         self.owned_project(session, user, project_id)

@@ -33,7 +33,6 @@ import { artifactScope, sectionRevisionArtifact } from '@/lib/agent/artifact-lib
 import SectionRevision from './SectionRevision';
 import { useSectionRevision } from './useSectionRevision';
 import { reportWorkState, sameReportRunScope, type ReportRunScope, type ReportWorkState } from '@/lib/agent/report-work';
-import type { WorkflowRole } from '@/lib/agent/workflow-task-client';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
@@ -75,6 +74,7 @@ import styles from './AgentShell.module.css';
 import type { FullReportGenerationResult, FullReportPack, ProjectResearchMode } from '@/lib/agent/full-report-pipeline';
 import { decomposeTopic } from '@/lib/agent/demo-study';
 import { canAcceptReportCandidate, hasUserResearchSource, mergeReportCandidate, reportChanges, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
+import { canPublishStudioResult, sameWorkspaceIdentity, type StudioPublicationIdentity, type WorkspaceIdentity } from '@/lib/agent/integration-safety';
 import { buildPaperSectionDiffs, locateArtifactTarget } from '@/lib/agent/paper-diff';
 import { fullReportInputRevision } from '@/lib/agent/full-report-request';
 import { requestFullReport, fullReportFailureStatus } from './full-report-client';
@@ -160,6 +160,11 @@ export default function AgentShell() {
     return { owner: owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch) ? owner : null, epoch: identityEpoch,
       thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
   }, [owner, identityEpoch, isCurrentAccount]);
+  const readWorkspaceIdentity = useCallback((): WorkspaceIdentity => {
+    const live = threads.view(owner), selected = live.threads.find(item => item.id === live.active);
+    return { owner: owner && isCurrentIdentity(owner === 'guest' ? null : owner, identityEpoch) ? owner : null,
+      epoch: identityEpoch, thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
+  }, [owner, identityEpoch, isCurrentIdentity]);
   const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research } = useWorkbenchModules(true, projectId);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
@@ -211,7 +216,7 @@ export default function AgentShell() {
     };
   }, []);
   const effectiveBrain = useMemo(() => {
-    if (customBrain?.apiKey?.trim()) {
+    if (brainStatus?.directGatewayEnabled && customBrain?.apiKey?.trim()) {
       const preset = customBrain.preset;
       const provider = preset === 'openai' ? 'OpenAI' : preset === 'qwen' ? '通义千问' : 'DeepSeek';
       const defaultModel = preset === 'openai' ? 'gpt-4o-mini' : preset === 'qwen' ? 'qwen-plus' : 'deepseek-chat';
@@ -223,7 +228,7 @@ export default function AgentShell() {
         source: 'custom' as const,
       };
     }
-    if (brainStatus?.available) {
+    if (brainStatus?.directGatewayEnabled && brainStatus.available) {
       return {
         available: true,
         preset: 'deepseek' as BrainPresetId,
@@ -1135,12 +1140,15 @@ export default function AgentShell() {
       turn: { lines: [[span(`正在连接「${effectiveBrain.provider}」研究大脑并分析意图…`, 'dim')]] },
     };
     threads.append([userMsg, pendingMsg]);
-    const homeThreadId = threads.threadOf(pendingMsg.id)?.id ?? null;
-    startCall(pendingMsg.id, currentOwner, latest.current.identityEpoch);
+    const homeThread = threads.threadOf(pendingMsg.id);
+    const homeThreadId = homeThread?.id ?? null;
+    const requestScope: WorkspaceIdentity = { owner: currentOwner, epoch: latest.current.identityEpoch,
+      thread: homeThreadId, project: homeThread?.projectId ?? null };
+    startCall(pendingMsg.id, currentOwner, requestScope.epoch);
 
     const stillCurrent = () =>
       !controller.signal.aborted &&
-      latest.current.owner === currentOwner &&
+      sameWorkspaceIdentity(requestScope, readWorkspaceIdentity()) &&
       threads.threadOf(pendingMsg.id)?.id === homeThreadId &&
       Boolean(threads.find(pendingMsg.id));
 
@@ -1405,7 +1413,7 @@ export default function AgentShell() {
       );
     } catch (error) {
       if ((error as Error)?.name === 'AbortError' || controller.signal.aborted) return;
-      if (!threads.find(pendingMsg.id)) return;
+      if (!stillCurrent()) return;
       const errMsg = (error as Error)?.message || '研究大脑请求未完成。';
       threads.patch(pendingMsg.id, m =>
         m.role === 'agent'
@@ -1433,7 +1441,7 @@ export default function AgentShell() {
       finishCall(pendingMsg.id);
       if (brainAbortRef.current === controller) brainAbortRef.current = null;
     }
-  }, [agent, customBrain, effectiveBrain, finishCall, setCopilotOpen, startCall]);
+  }, [agent, customBrain, effectiveBrain, finishCall, readWorkspaceIdentity, setCopilotOpen, startCall]);
 
   const dispatchUserMessage = useCallback((raw: string) => {
     const text = raw.trim();
@@ -1507,51 +1515,6 @@ export default function AgentShell() {
     dispatchUserMessage(text);
   }, [dispatchUserMessage]);
 
-  const adoptWorkflowOutput = useCallback((role: WorkflowRole, output: Record<string, unknown>) => {
-    if (role !== 'writing') return;
-    const deliverable = (output.deliverable ?? {}) as { chapters?: { title?: string; content?: string }[] };
-    const chapters = Array.isArray(deliverable.chapters) ? deliverable.chapters : [];
-    if (!chapters.length) return;
-    const expected = latest.current.reportSource;
-    const base = expected.report ?? blankReport;
-    const updatedIds: string[] = [];
-    const norm = (value: string) => value.trim().replace(/^[\d一二三四五六七八九十]+[、.\s]*/u, '');
-    const nextSections = base.report.map(sec => ({ ...sec }));
-    for (let i = 0; i < chapters.length; i++) {
-      const ch = chapters[i];
-      const text = typeof ch?.content === 'string' ? ch.content.trim() : '';
-      const rawTitle = typeof ch?.title === 'string' ? ch.title.trim() : '';
-      if (!text) continue;
-      let target = rawTitle
-        ? nextSections.find(sec => norm(sec.title) === norm(rawTitle) || sec.title.includes(norm(rawTitle)))
-        : undefined;
-      if (!target) {
-        target = nextSections.find(sec => !updatedIds.includes(sec.id) && sec.id !== 'abstract' && !sec.id.startsWith('appendix') && sec.id !== 'references');
-      }
-      if (target) {
-        target.body = text;
-        target.source = '协同流水线撰稿';
-        updatedIds.push(target.id);
-      } else {
-        const createdId = `workflow-sec-${i + 1}`;
-        nextSections.push({ id: createdId, title: rawTitle || `第 ${i + 1} 节`, body: text, source: '协同流水线撰稿' });
-        updatedIds.push(createdId);
-      }
-    }
-    if (!updatedIds.length) return;
-    const nextReport = { ...base, report: nextSections };
-    const outcome = restoreReportVersion(nextReport, expected);
-    if (outcome !== 'applied') {
-      setReviewNotice(outcome === 'conflict' ? '原稿或研究资料已更新，请重试写入章节。' : '无法写入工作区草稿，请检查本地存储。');
-      return;
-    }
-    setStage('paper');
-    setCopilotOpen(false);
-    pickSection(updatedIds[0]);
-    requestAnimationFrame(() => choreo.playChaptersTypewriter(nextReport, updatedIds));
-    setReviewNotice(`已将 ${updatedIds.length} 节协同撰稿成果以老式打字机模式写入报告画布。`);
-  }, [blankReport, choreo, pickSection, restoreReportVersion, setCopilotOpen, setStage]);
-
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
   const { ready: knowledgeReady, search } = knowledge;
@@ -1617,14 +1580,28 @@ export default function AgentShell() {
   const todayTokens = book.threads.reduce((total, t) => total + t.messages.reduce((sum, m) => m.role === 'agent' && m.at >= today && m.model?.usage ? sum + m.model.usage.inputTokens + m.model.usage.outputTokens : sum, 0), 0);
   const exportThread = thread && messages.length > 0 ? () => exportRecord(thread) : null;
 
+  const studioPreviewKey = useMemo(() => JSON.stringify([visibleCandidate?.runId ?? null, paperContent]), [visibleCandidate?.runId, paperContent]);
+  const studioIdentity = useMemo<StudioPublicationIdentity>(() => ({ owner, epoch: identityEpoch, thread: artifactThreadId || null,
+    project: artifactProjectId, sourceKey, previewKey: studioPreviewKey, pending: !!reportSource.inputPending || !!visibleCandidate?.pending || !!liveWriting?.active }),
+  [owner, identityEpoch, artifactThreadId, artifactProjectId, sourceKey, studioPreviewKey, reportSource.inputPending, visibleCandidate?.pending, liveWriting?.active]);
+  const latestStudioIdentity = useRef(studioIdentity);
+  useLayoutEffect(() => { latestStudioIdentity.current = studioIdentity; }, [studioIdentity]);
+  const studioResultCurrent = useCallback((expected: StudioPublicationIdentity) => canPublishStudioResult(expected,
+    { ...latestStudioIdentity.current, ...readWorkspaceIdentity(), sourceKey: reportSourceKey(latest.current.reportSource) }), [readWorkspaceIdentity]);
+
   const commitStudioReport = useCallback((nextContent: EditorContent, message: string, nextDesign?: Questionnaire | null) => {
+    if (!studioResultCurrent(studioIdentity)) {
+      setReviewNotice('原稿、候选稿或所在项目已变化，请根据当前材料重新生成这项成果。');
+      return;
+    }
     if (visibleCandidate && !visibleCandidate.pending) {
-      setCandidate(prev => prev ? { ...prev, preview: nextContent } : null);
+      setCandidate(prev => prev?.runId === visibleCandidate.runId && prev.preview === visibleCandidate.preview ? { ...prev, preview: nextContent } : prev);
       setStage('paper');
       setReviewNotice(`${message}（已同步至当前候选稿预览，采纳后永久落盘）`);
       return;
     }
-    const source = latest.current.reportSource;
+    // This is the source captured when the studio received its input, never whichever project is now visible.
+    const source = reportSource;
     const resolvedDesign = nextDesign ?? source.design ?? newQuestionnaire();
     const outcome = applyCandidate({
       design: resolvedDesign,
@@ -1639,16 +1616,17 @@ export default function AgentShell() {
     } else {
       setReviewNotice('工作区资料正在同步中，请稍候片刻重试写入。');
     }
-  }, [applyCandidate, setStage, visibleCandidate]);
+  }, [applyCandidate, reportSource, setStage, studioIdentity, studioResultCurrent, visibleCandidate]);
 
   const saveStudioSvgArtifact = useCallback((title: string, svg: string) => {
+    if (!studioResultCurrent(studioIdentity)) return;
     const cleanName = title.replace(/[\\/:*?"<>|]/g, '-').slice(0, 60) || 'evix-studio-asset';
     void artifacts.onImport(
       new File([new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })], `${cleanName}.svg`, { type: 'image/svg+xml' }),
       'diagram',
       { origin: '证见创作工坊', classification: 'simulated' },
     );
-  }, [artifacts]);
+  }, [artifacts, studioIdentity, studioResultCurrent]);
 
   const addSteeringNote = useCallback((raw: string) => {
     const clean = raw.trim();
@@ -1794,7 +1772,7 @@ export default function AgentShell() {
         onOpenStudio={tab => setActiveStudio(tab)}
         steeringCount={steeringNotes.length}
         brainStatus={effectiveBrain}
-        studioContent={activeStudio ? <StudioPanel
+        studioContent={activeStudio ? <StudioPanel key={composerScope}
           activeTab={activeStudio}
           onSelectTab={setActiveStudio}
           onClose={() => setActiveStudio(null)}
@@ -2022,8 +2000,7 @@ export default function AgentShell() {
             watermarkText={watermarkEnabled ? `证见 EVI-X · ${email || '内部审阅副本'} · 防未授权摘抄与外传` : null}
           />
         </div>}
-        {!overlayDock && (
-        <div className={styles.chatColumn}>
+        <div className={styles.chatColumn} hidden={overlayDock}>
         <div ref={scrollRef} className={styles.scroll}>
           {!messages.length && (
             <section className={styles.empty} aria-label="证见 Agent 研究大脑">
@@ -2106,8 +2083,7 @@ export default function AgentShell() {
               </div>
             </section>
           )}
-          {researchOpen && (
-            <section className={styles.researchDrawer} aria-label="研究路线">
+            <section className={styles.researchDrawer} aria-label="研究路线" hidden={!researchOpen}>
               <div className={styles.researchDrawerHead}>
                 <span><Icon name="spark" />研究路线</span>
                 <small>选题 · 文献 · 问卷 · 分析</small>
@@ -2116,6 +2092,7 @@ export default function AgentShell() {
               </div>
               <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
                 owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
+                execution={{ mutate, isCurrent: () => !!owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch), onProduced: artifacts.onProduced }}
                 modelRoutes={journeyModelRoutes} defaultServiceId={stagePreferences.defaultServiceId ?? null}
                 onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
                 onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}
@@ -2134,14 +2111,11 @@ export default function AgentShell() {
                 }}
                 simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
                   startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }}
-                onWorkflowWorkState={setWorkflowWorkState}
-                onAdoptWorkflowOutput={adoptWorkflowOutput} />
+                onWorkflowWorkState={setWorkflowWorkState} />
             </section>
-          )}
           {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={false} writingModelStatus={writingModelStatus} onAction={performAction} onAnswer={agent.answer} />}
         </div>
         </div>
-        )}
       </main>
 
       <section ref={artifactPanelRef} className={styles.panel} hidden={!panel && !output && !inspecting && !artifactOpen} aria-label={artifactOpen ? '成果架' : here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
@@ -2248,7 +2222,9 @@ export default function AgentShell() {
                           ? '正在使用当前标签页内存配置直连推理，刷新页面即自动销毁。'
                           : effectiveBrain.available
                             ? '服务端已挂载直连推理环境密钥，无需登录即可自由对话并调用以下 14 项工具。'
-                            : '如需直接开启自然语言多步协同，可配置仅存本标签页内存的 BYOK 密钥，或登录后在「模型设置」保存。'}
+                            : brainStatus?.directGatewayEnabled
+                              ? '可在本标签页配置临时密钥，也可登录后在「模型设置」保存个人模型。'
+                              : '当前部署使用已保存的个人模型服务。登录后进入「模型设置」配置，并在对话中选择服务。'}
                     </p>
                   </div>
                   <span className={styles.brainEngineBadge} data-online={effectiveBrain.available ? 'true' : 'false'}>
@@ -2256,7 +2232,10 @@ export default function AgentShell() {
                   </span>
                 </div>
 
-                {!chatService && (
+                {!chatService && !brainStatus?.directGatewayEnabled && <div className={styles.brainByokActions}>
+                  <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} onClick={() => { setBrainModalOpen(false); go('services'); }}>打开模型设置</button>
+                </div>}
+                {!chatService && brainStatus?.directGatewayEnabled && (
                   <div className={styles.brainByokForm}>
                     <div className={styles.brainByokFields}>
                       <label>
