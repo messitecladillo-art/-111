@@ -22,6 +22,8 @@ node_modules/
 playwright-report/
 test-results/
 *.tsbuildinfo
+.wrangler/
+/apps/frontend/dist/
 
 # Local research captures and generated delivery bundles (preserved on disk)
 /research/xhs-direct-20261007/
