@@ -7,6 +7,7 @@ import { Icon } from './icons';
 import { tidyTitle as tidy, type Book, type Thread } from './threads';
 import { thousands } from '@/lib/agent/chat';
 import type { RoomId } from '@/lib/agent/rooms';
+import { hubForTab, STUDIO_HUBS, type StudioTabId } from './studios/StudioPanel';
 import styles from './AgentShell.module.css';
 
 type Props = {
@@ -39,6 +40,11 @@ type Props = {
   onLogout: () => void;
   /** While the report fills the centre, its navigation takes the place of the conversation list. */
   nav?: ReactNode;
+  activeStudio?: StudioTabId | null;
+  onOpenStudio?: (tab: StudioTabId | null) => void;
+  studioContent?: ReactNode;
+  steeringCount?: number;
+  brainStatus?: { available: boolean; provider: string; model: string; source: 'env' | 'custom' | 'offline' };
 };
 
 /** Where a conversation's words hold what is searched for: a few words either side of the first place. */
@@ -59,7 +65,7 @@ function excerpt(thread: Thread, wanted: string): string | null {
  * them, then the rest by recency. Search reads titles and what was said. A conversation can be renamed in place;
  * deleting asks once more in place and removes the conversation only, never project work.
  */
-export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout, nav }: Props) {
+export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout, nav, activeStudio = null, onOpenStudio, studioContent, steeringCount = 0, brainStatus }: Props) {
   const [menu, setMenu] = useState(false);
   const [allOutputs, setAllOutputs] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -123,16 +129,42 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
   return <aside className={styles.sidebar} aria-label="对话与项目">
     <div className={styles.sideHead}>
       <span className={styles.brandName}>证见<small>EVI-X</small></span>
+      <Link href="/workspace" className={styles.sideBackLink} title="返回研究工作台">← 工作台</Link>
       <span className={styles.spacer} />
       <button type="button" className={styles.iconButton} aria-label="搜索对话" aria-pressed={searching} onClick={() => { setSearching(!searching); setQuery(''); }}><Icon name="search" /></button>
       <button type="button" className={styles.iconButton} aria-label="收起侧栏（Ctrl B）" title="收起侧栏（Ctrl B）" onClick={onCollapse}><Icon name="sidebar" /></button>
     </div>
     {searching && <input className={styles.sideSearch} autoFocus value={query} placeholder="搜索对话标题与内容" aria-label="搜索对话标题与内容" onChange={event => setQuery(event.target.value)} />}
     <nav className={styles.sideScroll} aria-label={nav ? "报告" : "对话"}>
-      {nav ?? <>
+      {onOpenStudio && !activeStudio && (
+        <details className={styles.sideGroup}>
+          <summary>创作工坊 <small>{steeringCount > 0 ? `${steeringCount} 条指令` : '按需呼出'}</small><Icon name="down" /></summary>
+          <section className={styles.studioDock} aria-label="Agent 核心创作工坊">
+            <div className={styles.studioPillGrid}>
+              {STUDIO_HUBS.map(hub => {
+                const active = activeStudio ? hubForTab(activeStudio).id === hub.id : false;
+                return (
+                  <button
+                    key={hub.id}
+                    type="button"
+                    className={styles.studioPill}
+                    aria-pressed={active}
+                    onClick={() => onOpenStudio(active ? null : hub.defaultTab)}
+                    title={hub.label}
+                  >
+                    <span>{hub.icon}</span>
+                    <span>{hub.short}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </details>
+      )}
+      {activeStudio && studioContent ? studioContent : (nav ?? <>
       <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}><Icon name="edit" />新对话</button>
       {!wanted && <>
-        <details className={styles.sideGroup} open>
+        <details className={styles.sideGroup}>
         <summary>研究进度 <Icon name="down" /></summary>
         <ol className={styles.stages}>
           {stages.map(stage => {
@@ -173,14 +205,14 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
       {(loose.length > 0 || !recent.length) && <p className={styles.sideLabel}>最近</p>}
       {loose.map(t => row(t))}
       {!recent.length && <p className={styles.sideEmpty}>{wanted ? '没有匹配的对话。' : '还没有对话。'}</p>}
-      </>}
+      </>)}
     </nav>
     {notice && <p className={styles.sideNotice} role="alert">{notice}</p>}
     <div className={styles.sideFoot}>
       {failed && account !== 'ready' ? <>
-        <span role="alert">账号服务暂未就绪</span>
+        <span role="status" title="账号服务未连接，内容安全保存在本地工作区" style={{ color: 'var(--c-dim)' }}>本地工作区（离线）</span>
         <span className={styles.spacer} />
-        <button type="button" onClick={onRetry}>重新连接</button>
+        <button type="button" onClick={onRetry}>重连</button>
       </> : account === 'ready' ? <div className={styles.accountWrap}>
         {menu && <div className={styles.accountMenu} role="menu" aria-label="账号">
           <button type="button" role="menuitem" onClick={() => { setMenu(false); onModels(); }}>模型设置</button>
@@ -195,7 +227,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
           <Icon name="more" />
         </button>
       </div> : <>
-        <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>
+        <span>{account === 'loading' ? '正在核对登录…' : brainStatus?.available ? `${brainStatus.provider} 直连 · 对话存本页` : '未登录 · 对话只留在本标签页'}</span>
         <span className={styles.spacer} />
         {account === 'guest' ? <Link href="/login">登录</Link> : <button type="button" onClick={onRetry}>重试连接</button>}
       </>}

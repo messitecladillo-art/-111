@@ -292,7 +292,8 @@ const ADVANCED = new Set([...Object.keys(FIGURE_OF), 'ahp']);
 
 /** Whether a result carries a method figure: every exporter then draws that figure instead of bars of a column. */
 export const carriesFigure = (r: { method: string; metrics: readonly { label: string }[] }): boolean =>
-  !!FIGURE_OF[r.method] && r.metrics.length > 0 && r.metrics.every(m => m.label.includes(SEP));
+  r.method === 'wordcloud' || r.method === 'framework' || r.method === 'diagram' || r.method === 'infographic'
+  || (!!FIGURE_OF[r.method] && r.metrics.length > 0 && r.metrics.every(m => m.label.includes(SEP)));
 
 /** Whether a result can be shown as a figure at all: not a sampling frame, and an advanced method only through its own figure. */
 export const canChart = (r: { method: string; metrics: readonly { label: string }[] }): boolean =>

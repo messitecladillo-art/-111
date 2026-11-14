@@ -119,7 +119,7 @@ test('results are narrowed by title, method or variable; nothing is invented whe
   assert.match(text(toolTurn({ tool: 'results', args: { query: '卡方' } }, withResults()).turn), /有关的已登记的分析结果 1 项。/);
   const none = route('/结果 回归', withResults()).turn;
   assert.match(text(none), /登记的结果里没有「回归」/);
-  assert.deepEqual(none.chips.map(c => c.action.text), ['/结果 通勤时间与满意度', '/结果 各年级满意度']);
+  assert.deepEqual(none.chips.map(c => c.action.text), ['筛选结果：通勤时间与满意度', '筛选结果：各年级满意度']);
   assert.match(text(route('/结果', withResults({ results: [], findings: [], pending: true, placed: [] })).turn), /正在送往报告/);
   const unseen = route('/结果', withResults(null)).turn;
   assert.match(text(unseen), /还没有打开报告与 PPT/);
@@ -190,7 +190,7 @@ test('writing results into the report is offered on a confirmation card that say
   assert.deepEqual(parseChatReceipt({ id: 'x', status: 'ready', reply: '好', actions: [{ tool: 'place', args: {} }] }).actions, [{ tool: 'place', args: {} }]);
   const listed = route('/结果', withResults({ ...held, placed: ['各年级满意度'] })).turn;
   assert.ok(text({ lines: listed.cards[0].lines }).includes('各年级满意度　卡方检验 · 有效样本 212 / 240 · 已写进报告'));
-  assert.equal(listed.chips[0].action.text, '/写入', 'the list recommends writing what is still missing');
+  assert.equal(listed.chips[0].action.text, '把结果写进报告', 'the list recommends writing what is still missing');
 });
 
 test('a receipt carries the tokens its call reported, shown as sent up and received down', async () => {
@@ -201,4 +201,78 @@ test('a receipt carries the tokens its call reported, shown as sent up and recei
   assert.equal(usageText({ inputTokens: 1234, outputTokens: 5 }), '↑1.2k ↓5 tokens');
   assert.equal(parseChatReceipt({ id: 't', status: 'ready', reply: '好', actions: [] }).usage, null, 'older receipts have none');
   for (const bad of [null, {}, { inputTokens: -1, outputTokens: 2 }, { inputTokens: 1.5, outputTokens: 2 }, { inputTokens: '3', outputTokens: 2 }]) assert.equal(parseUsage(bad), null);
+});
+
+test('orchestrator tools parse cleanly and map to stage, studios, section draft, full report, and simulation', async () => {
+  const first = parseChatReceipt({
+    id: 'orch-1',
+    status: 'ready',
+    reply: '已为你调度视图与工坊。',
+    actions: [
+      { tool: 'stage', args: { view: 'paper' } },
+      { tool: 'studio', args: { kind: 'chart' } },
+      { tool: 'draft_section', args: { node: '摘要' } },
+    ],
+  });
+  assert.equal(first.actions.length, 3);
+  assert.deepEqual(first.actions[0], { tool: 'stage', args: { view: 'paper' } });
+  assert.deepEqual(first.actions[1], { tool: 'studio', args: { kind: 'chart' } });
+  assert.deepEqual(first.actions[2], { tool: 'draft_section', args: { node: '摘要' } });
+
+  const second = parseChatReceipt({
+    id: 'orch-2',
+    status: 'ready',
+    reply: '准备生成报告或教学模拟。',
+    actions: [
+      { tool: 'generate_report', args: { topic: '社区助餐服务' } },
+      { tool: 'simulate', args: {} },
+    ],
+  });
+  assert.equal(second.actions.length, 2);
+
+  const rejected = parseChatReceipt({
+    id: 'orch-bad',
+    status: 'ready',
+    reply: '坏参数过滤。',
+    actions: [
+      { tool: 'stage', args: { view: 'invalid' } },
+      { tool: 'studio', args: { kind: 'invalid' } },
+      { tool: 'draft_section', args: { node: '' } },
+    ],
+  });
+  assert.equal(rejected.actions.length, 0);
+
+  const stageTurn = toolTurn({ tool: 'stage', args: { view: 'advisors' } }, withResults());
+  assert.deepEqual(stageTurn.turn.act, { type: 'stage', stage: 'advisors' });
+  const chartTurn = toolTurn({ tool: 'studio', args: { kind: 'chart' } }, withResults());
+  assert.equal(chartTurn.turn.cards[0].kind, 'chart-studio');
+  const draftRouted = toolTurn({ tool: 'draft_section', args: { node: '摘要' } }, withResults());
+  assert.ok('draft' in draftRouted);
+  const reportRouted = toolTurn({ tool: 'generate_report', args: { topic: '社区助餐服务' } }, withResults());
+  assert.equal(reportRouted.turn.act.type, 'generateFullReport');
+  const simRouted = toolTurn({ tool: 'simulate', args: {} }, withResults());
+  assert.equal(simRouted.turn.act.type, 'loadBenchmark');
+});
+
+test('brain tools schema covers all 14 EVI-X tools and strictly validates OpenAI tool-call payloads', async () => {
+  const { AGENT_TOOL_SPECS, toOpenAiToolDefinitions, validateToolAction, formatToolArgsBrief } = await import('../lib/agent/tools-schema.ts');
+  assert.equal(AGENT_TOOL_SPECS.length, 14);
+  const defs = toOpenAiToolDefinitions();
+  assert.equal(defs.length, 14);
+  assert.ok(defs.every((d) => d.type === 'function' && d.function.name && d.function.parameters.type === 'object'));
+
+  assert.deepEqual(validateToolAction('next', {}), { tool: 'next', args: {} });
+  assert.deepEqual(validateToolAction('light', { room: 'design' }), { tool: 'light', args: { room: 'design' } });
+  assert.equal(validateToolAction('light', { room: 'invalid_room' }), null);
+  assert.deepEqual(validateToolAction('open', { room: 'sampling' }), { tool: 'open', args: { room: 'sampling' } });
+  assert.equal(validateToolAction('open', {}), null);
+  assert.deepEqual(validateToolAction('studio', { kind: 'chart' }), { tool: 'studio', args: { kind: 'chart' } });
+  assert.equal(validateToolAction('studio', { kind: 'unknown' }), null);
+  assert.deepEqual(validateToolAction('lookup', { query: ' 设计效应 ' }), { tool: 'lookup', args: { query: '设计效应' } });
+  assert.equal(validateToolAction('lookup', { query: '' }), null);
+  assert.deepEqual(validateToolAction('draft_section', { node: '摘要' }), { tool: 'draft_section', args: { node: '摘要' } });
+  assert.equal(validateToolAction('unknown_tool', {}), null);
+
+  assert.equal(formatToolArgsBrief({ room: 'design', extra: undefined }), 'room=design');
+  assert.equal(formatToolArgsBrief(undefined), '');
 });

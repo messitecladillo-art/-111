@@ -104,7 +104,7 @@ test('slash commands, rooms and everyday phrasings route to what they name', () 
 test('a sentence naming two rooms asks which first; questions about terms go to the knowledge base', () => {
   const both = route('把抽样方案写进报告', ctx()).turn;
   assert.equal(both.act, undefined);
-  assert.deepEqual(both.chips.map(c => c.action.text), ['/抽样', '/报告']);
+  assert.deepEqual(both.chips.map(c => c.action), [{ type: 'open', room: 'sampling' }, { type: 'open', room: 'editor' }]);
   assert.deepEqual(route('什么是设计效应', ctx()), { lookup: '设计效应', explicit: true });
   assert.deepEqual(route('设计效应', ctx()), { lookup: '设计效应', explicit: false });
   assert.deepEqual(route('/查 设计效应', ctx()), { lookup: '设计效应', explicit: true });
@@ -119,7 +119,7 @@ test('knowledge answers are quoted from reviewed entries, and loose matches are 
   assert.match(text(lookupTurn('无此词', [], true)), /知识镜里没有「无此词」/);
   assert.match(text(lookupTurn('随便说说', [{ entry, match: 'fuzzy', ambiguous: false }], false)), /听不懂/);
   const ambiguous = lookupTurn('效应', [{ entry, match: 'fuzzy', ambiguous: false }, { entry: { ...entry, id: 'x', name: '效应量' }, match: 'fuzzy', ambiguous: false }], true);
-  assert.deepEqual(ambiguous.chips.map(c => c.action.text), ['/查 设计效应', '/查 效应量']);
+  assert.deepEqual(ambiguous.chips.map(c => c.action.text), ['查一下 设计效应', '查一下 效应量']);
 });
 
 test('drafting a questionnaire asks for consent rather than calling; designing alone still opens the room', () => {
@@ -221,7 +221,24 @@ test('/来处 answers with the path of one exhibit, offers a choice among severa
   assert.equal(card.reference, '图 1-1');
   assert.equal(route('图 1－1 的数字从哪来？', ctx(empty, 'overview', one)).turn.cards[0].kind, 'trace');
   const two = traceExhibits(reportWith([chart, { id: 'b2', kind: 'table', text: '使用频次', evidenceId: 'r2', valueColumn: 1 }], [result('r1'), result('r2')]), design);
-  assert.deepEqual(route('/来处', ctx(empty, 'overview', two)).turn.chips.map(c => c.action.text), ['/来处 图 1-1', '/来处 表 1-1']);
+  assert.deepEqual(route('/来处', ctx(empty, 'overview', two)).turn.chips.map(c => c.action.text), ['回溯：图 1-1', '回溯：表 1-1']);
   assert.equal(route('/来处 使用频次', ctx(empty, 'overview', two)).turn.cards[0].reference, '表 1-1');
   assert.match(text(route('/来处 图 9-9', ctx(empty, 'overview', two)).turn), /报告里没有「图 9-9」/);
+});
+
+test('global agent dock shows on non-agent routes, hides on excluded routes, and parses one-shot handoff payloads', async () => {
+  const { shouldShowGlobalDock, buildHandoffPayload, parseHandoffPayload, needsAgentShellHandoff } = await import('../lib/agent/dock.ts');
+  for (const shown of ['/', '/workspace', '/projects/abc', '/cases', '/explore', '/knowledge', '/services', '/preflight', '/chronicle']) {
+    assert.equal(shouldShowGlobalDock(shown), true, `expected dock on ${shown}`);
+  }
+  for (const hidden of [null, '/agent', '/agent/run', '/login', '/invites/tok', '/s/share-id']) {
+    assert.equal(shouldShowGlobalDock(hidden), false, `expected no dock on ${hidden}`);
+  }
+  const fresh = buildHandoffPayload('  帮我生成社区调研报告  ', 1_000_000);
+  assert.equal(parseHandoffPayload(fresh, 1_005_000), '帮我生成社区调研报告');
+  assert.equal(parseHandoffPayload(fresh, 1_300_000), null);
+  assert.equal(parseHandoffPayload('bad-json', 1_005_000), null);
+  assert.equal(needsAgentShellHandoff(route('/问卷', ctx())), true);
+  assert.equal(needsAgentShellHandoff(route('打开问卷设计', ctx())), true);
+  assert.equal(needsAgentShellHandoff(route('/查 设计效应', ctx())), false);
 });

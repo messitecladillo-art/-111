@@ -20,10 +20,13 @@ import type { DatasetValue } from '../canvas/execute.ts';
 import { type BenchmarkResult, benchmarkReport } from '../report-benchmark.ts';
 import { blueprintNode, matchBlueprintNode } from '../report-blueprint.ts';
 import { METHOD_LABELS, suggestedNode, targetSection } from '../report-placement.ts';
+import { isDiagramMethod } from '../diagram-figures.ts';
 import { verifyResearchQuality, type ReportBlock, type ResultSnapshot } from '../research-quality.ts';
+import { getSectionRhetoricalBlueprint } from '../../data/zhengda-empirical-anatomy.ts';
 import { ADVISORS, type AdvisorReading, advisorForNode, advisorReading, sectionIssues } from './advisors.ts';
 import { type Fact, SYNTHESIS_NODES, draftFacts, draftSection, reportOutline } from './draft.ts';
 import { buildDemoPack, decomposeTopic, noteDrafting, type DemoBlueprint, type DemoPack } from './demo-study.ts';
+import { buildDeAiPromptRules, AI_CLICHE_RULES } from './interview-corpus-deai.ts';
 import { standingFindings, type ResultsView } from './router.ts';
 
 export type ProjectResearchMode = 'plan' | 'demonstration' | 'empirical';
@@ -143,16 +146,17 @@ export async function validateFullReportBase(
   } else if (dataset?.kind === 'simulated' || results.some(r => r.classification === 'simulated')) {
     throw new FullReportInputError('mode_conflict', '模拟数据不能用于研究计划或实证报告模式，请明确选择教学演示。');
   }
+  const statResults = results.filter(r => !isDiagramMethod(r.method));
   if (mode === 'empirical') {
     if (!project || /^(?:local|demo|demonstration)(?:$|[-_:])/iu.test(project.projectId)) {
       throw new FullReportInputError('saved_project_required', '实证报告须绑定已保存的项目和当前输入版本。');
     }
-    if (dataset?.kind !== 'user_provided' || !results.length) {
+    if (dataset?.kind !== 'user_provided' || !statResults.length) {
       throw new FullReportInputError('empirical_evidence_required', '实证报告须提供真实数据集及已登记的分析结果。');
     }
   }
   if (results.length) {
-    if (!dataset || results.some(r => r.sourceHash !== dataset.sourceHash)) {
+    if (statResults.length && (!dataset || statResults.some(r => r.sourceHash !== dataset.sourceHash))) {
       throw new FullReportInputError('source_hash_mismatch', '分析结果与当前数据的来源指纹不一致，请重新登记计算结果。');
     }
     try {
@@ -448,6 +452,11 @@ export function sanitizeModelParagraph(raw: string): string {
       s = s.replace(/(?<![0-9.])([1-9]|10)\s*(?:—|–|-|至|到)\s*([1-9]|10)\s*(个|项|条|类|维|大|种|阶段|象限|部分|步|层|级|轮|期|周|天|月|年|次|段|句|篇)(?![0-9])/gu, (_, a: string, b: string, clf: string) => `${toChineseNumber(Number(a))}至${toChineseNumber(Number(b))}${clf}`);
       // Convert small integer counts with structural classifiers: 4个象限, 5维, 3条, 2类, 4分类 -> 四个象限, 五维, 三条, 两类, 四分类
       s = s.replace(/(?<![0-9.])([1-9]|1[0-9]|20)\s*(个|项|条|类|分类|维|维度|大|种|阶段|象限|部分|步|步骤|层|层面|级|轮|期|周|段|篇|轨|赛道|片区|主体|工程|模块|渠道)(?![0-9])/gu, (_, d: string, clf: string) => `${toChineseNumber(Number(d))}${clf}`);
+      // Strip AI writing cliches unconditionally (academic substitution contains zero Arabic/Chinese numerals)
+      for (const rule of AI_CLICHE_RULES) {
+        s = s.replace(rule.pattern, rule.academicSub);
+      }
+      s = s.replace(/([，,；;。])\s*[，,]/gu, '$1').replace(/^[\s，,、]+/u, '');
       return s;
     })
     .join('');
@@ -467,33 +476,40 @@ export function buildSkillPackContract(
   const findings = pack.report.quality?.findings ?? [];
   const refs = pack.report.references ?? [];
 
+  const hasExtendedScale = pack.design.questions.some(q => q.variable === 'Q15');
   const designMatrix: DesignMatrixRow[] = mode === 'demonstration' ? [
     {
       rqId: 'RQ1',
-      question: `「${topic.shortTitle}」中${topic.groupA}与${topic.groupB}的${topic.statusConstruct}是否不同？`,
+      question: `「${topic.shortTitle}」中${topic.groupA}与${topic.groupB}的${topic.statusConstruct}${hasExtendedScale ? '及群体分布特征' : ''}是否不同？`,
       decisionMeaning: '决定服务资源是统一投放，还是按人群分别安排',
-      construct: `${topic.groupConstruct} × ${topic.statusConstruct}`,
-      itemIds: ['Q1', 'Q2', 'Q8'],
+      construct: hasExtendedScale ? `${topic.groupConstruct} × ${topic.statusConstruct} × 年龄与频次结构` : `${topic.groupConstruct} × ${topic.statusConstruct}`,
+      itemIds: hasExtendedScale ? ['Q1', 'Q2', 'Q8', 'Q13', 'Q14'] : ['Q1', 'Q2', 'Q8'],
       analysisMethod: '列联表 Pearson χ² 检验与 Cramér’s V 效应量',
       boundary: '横截面列联检验仅反映群体分布关联，不作个体动态跃迁轨迹推断',
     },
     {
       rqId: 'RQ2',
-      question: `${topic.scaleConstruct}是否可靠，哪些方面重要而表现偏低？`,
+      question: hasExtendedScale
+        ? `${topic.scaleConstruct}及规则制度、信任契合三因子是否可靠，哪些方面重要而表现偏低？`
+        : `${topic.scaleConstruct}是否可靠，哪些方面重要而表现偏低？`,
       decisionMeaning: '找出应优先改进的服务短板，避免在不敏感的环节过度投入',
-      construct: `五个方面的体验（${topic.dimensions.map(d => d.short).join('、')}）`,
-      itemIds: ['Q3', 'Q4', 'Q5', 'Q6', 'Q7'],
-      analysisMethod: 'Cronbach α 内部一致性检验 + 均值比较（Welch t / Welch F）+ 重要性—表现分析',
-      boundary: '均值差异受限于样本覆盖范围，外推到样本以外的人群前需重新评估',
+      construct: hasExtendedScale
+        ? `核心体验（${topic.dimensions.map(d => d.short).join('、')}）与制度规则、信任契合维度`
+        : `五个方面的体验（${topic.dimensions.map(d => d.short).join('、')}）`,
+      itemIds: hasExtendedScale ? ['Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q15', 'Q16', 'Q17', 'Q18', 'Q19'] : ['Q3', 'Q4', 'Q5', 'Q6', 'Q7'],
+      analysisMethod: 'Cronbach α 内部一致性 + KMO/因子效度 + 组间差异比较 + 重要性—表现分析（IPA）',
+      boundary: '均值差异与象限划分受限于样本覆盖范围，外推到样本以外的人群前需重新评估',
     },
     {
       rqId: 'RQ3',
-      question: `${topic.overallSatConstruct}、${topic.mechanismConstruct}与${topic.conversionConstruct}之间的关联有多强？`,
-      decisionMeaning: '判断改善体验与推行机制对持续使用的带动潜力',
-      construct: `${topic.mechanismConstruct}、${topic.overallSatConstruct}与${topic.conversionConstruct}`,
-      itemIds: ['Q9', 'Q10', 'Q11', 'Q12'],
-      analysisMethod: 'Spearman 秩相关检验',
-      boundary: '陈述性意愿不等于实际行为，相关系数不直接等同于因果效应',
+      question: `${topic.overallSatConstruct}、${topic.mechanismConstruct}与${topic.conversionConstruct}的关联有多强，细分人群有何特征分化？`,
+      decisionMeaning: '判断改善体验与推行机制对持续使用的带动潜力，并按细分群体制定触达方案',
+      construct: hasExtendedScale
+        ? `${topic.mechanismConstruct}、${topic.overallSatConstruct}、${topic.conversionConstruct}与聚类画像`
+        : `${topic.mechanismConstruct}、${topic.overallSatConstruct}与${topic.conversionConstruct}`,
+      itemIds: hasExtendedScale ? ['Q9', 'Q10', 'Q11', 'Q12', 'Q20'] : ['Q9', 'Q10', 'Q11', 'Q12'],
+      analysisMethod: 'Spearman 相关 + 多元线性回归 + 轮廓系数自适应 K-means 聚类',
+      boundary: '陈述性意愿不等于实际行为，回归与聚类特征仅说明样本内关联，不作因果推断',
     },
   ] : pack.design.questions.filter(q => q.researchQuestion.trim() || q.construct.trim()).map((q, idx) => ({
     rqId: `RQ${idx + 1}`,
@@ -709,6 +725,7 @@ export function buildFullReportSectionPrompt(input: {
   held: NonNullable<ResultsView>;
   contract: SkillPackContract;
   tokens: SectionTokenMap;
+  steeringNotes?: readonly string[];
 }): string {
   const section = draftSection(input.nodeId);
   const isSynthesis = SYNTHESIS_NODES.has(input.nodeId);
@@ -787,6 +804,16 @@ export function buildFullReportSectionPrompt(input: {
     ...(outline ? { outline } : {}),
   };
 
+  const steeringBlock = input.steeringNotes?.length
+    ? `\n【用户实时插话与写作干预指令（须在不违反上述事实底线的前提下优先呼应）】\n${input.steeringNotes.map((note, idx) => `${idx + 1}. ${note}`).join('\n')}`
+    : '';
+  const rhetoric = getSectionRhetoricalBlueprint(input.nodeId);
+  const rhetoricBlock = rhetoric
+    ? `\n【本节国奖论证骨架与学术修辞引导（自二〇四篇国奖实证档案提炼，仅使用资料中确有的占位符，严禁在占位符外写出任何数字或数量词）】\n` +
+      `· 论证推进骨架：${rhetoric.structuralArc}\n` +
+      `· 开篇参考切入：${rhetoric.openingMove}\n` +
+      `· 评委防扣分关口：${rhetoric.judgeCheckpoint}`
+    : '';
   return (
     '你是正大杯全国大学生市场调查与分析大赛的报告撰稿助手，按《市调科研融合技能包》规范撰写报告章节。\n' +
     `当前撰写章节：「${section.title}」（节点 ID：${section.node}）。\n` +
@@ -801,8 +828,11 @@ export function buildFullReportSectionPrompt(input: {
     '【规则三：防误读红线】\n' +
     redLines.map((rule, i) => `${i + 1}. ${rule}`).join('\n') +
     (owner ? `\n【本节负责顾问】「${owner.name}」（技能 ${owner.skill}）：${owner.line} 写作规则：${owner.rules.join('；')}。` : '') +
+    `\n${buildDeAiPromptRules('academic_clean')}` +
+    steeringBlock +
+    rhetoricBlock +
     '\n【写作体例】\n' +
-    '中文学术调查报告语体，先亮核心判断、再摆证据、最后交代适用边界；写三到五段，每段一百到二百二十字。\n' +
+    '中文学术调查报告语体，先亮核心判断、再摆证据、最后交代适用边界；写三到五段，每段一百到二百二十字，言简意赅以免主报告超过竞赛三十页篇幅上限。\n' +
     (specificRules.length ? `【本节专项要求】\n${specificRules.join('\n')}\n` : '') +
     '只输出严格合法的 JSON 对象：{"paragraphs":[{"text":"段落正文"}]}，不要输出任何额外解释。\n' +
     `资料 JSON：${JSON.stringify(material)}`
@@ -1278,6 +1308,7 @@ export async function generateFullReportWithAgent(input: {
   project?: FullReportProjectScope;
   concurrency?: number;
   sectionNodes?: readonly string[];
+  steeringNotes?: readonly string[];
   onProgress?: (event: FullReportProgressEvent) => void;
   fetcher?: typeof globalThis.fetch;
 }): Promise<FullReportGenerationResult> {
@@ -1397,7 +1428,7 @@ export async function generateFullReportWithAgent(input: {
     const start = Date.now();
     const title = blueprintNode(nodeId).title;
     const tokens = buildSectionTokens(held, workingReport, nodeId, pack.design);
-    const prompt = buildFullReportSectionPrompt({ nodeId, content: workingReport, design: pack.design, held, contract, tokens });
+    const prompt = buildFullReportSectionPrompt({ nodeId, content: workingReport, design: pack.design, held, contract, tokens, steeringNotes: input.steeringNotes });
     let failure = new FullReportProviderError(halted ? 'run_stopped' : 'content_rejected');
     let feedback = '';
     let rawParagraphs = 0;

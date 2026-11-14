@@ -29,6 +29,7 @@ const PATHS: Record<string, ReactNode> = {
   code: <path d="m8 7-5 5 5 5M16 7l5 5-5 5" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   chart: <><path d="M4 20h16" /><path d="M7 16v-5M12 16V7M17 16v-8" /></>,
+  home: <><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.5Z" /><path d="M9.5 20.5v-6h5v6" /></>,
   more: <><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></>,
 };
 

@@ -13,7 +13,12 @@ export type ChatAction =
   | { tool: 'place'; args: Record<string, never> }
   | { tool: 'open'; args: { room: RoomId } }
   | { tool: 'lookup'; args: { query: string } }
-  | { tool: 'draft'; args: { brief: string } };
+  | { tool: 'draft'; args: { brief: string } }
+  | { tool: 'stage'; args: { view: 'chat' | 'paper' | 'advisors' } }
+  | { tool: 'studio'; args: { kind: 'chart' | 'code' | 'writing' | 'coach' } }
+  | { tool: 'draft_section'; args: { node: string } }
+  | { tool: 'generate_report'; args: { topic?: string } }
+  | { tool: 'simulate'; args: { topic?: string } };
 export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 /** Tokens the provider reported for one call; null when it reported none (or the call never reached it). */
 export type TokenUsage = { inputTokens: number; outputTokens: number };
@@ -89,7 +94,9 @@ export function chatHistory(lines: readonly ChatLine[]): ChatLine[] {
   return lines.filter(l => l.text.trim()).slice(-HISTORY_LIMIT).map(l => ({ role: l.role, text: clip(l.text.trim(), TEXT_LIMIT) }));
 }
 
-const TEXT_ARGS = { trace: ['reference', 20], lookup: ['query', 60], draft: ['brief', 600] } as const;
+const TEXT_ARGS = { trace: ['reference', 20], lookup: ['query', 60], draft: ['brief', 600], draft_section: ['node', 40] } as const;
+const STAGES = ['chat', 'paper', 'advisors'] as const;
+const STUDIOS = ['chart', 'code', 'writing', 'coach'] as const;
 function action(value: unknown): ChatAction | null {
   const row = value as { tool?: unknown; args?: Record<string, unknown> } | null;
   if (!row || typeof row !== 'object' || typeof row.tool !== 'string' || !row.args || typeof row.args !== 'object') return null;
@@ -99,12 +106,27 @@ function action(value: unknown): ChatAction | null {
     case 'place': return { tool: 'place', args: {} };
     case 'light': case 'blind': return room === undefined ? { tool: row.tool, args: {} } : room ? { tool: row.tool, args: { room } } : null;
     case 'open': return room ? { tool: 'open', args: { room } } : null;
+    case 'stage': {
+      const view = row.args.view;
+      return typeof view === 'string' && (STAGES as readonly string[]).includes(view)
+        ? { tool: 'stage', args: { view: view as 'chat' | 'paper' | 'advisors' } } : null;
+    }
+    case 'studio': {
+      const kind = row.args.kind;
+      return typeof kind === 'string' && (STUDIOS as readonly string[]).includes(kind)
+        ? { tool: 'studio', args: { kind: kind as 'chart' | 'code' | 'writing' | 'coach' } } : null;
+    }
     case 'results': {
       const given = row.args.query;
       if (given === undefined) return { tool: 'results', args: {} };
       return typeof given === 'string' && given.trim() && given.length <= 40 ? { tool: 'results', args: { query: given.trim() } } : null;
     }
-    case 'trace': case 'lookup': case 'draft': {
+    case 'generate_report': case 'simulate': {
+      const given = row.args.topic;
+      if (given === undefined) return { tool: row.tool, args: {} };
+      return typeof given === 'string' && given.trim() && given.length <= 200 ? { tool: row.tool, args: { topic: given.trim() } } : null;
+    }
+    case 'trace': case 'lookup': case 'draft': case 'draft_section': {
       const [name, limit] = TEXT_ARGS[row.tool], given = row.args[name];
       if (typeof given !== 'string' || !given.trim() || given.length > limit) return null;
       return { tool: row.tool, args: { [name]: given.trim() } } as ChatAction;

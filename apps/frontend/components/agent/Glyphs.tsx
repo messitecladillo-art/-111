@@ -39,7 +39,9 @@ export function Develop({ text, at }: { text: string; at: number }) {
 
 /** One line of marked text from the router. */
 export function Spans({ line, at }: { line: Line; at: number }) {
-  return <>{line.map((span, i) => span.mark === 'gold' ? <Develop key={i} text={span.text} at={at} />
+  return <>{line.map((span, i) => /^[·░▒▓█]{4}$/u.test(span.text)
+    ? <span key={i} className={styles.bar4} aria-hidden="true">{[...span.text].map((cell, ci) => <span key={ci} data-cell={cell === '·' ? 'dark' : 'lit'}>{cell}</span>)}</span>
+    : span.mark === 'gold' ? <Develop key={i} text={span.text} at={at} />
     : span.mark === 'tex' || span.mark === 'math' ? <span key={i} className={span.mark === 'math' ? styles.mathBlock : styles.mathInline} dangerouslySetInnerHTML={{ __html: renderTex(span.text, span.mark === 'math') }} />
     : span.mark ? <span key={i} className={styles[`s-${span.mark}`]}>{span.text}</span>
     : <Fragment key={i}>{span.text}</Fragment>)}</>;

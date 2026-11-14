@@ -131,3 +131,14 @@ test('creation request requires a canonical idempotency key and exact task role 
     const value = structuredClone(request); mutate(value); assert.throws(() => api.parseWorkflowCreateRequest(value));
   }
 });
+
+test('data phase disclosure preserves precise snapshots and rejects raw rows, missing policy and malformed references', () => {
+  const value = preview();
+  Object.assign(value, { dataTool: 'survey-release-aggregates/v1', dataDisclosure: 'aggregate_statistics_only_no_rows_no_open_text',
+    datasets: [{ ref: `survey-release:${serviceId}`, title: 'Synthetic responses', status: 'closed', classification: 'synthetic', rowCount: 3, variables: 2, sha256: sha }] });
+  assert.deepEqual(api.parseWorkflowPhasePreview(value, scope).datasets, value.datasets);
+  for (const mutate of [row => { delete row.dataDisclosure; }, row => { row.datasets[0].answers = ['private']; },
+    row => { row.datasets[0].ref = 'browser-file'; }, row => { row.datasets[0].rowCount = -1; }, row => { row.datasets[0].classification = 'verified'; }]) {
+    const invalid = structuredClone(value); mutate(invalid); assert.throws(() => api.parseWorkflowPhasePreview(invalid, scope));
+  }
+});

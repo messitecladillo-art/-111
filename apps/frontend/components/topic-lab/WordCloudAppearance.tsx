@@ -1,14 +1,36 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { CLOUD_SHAPES, DEFAULT_CLOUD_APPEARANCE, cloudShapePath, parseCloudAppearance, type CloudAppearance } from '@/lib/topic-lab/cloud-shapes';
+import {
+  CLOUD_SHAPES,
+  DEFAULT_CLOUD_APPEARANCE,
+  cloudShapePath,
+  parseCloudAppearance,
+  synthesizeSemanticCloudMask,
+  type AgentShapeRecognition,
+  type CloudAppearance,
+} from '@/lib/topic-lab/cloud-shapes';
 import { readCustomCloudMask } from '@/lib/topic-lab/custom-cloud-mask';
 import styles from './WordCloudAppearance.module.css';
 
-export default function WordCloudAppearance({ value, onChange }: { value: CloudAppearance; onChange: (value: CloudAppearance) => void }) {
+type WordCloudAppearanceProps = {
+  value: CloudAppearance;
+  onChange: (value: CloudAppearance) => void;
+  recognition?: AgentShapeRecognition;
+  autoRecognize?: boolean;
+  onToggleAuto?: (next: boolean) => void;
+};
+
+export default function WordCloudAppearance({
+  value,
+  onChange,
+  recognition,
+  autoRecognize = false,
+  onToggleAuto,
+}: WordCloudAppearanceProps) {
   const fileInput = useRef<HTMLInputElement>(null), epoch = useRef(0), controller = useRef<AbortController | null>(null);
   const latest = useRef(value);
-  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [prompt, setPrompt] = useState('');
   const customMask = value.customMask;
   const thumbnails = useMemo(() => new Map(CLOUD_SHAPES.filter(shape => shape.id !== 'free' && (shape.id !== 'custom' || customMask)).map(shape => [shape.id, cloudShapePath({ ...DEFAULT_CLOUD_APPEARANCE, shape: shape.id, ...(customMask ? { customMask } : {}) }, 100, 60)])), [customMask]);
   useEffect(() => { latest.current = value; }, [value]);
@@ -17,7 +39,16 @@ export default function WordCloudAppearance({ value, onChange }: { value: CloudA
   const select = (shape: CloudAppearance['shape']) => {
     cancel(); setError('');
     if (shape === 'custom' && !value.customMask) { fileInput.current?.click(); return; }
+    onToggleAuto?.(false);
     onChange({ ...value, shape });
+  };
+  const applyPromptShape = () => {
+    const clean = prompt.trim();
+    if (!clean) return;
+    cancel(); setError('');
+    const mask = synthesizeSemanticCloudMask(clean);
+    onToggleAuto?.(false);
+    onChange(parseCloudAppearance({ ...latest.current, shape: 'custom', outline: true, customMask: mask }));
   };
   async function upload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; e.target.value = '';
@@ -27,7 +58,10 @@ export default function WordCloudAppearance({ value, onChange }: { value: CloudA
     const timeout = window.setTimeout(() => active.abort(), 30_000);
     try {
       const customMask = await readCustomCloudMask(file, active.signal);
-      if (epoch.current === token && !active.signal.aborted) onChange(parseCloudAppearance({ ...latest.current, shape: 'custom', customMask }));
+      if (epoch.current === token && !active.signal.aborted) {
+        onToggleAuto?.(false);
+        onChange(parseCloudAppearance({ ...latest.current, shape: 'custom', customMask }));
+      }
     } catch (reason) {
       if (epoch.current === token) setError(active.signal.aborted ? '读取超时，请重试或换一张较小的剪影。' : reason instanceof Error ? reason.message : '剪影读取失败，请重试。');
     } finally {
@@ -36,6 +70,30 @@ export default function WordCloudAppearance({ value, onChange }: { value: CloudA
     }
   }
   return <section className={styles.appearance} aria-label="词云形状设置">
+    {recognition && <div className={styles.agentBar}>
+      <div className={styles.agentMeta}>
+        <span className={styles.agentBadge}>🤖 Agent 自动识形</span>
+        <span className={styles.agentCopy}>{recognition.reason}</span>
+      </div>
+      <div className={styles.agentControls}>
+        {onToggleAuto && <button type="button" className={styles.autoBtn} aria-pressed={autoRecognize} onClick={() => onToggleAuto(!autoRecognize)}>
+          {autoRecognize ? '✨ 自动识形：已开启' : `应用推荐「${recognition.label}」`}
+        </button>}
+        <div className={styles.promptRow}>
+          <input
+            type="text"
+            className={styles.promptInput}
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyPromptShape(); } }}
+            placeholder="AI 构形：如 新能源汽车、奶茶杯、奖杯"
+            aria-label="输入语义主题生成词云轮廓"
+            maxLength={40}
+          />
+          <button type="button" className={styles.aiBtn} disabled={!prompt.trim() || busy} onClick={applyPromptShape}>AI 构形</button>
+        </div>
+      </div>
+    </div>}
     <div className={styles.heading}><strong>形状</strong><button className={styles.upload} type="button" onClick={() => fileInput.current?.click()} disabled={busy} title="PNG、JPG 或 WebP，最多 2 MB">＋ 上传剪影</button></div>
     <div className={styles.shapes} role="group" aria-label="词云形状">
       {CLOUD_SHAPES.map(shape => <button key={shape.id} type="button" className={styles.shape} aria-pressed={value.shape === shape.id} aria-label={`${shape.label}词云`} onClick={() => select(shape.id)}>

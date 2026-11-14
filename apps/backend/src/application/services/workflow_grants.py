@@ -19,6 +19,7 @@ CALL_SCOPE = 'workflow-model-call/v1'
 GRANT_SECONDS = 1200
 PUBLIC = ('schemaVersion', 'id', 'ownerId', 'taskId', 'projectId', 'baseRevision', 'position', 'roles',
           'phaseHash', 'maxCalls', 'usedCalls', 'maxOutputTokens', 'steps', 'createdAt', 'expiresAt')
+DATA_FIELDS = ('dataTool', 'datasets', 'dataDisclosure')
 
 
 def iso(value):
@@ -50,7 +51,8 @@ def effective_status(record, row, parent=None):
 
 def view(record, row, parent=None):
     status, reason = effective_status(record, row, parent)
-    return {**{key: record[key] for key in PUBLIC}, 'status': status, 'stopReason': reason}
+    return {**{key: record[key] for key in PUBLIC}, **{key: record[key] for key in DATA_FIELDS if key in record},
+            'status': status, 'stopReason': reason}
 
 
 class WorkflowGrants:
@@ -81,6 +83,7 @@ class WorkflowGrants:
             'maxCalls': len(steps), 'maxOutputTokens': sum(c['maxOutputTokens'] for c in steps.values()),
             'available': first['available'], 'missingTools': first['missingTools'],
             'grantSeconds': GRANT_SECONDS, 'inputHash': fingerprint(row.state)}
+        payload.update({key: first[key] for key in DATA_FIELDS if key in first})
         return {**payload, 'phaseHash': fingerprint(payload)}
 
     def create(self, *, project_id, task_id, user, session, data, check_session):
@@ -111,6 +114,7 @@ class WorkflowGrants:
             'schemaVersion': 1, 'id': operation.key, 'ownerId': user.id, 'usedCalls': 0,
             'createdAt': iso(now()), 'expiresAt': iso(now() + timedelta(seconds=GRANT_SECONDS)),
             'basisHash': basis(state), 'producerResultHash': None}
+        record.update({key: preview[key] for key in DATA_FIELDS if key in preview})
         operation.response = record
         result = view(record, row)
         session.commit()
@@ -134,6 +138,8 @@ class WorkflowGrants:
         op = self.load_record(session, user, row, grant_id, lock=True)
         record = op.response
         single = self.models.preview(row=row, user=user, session=session)
+        if single['role'] == 'data' and any(single.get(key) != record.get(key) for key in DATA_FIELDS):
+            raise ApiError(409, 'model_dataset_changed', '答卷快照已变化，请重新核对数据后授权。')
         for step, config in single['steps'].items():
             if config != record['steps'].get(step) or single['instructionHashes'][step] != record['instructionHashes'].get(step):
                 raise ApiError(409, 'model_phase_changed', '模型或提示词版本已变化，请重新核对。')

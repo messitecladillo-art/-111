@@ -81,6 +81,8 @@ function harness({ initialTask = null, initialGrant = null, initialCalls = [], s
     readWorkflowTask: async () => clone(server.task),
     readWorkflowCreation: async () => { if (!server.task) throw Object.assign(Error('Synthetic not found'), { status: 404 }); return clone(server.task); },
     readWorkflowCalls: async () => clone(server.calls), readWorkflowGrants: async () => clone(server.grants),
+    readWorkflowSurveys: async () => [],
+    provideWorkflowInput: async () => { throw Error('Unexpected dataset binding in synthetic test'); },
     readWorkflowPhasePreview: async () => phase(server.task),
     createWorkflowTask: async (_mutate, _scope, body) => { server.task = task(); server.task.state.requirements = clone(body.requirements); return clone(server.task); },
     createWorkflowGrant: async (_mutate, _scope, body) => { const value = grant(server.task, body.idempotencyKey); server.grants = [value]; return clone(value); },
@@ -450,4 +452,22 @@ test('agent_input accepts only explicit nonempty feedback and does not automatic
   await h.controller.revise('合成补充说明');
   assert.equal(h.calls('approveWorkflowTask').length, 1); assert.equal(h.calls('createWorkflowGrant').length, 0);
   assert.equal(h.calls('advanceWorkflowTask').length, 0); assert.equal(h.snapshot().task.status, 'ready');
+});
+
+test('data gate binds a project survey with responses, refreshes consent, and never authorizes or analyzes on its own', async () => {
+  let h;
+  const releaseId = id(91), value = task({ position: 4, status: 'needs_input', awaiting: 'upload_real_data' });
+  h = harness({ initialTask: value, stored: locator(), client: {
+    readWorkflowSurveys: async () => [{ id: releaseId, projectId, responseCount: 3 }],
+    provideWorkflowInput: async (_mutate, selected, body) => {
+      assert.equal(selected.projectId, projectId); assert.equal(body.releaseId, releaseId);
+      h.server.task = task({ position: 4, revision: 1 }); h.server.task.state.input_artifact_refs = [`survey-release:${releaseId}`];
+      return clone(h.server.task);
+    },
+  } });
+  await h.controller.restore(); assert.equal(h.snapshot().surveys.length, 1);
+  await h.controller.bindDataset(id(92)); assert.equal(h.calls('provideWorkflowInput').length, 0);
+  await h.controller.bindDataset(releaseId); assert.equal(h.calls('provideWorkflowInput').length, 1);
+  assert.equal(h.snapshot().phasePreview.position, 4);
+  assert.equal(h.calls('createWorkflowGrant').length, 0); assert.equal(h.calls('advanceWorkflowTask').length, 0);
 });

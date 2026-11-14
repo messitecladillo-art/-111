@@ -68,3 +68,22 @@ test('apparatus pause, hidden page, offscreen and reduced motion preserve phase/
  }
  for(const phase of ['waiting','error','complete'])assert.match(render(workstationFile,[false,true],{...input,state:{...input.state,phase}},undefined,[true,false]),/data-running="false"/);
 });
+
+test('anatomy typewriter telemetry drives carriage/strike/returning while motion allowed and halts when paused or reduced',()=>{
+ const input={state:{phase:'writing',detail:'Typewriter pass',completed:2,total:5},telemetry:{lineRatio:0.5,strikeTick:3,returning:true,activePhrase:'测试文本行'}};
+ const activeHtml=render(workstationFile,[false,true],input,undefined,[true,false]);
+ assert.match(activeHtml,/data-typing="true"/);
+ assert.match(activeHtml,/data-driven="true"/);
+ assert.match(activeHtml,/data-strike="1"/);
+ assert.match(activeHtml,/data-returning="true"/);
+ assert.match(activeHtml,/--drive-x:/);
+ assert.match(activeHtml,/ANATOMY · TYPE/);
+ assert.match(activeHtml,/测试文本行/);
+ for(const [paused,reduced] of [[true,false],[false,true]]){
+  const haltedHtml=render(workstationFile,[false,true],{...input,paused},undefined,[true,reduced]);
+  assert.doesNotMatch(haltedHtml,/data-typing="true"/);
+  assert.doesNotMatch(haltedHtml,/data-driven="true"/);
+  assert.doesNotMatch(haltedHtml,/data-strike=/);
+  assert.doesNotMatch(haltedHtml,/data-returning=/);
+ }
+});

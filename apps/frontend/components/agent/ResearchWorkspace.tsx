@@ -15,6 +15,7 @@ import { buildLiteratureStudy, emptyLiteratureStudy, type LiteratureStudy } from
 import { adoptedLiteratureLines } from '@/lib/agent/literature-handoff';
 import { literatureWorkspaceReceipt, literatureEvidenceReference, type LiteratureWorkspaceSnapshot } from '@/lib/topic-lab/workspace';
 import { literatureEvidenceReferencesEqual } from '@/lib/topic-lab/evidence-reference';
+import type { ReportWorkState } from '@/lib/agent/report-work';
 import TopicAgent from '@/components/topic-advisor/TopicAgent';
 import RegionPicker from '@/components/topic-advisor/RegionPicker';
 import ResearchJourney, { type JourneyModelRoute, type ResearchJourneyStep } from './ResearchJourney';
@@ -37,6 +38,7 @@ export type ResearchWorkspaceProps = {
   literature: LiteratureWorkspaceSnapshot | null; onLiterature: (value: LiteratureWorkspaceSnapshot | null) => void;
   simulation?: ResearchSimulationHost;
   execution?: WorkflowExecutionHost;
+  onWorkflowWorkState?: (state: ReportWorkState | null) => void;
 };
 type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
@@ -49,12 +51,21 @@ function hasAdoptedEvidence(selection: TopicProjectDocument, study?: LiteratureS
 
 /** One browser-owned research draft. Mounted beside the same workbench editors, never their replacement. */
 export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
-  const { owner, projectId, identityEpoch, literature } = props;
+  const { owner, projectId, identityEpoch, literature, onWorkflowWorkState } = props;
   const [draft, setDraft] = useState<ResearchWorkspaceDraft>(() => emptyResearchWorkspaceDraft());
   const executionContext = { region: draft.profile.region, city: draft.profile.city, school: draft.profile.school, days: draft.profile.days, budgetYuan: draft.profile.budgetYuan };
   const execution = useWorkflowExecution({ owner, projectId, epoch: identityEpoch, direction: draft.direction,
     context: executionContext,
     services: props.services, defaultServiceId: props.defaultServiceId, host: props.execution });
+  useEffect(() => {
+    const task = execution.task;
+    if (!onWorkflowWorkState) return;
+    if (!task || !execution.busy && task.status !== 'running') { onWorkflowWorkState(null); return; }
+    const role = task.state.current_role;
+    onWorkflowWorkState({ phase: role === 'writing' ? 'writing' : role === 'reviewer' ? 'reviewing' : 'preparing',
+      completed: task.state.revision, total: task.taskType === 'full_research' ? 8 : 2, detail: task.state.summary || '正在处理本阶段研究任务' });
+    return () => onWorkflowWorkState(null);
+  }, [execution.task, execution.busy, onWorkflowWorkState]);
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [saved, setSaved] = useState(false), [conflict, setConflict] = useState(false);
   const [proposal, setProposal] = useState<TopicProjectDocument | null>(null);
@@ -349,6 +360,7 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
       sourceChanged={execution.sourceChanged} restored={execution.restored} onAuthorize={execution.onAuthorize} onContinue={execution.onContinue}
       onRefresh={execution.onRefresh} onCancel={execution.onCancel} onApprove={execution.onApprove} onRevise={execution.onRevise}
       onRoleSelectionChange={execution.onRoleSelectionChange} onOpenSettings={props.onOpenSettings} onOpenAnalysis={() => props.onOpenStage('analysis')}
+      surveys={execution.surveys} onBindDataset={execution.onBindDataset}
       onNewTask={execution.onNewTask} />}
     <details className={styles.literature} ref={literaturePanel}>
       <summary>选题与文献研究 <small>原文摘录 · 文献对照 · 候选选题</small></summary>

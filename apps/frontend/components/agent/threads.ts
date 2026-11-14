@@ -6,13 +6,34 @@ import type { AgentTurn } from '@/lib/agent/router';
  * One entry of a conversation. `at` lets a reply develop once, when it is new, and never on reload; `rev` dates its last
  * change, so the later of two copies wins when two tabs are merged.
  */
+export type ToolExecution = {
+  id: string;
+  tool: string;
+  label: string;
+  args?: Record<string, unknown>;
+  status: 'running' | 'done' | 'awaiting_confirm' | 'error';
+  durationMs?: number;
+  summary?: string;
+  resultText?: string;
+  action?: NonNullable<AgentTurn['chips']>[number]['action'];
+};
+
 export type Message = (
   | { id: string; at: number; role: 'user'; text: string }
   /**
    * `model`: a model call through this service, at this step of its sentence, recorded when it is sent and kept as it
    * settles (refused means the service turned it away before any model ran). Without it the answer was given by rule.
    */
-  | { id: string; at: number; role: 'agent'; turn: AgentTurn; answered?: 'confirmed' | 'cancelled'; model?: ModelCall }
+  | {
+      id: string;
+      at: number;
+      role: 'agent';
+      turn: AgentTurn;
+      answered?: 'confirmed' | 'cancelled';
+      model?: ModelCall;
+      toolCalls?: ToolExecution[];
+      reasoning?: string;
+    }
   /** A knowledge lookup waiting for the search index; never stored, since it could not finish after a reload. */
   | { id: string; at: number; role: 'pending'; query: string; explicit: boolean }
 ) & { rev?: number };
@@ -22,7 +43,8 @@ export type ModelCall = { service: string; step: number; status?: 'running' | 'r
   /** A persisted full-report stream must be reconciled after this page visit ends. */
   reportRunId?: string;
   /** Tokens the provider reported for this call, once it settled. */
-  usage?: { inputTokens: number; outputTokens: number } };
+  usage?: { inputTokens: number; outputTokens: number };
+  latencyMs?: number };
 /**
  * A conversation, optionally filed under a hosted project; `filedAt` dates the filing for the same reason. `titledAt`
  * dates a name the user gave it; without one the title is its first words.

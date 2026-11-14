@@ -26,7 +26,7 @@ export type AdvancedSpec =
   | { method: 'regression'; outcome: number; predictors: number[] }
   | { method: 'logistic'; outcome: number; predictors: number[] }
   | { method: 'ipa'; performance: number[]; importance: number[] | null; overall: number | null }
-  | { method: 'cluster'; variables: number[]; k: number }
+  | { method: 'cluster'; variables: number[]; k: number | 'auto' }
   | { method: 'ahp'; criteria: string[]; matrix: number[][] }
   | { method: 'profile'; group: number; dimensions: number[] }
   | { method: 'likert'; items: number[]; scale?: { min: number; max: number } }
@@ -38,7 +38,12 @@ export type AdvancedRun = { method: AdvancedMethod; title: string; variables: st
   /** Rows left out for a value that is neither a number nor a missing code (the rest of total − n were missing). */
   invalid?: number;
   /** AHP only: the criteria and judgement matrix the experts entered, whose hash identifies the result's source. */
-  judgements?: { criteria: string[]; matrix: number[][] } };
+  judgements?: { criteria: string[]; matrix: number[][] };
+  /** Cluster only: selected cluster count, silhouette scan across candidate k, and 0-based assignment aligned to table.rows (null if incomplete). */
+  chosenK?: number;
+  silhouetteMean?: number;
+  silhouetteScan?: { k: number; mean: number }[];
+  rowAssignments?: (number | null)[] };
 
 export const ADVANCED_METHODS: readonly { id: AdvancedMethod; title: string; use: string; node: string }[] = [
   { id: 'validity', title: '效度：KMO 与因子分析', use: '判断量表题项是否适合因子分析，并给出旋转后的因子结构。', node: ADVANCED_NODES.validity },
@@ -65,6 +70,20 @@ const REFUSALS: Record<string, string> = {
   'not-square': '判断矩阵须为方阵。', 'not-positive': '判断矩阵的值须为正数。', 'not-reciprocal': '判断矩阵须满足 aji = 1 / aij。',
 };
 export const refusalText = (code: string) => REFUSALS[code] ?? '无法计算。';
+
+/** Complete row indices paired with completeCases semantics for cluster-to-table alignment without changing completeCases's return shape. */
+function completeRowIndices(table: SurveyTable, columns: readonly number[], missingCodes: readonly string[]): number[] {
+  const missing = new Set(missingCodes.map(c => c.trim()));
+  const kept: number[] = [];
+  table.rows.forEach((row, idx) => {
+    const texts = columns.map(c => (row[c] ?? '').trim());
+    const values = texts.map(text => (!text || missing.has(text) ? null : finiteNumber(text)));
+    if (texts.some((text, j) => text && !missing.has(text) && values[j] === null)) return;
+    if (values.some(v => v === null)) return;
+    kept.push(idx);
+  });
+  return kept;
+}
 
 /** Rows where every chosen column is a finite number and not a missing code; nothing is imputed. */
 export function completeCases(table: SurveyTable, columns: readonly number[], missingCodes: readonly string[]): { columns: number[][]; n: number; total: number; invalid: number } {
@@ -161,10 +180,34 @@ export function runAdvanced(spec: AdvancedSpec, table: SurveyTable, missingCodes
     case 'cluster': {
       if (spec.variables.length > MAX_CLUSTER_VARIABLES) return { refused: `聚类变量至多 ${MAX_CLUSTER_VARIABLES} 个，结果表才能排进报告（不超过 10 列）。` };
       const rows = standardize(data.columns[0].map((_, i) => data.columns.map(c => c[i])));
-      const fit = kmeans(rows, spec.k, { seed: 'evix-advanced' });
-      if ('refused' in fit) return { refused: refusalText(fit.refused) };
-      return withFigure({ method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, invalid: data.invalid, writing: clusterWriting(fit, silhouette(...silhouetteSample(rows, fit.assignments)).mean, names) },
-        '各类人群标准化中心剖面图', { kind: 'profile', centers: fit.centers, sizes: fit.sizes, variables: names });
+      const keptIndices = completeRowIndices(table, columns, missingCodes);
+      const candidates = spec.k === 'auto' ? [2, 3, 4, 5] : [spec.k];
+      let bestFit: ReturnType<typeof kmeans> | null = null;
+      let bestMean = -Infinity;
+      let firstRefusal: string | null = null;
+      const scan: { k: number; mean: number }[] = [];
+      for (const kCandidate of candidates) {
+        const fitCandidate = kmeans(rows, kCandidate, { seed: 'evix-advanced' });
+        if ('refused' in fitCandidate) {
+          if (!firstRefusal) firstRefusal = fitCandidate.refused;
+          continue;
+        }
+        const mean = silhouette(...silhouetteSample(rows, fitCandidate.assignments)).mean;
+        scan.push({ k: kCandidate, mean });
+        if (!bestFit || 'refused' in bestFit || mean > bestMean) {
+          bestFit = fitCandidate;
+          bestMean = mean;
+        }
+      }
+      if (!bestFit || 'refused' in bestFit) return { refused: refusalText(firstRefusal ?? 'bad-k') };
+      const rowAssignments: (number | null)[] = Array(table.rows.length).fill(null);
+      keptIndices.forEach((rowIdx, pos) => { rowAssignments[rowIdx] = bestFit && !('refused' in bestFit) ? bestFit.assignments[pos] : null; });
+      const baseWriting = clusterWriting(bestFit, bestMean, names);
+      const writing = spec.k === 'auto' && scan.length > 1
+        ? { ...baseWriting, reading: `经 $k\\in\\{${scan.map(s => s.k).join(',')}\\}$ 轮廓系数比较（${scan.map(s => `$k=${s.k}$ 时 $\\bar{s}=${s.mean.toFixed(3)}$`).join('，')}），$k=${bestFit.k}$ 类划分轮廓系数最优；${baseWriting.reading}` }
+        : baseWriting;
+      return withFigure({ method: 'cluster', title: '各类人群的标准化中心', variables: names, n: data.n, total: data.total, invalid: data.invalid, writing, chosenK: bestFit.k, silhouetteMean: bestMean, silhouetteScan: scan, rowAssignments },
+        '各类人群标准化中心剖面图', { kind: 'profile', centers: bestFit.centers, sizes: bestFit.sizes, variables: names });
     }
   }
 }

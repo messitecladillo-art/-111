@@ -165,3 +165,14 @@ test('an in-flight read retains its captured identity and mutation replies canno
   await assert.rejects(client.approveWorkflowTask(async () => stale, scope, { expectedRevision: 4, approved: true }));
   await assert.rejects(client.cancelWorkflowTask(async () => stale, scope, 4));
 });
+
+test('survey data binding targets the captured project and exact release without an implicit advance', async () => {
+  const sent = [], result = task(); result.revision = 5; result.state.input_artifact_refs = [`survey-release:${serviceId}`];
+  const mutate = async (...args) => { sent.push(args); return result; };
+  const response = await client.provideWorkflowInput(mutate, scope, { expectedRevision: 4, releaseId: serviceId });
+  assert.equal(response.revision, 5); assert.equal(sent.length, 1);
+  assert.equal(sent[0][0], `${taskBase}/input`); assert.deepEqual(sent[0][1], { expectedRevision: 4, artifactRefs: [`survey-release:${serviceId}`] });
+  await assert.rejects(client.provideWorkflowInput(mutate, scope, { expectedRevision: 4, releaseId: '../other' }));
+  await assert.rejects(client.provideWorkflowInput(mutate, scope, { expectedRevision: 4, releaseId: serviceId, rawRows: [] }));
+  assert.equal(sent.length, 1);
+});

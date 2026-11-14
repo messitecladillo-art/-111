@@ -1,6 +1,7 @@
 'use client';
 
 import { hostedRequest } from '@/components/hosted/api-client';
+import { parseSurveyList, type SurveyRelease } from '@/lib/survey-collection';
 import {
   parseWorkflowCalls, parseWorkflowCreateRequest, parseWorkflowExecutions, parseWorkflowGrants,
   parseWorkflowModelGrant, parseWorkflowPhasePreview, parseWorkflowScope, parseWorkflowTask, parseWorkflowTasks,
@@ -117,4 +118,20 @@ export async function readWorkflowCalls(scope: WorkflowTaskScope, opt?: Workflow
 export async function readWorkflowExecutions(scope: WorkflowTaskScope, opt?: WorkflowRequestOptions): Promise<WorkflowExecution[]> {
   const checked = checkedTaskScope(scope);
   return parseWorkflowExecutions(await hostedRequest(`${taskPath(checked)}/executions`, options(opt, RECEIPTS_BYTES)));
+}
+export async function readWorkflowSurveys(scope: WorkflowProjectScope, opt?: WorkflowRequestOptions): Promise<SurveyRelease[]> {
+  const checked = parseWorkflowScope(scope);
+  const surveys = parseSurveyList(await hostedRequest(`${projectPath(checked)}/surveys`, options(opt, RECEIPTS_BYTES)));
+  if (surveys.some(item => item.projectId !== checked.projectId)) invalid();
+  return surveys;
+}
+export async function provideWorkflowInput(mutate: WorkflowMutate, scope: WorkflowTaskScope,
+  body: { expectedRevision: number; releaseId: string }, opt?: WorkflowRequestOptions): Promise<WorkflowTask> {
+  const row = fields(body, ['expectedRevision', 'releaseId']);
+  const checked = parseWorkflowScope(scope, true), revision = workflowRevision(row.expectedRevision), releaseId = workflowId(row.releaseId);
+  const result = parseWorkflowTask(await mutate(`${taskPath(checked as WorkflowTaskScope)}/input`, {
+    expectedRevision: revision, artifactRefs: [`survey-release:${releaseId}`],
+  }, 'POST', options(opt, TASK_BYTES)), checked);
+  if (result.revision <= revision || !result.state.input_artifact_refs.includes(`survey-release:${releaseId}`)) invalid();
+  return result;
 }

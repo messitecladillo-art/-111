@@ -179,8 +179,8 @@ def test_primary_team_form_payload_runs_research_and_survey_then_waits_for_real_
         if name == 'design_sampling':
             return json.dumps({'summary': 'Synthetic proposed survey, not fieldwork.', 'deliverable': {
                 'variables': [{'name': 'purchase_situation', 'status': 'proposed'}],
-                'questionnaire': {'questions': [{'text': 'Which purchase situation?', 'type': 'single'}]},
-                'sampling': {'status': 'proposed'}, 'pilot_plan': {'status': 'proposed'}, 'privacy_and_ethics': []}})
+                'questionnaire': {'title': 'Synthetic pilot questionnaire', 'sections': [{'questions': [{'id': 'Q1', 'text': 'Which purchase situation?', 'type': 'single'}]}]},
+                'sampling': {'status': 'proposed'}, 'pilot_plan': {'status': 'planned'}, 'privacy_and_ethics': []}})
         return json.dumps(value)
 
     provider.transform = survey

@@ -181,6 +181,12 @@ function triggerDownload(filename: string, content: string, mime = 'text/plain;c
   URL.revokeObjectURL(url);
 }
 
+export type WritingModelStatus = {
+  offline?: boolean;
+  authenticated?: boolean;
+  reportServiceLabel?: string | null;
+};
+
 /* ──────────────── 1. Chart Studio Card ──────────────── */
 
 /** The chart studio draws registered results only; before there are any, it says where they come from. */
@@ -198,8 +204,8 @@ export function ChartStudioView({
           还没有可画的结果。图表工坊只画项目已登记的分析结果：先在数据分析里运行并登记，或生成一套教学模拟研究。
         </p>
         <div className={styles.studioActions}>
-          <button type="button" className={styles.studioPrimaryBtn} onClick={() => onAction({ type: 'say', text: '/铸造' })}>生成教学模拟研究</button>
-          <button type="button" className={styles.studioSecondaryBtn} onClick={() => onAction({ type: 'say', text: '/结果' })}>查看结果清单</button>
+          <button type="button" className={styles.studioPrimaryBtn} onClick={() => onAction({ type: 'say', text: '生成教学模拟研究' })}>生成教学模拟研究</button>
+          <button type="button" className={styles.studioSecondaryBtn} onClick={() => onAction({ type: 'say', text: '查看结果清单' })}>查看结果清单</button>
         </div>
       </div>
     );
@@ -577,9 +583,11 @@ export function CodeStudioView({
 export function WritingStudioView({
   data,
   onAction,
+  modelStatus,
 }: {
   data: WritingStudioCardData;
   onAction: (action: AgentAction) => void;
+  modelStatus?: WritingModelStatus;
 }) {
   const [templateId, setTemplateId] = useState(data.activeTemplateId);
   const activeTpl = useMemo(
@@ -590,6 +598,8 @@ export function WritingStudioView({
   const [statusMsg, setStatusMsg] = useState('');
 
   const audit = useMemo(() => auditWritingDraft(draft), [draft]);
+  const modelReady = !!modelStatus?.reportServiceLabel;
+  const customDraft = draft.trim() && draft !== activeTpl.defaultDraft ? draft : undefined;
 
   const handleSelectTemplate = (id: string) => {
     setTemplateId(id);
@@ -620,6 +630,25 @@ export function WritingStudioView({
     setStatusMsg(`已将定稿写入报告「${activeTpl.nodeLabel}」章节，并在右侧打开报告。`);
   };
 
+  const handleLlmDraft = () => {
+    onAction({
+      type: 'draftSection',
+      node: activeTpl.nodeId,
+      ...(customDraft ? { draft: customDraft } : {}),
+    });
+    setStatusMsg(modelReady
+      ? `已发起「${activeTpl.nodeLabel}」大模型按事实撰写确认，请在下方卡片确认发送。`
+      : '请先按下方提示完成模型接入，再发起大模型按事实撰写。');
+  };
+
+  const modelNotice = modelReady
+    ? `已接入大模型：${modelStatus!.reportServiceLabel}（数字仅由已登记事实填入，不自造数字）`
+    : modelStatus?.offline
+      ? '当前模型网关离线，请启动后端服务并重连后再接入大模型。'
+      : modelStatus?.authenticated
+        ? '已登录 · 请在模型设置绑定支持「报告」的大模型服务（OpenAI / DeepSeek / 千问 / Gemini / Claude）。'
+        : '需登录后接入个人大模型密钥（BYOK），即可在此用模型按事实自动起草与润色。';
+
   return (
     <div className={styles.studioWrap}>
       <div className={styles.studioToolbar}>
@@ -637,6 +666,23 @@ export function WritingStudioView({
           <span>学术合规体检分</span>
           <strong>{audit.score} / 100</strong>
           <small>{audit.wordCount} 字 · {audit.factMentions} 处定量读数</small>
+        </div>
+      </div>
+
+      <div className={modelReady ? styles.studioLlmBarReady : styles.studioLlmBar}>
+        <span className={styles.studioLlmBadge}>
+          <strong>{modelReady ? '大模型就绪' : '需接入大模型'}</strong>
+          <span>{modelNotice}</span>
+        </span>
+        <div className={styles.studioLlmBtns}>
+          {!modelReady && !modelStatus?.authenticated && !modelStatus?.offline && (
+            <button type="button" className={styles.studioSecondaryBtn} onClick={() => onAction({ type: 'href', href: '/login' })}>
+              邮箱登录 ↗
+            </button>
+          )}
+          <button type="button" className={styles.studioSecondaryBtn} onClick={() => onAction({ type: 'open', room: 'services' })}>
+            {modelReady ? '切换模型' : '打开模型设置'}
+          </button>
         </div>
       </div>
 
@@ -673,8 +719,14 @@ export function WritingStudioView({
       </div>
 
       <div className={styles.studioActions}>
-        <button type="button" className={styles.studioPrimaryBtn} onClick={handleAdoptToReport}>
-          一键采纳并写入报告「{activeTpl.nodeLabel}」
+        <button type="button" className={styles.studioPrimaryBtn} onClick={handleLlmDraft}>
+          {customDraft ? `用大模型按事实润色「${activeTpl.nodeLabel}」` : `用大模型按事实撰写「${activeTpl.nodeLabel}」`}
+        </button>
+        <button type="button" className={styles.studioSecondaryBtn} onClick={() => onAction({ type: 'generateFullReport', topic: '' })}>
+          大模型生成全篇候选稿
+        </button>
+        <button type="button" className={styles.studioSecondaryBtn} onClick={handleAdoptToReport}>
+          采纳当前草稿写入「{activeTpl.nodeLabel}」
         </button>
         <button
           type="button"

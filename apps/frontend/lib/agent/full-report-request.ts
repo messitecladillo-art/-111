@@ -9,6 +9,7 @@ export type FullReportRequest = {
   schemaVersion: 1; runId: string; projectId: string | null; inputRevision: string;
   serviceId: string; serviceRevision: number; consent: true; topic: string; mode: ProjectResearchMode;
   base?: FullReportBase; concurrency?: number; sectionNodes?: string[]; stream?: boolean;
+  steeringNotes?: string[];
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const validId=(value:unknown):value is string=>typeof value==='string'&&UUID.test(value)&&value!=='00000000-0000-0000-0000-000000000000';
@@ -44,7 +45,7 @@ export function parseReportDataset(value: unknown): DatasetValue | null {
 }
 export function parseFullReportRequest(value: unknown): FullReportRequest {
   const required=['schemaVersion','runId','projectId','inputRevision','serviceId','serviceRevision','consent','topic','mode'];
-  const v=record(value,[...required,'base','concurrency','sectionNodes','stream'],required);
+  const v=record(value,[...required,'base','concurrency','sectionNodes','stream','steeringNotes'],required);
   if(v.schemaVersion!==1 || v.consent!==true || !validId(v.runId) || !validId(v.serviceId) || (v.projectId!==null && !validId(v.projectId)) || !Number.isSafeInteger(v.serviceRevision) || (v.serviceRevision as number)<1 || (v.serviceRevision as number)>2147483647) return fail();
   if(typeof v.inputRevision!=='string'||!/^[a-f0-9]{64}$/.test(v.inputRevision)||!['plan','demonstration','empirical'].includes(v.mode as string))return fail();
   const topic=text(v.topic,160,true),mode=v.mode as ProjectResearchMode;
@@ -52,15 +53,24 @@ export function parseFullReportRequest(value: unknown): FullReportRequest {
   if(v.concurrency!==undefined && (!Number.isSafeInteger(v.concurrency)||(v.concurrency as number)<1||(v.concurrency as number)>6))return fail();
   let sectionNodes:string[]|undefined;
   if(v.sectionNodes!==undefined){sectionNodes=strings(v.sectionNodes,26,60);if(!sectionNodes.length||new Set(sectionNodes).size!==sectionNodes.length||sectionNodes.some(n=>!NODES.has(n)))return fail();}
+  let steeringNotes:string[]|undefined;
+  if(v.steeringNotes!==undefined){const list=strings(v.steeringNotes,20,400).map(s=>s.trim()).filter(Boolean);if(list.length)steeringNotes=list;}
   let base:FullReportBase|undefined;
   if(v.base!==undefined){const b=record(v.base,['design','dataset','report']);base={design:parseQuestionnaire(JSON.stringify(b.design)),dataset:parseReportDataset(b.dataset),report:parseEditorContent(b.report)};}
   if(mode!=='demonstration'&&!base)return fail();
   if(mode==='empirical'&&!v.projectId)return fail();
-  return {schemaVersion:1,runId:v.runId,projectId:v.projectId as string|null,inputRevision:v.inputRevision,serviceId:v.serviceId,serviceRevision:v.serviceRevision as number,consent:true,topic,mode,...(base?{base}:{}),concurrency:(v.concurrency as number|undefined)??3,...(sectionNodes?{sectionNodes}:{}),stream:v.stream===true};
+  return {schemaVersion:1,runId:v.runId,projectId:v.projectId as string|null,inputRevision:v.inputRevision,serviceId:v.serviceId,serviceRevision:v.serviceRevision as number,consent:true,topic,mode,...(base?{base}:{}),concurrency:(v.concurrency as number|undefined)??3,...(sectionNodes?{sectionNodes}:{}),...(steeringNotes?{steeringNotes}:{}),stream:v.stream===true};
 }
 /** Hash the JSON wire representation so absent optional properties agree on both sides. */
-export async function fullReportInputRevision(input: Pick<FullReportRequest,'topic'|'mode'|'base'|'sectionNodes'>):Promise<string>{
-  const value=JSON.parse(JSON.stringify({topic:input.topic,mode:input.mode,base:input.base,sectionNodes:input.sectionNodes}));
+export async function fullReportInputRevision(input: Pick<FullReportRequest,'topic'|'mode'|'base'|'sectionNodes'|'steeringNotes'>):Promise<string>{
+  const payload = {
+    topic:input.topic,
+    mode:input.mode,
+    base:input.base,
+    sectionNodes:input.sectionNodes,
+    ...(input.steeringNotes?.length ? { steeringNotes: input.steeringNotes } : {}),
+  };
+  const value=JSON.parse(JSON.stringify(payload));
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(value)));
   return [...new Uint8Array(hash)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
 }

@@ -58,13 +58,15 @@ export type WorkflowPhasePreview = {
   phaseHash: string; inputHash: string; maxCalls: number; maxOutputTokens: number; grantSeconds: number;
   materials: WorkflowJsonObject; steps: Record<string, Service>; instructionHashes: Record<string, string>;
   available: boolean; missingTools: string[];
-};
+} & WorkflowDataDisclosure;
+export type WorkflowDataset = { ref: string; title: string; status: 'open' | 'closed'; classification: 'actual' | 'synthetic'; rowCount: number; variables: number; sha256: string };
+export type WorkflowDataDisclosure = { dataTool?: 'survey-release-aggregates/v1'; datasets?: WorkflowDataset[]; dataDisclosure?: 'aggregate_statistics_only_no_rows_no_open_text' };
 export type WorkflowModelGrant = {
   schemaVersion: 1; id: string; ownerId: string; taskId: string; projectId: string;
   status: 'active' | 'stopped' | 'expired' | 'exhausted'; baseRevision: number; position: number; roles: WorkflowRole[];
   phaseHash: string; maxCalls: number; usedCalls: number; maxOutputTokens: number; steps: Record<string, Service>;
   createdAt: string; expiresAt: string; stopReason: string | null;
-};
+} & WorkflowDataDisclosure;
 export type WorkflowModelCall = {
   schema: 'workflow-model-call/v1'; id: string; taskId: string; projectId: string; executionId: string; step: string;
   status: 'running' | 'completed' | 'failed' | 'outcome_unknown' | 'discarded'; inputRevision: number; inputHash: string;
@@ -167,6 +169,18 @@ function phaseRoles(value: unknown): WorkflowRole[] {
   if (!roles.length || (roles.length === 2 && (roles[0] === 'reviewer' || roles[1] !== 'reviewer'))) bad();
   return roles;
 }
+function dataDisclosure(row: Record<string, unknown>): WorkflowDataDisclosure {
+  if (!['dataTool', 'datasets', 'dataDisclosure'].some(key => key in row)) return {};
+  if (row.dataTool !== 'survey-release-aggregates/v1' || row.dataDisclosure !== 'aggregate_statistics_only_no_rows_no_open_text') bad();
+  const datasets = list(row.datasets, 5, item => {
+    const value = object(item, ['ref', 'title', 'status', 'classification', 'rowCount', 'variables', 'sha256']);
+    const ref = text(value.ref, 60); if (!ref.startsWith('survey-release:')) bad(); workflowId(ref.slice(15));
+    return { ref, title: text(value.title, 160), status: choice(value.status, ['open', 'closed']), classification: choice(value.classification, ['actual', 'synthetic']),
+      rowCount: workflowRevision(value.rowCount, 0, 5000), variables: workflowRevision(value.variables, 0, 500), sha256: hash(value.sha256) };
+  });
+  if (new Set(datasets.map(item => item.ref)).size !== datasets.length) bad();
+  return { dataTool: row.dataTool, dataDisclosure: row.dataDisclosure, datasets };
+}
 function services(value: unknown, roles: readonly WorkflowRole[]): Record<string, Service> {
   const keys = stepKeys(roles), row = object(value, keys);
   return Object.fromEntries(keys.map(key => {
@@ -249,27 +263,27 @@ function collection<T>(value: unknown, key: string, max: number, parse: (item: u
 export function parseWorkflowTasks(value: unknown, scope?: WorkflowScope): WorkflowTask[] { return collection(value, 'tasks', 50, item => parseWorkflowTask(item, scope), item => item.id); }
 export function parseWorkflowExecutions(value: unknown): WorkflowExecution[] { return collection(value, 'executions', 100, parseWorkflowExecution, item => item.id); }
 export function parseWorkflowPhasePreview(value: unknown, scope?: WorkflowScope): WorkflowPhasePreview {
-  const row = object(value, ['schemaVersion', 'taskId', 'projectId', 'baseRevision', 'position', 'roles', 'phaseHash', 'inputHash', 'maxCalls', 'maxOutputTokens', 'grantSeconds', 'materials', 'steps', 'instructionHashes', 'available', 'missingTools']);
+  const row = object(value, ['schemaVersion', 'taskId', 'projectId', 'baseRevision', 'position', 'roles', 'phaseHash', 'inputHash', 'maxCalls', 'maxOutputTokens', 'grantSeconds', 'materials', 'steps', 'instructionHashes', 'available', 'missingTools'], ['dataTool', 'datasets', 'dataDisclosure']);
   if (row.schemaVersion !== 1 || typeof row.available !== 'boolean' || row.grantSeconds !== 1200) bad();
   const roles = phaseRoles(row.roles), steps = services(row.steps, roles), keys = Object.keys(steps), hashes = object(row.instructionHashes, keys);
   const result: WorkflowPhasePreview = {
     schemaVersion: 1, taskId: workflowId(row.taskId), projectId: workflowId(row.projectId), baseRevision: workflowRevision(row.baseRevision), position: workflowRevision(row.position, 0, 7), roles,
     phaseHash: hash(row.phaseHash), inputHash: hash(row.inputHash), ...limits(row, steps), grantSeconds: 1200, materials: jsonObject(row.materials, 100_000), steps,
-    instructionHashes: Object.fromEntries(keys.map(key => [key, hash(hashes[key])])), available: row.available, missingTools: texts(row.missingTools, 32, 100),
+    instructionHashes: Object.fromEntries(keys.map(key => [key, hash(hashes[key])])), available: row.available, missingTools: texts(row.missingTools, 32, 100), ...dataDisclosure(row),
   };
   scoped(result.projectId, result.taskId, scope);
   if ((result.available && result.missingTools.length) || (!result.available && !result.missingTools.length)) bad();
   return result;
 }
 export function parseWorkflowModelGrant(value: unknown, scope?: WorkflowScope): WorkflowModelGrant {
-  const row = object(value, ['schemaVersion', 'id', 'ownerId', 'taskId', 'projectId', 'status', 'baseRevision', 'position', 'roles', 'phaseHash', 'maxCalls', 'usedCalls', 'maxOutputTokens', 'steps', 'createdAt', 'expiresAt', 'stopReason']);
+  const row = object(value, ['schemaVersion', 'id', 'ownerId', 'taskId', 'projectId', 'status', 'baseRevision', 'position', 'roles', 'phaseHash', 'maxCalls', 'usedCalls', 'maxOutputTokens', 'steps', 'createdAt', 'expiresAt', 'stopReason'], ['dataTool', 'datasets', 'dataDisclosure']);
   if (row.schemaVersion !== 1) bad();
   const roles = phaseRoles(row.roles), steps = services(row.steps, roles), budget = limits(row, steps);
   const result: WorkflowModelGrant = {
     schemaVersion: 1, id: workflowId(row.id), ownerId: workflowId(row.ownerId), taskId: workflowId(row.taskId), projectId: workflowId(row.projectId),
     status: choice(row.status, ['active', 'stopped', 'expired', 'exhausted']), baseRevision: workflowRevision(row.baseRevision), position: workflowRevision(row.position, 0, 7), roles,
     phaseHash: hash(row.phaseHash), ...budget, usedCalls: workflowRevision(row.usedCalls, 0, budget.maxCalls), steps,
-    createdAt: timestamp(row.createdAt), expiresAt: timestamp(row.expiresAt), stopReason: nullable(row.stopReason, item => text(item, 100)),
+    createdAt: timestamp(row.createdAt), expiresAt: timestamp(row.expiresAt), stopReason: nullable(row.stopReason, item => text(item, 100)), ...dataDisclosure(row),
   };
   scoped(result.projectId, result.taskId, scope);
   if (scope && result.ownerId !== parseWorkflowScope(scope).ownerId) bad();

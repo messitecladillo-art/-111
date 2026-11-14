@@ -3,10 +3,12 @@ import { makeWorkflowModelPlan, workflowId, WORKFLOW_PIPELINES, WORKFLOW_ROLES, 
   type WorkflowTask, type WorkflowRole, type WorkflowRoleSelections, type WorkflowModelGrant,
   type WorkflowPhasePreview, type WorkflowModelCall, type WorkflowProjectScope } from '@/lib/agent/workflow-tasks';
 import * as transport from './workflow-client';
+import type { SurveyRelease } from '@/lib/survey-collection';
 
 export type WorkflowSnapshot = {
   task: WorkflowTask | null; phasePreview: WorkflowPhasePreview | null; grant: WorkflowModelGrant | null;
   calls: WorkflowModelCall[]; roleSelections: WorkflowRoleSelections;
+  surveys: SurveyRelease[];
   busy: boolean; loading: boolean; error: string; reconciling: boolean; restored: boolean;
 };
 type Locator = { taskId: string | null; creationKey: string | null; grantKey: string | null; selections: WorkflowRoleSelections };
@@ -33,7 +35,8 @@ export function workflowResearchInput(goal: string, profile: Record<string, stri
   const geography = [...new Set([profile.region, profile.city].filter(value => typeof value === 'string' && value))].join(' · ');
   const notes = [profile.school ? `学校：${profile.school}` : '', profile.days === null || profile.days === undefined ? '' : `可用时间：${profile.days}天`,
     profile.budgetYuan === null || profile.budgetYuan === undefined ? '' : `经费：${profile.budgetYuan}元`].filter(Boolean).join('；');
-  return { requirements: { goal: goal.trim(), ...(geography ? { geography } : {}) }, constraints: notes ? { notes } : {} };
+  const constraints: Record<string, string> = notes ? { notes } : {};
+  return { requirements: { goal: goal.trim(), ...(geography ? { geography } : {}) }, constraints };
 }
 
 /** Owns one mounted account/project. Restoring or polling can only READ; fee calls require a user action. */
@@ -41,7 +44,7 @@ export function createWorkflowController(options: WorkflowControllerOptions) {
   const client = options.client ?? transport, scope = { ...options.scope };
   const storageKey = `evix.workflow-execution.v1:${scope.ownerId}:${scope.projectId}`;
   let locator = emptyLocator(), closed = false, operation = 0, reading = 0;
-  let snapshot: WorkflowSnapshot = { task: null, phasePreview: null, grant: null, calls: [], roleSelections: {},
+  let snapshot: WorkflowSnapshot = { task: null, phasePreview: null, grant: null, calls: [], roleSelections: {}, surveys: [],
     busy: false, loading: true, error: '', reconciling: false, restored: false };
   const live = () => !closed && options.current();
   const requests = new Set<AbortController>();
@@ -77,6 +80,10 @@ export function createWorkflowController(options: WorkflowControllerOptions) {
       publish({ calls, grant: null, reconciling: true, error: '授权回执尚未找到，请稍后再核对。' }); return;
     }
     publish({ calls, grant, reconciling: false, phasePreview: null });
+    if (task.status === 'needs_input' && task.state.awaiting_approval === 'upload_real_data') {
+      const surveys = await client.readWorkflowSurveys(scope, { signal });
+      if (valid()) publish({ surveys });
+    }
     const position = task.state.revision, pipeline = WORKFLOW_PIPELINES[task.taskType];
     if (task.status === 'ready' && position < pipeline.length && !unknown(task, calls)) {
       const preview = await client.readWorkflowPhasePreview(selected, { signal });
@@ -227,9 +234,21 @@ export function createWorkflowController(options: WorkflowControllerOptions) {
     } catch (reason) { if (live() && ticket === operation) publish({ error: message(reason), reconciling: true }); }
     finally { requests.delete(controller); if (live() && ticket === operation) publish({ busy: false }); }
   }
+  async function bindDataset(releaseId: string) {
+    if (!mutable() || !owns() || snapshot.task?.status !== 'needs_input' || !inputCurrent(snapshot.task)
+        || snapshot.task.state.awaiting_approval !== 'upload_real_data') return;
+    if (!snapshot.surveys.some(item => item.id === releaseId && item.responseCount > 0)) { publish({ error: '请选择已有答卷的调查。' }); return; }
+    const ticket = ++operation, controller = request(); reading++; publish({ busy: true, error: '' });
+    try {
+      const task = await client.provideWorkflowInput(options.mutate, taskScope(), { expectedRevision: snapshot.task.revision, releaseId }, { signal: controller.signal });
+      if (!live() || ticket !== operation) return;
+      adopt(task); locator.grantKey = null; persist(); publish({ grant: null }); await details(task, controller.signal);
+    } catch (reason) { if (live() && ticket === operation) publish({ error: message(reason), reconciling: !knownRejection(reason) }); }
+    finally { requests.delete(controller); if (live() && ticket === operation) publish({ busy: false }); }
+  }
   return {
     restore, refresh: () => refresh(), start, authorize: () => execute(true), resume: () => execute(false),
-    approve: () => decide(true), revise: (feedback: string) => decide(false, feedback), stop,
+    approve: () => decide(true), revise: (feedback: string) => decide(false, feedback), stop, bindDataset,
     select(role: WorkflowRole, id: string | null) {
       if (!mutable() || locator.creationKey) return;
       try {
@@ -242,7 +261,7 @@ export function createWorkflowController(options: WorkflowControllerOptions) {
       const previous = locator;
       try {
         locator = { ...emptyLocator(), selections: locator.selections }; persist();
-        operation++; reading++; publish({ task: null, grant: null, phasePreview: null, calls: [], error: '', restored: false });
+        operation++; reading++; publish({ task: null, grant: null, phasePreview: null, calls: [], surveys: [], error: '', restored: false });
       } catch (reason) { locator = previous; publish({ error: message(reason) }); }
     },
     close() { closed = true; operation++; reading++; for (const controller of requests) controller.abort(); requests.clear(); },

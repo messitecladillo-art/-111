@@ -13,6 +13,7 @@ import { DEFAULT_REPORT_OPTIONS, reportHeadingLevel, reportPart } from '@/lib/re
 import { blockLabel, numberedCaption, reportLabels } from '@/lib/report-numbering';
 import { isExhibitNote, sectionNotes } from '@/lib/report-tables';
 import { pageArtDataUrl } from '@/lib/page-art';
+import { frameSVG } from '@/lib/report-frame';
 import { figureInk } from '@/lib/figure-palette';
 import { resultFor, type ResultSnapshot } from '@/lib/research-quality';
 import { Formula } from '../math/Tex';
@@ -20,9 +21,18 @@ import { Figure, PaperText, ResultTable } from './PaperBlocks';
 import css from './PaperPages.module.css';
 import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
 import { reportWorkPlacement, type ReportWorkState } from '@/lib/agent/report-work';
+import type { PaperSectionDiff } from '@/lib/agent/paper-diff';
 
-export type LiveTypingState = { sectionId: string; visibleBody: string };
+export type LiveTypingState = {
+  sectionId: string;
+  visibleBody: string;
+  lineRatio?: number;
+  strikeTick?: number;
+  returning?: boolean;
+};
 export type LiveReviewState = { sectionId: string; badPhrase: string; goodPhrase: string; reason: string; step: 'flag' | 'rewrite' | 'done'; typedGood: string };
+export type PaperAnnotation = { id: string; sectionId: string; quote: string; note: string; status: 'open' | 'applied' };
+export type PaperSelectionAction = { sectionId: string; text: string; action: 'annotate' | 'rewrite' | 'qa' };
 
 type Kind = 'cover' | 'title' | 'special' | 'entry' | 'heading' | 'para' | 'ref' | 'figure' | 'caption' | 'table' | 'equation' | 'small' | 'note' | 'review';
 type Item = {
@@ -50,7 +60,16 @@ type Item = {
   doc?: 'appendix';
   render: (ctx: RenderCtx) => ReactNode;
 };
-type Live = { typing: LiveTypingState | null; review: LiveReviewState | null; writingActive: boolean };
+type Live = {
+  typing: LiveTypingState | null;
+  review: LiveReviewState | null;
+  writingActive: boolean;
+  highlightTerms?: readonly string[];
+  diffs?: ReadonlyMap<string, PaperSectionDiff>;
+  onToggleDiffLock?: (sectionId: string) => void;
+  onApplyRevisionDiff?: () => void;
+  onKeepRevisionDiff?: () => void;
+};
 type Catalog = { activeKey: string | null; onHover?: (attr: 'xref' | 'cite', id: string) => void; onClick?: (attr: 'xref' | 'cite', id: string) => void; onPick?: (sectionId: string) => void };
 /** What a box needs when it is drawn: whether it is on a page (and may be clicked and found), its page numbers, the catalog's handlers. */
 type RenderCtx = { onPage: boolean; folioOf: (anchor: string) => string; catalog: Catalog };
@@ -81,12 +100,75 @@ const GENERATED_APPENDIX = /^appendix-(?:data|ai|claims)-[a-f0-9]{64}$/;
  * the body from page 1, then each further part on a new page. Every paragraph, heading, caption, figure and table is
  * one box, so the boxes can be measured and broken into pages the way Word breaks them.
  */
+function renderDiffCard(
+  diff: PaperSectionDiff,
+  onPage: boolean,
+  live: Pick<Live, 'onToggleDiffLock' | 'onApplyRevisionDiff' | 'onKeepRevisionDiff'>,
+) {
+  const modeLabel = diff.mode === 'revision' ? '本节定点修订' : diff.changeType === 'added' ? '候选新增章节' : diff.changeType === 'removed' ? '候选拟移除章节' : '候选章节更新';
+  const remaining = Math.max(0, diff.totalChanged - diff.chunks.length);
+  return (
+    <div
+      className={css.diffBox}
+      data-locked={diff.locked ? 'true' : undefined}
+      role={onPage ? 'region' : undefined}
+      aria-label={onPage ? `「${diff.title}」改动对照` : undefined}
+      onClick={event => event.stopPropagation()}
+    >
+      <div className={css.diffHead}>
+        <span className={css.diffTitle}>{diff.title || '本节内容'}</span>
+        <span className={css.diffTag}>{diff.locked ? '已锁定保留原稿' : modeLabel}</span>
+        {onPage && (
+          <div className={css.diffActions}>
+            {diff.mode === 'candidate' && live.onToggleDiffLock && (
+              <button type="button" className={diff.locked ? css.diffBtnPrimary : css.diffBtn} onClick={() => live.onToggleDiffLock?.(diff.sectionId)}>
+                {diff.locked ? '恢复采纳新稿' : '锁定保留原稿'}
+              </button>
+            )}
+            {diff.mode === 'revision' && (
+              <>
+                {live.onApplyRevisionDiff && (
+                  <button type="button" className={css.diffBtnPrimary} onClick={() => live.onApplyRevisionDiff?.()}>
+                    在纸面采纳本节
+                  </button>
+                )}
+                {live.onKeepRevisionDiff && (
+                  <button type="button" className={css.diffBtn} onClick={() => live.onKeepRevisionDiff?.()}>
+                    保留原稿
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      {diff.chunks.length > 0 && (
+        <ul className={css.diffList}>
+          {diff.chunks.map((chunk, idx) => (
+            <li key={`${idx}-${chunk.index}`} className={css.diffItem}>
+              {chunk.before && <span className={css.diffDel}>- {chunk.before}</span>}
+              {chunk.after && <span className={css.diffIns}>+ {chunk.after}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {(remaining > 0 || !!diff.details?.length) && (
+        <p className={css.diffNote}>
+          {remaining > 0 ? `另有 ${remaining} 处段落变化；` : ''}
+          {diff.details?.join(' ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function buildFlow(content: EditorContent, live: Live): Item[] {
   const options = content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS;
   const labels = reportLabels(content.report);
   const cited = referenceNumbers(content), citations = cited.numbers;
-  const rich = (text: string) => <PaperText text={text} labels={labels} citations={citations} />;
+  const rich = (text: string) => <PaperText text={text} labels={labels} citations={citations} highlightTerms={live.highlightTerms} />;
   const items: Item[] = [];
+  let simulatedMarkShown = false;
   const ownerOf = (s: ReportSection) => {
     const part = reportPart(s.title);
     return advisorForNode(matchBlueprintNode(s.title)?.id ?? (part === 'body' ? null : part))?.id ?? null;
@@ -188,22 +270,64 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
     const lastWritten = lines.findLastIndex(l => l.trim().length > 0);
     let hint = false;
     lines.forEach((line, i) => {
+      const trimmedLine = line.trim();
+      if (/^【教学模拟数据[^】]*】$/u.test(trimmedLine)) {
+        if (simulatedMarkShown) return;
+        simulatedMarkShown = true;
+        out.push({
+          ...base,
+          key: `p:${s.id}:${i}`,
+          kind: 'small',
+          split: 'lines',
+          render: () => <p className={css.small}>{autospace(trimmedLine)}</p>,
+        });
+        return;
+      }
       if (/写作提示】/u.test(line)) hint = true;
       else if (hint && !line.trim()) hint = false;
       const inHint = hint;
-      const caret = (onPage: boolean) => onPage && typing && i === lastWritten ? <span data-typing-caret="true" className={css.caret} aria-hidden="true" /> : null;
+      const isLastTypingLine = !!typing && i === lastWritten;
+      const lineStyle = isLastTypingLine && typeof typing.lineRatio === 'number'
+        ? { '--type-progress': `${Math.max(4, Math.min(98, Math.round(typing.lineRatio * 100)))}%` } as CSSProperties
+        : undefined;
+      const caret = (pageFlag: boolean) => pageFlag && isLastTypingLine ? (
+        <span
+          data-typing-caret="true"
+          data-strike={typing.strikeTick !== undefined ? typing.strikeTick % 2 : undefined}
+          className={css.caret}
+          aria-hidden="true"
+        />
+      ) : null;
       const inner = part === 'body' && line.length <= 100 ? reportHeadingLevel(line) : null;
       if (inner) {
-        out.push({ ...base, key: `h:${s.id}:${i}`, anchor: `h:${s.id}:${i}`, kind: 'heading', keepNext: true, render: ({ onPage }) => <p className={css[`h${Math.min(inner, 3)}`]}>{line}{caret(onPage)}</p> });
+        out.push({
+          ...base, key: `h:${s.id}:${i}`, anchor: `h:${s.id}:${i}`, kind: 'heading', keepNext: true,
+          render: ({ onPage: pFlag }) => (
+            <p
+              className={css[`h${Math.min(inner, 3)}`]}
+              data-typing-line={pFlag && isLastTypingLine ? 'true' : undefined}
+              data-returning={pFlag && isLastTypingLine && typing.returning ? 'true' : undefined}
+              style={pFlag ? lineStyle : undefined}
+            >
+              {line}{caret(pFlag)}
+            </p>
+          ),
+        });
         return;
       }
       const keywords = part === 'abstract' ? /^(关键词[:：])\s*/u.exec(line) : null;
       out.push({
         ...base, key: `p:${s.id}:${i}`, kind: 'para', split: 'lines',
-        render: ({ onPage }) => (
-          <p className={`${part === 'references' ? css.flush : css.para} ${inHint ? css.hint : ''} ${line.trim() ? '' : css.blank}`} data-hint={inHint || undefined}>
+        render: ({ onPage: pFlag }) => (
+          <p
+            className={`${part === 'references' ? css.flush : css.para} ${inHint ? css.hint : ''} ${line.trim() ? '' : css.blank}`}
+            data-hint={inHint || undefined}
+            data-typing-line={pFlag && isLastTypingLine ? 'true' : undefined}
+            data-returning={pFlag && isLastTypingLine && typing.returning ? 'true' : undefined}
+            style={pFlag ? lineStyle : undefined}
+          >
             {keywords ? <><b className={css.keywords}>{keywords[1]}</b>{rich(line.slice(keywords[0].length))}</> : line.trim() ? rich(line) : null}
-            {caret(onPage)}
+            {caret(pFlag)}
           </p>
         ),
       });
@@ -269,15 +393,64 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
           </div>
         ),
       });
+    } else {
+      const sectionDiff = live.diffs?.get(s.id);
+      if (sectionDiff) {
+        out.push({
+          ...base,
+          key: `df:${s.id}`,
+          kind: 'review',
+          render: ({ onPage }) => renderDiffCard(sectionDiff, onPage, live),
+        });
+      }
     }
     return out;
   };
 
-  const cover = (): Item => ({
-    key: 'cover', kind: 'cover', style: 'cover', breakBefore: true,
-    // A cover image is the whole page (drawn by the page itself, edge to edge); the flow then holds nothing.
-    render: () => content.coverImage ? <div /> : <div className={css.cover}><p className={css.coverTitle}>{autospace(content.title || '未命名研究')}</p>{content.subtitle && <p className={css.coverSubtitle}>{autospace(content.subtitle)}</p>}</div>,
-  });
+  const cover = (isAppendix = false): Item => {
+    const accent = figureInk(content);
+    const hasSimulated = content.quality?.results?.some(r => r.classification === 'simulated');
+    const hasEmpirical = content.quality?.results?.some(r => r.classification === 'user_provided');
+    const sourceLabel = hasSimulated
+      ? '蒙特卡洛教学模拟计算样稿（非真实调研）'
+      : hasEmpirical
+        ? '用户实证采集与定量分析报告'
+        : '研究设计框架与方法预案';
+    const competitionProfile = content.reportFormat?.profileId === 'btbu-17-report-layout-v1';
+    const eyebrow = isAppendix
+      ? '研究报告附录卷 · 问卷量表、抽样参数与模型技术细节'
+      : competitionProfile
+        ? '第十七届全国大学生市场调查与分析大赛参考版式 · 主体研究报告'
+        : '标准化市场调查与统计分析报告';
+    const resultsCount = content.quality?.results?.length ?? 0;
+    const refCount = content.references?.length ?? 0;
+    const sub = isAppendix ? '问卷量表、抽样参数与模型技术附录' : content.subtitle;
+    return {
+      key: isAppendix ? 'a:cover' : 'cover',
+      kind: 'cover',
+      style: 'cover',
+      breakBefore: true,
+      // A cover image is the whole page (drawn by the page itself, edge to edge); the flow then holds nothing.
+      render: () => content.coverImage ? <div /> : (
+        <div className={css.cover} style={{ '--cover-accent': accent } as CSSProperties}>
+          <div className={css.coverTop}>
+            <span className={css.coverRule} aria-hidden="true" />
+            <p className={css.coverEyebrow}>{autospace(eyebrow)}</p>
+          </div>
+          <div className={css.coverCenter}>
+            <p className={css.coverTitle}>{autospace(content.title || '未命名研究')}</p>
+            {sub && <p className={css.coverSubtitle}>{autospace(sub)}</p>}
+            <span className={css.coverDivider} aria-hidden="true" />
+          </div>
+          <dl className={css.coverMeta}>
+            <div><dt>排版规范</dt><dd>{competitionProfile ? '正大杯 A4 赛制结构（GB/T 7714—2015）' : '标准化统计报告版式'}</dd></div>
+            <div><dt>{isAppendix ? '附录编排' : '登记证据'}</dt><dd>{isAppendix ? `共 ${appendix.length} 项技术附录` : `${resultsCount} 项定量结果 · ${refCount} 篇已核验文献`}</dd></div>
+            <div><dt>数据属性</dt><dd>{sourceLabel}</dd></div>
+          </dl>
+        </div>
+      ),
+    };
+  };
   if (options.includeCover) items.push(cover());
   let bodyStarted = false;
   for (const s of main) {
@@ -292,10 +465,23 @@ function buildFlow(content: EditorContent, live: Live): Item[] {
     if (!preliminary) bodyStarted = true;
   }
   if (!bodyStarted) mainToc();
+  if (live.diffs?.size) {
+    const presentIds = new Set(content.report.map(s => s.id));
+    for (const diff of live.diffs.values()) {
+      if (presentIds.has(diff.sectionId)) continue;
+      items.push({
+        key: `df:orphan:${diff.sectionId}`,
+        kind: 'review',
+        style: 'body',
+        sectionId: diff.sectionId,
+        render: ({ onPage }) => renderDiffCard(diff, onPage, live),
+      });
+    }
+  }
   // The appendix as Word exports it on its own: a cover, its contents, then each appendix on a new page from page 1.
   if (appendix.length) {
     const from = items.length;
-    if (options.includeCover) items.push({ ...cover(), key: 'a:cover' });
+    if (options.includeCover) items.push(cover(true));
     toc(listingOf(appendix), 'a:');
     for (const s of appendix) {
       const flow = sectionFlow(s, 'body');
@@ -372,6 +558,14 @@ export default function PaperPages({
   content, label, docFormat, activeSectionId = null, writingActive = false, typingState = null, reviewState = null,
   formatScanSectionId = null, activeCatalogKey = null, onPick, onCatalogHover, onCatalogClick,
   workState = null,
+  sectionDiffs,
+  onToggleDiffLock,
+  onApplyRevisionDiff,
+  onKeepRevisionDiff,
+  highlightTerms,
+  annotations,
+  onSelectionAction,
+  watermarkText = null,
 }: {
   content: EditorContent;
   label: string;
@@ -386,8 +580,45 @@ export default function PaperPages({
   onPick?: (sectionId: string) => void;
   onCatalogHover?: (attr: 'xref' | 'cite', id: string) => void;
   onCatalogClick?: (attr: 'xref' | 'cite', id: string) => void;
+  sectionDiffs?: readonly PaperSectionDiff[];
+  onToggleDiffLock?: (sectionId: string) => void;
+  onApplyRevisionDiff?: () => void;
+  onKeepRevisionDiff?: () => void;
+  highlightTerms?: readonly string[];
+  annotations?: readonly PaperAnnotation[];
+  onSelectionAction?: (selection: PaperSelectionAction) => void;
+  watermarkText?: string | null;
 }) {
-  const items = useMemo(() => buildFlow(content, { typing: typingState, review: reviewState, writingActive }), [content, typingState, reviewState, writingActive]);
+  const diffMap = useMemo(() => {
+    if (!sectionDiffs?.length) return undefined;
+    return new Map(sectionDiffs.map(item => [item.sectionId, item]));
+  }, [sectionDiffs]);
+  const combinedHighlights = useMemo(() => {
+    const out: string[] = [];
+    for (const term of highlightTerms ?? []) {
+      const clean = term.trim();
+      if (clean.length >= 2 && !out.includes(clean)) out.push(clean);
+    }
+    for (const note of annotations ?? []) {
+      if (note.status !== 'open') continue;
+      const snippet = note.quote.trim().slice(0, 48);
+      if (snippet.length >= 4 && !out.includes(snippet)) out.push(snippet);
+    }
+    return out;
+  }, [highlightTerms, annotations]);
+  const items = useMemo(
+    () => buildFlow(content, {
+      typing: typingState,
+      review: reviewState,
+      writingActive,
+      highlightTerms: combinedHighlights,
+      diffs: diffMap,
+      onToggleDiffLock,
+      onApplyRevisionDiff,
+      onKeepRevisionDiff,
+    }),
+    [content, typingState, reviewState, writingActive, combinedHighlights, diffMap, onToggleDiffLock, onApplyRevisionDiff, onKeepRevisionDiff],
+  );
   const indent = (content.reportFormat?.options ?? DEFAULT_REPORT_OPTIONS).firstLineChars === 2 ? '24pt' : '0pt';
 
   // The measured copy lives outside the report container, so a lookup in the report never finds it.
@@ -475,8 +706,62 @@ export default function PaperPages({
     if (list.length) setZoomChoice(list[0]);
   };
 
+  const workTelemetry = useMemo(() => {
+    if (!typingState && !reviewState) return undefined;
+    if (reviewState && reviewState.step !== 'done') {
+      const typedLen = reviewState.typedGood.length;
+      const totalLen = Math.max(1, reviewState.goodPhrase.length);
+      return {
+        lineRatio: Math.min(0.96, 0.08 + (typedLen / totalLen) * 0.88),
+        strikeTick: typedLen,
+        returning: false,
+        activePhrase: reviewState.typedGood || reviewState.badPhrase,
+      };
+    }
+    if (!typingState) return undefined;
+    const activeLine = typingState.visibleBody.split('\n').findLast(l => l.trim().length > 0)?.trim() ?? '';
+    return {
+      lineRatio: typingState.lineRatio,
+      strikeTick: typingState.strikeTick,
+      returning: typingState.returning,
+      activePhrase: activeLine.slice(-24),
+    };
+  }, [typingState, reviewState]);
+
   const [marks, setMarks] = useState(true);
   const [focus, setFocus] = useState<string | null>(null);
+  const [selectionMenu, setSelectionMenu] = useState<{ sectionId: string; text: string; top: number; left: number } | null>(null);
+  const handlePaperMouseUp = () => {
+    if (!onSelectionAction) return;
+    const sel = window.getSelection();
+    const text = sel?.toString().trim() ?? '';
+    if (!sel || sel.isCollapsed || text.length < 4 || text.length > 500 || !viewerRef.current) {
+      setSelectionMenu(null);
+      return;
+    }
+    const anchorEl = sel.anchorNode instanceof HTMLElement ? sel.anchorNode : sel.anchorNode?.parentElement;
+    const sectionEl = anchorEl?.closest<HTMLElement>('[data-report-section]');
+    const sectionId = sectionEl?.dataset.reportSection;
+    if (!sectionId) {
+      setSelectionMenu(null);
+      return;
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const host = viewerRef.current.getBoundingClientRect();
+    setSelectionMenu({
+      sectionId,
+      text,
+      top: Math.max(8, rect.top - host.top - 42),
+      left: Math.max(16, Math.min(host.width - 280, rect.left - host.left + rect.width / 2 - 125)),
+    });
+  };
+  const openNoteCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const note of annotations ?? []) {
+      if (note.status === 'open') counts.set(note.sectionId, (counts.get(note.sectionId) ?? 0) + 1);
+    }
+    return counts;
+  }, [annotations]);
   const writingSection = typingState?.sectionId ?? (writingActive ? activeSectionId : null);
   const writingAdvisor = writingSection ? items.find(i => i.sectionId === writingSection && i.kind !== 'figure' && i.kind !== 'table' && i.kind !== 'caption')?.advisor ?? null : null;
   const shares = useMemo(() => {
@@ -489,7 +774,16 @@ export default function PaperPages({
   }, [items]);
 
   const coverSrc = useMemo(() => (content.coverImage ? pageArtDataUrl(content.coverImage) : ''), [content.coverImage]);
-  const frameSrc = useMemo(() => (content.frameImage ? pageArtDataUrl(content.frameImage) : ''), [content.frameImage]);
+  const frameSrc = useMemo(() => {
+    if (content.frameImage) return pageArtDataUrl(content.frameImage);
+    const frame = content.reportFrame;
+    if (!frame || frame.layout === 'none' || frame.status === 'concept') return '';
+    try {
+      return `data:image/svg+xml;utf8,${encodeURIComponent(frameSVG(frame))}`;
+    } catch {
+      return '';
+    }
+  }, [content.frameImage, content.reportFrame]);
   const framed = Math.max(1, layout?.pages.length ?? 1) * (PAGE.height + PAGE_GAP) - PAGE_GAP;
   const mainPages = layout ? layout.pages.filter(p => shown[p.first]?.doc !== 'appendix').length : 0;
   const appendixPages = layout ? layout.pages.length - mainPages : 0;
@@ -533,12 +827,25 @@ export default function PaperPages({
       </div>
 
       {workState && !workPlacement && <aside className={css.workDock} data-screen-only="true" aria-label="报告生成状态">
-        <ReportWorkstation state={workState} compact />
+        <ReportWorkstation state={workState} telemetry={workTelemetry} compact />
       </aside>}
 
       {/* Pages are laid out at their true size and only drawn smaller or larger: a transform never re-flows the text, so
           each page shows exactly what was measured; the frame takes the scaled size so the scroll extent is right. */}
-      <div className={css.pagesFrame} style={{ width: PAGE.width * zoom, height: framed * zoom }}>
+      {selectionMenu && onSelectionAction && (
+        <div className={css.selBar} role="toolbar" aria-label="选中文本操作" style={{ top: selectionMenu.top, left: selectionMenu.left }}>
+          <button type="button" onClick={() => { onSelectionAction({ sectionId: selectionMenu.sectionId, text: selectionMenu.text, action: 'annotate' }); setSelectionMenu(null); window.getSelection()?.removeAllRanges(); }}>
+            📌 标红批注
+          </button>
+          <button type="button" onClick={() => { onSelectionAction({ sectionId: selectionMenu.sectionId, text: selectionMenu.text, action: 'rewrite' }); setSelectionMenu(null); window.getSelection()?.removeAllRanges(); }}>
+            ✨ 按想法重写
+          </button>
+          <button type="button" onClick={() => { onSelectionAction({ sectionId: selectionMenu.sectionId, text: selectionMenu.text, action: 'qa' }); setSelectionMenu(null); window.getSelection()?.removeAllRanges(); }}>
+            🔍 Q/A 核查
+          </button>
+        </div>
+      )}
+      <div className={css.pagesFrame} style={{ width: PAGE.width * zoom, height: framed * zoom }} onMouseUp={handlePaperMouseUp}>
       <div className={css.pages} style={{ transform: `scale(${zoom})`, '--indent': indent } as CSSProperties} data-focus={focus ?? undefined}>
         {layout?.pages.map((p, index) => {
           const style = shown[p.first]?.style ?? 'body';
@@ -553,16 +860,20 @@ export default function PaperPages({
             if (prev && prev.advisor === item.advisor && prev.sectionId === item.sectionId && y0 - prev.y1 < 30) prev.y1 = y1;
             else segments.push({ advisor: item.advisor, sectionId: item.sectionId, y0, y1, pending: !!item.pending, head: item.kind === 'heading' || item.kind === 'special' || item.kind === 'figure' || (item.kind === 'caption' && !segments.some(s => s.sectionId === item.sectionId && s.advisor === item.advisor)) });
           }
+          const pageArea: 'body' | 'cover' | 'appendix' =
+            style === 'cover' ? 'cover' : shown[p.first]?.doc === 'appendix' ? 'appendix' : 'body';
+          const showFrame = !!frameSrc && (content.reportFrame ? content.reportFrame.appliesTo.includes(pageArea) : style !== 'cover');
           return (
             <article key={index} className={css.page} data-page-style={style} aria-label={folios[index] ? `第 ${folios[index]} 页` : '封面'}>
               {/* eslint-disable-next-line @next/next/no-img-element -- the draft's own data URL; an image optimizer cannot serve it. */}
               {style === 'cover' && coverSrc && <img className={css.pageArt} src={coverSrc} alt={content.subtitle ? `封面：${content.title}——${content.subtitle}` : `封面：${content.title}`} draggable={false} />}
               {/* eslint-disable-next-line @next/next/no-img-element -- the draft's own data URL; an image optimizer cannot serve it. */}
-              {style !== 'cover' && frameSrc && <img className={css.pageArt} src={frameSrc} alt="" aria-hidden="true" draggable={false} />}
+              {showFrame && !(style === 'cover' && coverSrc) && <img className={css.pageArt} src={frameSrc} alt="" aria-hidden="true" draggable={false} />}
+              {watermarkText && <div className={css.watermark} data-screen-only="true" aria-hidden="true"><span>{watermarkText}</span><span>{watermarkText}</span></div>}
               {workState && workPlacement?.page === index && <aside
                 className={css.workOverlay} data-screen-only="true" aria-label="报告生成状态"
                 style={{ top: `calc(${PAGE.topMm}mm + ${workPlacement.top}px)` }}>
-                <ReportWorkstation state={workState} compact />
+                <ReportWorkstation state={workState} telemetry={workTelemetry} compact />
               </aside>}
               <div className={`${css.flow} ${css.body}`} style={{ height: p.end - p.start }}>
                 <div className={css.slice} style={{ transform: `translateY(${-shift}px)` }}>
@@ -571,11 +882,15 @@ export default function PaperPages({
                       key={item.key}
                       className={boxClass(item)}
                       style={item.gap ? { paddingTop: `${item.gap}pt` } : undefined}
+                      data-report-section={item.sectionId ?? undefined}
                       data-advisor={item.advisor ?? undefined}
                       data-dim={focus && item.advisor !== focus ? 'true' : undefined}
                       onClick={onPick && item.sectionId && item.kind !== 'entry' ? () => onPick(item.sectionId!) : undefined}
                     >
                       {item.render(pageCtx)}
+                      {item.kind === 'heading' && item.sectionId && (openNoteCounts.get(item.sectionId) ?? 0) > 0 && (
+                        <span className={css.noteBadge} data-screen-only="true">{openNoteCounts.get(item.sectionId)} 条批注</span>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import type { Service } from '@evix/shared';
+import type { SurveyRelease } from '@/lib/survey-collection';
 import {
   WORKFLOW_PIPELINES, WORKFLOW_ROLE_CAPABILITIES, WORKFLOW_TASK_ROLES,
   type WorkflowModelCall, type WorkflowModelGrant, type WorkflowPhasePreview, type WorkflowRole,
@@ -35,6 +36,8 @@ export type WorkflowExecutionPanelProps = {
   onRoleSelectionChange: (role: WorkflowRole, serviceId: string | null) => void;
   onPrepare?: () => void;
   onNewTask?: () => void;
+  surveys?: readonly SurveyRelease[];
+  onBindDataset?: (releaseId: string) => void;
 };
 
 const ROLE_LABELS: Record<WorkflowRole, string> = {
@@ -115,10 +118,11 @@ function frozenModels(steps: Record<string, Service>, roles: readonly WorkflowRo
 export default function WorkflowExecutionPanel({ task, taskKind = 'full_research', phasePreview, grant, calls, services,
   roleSelections, canManage, busy = false, loading = false, error = '', reconciling = false, sourceChanged = false,
   restored = false, onAuthorize, onContinue, onRefresh, onCancel, onApprove, onRevise, onOpenSettings,
-  onOpenAnalysis, onRoleSelectionChange, onPrepare, onNewTask }: WorkflowExecutionPanelProps) {
+  onOpenAnalysis, onRoleSelectionChange, onPrepare, onNewTask, surveys = [], onBindDataset }: WorkflowExecutionPanelProps) {
   const id = useId();
   const [acceptedPhase, setAcceptedPhase] = useState<string | null>(null);
   const [feedbackDraft, setFeedbackDraft] = useState({ checkpoint: '', text: '' });
+  const [surveySelection, setSurveySelection] = useState({ taskId: '', id: '' });
   const kind = task?.taskType ?? taskKind;
   const roles = WORKFLOW_TASK_ROLES[kind];
   const pipeline = WORKFLOW_PIPELINES[kind];
@@ -218,6 +222,8 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
         </li>)}</ul>
         <p className={styles.limits}>最多 <strong>{frozen.maxCalls}</strong> 次模型调用<span aria-hidden="true"> · </span>本阶段输出上限 <strong>{frozen.maxOutputTokens.toLocaleString('en-US')}</strong> token
           {shownGrant && <span className={styles.used}>已使用 {shownGrant.usedCalls} / {shownGrant.maxCalls} 次</span>}</p>
+        {frozen.datasets && <div className={styles.materials}><p>数据仅发送聚合统计，不发送逐行答卷或开放题原文。</p>
+          <ul>{frozen.datasets.map(item => <li key={item.ref}>{item.title} · {item.rowCount} 份 · {item.classification === 'synthetic' ? '合成数据' : '回收数据'}<small> · 快照 {item.sha256.slice(0, 12)}</small></li>)}</ul></div>}
         {preview && !shownGrant && <>
           <details className={styles.materials}><summary>查看将发送的完整材料</summary>
             <p className={styles.muted}>本阶段后续步骤还会使用前序步骤生成的有界结果。人工确认、返修、取消或结果未知时，本阶段授权停止。</p>
@@ -271,6 +277,11 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
       </section>}
 
       {needsData && <div className={styles.attention}><p>研究已到真实数据环节。请先导入并核查数据，才能继续分析。</p>
+        {!!surveys.length && onBindDataset && <label>选择已回收的调查<select aria-label="选择已回收的调查" disabled={!mutationAllowed}
+          value={surveySelection.taskId === task.id ? surveySelection.id : ''} onChange={event => setSurveySelection({ taskId: task.id, id: event.target.value })}>
+          <option value="">请选择调查</option>{surveys.map(item => <option key={item.id} value={item.id} disabled={!item.responseCount}>{item.title} · {item.responseCount} 份{item.classification === 'synthetic' ? ' · 合成数据' : ''}</option>)}</select>
+          <button type="button" className={styles.primary} disabled={!mutationAllowed || surveySelection.taskId !== task.id || !surveys.some(item => item.id === surveySelection.id && item.responseCount > 0)}
+            onClick={() => { if (mutationAllowed && surveySelection.taskId === task.id && surveys.some(item => item.id === surveySelection.id && item.responseCount > 0)) onBindDataset(surveySelection.id); }}>使用这份调查数据</button></label>}
         <button type="button" className={styles.secondary} onClick={onOpenAnalysis}>前往数据分析</button></div>}
       {task.status === 'blocked' && !unknown && !cancelled && <p className={styles.notice}>流程暂时停止。请核对已有成果、待补材料与执行记录，再决定下一步。</p>}
       {task.state.errors.length > 0 && <details className={styles.raw}><summary>查看处理说明</summary>{content(task.state.errors)}</details>}

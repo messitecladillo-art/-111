@@ -41,6 +41,7 @@ export type ArtifactShelfProps = {
   onImport: (file: File, kind: 'cover' | 'diagram' | 'file') => void;
   onCapture: () => void;
   onExample?: () => void;
+  onLocate?: (id: string) => void;
 };
 
 type Kind = ArtifactShelfItem['kind'];
@@ -102,7 +103,7 @@ function updatedLabel(value: string) {
 }
 
 /** Presentation only: supplied objects and callbacks remain owned by the active workspace. */
-export default function ArtifactShelf({ items, selectedId, preview, busy, error, unavailableReason, onSelect, onClose, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, onExample }: ArtifactShelfProps) {
+export default function ArtifactShelf({ items, selectedId, preview, busy, error, unavailableReason, onSelect, onClose, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, onExample, onLocate }: ArtifactShelfProps) {
   const headingId = useId();
   const searchId = useId();
   const versionId = useId();
@@ -204,6 +205,7 @@ export default function ArtifactShelf({ items, selectedId, preview, busy, error,
         </dialog>}
         <div className={styles.actions} aria-label="选中素材操作" data-download={selected.useAction === 'download' && selected.canUse}>
           <button type="button" className={styles.primaryButton} disabled={blocked || !selected.canUse} onClick={() => onUse(selected.id)}><Icon name={selected.useAction === 'download' ? 'download' : 'check'} />{selected.useLabel??(selected.kind==='frame'?'预览并应用':'用于报告')}</button>
+          {onLocate && <button type="button" disabled={blocked} onClick={() => onLocate(selected.id)}>定位正文</button>}
           <button type="button" disabled={blocked || !selected.canEdit} onClick={() => onEdit(selected.id)}><Icon name="edit" />编辑</button>
           {(selected.useAction !== 'download' || !selected.canUse) && <button type="button" disabled={blocked || !selected.canExport} onClick={() => onExport(selected.id)}><Icon name="download" />导出</button>}
           <button type="button" disabled={blocked || selected.status === 'stored'} onClick={() => onArchive(selected.id)}><Icon name="folder" />{selected.status === 'stored' ? '已收存' : '收存'}</button>

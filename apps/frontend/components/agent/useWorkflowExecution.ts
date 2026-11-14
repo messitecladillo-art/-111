@@ -13,7 +13,7 @@ export type WorkflowExecutionHost = {
 type Options = { owner: string | null; projectId: string | null; epoch: number; direction: string;
   context: Record<string, string | number | null>;
   services: readonly Service[]; defaultServiceId: string | null; host?: WorkflowExecutionHost };
-const initial = (): WorkflowSnapshot => ({ task: null, phasePreview: null, grant: null, calls: [], roleSelections: {}, busy: false, loading: true, error: '', reconciling: false, restored: false });
+const initial = (): WorkflowSnapshot => ({ task: null, phasePreview: null, grant: null, calls: [], surveys: [], roleSelections: {}, busy: false, loading: true, error: '', reconciling: false, restored: false });
 const NAMES: Record<WorkflowRole, string> = { research: '研究设计', survey: '问卷与抽样', data: '数据分析', writing: '报告草稿', reviewer: '审阅记录' };
 function matchesInput(task: WorkflowTask, options: Options) {
   try {
@@ -75,5 +75,6 @@ export function useWorkflowExecution(options: Options) {
     onApprove: () => { void controller.current?.approve(); }, onRevise: (feedback: string) => { void controller.current?.revise(feedback); },
     onRoleSelectionChange: (role: WorkflowRole, id: string | null) => controller.current?.select(role, id),
     onNewTask: () => controller.current?.newTask(),
+    onBindDataset: (id: string) => { void controller.current?.bindDataset(id); },
   };
 }

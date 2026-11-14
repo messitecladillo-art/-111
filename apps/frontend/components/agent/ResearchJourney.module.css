@@ -34,10 +34,11 @@
 .journey textarea::placeholder { color: var(--journey-muted); }
 .intakeActions { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
 .defaultModel { display: grid; gap: 6px; flex: 1; max-width: 320px; min-width: 180px; color: var(--journey-muted); }
-.journey select { display: block; width: 100%; min-width: 0; min-height: 40px; border: 1px solid var(--c-line-strong, #d2d9d6); border-radius: 7px; padding: 8px 10px; color: var(--journey-fg); background: var(--journey-bg); font: inherit; text-overflow: ellipsis; }
-.journey :is(select, textarea):disabled { background: var(--c-side, #f8faf9); color: var(--journey-muted); }
+.journey select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid var(--c-line-strong, #d2d9d6); border-radius: 7px; background: var(--journey-bg); color: var(--journey-fg); font: inherit; font-size: 13px; height: 36px; min-height: 36px; padding: 0 10px; line-height: 34px; vertical-align: middle; }
+.journey :is(select, textarea):disabled { background-color: var(--c-side, #f8faf9); color: var(--journey-muted); }
 .journey select[aria-invalid="true"] { border-color: var(--c-warn, #c2410c); }
-.primary { min-height: 42px; padding: 9px 20px; border: 1px solid var(--journey-accent); border-radius: 8px; color: var(--c-bg, #fff); background: var(--journey-accent); font-weight: 500 !important; }
+.primary { min-height: 40px; padding: 8px 20px; border: 1px solid transparent; border-radius: 999px; color: var(--c-obsidian-fg, #fff); background: var(--c-obsidian, var(--journey-accent)); font-weight: 550 !important; transition: opacity 150ms, transform 120ms; }
+.primary:hover:not(:disabled) { opacity: 0.88; }
 .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .suggestions button { display: inline-flex; align-items: center; gap: 20px; min-height: 34px; padding: 5px 12px; border: 1px solid var(--journey-line); border-radius: 8px; background: transparent; color: var(--journey-muted); font-size: 12px; transition: background 120ms, border-color 120ms; }
 .suggestions button:hover { color: var(--journey-accent); border-color: var(--journey-accent); background: var(--c-accent-soft); }

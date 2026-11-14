@@ -239,3 +239,14 @@ test('Latin-only characters in Chinese text keep the Latin face: accents, Greek,
   for (const text of ['α', '–', 'É']) assert.match(xml, new RegExp(`<w:rFonts w:eastAsia="Times New Roman" w:hint="default"/>(?:(?!</w:r>).)*<w:t xml:space="preserve">${text}</w:t>`), text);
   assert.match(xml, /<w:t xml:space="preserve">Cronbach 的 <\/w:t>/, 'the rest of the sentence keeps the paragraph font');
 });
+
+test('ring chart reading col 2 percentage falls back to integer count without 15-decimal float leak', async () => {
+  const csv94 = ['编号,偏好', ...Array.from({ length: 94 }, (_, i) => `${i + 1},${i < 44 ? '经常' : i < 74 ? '偶尔' : '极少'}`)].join('\n');
+  const freq94 = await snapshotRecipe(runRecipe(parseSurveyCsv(csv94), { id: 'f94', method: 'frequency', x: 1, y: null, question: '偏好' }, []), { ...source, title: 'f94' }, 'f94');
+  const plan = figurePlan(freq94, 2, '#0F766E');
+  assert.equal(plan?.kind, 'ring');
+  const svg = await figureSVG(freq94, 2, '#0F766E');
+  assert.match(svg, /\(44\)/);
+  assert.match(svg, /46\.8%/);
+  assert.doesNotMatch(svg, />[^<]*\.\d{3,}[^<]*</, 'must not leak raw IEEE-754 float precision in ring legend text');
+});

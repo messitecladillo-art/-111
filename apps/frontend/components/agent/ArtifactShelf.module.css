@@ -108,8 +108,8 @@
 .enlarge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; margin-top: 8px; padding: 5px 9px; border: 1px solid var(--s-line); border-radius: 7px; color: var(--s-dim); background: var(--s-raise); font-size: 12px !important; }
 .enlarge:hover { color: var(--s-accent); border-color: var(--s-accent); }
 .enlarge svg { width: 14px; height: 14px; }
-.imageViewer { width: min(1120px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--s-line); border-radius: 16px; color: var(--s-fg); background: var(--s-bg); box-shadow: 0 24px 80px #0005; }
-.imageViewer::backdrop { background: #101816b8; }
+.imageViewer { width: min(1120px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--s-line); border-radius: 16px; color: var(--s-fg); background: var(--s-bg); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32); }
+.imageViewer::backdrop { background: rgba(16, 20, 22, 0.55); backdrop-filter: blur(12px); }
 .imageViewer header { position: sticky; top: 0; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--s-line); background: var(--s-bg); }
 .imageViewer h3 { flex: 1; min-width: 0; margin: 0; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
 .imageViewer h3 small { display: inline-block; margin-left: 10px; color: var(--s-dim); font-size: 12px; }
@@ -134,8 +134,8 @@
 .actions button, .importRow button, .captureButton { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 36px; padding: 7px 6px; border: 1px solid var(--s-line); border-radius: 7px; background: var(--s-raise); font-size: 12px !important; line-height: 1.4; }
 .actions svg, .importRow button svg, .captureButton svg { flex: none; width: 14px; height: 14px; }
 .actions button:hover:not(:disabled), .importRow button:hover:not(:disabled), .captureButton:hover:not(:disabled) { border-color: var(--s-strong); background: var(--s-hover); }
-.actions .primaryButton { border-color: var(--s-accent); color: var(--s-accent); background: var(--s-soft); }
-.actions .primaryButton:hover:not(:disabled) { border-color: var(--s-accent); background: color-mix(in srgb, var(--s-accent) 14%, var(--s-bg)); }
+.actions .primaryButton { border-color: transparent; color: var(--c-obsidian-fg, #fff); background: var(--c-obsidian, var(--s-accent)); font-weight: 550; }
+.actions .primaryButton:hover:not(:disabled) { border-color: transparent; opacity: 0.88; background: var(--c-obsidian, var(--s-accent)); }
 .command { margin-top: 18px; }
 .command > label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 500; }
 .commandInput { display: flex; align-items: flex-end; gap: 8px; padding: 9px; border: 1px solid var(--s-strong); border-radius: 9px; background: var(--s-bg); }

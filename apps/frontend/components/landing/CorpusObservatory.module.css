@@ -1,0 +1,569 @@
+/* Minimalist Swiss-Grid & Obsidian Glass Corpus Observatory */
+.observatory {
+  --obs-bg: rgba(7, 14, 25, 0.72);
+  --obs-glass: rgba(14, 24, 41, 0.65);
+  --obs-border: rgba(247, 244, 237, 0.085);
+  --obs-border-glow: rgba(244, 185, 66, 0.42);
+  --obs-gold: #f4b942;
+  --obs-teal: #4fd1c1;
+  --obs-blue: #7fb6ff;
+  --obs-ivory: #f7f4ed;
+  --obs-mist: #a6b4c3;
+  --obs-muted: #6c7c8d;
+  --obs-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  position: relative;
+  display: grid;
+  gap: 24px;
+  padding: clamp(24px, 3.6vw, 40px);
+  border-radius: 28px;
+  background:
+    radial-gradient(60% 45% at 15% 0%, rgba(244, 185, 66, 0.07), transparent),
+    radial-gradient(50% 45% at 88% 100%, rgba(79, 209, 193, 0.06), transparent),
+    var(--obs-bg);
+  border: 1px solid var(--obs-border);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 32px 80px -40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--obs-ivory);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.compact {
+  padding: 14px;
+  border-radius: 16px;
+  gap: 14px;
+  background: #08111f;
+}
+
+/* Header & Segmented Controller */
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font: 600 10.5px var(--obs-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--obs-teal);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(22px, 2.8vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.compact .title {
+  font-size: 16px;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--obs-border);
+}
+
+.segBtn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--obs-mist);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.compact .segBtn {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.segBtn:hover {
+  color: var(--obs-ivory);
+}
+
+.segBtnActive {
+  color: #13110d;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f9d478, var(--obs-gold));
+  box-shadow: 0 4px 16px -4px rgba(244, 185, 66, 0.65);
+}
+
+/* 4-Column Ultra-Clean Metric Strip */
+.heroMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--obs-border);
+  border-bottom: 1px solid var(--obs-border);
+  padding: 18px 0;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .heroMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.compact .heroMetrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px 0;
+  gap: 8px;
+}
+
+.metricCell {
+  display: grid;
+  gap: 4px;
+  padding: 0 12px;
+  border-right: 1px solid var(--obs-border);
+  min-width: 0;
+}
+
+.metricCell:last-child {
+  border-right: 0;
+}
+
+@media (max-width: 720px) {
+  .metricCell:nth-child(2n) {
+    border-right: 0;
+  }
+}
+
+.compact .metricCell {
+  padding: 0 6px;
+}
+
+.compact .metricCell:nth-child(2n) {
+  border-right: 0;
+}
+
+.metricNum {
+  font: 600 clamp(26px, 3.2vw, 38px) / 1 var(--obs-mono);
+  letter-spacing: -0.04em;
+  background: linear-gradient(180deg, #fff5d9 0%, var(--obs-gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.compact .metricNum {
+  font-size: 22px;
+}
+
+.metricName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--obs-ivory);
+}
+
+.metricSub {
+  font: 500 11px var(--obs-mono);
+  color: var(--obs-muted);
+}
+
+/* Split Dashboard Grid */
+.splitGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+@media (max-width: 880px) {
+  .splitGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.compact .splitGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.glassCard {
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--obs-glass);
+  border: 1px solid var(--obs-border);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.compact .glassCard {
+  padding: 12px;
+  border-radius: 14px;
+  gap: 10px;
+}
+
+.cardLabel {
+  font: 600 11px var(--obs-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--obs-muted);
+}
+
+/* Models Spectral Bars */
+.spectrumList {
+  display: grid;
+  gap: 6px;
+}
+
+.spectrumRow {
+  display: grid;
+  grid-template-columns: minmax(0, 130px) minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--obs-mist);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.compact .spectrumRow {
+  grid-template-columns: minmax(0, 108px) minmax(0, 1fr) 44px;
+  gap: 8px;
+  padding: 5px 6px;
+  font-size: 11.5px;
+}
+
+.spectrumRow:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--obs-ivory);
+}
+
+.spectrumRowActive {
+  background: rgba(244, 185, 66, 0.09);
+  border-color: rgba(244, 185, 66, 0.34);
+  color: var(--obs-ivory);
+}
+
+.spectrumName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.spectrumTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.spectrumFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(79, 209, 193, 0.8), var(--obs-gold));
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.spectrumVal {
+  text-align: right;
+  font: 600 11.5px var(--obs-mono);
+  color: var(--obs-gold);
+}
+
+/* Model Focus Gauge Card */
+.gaugeWrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.miniPill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(79, 209, 193, 0.1);
+  border: 1px solid rgba(79, 209, 193, 0.25);
+  color: var(--obs-teal);
+}
+
+.goldPill {
+  background: rgba(244, 185, 66, 0.1);
+  border-color: rgba(244, 185, 66, 0.28);
+  color: var(--obs-gold);
+}
+
+.quoteLine {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border-left: 2px solid var(--obs-gold);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--obs-mist);
+}
+
+/* Bento Charts Gallery (Visual-First) */
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 1040px) {
+  .bentoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.compact .bentoGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bentoCard {
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--obs-glass);
+  border: 1px solid var(--obs-border);
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  min-width: 0;
+}
+
+.bentoCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(79, 209, 193, 0.45);
+}
+
+.bentoCardActive {
+  border-color: var(--obs-gold);
+  background: rgba(244, 185, 66, 0.08);
+}
+
+.svgCanvas {
+  width: 100%;
+  aspect-ratio: 4 / 2.7;
+  border-radius: 10px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    #050b16;
+  background-size: 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.bentoMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bentoTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--obs-ivory);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bentoPct {
+  font: 700 12px var(--obs-mono);
+  color: var(--obs-gold);
+}
+
+.bentoSub {
+  font-size: 10.5px;
+  color: var(--obs-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.insightStrip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(79, 209, 193, 0.07);
+  border: 1px solid rgba(79, 209, 193, 0.22);
+  font-size: 12px;
+  color: var(--obs-ivory);
+}
+
+/* Clean Three-Line Table Studio */
+.chipBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chipBtn {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--obs-border);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--obs-mist);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.16s;
+}
+
+.chipBtnActive {
+  background: var(--obs-gold);
+  border-color: var(--obs-gold);
+  color: #13110d;
+  font-weight: 700;
+}
+
+.tableStage {
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: #faf7f0;
+  color: #0f172a;
+  overflow-x: auto;
+}
+
+.compact .tableStage {
+  padding: 12px;
+}
+
+.tableHeading {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.academicTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+}
+
+.academicTable th {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #0f172a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.academicTable td {
+  padding: 7px 10px;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Title Formulas 4-Up & 3-Step Flow */
+.formulaGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .formulaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.compact .formulaGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formulaCard {
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--obs-glass);
+  border: 1px solid var(--obs-border);
+  display: grid;
+  gap: 6px;
+}
+
+.formulaPct {
+  font: 700 24px/1 var(--obs-mono);
+  color: var(--obs-gold);
+}
+
+.stepFlow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .stepFlow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.compact .stepFlow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stepNode {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--obs-border);
+  display: grid;
+  gap: 4px;
+}
+
+.stepBadge {
+  font: 700 10.5px var(--obs-mono);
+  color: var(--obs-teal);
+  letter-spacing: 0.08em;
+}
+
+.actionBtn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 185, 66, 0.45);
+  background: rgba(244, 185, 66, 0.14);
+  color: var(--obs-gold);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actionBtn:hover {
+  background: rgba(244, 185, 66, 0.24);
+}

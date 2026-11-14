@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { awardCases } from '@/data/award-cases';
+import { ZHENGDA_ARCHIVE_META, zhengdaArchiveLitRecords } from '@/data/zhengda-corpus-2015-2027';
 import { useWorkbenchTheme } from '@/components/workbench/shell-kit';
 import { keywordBursts, type Burst } from '@/lib/topic-lab/burst';
 import { awardCaseRecords } from '@/lib/topic-lab/evaluate';
@@ -134,9 +135,12 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     const share = (f: (r: LitRecord) => boolean) => records.filter(f).length / records.length;
     return { year: share(r => r.year !== null), keywords: share(r => r.keywords.length > 0), plus: share(r => r.keywordsPlus.length > 0), abstract: share(r => r.abstract.length > 40), refs: share(r => r.refs.length > 0), citations: share(r => r.citations !== null) };
   }, [records]);
+  const isLocalArchive = corpus?.kind === 'import' && corpus.files.some(f => f.name === 'zhengda-2015-2025-archive.library');
   const corpusLabel = !corpus || !merged ? '' : corpus.kind === 'library'
     ? `内置获奖案例索引 ${records.length} 项题名（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`
-    : `导入的 ${[...new Set(corpus.files.filter(f => f.records).map(f => f.format === 'unknown' ? '未知格式' : FORMAT_LABELS[f.format]))].join(' + ')} 共 ${fmtInt(records.length)} 条记录（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`;
+    : isLocalArchive
+      ? `2015–2025 历届正大杯全量题录 ${fmtInt(records.length)} 篇（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`
+      : `导入的 ${[...new Set(corpus.files.filter(f => f.records).map(f => f.format === 'unknown' ? '未知格式' : FORMAT_LABELS[f.format]))].join(' + ')} 共 ${fmtInt(records.length)} 条记录（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`;
 
   const dataNote = `数据：${corpusLabel}；词来源：${SOURCE_LABELS[activeSource]}，出现 ≥ ${minDf} 篇，显示前 ${maxTerms} 个词。`;
 
@@ -173,6 +177,16 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     if (lists.some(l => l.length)) setView('cloud');
   }
   const loadLibrary = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus({ kind: 'library', lists: [awardCaseRecords(awardCases)], files: [] }); setSource(null); setMinDf(2); setBasket([]); setView('cloud'); };
+  const loadFullArchive = () => {
+    const archiveRecords = zhengdaArchiveLitRecords();
+    epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError('');
+    setCorpus({
+      kind: 'import',
+      lists: [archiveRecords],
+      files: [{ name: 'zhengda-2015-2025-archive.library', format: 'library', records: archiveRecords.length, skipped: 0, warnings: [] }],
+    });
+    setSource('title'); setMinDf(2); setBasket([]); setView('cloud');
+  };
   const clear = () => { epoch.current++; restoring.current = false; setRestoreBusy(false); setBusy(''); setImportError(''); setCorpus(null); setBasket([]); setSource(null); setCloud(undefined); setThesaurus(''); setThesaurusDraft(''); };
   const onDrop = (e: DragEvent) => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length) void addFiles(e.dataTransfer.files); };
 
@@ -186,6 +200,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
         <h3>导入文献</h3><span>拖入数据库导出的文件，或从本地选择</span>
         <span>Web of Science 纯文本 · RIS · BibTeX · RefWorks · EndNote</span>
         <button type="button" className={styles.primaryButton} onClick={() => fileInput.current?.click()} disabled={!!busy}>{busy || '选择文献文件'}</button>
+        <button type="button" className={styles.secondaryButton} onClick={loadFullArchive}>加载 2015–2025 历届国奖全量题录（{ZHENGDA_ARCHIVE_META.totalReports} 篇）</button>
         <button type="button" className={styles.linkButton} onClick={loadLibrary}>试用内置题名索引（{awardCases.length} 项）</button>
         <small>{restoreBusy ? '正在核对项目文献快照…' : onSnapshot ? '仅在本浏览器解析，文献快照由当前项目保存。' : '仅在本浏览器解析；当前宿主未配置快照保存。'}</small>
         {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
@@ -205,9 +220,10 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
     <div className={styles.corpusBar}>
       <div className={styles.corpusMain}>
-        <span className={styles.eyebrowSmall}>{corpus.kind === 'library' ? '示例语料 · 内置获奖案例索引' : '文献语料'}</span>
+        <span className={styles.eyebrowSmall}>{corpus.kind === 'library' ? '示例语料 · 内置获奖案例索引' : isLocalArchive ? '本地全量语料 · 2015–2025 历届正大杯国奖题录' : '文献语料'}</span>
         <strong>{fmtInt(records.length)} 条记录{cy?.min ? ` · ${cy.min}–${cy.max}` : ''}</strong>
-        {corpus.kind === 'import' && <span>{corpus.files.map(f => `${f.name}：${f.format === 'unknown' ? '无法识别' : `${FORMAT_LABELS[f.format]} ${f.records} 条`}`).join('；')}{merged!.duplicates ? `；合并去重 ${merged!.duplicates} 条` : ''}</span>}
+        {corpus.kind === 'import' && isLocalArchive && <span>源自用户本地 2014–2025 历届正大杯 PDF 合集（含 {ZHENGDA_ARCHIVE_META.cpPropositions} 篇正大企业命题），属描述性参照语料，非官方认证或排名依据。</span>}
+        {corpus.kind === 'import' && !isLocalArchive && <span>{corpus.files.map(f => `${f.name}：${f.format === 'unknown' ? '无法识别' : `${FORMAT_LABELS[f.format]} ${f.records} 条`}`).join('；')}{merged!.duplicates ? `；合并去重 ${merged!.duplicates} 条` : ''}</span>}
         {corpus.kind === 'library' && <span>{awardCases.filter(c => c.verification === 'official_verified').length} 项官方来源核验 + {awardCases.filter(c => c.verification !== 'official_verified').length} 项用户陈述；非历届全量，只能描述这些题名本身。</span>}
       </div>
       {quality && <dl className={styles.quality}>
@@ -219,6 +235,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
       </dl>}
       <div className={styles.corpusActions}>
         {corpus.kind === 'import' && <button type="button" className={styles.secondaryButton} onClick={() => fileInput.current?.click()} disabled={!!busy}>{busy || '追加文件'}</button>}
+        {corpus.kind === 'library' && <button type="button" className={styles.secondaryButton} onClick={loadFullArchive}>切换 2015–2025 全量题录（{ZHENGDA_ARCHIVE_META.totalReports} 篇）</button>}
         {corpus.kind === 'library' && <button type="button" className={styles.primaryButton} onClick={() => { clear(); }}>导入自己的文献</button>}
         <button type="button" className={styles.linkButton} onClick={clear}>清除</button>
       </div>

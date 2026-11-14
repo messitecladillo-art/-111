@@ -75,8 +75,8 @@ def test_revoke_after_last_call_receipt_before_parent_publish_blocks_all_output(
     ready_to_publish, release = Event(), Event()
     original = models.model_handler
 
-    def pause_after_completed_role(role, invoke):
-        handler = original(role, invoke)
+    def pause_after_completed_role(role, invoke, tools=None):
+        handler = original(role, invoke, tools)
 
         def run(state):
             result = handler(state)

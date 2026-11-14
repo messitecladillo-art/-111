@@ -1,7 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { layoutCloud, fontScale } from '../lib/topic-lab/wordcloud.ts';
-import { DEFAULT_CLOUD_APPEARANCE, CLOUD_SHAPES, parseCloudAppearance, cloudShapeAspectRatio, cloudShapePath, cloudShapeContains, cloudShapeConstraint } from '../lib/topic-lab/cloud-shapes.ts';
+import {
+  DEFAULT_CLOUD_APPEARANCE,
+  CLOUD_SHAPES,
+  parseCloudAppearance,
+  cloudShapeAspectRatio,
+  cloudShapePath,
+  cloudShapeContains,
+  cloudShapeConstraint,
+  inferAgentCloudShape,
+  synthesizeSemanticCloudMask,
+} from '../lib/topic-lab/cloud-shapes.ts';
 
 const appearance = (shape, extra = {}) => ({ ...DEFAULT_CLOUD_APPEARANCE, shape, ...extra });
 const mask = (width, height, foreground) => ({ width, height, label: '测试剪影', bits: Array.from({ length: width * height }, (_, i) => foreground(i % width, Math.floor(i / width)) ? '1' : '0').join('') });
@@ -113,5 +123,39 @@ test('200-term pressure input stays deterministic and accounts for every unplace
     assert.ok(result.dropped.length > 0);
     verifyLayout(input, opts, result);
     assert.deepEqual(layoutCloud(input, opts), result);
+  }
+});
+
+test('Agent semantic shape recognition maps domain keywords cleanly and AI prompt synthesizer produces valid dense masks', () => {
+  const aiCase = inferAgentCloudShape([
+    { label: '大学生', weight: 20 },
+    { label: '人工智能', weight: 24 },
+    { label: '大模型', weight: 18 },
+    { label: '学习', weight: 15 },
+  ]);
+  assert.equal(aiCase.shape, 'brain');
+  assert.ok(aiCase.confidence >= 88 && aiCase.confidence <= 98);
+
+  const elderlyCase = inferAgentCloudShape([
+    { label: '社区助餐', weight: 22 },
+    { label: '老年人', weight: 20 },
+    { label: '养老', weight: 18 },
+    { label: '健康', weight: 16 },
+  ]);
+  assert.equal(elderlyCase.shape, 'heart');
+
+  const retailCase = inferAgentCloudShape([
+    { label: '市场消费', weight: 30 },
+    { label: '品牌', weight: 22 },
+    { label: '购买意愿', weight: 19 },
+  ]);
+  assert.equal(retailCase.shape, 'bag');
+
+  for (const prompt of ['新能源汽车', '新中式奶茶杯', '城市天际线', '国奖奖杯', '生态山水', 'Z世代星际探索']) {
+    const generated = synthesizeSemanticCloudMask(prompt);
+    const parsed = parseCloudAppearance({ ...DEFAULT_CLOUD_APPEARANCE, shape: 'custom', customMask: generated });
+    const laid = layoutCloud(items, { ...options, appearance: parsed });
+    assert.ok(laid.placed.length >= 10, `${prompt} mask should place >= 10 words, got ${laid.placed.length}`);
+    verifyLayout(items, { ...options, appearance: parsed }, laid);
   }
 });

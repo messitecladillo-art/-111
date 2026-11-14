@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { flushSync } from 'react-dom';
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
+import AnatomyPrismMark from '@/components/figures/report-workstation/AnatomyPrismMark';
+import AnatomyStageCard from '@/components/figures/report-workstation/AnatomyStageCard';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
@@ -21,6 +23,7 @@ import { reportPlan } from '@/lib/agent/report-plan';
 import { readDraft, sendDraft } from './draft-client';
 import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, standingFindings, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type ResultsView, type Span } from '@/lib/agent/router';
+import { AGENT_HANDOFF_KEY, parseHandoffPayload } from '@/lib/agent/dock';
 import { readChatTurn, sendChatTurn } from './chat-client';
 import { UNRECORDED_SERVICE, conversationMarkdown, recordName } from '@/lib/agent/transcript-export';
 import Composer from './Composer';
@@ -29,7 +32,7 @@ import { useArtifactLibrary } from './useArtifactLibrary';
 import { artifactScope, sectionRevisionArtifact } from '@/lib/agent/artifact-library';
 import SectionRevision from './SectionRevision';
 import { useSectionRevision } from './useSectionRevision';
-import { reportWorkState, sameReportRunScope, type ReportRunScope } from '@/lib/agent/report-work';
+import { reportWorkState, sameReportRunScope, type ReportRunScope, type ReportWorkState } from '@/lib/agent/report-work';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
@@ -39,18 +42,23 @@ import { useHired, useShowCode, useStage } from './code-view';
 import Advisors from './Advisors';
 import { ADVISORS, advisorReading } from '@/lib/agent/advisors';
 import CursorTrail from './CursorTrail';
-import ReportPaper, { type DocFormatMode } from '@/components/editors/ReportPaper';
+import ReportPaper, { type DocFormatMode, type PaperAnnotation, type PaperSelectionAction } from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
 import { ReportLiveTheater, useLiveReportChoreography } from './ReportLiveTheater';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
 import { createEditorContent, type EditorContent } from '@/lib/editor-model';
+import { newQuestionnaire, type Questionnaire } from '@/lib/questionnaire';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
 import Sidebar from './Sidebar';
+import type { WritingModelStatus } from './StudioCards';
+import StudioPanel, { type StudioTabId } from './studios/StudioPanel';
 import Transcript from './Transcript';
-import { stamp, threads, type Message, type ModelCall } from './threads';
+import { stamp, threads, type Message, type ModelCall, type ToolExecution } from './threads';
+import { fetchBrainStatus, sendBrainTurn, type BrainPresetId, type BrainStatus, type BrainStepTrace, type CustomBrainOverride } from '@/lib/agent/brain-client';
+import { AGENT_TOOL_SPECS, toolSpecById, type AgentToolCategory } from '@/lib/agent/tools-schema';
 import type { Service } from '@evix/shared';
 import { eligibleModelServices, getStageModelPreferences, getServerStageModelPreferences, matchesModelConsent, resolveStageModelRoute, setDefaultModelPreference, setStageModelPreference, subscribeModelPreferences, type ModelConsentBinding, type ModelTask } from '@/lib/agent/model-routing';
 import { MODEL_CALL_IDS, type ModelCallId, type ResearchStageId } from '@/lib/agent/research-stages';
@@ -64,7 +72,10 @@ import ResearchWorkspace from './ResearchWorkspace';
 type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service; after: string; owner: string; epoch: number };
 import styles from './AgentShell.module.css';
 import type { FullReportGenerationResult, FullReportPack, ProjectResearchMode } from '@/lib/agent/full-report-pipeline';
+import { decomposeTopic } from '@/lib/agent/demo-study';
 import { canAcceptReportCandidate, hasUserResearchSource, mergeReportCandidate, reportChanges, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
+import { canPublishStudioResult, sameWorkspaceIdentity, type StudioPublicationIdentity, type WorkspaceIdentity } from '@/lib/agent/integration-safety';
+import { buildPaperSectionDiffs, locateArtifactTarget } from '@/lib/agent/paper-diff';
 import { fullReportInputRevision } from '@/lib/agent/full-report-request';
 import { requestFullReport, fullReportFailureStatus } from './full-report-client';
 import AgentRunReview from './AgentRunReview';
@@ -113,8 +124,8 @@ const MODE_KEY = 'evix.agent.chat-mode.v1:', modeListeners = new Set<() => void>
 const modeStorage = (owner: string) => owner === 'guest' ? window.sessionStorage : window.localStorage;
 function subscribeMode(listener: () => void) { modeListeners.add(listener); return () => { modeListeners.delete(listener); }; }
 function readMode(owner: string | null): ChatMode {
-  if (!owner) return 'command';
-  try { return modeStorage(owner).getItem(MODE_KEY + owner) === 'model' ? 'model' : 'command'; } catch { return 'command'; }
+  if (!owner) return 'model';
+  try { return modeStorage(owner).getItem(MODE_KEY + owner) === 'command' ? 'command' : 'model'; } catch { return 'model'; }
 }
 function writeMode(owner: string | null, mode: ChatMode) {
   if (!owner) return;
@@ -149,6 +160,11 @@ export default function AgentShell() {
     return { owner: owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch) ? owner : null, epoch: identityEpoch,
       thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
   }, [owner, identityEpoch, isCurrentAccount]);
+  const readWorkspaceIdentity = useCallback((): WorkspaceIdentity => {
+    const live = threads.view(owner), selected = live.threads.find(item => item.id === live.active);
+    return { owner: owner && isCurrentIdentity(owner === 'guest' ? null : owner, identityEpoch) ? owner : null,
+      epoch: identityEpoch, thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
+  }, [owner, identityEpoch, isCurrentIdentity]);
   const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research } = useWorkbenchModules(true, projectId);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
@@ -160,7 +176,10 @@ export default function AgentShell() {
   const sourceKey = useMemo(() => reportSourceKey(reportSource), [reportSource]);
   const candidateConflict = !!visibleCandidate && (visibleCandidate.sourceKey !== sourceKey || !!reportSource.inputPending);
   const candidateChanges = useMemo(() => visibleCandidate ? reportChanges(visibleCandidate.before, visibleCandidate.preview) : [], [visibleCandidate]);
-  const lockedSectionIds = lockedSections.runId === visibleCandidate?.runId ? lockedSections.ids : [];
+  const lockedSectionIds = useMemo(
+    () => (lockedSections.runId === visibleCandidate?.runId ? lockedSections.ids : []),
+    [lockedSections, visibleCandidate],
+  );
   // Remove the legacy direct-key slot; credentials are entered only in the hosted model-service form.
   useEffect(() => { try { window.sessionStorage.removeItem('evix.agent.direct-api-key.v1'); } catch { /* no browser storage */ } }, []);
   const messages = thread?.messages ?? EMPTY_MESSAGES;
@@ -171,8 +190,61 @@ export default function AgentShell() {
   const [hired, setHired] = useHired(owner);
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
   const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
+  const [activeStudio, setActiveStudio] = useState<StudioTabId | null>(null);
+  const [steeringNotes, setSteeringNotes] = useState<string[]>([]);
+  const [quickSteeringDraft, setQuickSteeringDraft] = useState('');
+  const [annotations, setAnnotations] = useState<PaperAnnotation[]>([]);
+  const [qaHighlightTerms, setQaHighlightTerms] = useState<string[]>([]);
+  const [watermarkEnabled, setWatermarkEnabled] = useState(false);
+  const [brainStatus, setBrainStatus] = useState<BrainStatus | null>(null);
+  const [customBrain, setCustomBrain] = useState<CustomBrainOverride | null>(null);
+  const [brainModalOpen, setBrainModalOpen] = useState(false);
+  const [brainToolFilter, setBrainToolFilter] = useState<'all' | AgentToolCategory>('all');
+  const [brainPresetDraft, setBrainPresetDraft] = useState<BrainPresetId>('deepseek');
+  const [brainModelDraft, setBrainModelDraft] = useState('');
+  const [brainKeyDraft, setBrainKeyDraft] = useState('');
+  const brainAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchBrainStatus(controller.signal).then(setBrainStatus).catch(() => {});
+    return () => {
+      controller.abort();
+      brainAbortRef.current?.abort();
+    };
+  }, []);
+  const effectiveBrain = useMemo(() => {
+    if (brainStatus?.directGatewayEnabled && customBrain?.apiKey?.trim()) {
+      const preset = customBrain.preset;
+      const provider = preset === 'openai' ? 'OpenAI' : preset === 'qwen' ? '通义千问' : 'DeepSeek';
+      const defaultModel = preset === 'openai' ? 'gpt-4o-mini' : preset === 'qwen' ? 'qwen-plus' : 'deepseek-chat';
+      return {
+        available: true,
+        preset,
+        provider,
+        model: customBrain.model?.trim() || defaultModel,
+        source: 'custom' as const,
+      };
+    }
+    if (brainStatus?.directGatewayEnabled && brainStatus.available) {
+      return {
+        available: true,
+        preset: 'deepseek' as BrainPresetId,
+        provider: brainStatus.provider,
+        model: customBrain?.model?.trim() || brainStatus.model,
+        source: customBrain?.model?.trim() ? ('custom' as const) : ('env' as const),
+      };
+    }
+    return {
+      available: false,
+      preset: 'deepseek' as BrainPresetId,
+      provider: '本地规则引擎',
+      model: 'rule-engine',
+      source: 'offline' as const,
+    };
+  }, [brainStatus, customBrain]);
   // Only requests dispatched in this mounted workspace may animate. Restored messages are records, not live jobs.
   const [activeCalls, setActiveCalls] = useState<{ id: string; owner: string; epoch: number }[]>([]);
   const startCall = useCallback((id: string, owner: string, epoch: number) => {
@@ -181,6 +253,7 @@ export default function AgentShell() {
   const finishCall = useCallback((id: string) => setActiveCalls(calls => calls.filter(call => call.id !== id)), []);
 
   const [writingEnvelope, setWritingEnvelope] = useState<{ scope: ReportRunScope; status: LiveWritingStatus } | null>(null);
+  const [workflowWorkState, setWorkflowWorkState] = useState<ReportWorkState | null>(null);
   const liveWriting = writingEnvelope && sameReportRunScope(writingEnvelope.scope, displayScope) ? writingEnvelope.status : null;
   const setReportWriting = useCallback((scope: ReportRunScope, update: LiveWritingStatus | null | ((previous: LiveWritingStatus) => LiveWritingStatus)) => {
     setWritingEnvelope(previous => {
@@ -253,7 +326,7 @@ export default function AgentShell() {
   // conversation its minimum. Widths are read through stores so the first client render matches the server's.
   const savedWidth = useSyncExternalStore(subscribeNothing, savedPanelWidth, () => null);
   const [draggedWidth, setPanelWidth] = useState<number | null>(null);
-  const room = viewport - RAIL - GUTTERS - (sideOpen ? SIDEBAR : 0);
+  const room = viewport - RAIL - GUTTERS - (sideOpen ? (activeStudio ? 448 : SIDEBAR) : 0);
   const available = Math.max(MIN_PANEL, room - MIN_TALK);
   const panelWidth = Math.min(available, draggedWidth ?? savedWidth ?? Math.round(Math.min(1240, Math.max(MIN_PANEL, room * 0.7))));
   const [dragging, setDragging] = useState(false);
@@ -296,11 +369,11 @@ export default function AgentShell() {
   const focusInput = useCallback(() => {
     if (inputRef.current?.offsetParent === null) flushSync(() => setExpanded(false));
     inputRef.current?.focus();
-  }, []);
+  }, [setExpanded]);
   const go = useCallback((id: RoomId) => {
     if (id === 'services') { setArtifactOpen(false); setExpanded(true); }
     if (currentPanel() !== id) window.location.hash = id;
-  }, []);
+  }, [setExpanded]);
   const closePanel = useCallback(() => { window.location.hash = ''; }, []);
   const pick = (id: RoomId) => { focusPicked.current = true; setRailMenu(null); go(id); };
   const generation = useGeneration(publishProposal, go, projectId);
@@ -318,6 +391,14 @@ export default function AgentShell() {
   const stagePreferences=useSyncExternalStore(subscribeModelPreferences,()=>getStageModelPreferences(owner),getServerStageModelPreferences);
   const chatService = resolveStageModelRoute('research.conversation', lists.services, stagePreferences).service;
   const reportService = resolveStageModelRoute('report.revision', lists.services, stagePreferences).service;
+  const writingModelStatus = useMemo<WritingModelStatus>(
+    () => ({
+      offline: !!sessionError,
+      authenticated: generationAccount === 'ready',
+      reportServiceLabel: reportService ? `${reportService.label}（${reportService.model}）` : null,
+    }),
+    [sessionError, generationAccount, reportService],
+  );
   const journeyModelRoutes = useMemo<Partial<Record<ModelCallId, JourneyModelRoute>>>(() => Object.fromEntries(MODEL_CALL_IDS.map(call => {
     const selected = resolveStageModelRoute(call, lists.services, stagePreferences);
     const source: JourneyModelRoute['source'] = selected.reason === 'stale_selection' || selected.reason === 'no_eligible' || selected.reason === 'unselected'
@@ -365,7 +446,7 @@ export default function AgentShell() {
     const captured=readArtifactCurrent().scope,registration=draftWriter.current;if(!captured||!registration)return;
     setArtifactNotice(null);setCopilotOpen(true);if(stage==='advisors')setStage('chat');
     window.requestAnimationFrame(()=>{if(readArtifactCurrent().scope!==captured||draftWriter.current!==registration)return;if(registration.scope!==composerScope||!registration.write(text))setArtifactNotice('输入框暂时无法加入指令，请保留现有草稿后重试。');});
-  },[readArtifactCurrent,stage,setStage,composerScope]);
+  },[readArtifactCurrent,stage,setStage,composerScope,setCopilotOpen]);
   const stableArtifactCandidate=useMemo(()=>visibleCandidate?.result&&!visibleCandidate.pending&&!visibleCandidate.failed?{id:visibleCandidate.runId,report:visibleCandidate.preview}:null,[visibleCandidate]);
   const sectionArtifactCandidate=useMemo(()=>revision.artifactCandidate?{id:revision.artifactCandidate.id,seed:sectionRevisionArtifact(revision.artifactCandidate)}:null,[revision.artifactCandidate]);
   const artifacts=useArtifactLibrary({owner,projectId,content:view.report,candidate:stableArtifactCandidate,sectionCandidate:sectionArtifactCandidate,selectedSectionId:pickedSection,readCurrent:readArtifactCurrent,apply:applyArtifact,onSay:prefillArtifactCommand});
@@ -379,6 +460,54 @@ export default function AgentShell() {
     finally{examplePending.current=false;}
   },[readArtifactCurrent,artifacts]);
   const openArtifactShelf=()=>{setVisited(v=>v.includes('editor')?v:[...v,'editor']);setArtifactOpen(v=>!v);};
+  const triggerXrefSynapse = choreo.triggerXrefSynapse;
+  const toggleSectionLock = useCallback((id: string) => {
+    if (!visibleCandidate) return;
+    setLockedSections(previous => {
+      const ids = previous.runId === visibleCandidate.runId ? previous.ids : [];
+      return { runId: visibleCandidate.runId, ids: ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id] };
+    });
+  }, [visibleCandidate]);
+  const paperSectionDiffs = useMemo(() => buildPaperSectionDiffs({
+    changes: visibleCandidate ? candidateChanges : [],
+    lockedSectionIds,
+    revision: revision.phase === 'ready' && revision.section
+      ? { active: true, sectionId: revision.section.id, title: revision.section.title, original: revision.original, proposed: revision.proposed }
+      : null,
+  }), [visibleCandidate, candidateChanges, lockedSectionIds, revision.phase, revision.section, revision.original, revision.proposed]);
+  const locateArtifact = useCallback((id: string) => {
+    const record = artifacts.recordOf(id);
+    if (!record) return;
+    const target = locateArtifactTarget(paperContent, record);
+    if (!target.sectionId && !target.pageZero) {
+      setArtifactNotice('该成果尚未嵌入当前报告正文，可先点击“用于报告”加入文档。');
+      return;
+    }
+    setArtifactNotice(null);
+    const jump = () => {
+      if (target.xrefBlockId && target.sectionId) {
+        const hasNode = !!paperRef.current?.querySelector(`[data-xref-target="${CSS.escape(target.xrefBlockId)}"]`);
+        if (hasNode) {
+          setPickedSection(target.sectionId);
+          triggerXrefSynapse('xref', target.xrefBlockId, true);
+        } else {
+          pickSection(target.sectionId);
+          triggerXrefSynapse('xref', target.xrefBlockId, false);
+        }
+      } else if (target.sectionId) {
+        pickSection(target.sectionId);
+      } else if (target.pageZero) {
+        setPickedSection(null);
+        paperRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    if (stage !== 'paper') {
+      setStage('paper');
+      requestAnimationFrame(() => requestAnimationFrame(jump));
+    } else {
+      jump();
+    }
+  }, [artifacts, paperContent, stage, setStage, pickSection, triggerXrefSynapse]);
   const artifactPanelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!artifactOpen) return;
@@ -416,8 +545,8 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, dataset = deferredView.dataset, liveReport = view.report;
   // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
-  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection });
-  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection }; });
+  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, sessionError, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes, stage, expanded });
+  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, sessionError, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes, stage, expanded }; });
   const stopChoreography = choreo.stop;
   const stopReportRun = useCallback((reason = '已取消运行；原稿已保留。已发出的调用可能仍计费，请核对回执。') => {
     preparingReport.current = null;
@@ -497,12 +626,34 @@ export default function AgentShell() {
     };
     // The first sentence of a conversation waits for consent: what goes to the service, what never does, who pays.
     const ask = (text: string) => {
-      const { generation, owner, identityEpoch } = latest.current;
+      const { generation, owner, identityEpoch, sessionError } = latest.current;
       const chatService = currentService('research');
       if (generation.account !== 'ready' || !chatService) {
         // Whatever the sentence routes to here, the user learns why the model was not asked.
         local(text);
-        say([span(generation.account === 'ready' ? '请在输入框选择当前对话模型，或到模型设置接入服务，' : '用模型对话需要先登录，', 'dim'), span('这一句按指令模式回答。', 'dim')]);
+        if (generation.account !== 'ready') {
+          say(
+            [
+              span(
+                sessionError
+                  ? '模型网关当前离线，本句先按本地规则引擎回答；启动后端网关并登录后即可调用大模型自由对话。'
+                  : '用大模型自由对话需要先邮箱登录并在「模型设置」接入服务密钥（BYOK），这一句先按本地规则引擎回答。',
+                'dim',
+              ),
+            ],
+            sessionError
+              ? [{ label: '打开模型设置', action: { type: 'open', room: 'services' } }]
+              : [
+                  { label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true },
+                  { label: '打开模型设置', action: { type: 'open', room: 'services' } },
+                ],
+          );
+        } else {
+          say(
+            [span('请在输入框选择对话模型，或到「模型设置」启用对话服务，这一句先按本地规则引擎回答。', 'dim')],
+            [{ label: '打开模型设置', action: { type: 'open', room: 'services' }, primary: true }],
+          );
+        }
         return;
       }
       threads.append([{ ...stamp(), role: 'user', text }]);
@@ -603,14 +754,44 @@ export default function AgentShell() {
     };
 
     // Drafting a report section: consent first, every time, naming what goes to the service and the number rule.
-    const askDraft = (nodeId: string) => {
-      const { generation, held, report, owner, identityEpoch } = latest.current;
+    const askDraft = (nodeId: string, existingOverride?: string) => {
+      const { generation, held, report, owner, identityEpoch, sessionError } = latest.current;
       const reportService = currentService('report');
       const title = blueprintNode(nodeId).title;
-      if (generation.account !== 'ready') { say([span('起草要调用你自己的模型服务，需要先登录。', 'dim')], [{ label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true }]); return; }
-      if (!held || !report) { say([span(`起草「${title}」要先读到报告与登记结果；这次访问还没有打开报告与 PPT。`, 'dim')], [{ label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]); return; }
-      if (!reportService) { say([span('请到模型设置的「任务分工」选择报告拟稿服务；服务需启用报告能力。', 'dim')], [{ label: '/模型', action: { type: 'say', text: '/模型' }, primary: true }]); return; }
-      const facts = draftFacts(held, nodeId).length, findings = standingFindings(held).length, existing = sectionText(report, nodeId).length;
+      if (generation.account !== 'ready') {
+        say(
+          [
+            span(
+              sessionError
+                ? '模型网关当前离线，无法调用大模型按事实起草；请启动本地/托管后端网关或到「模型设置」检查服务连接。'
+                : '按事实起草需要调用你接入的大模型服务，请先邮箱登录并在「模型设置」保存服务密钥（BYOK）。',
+              'dim',
+            ),
+          ],
+          sessionError
+            ? [
+                { label: '打开模型设置', action: { type: 'open', room: 'services' }, primary: true },
+                { label: '邮箱登录 ↗', action: { type: 'href', href: '/login' } },
+              ]
+            : [
+                { label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true },
+                { label: '打开模型设置', action: { type: 'open', room: 'services' } },
+              ],
+        );
+        return;
+      }
+      if (!held || !report) {
+        say([span(`起草「${title}」要先读到报告与登记结果；这次访问还没有打开报告与 PPT。`, 'dim')],
+          [{ label: '打开报告与 PPT', action: { type: 'open', room: 'editor' }, primary: true }]);
+        return;
+      }
+      if (!reportService) {
+        say([span('请到模型设置的「任务分工」选择报告拟稿服务；服务需启用报告能力。', 'dim')],
+          [{ label: '打开模型设置', action: { type: 'open', room: 'services' }, primary: true }]);
+        return;
+      }
+      const trimmedOverride = existingOverride?.trim() ? existingOverride.trim().slice(0, 3000) : undefined;
+      const facts = draftFacts(held, nodeId).length, findings = standingFindings(held).length, existing = trimmedOverride ? trimmedOverride.length : sectionText(report, nodeId).length;
       const outline = SYNTHESIS_NODES.has(nodeId) ? reportOutline(report, nodeId).length : 0;
       threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span('起草之前请确认：')]], cards: [{ kind: 'confirm', title: `用「${reportService.label} · ${reportService.model} · v${reportService.revision}」起草「${title}」`,
         lines: [
@@ -618,16 +799,16 @@ export default function AgentShell() {
             span(' 条事实（已登记结果的方法、有效样本、统计量与表中数字）、'), span(String(findings), 'gold'), span(` 条已确认研究发现的标题与解释${existing ? `、本节已有的 ${existing} 字正文` : ''}${outline ? `，以及报告其他 ${outline} 个章节的标题与开头摘录（每节至多 400 字），供这一节概括` : ''}。`)],
           [span(outline ? '不发送：问卷题目、原始数据，以及其他章节在摘录以外的正文。' : '不发送：问卷题目、原始数据与报告其他章节的正文。', 'dim')],
           [span('模型只能用事实编号引用数字，自己写了数字的段落整段丢弃；数字由这里按登记结果填入。拟稿未经核实，你确认后才写进报告。费用按你的服务商计。', 'dim')],
-        ], confirm: { label: '起草', action: { type: 'draft', node: nodeId, modelBinding: { owner: owner!, identityEpoch, serviceId: reportService.id, serviceRevision: reportService.revision } } }, cancel: '不起草' }] } }]);
+        ], confirm: { label: '起草', action: { type: 'draft', node: nodeId, ...(trimmedOverride ? { existingText: trimmedOverride } : {}), modelBinding: { owner: owner!, identityEpoch, serviceId: reportService.id, serviceRevision: reportService.revision } } }, cancel: '不起草' }] } }]);
     };
-    const draftNow = (nodeId: string, binding?: ModelConsentBinding) => {
+    const draftNow = (nodeId: string, binding?: ModelConsentBinding, existingText?: string) => {
       const { held, report, design, mutate, owner, identityEpoch, isCurrentAccount } = latest.current;
       if (!owner || !isCurrentAccount(owner, identityEpoch)) return false;
       const reportService = currentService('report');
-      if (!matchesModelConsent(binding, owner, identityEpoch, reportService)) { say([span('模型配置或登录状态已变化，请重新确认本次拟稿。', 'dim')]); askDraft(nodeId); return false; }
-      if (!reportService || !held || !report) { askDraft(nodeId); return false; }
+      if (!matchesModelConsent(binding, owner, identityEpoch, reportService)) { say([span('模型配置或登录状态已变化，请重新确认本次拟稿。', 'dim')]); askDraft(nodeId, existingText); return false; }
+      if (!reportService || !held || !report) { askDraft(nodeId, existingText); return false; }
       const title = blueprintNode(nodeId).title;
-      const { request, facts } = draftRequest({ nodeId, held, content: report, design, service: reportService });
+      const { request, facts } = draftRequest({ nodeId, held, content: report, design, service: reportService, existingText });
       const waiting: Message = { ...stamp(), role: 'agent', model: { service: reportService.label, serviceId: reportService.id, serviceRevision: reportService.revision, provider: reportService.provider, modelName: reportService.model, step: 1, status: 'running' },
         turn: { lines: [[span('正在请'), span(`「${reportService.label}」`, 'strong'), span(`起草「${title}」…`, 'dim')]] } };
       threads.append([waiting]);
@@ -638,7 +819,7 @@ export default function AgentShell() {
     const draftError = (code: string | null) => code === 'capability_unavailable' ? '这个模型服务没有启用「报告」能力。' : CHAT_ERRORS[code ?? ''] ?? '模型服务出错了。';
     // A draft in place of the waiting line: its paragraphs with each fact's value in gold, marked unverified, ready to adopt.
     const settleDraft = (messageId: string, receipt: DraftReceipt, label: string, nodeId: string, facts: Fact[]) => {
-      const title = blueprintNode(nodeId).title, again = { label: '重新起草', action: { type: 'say' as const, text: `/起草 ${title}` } };
+      const title = blueprintNode(nodeId).title, again = { label: '重新起草', action: { type: 'draftSection' as const, node: nodeId } };
       if (receipt.status === 'ready' && receipt.paragraphs.length) {
         mark(messageId, 'ready', label, 1, receipt.usage);
         replace(messageId, {
@@ -658,7 +839,7 @@ export default function AgentShell() {
       }
     };
     const failDraft = (messageId: string, failure: unknown, draftId: string, nodeId: string, facts: Fact[]) => {
-      const again = { label: '重新起草', action: { type: 'say' as const, text: `/起草 ${blueprintNode(nodeId).title}` } };
+      const again = { label: '重新起草', action: { type: 'draftSection' as const, node: nodeId } };
       if (failure instanceof HostedApiError && isDefiniteChatRejection(failure.status, failure.code)) {
         mark(messageId, 'refused');
         replace(messageId, { lines: [[span('这次起草没有发出：', 'error'), span(failure.code === 'capability_unavailable' ? draftError(failure.code) : CHAT_ERRORS[failure.code] ?? errorMessage(failure))]], chips: [again] });
@@ -691,7 +872,7 @@ export default function AgentShell() {
       if (!current()) return null;
       const { panel, light, theme, traces, held, plan, report, design, dataset, generation, knowledge } = latest.current;
       const routed = toolTurn(action, { room: panel, light, theme, traces, results: held, plan, projectTitle: report?.title || design?.title, design, datasetName: dataset?.name });
-      if ('draft' in routed) return null;
+      if ('draft' in routed) { askDraft(routed.draft); return null; }
       if ('generate' in routed) { threads.appendAfter(afterId, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }); return null; }
       if ('lookup' in routed) {
         let found: AgentTurn;
@@ -712,6 +893,7 @@ export default function AgentShell() {
     const perform = (action: AgentAction) => {
       switch (action.type) {
         case 'open': go(action.room); break;
+        case 'stage': setStage(action.stage); break;
         case 'theme': saveTheme(action.theme); break;
         case 'search': latest.current.knowledge.openSearch(); break;
         case 'entry': latest.current.knowledge.open(action.id); break;
@@ -728,7 +910,8 @@ export default function AgentShell() {
           return started;
         }
         case 'check': check(action.turn, action.message); break;
-        case 'draft': return draftNow(action.node, action.modelBinding);
+        case 'draft': return draftNow(action.node, action.modelBinding, action.existingText);
+        case 'draftSection': { askDraft(action.node, action.draft); break; }
         case 'checkDraft': checkDraft(action.draft, action.message, action.node, action.facts); break;
         // A draft adopted from a stored conversation is checked again: a blueprint section, a few paragraphs of text.
         case 'adopt': {
@@ -741,7 +924,7 @@ export default function AgentShell() {
           const current = liveReport ? new Set(draftFacts({ results: liveReport.quality?.results ?? [], findings: [], pending: false, placed: [] }, action.node).map(f => f.text)) : null;
           if (!current || !Array.isArray(action.cited) || action.cited.some(text => typeof text !== 'string' || !current.has(text))) {
             say([span(current ? '登记结果在起草之后变了，拟稿里的数字可能已经过时，没有写入。' : '要先读到报告与登记结果才能核对拟稿里的数字；打开报告与 PPT 后再写入。', 'error')],
-              [current ? { label: '重新起草', action: { type: 'say', text: `/起草 ${title}` }, primary: true } : { label: '/报告', action: { type: 'say', text: '/报告' }, primary: true }]);
+              [current ? { label: '重新起草', action: { type: 'draftSection', node: action.node }, primary: true } : { label: '打开报告与 PPT', action: { type: 'open', room: 'editor' }, primary: true }]);
             break;
           }
           sendToReport({ id: crypto.randomUUID(), node: action.node, source: '证见 Agent 拟稿', items: paragraphs.map(text => ({ kind: 'paragraph', text })) });
@@ -765,7 +948,25 @@ export default function AgentShell() {
           const current = latest.current;
           const service = currentService('report','report.full');
           if (!current.owner || current.owner === 'guest' || current.generation.account !== 'ready' || !service || !current.csrfToken) {
-            say([span('生成候选稿需要登录并在模型设置中选择可用的报告服务。', 'dim')]); go('services'); break;
+            const unauthed = !current.owner || current.owner === 'guest' || current.generation.account !== 'ready' || !current.csrfToken;
+            if (unauthed) {
+              const userSource = hasUserResearchSource(current.reportSource);
+              const alreadyDemo = current.reportSource.dataset?.kind === 'simulated';
+              say(
+                [span(alreadyDemo
+                  ? '当前工作区已由本地计算引擎生成完整教学样板成稿，可直接查阅右侧排版与导出 Word/LaTeX；如需大模型逐章改写，请先登录并在「模型设置」接入服务密钥。'
+                  : '大模型逐章扩写需先登录并在「模型设置」保存服务密钥（BYOK）；若暂不接入外部密钥，可先用「教学模拟研究」生成完整定量教学样板。', 'dim')],
+                [
+                  ...(!alreadyDemo && !userSource ? [{ label: '生成教学模拟样板', action: { type: 'loadBenchmark' as const, benchmarkId: 'current' }, primary: true as const }] : []),
+                  { label: '邮箱登录 ↗', action: { type: 'href' as const, href: '/login' }, ...((alreadyDemo || userSource) ? { primary: true as const } : {}) },
+                  { label: '打开模型设置', action: { type: 'open' as const, room: 'services' as const } },
+                ],
+              );
+            } else {
+              say([span('请在「模型设置」选择或启用支持报告生成的模型服务。', 'dim')], [{ label: '打开模型设置', action: { type: 'open', room: 'services' }, primary: true }]);
+              go('services');
+            }
+            break;
           }
           const requestScope = readReportScope();
           if (requestScope.owner !== current.owner || requestScope.epoch !== current.identityEpoch || requestScope.project !== current.projectId) {
@@ -791,7 +992,8 @@ export default function AgentShell() {
           void (async () => {
             let handle: ReportRunHandle | null = null;
             try {
-              const inputRevision = await fullReportInputRevision({ topic, mode, base });
+              const activeSteering = latest.current.steeringNotes ?? [];
+              const inputRevision = await fullReportInputRevision({ topic, mode, base, ...(activeSteering.length ? { steeringNotes: activeSteering } : {}) });
               if (preparingReport.current !== preparation || !sameReportRunScope(requestScope, readReportScope()) || reportSourceKey(latest.current.reportSource) !== sourceKey) return;
               const selected = currentService('report','report.full');
               if (!selected || selected.id !== service.id || selected.revision !== service.revision) { say([span('报告模型配置已变化，请重新点击生成并核对服务。', 'dim')]); return; }
@@ -821,7 +1023,7 @@ export default function AgentShell() {
               setStage('paper'); closePanel(); setCopilotOpen(false); choreo.stop();
               setReportWriting(run.scope, { active: true, phase: 'contract', completed: 0, total: 0, paragraphs: 0, facts: 0, lastSectionId: null, lastSectionTitle: '', topicTitle: topic, autoFollow: autoFollowRef.current });
               const seenSections = new Map<string, { paragraphs: number; facts: string[] }>();
-              const result = await requestFullReport({ schemaVersion: 1, runId, projectId: current.projectId, inputRevision, serviceId: service.id, serviceRevision: service.revision, consent: true, topic, mode, base, stream: true, concurrency: 3 }, {
+              const result = await requestFullReport({ schemaVersion: 1, runId, projectId: current.projectId, inputRevision, serviceId: service.id, serviceRevision: service.revision, consent: true, topic, mode, base, ...(activeSteering.length ? { steeringNotes: activeSteering } : {}), stream: true, concurrency: 3 }, {
                 csrfToken: current.csrfToken!, signal: controller.signal,
                 onEvent: event => {
                   if (!stillCurrent()) return;
@@ -905,6 +1107,401 @@ export default function AgentShell() {
     return { send, perform, answer };
   }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, choreo, blankReport, readReportScope, setReportWriting, startCall, finishCall]);
 
+  const runBrainConversation = useCallback(async (rawText: string) => {
+    const currentOwner = latest.current.owner;
+    if (!currentOwner) return;
+    if (rawText.length > TEXT_LIMIT) {
+      threads.append([
+        { ...stamp(), role: 'user', text: rawText },
+        { ...stamp(), role: 'agent', turn: { lines: [[span(`单次提问最多 ${TEXT_LIMIT} 字，当前已有 ${rawText.length} 字；请精简或分段发送。`, 'error')]] } },
+      ]);
+      return;
+    }
+
+    brainAbortRef.current?.abort();
+    const controller = new AbortController();
+    brainAbortRef.current = controller;
+
+    const currentBook = threads.view(currentOwner);
+    const activeThread = currentBook.threads.find(t => t.id === currentBook.active) ?? null;
+    const historyLines = chatHistory((activeThread?.messages ?? []).flatMap(chatLine));
+
+    const userMsg: Message = { ...stamp(), role: 'user', text: rawText };
+    const pendingMsg: Message = {
+      ...stamp(),
+      role: 'agent',
+      model: {
+        service: effectiveBrain.provider,
+        provider: effectiveBrain.preset,
+        modelName: effectiveBrain.model,
+        step: 1,
+        status: 'running',
+      },
+      turn: { lines: [[span(`正在连接「${effectiveBrain.provider}」研究大脑并分析意图…`, 'dim')]] },
+    };
+    threads.append([userMsg, pendingMsg]);
+    const homeThread = threads.threadOf(pendingMsg.id);
+    const homeThreadId = homeThread?.id ?? null;
+    const requestScope: WorkspaceIdentity = { owner: currentOwner, epoch: latest.current.identityEpoch,
+      thread: homeThreadId, project: homeThread?.projectId ?? null };
+    startCall(pendingMsg.id, currentOwner, requestScope.epoch);
+
+    const stillCurrent = () =>
+      !controller.signal.aborted &&
+      sameWorkspaceIdentity(requestScope, readWorkspaceIdentity()) &&
+      threads.threadOf(pendingMsg.id)?.id === homeThreadId &&
+      Boolean(threads.find(pendingMsg.id));
+
+    const ledger: ToolExecution[] = [];
+    const stepTraces: BrainStepTrace[] = [];
+    const reasoningParts: string[] = [];
+    const collectedCards: NonNullable<AgentTurn['cards']> = [];
+    const collectedChips: NonNullable<AgentTurn['chips']> = [];
+    const usageTotals: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+    let hasUsage = false;
+    let totalLatency = 0;
+    let finalReply = '';
+    let finalProvider = effectiveBrain.provider;
+    let finalModel = effectiveBrain.model;
+    let settledStep = 1;
+    let lastToolTexts: string[] = [];
+
+    try {
+      for (let step = 1; step <= MAX_STEPS; step++) {
+        if (!stillCurrent()) return;
+        settledStep = step;
+        const snap = latest.current;
+        if (step > 1) {
+          threads.patch(pendingMsg.id, m =>
+            m.role === 'agent'
+              ? {
+                  ...m,
+                  model: m.model ? { ...m.model, step, status: 'running' } : m.model,
+                  toolCalls: [...ledger],
+                  turn: { lines: [[span(`已汇总 ${ledger.length} 项证见工具结果，正在完成第 ${step} 步综合研判…`, 'dim')]] },
+                }
+              : m,
+          );
+        }
+
+        const resp = await sendBrainTurn(
+          {
+            message: rawText,
+            history: historyLines,
+            context: chatContext(snap.panel, snap.light, snap.traces, snap.held),
+            step,
+            ...(stepTraces.length ? { steps: stepTraces } : {}),
+            ...(customBrain ? { custom: customBrain } : {}),
+          },
+          controller.signal,
+        );
+        if (!stillCurrent()) return;
+
+        finalProvider = resp.provider;
+        finalModel = resp.model;
+        totalLatency += resp.latencyMs;
+        if (resp.usage) {
+          hasUsage = true;
+          usageTotals.inputTokens += resp.usage.inputTokens;
+          usageTotals.outputTokens += resp.usage.outputTokens;
+        }
+        if (resp.reasoning) reasoningParts.push(resp.reasoning);
+
+        if (!resp.toolCalls.length || step >= MAX_STEPS) {
+          finalReply = resp.reply || (lastToolTexts.length ? lastToolTexts.join('\n\n') : '已完成核查与工具调度。');
+          break;
+        }
+
+        const stepOutputs: BrainStepTrace['toolOutputs'] = [];
+        const seenKeys = new Set<string>();
+        for (const tc of resp.toolCalls) {
+          if (!stillCurrent()) return;
+          const toolKey = `${tc.action.tool}:${JSON.stringify(tc.action.args)}`;
+          const spec = toolSpecById(tc.action.tool);
+          const execItem: ToolExecution = {
+            id: tc.id,
+            tool: tc.action.tool,
+            label: spec?.zhLabel ?? tc.action.tool,
+            args: tc.action.args as Record<string, unknown>,
+            status: 'running',
+          };
+          ledger.push(execItem);
+          threads.patch(pendingMsg.id, m =>
+            m.role === 'agent'
+              ? {
+                  ...m,
+                  toolCalls: [...ledger],
+                  turn: { lines: [[span(resp.reply || `正在调度「${execItem.label}」…`, 'dim')]] },
+                }
+              : m,
+          );
+
+          const startedToolAt = performance.now();
+          if (seenKeys.has(toolKey)) {
+            execItem.status = 'done';
+            execItem.durationMs = 0;
+            execItem.summary = '复用同一步查询结果';
+            execItem.resultText = '同一步已执行过相同参数调用，直接复用观察结果。';
+            stepOutputs.push({ toolCallId: tc.id, tool: tc.action.tool, text: execItem.resultText });
+            continue;
+          }
+          seenKeys.add(toolKey);
+
+          const cur = latest.current;
+          const routed = toolTurn(tc.action, {
+            room: cur.panel,
+            light: cur.light,
+            theme: cur.theme,
+            traces: cur.traces,
+            results: cur.held,
+            plan: cur.plan,
+            projectTitle: cur.report?.title || cur.design?.title,
+            design: cur.design,
+            datasetName: cur.dataset?.name,
+          });
+
+          let resultSummary = '';
+          let toolOutputText = '';
+          if ('draft' in routed) {
+            const secTitle = blueprintNode(routed.draft).title;
+            if (cur.generation.account === 'ready') {
+              agent.perform({ type: 'draftSection', node: routed.draft });
+              execItem.status = 'awaiting_confirm';
+              resultSummary = `已呼出「${secTitle}」起草门控`;
+              toolOutputText = `已弹出「${secTitle}」托管起草确认门控，等待用户确认后拟稿。`;
+            } else {
+              agent.perform({ type: 'open', room: 'editor' });
+              collectedCards.push({
+                kind: 'tool',
+                title: `章节共创起草 · ${secTitle}`,
+                lines: [
+                  [span('当前处于免登录直连推理大脑模式，已为你对齐写作工作台；请在下方审阅结构化初稿并手动归档。', 'dim')],
+                ],
+                links: [
+                  { label: '切入写作润色工坊', action: { type: 'say', text: '/撰稿' } },
+                  { label: '定位到报告与 PPT', action: { type: 'open', room: 'editor' } },
+                ],
+              });
+              execItem.status = 'done';
+              execItem.summary = `已就绪「${secTitle}」共创起草`;
+              execItem.action = { type: 'open', room: 'editor' };
+              toolOutputText = `当前处于免登录直连推理大脑模式，未触发云端登录门控；已在右侧对齐「${secTitle}」章节与报告编辑器，请直接在当前回复中给出符合实证口径的结构化章节草稿。`;
+            }
+          } else if ('generate' in routed) {
+            if (cur.generation.account === 'ready') {
+              threads.appendAfter(pendingMsg.id, { ...stamp(), role: 'agent', turn: cur.generation.start(routed.generate) });
+              execItem.status = 'awaiting_confirm';
+              resultSummary = '已生成问卷草案确认卡';
+              toolOutputText = `已在对话下方弹出问卷草案生成确认卡片：${routed.generate.slice(0, 100)}。`;
+            } else {
+              agent.perform({ type: 'open', room: 'design' });
+              collectedCards.push({
+                kind: 'tool',
+                title: '问卷设计构念台 · 实时协同起草',
+                lines: [
+                  [span('研究简报：', 'dim'), span(routed.generate.slice(0, 140))],
+                  [span('当前使用直连推理大脑，已在右侧展开「问卷设计」面板对照；可将下方结构化问卷矩阵直接填入工坊。', 'dim')],
+                ],
+                links: [
+                  { label: '展开问卷设计面板', action: { type: 'open', room: 'design' } },
+                  { label: '打开极简问卷工坊', action: { type: 'say', text: '/问卷工坊' } },
+                ],
+              });
+              execItem.status = 'done';
+              resultSummary = '已开启问卷设计构念协同';
+              execItem.action = { type: 'open', room: 'design' };
+              toolOutputText = `当前处于免登录直连推理大脑模式（无需云端登录确认卡），已在右侧打开「问卷设计」面板并与研究简报（${routed.generate.slice(0, 120)}）对齐。请直接在当前回复中输出完整、可落地的结构化问卷设计（含甄别题、构念映射表、量表题项与分析口径），不要说“确认卡片已弹在对话下方”。`;
+            }
+          } else if ('lookup' in routed) {
+            for (const s = Date.now(); stillCurrent() && !latest.current.knowledge.ready && Date.now() - s < 8000;) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            if (!stillCurrent()) return;
+            let found: AgentTurn;
+            if (!latest.current.knowledge.ready) {
+              found = { lines: [[span('知识镜索引仍在加载中，暂未能检索词条。', 'dim')]] };
+              execItem.status = 'error';
+              resultSummary = '知识镜索引加载超时';
+            } else {
+              try {
+                found = lookupTurn(routed.lookup, await latest.current.knowledge.search(routed.lookup), routed.explicit);
+                execItem.status = 'done';
+                resultSummary = found.cards?.length ? `命中「${routed.lookup}」词条` : `完成知识镜检索`;
+              } catch {
+                found = { lines: [[span('知识镜检索暂时无响应。', 'error')]] };
+                execItem.status = 'error';
+                resultSummary = '知识镜检索失败';
+              }
+            }
+            if (found.cards?.length) collectedCards.push(...found.cards);
+            toolOutputText = turnText(found);
+            execItem.action = found.cards?.[0]?.kind === 'entry' ? { type: 'entry', id: found.cards[0].id } : { type: 'search' };
+          } else {
+            const turnOut = routed.turn;
+            const hasGateCard = Boolean(turnOut.cards?.some(c => c.kind === 'confirm' || c.kind === 'consent' || c.kind === 'job' || c.kind === 'proposal'));
+            if (hasGateCard) {
+              threads.appendAfter(pendingMsg.id, { ...stamp(), role: 'agent', turn: turnOut });
+              execItem.status = 'awaiting_confirm';
+            } else {
+              execItem.status = 'done';
+              if (turnOut.cards?.length) collectedCards.push(...turnOut.cards);
+              if (turnOut.chips?.length) {
+                for (const chip of turnOut.chips) {
+                  if (!collectedChips.some(existing => existing.label === chip.label)) collectedChips.push(chip);
+                }
+              }
+            }
+            if (turnOut.act) {
+              agent.perform(turnOut.act);
+              if ((turnOut.act.type === 'stage' && turnOut.act.stage !== 'chat') || turnOut.act.type === 'loadBenchmark') {
+                setCopilotOpen(true);
+              }
+            }
+            toolOutputText = turnText(turnOut);
+            const preview = toolOutputText.replace(/\s+/gu, ' ').trim();
+            resultSummary = preview.slice(0, 40) + (preview.length > 40 ? '…' : '');
+            if (tc.action.tool === 'open') execItem.action = { type: 'open', room: tc.action.args.room };
+            else if (tc.action.tool === 'stage') execItem.action = { type: 'stage', stage: tc.action.args.view };
+            else if (tc.action.tool === 'light' || tc.action.tool === 'blind' || tc.action.tool === 'next') execItem.action = { type: 'open', room: 'overview' };
+            else if (tc.action.tool === 'results') execItem.action = { type: 'open', room: 'analysis' };
+            else if (tc.action.tool === 'trace') execItem.action = { type: 'open', room: 'editor' };
+          }
+
+          execItem.durationMs = Math.max(1, Math.round(performance.now() - startedToolAt));
+          execItem.summary = resultSummary || execItem.label;
+          execItem.resultText = toolOutputText.slice(0, 1200);
+          stepOutputs.push({ toolCallId: tc.id, tool: tc.action.tool, text: toolOutputText.slice(0, 1800) });
+        }
+
+        if (!stillCurrent()) return;
+        lastToolTexts = stepOutputs.map(o => o.text);
+        threads.patch(pendingMsg.id, m => m.role === 'agent' ? { ...m, toolCalls: [...ledger] } : m);
+        stepTraces.push({
+          assistantContent: resp.reply,
+          assistantToolCalls: resp.rawToolCalls,
+          toolOutputs: stepOutputs,
+        });
+      }
+
+      if (!stillCurrent()) return;
+      const totalUsage = hasUsage ? { ...usageTotals } : null;
+      const renderedReplyLines = replyLines(finalReply);
+      threads.patch(pendingMsg.id, m =>
+        m.role === 'agent'
+          ? {
+              ...m,
+              model: {
+                service: finalProvider,
+                provider: effectiveBrain.preset,
+                modelName: finalModel,
+                step: settledStep,
+                status: 'ready',
+                usage: totalUsage ?? undefined,
+                latencyMs: totalLatency,
+              },
+              ...(reasoningParts.length ? { reasoning: reasoningParts.join('\n\n') } : {}),
+              ...(ledger.length ? { toolCalls: [...ledger] } : {}),
+              turn: {
+                lines: renderedReplyLines.length
+                  ? renderedReplyLines
+                  : [[span(`${finalProvider} · 已完成工具协同调度。`, 'dim')]],
+                ...(collectedCards.length ? { cards: collectedCards.slice(0, 3) } : {}),
+                ...(collectedChips.length ? { chips: collectedChips.slice(0, 5) } : {}),
+              },
+            }
+          : m,
+      );
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError' || controller.signal.aborted) return;
+      if (!stillCurrent()) return;
+      const errMsg = (error as Error)?.message || '研究大脑请求未完成。';
+      threads.patch(pendingMsg.id, m =>
+        m.role === 'agent'
+          ? {
+              ...m,
+              model: {
+                service: effectiveBrain.provider,
+                provider: effectiveBrain.preset,
+                modelName: effectiveBrain.model,
+                step: settledStep,
+                status: 'failed',
+              },
+              ...(ledger.length ? { toolCalls: [...ledger] } : {}),
+              turn: {
+                lines: [[span('本轮模型推理未完成：', 'error'), span(errMsg)]],
+                chips: [
+                  { label: '重试这一句', action: { type: 'say', text: rawText }, primary: true },
+                  { label: '检查大脑与密钥', action: { type: 'open', room: 'services' } },
+                ],
+              },
+            }
+          : m,
+      );
+    } finally {
+      finishCall(pendingMsg.id);
+      if (brainAbortRef.current === controller) brainAbortRef.current = null;
+    }
+  }, [agent, customBrain, effectiveBrain, finishCall, readWorkspaceIdentity, setCopilotOpen, startCall]);
+
+  const dispatchUserMessage = useCallback((raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    const snap = latest.current;
+    if (snap.stage !== 'chat' || snap.expanded) setCopilotOpen(true);
+    if (/^[/／]密钥(?:\s|$)|\bsk-[A-Za-z0-9_-]{12,}/u.test(text) || /^[/／]/u.test(text) || snap.chatMode === 'command') {
+      agent.send(text);
+      return;
+    }
+    if (snap.generation.account === 'ready' && snap.chatService) {
+      agent.send(text);
+      return;
+    }
+    const openResult = snap.outputId && snap.liveReport ? snap.liveReport.quality?.results.find(r => r.id === snap.outputId) : undefined;
+    if (openResult && parseFigureRequest(text)) {
+      agent.send(text);
+      return;
+    }
+    if (effectiveBrain.available) {
+      void runBrainConversation(text);
+      return;
+    }
+    agent.send(text);
+  }, [agent, effectiveBrain.available, runBrainConversation, setCopilotOpen]);
+
+  const performAction = useCallback((action: AgentAction) => {
+    if (action.type === 'say') {
+      dispatchUserMessage(action.text);
+      return;
+    }
+    agent.perform(action);
+  }, [agent, dispatchUserMessage]);
+
+  const sendRef = useRef(dispatchUserMessage);
+  useLayoutEffect(() => { sendRef.current = dispatchUserMessage; }, [dispatchUserMessage]);
+  const handoffTextRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!owner) return;
+    if (!handoffTextRef.current) {
+      try {
+        const raw = window.sessionStorage.getItem(AGENT_HANDOFF_KEY);
+        if (raw) {
+          window.sessionStorage.removeItem(AGENT_HANDOFF_KEY);
+          const text = parseHandoffPayload(raw);
+          if (text) handoffTextRef.current = text;
+        }
+      } catch { /* Ignore storage failures. */ }
+    }
+    const text = handoffTextRef.current;
+    if (!text) return;
+    const timer = window.setTimeout(() => {
+      if (handoffTextRef.current !== text) return;
+      handoffTextRef.current = null;
+      setStage('chat');
+      sendRef.current(text);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [owner, setStage]);
+
   // The toolbar writes into the section in view through the editor, as one undoable step; the paper shows it at once.
   const insertIntoSection = useCallback((items: InsertItem[]) => {
     if (visibleCandidate) return;
@@ -913,7 +1510,10 @@ export default function AgentShell() {
     sendToReport({ id: crypto.randomUUID(), node: matchBlueprintNode(section.title)?.id ?? '', source: '报告工具栏', items, sectionId: section.id });
   }, [paperContent, pickedSection, sendToReport, visibleCandidate]);
   // A writing tool opens the copilot and says its command there, as if typed.
-  const sayFromTool = useCallback((text: string) => { setCopilotOpen(true); agent.send(text); }, [agent]);
+  const sayFromTool = useCallback((text: string) => { setCopilotOpen(true); dispatchUserMessage(text); }, [dispatchUserMessage, setCopilotOpen]);
+  const sendFromDock = useCallback((text: string) => {
+    dispatchUserMessage(text);
+  }, [dispatchUserMessage]);
 
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
@@ -980,8 +1580,125 @@ export default function AgentShell() {
   const todayTokens = book.threads.reduce((total, t) => total + t.messages.reduce((sum, m) => m.role === 'agent' && m.at >= today && m.model?.usage ? sum + m.model.usage.inputTokens + m.model.usage.outputTokens : sum, 0), 0);
   const exportThread = thread && messages.length > 0 ? () => exportRecord(thread) : null;
 
+  const studioPreviewKey = useMemo(() => JSON.stringify([visibleCandidate?.runId ?? null, paperContent]), [visibleCandidate?.runId, paperContent]);
+  const studioIdentity = useMemo<StudioPublicationIdentity>(() => ({ owner, epoch: identityEpoch, thread: artifactThreadId || null,
+    project: artifactProjectId, sourceKey, previewKey: studioPreviewKey, pending: !!reportSource.inputPending || !!visibleCandidate?.pending || !!liveWriting?.active }),
+  [owner, identityEpoch, artifactThreadId, artifactProjectId, sourceKey, studioPreviewKey, reportSource.inputPending, visibleCandidate?.pending, liveWriting?.active]);
+  const latestStudioIdentity = useRef(studioIdentity);
+  useLayoutEffect(() => { latestStudioIdentity.current = studioIdentity; }, [studioIdentity]);
+  const studioResultCurrent = useCallback((expected: StudioPublicationIdentity) => canPublishStudioResult(expected,
+    { ...latestStudioIdentity.current, ...readWorkspaceIdentity(), sourceKey: reportSourceKey(latest.current.reportSource) }), [readWorkspaceIdentity]);
+
+  const commitStudioReport = useCallback((nextContent: EditorContent, message: string, nextDesign?: Questionnaire | null) => {
+    if (!studioResultCurrent(studioIdentity)) {
+      setReviewNotice('原稿、候选稿或所在项目已变化，请根据当前材料重新生成这项成果。');
+      return;
+    }
+    if (visibleCandidate && !visibleCandidate.pending) {
+      setCandidate(prev => prev?.runId === visibleCandidate.runId && prev.preview === visibleCandidate.preview ? { ...prev, preview: nextContent } : prev);
+      setStage('paper');
+      setReviewNotice(`${message}（已同步至当前候选稿预览，采纳后永久落盘）`);
+      return;
+    }
+    // This is the source captured when the studio received its input, never whichever project is now visible.
+    const source = reportSource;
+    const resolvedDesign = nextDesign ?? source.design ?? newQuestionnaire();
+    const outcome = applyCandidate({
+      design: resolvedDesign,
+      dataset: source.dataset ?? null,
+      report: nextContent,
+      blueprint: decomposeTopic(nextContent.title || resolvedDesign.title || '专题实证调研'),
+    }, source);
+    setStage('paper');
+    if (outcome === 'applied') {
+      setReviewNotice(message);
+      threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span(message, 'dim')]] } }]);
+    } else {
+      setReviewNotice('工作区资料正在同步中，请稍候片刻重试写入。');
+    }
+  }, [applyCandidate, reportSource, setStage, studioIdentity, studioResultCurrent, visibleCandidate]);
+
+  const saveStudioSvgArtifact = useCallback((title: string, svg: string) => {
+    if (!studioResultCurrent(studioIdentity)) return;
+    const cleanName = title.replace(/[\\/:*?"<>|]/g, '-').slice(0, 60) || 'evix-studio-asset';
+    void artifacts.onImport(
+      new File([new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })], `${cleanName}.svg`, { type: 'image/svg+xml' }),
+      'diagram',
+      { origin: '证见创作工坊', classification: 'simulated' },
+    );
+  }, [artifacts, studioIdentity, studioResultCurrent]);
+
+  const addSteeringNote = useCallback((raw: string) => {
+    const clean = raw.trim();
+    if (!clean) return;
+    setSteeringNotes(prev => (prev.includes(clean) ? prev : [...prev.slice(-7), clean]));
+  }, []);
+
+  const rewriteSectionWithIdea = useCallback((sectionId: string, quote: string, idea: string) => {
+    const secTitle = paperContent.report.find(s => s.id === sectionId)?.title ?? sectionId;
+    addSteeringNote(`[${secTitle}] ${idea}`);
+    setAnnotations(prev => prev.map(a => a.sectionId === sectionId && a.note === idea ? { ...a, status: 'applied' } : a));
+    sayFromTool(`起草「${secTitle}」：请针对选段「${quote.slice(0, 48)}」按以下思路精修重写：${idea}`);
+  }, [paperContent.report, addSteeringNote, sayFromTool]);
+
+  const handleSelectionAction = useCallback((sel: PaperSelectionAction) => {
+    if (sel.action === 'qa') {
+      const tokens = sel.text.split(/[\s，。、；！？（）()]+/u).filter(t => t.length >= 2).slice(0, 6);
+      setQaHighlightTerms(tokens.length ? tokens : [sel.text.slice(0, 12)]);
+      setSideOpen(true);
+      setActiveStudio('qa');
+      pickSection(sel.sectionId);
+      return;
+    }
+    const idea = quickSteeringDraft.trim() || (sel.action === 'rewrite' ? '增强因果分析密度与数据佐证，精简空泛套话' : '待复核论据与统计口径');
+    setAnnotations(prev => [
+      { id: `ann-${Date.now().toString(36)}`, sectionId: sel.sectionId, quote: sel.text, note: idea, status: sel.action === 'rewrite' ? 'applied' : 'open' },
+      ...prev.slice(0, 29),
+    ]);
+    setSideOpen(true);
+    setActiveStudio('steering');
+    if (sel.action === 'rewrite') {
+      setQuickSteeringDraft('');
+      rewriteSectionWithIdea(sel.sectionId, sel.text, idea);
+    }
+  }, [quickSteeringDraft, rewriteSectionWithIdea, setSideOpen, pickSection]);
+
+  const overlayDock = stage !== 'chat' || (expanded && !!panel);
+  const dockPanelReserve = !overlayDock && (panel || output || inspecting || artifactOpen)
+    ? (artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth)
+    : 0;
+  const composerElement = (
+    <Composer
+      key="persistent-agent-composer"
+      onDraftWriter={registerDraftWriter}
+      onSend={sendFromDock}
+      inputRef={inputRef}
+      account={generationAccount}
+      onNeedLists={() => loadLists(true)}
+      projects={projects}
+      projectId={projectId}
+      onProject={threads.setProject}
+      services={services}
+      serviceId={chatService?.id ?? ''}
+      onService={id => setStageModelPreference(owner, 'research.conversation', id || null)}
+      mode={chatMode}
+      onMode={setChatMode}
+      chatLabel={chatService?.label ?? ''}
+      onOpen={go}
+      brainInfo={{
+        available: effectiveBrain.available,
+        provider: effectiveBrain.provider,
+        model: effectiveBrain.model,
+        source: effectiveBrain.source,
+        toolsCount: AGENT_TOOL_SPECS.length,
+        onConfigureBrain: () => setBrainModalOpen(true),
+        onToggleTools: () => setBrainModalOpen(true),
+      }}
+    />
+  );
+
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
-    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? (output ? 'output' : 'none')} data-expanded={expanded && !!panel}>
+    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? (output ? 'output' : 'none')} data-expanded={expanded && !!panel} data-studio-open={activeStudio ? 'true' : undefined} style={dockPanelReserve ? { ['--dock-panel' as string]: `${dockPanelReserve}px` } : undefined}>
       <CursorTrail />
       <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); focusInput(); }}>跳到输入框</a>
 
@@ -994,6 +1711,7 @@ export default function AgentShell() {
         <button ref={modulesRef} type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="dialog" aria-expanded={railMenu === 'modules'} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setRailMenu(railMenu === 'modules' ? null : 'modules')}><Icon name="grid" /></button>
         <button type="button" className={styles.railButton} aria-label="项目全景" title="项目全景" aria-pressed={panel === 'overview'} onClick={() => panel === 'overview' ? closePanel() : go('overview')}><Icon name="lamp" /></button>
         <button type="button" className={styles.railButton} aria-label={`知识镜搜索（${shortcut}）`} title={`知识镜搜索（${shortcut}）`} onClick={knowledge.openSearch}><Icon name="book" /></button>
+        <Link href="/workspace" className={styles.railButton} aria-label="返回研究工作台" title="返回经典工作台"><Icon name="home" /></Link>
         <span className={styles.spacer} />
         <button type="button" className={styles.railButton} aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'} title={theme === 'dark' ? '浅色' : '深色'} onClick={event => switchTheme(theme === 'dark' ? 'light' : 'dark', event)}><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
         {owner && owner !== 'guest'
@@ -1017,7 +1735,7 @@ export default function AgentShell() {
           event.preventDefault();
           buttons[(at + step + buttons.length) % buttons.length]?.focus();
         }}>
-          <div className={styles.launcherHead}><b>模块</b><small>在右侧面板打开；也可以在输入框里输入 <kbd>/</kbd> 加模块名，例如 /问卷</small></div>
+          <div className={styles.launcherHead}><b>模块</b><small>在右侧面板打开；也可以在输入框输入 <kbd>/</kbd> 调出隐藏命令菜单</small></div>
           {/* The research path in working order: what each step is for, and how much evidence it holds where that is measured. */}
           <p className={styles.launcherLabel}>{ROOM_GROUPS.path}</p>
           <div className={styles.steps}>
@@ -1050,11 +1768,45 @@ export default function AgentShell() {
         stages={stages} openRoom={panel} onRoom={go} outputs={outputs} openOutput={output?.id ?? null} onOutput={id => { window.location.hash = `output/${encodeURIComponent(id)}`; }}
         todayTokens={todayTokens} onModels={() => go('services')} onExport={exportThread}
         onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}
-        nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })} liveWriting={liveWriting} /> : undefined} />
+        activeStudio={activeStudio}
+        onOpenStudio={tab => setActiveStudio(tab)}
+        steeringCount={steeringNotes.length}
+        brainStatus={effectiveBrain}
+        studioContent={activeStudio ? <StudioPanel key={composerScope}
+          activeTab={activeStudio}
+          onSelectTab={setActiveStudio}
+          onClose={() => setActiveStudio(null)}
+          content={paperContent}
+          design={design ?? null}
+          onSaveDesign={nextDesign => {
+            const merged = { ...paperContent, design: nextDesign };
+            commitStudioReport(merged, '已同步极简问卷结构到研究工作台。', nextDesign);
+          }}
+          onUpdateReport={(next, msg, nextDesign) => commitStudioReport(next, msg, nextDesign)}
+          onSaveArtifact={saveStudioSvgArtifact}
+          onJumpToSection={sectionId => { setStage('paper'); requestAnimationFrame(() => pickSection(sectionId)); }}
+          highlightTerms={qaHighlightTerms}
+          onHighlightChange={setQaHighlightTerms}
+          onOpenKnowledge={knowledge.openSearch}
+          onAskExternalAi={q => sayFromTool(q)}
+          steeringNotes={steeringNotes}
+          onAddSteering={addSteeringNote}
+          onRemoveSteering={idx => setSteeringNotes(prev => prev.filter((_, i) => i !== idx))}
+          annotations={annotations}
+          onAddAnnotation={ann => setAnnotations(prev => [{ id: `ann-${Date.now().toString(36)}`, status: 'open', ...ann }, ...prev])}
+          onToggleAnnotationStatus={id => setAnnotations(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'applied' ? 'open' : 'applied' } : a))}
+          onRemoveAnnotation={id => setAnnotations(prev => prev.filter(a => a.id !== id))}
+          onRewriteWithIdea={rewriteSectionWithIdea}
+          signedIn={!!account?.authenticated}
+          currentUserEmail={email}
+          csrfToken={account?.csrfToken}
+        /> : null}
+        nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} onDraftSection={sec => sayFromTool(`起草「${sec}」`)} onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })} liveWriting={liveWriting} /> : undefined} />
 
       <main className={styles.main} aria-label={stage === 'paper' ? '报告' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
+          <Link href="/workspace" className={styles.backWorkbench} aria-label="返回研究工作台">← 工作台</Link>
           <span className={styles.topTitle}>{stage === 'paper' ? paperContent.title : thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
             <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
@@ -1062,8 +1814,17 @@ export default function AgentShell() {
             <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
           <span className={styles.workState} data-busy={!!running || looking || !!liveWriting?.active} role="status">
-            <i aria-hidden="true" />{liveWriting?.active ? `实时撰稿中 · ${liveWriting.completed}/${liveWriting.total} 节` : running?.model ? `工作中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '工作中 · 查知识镜' : '就绪'}
+            <i aria-hidden="true" />{liveWriting?.active ? `实时撰稿中 · ${liveWriting.completed}/${liveWriting.total} 节` : running?.model ? `推理中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '查阅知识镜' : '就绪'}
           </span>
+          <button type="button" className={styles.lightGaugePill} onClick={() => go('overview')} title="查看全站证据照度与盲区全景">
+            <LightBar score={light.overall} />
+            <span>照度 {percent(light.overall)}</span>
+            {light.blind.length > 0 && <em>盲区 {light.blind.length}</em>}
+          </button>
+          <button type="button" className={styles.enginePill} data-online={effectiveBrain.available ? 'true' : 'false'} onClick={() => setBrainModalOpen(true)} title="查看大模型推理引擎与 14 项可调度工具矩阵">
+            <i aria-hidden="true" />
+            <span>{chatService ? `${chatService.label}` : effectiveBrain.available ? `${effectiveBrain.provider} · ${effectiveBrain.model}` : brainStatus === null ? '探测大脑…' : '本地规则引擎'}</span>
+          </button>
           <ArtifactShelfLauncher count={artifacts.count} open={artifactOpen} onClick={openArtifactShelf} />
           <span className={styles.spacer} />
           <button type="button" className={styles.chip} onClick={() => go('services')} aria-label="模型配置">模型配置</button>
@@ -1082,7 +1843,17 @@ export default function AgentShell() {
           </details>
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
-        {stage === 'advisors' && <Advisors benchmark={paperBenchmark} hired={hired} onHire={setHired} />}
+        {stage === 'advisors' && (
+          <Advisors
+            benchmark={paperBenchmark}
+            hired={hired}
+            onHire={setHired}
+            onConsult={(_advisor, prompt) => {
+              setStage('chat');
+              sendFromDock(prompt);
+            }}
+          />
+        )}
         {stage === 'paper' && <div ref={paperRef} className={styles.paperStage} role="region" aria-label="报告实时排版">
           <PaperToolbar
             content={paperContent}
@@ -1099,6 +1870,21 @@ export default function AgentShell() {
             onJumpToSection={pickSection}
             docFormat={docFormat}
             onChangeDocFormat={setDocFormat}
+            projectId={projectId}
+            signedIn={!!account?.authenticated}
+            fullReportSummary={visibleCandidate ? {
+              used: true,
+              modelLabel: reportService ? `${reportService.label}（${reportService.model}）` : null,
+              sectionCount: visibleCandidate.receipts.length || visibleCandidate.preview.report.length,
+              note: `研究模式：${REPORT_MODES[visibleCandidate.mode]}，回执 ${visibleCandidate.receipts.length} 条`,
+            } : null}
+            onWriteAiAppendix={lines => sendToReport({
+              id: crypto.randomUUID(),
+              node: 'appendix.ai',
+              source: 'AI 使用说明',
+              items: lines.map(text => ({ kind: 'paragraph', text })),
+            })}
+            onOpenPreflightPanel={() => go('preflight')}
           />
           {reviewNotice && <p className={styles.reviewNotice} role="status">{reviewNotice}</p>}
           {reportVersions.length > 0 && <details className={styles.versions}>
@@ -1120,7 +1906,7 @@ export default function AgentShell() {
               onCancel={() => stopReportRun()}
               onDiscard={() => { stopReportRun(); setCandidate(null); setReportWriting(readReportScope(), null); setReviewNotice('候选稿已丢弃，原稿保留。'); }}
               onSelectSection={pickSection}
-              onToggleSectionLock={id => setLockedSections(previous => { const ids = previous.runId === visibleCandidate.runId ? previous.ids : []; return { runId: visibleCandidate.runId, ids: ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id] }; })}
+              onToggleSectionLock={toggleSectionLock}
               onApply={() => {
                 const result = visibleCandidate.result, pack = visibleCandidate.pack;
                 const scope = readReportScope();
@@ -1138,6 +1924,50 @@ export default function AgentShell() {
               <ul>{visibleCandidate.receipts.map(receipt => <li key={receipt.id}><a href={`/api/agent/report-sections/${encodeURIComponent(receipt.id)}`} target="_blank" rel="noreferrer">{blueprintNode(receipt.nodeId)?.title ?? receipt.nodeId} ↗</a><span>{({ dispatched: '已发出 · 待核对', ready: '已返回', failed: '失败', unknown: '结果待核对', running: '处理中' } as Record<string, string>)[receipt.status] ?? '待核对'}</span></li>)}</ul>
             </details>
           </>}
+          <div className={styles.steeringStrip} role="region" aria-label="实时想法插话与安全审阅控制">
+            <input
+              className={styles.steeringInput}
+              value={quickSteeringDraft}
+              onChange={e => setQuickSteeringDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && quickSteeringDraft.trim()) {
+                  e.preventDefault();
+                  addSteeringNote(quickSteeringDraft);
+                  setQuickSteeringDraft('');
+                }
+              }}
+              placeholder="实时插入想法到生成过程，或输入改写想法后直接在下方 A4 正文划词重写…"
+            />
+            <button
+              type="button"
+              className={styles.steeringBtn}
+              disabled={!quickSteeringDraft.trim()}
+              onClick={() => {
+                addSteeringNote(quickSteeringDraft);
+                setQuickSteeringDraft('');
+                setSideOpen(true);
+                setActiveStudio('steering');
+              }}
+            >
+              + 注入流程 ({steeringNotes.length})
+            </button>
+            <button
+              type="button"
+              className={styles.steeringBtn}
+              aria-pressed={activeStudio === 'qa'}
+              onClick={() => { setSideOpen(true); setActiveStudio(activeStudio === 'qa' ? null : 'qa'); }}
+            >
+              Q/A 标红 ({qaHighlightTerms.length})
+            </button>
+            <button
+              type="button"
+              className={styles.steeringBtn}
+              aria-pressed={watermarkEnabled}
+              onClick={() => setWatermarkEnabled(v => !v)}
+            >
+              🛡 审阅水印
+            </button>
+          </div>
           <ReportLiveTheater
             paperRef={paperRef}
             robotRole={choreo.robotRole}
@@ -1151,8 +1981,8 @@ export default function AgentShell() {
             activeSectionId={pickedSection}
             onPick={setPickedSection}
             label="报告实时排版"
-            writingActive={!!liveWriting?.active}
-            workState={reportWorkState(liveWriting)}
+            writingActive={!!liveWriting?.active || !!choreo.typingState || !!choreo.reviewState || !!workflowWorkState}
+            workState={reportWorkState(liveWriting) ?? workflowWorkState ?? choreo.workState ?? null}
             typingState={choreo.typingState}
             reviewState={choreo.reviewState}
             formatScanSectionId={choreo.formatScanSectionId}
@@ -1160,57 +1990,140 @@ export default function AgentShell() {
             onCatalogHover={(attr, id) => choreo.triggerXrefSynapse(attr, id, false)}
             onCatalogClick={(attr, id) => choreo.triggerXrefSynapse(attr, id, true)}
             docFormat={docFormat}
+            sectionDiffs={paperSectionDiffs}
+            onToggleDiffLock={visibleCandidate ? toggleSectionLock : undefined}
+            onApplyRevisionDiff={revision.onApply}
+            onKeepRevisionDiff={revision.onKeep}
+            highlightTerms={qaHighlightTerms}
+            annotations={annotations}
+            onSelectionAction={handleSelectionAction}
+            watermarkText={watermarkEnabled ? `证见 EVI-X · ${email || '内部审阅副本'} · 防未授权摘抄与外传` : null}
           />
         </div>}
-        {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
-          <BrandMark size={16} />证见 AI{running || looking ? <i aria-label="工作中" /> : null}
-        </button>}
-        <div className={stage === 'paper' ? styles.copilot : styles.chatColumn} hidden={(stage === 'paper' && !copilotOpen) || stage === 'advisors'}>
-        {stage === 'paper' && <div className={styles.copilotHead}>
-          <BrandMark size={16} /><b>证见 AI</b><small>{thread?.title ?? '新对话'}</small>
-          <span className={styles.spacer} />
-          <button type="button" className={styles.iconButton} aria-label="收起证见 AI" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
-        </div>}
+        <div className={styles.chatColumn} hidden={overlayDock}>
         <div ref={scrollRef} className={styles.scroll}>
-          <details className={styles.researchDisclosure} open={!messages.length} data-fresh={!messages.length}>
-            <summary><span><Icon name="spark" />研究路线</span><small>选题 · 文献 · 问卷 · 分析</small><span className={styles.disclosureAction} /><Icon name="down" /></summary>
-          <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
-            owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
-            execution={{ mutate, isCurrent: () => !!owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch), onProduced: artifacts.onProduced }}
-            modelRoutes={journeyModelRoutes} defaultServiceId={stagePreferences.defaultServiceId ?? null}
-            onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
-            onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}
-            onOpenSettings={() => go('services')} onOpenStage={openResearchStage}
-            onTopic={research.topic} onRetractTopic={research.retractTopic} literature={research.literature} onLiterature={research.setLiterature}
-            onLiteratureToReport={lines => {
-              sendToReport({ id: crypto.randomUUID(), node: 'appendix.data', source: '选题研读资料',
-                items: lines.map(text => ({ kind: 'paragraph', text })) });
-              go('editor');
-            }}
-            onDraftQuestionnaire={({ input }, destination) => {
-              if (destination !== readReportScope().project) return;
-              const brief = [input.title, input.problem, `决策主体：${input.decisionOwner}`,
-                `调查对象：${input.population}`, `地区：${input.geography}`].join('\n');
-              threads.append([{ ...stamp(), role: 'agent', turn: generation.start(brief, destination) }]);
-            }}
-            simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
-              startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }} />
-          </details>
-          {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />}
+          {!messages.length && (
+            <section className={styles.empty} aria-label="证见 Agent 研究大脑">
+              <div className={styles.emptyHero}>
+                <AnatomyPrismMark size={78} running={!!running || looking} />
+                <div className={styles.emptyEyebrow}>EVI-X OPTICAL HARNESS · 证见镜室操作系统</div>
+                <h1 tabIndex={-1}>以对话为中枢，按需唤醒整座实证研究工坊</h1>
+                <p className={styles.emptyLead}>
+                  {chatService
+                    ? `已绑定「${chatService.label}（${chatService.model}）」；右侧工作台照度 ${percent(light.overall)}，共配备 ${AGENT_TOOL_SPECS.length} 项证见工具。`
+                    : effectiveBrain.available
+                      ? `推理大脑「${effectiveBrain.provider} · ${effectiveBrain.model}」已直连就绪；当前全站照度 ${percent(light.overall)}，随问随调报告、问卷、知识镜与交互工坊。`
+                      : brainStatus === null
+                        ? `正在探测研究大脑直连服务与工具能力；当前全站照度 ${percent(light.overall)}，可随时输入研究问题。`
+                        : `当前工作区照度 ${percent(light.overall)}（离线规则引擎模式）。可点击下方任一研究情境试运行，或点击右上角引擎胶囊接入推理密钥。`}
+                </p>
+              </div>
+
+              <AnatomyStageCard
+                overallScore={light.overall}
+                blindCount={light.blind.length}
+                litCount={light.rooms.filter(r => r.score > 0).length}
+                totalRooms={light.rooms.length}
+                busy={!!running || looking}
+              />
+
+              <div className={styles.bentoGrid} role="group" aria-label="典型研究调度情境">
+                {[
+                  {
+                    tag: 'OPTICAL PROBE · 照度巡检',
+                    title: '全站证据体检与盲区诊断',
+                    desc: '读取四象限照度、定位尚未补全的研究盲区并给出下一步动线。',
+                    prompt: '帮我扫描当前项目各模块的证据照度，目前还缺哪些核心证据？下一步该优先完善哪一块？',
+                  },
+                  {
+                    tag: 'SIMULATION · 全链演示',
+                    title: '铸造社区助餐教学模拟全案',
+                    desc: '围绕「社区养老助餐服务」生成完整问卷、模拟样本与合规模板。',
+                    prompt: '请围绕「社区养老助餐服务满意度与优化路径」生成一套教学模拟研究样板，并切到报告视图讲讲结构。',
+                  },
+                  {
+                    tag: 'KNOWLEDGE MIRROR · 公式溯源',
+                    title: '设计效应 DEFF 与样本量校验',
+                    desc: '检索知识镜已审核词条，核对精确 LaTeX 公式与抽样框适用边界。',
+                    prompt: '什么是抽样设计效应（DEFF）？请用知识镜查一下公式，并说说正大杯多阶段抽样里怎么设定它。',
+                  },
+                  {
+                    tag: 'STUDIO HARNESS · 工坊协同',
+                    title: '设计多维满意度对比与作图脚本',
+                    desc: '推导统计检验方案，并在对话内直接呼出交互式图表 / 统计编程工坊。',
+                    prompt: '我想研究青年群体 AI 消费满意度的群体差异，帮我设计实证检验思路并打开统计绘图工坊。',
+                  },
+                ].map(card => (
+                  <button
+                    key={card.title}
+                    type="button"
+                    className={styles.bentoCard}
+                    onClick={() => sendFromDock(card.prompt)}
+                  >
+                    <span className={styles.bentoTag}>{card.tag}</span>
+                    <strong className={styles.bentoTitle}>{card.title}</strong>
+                    <span className={styles.bentoDesc}>{card.desc}</span>
+                    <span className={styles.bentoPrompt}>“{card.prompt}”</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className={styles.brainToolbar}>
+                <button type="button" className={styles.brainSecondaryBtn} onClick={() => setBrainModalOpen(true)}>
+                  <Icon name="bolt" />
+                  <span>{effectiveBrain.available ? `${effectiveBrain.provider} · ${AGENT_TOOL_SPECS.length} 项工具矩阵` : `查看 ${AGENT_TOOL_SPECS.length} 项证见工具与密钥设置`}</span>
+                </button>
+                <button type="button" className={styles.brainSecondaryBtn} aria-expanded={researchOpen} onClick={() => setResearchOpen(open => !open)}>
+                  <Icon name="spark" />
+                  <span>{researchOpen ? '收起研究路线表单' : '展开研究路线表单（按需使用）'}</span>
+                </button>
+                <span className={styles.brainSlashHint}>
+                  键入 <kbd>/</kbd> 随时调出快捷命令
+                </span>
+              </div>
+            </section>
+          )}
+            <section className={styles.researchDrawer} aria-label="研究路线" hidden={!researchOpen}>
+              <div className={styles.researchDrawerHead}>
+                <span><Icon name="spark" />研究路线</span>
+                <small>选题 · 文献 · 问卷 · 分析</small>
+                <span className={styles.spacer} />
+                <button type="button" className={styles.chip} onClick={() => setResearchOpen(false)}>收起</button>
+              </div>
+              <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
+                owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
+                execution={{ mutate, isCurrent: () => !!owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch), onProduced: artifacts.onProduced }}
+                modelRoutes={journeyModelRoutes} defaultServiceId={stagePreferences.defaultServiceId ?? null}
+                onDefaultServiceChange={id => setDefaultModelPreference(owner, id)}
+                onModelCallChange={(call, id) => setStageModelPreference(owner, call, id)}
+                onOpenSettings={() => go('services')} onOpenStage={openResearchStage}
+                onTopic={research.topic} onRetractTopic={research.retractTopic} literature={research.literature} onLiterature={research.setLiterature}
+                onLiteratureToReport={lines => {
+                  sendToReport({ id: crypto.randomUUID(), node: 'appendix.data', source: '选题研读资料',
+                    items: lines.map(text => ({ kind: 'paragraph', text })) });
+                  go('editor');
+                }}
+                onDraftQuestionnaire={({ input }, destination) => {
+                  if (destination !== readReportScope().project) return;
+                  const brief = [input.title, input.problem, `决策主体：${input.decisionOwner}`,
+                    `调查对象：${input.population}`, `地区：${input.geography}`].join('\n');
+                  threads.append([{ ...stamp(), role: 'agent', turn: generation.start(brief, destination) }]);
+                }}
+                simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
+                  startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }}
+                onWorkflowWorkState={setWorkflowWorkState} />
+            </section>
+          {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={false} writingModelStatus={writingModelStatus} onAction={performAction} onAnswer={agent.answer} />}
         </div>
-        <Composer onDraftWriter={registerDraftWriter} onSend={agent.send} inputRef={inputRef} account={generationAccount} onNeedLists={() => loadLists(true)}
-          projects={projects} projectId={projectId} onProject={threads.setProject}
-          services={services} serviceId={chatService?.id ?? ''} onService={id => setStageModelPreference(owner, 'research.conversation', id || null)}
-          mode={chatMode} onMode={setChatMode} chatLabel={chatService?.label ?? ''} onOpen={go} />
         </div>
       </main>
 
       <section ref={artifactPanelRef} className={styles.panel} hidden={!panel && !output && !inspecting && !artifactOpen} aria-label={artifactOpen ? '成果架' : here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
         onKeyDown={event => { if (artifactOpen && event.key === 'Escape') { event.stopPropagation(); setArtifactOpen(false); } }}
         data-inspector={inspecting || artifactOpen || undefined} style={{ ['--panel-w' as string]: `${artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth}px` }}>
-        {artifactOpen && <ArtifactShelf {...artifacts} error={artifacts.error??artifactNotice} onClose={()=>setArtifactOpen(false)} onExample={()=>void addInfographicExample()} />}
+        {artifactOpen && <ArtifactShelf {...artifacts} error={artifacts.error??artifactNotice} onClose={()=>setArtifactOpen(false)} onExample={()=>void addInfographicExample()} onLocate={locateArtifact} />}
         {!artifactOpen && inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}
-          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} revision={<SectionRevision {...revision} />} />}
+          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onDraftSection={sec => sayFromTool(`起草「${sec}」`)} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} onJumpToIssue={sectionId => { if (stage !== 'paper') { setStage('paper'); requestAnimationFrame(() => pickSection(sectionId)); } else { pickSection(sectionId); } }} revision={<SectionRevision {...revision} />} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {!artifactOpen && here && <header className={styles.panelHead}>
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>
@@ -1221,10 +2134,10 @@ export default function AgentShell() {
             title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
         </header>}
-        {!artifactOpen && output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} onSay={agent.send}
+        {!artifactOpen && output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} onSay={sendFromDock}
           figure={deferredView.report ? figureOf(deferredView.report, output) : null} visualStyle={deferredView.report?.visualStyle} />}
         <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel || artifactOpen}>
-          {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={agent.send} headingRef={null} />}
+          {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={sendFromDock} headingRef={null} />}
           {/* The report editor stays mounted, hidden, while the report fills the centre: the paper shows its content and the
               toolbar writes through it. */}
           {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && (visited.includes(id) || (id === 'editor' && stage === 'paper'))).map(id =>
@@ -1235,6 +2148,204 @@ export default function AgentShell() {
           <button type="button" aria-label="不再显示返回画布" onClick={() => setCanvasReturn(null)}>×</button>
         </div>}
       </section>
+
+      <div className={styles.floatingDock} data-overlay={overlayDock || undefined} data-dialog-background>
+        {overlayDock && !copilotOpen && (
+          <div className={styles.dockTrayRow}>
+            <button type="button" className={styles.dockTrayPill} onClick={() => setCopilotOpen(true)}>
+              <BrandMark size={15} />
+              <span>{running || looking ? '证见大脑思考中…' : messages.length ? `展开对话记录 (${messages.length})` : '展开对话抽屉'}</span>
+              {running || looking ? <i aria-label="工作中" /> : null}
+            </button>
+          </div>
+        )}
+        {overlayDock && copilotOpen && (
+          <section className={styles.copilot} aria-label="证见 AI 对话抽屉">
+            <div className={styles.copilotHead}>
+              <BrandMark size={16} />
+              <b>证见 AI</b>
+              <small>{thread?.title ?? '新对话'}</small>
+              <span className={styles.spacer} />
+              <button type="button" className={styles.chip} onClick={() => { setExpanded(false); setStage('chat'); }}>回到对话</button>
+              <button type="button" className={styles.iconButton} aria-label="收起对话抽屉" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
+            </div>
+            <div ref={scrollRef} className={styles.scroll}>
+              {messages.length ? (
+                <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} writingModelStatus={writingModelStatus} onAction={performAction} onAnswer={agent.answer} />
+              ) : (
+                <div className={styles.copilotEmpty}>直接从下方悬浮输入框向大脑提问，报告、问卷、图表或模块会按需在此处调度并呼出。</div>
+              )}
+            </div>
+          </section>
+        )}
+        <div className={styles.dockComposerWrap} data-overlay={overlayDock || undefined}>
+          {composerElement}
+        </div>
+      </div>
+
+      {brainModalOpen && (
+        <div
+          className={styles.brainModalBackdrop}
+          role="presentation"
+          onClick={event => { if (event.target === event.currentTarget) setBrainModalOpen(false); }}
+          onKeyDown={event => { if (event.key === 'Escape') setBrainModalOpen(false); }}
+        >
+          <section className={styles.brainModal} role="dialog" aria-modal="true" aria-label="证见研究大脑与工具矩阵">
+            <header className={styles.brainModalHead}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <AnatomyPrismMark size={54} running={effectiveBrain.available} />
+                <div>
+                  <span className={styles.brainModalEyebrow}>EVI-X HARNESS · ENGINE & CAPABILITIES</span>
+                  <h2>研究大脑控制台</h2>
+                </div>
+              </div>
+              <button type="button" className={styles.iconButton} aria-label="关闭控制台" onClick={() => setBrainModalOpen(false)}>
+                <Icon name="close" />
+              </button>
+            </header>
+
+            <div className={styles.brainModalBody}>
+              <div className={styles.brainEngineBox}>
+                <div className={styles.brainEngineRow}>
+                  <div>
+                    <strong className={styles.brainEngineTitle}>
+                      {chatService
+                        ? `托管服务优先：${chatService.label} (${chatService.model})`
+                        : effectiveBrain.available
+                          ? `${effectiveBrain.provider} · ${effectiveBrain.model}`
+                          : '当前处于本地规则引擎模式'}
+                    </strong>
+                    <p className={styles.brainEngineSub}>
+                      {chatService
+                        ? '已登录并选定托管对话服务，所有发言按托管合规链路运行。'
+                        : effectiveBrain.source === 'custom'
+                          ? '正在使用当前标签页内存配置直连推理，刷新页面即自动销毁。'
+                          : effectiveBrain.available
+                            ? '服务端已挂载直连推理环境密钥，无需登录即可自由对话并调用以下 14 项工具。'
+                            : brainStatus?.directGatewayEnabled
+                              ? '可在本标签页配置临时密钥，也可登录后在「模型设置」保存个人模型。'
+                              : '当前部署使用已保存的个人模型服务。登录后进入「模型设置」配置，并在对话中选择服务。'}
+                    </p>
+                  </div>
+                  <span className={styles.brainEngineBadge} data-online={effectiveBrain.available ? 'true' : 'false'}>
+                    {effectiveBrain.available ? 'ONLINE' : 'OFFLINE'}
+                  </span>
+                </div>
+
+                {!chatService && !brainStatus?.directGatewayEnabled && <div className={styles.brainByokActions}>
+                  <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} onClick={() => { setBrainModalOpen(false); go('services'); }}>打开模型设置</button>
+                </div>}
+                {!chatService && brainStatus?.directGatewayEnabled && (
+                  <div className={styles.brainByokForm}>
+                    <div className={styles.brainByokFields}>
+                      <label>
+                        <span>服务商预设</span>
+                        <select value={brainPresetDraft} onChange={e => setBrainPresetDraft(e.target.value as BrainPresetId)}>
+                          <option value="deepseek">DeepSeek (deepseek-chat / deepseek-reasoner)</option>
+                          <option value="openai">OpenAI (gpt-4o-mini / gpt-4.1)</option>
+                          <option value="qwen">通义千问 (qwen-plus / qwen-max)</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>模型 ID（可选覆盖）</span>
+                        <input
+                          type="text"
+                          value={brainModelDraft}
+                          onChange={e => setBrainModelDraft(e.target.value)}
+                          placeholder={brainPresetDraft === 'openai' ? 'gpt-4o-mini' : brainPresetDraft === 'qwen' ? 'qwen-plus' : 'deepseek-chat'}
+                        />
+                      </label>
+                      <label>
+                        <span>会话临时密钥（仅驻留内存，不落盘）</span>
+                        <input
+                          type="password"
+                          autoComplete="off"
+                          value={brainKeyDraft}
+                          onChange={e => setBrainKeyDraft(e.target.value)}
+                          placeholder={brainStatus?.available ? '留空则沿用服务端环境密钥' : 'sk-...'}
+                        />
+                      </label>
+                    </div>
+                    <div className={styles.brainByokActions}>
+                      {brainPresetDraft === 'deepseek' && (
+                        <>
+                          <button type="button" className={styles.chip} onClick={() => setBrainModelDraft('deepseek-chat')}>deepseek-chat</button>
+                          <button type="button" className={styles.chip} onClick={() => setBrainModelDraft('deepseek-reasoner')}>deepseek-reasoner (思考链)</button>
+                        </>
+                      )}
+                      <span className={styles.spacer} />
+                      {customBrain && (
+                        <button
+                          type="button"
+                          className={styles.chip}
+                          onClick={() => { setCustomBrain(null); setBrainModelDraft(''); setBrainKeyDraft(''); }}
+                        >
+                          恢复默认引擎
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`${styles.chip} ${styles.chipPrimary}`}
+                        onClick={() => {
+                          const cleanModel = brainModelDraft.trim() || undefined;
+                          const cleanKey = brainKeyDraft.trim() || undefined;
+                          if (!cleanModel && !cleanKey) setCustomBrain(null);
+                          else setCustomBrain({ preset: brainPresetDraft, ...(cleanModel ? { model: cleanModel } : {}), ...(cleanKey ? { apiKey: cleanKey } : {}) });
+                          setBrainModalOpen(false);
+                        }}
+                      >
+                        应用至当前会话
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.brainToolsSection}>
+                <div className={styles.brainToolsHead}>
+                  <strong>可直接调度的 {AGENT_TOOL_SPECS.length} 项证见工具</strong>
+                  <div className={styles.brainToolTabs} role="tablist" aria-label="按类别筛选工具">
+                    {([
+                      ['all', `全部 (${AGENT_TOOL_SPECS.length})`],
+                      ['probe', '光学探针'],
+                      ['inspect', '循证检索'],
+                      ['navigate', '舞台调度'],
+                      ['studio', '交互工坊'],
+                      ['write', '确认写入'],
+                    ] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={brainToolFilter === key}
+                        className={styles.brainToolTab}
+                        onClick={() => setBrainToolFilter(key)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.brainToolGrid}>
+                  {AGENT_TOOL_SPECS.filter(spec => brainToolFilter === 'all' || spec.category === brainToolFilter).map(spec => (
+                    <div key={spec.id} className={styles.brainToolCard}>
+                      <div className={styles.brainToolCardTop}>
+                        <code>{spec.id}{spec.argsHint ? `(${spec.argsHint})` : '()'}</code>
+                        <span className={spec.mutates ? styles.brainGateWarn : styles.brainGateSafe}>
+                          {spec.mutates ? '写入需确认' : '只读 / 调度'}
+                        </span>
+                      </div>
+                      <strong>{spec.zhLabel}</strong>
+                      <p>{spec.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   </GenerationProvider></WorkbenchNavProvider></ThemeProvider>;
 }

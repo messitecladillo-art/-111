@@ -51,7 +51,7 @@ export type AgentAction =
   /** Writes these registered results into the report's blueprint sections; offered only on a confirmation card. */
   | { type: 'place'; results: string[] }
   /** Asks the user's model service to draft this blueprint section; offered only on a confirmation card. */
-  | { type: 'draft'; node: string; modelBinding?: ModelConsentBinding }
+  | { type: 'draft'; node: string; existingText?: string; modelBinding?: ModelConsentBinding }
   /**
    * Writes a draft's paragraphs, numbers already filled from the facts, into this blueprint section. `cited` holds the
    * statements of the facts they cite, checked against the project's current facts before anything is written.
@@ -65,6 +65,10 @@ export type AgentAction =
   | { type: 'generateFullReport'; topic: string; mode?: 'plan' | 'demonstration' | 'empirical'; modelBinding?:ModelConsentBinding; inputRevision?:string }
   /** Stores a session-scoped LLM API key in browser sessionStorage for direct full-report generation. */
   | { type: 'setApiKey'; apiKey: string }
+  /** Opens the LLM consent & fact-grounded section drafting flow directly from studio/outline buttons. */
+  | { type: 'draftSection'; node: string; draft?: string }
+  /** Switches the active workspace stage between chat, paper, and advisors on demand. */
+  | { type: 'stage'; stage: 'chat' | 'paper' | 'advisors' }
   /** Inserts text/code/chart-reading paragraphs produced in an interactive studio card into a blueprint section. */
   | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[] };
 /** A primary link is the one step the agent recommends; a turn has at most one. */
@@ -159,15 +163,30 @@ export function mentionedRooms(text: string): Room[] {
 }
 
 function help(): AgentTurn {
-  const general = COMMANDS.filter(c => !ROOM_COMMANDS.includes(c));
   return {
-    lines: [[t('我是'), t('证见', 'strong'), t('。现在是'), t('指令模式', 'teal'), t('：还没有接入模型，我只听懂命令和下面这些说法；听不懂时会直说，不会编造。')]],
+    lines: [[t('我是'), t('证见', 'strong'), t('。当前是'), t('指令模式', 'teal'), t('：可直接使用自然中文对话触发功能；在输入框敲入 '), t('/', 'teal'), t(' 即可调出全部隐藏快捷命令。也可在右下角切换「用模型对话」。')]],
     cards: [
-      { kind: 'tool', title: '命令', columns: true, lines: general.map(c => [t(`/${c.name}${c.args ? ` ‹${c.args}›` : ''}`, 'teal'), t(c.line, 'dim')]) },
-      { kind: 'tool', title: '模块', lines: [ROOM_COMMANDS.map(c => t(`/${c.name} `, 'teal'))] },
-      { kind: 'tool', title: '也可以这样说', lines: ['下一步做什么', '问卷还缺什么', '打开数据分析', '图 1-1 的数字从哪来', '登记了哪些结果', '把结果写进报告', '写报告', '帮我写研究背景', '帮我出一份社区体育设施满意度的问卷', '什么是设计效应', '切换到浅色模式'].map(s => [t(`“${s}”`)]) },
+      {
+        kind: 'tool',
+        title: '常用自然说法示例',
+        columns: true,
+        lines: [
+          [t('工作流与进度', 'dim'), t('“下一步做什么”“查看项目照度”“还缺什么”“查看备赛路线”')],
+          [t('工坊与教学模拟', 'dim'), t('“生成教学模拟研究”“打开图表工坊”“打开代码工坊”“打开撰稿工坊”')],
+          [t('报告与结果', 'dim'), t('“登记了哪些结果”“把结果写进报告”“查看报告进度”“图 1-1 的数字从哪来”')],
+          [t('设计与知识检索', 'dim'), t('“打开问卷设计”“帮我出一份……的问卷”“什么是设计效应”“切换到深色主题”')],
+        ],
+      },
+      {
+        kind: 'tool',
+        title: '隐藏命令与模型接入',
+        lines: [
+          [t('快捷命令已默认隐藏，在输入框键入 '), t('/', 'teal'), t(' 即可弹出全部 '), t(String(COMMANDS.length), 'gold'), t(' 项命令菜单。')],
+          [t('在「模型设置」中接入 API Key 后，可在「撰稿工坊」或输入框右下角切换「用模型对话」直接起草正文。', 'dim')],
+        ],
+      },
     ],
-    chips: [recommend(say('下一步做什么')), say('/照度')],
+    chips: [recommend(say('下一步做什么')), say('查看项目照度'), say('查看备赛路线')],
   };
 }
 
@@ -190,7 +209,7 @@ function status(ctx: RouterContext, scope?: RoomId): AgentTurn {
   return {
     lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的模块：问卷、抽样、分析与报告；其他模块接入 Agent 主循环后再计算。', 'dim')]],
     cards: [{ kind: 'tool', title: '读取 · 项目照度', columns: true, lines: light.rooms.map(r => [t(named(r.room)), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(percent(r.score), 'gold'), t(r.summary, 'dim')]) }],
-    chips: [recommend(say('下一步做什么')), say('还缺什么', '/盲区')],
+    chips: [recommend(say('下一步做什么')), say('还缺什么')],
   };
 }
 
@@ -223,7 +242,7 @@ function sealStatus(ctx: RouterContext): AgentTurn {
       columns: true,
       lines: light.rooms.map(r => [t(named(r.room)), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(percent(r.score), 'gold'), t(r.summary, 'dim')]),
     }],
-    chips: [recommend(say('下一步做什么')), say('/照度'), say('/盲区')],
+    chips: [recommend(say('下一步做什么')), say('查看项目照度'), say('还缺什么')],
   };
 }
 
@@ -238,7 +257,7 @@ function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
       kind: 'tool', title: '读取 · 盲区',
       lines: [...shown.map((c: LightCheck) => [t('✕ ', 'error'), t(`${named(c.room)} · `, 'dim'), t(c.label), t(`　${c.detail}`, 'dim')]),
         ...(spots.length > shown.length ? [[t(`还有 ${spots.length - shown.length} 处，项目全景里列全了。`, 'dim')]] : [])],
-      links: rooms.map(id => say(`去${named(id)}`, `/${roomById(id).command}`)),
+      links: rooms.map(id => ({ label: `去${named(id)}`, action: { type: 'open' as const, room: id } })),
     }],
   };
 }
@@ -254,7 +273,7 @@ function buildFullReportTurn(ctx: RouterContext, rawTopic = ''): AgentTurn {
       [t('原稿保护','teal'),t('　生成过程中原稿保留；比较、锁定章节后决定是否采纳为草稿。','dim')],
       [t('交付边界','teal'),t('　完整度检查不代表独立审稿或文件验收；最终导出仍需复核。','dim')],
     ],links:[{label:'查看生成计划',action,primary:true}]}],
-    chips:[recommend({label:'查看生成计划',action}),say('/写报告'),say('/提交')],
+    chips:[recommend({label:'查看生成计划',action}),say('查看报告进度'),{label:'提交前体检',action:{type:'open',room:'preflight'}}],
   };
 }
 
@@ -264,10 +283,10 @@ function buildApiKeyTurn(): AgentTurn {
 
 function nextStep(ctx: RouterContext): AgentTurn {
   const spot = ctx.light.blind[0];
-  if (!spot) return { lines: [[t('有照度的模块，检查都通过了。')], [t('可以打开路演答辩演练追问，交稿前用提交前体检查一遍文件。', 'dim')]], chips: [say('/答辩'), say('/提交')] };
+  if (!spot) return { lines: [[t('有照度的模块，检查都通过了。')], [t('可以打开路演答辩演练追问，交稿前用提交前体检查一遍文件。', 'dim')]], chips: [{ label: '打开路演答辩', action: { type: 'open', room: 'defense' } }, { label: '提交前体检', action: { type: 'open', room: 'preflight' } }] };
   return {
     lines: [[t('下一步：'), t(spot.label, 'strong'), t('。')], [t(spot.detail, 'dim')]],
-    chips: [recommend(say(`打开${named(spot.go)}`, `/${roomById(spot.go).command}`)), say('还缺什么', '/盲区')],
+    chips: [recommend({ label: `打开${named(spot.go)}`, action: { type: 'open', room: spot.go } }), say('还缺什么')],
   };
 }
 
@@ -276,7 +295,7 @@ function trace(ctx: RouterContext, arg = ''): AgentTurn {
   const traces = ctx.traces ?? [], wanted = arg.trim(), key = exhibitKey(wanted);
   if (!traces.length) return {
     lines: [[t('报告里还没有来自登记结果的图表。')], [t('在数据分析里完成一项分析并发送到报告，或从抽样设计插入抽样框，就能沿光路回溯到数据与题目。', 'dim')]],
-    chips: [recommend(say('/分析')), say('/报告')],
+    chips: [recommend({ label: '打开数据分析', action: { type: 'open', room: 'analysis' } }), { label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } }],
   };
   const chosen = wanted ? traces.filter(x => exhibitKey(x.reference) === key || x.title.includes(wanted)) : traces.length === 1 ? traces : [];
   if (chosen.length === 1) {
@@ -285,7 +304,7 @@ function trace(ctx: RouterContext, arg = ''): AgentTurn {
   }
   return {
     lines: wanted ? [[t('报告里没有'), t(`「${wanted}」`, 'strong'), t('，可以回溯的图表有：')]] : [[t('报告里有 '), t(String(traces.length), 'gold'), t(' 个来自登记结果的图表，回溯哪一个？')]],
-    chips: traces.slice(0, 8).map(x => say(`${x.reference} ${x.title}`.slice(0, 26), `/来处 ${x.reference}`)),
+    chips: traces.slice(0, 8).map(x => say(`${x.reference} ${x.title}`.slice(0, 26), `回溯：${x.reference}`)),
   };
 }
 
@@ -315,17 +334,17 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
   const held = ctx.results;
   if (!held) return {
     lines: [[t('登记的结果存在报告里；这次访问还没有打开报告与 PPT，所以我还读不到。')], [t('打开一次报告与 PPT，再问一遍。', 'dim')]],
-    chips: [recommend(say('/报告'))],
+    chips: [recommend({ label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } })],
   };
   const all = [...held.results].reverse(), wanted = query.trim().toLowerCase();
   if (!all.length) return {
     lines: [[t('还没有登记的分析结果。')], [t(held.pending ? '有一项结果正在送往报告，在报告与 PPT 里收下后就能读到。' : '在数据分析里完成一项分析并登记，结果会带着方法与有效样本进入报告。', 'dim')]],
-    chips: [recommend(say(held.pending ? '/报告' : '/分析'))],
+    chips: [recommend({ label: held.pending ? '打开报告与 PPT' : '打开数据分析', action: { type: 'open', room: held.pending ? 'editor' : 'analysis' } })],
   };
   const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? `抽样框 ${methodName(r)}` : `${r.method} ${methodName(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
   if (!chosen.length) return {
     lines: [[t('登记的结果里没有'), t(`「${query.trim()}」`, 'strong'), t('，现有的是：')]],
-    chips: all.slice(0, 6).map(r => say(r.title.slice(0, 20), `/结果 ${r.title.slice(0, 20)}`)),
+    chips: all.slice(0, 6).map(r => say(r.title.slice(0, 20), `筛选结果：${r.title.slice(0, 20)}`)),
   };
   const analyses = chosen.filter(r => !isFrame(r)), frames = chosen.filter(isFrame);
   const shown = analyses.slice(0, wanted ? 4 : 8), simulated = analyses.filter(r => r.classification === 'simulated').length;
@@ -350,7 +369,11 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
       ...(frames.length ? [{ kind: 'tool' as const, title: '已写进报告的抽样框（计划，不是分析结果）', lines: frames.slice(0, 6).flatMap(r => [[t(r.title, 'strong')], ...statistics(r, 4)]) }] : []),
       ...(confirmed.length ? [{ kind: 'tool' as const, title: '已确认的研究发现', lines: confirmed.slice(0, 6).map(f => [t(f.title, 'strong'), t(`　${f.interpretation}`, 'dim')]) }] : []),
     ],
-    chips: analyses.some(r => !held.placed.includes(r.id)) ? [recommend(say('/写入')), say('/来处')] : analyses.length ? [say('/来处'), say('/报告')] : [recommend(say('/分析')), say('/报告')],
+    chips: analyses.some(r => !held.placed.includes(r.id))
+      ? [recommend(say('把结果写进报告')), say('沿光路回溯来处')]
+      : analyses.length
+        ? [say('沿光路回溯来处'), { label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } }]
+        : [recommend({ label: '打开数据分析', action: { type: 'open', room: 'analysis' } }), { label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } }],
   };
 }
 
@@ -362,11 +385,11 @@ function place(ctx: RouterContext): AgentTurn {
   const held = ctx.results;
   if (!held) return {
     lines: [[t('登记的结果存在报告里；这次访问还没有打开报告与 PPT，所以我还读不到。')], [t('打开一次报告与 PPT，再说“把结果写进报告”。', 'dim')]],
-    chips: [recommend(say('/报告'))],
+    chips: [recommend({ label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } })],
   };
-  if (!held.results.length) return { lines: [[t('还没有登记的结果可写。')], [t('在数据分析里完成一项分析并登记，再回来写入。', 'dim')]], chips: [recommend(say('/分析'))] };
+  if (!held.results.length) return { lines: [[t('还没有登记的结果可写。')], [t('在数据分析里完成一项分析并登记，再回来写入。', 'dim')]], chips: [recommend({ label: '打开数据分析', action: { type: 'open', room: 'analysis' } })] };
   const waiting = [...held.results].filter(r => !held.placed.includes(r.id));
-  if (!waiting.length) return { lines: [[t('已登记的 '), t(String(held.results.length), 'gold'), t(' 项结果都已写进报告。')]], chips: [recommend(say('/盲区 报告')), say('/报告')] };
+  if (!waiting.length) return { lines: [[t('已登记的 '), t(String(held.results.length), 'gold'), t(' 项结果都已写进报告。')]], chips: [recommend(say('报告还缺什么')), { label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } }] };
   const sections = new Map<string, ResultSnapshot[]>();
   for (const r of waiting) { const title = blueprintNode(suggestedNode(r)).title; sections.set(title, [...(sections.get(title) ?? []), r]); }
   const simulated = waiting.filter(r => r.classification === 'simulated').length;
@@ -393,9 +416,9 @@ function writePlan(ctx: RouterContext): AgentTurn {
   const plan = ctx.plan;
   if (!plan) return {
     lines: [[t('写报告要先读到报告；这次访问还没有打开报告与 PPT。')], [t('打开一次报告与 PPT，再说“写报告”。', 'dim')]],
-    chips: [recommend(say('/报告'))],
+    chips: [recommend({ label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } })],
   };
-  if (!plan.sections.length) return { lines: [[t('报告里还没有按蓝图组织的章节。')], [t('在报告与 PPT 里按报告类型建立蓝图骨架，再回来逐节写。', 'dim')]], chips: [recommend(say('/报告'))] };
+  if (!plan.sections.length) return { lines: [[t('报告里还没有按蓝图组织的章节。')], [t('在报告与 PPT 里按报告类型建立蓝图骨架，再回来逐节写。', 'dim')]], chips: [recommend({ label: '打开报告与 PPT', action: { type: 'open', room: 'editor' } })] };
   const unplaced = ctx.results ? ctx.results.results.filter(r => !ctx.results!.placed.includes(r.id)).length : 0;
   const empty = plan.sections.filter(s => s.draftable && ['missing', 'empty'].includes(sectionState(s)));
   // Chapters are headings; each section says where it stands: not yet in the report, empty, under way, or in place.
@@ -405,7 +428,8 @@ function writePlan(ctx: RouterContext): AgentTurn {
     return [t(`　${STATE_GLYPH[state]} `, state === 'done' ? 'gold' : 'dim'), t(s.title),
       t(state === 'missing' ? '　未建' : `　已写 ${s.written} 字${s.length ? `（建议 ${s.length[0]}–${s.length[1]}）` : ''}${missing.length ? ` · 还缺：${missing.join('、')}` : ''}`, 'dim')];
   });
-  const next = unplaced ? recommend(say('/写入')) : empty.length ? recommend(say(`起草「${empty[0].title}」`.slice(0, 26), `/起草 ${empty[0].title}`)) : recommend(say('/盲区 报告'));
+  const draftChip = (s: { title: string; node: string }): AgentLink => ({ label: `起草「${s.title}」`.slice(0, 26), action: { type: 'draftSection', node: s.node } });
+  const next = unplaced ? recommend(say('把结果写进报告')) : empty.length ? recommend(draftChip(empty[0])) : recommend(say('报告还缺什么'));
   return {
     lines: [
       plan.score === null ? [t('按蓝图逐节看报告：')] : [t('报告体检 '), t(String(Math.round(plan.score)), 'gold'), t(` 分，适用的 ${plan.total} 项检查通过 ${plan.passed} 项。按蓝图逐节看：`)],
@@ -416,7 +440,7 @@ function writePlan(ctx: RouterContext): AgentTurn {
       { kind: 'tool', title: '读取 · 报告逐节进度', lines: rows },
       ...(plan.gaps.length ? [{ kind: 'tool' as const, title: '体检里最该补的', lines: plan.gaps.map(g => [t(g.label, 'strong'), t(`　${g.detail}`, 'dim')]) }] : []),
     ],
-    chips: [next, ...empty.slice(unplaced ? 0 : 1, unplaced ? 2 : 3).map(s => say(`起草「${s.title}」`.slice(0, 26), `/起草 ${s.title}`))],
+    chips: [next, ...empty.slice(unplaced ? 0 : 1, unplaced ? 2 : 3).map(draftChip)],
   };
 }
 
@@ -427,7 +451,7 @@ function draftTarget(ctx: RouterContext, arg: string): Routed {
   const empty = ctx.plan?.sections.filter(s => s.draftable && sectionState(s) !== 'done') ?? [];
   return { turn: {
     lines: arg ? [[t('报告蓝图里没有'), t(`「${arg}」`, 'strong'), t('这一节。')]] : [[t('起草哪一节？')]],
-    chips: empty.length ? empty.slice(0, 6).map(s => say(s.title.slice(0, 20), `/起草 ${s.title}`)) : [say('/写报告')],
+    chips: empty.length ? empty.slice(0, 6).map(s => ({ label: s.title.slice(0, 20), action: { type: 'draftSection' as const, node: s.node } })) : [say('查看报告进度')],
   } };
 }
 
@@ -443,13 +467,13 @@ function open(room: Room, ctx: RouterContext): AgentTurn {
 function choose(rooms: Room[]): AgentTurn {
   return {
     lines: [[t('这句话涉及'), ...rooms.flatMap((r, i) => [...(i ? [t('、')] : []), t(r.name, 'strong')]), t('。')], [t('指令模式下我一次只打开一个模块，先开哪一个？', 'dim')]],
-    chips: rooms.map(r => say(r.name, `/${r.command}`)),
+    chips: rooms.map(r => ({ label: r.name, action: { type: 'open' as const, room: r.id } })),
   };
 }
 
 const unknown = (): AgentTurn => ({
-  lines: [[t('指令模式下我听不懂这句话，也不会去猜。')], [t('可以说“下一步做什么”“还缺什么”“打开问卷设计”，或输入 ', 'dim'), t('/', 'teal'), t(' 查看全部命令。', 'dim')]],
-  chips: [recommend(say('下一步做什么')), say('/帮助')],
+  lines: [[t('指令模式下我听不懂这句话，也不会去猜。')], [t('可以说“下一步做什么”“还缺什么”“打开问卷设计”，或输入 ', 'dim'), t('/', 'teal'), t(' 查看全部隐藏命令。', 'dim')]],
+  chips: [recommend(say('下一步做什么')), say('查看使用帮助', '帮助')],
 });
 
 function slash(body: string, ctx: RouterContext): Routed {
@@ -457,7 +481,7 @@ function slash(body: string, ctx: RouterContext): Routed {
   const command = COMMANDS.find(c => c.name === head || c.words.includes(word));
   if (!command) {
     const near = matchCommands(head.slice(0, 1));
-    return { turn: { lines: [[t('没有 '), t(`/${head}`, 'teal'), t(' 这个命令。')]], chips: [...near.slice(0, 3).map(c => say(`/${c.name}`)), say('/帮助')] } };
+    return { turn: { lines: [[t('没有 '), t(`/${head}`, 'teal'), t(' 这个命令。输入 '), t('/', 'teal'), t(' 可从弹出列表里选命令。', 'dim')]], chips: [...near.slice(0, 3).map(c => say(c.name, `/${c.name}`)), say('查看使用帮助', '帮助')] } };
   }
   const scope = mentionedRooms(arg).map(r => r.id).find(lit);
   const room = ROOMS.find(r => r.command === command.name);
@@ -502,14 +526,17 @@ const SEAL = /印鉴|九门印鉴|核验印鉴|循证印鉴|核验码/u;
 const FULL_REPORT = /(?:自动|一键|全流程|ai|大模型).{0,6}(?:生成|起草|撰写|写)(?:整份|全篇|完整|全套|全)?报告|(?:生成|起草|撰写)全报告/iu;
 const DEMO = /铸造|教学模拟研究|全链条演示|国奖标杆|标杆样板/u;
 const COACH = /备赛|参赛指南|八阶|国奖路线|怎么拿国奖/u;
-const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
-const CODE_STUDIO = /^(?:打开)?(?:编程|写代码|统计编程|代码工坊|三线表代码|复现代码|python代码|r代码|spss代码)(?:工坊)?$|生成.*(?:python|r语言|spss|latex).*代码/iu;
-const WRITING_STUDIO = /^(?:打开)?(?:撰稿|润色|写作工坊|撰稿工坊|答辩手卡|5w1h答辩)(?:工坊)?$/iu;
+const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?(?:\s*[·:：]\s*.+)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
+const CODE_STUDIO = /^(?:打开)?(?:编程|写代码|统计编程|代码工坊|三线表代码|复现代码|python代码|r代码|spss代码)(?:工坊)?(?:\s*[·:：]\s*.+)?$|生成.*(?:python|r语言|spss|latex).*代码/iu;
+const WRITING_STUDIO = /^(?:打开)?(?:撰稿|润色|写作工坊|撰稿工坊|答辩手卡|5w1h答辩)(?:工坊)?(?:\s*[·:：]\s*.+)?$/iu;
 const WHERE = /^(我在哪|这是哪|当前模块|打开的是什么|我在哪里)/u;
 const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
-const PLAN = /^(帮我|我要|开始)?(写|撰写|完成)(一份|整份|这份)?报告$|报告(怎么写|还缺什么|写到哪|写得怎么样)/u;
-const DRAFT = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[「“"]?(.{2,24}?)[」”"]?(?:这一?节|一节|部分|这一?章)?$/u;
+const TRACE_QUERY = /(?:回溯|来处)[：:\s]+(.+)$/u;
+const PLAN = /^(?:(?:帮我|我要|开始)?(?:写|撰写|完成)(?:一份|整份|这份)?报告|(?:查看)?报告(?:怎么写|还缺什么|写到哪|写得怎么样|进度))$/u;
+const DRAFT_BRACKET = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[「“"]([^」”"\n]{2,40})[」”"](?:这一?节|一节|部分|这一?章)?(?:\s*[：:]\s*.+)?$/u;
+const DRAFT = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[「“"]?(.{2,32}?)[」”"]?(?:这一?节|一节|部分|这一?章)?$/u;
 const PLACE = /(把|将)?[^。]{0,10}结果[^。]{0,4}(写|放|加)(进|入|到)报告|写入报告/u;
+const RESULTS_QUERY = /^筛选结果[：:\s]+(.+)$/u;
 const RESULTS = /结果清单|(登记|已有|现有)(了|的)?(哪些)?(分析|统计)?结果|有哪些(分析|统计|检验)?结果|(分析|统计|检验)结果(是什么|是多少|怎么样|如何|有哪些)/u;
 const EXHIBIT = /([图表])\s*([0-9０-９]+(?:\s*[-－—.．]\s*[0-9０-９]+)?)/u;
 const LOOKUP = [/^(?:什么是|何为|啥是|解释一下|解释|查一下|查查|查|搜一下|搜索|搜)\s*(.+)$/u, /^(.+?)(?:是什么意思|是什么|是啥|什么意思|怎么算|怎么计算|的公式|的定义|指的是什么)$/u];
@@ -524,6 +551,11 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (HELP.test(input)) return { turn: help() };
   if (NIGHT.test(input)) return slash('夜', ctx);
   if (DAY.test(input)) return slash('昼', ctx);
+  {
+    const bracketed = DRAFT_BRACKET.exec(input);
+    const node = bracketed && draftableNode(bracketed[1]);
+    if (node) return { draft: node.id };
+  }
   if (GENERATE.test(input)) return { generate: input };
   const scope = mentionedRooms(input).map(r => r.id).find(lit);
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
@@ -536,13 +568,18 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (WRITING_STUDIO.test(input)) return { turn: buildWritingStudioTurn(ctx, input) };
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
-  if (TRACE.test(input)) { const m = EXHIBIT.exec(input); return { turn: trace(ctx, m ? m[1] + m[2] : '') }; }
+  if (TRACE.test(input)) {
+    const m = EXHIBIT.exec(input);
+    const qm = !m ? TRACE_QUERY.exec(input) : null;
+    return { turn: trace(ctx, m ? m[1] + m[2] : (qm?.[1] ?? '')) };
+  }
   if (PLAN.test(input)) return { turn: writePlan(ctx) };
   { const m = DRAFT.exec(input); const node = m && draftableNode(m[1]); if (node) return { draft: node.id }; }
   if (PLACE.test(input)) return { turn: place(ctx) };
+  { const rq = RESULTS_QUERY.exec(input); if (rq?.[1]?.trim()) return { turn: results(ctx, rq[1].trim()) }; }
   if (RESULTS.test(input)) return { turn: results(ctx) };
   if (WHERE.test(input)) {
-    if (!ctx.room) return { turn: { lines: [[t('右侧没有打开模块，现在只显示对话。')]], chips: [say('打开项目全景', '/全景')] } };
+    if (!ctx.room) return { turn: { lines: [[t('右侧没有打开模块，现在只显示对话。')]], chips: [{ label: '打开项目全景', action: { type: 'open', room: 'overview' } }] } };
     const room = roomById(ctx.room);
     return { turn: { lines: [[t('右侧打开的是'), t(room.name, 'strong'), t('。')], [t(room.line, 'dim')]] } };
   }
@@ -550,7 +587,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   const verb = OPEN.exec(input), rooms = mentionedRooms(verb?.[1] ?? input);
   if (rooms.length === 1) return { turn: open(rooms[0], ctx) };
   if (rooms.length > 1) return { turn: choose(rooms.slice(0, 4)) };
-  if (verb) return { turn: { lines: [[t('没有叫'), t(`「${verb[1]}」`, 'strong'), t('这个模块。')]], chips: [say('/帮助')] } };
+  if (verb) return { turn: { lines: [[t('没有叫'), t(`「${verb[1]}」`, 'strong'), t('这个模块。')]], chips: [say('查看使用帮助', '帮助')] } };
   // A short phrase may be a term; a sentence the router cannot read is not guessed at.
   return input.length <= 16 ? { lookup: input, explicit: false } : { turn: unknown() };
 }
@@ -576,6 +613,27 @@ export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
     case 'open': return { turn: open(roomById(action.args.room), ctx) };
     case 'lookup': return { lookup: action.args.query, explicit: true };
     case 'draft': return { generate: action.args.brief };
+    case 'stage': {
+      const label = action.args.view === 'paper' ? '已为你切换到报告成文视图。' : action.args.view === 'advisors' ? '已为你打开专家审阅圆桌。' : '已回到对话工作区。';
+      return { turn: { lines: [[t(label)]], act: { type: 'stage', stage: action.args.view } } };
+    }
+    case 'studio': {
+      switch (action.args.kind) {
+        case 'chart': return { turn: buildChartStudioTurn(ctx) };
+        case 'code': return { turn: buildCodeStudioTurn(ctx) };
+        case 'writing': return { turn: buildWritingStudioTurn(ctx) };
+        case 'coach': return { turn: buildCoachTurn(ctx) };
+      }
+    }
+    case 'draft_section': return draftTarget(ctx, action.args.node);
+    case 'generate_report': {
+      const topic = (action.args.topic ?? '').trim() || ctx.projectTitle?.trim() || '';
+      return { turn: { ...buildFullReportTurn(ctx, topic), act: { type: 'generateFullReport', topic } } };
+    }
+    case 'simulate': {
+      const topic = (action.args.topic ?? '').trim();
+      return { turn: { ...buildDemoTurn(ctx, topic), act: { type: 'loadBenchmark', benchmarkId: topic || 'current' } } };
+    }
   }
 }
 
@@ -588,14 +646,14 @@ export function lookupTurn(query: string, hits: readonly KnowledgeHit[], explici
   const top = pool[0], exact = top.match === 'name' || top.match === 'alias';
   if (top.ambiguous || (!exact && pool.length > 1)) return {
     lines: [[t(`「${query}」`, 'strong'), t('在知识镜里可能指：')]],
-    chips: pool.slice(0, 5).map(h => say(h.entry.name, `/查 ${h.entry.name}`)),
+    chips: pool.slice(0, 5).map(h => say(h.entry.name, `查一下 ${h.entry.name}`)),
   };
   const e = top.entry;
   return {
     lines: [[t('知识镜中的'), t(`「${e.name}」`, 'strong'), t('，原文照录：')]],
     cards: [{ kind: 'entry', id: e.id, name: e.name, ...(e.englishName ? { english: e.englishName } : {}), definition: e.definition,
       ...(e.formula?.tex ? { formula: e.formula.tex } : {}), sources: e.sources.map(s => s.title).slice(0, 3), reviewed: e.review.status === 'reviewed' }],
-    chips: pool.slice(1, 4).map(h => say(h.entry.name, `/查 ${h.entry.name}`)),
+    chips: pool.slice(1, 4).map(h => say(h.entry.name, `查一下 ${h.entry.name}`)),
     ...(pool.length > 1 ? { chipsLabel: '相关词条' } : {}),
   };
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { FullReportGenerationResult } from '@/lib/agent/full-report-pipeline';
+import type { ReportWorkState } from '@/lib/agent/report-work';
 import type { EditorContent, ReportSection } from '@/lib/editor-model';
 import { referenceNumbers } from '@/lib/references';
 import { blockLabel, reportLabels } from '@/lib/report-numbering';
@@ -254,11 +255,14 @@ export function useLiveReportChoreography(
   const [robotRole, setRobotRole] = useState<RobotRole>('writer');
   const [robotStatusText, setRobotStatusText] = useState('');
   const [robotVisible, setRobotVisible] = useState(false);
+  const [workState, setWorkState] = useState<ReportWorkState | null>(null);
   const [forgePod, setForgePod] = useState<ForgePodState | null>(null);
   const [beams, setBeams] = useState<SynapseBeam[]>([]);
   const [activeTargetKey, setActiveTargetKey] = useState<string | null>(null);
   const timerIds = useRef(new Set<number>());
   const reducedMotion = useRef(false);
+  const incomingQueueRef = useRef<{ section: ReportSection; snapshot: EditorContent }[]>([]);
+  const incomingBusyRef = useRef(false);
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => { reducedMotion.current = query.matches; };
@@ -278,8 +282,9 @@ export function useLiveReportChoreography(
     });
   }, [paperRef]);
   const stop = useCallback(() => {
+    incomingQueueRef.current = []; incomingBusyRef.current = false;
     clearAllTimers(); clearActiveDomHighlights(); setTypingState(null); setReviewState(null);
-    setRobotVisible(false); setForgePod(null); setBeams([]); setActiveTargetKey(null);
+    setRobotVisible(false); setWorkState(null); setForgePod(null); setBeams([]); setActiveTargetKey(null);
   }, [clearAllTimers, clearActiveDomHighlights]);
 
   const triggerXrefSynapse = useCallback((attr: 'xref' | 'cite', targetId: string, scroll = false) => {
@@ -321,35 +326,127 @@ export function useLiveReportChoreography(
     return () => { container.removeEventListener('mouseover', focus); container.removeEventListener('focusin', focus); container.removeEventListener('click', focus); };
   }, [paperRef, triggerXrefSynapse]);
 
-  const animateIncomingSection = useCallback((section: ReportSection, snapshot: EditorContent) => {
-    stop();
+  const buildTypewriterPlan = (body: string, maxBudgetMs = 1550) => {
+    const frames: { endIndex: number; delayMs: number; lineRatio: number; strikeTick: number; returning: boolean }[] = [];
+    const total = body.length;
+    if (!total) return frames;
+    const targetFrames = Math.min(32, Math.max(10, Math.ceil(total / 2)));
+    const avgChunk = Math.max(1, Math.ceil(total / targetFrames));
+    let pos = 0;
+    let elapsed = 0;
+    let strikeTick = 0;
+    let lineWidth = 0;
+    while (pos < total) {
+      const step = pos < 22 ? 1 : avgChunk;
+      let next = Math.min(total, pos + step);
+      const nl = body.indexOf('\n', pos);
+      if (nl >= pos && nl < next) next = nl + 1;
+      const slice = body.slice(pos, next);
+      const hasNewline = slice.endsWith('\n');
+      const lastChar = slice.trimEnd().slice(-1);
+      for (const ch of slice) {
+        if (ch === '\n') lineWidth = 0;
+        else lineWidth = (lineWidth + (/[\u2e80-\uffff]/u.test(ch) ? 2 : 1)) % 42 || 42;
+      }
+      const lineRatio = hasNewline ? 0.04 : Math.max(0.06, Math.min(0.98, lineWidth / 42));
+      const cadence = 42 + ((strikeTick * 13) % 15);
+      const punctPause = hasNewline ? 130 : /[。！？；.!?;]/u.test(lastChar) ? 85 : /[，、：,]/u.test(lastChar) ? 40 : 0;
+      elapsed += cadence + punctPause;
+      strikeTick += 1;
+      frames.push({ endIndex: next, delayMs: elapsed, lineRatio, strikeTick, returning: hasNewline });
+      pos = next;
+    }
+    const totalDelay = frames.at(-1)?.delayMs ?? 0;
+    if (totalDelay > maxBudgetMs && maxBudgetMs > 0) {
+      const scale = maxBudgetMs / totalDelay;
+      for (const f of frames) f.delayMs = Math.max(22, Math.round(f.delayMs * scale));
+    }
+    return frames;
+  };
+
+  const streamSectionIntoStage = useCallback((
+    section: ReportSection,
+    snapshot: EditorContent,
+    onComplete?: () => void,
+  ) => {
     const body = (section.body || '').trim();
-    if (!body || reducedMotion.current) return;
-    setRobotVisible(true); setRobotRole('writer'); setRobotStatusText(section.title);
-    for (let step = 1; step <= 12; step++) schedule(() => setTypingState({ sectionId: section.id, visibleBody: body.slice(0, Math.ceil(body.length * step / 12)) }), step * 35);
+    if (!body || reducedMotion.current) { onComplete?.(); return; }
+    setRobotVisible(true);
+    setRobotRole('writer');
+    setRobotStatusText(section.title);
+    const plan = buildTypewriterPlan(body);
+    for (const frame of plan) {
+      schedule(() => {
+        setTypingState({
+          sectionId: section.id,
+          visibleBody: body.slice(0, frame.endIndex),
+          lineRatio: frame.lineRatio,
+          strikeTick: frame.strikeTick,
+          returning: frame.returning,
+        });
+      }, frame.delayMs);
+    }
+    const finishMs = (plan.at(-1)?.delayMs ?? 360) + 90;
     schedule(() => {
       setTypingState(null);
       const exhibit = section.blocks?.find(block => block.kind === 'chart' || block.kind === 'table');
-      if (!exhibit || (exhibit.kind !== 'chart' && exhibit.kind !== 'table')) { setRobotVisible(false); return; }
+      if (!exhibit || (exhibit.kind !== 'chart' && exhibit.kind !== 'table')) {
+        setRobotVisible(false);
+        onComplete?.();
+        return;
+      }
       const result = resultFor(snapshot.quality, exhibit.evidenceId);
-      if (!result) { setRobotVisible(false); return; }
+      if (!result) {
+        setRobotVisible(false);
+        onComplete?.();
+        return;
+      }
       const label = blockLabel(reportLabels(snapshot.report), section.id, exhibit.id)?.label ?? '已登记图表';
-      setRobotRole('chart'); setRobotStatusText(label);
+      setRobotRole('chart');
+      setRobotStatusText(label);
       setForgePod({ kind: exhibit.kind, label, caption: exhibit.text || result.title, phase: 'pop', result, valueColumn: exhibit.kind === 'chart' ? exhibit.valueColumn : 1 });
-      schedule(() => setForgePod(previous => previous ? { ...previous, phase: 'fly' } : null), 600);
-      schedule(() => { setForgePod(null); setRobotVisible(false); triggerXrefSynapse('xref', exhibit.id); }, 1000);
-    }, 470);
-  }, [stop, schedule, triggerXrefSynapse]);
+      schedule(() => setForgePod(previous => previous ? { ...previous, phase: 'fly' } : null), 560);
+      schedule(() => {
+        setForgePod(null);
+        setRobotVisible(false);
+        triggerXrefSynapse('xref', exhibit.id);
+        onComplete?.();
+      }, 940);
+    }, finishMs);
+  }, [schedule, triggerXrefSynapse]);
+
+  const animateIncomingSection = useCallback((section: ReportSection, snapshot: EditorContent) => {
+    if (incomingBusyRef.current) {
+      if (incomingQueueRef.current.length >= 3) {
+        incomingQueueRef.current.shift();
+      }
+      incomingQueueRef.current.push({ section, snapshot });
+      return;
+    }
+    const pump = (sec: ReportSection, snap: EditorContent) => {
+      incomingBusyRef.current = true;
+      streamSectionIntoStage(sec, snap, () => {
+        const next = incomingQueueRef.current.shift();
+        if (next) {
+          pump(next.section, next.snapshot);
+        } else {
+          incomingBusyRef.current = false;
+        }
+      });
+    };
+    pump(section, snapshot);
+  }, [streamSectionIntoStage]);
 
   const runReviewAndFormatChoreography = useCallback((snapshot: EditorContent, revisions: FullReportGenerationResult['revisions'] = [], onFinish?: () => void) => {
     stop();
     const revision = revisions.find(item => item.before !== item.after && snapshot.report.some(section => section.id === item.sectionId));
     if (!revision || reducedMotion.current) { onFinish?.(); return; }
     onFocusSection?.(revision.sectionId); setRobotVisible(true); setRobotRole('reviewer'); setRobotStatusText('本轮实际修订');
+    setWorkState({ phase: 'reviewing', completed: 1, total: 1, detail: `审校修订：${revision.reason}` });
     const review = { sectionId: revision.sectionId, badPhrase: revision.before, goodPhrase: revision.after, reason: revision.reason };
     setReviewState({ ...review, step: 'flag', typedGood: '' });
-    for (let step = 1; step <= 12; step++) schedule(() => setReviewState({ ...review, step: step === 12 ? 'done' : 'rewrite', typedGood: revision.after.slice(0, Math.ceil(revision.after.length * step / 12)) }), 550 + step * 45);
-    schedule(() => { setReviewState(null); setRobotVisible(false); onFinish?.(); }, 2100);
+    for (let step = 1; step <= 14; step++) schedule(() => setReviewState({ ...review, step: step === 14 ? 'done' : 'rewrite', typedGood: revision.after.slice(0, Math.ceil(revision.after.length * step / 14)) }), 480 + step * 48);
+    schedule(() => { setReviewState(null); setRobotVisible(false); setWorkState(null); onFinish?.(); }, 1850);
   }, [stop, schedule, onFocusSection]);
 
   const sweepAllXrefs = useCallback(() => {
@@ -357,14 +454,56 @@ export function useLiveReportChoreography(
     const entries = buildReportDirectory(paperContent).slice(0, 5);
     entries.forEach((entry, index) => schedule(() => triggerXrefSynapse(entry.targetAttr, entry.targetId, true), index * 1000));
   }, [stop, paperContent, schedule, triggerXrefSynapse]);
+
+  const playChaptersTypewriter = useCallback((
+    snapshot: EditorContent,
+    sectionIds?: readonly string[],
+    revisions: FullReportGenerationResult['revisions'] = [],
+  ) => {
+    stop();
+    if (reducedMotion.current) return;
+    const pool = sectionIds?.length
+      ? snapshot.report.filter(item => sectionIds.includes(item.id) && item.body.trim().length > 0)
+      : snapshot.report.filter(item => item.body.trim().length > 24).slice(0, 2);
+    if (!pool.length) return;
+    const playAt = (index: number) => {
+      const section = pool[index];
+      if (!section) {
+        if (revisions.length) {
+          runReviewAndFormatChoreography(snapshot, revisions, () => setWorkState(null));
+        } else {
+          setWorkState(null);
+          setRobotVisible(false);
+        }
+        return;
+      }
+      onFocusSection?.(section.id);
+      setWorkState({
+        phase: 'writing',
+        completed: index,
+        total: pool.length,
+        detail: `打字机撰写：${section.title || `第 ${index + 1} 节`}`,
+      });
+      streamSectionIntoStage(section, snapshot, () => {
+        setWorkState({
+          phase: 'writing',
+          completed: index + 1,
+          total: pool.length,
+          detail: `已完成：${section.title || `第 ${index + 1} 节`}`,
+        });
+        schedule(() => playAt(index + 1), 160);
+      });
+    };
+    playAt(0);
+  }, [stop, onFocusSection, streamSectionIntoStage, runReviewAndFormatChoreography, schedule]);
+
   const playFullTheaterShowcase = useCallback((contentOverride?: EditorContent, revisions: FullReportGenerationResult['revisions'] = []) => {
     const content = contentOverride ?? paperContent;
-    const section = content.report.find(item => item.body.trim().length > 30);
-    stop(); if (!section || reducedMotion.current) return;
-    onFocusSection?.(section.id); animateIncomingSection(section, content);
-    if (revisions.length) schedule(() => runReviewAndFormatChoreography(content, revisions), 2200);
-  }, [paperContent, stop, onFocusSection, animateIncomingSection, schedule, runReviewAndFormatChoreography]);
+    const candidates = content.report.filter(item => item.body.trim().length > 30).slice(0, 2);
+    if (!candidates.length || reducedMotion.current) return;
+    playChaptersTypewriter(content, candidates.map(s => s.id), revisions);
+  }, [paperContent, playChaptersTypewriter]);
   useEffect(() => () => { clearAllTimers(); clearActiveDomHighlights(); }, [clearAllTimers, clearActiveDomHighlights]);
 
-  return { typingState, reviewState, formatScanSectionId: null, robotRole, robotStatusText, robotVisible, forgePod, beams, activeTargetKey, triggerXrefSynapse, sweepAllXrefs, animateIncomingSection, runReviewAndFormatChoreography, playFullTheaterShowcase, setRobotVisible, stop };
+  return { typingState, reviewState, formatScanSectionId: null, robotRole, robotStatusText, robotVisible, workState, forgePod, beams, activeTargetKey, triggerXrefSynapse, sweepAllXrefs, animateIncomingSection, runReviewAndFormatChoreography, playChaptersTypewriter, playFullTheaterShowcase, setRobotVisible, stop };
 }

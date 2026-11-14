@@ -19,10 +19,41 @@ type Citations = ReadonlyMap<string, number>;
 
 const INLINE_XREF_RE = /((?:附?[图表]|式)\s*[（(]?[0-9]+(?:[\-－—.][0-9]+)?[)）]?|\[\s*\d+(?:\s*[,，、\-–—]\s*\d+)*\s*\])/gu;
 
+function highlightPlainText(
+  text: string,
+  terms: readonly string[] | undefined,
+  keyBase: string,
+): ReactNode {
+  if (!terms?.length) return text;
+  const escaped = terms
+    .map(t => t.trim())
+    .filter(t => t.length >= 2)
+    .slice(0, 12)
+    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!escaped.length) return text;
+  const re = new RegExp(`(${escaped.join('|')})`, 'giu');
+  const pieces = text.split(re);
+  if (pieces.length === 1) return text;
+  return pieces.map((chunk, idx) =>
+    idx % 2 === 1 ? (
+      <mark
+        key={`${keyBase}-hl-${idx}`}
+        data-qa-hit="true"
+        style={{ background: 'rgba(220, 38, 38, 0.16)', color: '#991b1b', boxShadow: 'inset 0 -1.5px 0 #dc2626', borderRadius: '2px' }}
+      >
+        {chunk}
+      </mark>
+    ) : (
+      chunk
+    ),
+  );
+}
+
 function renderRichPlainRun(
   source: string,
   keyPrefix: string,
   labelToBlockId: ReadonlyMap<string, string>,
+  highlightTerms?: readonly string[],
 ) {
   // Spaced before it is cut into references, so "图 4-3可知" gets Word's space after the reference too; a reference
   // still matches with a space inside it ("图4-1" becomes "图 4-1").
@@ -33,7 +64,7 @@ function renderRichPlainRun(
   for (const m of text.matchAll(INLINE_XREF_RE)) {
     const start = m.index ?? 0;
     if (start > last) {
-      parts.push(<span key={`${keyPrefix}-t-${idx++}`}>{text.slice(last, start)}</span>);
+      parts.push(<span key={`${keyPrefix}-t-${idx++}`}>{highlightPlainText(text.slice(last, start), highlightTerms, `${keyPrefix}-${idx}`)}</span>);
     }
     const token = m[0];
     if (token.startsWith('[')) {
@@ -68,13 +99,23 @@ function renderRichPlainRun(
     last = start + token.length;
   }
   if (last < text.length) {
-    parts.push(<span key={`${keyPrefix}-t-${idx++}`}>{text.slice(last)}</span>);
+    parts.push(<span key={`${keyPrefix}-t-${idx++}`}>{highlightPlainText(text.slice(last), highlightTerms, `${keyPrefix}-${idx}`)}</span>);
   }
   return parts;
 }
 
 /** Running text as the export prints it: references resolved, citations as superscripts, `$…$` typeset, broken references marked. */
-export function PaperText({ text, labels, citations }: { text: string; labels: Labels; citations?: Citations }) {
+export function PaperText({
+  text,
+  labels,
+  citations,
+  highlightTerms,
+}: {
+  text: string;
+  labels: Labels;
+  citations?: Citations;
+  highlightTerms?: readonly string[];
+}) {
   const labelToBlockId = new Map<string, string>();
   for (const [k, v] of labels.entries()) {
     if (!k.includes('\u0000')) {
@@ -112,7 +153,7 @@ export function PaperText({ text, labels, citations }: { text: string; labels: L
       );
     }
     return splitInlineMath(segment.text).map((part, j) =>
-      part.math ? <Tex key={`${i}-${j}`} tex={part.text}/> : renderRichPlainRun(part.text, `${i}-${j}`, labelToBlockId),
+      part.math ? <Tex key={`${i}-${j}`} tex={part.text}/> : renderRichPlainRun(part.text, `${i}-${j}`, labelToBlockId, highlightTerms),
     );
   })}</>;
 }
