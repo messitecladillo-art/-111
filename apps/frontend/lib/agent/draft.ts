@@ -159,14 +159,17 @@ export function sectionText(content: EditorContent, nodeId: string): string {
   return clip(lines.join('\n'), 3000);
 }
 
-export function draftRequest(input: { nodeId: string; held: NonNullable<ResultsView>; content: EditorContent; design: Questionnaire | null; service: { id: string; revision: number } }): { request: DraftRequest; facts: Fact[] } {
+export function draftRequest(input: { nodeId: string; held: NonNullable<ResultsView>; content: EditorContent; design: Questionnaire | null; service: { id: string; revision: number }; existingText?: string }): { request: DraftRequest; facts: Fact[] } {
   const facts = draftFacts(input.held, input.nodeId);
+  const customExisting = typeof input.existingText === 'string'
+    ? clip(input.existingText.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/gu, '').trim(), 3000)
+    : '';
   const base: DraftRequest = {
     schemaVersion: 1, idempotencyKey: crypto.randomUUID(), section: draftSection(input.nodeId),
     project: { title: clip(tidy(input.content.title || input.design?.title || ''), 80), objective: clip(tidy(input.design?.objective ?? ''), 400), population: clip(tidy(input.design?.population ?? ''), 200) },
     facts: facts.map(({ id, text }) => ({ id, text })),
     findings: standingFindings(input.held).slice(0, 20).map(f => ({ title: clip(tidy(f.title) || '未命名发现', 80), interpretation: clip(tidy(f.interpretation), 600), scope: clip(tidy(f.scope), 300), action: clip(tidy(f.action), 300) })),
-    existing: sectionText(input.content, input.nodeId), serviceId: input.service.id, serviceRevision: input.service.revision, consent: true,
+    existing: customExisting || sectionText(input.content, input.nodeId), serviceId: input.service.id, serviceRevision: input.service.revision, consent: true,
   };
   if (!SYNTHESIS_NODES.has(input.nodeId)) return { facts, request: base };
   // The outline takes what the facts, findings and existing text leave of the prompt: its excerpts shrink, down to titles alone.

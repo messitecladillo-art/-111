@@ -100,7 +100,7 @@ test('/写报告 shows the plan and the next step; /起草 and everyday phrasing
   const turn = route('/写报告', ctx).turn, rows = turn.cards[0].lines.map(line => line.map(s => s.text).join(''));
   assert.ok(rows.includes('研究项目简介'), 'chapters are headings');
   assert.ok(rows.some(r => /^　○ 研究背景　已写 0 字/.test(r)));
-  assert.equal(turn.chips[0].action.text, '/写入', 'registered results go in first');
+  assert.equal(turn.chips[0].action.text, '把结果写进报告', 'registered results go in first');
   assert.deepEqual(route('写报告', ctx), route('/写报告', ctx));
   assert.deepEqual(route('/起草 研究背景', ctx), { draft: 'intro.background' });
   assert.deepEqual(route('帮我写研究背景', ctx), { draft: 'intro.background' });
@@ -181,4 +181,6 @@ test('a fact prints its number as the report does: p below 0.001 as "<0.001", ne
   assert.equal(factNumber('均值', 4.3), '4.3');
   assert.equal(factNumber('n', 641), '641');
   assert.ok(!/e[-+]/u.test(factNumber('系数', 1.2e-9)), 'no scientific notation for tiny values either');
+  assert.equal(draftRequest({ nodeId: 'intro.background', held, content: createEditorContent(), design: null, service: { id: 's', revision: 1 }, existingText: '用户自定义模板\u0007'.repeat(3) }).request.existing, '用户自定义模板'.repeat(3));
+  assert.deepEqual(route('请起草「摘要」这一节', { room: null, light: illuminate({ design: null, dataset: null, report: null, resultPending: false }), traces: [], results: held, plan: null }), { draft: 'abstract' });
 });

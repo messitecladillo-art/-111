@@ -7,6 +7,16 @@ import type { RoomId } from '@/lib/agent/rooms';
 import { Icon } from './icons';
 import styles from './AgentShell.module.css';
 
+type BrainComposerInfo = {
+  available: boolean;
+  provider: string;
+  model: string;
+  source: 'env' | 'custom' | 'offline';
+  toolsCount: number;
+  onConfigureBrain?: () => void;
+  onToggleTools?: () => void;
+};
+
 type Choice = { id: string; label: string; detail?: string };
 type Props = {
   onSend: (text: string) => void;
@@ -20,6 +30,7 @@ type Props = {
   mode: 'command' | 'model'; onMode: (mode: 'command' | 'model') => void; chatLabel: string;
   onOpen: (room: RoomId) => void;
   onDraftWriter?: (write:(text:string)=>boolean) => () => void;
+  brainInfo?: BrainComposerInfo;
 };
 type MenuName = 'project' | 'model' | 'attach' | null;
 
@@ -29,7 +40,7 @@ type MenuName = 'project' | 'model' | 'attach' | null;
  * method is composing. Above it, the project the conversation is filed under and where its work is kept; below it,
  * what may be attached, how the agent acts, and which model service drafts for it.
  */
-export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen, onDraftWriter }: Props) {
+export default function Composer({ onSend, inputRef, account, onNeedLists, projects, projectId, onProject, services, serviceId, onService, mode, onMode, chatLabel, onOpen, onDraftWriter, brainInfo }: Props) {
   const [value, setValue] = useState('');
   const draftValue=useRef(value), composing=useRef(false), queued=useRef<string[]>([]), draftEpoch=useRef(0);
   useLayoutEffect(()=>{draftValue.current=value;},[value]);
@@ -151,7 +162,7 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
       <textarea ref={inputRef} id="agent-command-line" rows={1} value={value} spellCheck={false} enterKeyHint="send"
         onCompositionStart={()=>{composing.current=true;}}
         onCompositionEnd={()=>{composing.current=false;if(queued.current.length){const additions=queued.current.splice(0),epoch=draftEpoch.current;window.setTimeout(()=>{if(epoch!==draftEpoch.current)return;const next=[draftValue.current,...additions].filter(Boolean).join('\n\n');draftValue.current=next;setValue(next);},0);}}}
-        placeholder="随心输入，或输入 / 调出命令" aria-label="对证见说" aria-autocomplete="list"
+        placeholder="用自然语言交流研究思路、核查数据或调度模块（键入 / 呼出快捷命令）" aria-label="对证见说" aria-autocomplete="list"
         aria-controls={options.length ? 'agent-commands' : undefined} aria-activedescendant={selected >= 0 ? `agent-command-${selected}` : undefined}
         onChange={event => change(event.target.value)} onKeyDown={key} />
       <div className={styles.toolbar}>
@@ -165,23 +176,44 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
           </div>}
         </span>
         <span className={styles.modeChip} title="读取与计算直接进行；调用模型、写入报告或改动项目之前，都会先请你确认。"><Icon name="info" />改动前确认</span>
+        {brainInfo?.onToggleTools && (
+          <button type="button" className={styles.toolsChip} onClick={() => { setMenu(null); brainInfo.onToggleTools?.(); }} title="查看研究大脑可直接调度的证见工具矩阵">
+            <span className={styles.toolsDot} data-online={brainInfo.available ? 'true' : 'false'} aria-hidden="true" />
+            {brainInfo.toolsCount} 项工具
+          </button>
+        )}
         <span className={styles.spacer} />
         <span className={styles.chipSlot}>
-          <button type="button" className={styles.modelChip} aria-haspopup="menu" aria-expanded={menu === 'model'} onClick={() => toggle('model')}>
-            <Icon name="bolt" /><span className={styles.chipText}>{mode === 'model' ? (chatLabel ? `${chatLabel} · 对话` : '用模型对话') : '指令模式'}</span><Icon name="down" />
+          <button type="button" className={styles.modelChip} data-online={mode === 'model' && (chatLabel || brainInfo?.available) ? 'true' : 'false'} aria-haspopup="menu" aria-expanded={menu === 'model'} onClick={() => toggle('model')}>
+            <Icon name="bolt" /><span className={styles.chipText}>{mode === 'model' ? (chatLabel ? `${chatLabel} · 对话` : brainInfo?.available ? `${brainInfo.provider} · ${brainInfo.model}` : '用模型对话') : '指令模式'}</span><Icon name="down" />
           </button>
           {menu === 'model' && <div className={styles.menu} data-place="above" role="menu" aria-label="模型服务" aria-describedby="agent-model-note" style={{ right: 0 }}>
-            <p id="agent-model-note" className={styles.menuLabel} aria-hidden="true">当前对话</p>
-            {account !== 'ready' ? <Link role="menuitem" className={styles.menuItem} href="/login">登录后选择模型服务 ↗</Link> : <>
+            <p id="agent-model-note" className={styles.menuLabel} aria-hidden="true">研究大脑与模型引擎</p>
+            {account !== 'ready' ? <>
+              <div role="group" aria-label="对话方式">
+                <p className={styles.menuLabel} aria-hidden="true">对话方式</p>
+                {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '仅走本地规则与 / 命令' })}
+                {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: brainInfo?.available ? `${brainInfo.provider} · ${brainInfo.model}` : '需接入本会话密钥' })}
+              </div>
+              {brainInfo && <p className={styles.menuNote} aria-hidden="true">
+                {brainInfo.available
+                  ? `当前已就绪：${brainInfo.provider}（${brainInfo.model} · ${brainInfo.source === 'custom' ? '本会话密钥' : '环境直连'}），支持工具调度。`
+                  : '支持 DeepSeek / OpenAI / 千问 本会话 BYOK 密钥直连。'}
+              </p>}
+              {brainInfo?.onConfigureBrain && item('byok', brainInfo.source === 'custom' ? '调整或清除会话密钥…' : '配置会话推理密钥 / 切换模型…', () => { brainInfo.onConfigureBrain?.(); })}
+              <Link role="menuitem" className={styles.menuItem} href="/login">登录托管工作区 ↗</Link>
+              {item('manage', '查看全站模型分工 →', () => onOpen('services'))}
+            </> : <>
               <div role="group" aria-label="对话方式">
                 <p className={styles.menuLabel} aria-hidden="true">对话方式</p>
                 {item('command', '指令模式', () => onMode('command'), { checked: mode === 'command', note: '不调用模型' })}
-                {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : '需要「研究」能力' })}
+                {item('model', '用模型对话', () => onMode('model'), { checked: mode === 'model', note: chatLabel ? '先确认再发送' : brainInfo?.available ? `${brainInfo.provider} 工具直连` : '需要「研究」能力' })}
               </div>
               <div role="group" aria-label="当前对话模型">
                 {services.map(s => item(s.id, s.label, () => onService(s.id), { checked: s.id === serviceId, note: s.detail }))}
-                {!services.length && <p className={styles.menuNote}>先接入一个研究模型。</p>}
+                {!services.length && <p className={styles.menuNote}>尚未配置托管服务，可直接使用研究大脑直连或绑定 BYOK。</p>}
               </div>
+              {brainInfo?.onConfigureBrain && item('byok', brainInfo.source === 'custom' ? '调整或清除会话密钥…' : '本会话直连推理密钥…', () => { brainInfo.onConfigureBrain?.(); })}
               {item('manage', '模型设置与任务分工 →', () => onOpen('services'))}
             </>}
           </div>}

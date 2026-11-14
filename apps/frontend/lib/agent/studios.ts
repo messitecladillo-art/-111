@@ -29,8 +29,8 @@ const recommend = (link: AgentLink): AgentLink => ({ ...link, primary: true });
  */
 export function resolveActiveBlueprint(ctx: RouterContext, query = ''): DemoBlueprint {
   const cleanedQuery = query
-    .replace(/^\/?(?:国奖|铸造|标杆|绘图|画图|制图|编程|代码|撰稿|润色|备赛|教练)\s*/iu, '')
-    .replace(/^(?:五维|ipa|列联|卡方|帕累托|摘要|抽样|实证|对策|答辩)\s*/iu, '')
+    .replace(/^[/／]?(?:生成)?(?:国奖|铸造|标杆|教学模拟研究|全链条演示|绘图工坊|画图工坊|制图工坊|图表工坊|绘图|画图|制图|代码工坊|编程|代码|写作工坊|撰稿工坊|撰稿|润色|备赛路线|备赛|教练)\s*[·:：\-—]*\s*/iu, '')
+    .replace(/^(?:五维|ipa|列联|卡方|帕累托|摘要|抽样|实证|对策|答辩)\s*[·:：\-—]*\s*/iu, '')
     .trim();
   const designRoom = ctx.light.rooms.find(r => r.room === 'design');
   const rawDesignDetail = designRoom?.checks[0]?.detail ?? '';
@@ -604,9 +604,9 @@ export function buildDemoTurn(ctx: RouterContext, query = ''): AgentTurn {
         [t('结果变量', 'dim'), t(`${bp.overallSatConstruct} · ${bp.conversionConstruct}`, 'gold')],
       ],
       links: [
-        say('换一个题目：社区助餐', '/铸造 城市社区助餐服务的使用体验、满意度与持续使用意愿调查'),
-        say('换一个题目：大学生 AI 学习工具', '/铸造 大学生使用 AI 学习工具的体验、规范认知与持续使用意愿调查'),
-        say('换一个题目：城市文体活动', '/铸造 城市文体活动的现场体验、满意度与重游意愿调查'),
+        say('换一个题目：社区助餐', '教学模拟研究：城市社区助餐服务的使用体验、满意度与持续使用意愿调查'),
+        say('换一个题目：大学生 AI 学习工具', '教学模拟研究：大学生使用 AI 学习工具的体验、规范认知与持续使用意愿调查'),
+        say('换一个题目：城市文体活动', '教学模拟研究：城市文体活动的现场体验、满意度与重游意愿调查'),
       ],
     },
     {
@@ -646,10 +646,10 @@ export function buildDemoTurn(ctx: RouterContext, query = ''): AgentTurn {
     ],
     cards,
     chips: [
-      recommend(say('按当前选题看图表', `/绘图 ${bp.shortTitle}`)),
-      say('按当前选题看代码', `/编程 ${bp.shortTitle}`),
-      say('按当前选题看写作模板', `/撰稿 ${bp.shortTitle}`),
-      say('/备赛'),
+      recommend(say('按当前选题看图表', `打开图表工坊 · ${bp.shortTitle}`)),
+      say('按当前选题看代码', `打开代码工坊 · ${bp.shortTitle}`),
+      say('按当前选题看写作模板', `打开撰稿工坊 · ${bp.shortTitle}`),
+      say('查看备赛路线'),
     ],
   };
 }
@@ -661,15 +661,15 @@ export function buildCoachTurn(ctx: RouterContext, query = ''): AgentTurn {
   const aScore = roomLight(ctx.light, 'analysis')?.score ?? 0;
   const eScore = roomLight(ctx.light, 'editor')?.score ?? 0;
 
-  const stages: Array<{ code: string; name: string; done: boolean; standard: string; cmd: string }> = [
-    { code: 'Stage 01', name: '立题', done: dScore >= 0.5, standard: '从现实问题出发，写清研究问题、决策用途与可检验的问题', cmd: '/选题' },
-    { code: 'Stage 02', name: '问卷', done: dScore >= 0.999, standard: '每题对应构念与分析方法，量表方向一致，设置注意力检查题', cmd: '/问卷' },
-    { code: 'Stage 03', name: '抽样与预调查', done: sScore >= 0.66, standard: '样本量公式写明参数来源；有抽样框才谈设计效应；预调查校准题项', cmd: '/抽样' },
-    { code: 'Stage 04', name: '回收与清洗', done: sScore >= 0.999 && aScore >= 0.33, standard: '按注意力题、作答时长、直线作答与重复提交筛查，逐项报告剔除数与有效率', cmd: '/数据' },
-    { code: 'Stage 05', name: '统计分析', done: aScore >= 0.66, standard: '描述 → 信度 → 差异检验（名义变量用卡方）→ 关联与回归 → 分群，每步报告效应量', cmd: '/编程' },
-    { code: 'Stage 06', name: '图表', done: eScore >= 0.6 && (ctx.results?.placed.length ?? 0) >= 2, standard: '一图一结论，标注样本口径与来源，正文引用并解读', cmd: '/绘图' },
-    { code: 'Stage 07', name: '撰稿', done: aScore >= 0.999 && eScore >= 0.9, standard: '先结论后证据，数字来自登记结果，对策对应发现并写明执行主体与评估指标', cmd: '/撰稿' },
-    { code: 'Stage 08', name: '答辩', done: eScore >= 0.999, standard: '路演页与报告一致，预先准备样本代表性、方法选择与建议依据三类追问', cmd: '/答辩' },
+  const stages: Array<{ code: string; name: string; done: boolean; standard: string; action: AgentLink['action'] }> = [
+    { code: 'Stage 01', name: '立题', done: dScore >= 0.5, standard: '从现实问题出发，写清研究问题、决策用途与可检验的问题', action: { type: 'open', room: 'diagnose' } },
+    { code: 'Stage 02', name: '问卷', done: dScore >= 0.999, standard: '每题对应构念与分析方法，量表方向一致，设置注意力检查题', action: { type: 'open', room: 'design' } },
+    { code: 'Stage 03', name: '抽样与预调查', done: sScore >= 0.66, standard: '样本量公式写明参数来源；有抽样框才谈设计效应；预调查校准题项', action: { type: 'open', room: 'sampling' } },
+    { code: 'Stage 04', name: '回收与清洗', done: sScore >= 0.999 && aScore >= 0.33, standard: '按注意力题、作答时长、直线作答与重复提交筛查，逐项报告剔除数与有效率', action: { type: 'open', room: 'analysis' } },
+    { code: 'Stage 05', name: '统计分析', done: aScore >= 0.66, standard: '描述 → 信度 → 差异检验（名义变量用卡方）→ 关联与回归 → 分群，每步报告效应量', action: { type: 'say', text: '打开代码工坊' } },
+    { code: 'Stage 06', name: '图表', done: eScore >= 0.6 && (ctx.results?.placed.length ?? 0) >= 2, standard: '一图一结论，标注样本口径与来源，正文引用并解读', action: { type: 'say', text: '打开图表工坊' } },
+    { code: 'Stage 07', name: '撰稿', done: aScore >= 0.999 && eScore >= 0.9, standard: '先结论后证据，数字来自登记结果，对策对应发现并写明执行主体与评估指标', action: { type: 'say', text: '打开撰稿工坊' } },
+    { code: 'Stage 08', name: '答辩', done: eScore >= 0.999, standard: '路演页与报告一致，预先准备样本代表性、方法选择与建议依据三类追问', action: { type: 'open', room: 'defense' } },
   ];
 
   const firstPending = stages.find(s => !s.done) ?? stages[stages.length - 1];
@@ -695,19 +695,24 @@ export function buildCoachTurn(ctx: RouterContext, query = ''): AgentTurn {
         lines: stages.map(s => [
           t(s.done ? '● 已完成' : '○ 待推进', s.done ? 'gold' : 'teal'),
           t(`${s.code} ${s.name}`, 'strong'),
-          t(s.cmd, 'teal'),
           t(s.standard, 'dim'),
         ]),
         links: [
-          recommend(say(`下一步：${firstPending.name}`, firstPending.cmd)),
-          say('生成教学模拟研究', '/铸造'),
-          say('打开图表工坊', '/绘图'),
-          say('打开代码工坊', '/编程'),
-          say('打开撰稿工坊', '/撰稿'),
+          recommend({ label: `下一步：${firstPending.name}`, action: firstPending.action }),
+          say('生成教学模拟研究'),
+          say('打开图表工坊'),
+          say('打开代码工坊'),
+          say('打开撰稿工坊'),
         ],
       },
     ],
-    chips: [recommend(say('/铸造')), say('/绘图'), say('/编程'), say('/撰稿'), say('/印鉴')],
+    chips: [
+      recommend(say('生成教学模拟研究')),
+      say('打开图表工坊'),
+      say('打开代码工坊'),
+      say('打开撰稿工坊'),
+      say('查验循证印鉴'),
+    ],
   };
 }
 
@@ -718,10 +723,14 @@ export function buildChartStudioTurn(ctx: RouterContext, query = ''): AgentTurn 
     lines: [
       studio.datasets.length
         ? [t('已打开'), t('图表工坊', 'strong'), t(`：${studio.datasets.length} 项已登记结果可画成图，可切换图型与配色、编辑标签，导出 SVG 或写入报告。`)]
-        : [t('图表工坊里还没有可画的结果：先在数据分析里运行并登记结果，或用 '), t('/铸造', 'teal'), t(' 生成一套教学模拟研究。')],
+        : [t('图表工坊里还没有可画的结果：先在数据分析里运行并登记结果，或点击下方生成一套教学模拟研究。')],
     ],
     cards: [{ kind: 'chart-studio', title: `图表工坊 · 《${bp.shortTitle}》`, studio }],
-    chips: [recommend(say('打开代码工坊', `/编程 ${bp.shortTitle}`)), say('打开撰稿工坊', `/撰稿 ${bp.shortTitle}`), say('/铸造')],
+    chips: [
+      recommend(say('打开代码工坊', `打开代码工坊 · ${bp.shortTitle}`)),
+      say('打开撰稿工坊', `打开撰稿工坊 · ${bp.shortTitle}`),
+      say('生成教学模拟研究'),
+    ],
   };
 }
 
@@ -739,7 +748,11 @@ export function buildCodeStudioTurn(ctx: RouterContext, query = ''): AgentTurn {
       ],
     ],
     cards: [{ kind: 'code-studio', title: `代码工坊 · 《${bp.shortTitle}》`, studio }],
-    chips: [recommend(say('打开撰稿工坊', `/撰稿 ${bp.shortTitle}`)), say('打开图表工坊', `/绘图 ${bp.shortTitle}`), say('/铸造')],
+    chips: [
+      recommend(say('打开撰稿工坊', `打开撰稿工坊 · ${bp.shortTitle}`)),
+      say('打开图表工坊', `打开图表工坊 · ${bp.shortTitle}`),
+      say('生成教学模拟研究'),
+    ],
   };
 }
 
@@ -751,13 +764,17 @@ export function buildWritingStudioTurn(ctx: RouterContext, query = ''): AgentTur
       [
         t('已打开'),
         t('撰稿工坊', 'strong'),
-        t('：五个章节模板，【】处由你填写；'),
-        t(studio.facts.length ? `${studio.facts.length} 条已登记结果` : '登记结果后', 'gold'),
-        t(studio.facts.length ? '可一键注入，' : '可一键注入事实，'),
-        t('写完做一次合规体检（数字来源、因果措辞、套话、执行主体与边界）。'),
+        t('：五个核心章节支持调用已接入的大模型按登记事实智能起草，也可手动填充模板并注入 '),
+        t(studio.facts.length ? `${studio.facts.length} 条已登记结果` : '登记后的事实', 'gold'),
+        t('，完成后即时进行学术合规体检。'),
       ],
     ],
     cards: [{ kind: 'writing-studio', title: `撰稿工坊 · 《${bp.shortTitle}》`, studio }],
-    chips: [recommend(say('查看报告进度', '/写报告')), say('打开图表工坊', `/绘图 ${bp.shortTitle}`), say('打开代码工坊', `/编程 ${bp.shortTitle}`), say('/铸造')],
+    chips: [
+      recommend(say('查看报告进度')),
+      say('打开图表工坊', `打开图表工坊 · ${bp.shortTitle}`),
+      say('打开代码工坊', `打开代码工坊 · ${bp.shortTitle}`),
+      say('生成教学模拟研究'),
+    ],
   };
 }

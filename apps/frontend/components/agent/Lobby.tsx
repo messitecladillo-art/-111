@@ -7,6 +7,7 @@ import { roomLight, type Illumination, type ProjectView } from '@/lib/agent/illu
 import { roomById, type RoomId } from '@/lib/agent/rooms';
 import { questionIsMapped, questionnaireIssues } from '@/lib/questionnaire';
 import { LightBar } from './Glyphs';
+import AnatomyStageCard from '@/components/figures/report-workstation/AnatomyStageCard';
 import styles from './AgentShell.module.css';
 
 /** The research path drawn as a house plan: left to right, down, and back, so it reads as one corridor. */
@@ -35,6 +36,16 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
       <h1 ref={headingRef} tabIndex={-1}>每一个数字，都有来处。</h1>
       <p>证据是光，盲区是光到不了的地方。这里的每一格光，都来自项目里真实的问卷、数据与报告。</p>
     </header>
+
+    <div style={{ marginBottom: 20 }}>
+      <AnatomyStageCard
+        overallScore={light.overall}
+        blindCount={light.blind.length}
+        litCount={light.rooms.filter(r => r.score > 0).length}
+        totalRooms={light.rooms.length}
+        defaultKind="analysis"
+      />
+    </div>
 
     <section className={styles.section} aria-labelledby="lobby-map">
       <div className={styles.sectionHead}><h2 id="lobby-map">照度图</h2><span>整体照度 <b>{percent(light.overall)}</b> · 盲区 <b>{light.blind.length}</b></span></div>
@@ -112,7 +123,7 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
         </div>
       </div>
       <p className={styles.traceRow}>
-        {traces ? <><button type="button" className={`${styles.go} ${styles.goGold}`} onClick={() => onSay('/来处')}>◀── 沿光路回溯 {traces} 个图表</button><span>每个来自登记结果的图表，都能沿光路回到数据文件与题目。</span></>
+        {traces ? <><button type="button" className={`${styles.go} ${styles.goGold}`} onClick={() => onSay('沿光路回溯图表来处')}>◀── 沿光路回溯 {traces} 个图表</button><span>每个来自登记结果的图表，都能沿光路回到数据文件与题目。</span></>
           : <span>报告里还没有来自登记结果的图表；有了之后，这里可以沿光路回溯它们的来处。</span>}
       </p>
     </section>

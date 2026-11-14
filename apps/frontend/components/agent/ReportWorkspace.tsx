@@ -52,6 +52,7 @@ export function ReportNav({
   picked,
   onPick,
   onSay,
+  onDraftSection,
   onStartFullReport,
   liveWriting,
 }: {
@@ -59,6 +60,7 @@ export function ReportNav({
   picked: string | null;
   onPick: (id: string) => void;
   onSay: (text: string) => void;
+  onDraftSection?: (sectionTitle: string) => void;
   onStartFullReport?: (topic?: string) => void;
   liveWriting?: LiveWritingStatus | null;
 }) {
@@ -95,7 +97,7 @@ export function ReportNav({
           type="button"
           data-primary="true"
           disabled={liveWriting?.active}
-          onClick={() => (onStartFullReport ? onStartFullReport() : onSay('/全报告'))}
+          onClick={() => (onStartFullReport ? onStartFullReport() : onSay('一键生成完整报告'))}
           title="先核对研究模式、模型与资料范围，再生成独立候选稿"
         >
           <Icon name="spark" />
@@ -104,21 +106,21 @@ export function ReportNav({
         <button
           type="button"
           disabled={!draftable}
-          onClick={() => section && onSay(`/起草 ${section.title}`)}
+          onClick={() => section && (onDraftSection ? onDraftSection(section.title) : onSay(`起草「${section.title}」`))}
           title={draftable ? `用你的模型服务起草「${section!.title}」` : '先在纸面或目录里选一节'}
         >
           <Icon name="edit" />
           起草本节{section && draftable ? <small>{section.title}</small> : null}
         </button>
-        <button type="button" onClick={() => onSay('/写入')}>
+        <button type="button" onClick={() => onSay('把结果写进报告')}>
           <Icon name="plus" />
           把登记结果写进报告
         </button>
-        <button type="button" onClick={() => onSay('/写报告')}>
+        <button type="button" onClick={() => onSay('查看报告进度')}>
           <Icon name="book" />
           报告写到哪了
         </button>
-        <button type="button" onClick={() => onSay('/盲区 报告')}>
+        <button type="button" onClick={() => onSay('报告还缺什么')}>
           <Icon name="lamp" />
           报告还缺什么
         </button>
@@ -137,6 +139,7 @@ export function ReportInspector({
   benchmark,
   advisors,
   onSay,
+  onDraftSection,
   onEdit,
   onAdvisors,
   revision,
@@ -147,6 +150,7 @@ export function ReportInspector({
   benchmark: BenchmarkResult | null;
   advisors: AdvisorReading[];
   onSay: (text: string) => void;
+  onDraftSection?: (sectionTitle: string) => void;
   onEdit: () => void;
   onAdvisors: () => void;
   revision?: ReactNode;
@@ -187,7 +191,7 @@ export function ReportInspector({
                 {exhibits(section) ? ` · ${exhibits(section)} 个图、表或公式` : ''}
               </span>
               {outlineKind(section.title) !== 'chapter' && reportPart(section.title) !== 'references' && (
-                <button type="button" data-primary="true" onClick={() => onSay(`/起草 ${section.title}`)}>
+                <button type="button" data-primary="true" onClick={() => (onDraftSection ? onDraftSection(section.title) : onSay(`起草「${section.title}」`))}>
                   起草这一节
                 </button>
               )}

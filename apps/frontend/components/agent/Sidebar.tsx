@@ -44,6 +44,7 @@ type Props = {
   onOpenStudio?: (tab: StudioTabId | null) => void;
   studioContent?: ReactNode;
   steeringCount?: number;
+  brainStatus?: { available: boolean; provider: string; model: string; source: 'env' | 'custom' | 'offline' };
 };
 
 /** Where a conversation's words hold what is searched for: a few words either side of the first place. */
@@ -64,7 +65,7 @@ function excerpt(thread: Thread, wanted: string): string | null {
  * them, then the rest by recency. Search reads titles and what was said. A conversation can be renamed in place;
  * deleting asks once more in place and removes the conversation only, never project work.
  */
-export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout, nav, activeStudio = null, onOpenStudio, studioContent, steeringCount = 0 }: Props) {
+export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout, nav, activeStudio = null, onOpenStudio, studioContent, steeringCount = 0, brainStatus }: Props) {
   const [menu, setMenu] = useState(false);
   const [allOutputs, setAllOutputs] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -136,35 +137,34 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
     {searching && <input className={styles.sideSearch} autoFocus value={query} placeholder="搜索对话标题与内容" aria-label="搜索对话标题与内容" onChange={event => setQuery(event.target.value)} />}
     <nav className={styles.sideScroll} aria-label={nav ? "报告" : "对话"}>
       {onOpenStudio && !activeStudio && (
-        <section className={styles.studioDock} aria-label="Agent 核心创作工坊">
-          <div className={styles.studioDockHead}>
-            <span>创作工坊</span>
-            <small>{steeringCount > 0 ? `${steeringCount}条指令` : '4 组核心能力'}</small>
-          </div>
-          <div className={styles.studioPillGrid}>
-            {STUDIO_HUBS.map(hub => {
-              const active = activeStudio ? hubForTab(activeStudio).id === hub.id : false;
-              return (
-                <button
-                  key={hub.id}
-                  type="button"
-                  className={styles.studioPill}
-                  aria-pressed={active}
-                  onClick={() => onOpenStudio(active ? null : hub.defaultTab)}
-                  title={hub.label}
-                >
-                  <span>{hub.icon}</span>
-                  <span>{hub.short}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <details className={styles.sideGroup}>
+          <summary>创作工坊 <small>{steeringCount > 0 ? `${steeringCount} 条指令` : '按需呼出'}</small><Icon name="down" /></summary>
+          <section className={styles.studioDock} aria-label="Agent 核心创作工坊">
+            <div className={styles.studioPillGrid}>
+              {STUDIO_HUBS.map(hub => {
+                const active = activeStudio ? hubForTab(activeStudio).id === hub.id : false;
+                return (
+                  <button
+                    key={hub.id}
+                    type="button"
+                    className={styles.studioPill}
+                    aria-pressed={active}
+                    onClick={() => onOpenStudio(active ? null : hub.defaultTab)}
+                    title={hub.label}
+                  >
+                    <span>{hub.icon}</span>
+                    <span>{hub.short}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </details>
       )}
       {activeStudio && studioContent ? studioContent : (nav ?? <>
       <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}><Icon name="edit" />新对话</button>
       {!wanted && <>
-        <details className={styles.sideGroup} open>
+        <details className={styles.sideGroup}>
         <summary>研究进度 <Icon name="down" /></summary>
         <ol className={styles.stages}>
           {stages.map(stage => {
@@ -227,7 +227,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
           <Icon name="more" />
         </button>
       </div> : <>
-        <span>{account === 'loading' ? '正在核对登录…' : '未登录 · 对话只留在本标签页'}</span>
+        <span>{account === 'loading' ? '正在核对登录…' : brainStatus?.available ? `${brainStatus.provider} 直连 · 对话存本页` : '未登录 · 对话只留在本标签页'}</span>
         <span className={styles.spacer} />
         {account === 'guest' ? <Link href="/login">登录</Link> : <button type="button" onClick={onRetry}>重试连接</button>}
       </>}

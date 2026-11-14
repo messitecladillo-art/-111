@@ -185,3 +185,57 @@ def test_writing_results_into_the_report_is_a_tool_the_browser_confirms_first():
     raw = json.dumps({"reply": "我把结果写进报告。", "actions": [{"tool": "place", "args": {}}, {"tool": "place", "args": {"all": True}}]}, ensure_ascii=False)
     assert chat.parse_reply(raw) == {"reply": "我把结果写进报告。", "droppedActions": 1, "actions": [{"tool": "place", "args": {}}]}
     assert "place（" in chat.agent_prompt(request()) and "place" not in chat.RESULT_TOOLS
+
+
+def test_orchestrator_tools_validate_stage_studio_draft_section_report_and_simulate():
+    first = chat.parse_reply(
+        json.dumps(
+            {
+                "reply": "已为你调出成文页和图表工坊。",
+                "actions": [
+                    {"tool": "stage", "args": {"view": "paper"}},
+                    {"tool": "studio", "args": {"kind": "chart"}},
+                    {"tool": "draft_section", "args": {"node": "摘要"}},
+                ],
+            },
+            ensure_ascii=False,
+        )
+    )
+    assert first["droppedActions"] == 0
+    assert first["actions"] == [
+        {"tool": "stage", "args": {"view": "paper"}},
+        {"tool": "studio", "args": {"kind": "chart"}},
+        {"tool": "draft_section", "args": {"node": "摘要"}},
+    ]
+
+    second = chat.parse_reply(
+        json.dumps(
+            {
+                "reply": "一键生成完整报告并启动模拟研究。",
+                "actions": [
+                    {"tool": "generate_report", "args": {"topic": "社区助餐服务"}},
+                    {"tool": "simulate", "args": {}},
+                ],
+            },
+            ensure_ascii=False,
+        )
+    )
+    assert second["droppedActions"] == 0
+    assert second["actions"] == [
+        {"tool": "generate_report", "args": {"topic": "社区助餐服务"}},
+        {"tool": "simulate", "args": {}},
+    ]
+
+    bad = json.dumps(
+        {
+            "reply": "无效参数会被丢弃。",
+            "actions": [
+                {"tool": "stage", "args": {"view": "invalid"}},
+                {"tool": "studio", "args": {"kind": "unknown"}},
+                {"tool": "draft_section", "args": {}},
+            ],
+        },
+        ensure_ascii=False,
+    )
+    assert chat.parse_reply(bad) == {"reply": "无效参数会被丢弃。", "actions": [], "droppedActions": 3}
+

@@ -203,4 +203,10 @@ test('the full-report pipeline writes up the computed simulation, and its AI app
   const rFull = route('/全报告 社区助餐服务调研', { room: null, light: illuminate({ design: null, dataset: null, report: null, resultPending: false }) });
   assert.ok('turn' in rFull && rFull.turn.chips?.some(c => c.action.type === 'generateFullReport'));
   assert.ok(!BORROWED.test(JSON.stringify(rFull.turn)) && !/641|26 节/u.test(JSON.stringify(rFull.turn.cards)));
+
+  for (const cmd of ['生成教学模拟研究', '备赛路线', '打开图表工坊', '打开代码工坊', '打开撰稿工坊']) {
+    const turn = route(cmd, { room: null, light: illuminate({ design: null, dataset: null, report: null, resultPending: false }) }).turn;
+    const serialized = JSON.stringify({ cards: turn.cards, chips: turn.chips });
+    assert.equal(/\/(?:铸造|备赛|绘图|编程|撰稿|印鉴|选题|写报告|结果|写入|模型|报告|帮助)\b/u.test(serialized), false, `${cmd} exposes no raw slash hints in UI surfaces`);
+  }
 });
