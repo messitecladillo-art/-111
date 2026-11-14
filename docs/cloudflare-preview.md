@@ -35,4 +35,12 @@ npm run deploy:cloudflare:preview --workspace evi-x-zhengda-champion-platform
 
 每次发布记录源码提交、Worker版本和实际网址，并检查页面、脚本、图片、知识资源、案例接口、诊断接口及托管API的明确拒绝。不能用构建成功代替线上检查，也不能把该版本称为完整云端研究系统。
 
+发布后运行实际页面资源检查，再用浏览器检查显示与交互：
+
+```powershell
+npm run check:cloudflare:preview --workspace evi-x-zhengda-champion-platform -- https://evix-research-preview.messitecladillo.workers.dev
+```
+
+该检查从六个页面提取真实样式与脚本链接，要求全部返回正确类型的非空文件，并核对后端未接通提示。`run_worker_first` 开启时，`/_next/static/` 必须由入口显式交给 `ASSETS`；否则 HTML 可以返回 200，但页面会失去样式和交互。未知静态文件保留 404，不能回退为 HTML。
+
 接入正式后端须另批配置HTTPS来源、受限数据库、实际邮件、密钥保管、Cookie、撤权、预算回执和备份恢复；不得直接把API转发改成本地测试地址。当前Worker白名单默认阻止这类接入，需显式改造并验收。

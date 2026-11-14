@@ -15,6 +15,7 @@
     "start": "node scripts/start-hosted.mjs",
     "build:cloudflare:preview": "npm run prebuild && vite build --config vite.cloudflare.config.ts && node scripts/check-cloud-bundle-isolation.mjs && next typegen",
     "preview:cloudflare": "wrangler dev --config dist/server/wrangler.json --ip 127.0.0.1 --port 3199",
+    "check:cloudflare:preview": "node scripts/check-cloudflare-preview.mjs",
     "deploy:cloudflare:preview": "npm run build:cloudflare:preview && wrangler deploy --config dist/server/wrangler.json",
     "test": "npm run test:unit && npm run typecheck && npm run build",
     "test:diagnosis": "node --experimental-strip-types --test tests/diagnosis-actions.test.mjs",

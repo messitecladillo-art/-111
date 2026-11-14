@@ -58,3 +58,45 @@ test('malformed encoded paths fail without reaching application code', async () 
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error.code, 'invalid_path');
 });
+
+test('generated browser assets are served by ASSETS before the application router', async () => {
+  const seen = [];
+  const worker = createCloudflarePreview({ fetch() { throw Error('compiled assets must bypass application routing'); } });
+  const env = { ASSETS: { fetch(request) {
+    seen.push(request);
+    const css = new URL(request.url).pathname.endsWith('.css');
+    return new Response(request.method === 'HEAD' ? null : css ? 'body{color:red}' : 'export{}', {
+      headers: { 'Content-Type': css ? 'text/css' : 'text/javascript', 'Cache-Control': 'public, max-age=31536000, immutable' },
+    });
+  } } };
+  for (const [path, method, mime] of [
+    ['/_next/static/css/main.hash.css', 'GET', 'text/css'],
+    ['/_next/static/chunks/page.hash.js', 'GET', 'text/javascript'],
+    ['/_next/static/media/font.hash.woff2', 'HEAD', 'text/javascript'],
+  ]) {
+    const request = new Request(origin + path, { method });
+    const response = await worker.fetch(request, env, {});
+    assert.strictEqual(seen.at(-1), request);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), mime);
+    assert.match(response.headers.get('cache-control'), /immutable/);
+    assert.equal(response.headers.get('x-evix-deployment-scope'), 'frontend-preview');
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    if (method === 'HEAD') assert.equal(await response.text(), '');
+  }
+});
+
+test('missing compiled assets stay 404 and mutating requests cannot reach asset storage', async () => {
+  let assetCalls = 0;
+  const env = { ASSETS: { fetch() { assetCalls++; return new Response('Not Found', { status: 404 }); } } };
+  const worker = createCloudflarePreview({ fetch() { throw Error('must not render HTML for generated assets'); } });
+  const missing = await worker.fetch(new Request(origin + '/_next/static/chunks/missing.js'), env, {});
+  assert.equal(missing.status, 404);
+  assert.equal(await missing.text(), 'Not Found');
+  for (const method of ['POST', 'PUT', 'DELETE']) {
+    const response = await worker.fetch(new Request(origin + '/_next/static/css/main.css', { method }), env, {});
+    assert.equal(response.status, 405);
+    assert.equal(response.headers.get('allow'), 'GET, HEAD');
+  }
+  assert.equal(assetCalls, 1);
+});

@@ -3,6 +3,10 @@ export type PreviewHandler<Environment, Context> = {
   fetch(request: Request, env: Environment, context: Context): Response | Promise<Response>;
 };
 
+type PreviewAssets = {
+  ASSETS?: { fetch(request: Request): Response | Promise<Response> };
+};
+
 const LOCAL_API_PATHS = new Set([
   '/api/cases',
   '/api/rules',
@@ -33,7 +37,7 @@ function securityHeaders(response: Response, pathname: string): Response {
 }
 
 /** No backend or provider request is made for a refused preview API route. */
-export function createCloudflarePreview<Environment, Context>(handler: PreviewHandler<Environment, Context>): PreviewHandler<Environment, Context> {
+export function createCloudflarePreview<Environment extends PreviewAssets, Context>(handler: PreviewHandler<Environment, Context>): PreviewHandler<Environment, Context> {
   return {
     async fetch(request, env, context) {
       const pathname = new URL(request.url).pathname;
@@ -52,6 +56,14 @@ export function createCloudflarePreview<Environment, Context>(handler: PreviewHa
           },
           deploymentScope: 'frontend-preview',
         }, { status: 503, headers: { 'Cache-Control': 'no-store' } }), pathname);
+      }
+      // run_worker_first sends compiled CSS/JS here too. vinext only falls
+      // back to ASSETS for declared public files, not its generated bundles.
+      if (pathname === decodedPath && pathname.startsWith('/_next/static/') && env.ASSETS) {
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+          return securityHeaders(new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } }), pathname);
+        }
+        return securityHeaders(await env.ASSETS.fetch(request), pathname);
       }
       return securityHeaders(await handler.fetch(request, env, context), pathname);
     },
