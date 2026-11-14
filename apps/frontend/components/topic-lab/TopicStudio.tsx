@@ -5,6 +5,12 @@ import { esc, exportSvgElement, exportSvgString, stamp as today } from './export
 import ChoiceGroup from '@/components/ChoiceGroup';
 import type { Theme } from '@/components/workbench/shell-kit';
 import { awardCases, awardCaseLibraryNotice } from '@/data/award-cases';
+import {
+  TOPICS_2027_POOL,
+  TOPIC_THEMES_2027,
+  type TopicPoolItem2027,
+  type TopicTheme2027,
+} from '@/data/zhengda-corpus-2015-2027';
 import type { Burst } from '@/lib/topic-lab/burst';
 import { EMPTY_FEASIBILITY, STATUS_LABELS, evaluateTopic, gapCandidates, matchTitleTerms, risingTerms, type Feasibility, type Status, type TopicEvaluation } from '@/lib/topic-lab/evaluate';
 import type { TermMap } from '@/lib/topic-lab/network';
@@ -35,6 +41,11 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
   const pivots = useMemo(() => map.nodes.filter(n => n.centrality >= PIVOT).sort((a, b) => b.centrality - a.centrality).slice(0, 10), [map]);
   const [showGaps, setShowGaps] = useState(8);
   const [openGap, setOpenGap] = useState<number | null>(null);
+  const [theme2027Filter, setTheme2027Filter] = useState<'all' | TopicTheme2027>('all');
+  const filtered2027Topics = useMemo(
+    () => (theme2027Filter === 'all' ? TOPICS_2027_POOL : TOPICS_2027_POOL.filter(t => t.theme === theme2027Filter)),
+    [theme2027Filter],
+  );
 
   const [title, setTitle] = useState('');
   const [terms, setTerms] = useState<string[]>([]);
@@ -56,6 +67,17 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
     setResult({ ev, stamp }); setCopied('');
   };
   const draftFrom = (keys: string[]) => { setTerms(keys); if (!title.trim()) setTitle(keys.map(label).join(' × ')); document.getElementById('tl-candidate')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const apply2027Topic = (item: TopicPoolItem2027) => {
+    const detected = matchTitleTerms(index, item.title, synonyms);
+    const constructKeys = item.coreConstructs.map(c => synonyms.get(termKey(c)) ?? termKey(c)).filter(Boolean);
+    setTitle(item.title);
+    setTerms([...new Set([...constructKeys, ...detected])]);
+    setFeas(prev => ({
+      ...prev,
+      decisionOwner: prev.decisionOwner.trim() ? prev.decisionOwner : `${item.sampleTarget}相关决策方`,
+    }));
+    document.getElementById('tl-candidate')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const exportTree = (ev: TopicEvaluation) => {
     const svg = treeRef.current; if (!svg) return;
@@ -99,6 +121,43 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
         {basket.length > 0 && <ul className={styles.chips}>{basket.map(k => <li key={k}><span>{label(k)}<small>{index.terms.get(k)?.df ?? 0}</small></span><button type="button" onClick={() => setBasket(basket.filter(x => x !== k))} aria-label={`移出 ${label(k)}`}>×</button></li>)}</ul>}
         {basket.length > 0 && <button type="button" className={styles.secondaryButton} onClick={() => draftFrom(basket)}>用选题篮起草候选题目</button>}
       </div>
+
+      <article className={styles.inspireBlock}>
+        <header>
+          <h4>2027 正大杯 50 大高潜选题池</h4>
+          <span className={styles.badge}>五大前沿赛道 · {filtered2027Topics.length}/{TOPICS_2027_POOL.length}</span>
+        </header>
+        <p className={styles.muted}>按五大年度主题筛选高潜实证题目与推荐统计模型，一键代入右侧候选评估区。</p>
+        <div className={styles.rowActions} style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+          <button type="button" className={theme2027Filter === 'all' ? styles.secondaryButton : styles.linkButton} onClick={() => setTheme2027Filter('all')}>
+            全部 ({TOPICS_2027_POOL.length})
+          </button>
+          {TOPIC_THEMES_2027.map(th => (
+            <button
+              key={th}
+              type="button"
+              className={theme2027Filter === th ? styles.secondaryButton : styles.linkButton}
+              onClick={() => setTheme2027Filter(th)}
+            >
+              {th}
+            </button>
+          ))}
+        </div>
+        <ol className={styles.gapList} style={{ maxHeight: 320, overflowY: 'auto', paddingRight: 4 }}>
+          {filtered2027Topics.map(item => (
+            <li key={item.id}>
+              <div className={styles.gapHead}>
+                <span className={styles.gapTerms}><b>#{item.id}</b> {item.title}</span>
+                <span className={styles.badge}>{item.categoryTag}</span>
+              </div>
+              <p className={styles.gapStats}>方法建议：{item.methodDesign} · 目标样本：{item.sampleTarget}</p>
+              <div className={styles.rowActions}>
+                <button type="button" className={styles.linkButton} onClick={() => apply2027Topic(item)}>代入此选题评估</button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </article>
 
       <article className={styles.inspireBlock}>
         <header><h4>研究空白候选</h4><span className={styles.rowActions}><span className={styles.badge}>Fisher 精确检验 · BH 校正</span>{gaps.candidates.length > 0 && <ExportButton onExport={exportGaps} />}</span></header>

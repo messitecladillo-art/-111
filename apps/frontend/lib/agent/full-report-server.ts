@@ -76,7 +76,7 @@ export function createFullReportHandler(options:Options={}){
         return {content:receipt.content,...(valid?{usage:{prompt:usage!.inputTokens as number,completion:usage!.outputTokens as number,total:(usage!.inputTokens as number)+(usage!.outputTokens as number)}}:{})};
       };
       const run=async()=>{
-        const result=await (options.generate??generateFullReportWithAgent)({topic:input.topic,mode:input.mode,base:input.base,sectionNodes:input.sectionNodes,project,signal,concurrency:Math.min(input.concurrency??3,typeof preflight.maxConcurrency==='number'?Math.max(1,preflight.maxConcurrency):3),sectionGenerator,onProgress:event=>{if(event.phase==='done')return;send({type:event.phase==='contract'?'init':event.phase==='repair'?'repair':'section',...event});}});
+        const result=await (options.generate??generateFullReportWithAgent)({topic:input.topic,mode:input.mode,base:input.base,sectionNodes:input.sectionNodes,steeringNotes:input.steeringNotes,project,signal,concurrency:Math.min(input.concurrency??3,typeof preflight.maxConcurrency==='number'?Math.max(1,preflight.maxConcurrency):3),sectionGenerator,onProgress:event=>{if(event.phase==='done')return;send({type:event.phase==='contract'?'init':event.phase==='repair'?'repair':'section',...event});}});
         signal.throwIfAborted();
         if(preflight.providerMode==='fixture'){
           result.quality.checks.push({id:'provider_fixture',label:'模型服务模式',status:'warning',detail:'本轮使用合成服务回执，仅用于验证流程，未完成真实模型生成验收。'});

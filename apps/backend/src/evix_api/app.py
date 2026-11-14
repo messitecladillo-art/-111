@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from evix_api.runtime import create_runtime
 from evix_api.dependencies import create_dependencies
 from evix_api.errors import install_handlers
+from evix_api.security import install_security_middleware
 from multi_agent.workflow import WorkflowEngine
 from multi_agent.workflow.langgraph_runner import LangGraphRunner
 from evix_api.routes import system, auth, teams, projects, model_services, questionnaires, proposals, survey_runs, uploads, knowledge, topics, topic_agent, topic_projects, surveys, reports, latex, agent_tasks, agent_chat, full_report_section
@@ -38,4 +39,5 @@ def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_c
     agent_tasks.register_routes(app, db=deps.db, auth=deps.auth, owned_project=deps.owned_project,
         session_user=deps.session_user, owned_service=deps.owned_service,
         model_runtime={'settings': settings, 'provider': runtime.generator} if workflow_handlers is None else None)
+    install_security_middleware(app, settings)
     return app

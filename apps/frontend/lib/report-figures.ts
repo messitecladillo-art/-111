@@ -10,6 +10,7 @@
 import type { CustomSeriesOption, EChartsOption, SeriesOption } from 'echarts';
 import type { ResultSnapshot } from './research-quality.ts';
 import { assertTrueVector } from './svg-safety.ts';
+import { diagramSnapshotSVG, isDiagramMethod } from './diagram-figures.ts';
 import { canChart, methodFigure } from './method-figures.ts';
 import type { FigureInk } from './figure-palette.ts';
 import { categoryOrder, crosstabOrder, groupRows } from './report-tables.ts';
@@ -97,9 +98,17 @@ type Label = { value: unknown };
 function bars(labels: string[], values: number[], header: string, accent: string): FigurePlan {
   const horizontal = labels.length > 7 || Math.max(...labels.map(width)) > 12;
   const percent = isPercent(header), integer = values.every(Number.isInteger);
+  const finite = values.filter(Number.isFinite);
+  const avg = finite.length ? finite.reduce((s, v) => s + v, 0) / finite.length : 0;
+  const hasSpread = finite.length >= 3 && Math.max(...finite) > Math.min(...finite);
+  const radius = horizontal ? [0, 5, 5, 0] : [5, 5, 0, 0];
   const series: SeriesOption = {
-    type: 'bar', data: values, barMaxWidth: horizontal ? 30 : 60, barCategoryGap: '40%', itemStyle: { color: accent },
+    type: 'bar', data: values, barMaxWidth: horizontal ? 30 : 60, barCategoryGap: '38%',
+    showBackground: true,
+    backgroundStyle: { color: '#F1F5F9', borderRadius: radius },
+    itemStyle: { color: accent, borderRadius: radius },
     label: { show: true, position: horizontal ? 'right' : 'top', ...small, formatter: (p: Label) => format(Number(p.value), percent, integer) },
+    ...(hasSpread ? { markLine: { silent: true, symbol: 'none', lineStyle: { color: '#94A3B8', type: 'dashed', width: 1.5 }, label: { show: false }, data: [horizontal ? { xAxis: avg } : { yAxis: avg }] } } : {}),
   };
   return horizontal
     ? { kind: 'barsHorizontal', height: rowsHeight(labels.length, 46, 110), option: { ...base(), grid: grid({ right: 96 }), xAxis: valueAxis(axisName(header), lowerTitle), yAxis: categoryAxis(labels, true), series: [series] } }
@@ -108,14 +117,15 @@ function bars(labels: string[], values: number[], header: string, accent: string
 
 /** A composition of two to four answers: a ring in shades of the accent, with the sample size at its centre. */
 function ring(labels: string[], values: number[], shares: number[], total: number, ordinal: boolean, ink: FigureInk): FigurePlan {
-  const height = 420, colors = categoryColors(ink, labels.length, ordinal);
+  const height = 430, colors = categoryColors(ink, labels.length, ordinal);
+  const formatCount = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(1));
   return { kind: 'ring', height, option: {
     ...base(), color: colors,
     series: [{
-      type: 'pie', radius: ['40%', '64%'], center: ['50%', '52%'], startAngle: 90, avoidLabelOverlap: true,
-      itemStyle: { borderColor: '#FFFFFF', borderWidth: 3 },
-      label: { show: true, ...small, lineHeight: 28, formatter: (p: { dataIndex: number }) => `${labels[p.dataIndex]}\n${shares[p.dataIndex].toFixed(1)}%` },
-      labelLine: { show: true, length: 16, length2: 24, lineStyle: { color: AXIS } },
+      type: 'pie', radius: ['42%', '67%'], center: ['50%', '52%'], startAngle: 90, avoidLabelOverlap: true,
+      itemStyle: { borderColor: '#FFFFFF', borderWidth: 3, borderRadius: 4 },
+      label: { show: true, ...small, lineHeight: 28, formatter: (p: { dataIndex: number }) => `${labels[p.dataIndex]}\n${shares[p.dataIndex].toFixed(1)}% (${formatCount(values[p.dataIndex])})` },
+      labelLine: { show: true, length: 18, length2: 26, lineStyle: { color: AXIS } },
       data: labels.map((name, i) => ({ name, value: values[i] })),
     }],
     graphic: [{ type: 'text', x: FIGURE_WIDTH / 2, y: height * 0.52, style: { text: `{n|n} = ${total}`, rich: { n: { fill: INK, fontSize: 24, fontFamily: FONT, fontStyle: 'italic' } }, fill: INK, fontSize: 24, fontFamily: FONT, align: 'center', verticalAlign: 'middle' } }],
@@ -123,13 +133,19 @@ function ring(labels: string[], values: number[], shares: number[], total: numbe
 }
 
 function frequency(r: ResultSnapshot, column: number, ink: FigureInk): FigurePlan {
-  const at = new Map(r.rows.map(row => [String(row[0]), numeric(row[column])!]));
+  const hasCounts = r.rows.every(row => numeric(row[1]) !== null);
+  const readColumn = column === 2 && hasCounts ? 1 : column;
+  const at = new Map(r.rows.map(row => [String(row[0]), numeric(row[readColumn])!]));
+  const shareAt = column === 2 && hasCounts ? new Map(r.rows.map(row => [String(row[0]), numeric(row[2])])) : null;
   const order = at.size === r.rows.length ? categoryOrder([...at.keys()]) : { labels: r.rows.map(row => String(row[0])), ordinal: false };
   const values = order.labels.map(label => at.get(label)!), sum = values.reduce((a, b) => a + b, 0);
   const counts = r.rows.reduce((a, row) => a + (numeric(row[1]) ?? 0), 0);
-  if (order.labels.length >= 2 && order.labels.length <= 4 && (column === 1 || column === 2) && sum > 0 && values.every(v => v >= 0))
-    return ring(order.labels, values, values.map(v => v / sum * 100), counts, order.ordinal, ink);
-  return bars(order.labels, values, r.headers[column], inkPrimary(ink));
+  if (order.labels.length >= 2 && order.labels.length <= 4 && (column === 1 || column === 2) && sum > 0 && values.every(v => v >= 0)) {
+    const shares = order.labels.map((label, i) => shareAt?.get(label) ?? (values[i] / sum * 100));
+    return ring(order.labels, values.map(v => Math.round(v)), shares, Math.round(counts), order.ordinal, ink);
+  }
+  const barValues = column === 2 && hasCounts ? order.labels.map((label, i) => shareAt?.get(label) ?? values[i]) : values;
+  return bars(order.labels, barValues, r.headers[column], inkPrimary(ink));
 }
 
 type Cells = { rows: string[]; cols: string[]; colsOrdinal: boolean; at: Map<string, (string | number | null)[]>; rowTotals: number[] };
@@ -332,6 +348,7 @@ export function svgSize(svg: string): { width: number; height: number } {
 
 /** Server-rendered SVG with ECharts' interaction styles removed, checked against the vector-asset rules. */
 export async function figureSVG(r: ResultSnapshot, column: number, ink: FigureInk): Promise<string> {
+  if (isDiagramMethod(r.method)) return assertTrueVector(diagramSnapshotSVG(r, ink));
   return planSVG(figurePlan(r, column, ink));
 }
 

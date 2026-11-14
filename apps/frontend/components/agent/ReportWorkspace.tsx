@@ -12,6 +12,22 @@ import { benchmarkReport, writtenLines, type BenchmarkResult } from '@/lib/repor
 import { DEFAULT_REPORT_SETTINGS, outlineKind, reportExportOptions, reportPart } from '@/lib/report-format';
 import { buildLatexSource, generateLatexBody, latexCompileInput } from '@/lib/latex-report';
 import type { DocFormatMode } from '@/components/editors/ReportPaper';
+import { hostedRequest } from '@/components/hosted/api-client';
+import {
+  buildAiDisclosureLines,
+  formatAiDisclosureMarkdown,
+  inspectReportDocxLocal,
+  type FullReportDisclosureSummary,
+} from '@/lib/agent/ai-disclosure';
+import { locateCheckSectionId } from '@/lib/agent/paper-diff';
+import {
+  getModelCalls,
+  listAgentTasks,
+  type WorkflowModelCallReceipt,
+  type WorkflowTransport,
+} from '@/lib/agent/workflow-task-client';
+import { parseAiUsageLedger, type AiUsageLedger } from '@/lib/evidence-appendices';
+import type { PreflightReport } from '@/lib/submission-preflight';
 import { Icon } from './icons';
 import styles from './ReportWorkspace.module.css';
 
@@ -124,6 +140,7 @@ export function ReportInspector({
   onEdit,
   onAdvisors,
   revision,
+  onJumpToIssue,
 }: {
   content: EditorContent;
   picked: string | null;
@@ -133,6 +150,7 @@ export function ReportInspector({
   onEdit: () => void;
   onAdvisors: () => void;
   revision?: ReactNode;
+  onJumpToIssue?: (sectionId: string, checkId: string) => void;
 }) {
   const section = content.report.find(s => s.id === picked) ?? null;
   const blocks = content.report.flatMap(s => s.blocks ?? []);
@@ -184,13 +202,28 @@ export function ReportInspector({
                 <ul className={styles.todo} aria-label="本节体检">
                   {issues.map(({ check, advisor }) => (
                     <li key={check.id} data-status={check.status}>
-                      <b>
-                        <i className={styles.byGlyph} title={advisor.name} aria-label={advisor.name}>
-                          {advisor.glyph}
-                        </i>
-                        {check.label}
-                      </b>
-                      <span>{check.detail}</span>
+                      {onJumpToIssue ? (
+                        <button type="button" className={styles.issueBtn} onClick={() => onJumpToIssue(section.id, check.id)}>
+                          <b>
+                            <i className={styles.byGlyph} title={advisor.name} aria-label={advisor.name}>
+                              {advisor.glyph}
+                            </i>
+                            {check.label}
+                          </b>
+                          <span>{check.detail}</span>
+                          <em className={styles.issueHint}>在纸面定位本节 →</em>
+                        </button>
+                      ) : (
+                        <>
+                          <b>
+                            <i className={styles.byGlyph} title={advisor.name} aria-label={advisor.name}>
+                              {advisor.glyph}
+                            </i>
+                            {check.label}
+                          </b>
+                          <span>{check.detail}</span>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -231,12 +264,25 @@ export function ReportInspector({
                     </p>
                     {issues.length ? (
                       <ul className={styles.todo}>
-                        {issues.slice(0, 3).map(c => (
-                          <li key={c.id} data-status={c.status}>
-                            <b>{c.label}</b>
-                            <span>{c.detail}</span>
-                          </li>
-                        ))}
+                        {issues.slice(0, 3).map(c => {
+                          const targetSectionId = onJumpToIssue ? locateCheckSectionId(content, c.id) : null;
+                          return (
+                            <li key={c.id} data-status={c.status}>
+                              {targetSectionId && onJumpToIssue ? (
+                                <button type="button" className={styles.issueBtn} onClick={() => onJumpToIssue(targetSectionId, c.id)}>
+                                  <b>{c.label}</b>
+                                  <span>{c.detail}</span>
+                                  <em className={styles.issueHint}>定位对应章节 →</em>
+                                </button>
+                              ) : (
+                                <>
+                                  <b>{c.label}</b>
+                                  <span>{c.detail}</span>
+                                </>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : (
                       <p className={styles.hint}>{checked ? '当前可检查项未发现问题，独立复核仍待完成。' : '报告里还没有它能检查的内容。'}</p>
@@ -245,12 +291,25 @@ export function ReportInspector({
                 ))
               ) : todo.length ? (
                 <ul className={styles.todo}>
-                  {todo.map(c => (
-                    <li key={c.id} data-status={c.status}>
-                      <b>{c.label}</b>
-                      <span>{c.detail}</span>
-                    </li>
-                  ))}
+                  {todo.map(c => {
+                    const targetSectionId = onJumpToIssue ? locateCheckSectionId(content, c.id) : null;
+                    return (
+                      <li key={c.id} data-status={c.status}>
+                        {targetSectionId && onJumpToIssue ? (
+                          <button type="button" className={styles.issueBtn} onClick={() => onJumpToIssue(targetSectionId, c.id)}>
+                            <b>{c.label}</b>
+                            <span>{c.detail}</span>
+                            <em className={styles.issueHint}>定位对应章节 →</em>
+                          </button>
+                        ) : (
+                          <>
+                            <b>{c.label}</b>
+                            <span>{c.detail}</span>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className={styles.hint}>可检测的项目都通过了；仍需人工核对数字与版面。</p>
@@ -270,11 +329,11 @@ export function ReportInspector({
   );
 }
 
-type Tool = 'text' | 'figure' | 'table' | 'formula' | 'ai';
+type Tool = 'text' | 'figure' | 'table' | 'formula' | 'ai' | 'preflight' | 'disclosure';
 const focusQuietly: RefCallback<HTMLInputElement | HTMLTextAreaElement> = el => {
   el?.focus({ preventScroll: true });
 };
-const TOOLS: { id: Exclude<Tool, 'ai'>; label: string; icon: string }[] = [
+const TOOLS: { id: Exclude<Tool, 'ai' | 'preflight' | 'disclosure'>; label: string; icon: string }[] = [
   { id: 'text', label: '正文', icon: 'edit' },
   { id: 'figure', label: '图', icon: 'chart' },
   { id: 'table', label: '表', icon: 'grid' },
@@ -310,6 +369,11 @@ export function PaperToolbar({
   docFormat = 'latex',
   onChangeDocFormat,
   previewOnly = false,
+  projectId = null,
+  signedIn = false,
+  fullReportSummary = null,
+  onWriteAiAppendix,
+  onOpenPreflightPanel,
 }: {
   content: EditorContent;
   section: ReportSection | null;
@@ -325,10 +389,32 @@ export function PaperToolbar({
   docFormat?: DocFormatMode;
   onChangeDocFormat?: (mode: DocFormatMode) => void;
   previewOnly?: boolean;
+  projectId?: string | null;
+  signedIn?: boolean;
+  fullReportSummary?: FullReportDisclosureSummary | null;
+  onWriteAiAppendix?: (lines: string[]) => void;
+  onOpenPreflightPanel?: () => void;
 }) {
   const [open, setOpen] = useState<Tool | null>(null);
   const [showTexSource, setShowTexSource] = useState(false);
   const [exportingDocx, setExportingDocx] = useState(false);
+  const [identityTermsInput, setIdentityTermsInput] = useState('');
+  const [preflightState, setPreflightState] = useState<{
+    running: boolean;
+    phase: string;
+    report: PreflightReport | null;
+    filename: string;
+    blob: Blob | null;
+    error: string;
+  }>({ running: false, phase: '', report: null, filename: '', blob: null, error: '' });
+  const [manualAiTools, setManualAiTools] = useState('');
+  const [disclosureState, setDisclosureState] = useState<{
+    loading: boolean;
+    loaded: boolean;
+    ledger: AiUsageLedger | null;
+    workflowCalls: WorkflowModelCallReceipt[];
+    error: string;
+  }>({ loading: false, loaded: false, ledger: null, workflowCalls: [], error: '' });
   const [text, setText] = useState('');
   const [tex, setTex] = useState('');
   const [topicInput, setTopicInput] = useState('');
@@ -402,6 +488,150 @@ export function PaperToolbar({
     } finally {
       if (mounted.current) setExportingDocx(false);
     }
+  };
+
+  const deliveryEpoch = useRef(0);
+  useEffect(() => {
+    deliveryEpoch.current += 1;
+    setPreflightState({ running: false, phase: '', report: null, filename: '', blob: null, error: '' });
+    setDisclosureState({ loading: false, loaded: false, ledger: null, workflowCalls: [], error: '' });
+  }, [projectId]);
+
+  const identityTerms = useMemo(
+    () =>
+      identityTermsInput
+        .split(/[\s,，、;；]+/u)
+        .map(s => s.trim())
+        .filter(Boolean),
+    [identityTermsInput],
+  );
+
+  const runLocalPreflight = async () => {
+    const ticket = ++deliveryEpoch.current;
+    setPreflightState(prev => ({ ...prev, running: true, phase: '正在按提交规范打包 Word…', error: '' }));
+    try {
+      const outcome = await inspectReportDocxLocal(content, {
+        identityTerms,
+        onPhase: phase => {
+          if (mounted.current && deliveryEpoch.current === ticket) {
+            setPreflightState(prev => ({ ...prev, phase }));
+          }
+        },
+      });
+      if (!mounted.current || deliveryEpoch.current !== ticket) return;
+      setPreflightState({
+        running: false,
+        phase: '检验完成',
+        report: outcome.report,
+        filename: outcome.filename,
+        blob: outcome.blob,
+        error: '',
+      });
+    } catch (err) {
+      if (!mounted.current || deliveryEpoch.current !== ticket) return;
+      setPreflightState(prev => ({
+        ...prev,
+        running: false,
+        phase: '',
+        error: err instanceof Error ? err.message : '参赛预检未能完成，请核对报告内容后重试',
+      }));
+    }
+  };
+
+  const handleDownloadCheckedDocx = async () => {
+    if (!preflightState.blob || !preflightState.filename) return;
+    const { downloadBlob } = await import('@/lib/editor-export');
+    downloadBlob(preflightState.blob, preflightState.filename);
+    announce('已下载通过本地预检的 Word 文档');
+  };
+
+  const refreshDisclosure = async () => {
+    const ticket = ++deliveryEpoch.current;
+    if (!signedIn || !projectId) {
+      setDisclosureState({ loading: false, loaded: true, ledger: null, workflowCalls: [], error: '' });
+      return;
+    }
+    setDisclosureState(prev => ({ ...prev, loading: true, error: '' }));
+    try {
+      let ledger: AiUsageLedger | null = null;
+      const errors: string[] = [];
+      try {
+        const rawLedger = await hostedRequest(`/api/projects/${encodeURIComponent(projectId)}/report/ai-usage`);
+        ledger = parseAiUsageLedger(rawLedger, projectId);
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message : '未能读取项目 AI 台账');
+      }
+      const calls: WorkflowModelCallReceipt[] = [];
+      try {
+        const transport: WorkflowTransport = {
+          request: hostedRequest,
+          mutate: (path, body, method = 'POST') => hostedRequest(path, { method, body }),
+        };
+        const tasks = await listAgentTasks(transport, projectId);
+        const withCalls = tasks.slice(0, 6);
+        const callBatches = await Promise.allSettled(
+          withCalls.map(task => getModelCalls(transport, projectId, task.id)),
+        );
+        for (const res of callBatches) {
+          if (res.status === 'fulfilled') calls.push(...res.value);
+        }
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message : '未能读取工作流调用回执');
+      }
+      if (!mounted.current || deliveryEpoch.current !== ticket) return;
+      setDisclosureState({
+        loading: false,
+        loaded: true,
+        ledger,
+        workflowCalls: calls,
+        error: errors.join('；'),
+      });
+    } catch (err) {
+      if (!mounted.current || deliveryEpoch.current !== ticket) return;
+      setDisclosureState(prev => ({
+        ...prev,
+        loading: false,
+        loaded: true,
+        error: err instanceof Error ? err.message : 'AI 使用记录读取失败',
+      }));
+    }
+  };
+
+  const disclosureLines = useMemo(
+    () =>
+      buildAiDisclosureLines({
+        content,
+        ledger: disclosureState.ledger,
+        workflowCalls: disclosureState.workflowCalls,
+        fullReportSummary,
+        manualToolsNote: manualAiTools,
+      }),
+    [content, disclosureState.ledger, disclosureState.workflowCalls, fullReportSummary, manualAiTools],
+  );
+
+  const handleWriteAiAppendix = () => {
+    if (!onWriteAiAppendix || previewOnly) return;
+    onWriteAiAppendix(disclosureLines);
+    setOpen(null);
+    announce('已将《AI 工具使用情况说明》写入附录，可在编辑器中撤销');
+  };
+
+  const handleDownloadAiMarkdown = async () => {
+    const { downloadBlob, fileName } = await import('@/lib/editor-export');
+    const parsed = parseEditorContent(content);
+    const md = formatAiDisclosureMarkdown({
+      content: parsed,
+      projectId,
+      ledger: disclosureState.ledger,
+      workflowCalls: disclosureState.workflowCalls,
+      fullReportSummary,
+      manualToolsNote: manualAiTools,
+    });
+    downloadBlob(
+      new Blob([md], { type: 'text/markdown;charset=utf-8' }),
+      `${fileName(parsed.title)}-AI工具使用情况说明.md`,
+    );
+    announce('已下载《AI 工具使用情况说明.md》');
   };
 
   const handlePrintPdf = () => {
@@ -479,6 +709,36 @@ export function PaperToolbar({
             <span>{exportingDocx ? '导出中…' : '导出 .docx'}</span>
           </button>
         )}
+
+        <button
+          type="button"
+          data-tool="preflight"
+          aria-pressed={open === 'preflight'}
+          onClick={() => {
+            const next = open === 'preflight' ? null : 'preflight';
+            setOpen(next);
+            if (next === 'preflight' && !preflightState.running) void runLocalPreflight();
+          }}
+          title="按竞赛提交格式构建 Word 并执行本地匿名与合规预检"
+        >
+          <Icon name="check" />
+          <span>{preflightState.running ? '预检中…' : '参赛预检'}</span>
+        </button>
+
+        <button
+          type="button"
+          data-tool="disclosure"
+          aria-pressed={open === 'disclosure'}
+          onClick={() => {
+            const next = open === 'disclosure' ? null : 'disclosure';
+            setOpen(next);
+            if (next === 'disclosure' && !disclosureState.loaded && !disclosureState.loading) void refreshDisclosure();
+          }}
+          title="汇总服务端台账与会话调用记录，生成《AI 工具使用情况说明》"
+        >
+          <Icon name="info" />
+          <span>AI 说明</span>
+        </button>
 
         <span className={styles.toolbarRule} aria-hidden="true" />
 
@@ -633,7 +893,158 @@ export function PaperToolbar({
         </div>
       )}
 
-      {open && open !== 'ai' && section && !previewOnly && (
+      {open === 'preflight' && (
+        <div className={styles.popover} aria-label="竞赛参赛预检">
+          <div className={styles.deliveryHead}>
+            <strong>竞赛终稿本地预检</strong>
+            {preflightState.report && (
+              <span
+                className={`${styles.deliveryBadge} ${
+                  preflightState.report.status === 'no_issues_in_checked_scope'
+                    ? styles.deliveryBadgeOk
+                    : styles.deliveryBadgeWarn
+                }`}
+              >
+                {preflightState.report.status === 'no_issues_in_checked_scope'
+                  ? '已检范围无阻断项'
+                  : preflightState.report.status === 'issues_found'
+                    ? '发现需核查项'
+                    : '检查未完全覆盖'}
+              </span>
+            )}
+          </div>
+          <input
+            ref={focusQuietly}
+            aria-label="匿名核查关键词"
+            maxLength={200}
+            value={identityTermsInput}
+            onChange={e => setIdentityTermsInput(e.target.value)}
+            onKeyDown={event => keys(() => !preflightState.running && void runLocalPreflight())(event)}
+            placeholder="输入需匿名核查的院校、姓名或赛区关键词（逗号或空格分隔）…"
+          />
+          {preflightState.running && (
+            <p className={styles.deliveryMeta}>{preflightState.phase || '正在执行 .docx 匿名与元数据检查…'}</p>
+          )}
+          {preflightState.error && <p className={styles.texProblem}>{preflightState.error}</p>}
+          {preflightState.report && (
+            <>
+              <p className={styles.deliveryMeta}>
+                文件大小 {Math.max(1, Math.round(preflightState.report.bytes / 1024))} KB · SHA-256{' '}
+                <code>{preflightState.report.sha256.slice(0, 16)}…</code> · 发现{' '}
+                {preflightState.report.findings.length} 项 · 覆盖：
+                {preflightState.report.coverage
+                  .map(
+                    c =>
+                      `${c.label}(${c.status === 'checked' ? '已检' : c.status === 'manual' ? '需人工' : '未检'})`,
+                  )
+                  .join(' / ')}
+              </p>
+              {preflightState.report.findings.length > 0 && (
+                <ul className={styles.deliveryFindings}>
+                  {preflightState.report.findings.map((finding, idx) => (
+                    <li
+                      key={`${finding.code}-${idx}`}
+                      className={styles.deliveryFinding}
+                      data-level={finding.level}
+                    >
+                      <b>
+                        {finding.level === 'error' ? '阻断' : '提醒'} · {finding.code}
+                      </b>
+                      <span>{finding.message}</span>
+                      {finding.location && <small> · 位置：{finding.location}</small>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          <div className={styles.popActions}>
+            <span>仅在浏览器本地检查正文与元数据；深度页数与字体校验请用完整工作台。</span>
+            {onOpenPreflightPanel && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(null);
+                  onOpenPreflightPanel();
+                }}
+              >
+                完整体检工作台
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!preflightState.blob || preflightState.running}
+              onClick={() => void handleDownloadCheckedDocx()}
+            >
+              下载已检 .docx
+            </button>
+            <button
+              type="button"
+              data-primary="true"
+              disabled={preflightState.running}
+              onClick={() => void runLocalPreflight()}
+            >
+              {preflightState.running ? '检验中…' : '重新检验'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {open === 'disclosure' && (
+        <div className={styles.popover} aria-label="AI 工具使用情况说明">
+          <div className={styles.deliveryHead}>
+            <strong>《AI 工具使用情况说明》汇总</strong>
+            <span
+              className={`${styles.deliveryBadge} ${
+                disclosureState.ledger?.coverage === 'partial'
+                  ? styles.deliveryBadgeOk
+                  : styles.deliveryBadgeWarn
+              }`}
+            >
+              {disclosureState.ledger?.coverage === 'partial' ? '部分服务端台账已核对' : '当前仅会话可见范围'}
+            </span>
+          </div>
+          <p className={styles.deliveryMeta}>
+            服务端台账 {disclosureState.ledger?.records.length ?? 0} 条 · 工作流回执{' '}
+            {disclosureState.workflowCalls.length} 条
+            {disclosureState.loading ? ' · 正在读取…' : ''}
+            {disclosureState.error ? ` · 提示：${disclosureState.error}` : ''}
+          </p>
+          <input
+            ref={focusQuietly}
+            aria-label="补录平台外使用的 AI 工具"
+            maxLength={200}
+            value={manualAiTools}
+            onChange={e => setManualAiTools(e.target.value)}
+            placeholder="如有平台外使用的 AI 工具与版本，可在此补充（可选）…"
+          />
+          <pre className={styles.deliveryPreview}>{disclosureLines.join('\n')}</pre>
+          <div className={styles.popActions}>
+            <span>仅如实陈述已验证范围与回执，不虚构未记录的 Token 或审核结论。</span>
+            <button
+              type="button"
+              disabled={disclosureState.loading}
+              onClick={() => void refreshDisclosure()}
+            >
+              刷新台账
+            </button>
+            <button type="button" onClick={() => void handleDownloadAiMarkdown()}>
+              下载 .md 说明
+            </button>
+            <button
+              type="button"
+              data-primary="true"
+              disabled={!onWriteAiAppendix || previewOnly}
+              title={previewOnly ? '预览候选稿时不可写入，请先采纳或返回原稿' : '写入附录并保留编辑器撤销栈'}
+              onClick={handleWriteAiAppendix}
+            >
+              写入「AI 附录」
+            </button>
+          </div>
+        </div>
+      )}
+
+      {open && open !== 'ai' && open !== 'preflight' && open !== 'disclosure' && section && !previewOnly && (
         <div className={styles.popover}>
           {open === 'text' && (
             <>

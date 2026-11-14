@@ -598,8 +598,10 @@ export function buildDemoTurn(ctx: RouterContext, query = ''): AgentTurn {
       title: `选题结构 · 《${bp.title}》`,
       columns: true,
       lines: [
-        [t('分组', 'dim'), t(`${bp.groupA} / ${bp.groupB}`, 'gold'), t(bp.statusConstruct, 'dim'), t(bp.statusCategories.join(' / '), 'gold')],
-        [t('五个方面', 'dim'), t(bp.dimensions.map(d => d.short).join(' · '), 'gold'), t('结果变量', 'dim'), t(`${bp.overallSatConstruct} · ${bp.conversionConstruct}`, 'gold')],
+        [t('群际分组', 'dim'), t(`${bp.groupA} / ${bp.groupB}`, 'gold')],
+        [t(bp.statusConstruct, 'dim'), t(bp.statusCategories.join(' / '), 'gold')],
+        [t('核心维度', 'dim'), t(bp.dimensions.map(d => d.short).join(' · '), 'gold')],
+        [t('结果变量', 'dim'), t(`${bp.overallSatConstruct} · ${bp.conversionConstruct}`, 'gold')],
       ],
       links: [
         say('换一个题目：社区助餐', '/铸造 城市社区助餐服务的使用体验、满意度与持续使用意愿调查'),
@@ -612,11 +614,11 @@ export function buildDemoTurn(ctx: RouterContext, query = ''): AgentTurn {
       title: `按《${bp.shortTitle}》生成一套教学模拟研究`,
       lines: [
         [
-          t('将生成：按选题编写的 12 题问卷、按问卷模拟的作答（含少量会被质量筛查剔除的答卷），并由分析引擎在筛查后的数据上'),
+          t('将生成：按选题设计的 20 题多因子问卷与模拟作答（含少量会被质量筛查剔除的答卷），由分析引擎在清洗后的数据上'),
           t('实际计算', 'strong'),
-          t('频数、交叉表与卡方、信度、组间比较、相关、因子结构、回归、重要性—表现分析与聚类，逐项登记、放进报告对应章节。全部标注'),
+          t('效度与信度（EFA / α）、列联表卡方、相关、多元回归、K-means 分群与 IPA 诊断，登记结果并自动装配十一类定量图表、结构化报告初稿、参考文献与四项可复现附录。全部标注'),
           t('教学模拟数据', 'gold'),
-          t('；叙述性章节留空，由你或全报告流水线起草。会替换当前工作区的问卷、数据和报告。'),
+          t('；可在生成后直接查看论文与演示稿，或用全报告流水线逐章改写。会替换当前工作区内容。'),
         ],
       ],
       confirm: {
@@ -693,8 +695,8 @@ export function buildCoachTurn(ctx: RouterContext, query = ''): AgentTurn {
         lines: stages.map(s => [
           t(s.done ? '● 已完成' : '○ 待推进', s.done ? 'gold' : 'teal'),
           t(`${s.code} ${s.name}`, 'strong'),
-          t(s.standard, 'dim'),
           t(s.cmd, 'teal'),
+          t(s.standard, 'dim'),
         ]),
         links: [
           recommend(say(`下一步：${firstPending.name}`, firstPending.cmd)),

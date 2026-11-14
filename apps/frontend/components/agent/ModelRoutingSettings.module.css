@@ -48,7 +48,7 @@
 .settings .task h3 { color: var(--mr-text); font-size: 15px; font-weight: 600; line-height: 1.5; }
 .settings .taskCopy p { margin-top: 4px; color: var(--mr-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .selection { min-width: 0; }
-.settings .selection select { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 44px; padding: 10px 11px; border: 1px solid var(--mr-border); border-radius: 7px; background: var(--mr-bg); color: var(--mr-text); font: inherit; font-size: 13px; line-height: 1.6; text-overflow: ellipsis; cursor: pointer; transition: border-color 160ms ease; }
+.settings .selection select { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; border: 1px solid var(--mr-border); border-radius: 7px; background: var(--mr-bg); color: var(--mr-text); font: inherit; font-size: 13px; height: 38px; min-height: 38px; padding: 0 10px; line-height: 36px; vertical-align: middle; cursor: pointer; transition: border-color 160ms ease; }
 .settings .selection select:not(:disabled):hover { border-color: var(--mr-accent); }
 .settings .selection select:disabled { background: var(--mr-soft); color: var(--mr-muted); cursor: not-allowed; opacity: 1; }
 .settings .selection select[aria-invalid=true] { border-color: var(--mr-warning); }

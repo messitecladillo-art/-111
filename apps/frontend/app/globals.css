@@ -205,9 +205,10 @@ button { color: inherit; }
 .case-result-count { margin: 0 0 22px; color: var(--slate); font-size: 14px; }
 .search-field { position: relative; display: flex; align-items: center; }
 .search-field > span:not(.sr-only) { position: absolute; left: 16px; color: var(--teal-deep); font-size: 22px; }
-input, select, textarea { width: 100%; border: 1px solid rgba(10, 31, 51, 0.18); border-radius: 10px; background: rgba(255, 254, 249, 0.9); color: var(--ink); font-size: 16px; }
-input, select { height: 48px; padding: 0 14px; }
-textarea { resize: vertical; min-height: 92px; padding: 13px 14px; }
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) { width: 100%; border: 1px solid rgba(10, 31, 51, 0.18); border-radius: 10px; background: rgba(255, 254, 249, 0.9); color: var(--ink); font-size: 14px; box-sizing: border-box; }
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select) { height: auto; min-height: 36px; padding: 6px 12px; line-height: 1.35; vertical-align: middle; }
+:where(.diagnose-form, .rule-form, .case-toolbar, .client-key-form, .new-project-form) :is(input:not([type="checkbox"]):not([type="radio"]), select) { height: 46px; min-height: 46px; padding: 0 14px; line-height: 44px; font-size: 15px; }
+:where(textarea) { resize: vertical; min-height: 92px; padding: 10px 14px; }
 input::placeholder, textarea::placeholder { color: var(--slate); opacity: 1; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--teal-deep); outline: 3px solid var(--white); box-shadow: 0 0 0 6px var(--teal-deep); }
 .search-field input { padding-left: 46px; }

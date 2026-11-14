@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /api/
+Disallow: /agent/
+Disallow: /workspace/
+Disallow: /projects/
+Disallow: /_next/
+Allow: /$

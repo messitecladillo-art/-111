@@ -1,10 +1,12 @@
 'use client';
 
 import type { EditorContent } from '@/lib/editor-model';
-import PaperPages, { type LiveReviewState, type LiveTypingState } from './PaperPages';
+import PaperPages, { type LiveReviewState, type LiveTypingState, type PaperAnnotation, type PaperSelectionAction } from './PaperPages';
 import type { ReportWorkState } from '@/lib/agent/report-work';
+import type { PaperSectionDiff } from '@/lib/agent/paper-diff';
 
-export type { LiveReviewState, LiveTypingState } from './PaperPages';
+export type { LiveReviewState, LiveTypingState, PaperAnnotation, PaperSelectionAction } from './PaperPages';
+export type { PaperSectionDiff } from '@/lib/agent/paper-diff';
 /** Which export the preview stands for; both are set in the same competition layout, so the pages are the same. */
 export type DocFormatMode = 'latex' | 'word';
 
@@ -27,6 +29,14 @@ export default function ReportPaper({
   onCatalogHover,
   onCatalogClick,
   docFormat = 'word',
+  sectionDiffs,
+  onToggleDiffLock,
+  onApplyRevisionDiff,
+  onKeepRevisionDiff,
+  highlightTerms,
+  annotations,
+  onSelectionAction,
+  watermarkText,
 }: {
   content: EditorContent;
   activeSectionId?: string | null;
@@ -41,6 +51,14 @@ export default function ReportPaper({
   onCatalogHover?: (targetAttr: 'xref' | 'cite', targetId: string) => void;
   onCatalogClick?: (targetAttr: 'xref' | 'cite', targetId: string) => void;
   docFormat?: DocFormatMode;
+  sectionDiffs?: readonly PaperSectionDiff[];
+  onToggleDiffLock?: (sectionId: string) => void;
+  onApplyRevisionDiff?: () => void;
+  onKeepRevisionDiff?: () => void;
+  highlightTerms?: readonly string[];
+  annotations?: readonly PaperAnnotation[];
+  onSelectionAction?: (selection: PaperSelectionAction) => void;
+  watermarkText?: string | null;
 }) {
   return (
     <PaperPages
@@ -57,6 +75,14 @@ export default function ReportPaper({
       onPick={onPick}
       onCatalogHover={onCatalogHover}
       onCatalogClick={onCatalogClick}
+      sectionDiffs={sectionDiffs}
+      onToggleDiffLock={onToggleDiffLock}
+      onApplyRevisionDiff={onApplyRevisionDiff}
+      onKeepRevisionDiff={onKeepRevisionDiff}
+      highlightTerms={highlightTerms}
+      annotations={annotations}
+      onSelectionAction={onSelectionAction}
+      watermarkText={watermarkText}
     />
   );
 }

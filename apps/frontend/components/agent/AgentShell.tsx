@@ -29,7 +29,8 @@ import { useArtifactLibrary } from './useArtifactLibrary';
 import { artifactScope, sectionRevisionArtifact } from '@/lib/agent/artifact-library';
 import SectionRevision from './SectionRevision';
 import { useSectionRevision } from './useSectionRevision';
-import { reportWorkState, sameReportRunScope, type ReportRunScope } from '@/lib/agent/report-work';
+import { reportWorkState, sameReportRunScope, type ReportRunScope, type ReportWorkState } from '@/lib/agent/report-work';
+import type { WorkflowRole } from '@/lib/agent/workflow-task-client';
 import { GenerationProvider, useGeneration } from './generation';
 import { LightBar } from './Glyphs';
 import { Icon } from './icons';
@@ -39,16 +40,18 @@ import { useHired, useShowCode, useStage } from './code-view';
 import Advisors from './Advisors';
 import { ADVISORS, advisorReading } from '@/lib/agent/advisors';
 import CursorTrail from './CursorTrail';
-import ReportPaper, { type DocFormatMode } from '@/components/editors/ReportPaper';
+import ReportPaper, { type DocFormatMode, type PaperAnnotation, type PaperSelectionAction } from '@/components/editors/ReportPaper';
 import { PaperToolbar, ReportInspector, ReportNav, type LiveWritingStatus } from './ReportWorkspace';
 import { ReportLiveTheater, useLiveReportChoreography } from './ReportLiveTheater';
 import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
 import { createEditorContent, type EditorContent } from '@/lib/editor-model';
+import { newQuestionnaire, type Questionnaire } from '@/lib/questionnaire';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
 import Sidebar from './Sidebar';
+import StudioPanel, { type StudioTabId } from './studios/StudioPanel';
 import Transcript from './Transcript';
 import { stamp, threads, type Message, type ModelCall } from './threads';
 import type { Service } from '@evix/shared';
@@ -64,7 +67,9 @@ import ResearchWorkspace from './ResearchWorkspace';
 type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service; after: string; owner: string; epoch: number };
 import styles from './AgentShell.module.css';
 import type { FullReportGenerationResult, FullReportPack, ProjectResearchMode } from '@/lib/agent/full-report-pipeline';
+import { decomposeTopic } from '@/lib/agent/demo-study';
 import { canAcceptReportCandidate, hasUserResearchSource, mergeReportCandidate, reportChanges, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
+import { buildPaperSectionDiffs, locateArtifactTarget } from '@/lib/agent/paper-diff';
 import { fullReportInputRevision } from '@/lib/agent/full-report-request';
 import { requestFullReport, fullReportFailureStatus } from './full-report-client';
 import AgentRunReview from './AgentRunReview';
@@ -160,7 +165,10 @@ export default function AgentShell() {
   const sourceKey = useMemo(() => reportSourceKey(reportSource), [reportSource]);
   const candidateConflict = !!visibleCandidate && (visibleCandidate.sourceKey !== sourceKey || !!reportSource.inputPending);
   const candidateChanges = useMemo(() => visibleCandidate ? reportChanges(visibleCandidate.before, visibleCandidate.preview) : [], [visibleCandidate]);
-  const lockedSectionIds = lockedSections.runId === visibleCandidate?.runId ? lockedSections.ids : [];
+  const lockedSectionIds = useMemo(
+    () => (lockedSections.runId === visibleCandidate?.runId ? lockedSections.ids : []),
+    [lockedSections, visibleCandidate],
+  );
   // Remove the legacy direct-key slot; credentials are entered only in the hosted model-service form.
   useEffect(() => { try { window.sessionStorage.removeItem('evix.agent.direct-api-key.v1'); } catch { /* no browser storage */ } }, []);
   const messages = thread?.messages ?? EMPTY_MESSAGES;
@@ -173,6 +181,12 @@ export default function AgentShell() {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [pickedSection, setPickedSection] = useState<string | null>(null);
   const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
+  const [activeStudio, setActiveStudio] = useState<StudioTabId | null>(null);
+  const [steeringNotes, setSteeringNotes] = useState<string[]>([]);
+  const [quickSteeringDraft, setQuickSteeringDraft] = useState('');
+  const [annotations, setAnnotations] = useState<PaperAnnotation[]>([]);
+  const [qaHighlightTerms, setQaHighlightTerms] = useState<string[]>([]);
+  const [watermarkEnabled, setWatermarkEnabled] = useState(false);
   // Only requests dispatched in this mounted workspace may animate. Restored messages are records, not live jobs.
   const [activeCalls, setActiveCalls] = useState<{ id: string; owner: string; epoch: number }[]>([]);
   const startCall = useCallback((id: string, owner: string, epoch: number) => {
@@ -181,6 +195,7 @@ export default function AgentShell() {
   const finishCall = useCallback((id: string) => setActiveCalls(calls => calls.filter(call => call.id !== id)), []);
 
   const [writingEnvelope, setWritingEnvelope] = useState<{ scope: ReportRunScope; status: LiveWritingStatus } | null>(null);
+  const [workflowWorkState, setWorkflowWorkState] = useState<ReportWorkState | null>(null);
   const liveWriting = writingEnvelope && sameReportRunScope(writingEnvelope.scope, displayScope) ? writingEnvelope.status : null;
   const setReportWriting = useCallback((scope: ReportRunScope, update: LiveWritingStatus | null | ((previous: LiveWritingStatus) => LiveWritingStatus)) => {
     setWritingEnvelope(previous => {
@@ -253,7 +268,7 @@ export default function AgentShell() {
   // conversation its minimum. Widths are read through stores so the first client render matches the server's.
   const savedWidth = useSyncExternalStore(subscribeNothing, savedPanelWidth, () => null);
   const [draggedWidth, setPanelWidth] = useState<number | null>(null);
-  const room = viewport - RAIL - GUTTERS - (sideOpen ? SIDEBAR : 0);
+  const room = viewport - RAIL - GUTTERS - (sideOpen ? (activeStudio ? 448 : SIDEBAR) : 0);
   const available = Math.max(MIN_PANEL, room - MIN_TALK);
   const panelWidth = Math.min(available, draggedWidth ?? savedWidth ?? Math.round(Math.min(1240, Math.max(MIN_PANEL, room * 0.7))));
   const [dragging, setDragging] = useState(false);
@@ -379,6 +394,54 @@ export default function AgentShell() {
     finally{examplePending.current=false;}
   },[readArtifactCurrent,artifacts]);
   const openArtifactShelf=()=>{setVisited(v=>v.includes('editor')?v:[...v,'editor']);setArtifactOpen(v=>!v);};
+  const triggerXrefSynapse = choreo.triggerXrefSynapse;
+  const toggleSectionLock = useCallback((id: string) => {
+    if (!visibleCandidate) return;
+    setLockedSections(previous => {
+      const ids = previous.runId === visibleCandidate.runId ? previous.ids : [];
+      return { runId: visibleCandidate.runId, ids: ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id] };
+    });
+  }, [visibleCandidate]);
+  const paperSectionDiffs = useMemo(() => buildPaperSectionDiffs({
+    changes: visibleCandidate ? candidateChanges : [],
+    lockedSectionIds,
+    revision: revision.phase === 'ready' && revision.section
+      ? { active: true, sectionId: revision.section.id, title: revision.section.title, original: revision.original, proposed: revision.proposed }
+      : null,
+  }), [visibleCandidate, candidateChanges, lockedSectionIds, revision.phase, revision.section, revision.original, revision.proposed]);
+  const locateArtifact = useCallback((id: string) => {
+    const record = artifacts.recordOf(id);
+    if (!record) return;
+    const target = locateArtifactTarget(paperContent, record);
+    if (!target.sectionId && !target.pageZero) {
+      setArtifactNotice('该成果尚未嵌入当前报告正文，可先点击“用于报告”加入文档。');
+      return;
+    }
+    setArtifactNotice(null);
+    const jump = () => {
+      if (target.xrefBlockId && target.sectionId) {
+        const hasNode = !!paperRef.current?.querySelector(`[data-xref-target="${CSS.escape(target.xrefBlockId)}"]`);
+        if (hasNode) {
+          setPickedSection(target.sectionId);
+          triggerXrefSynapse('xref', target.xrefBlockId, true);
+        } else {
+          pickSection(target.sectionId);
+          triggerXrefSynapse('xref', target.xrefBlockId, false);
+        }
+      } else if (target.sectionId) {
+        pickSection(target.sectionId);
+      } else if (target.pageZero) {
+        setPickedSection(null);
+        paperRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    if (stage !== 'paper') {
+      setStage('paper');
+      requestAnimationFrame(() => requestAnimationFrame(jump));
+    } else {
+      jump();
+    }
+  }, [artifacts, paperContent, stage, setStage, pickSection, triggerXrefSynapse]);
   const artifactPanelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!artifactOpen) return;
@@ -416,8 +479,8 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, dataset = deferredView.dataset, liveReport = view.report;
   // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
-  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection });
-  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection }; });
+  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes });
+  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes }; });
   const stopChoreography = choreo.stop;
   const stopReportRun = useCallback((reason = '已取消运行；原稿已保留。已发出的调用可能仍计费，请核对回执。') => {
     preparingReport.current = null;
@@ -765,7 +828,25 @@ export default function AgentShell() {
           const current = latest.current;
           const service = currentService('report','report.full');
           if (!current.owner || current.owner === 'guest' || current.generation.account !== 'ready' || !service || !current.csrfToken) {
-            say([span('生成候选稿需要登录并在模型设置中选择可用的报告服务。', 'dim')]); go('services'); break;
+            const unauthed = !current.owner || current.owner === 'guest' || current.generation.account !== 'ready' || !current.csrfToken;
+            if (unauthed) {
+              const userSource = hasUserResearchSource(current.reportSource);
+              const alreadyDemo = current.reportSource.dataset?.kind === 'simulated';
+              say(
+                [span(alreadyDemo
+                  ? '当前工作区已由本地计算引擎生成完整教学样板成稿，可直接查阅右侧排版与导出 Word/LaTeX；如需大模型逐章改写，请先登录并在「模型设置」接入服务密钥。'
+                  : '大模型逐章扩写需先登录并在「模型设置」保存服务密钥（BYOK）；若暂不接入外部密钥，可先用「/铸造」生成完整定量教学样板。', 'dim')],
+                [
+                  ...(!alreadyDemo && !userSource ? [{ label: '/铸造 教学样板', action: { type: 'loadBenchmark' as const, benchmarkId: 'current' }, primary: true as const }] : []),
+                  { label: '邮箱登录 ↗', action: { type: 'href' as const, href: '/login' }, ...((alreadyDemo || userSource) ? { primary: true as const } : {}) },
+                  { label: '打开模型设置', action: { type: 'open' as const, room: 'services' as const } },
+                ],
+              );
+            } else {
+              say([span('请在「模型设置」选择或启用支持报告生成的模型服务。', 'dim')], [{ label: '打开模型设置', action: { type: 'open', room: 'services' }, primary: true }]);
+              go('services');
+            }
+            break;
           }
           const requestScope = readReportScope();
           if (requestScope.owner !== current.owner || requestScope.epoch !== current.identityEpoch || requestScope.project !== current.projectId) {
@@ -791,7 +872,8 @@ export default function AgentShell() {
           void (async () => {
             let handle: ReportRunHandle | null = null;
             try {
-              const inputRevision = await fullReportInputRevision({ topic, mode, base });
+              const activeSteering = latest.current.steeringNotes ?? [];
+              const inputRevision = await fullReportInputRevision({ topic, mode, base, ...(activeSteering.length ? { steeringNotes: activeSteering } : {}) });
               if (preparingReport.current !== preparation || !sameReportRunScope(requestScope, readReportScope()) || reportSourceKey(latest.current.reportSource) !== sourceKey) return;
               const selected = currentService('report','report.full');
               if (!selected || selected.id !== service.id || selected.revision !== service.revision) { say([span('报告模型配置已变化，请重新点击生成并核对服务。', 'dim')]); return; }
@@ -821,7 +903,7 @@ export default function AgentShell() {
               setStage('paper'); closePanel(); setCopilotOpen(false); choreo.stop();
               setReportWriting(run.scope, { active: true, phase: 'contract', completed: 0, total: 0, paragraphs: 0, facts: 0, lastSectionId: null, lastSectionTitle: '', topicTitle: topic, autoFollow: autoFollowRef.current });
               const seenSections = new Map<string, { paragraphs: number; facts: string[] }>();
-              const result = await requestFullReport({ schemaVersion: 1, runId, projectId: current.projectId, inputRevision, serviceId: service.id, serviceRevision: service.revision, consent: true, topic, mode, base, stream: true, concurrency: 3 }, {
+              const result = await requestFullReport({ schemaVersion: 1, runId, projectId: current.projectId, inputRevision, serviceId: service.id, serviceRevision: service.revision, consent: true, topic, mode, base, ...(activeSteering.length ? { steeringNotes: activeSteering } : {}), stream: true, concurrency: 3 }, {
                 csrfToken: current.csrfToken!, signal: controller.signal,
                 onEvent: event => {
                   if (!stillCurrent()) return;
@@ -915,6 +997,51 @@ export default function AgentShell() {
   // A writing tool opens the copilot and says its command there, as if typed.
   const sayFromTool = useCallback((text: string) => { setCopilotOpen(true); agent.send(text); }, [agent]);
 
+  const adoptWorkflowOutput = useCallback((role: WorkflowRole, output: Record<string, unknown>) => {
+    if (role !== 'writing') return;
+    const deliverable = (output.deliverable ?? {}) as { chapters?: { title?: string; content?: string }[] };
+    const chapters = Array.isArray(deliverable.chapters) ? deliverable.chapters : [];
+    if (!chapters.length) return;
+    const expected = latest.current.reportSource;
+    const base = expected.report ?? blankReport;
+    const updatedIds: string[] = [];
+    const norm = (value: string) => value.trim().replace(/^[\d一二三四五六七八九十]+[、.\s]*/u, '');
+    const nextSections = base.report.map(sec => ({ ...sec }));
+    for (let i = 0; i < chapters.length; i++) {
+      const ch = chapters[i];
+      const text = typeof ch?.content === 'string' ? ch.content.trim() : '';
+      const rawTitle = typeof ch?.title === 'string' ? ch.title.trim() : '';
+      if (!text) continue;
+      let target = rawTitle
+        ? nextSections.find(sec => norm(sec.title) === norm(rawTitle) || sec.title.includes(norm(rawTitle)))
+        : undefined;
+      if (!target) {
+        target = nextSections.find(sec => !updatedIds.includes(sec.id) && sec.id !== 'abstract' && !sec.id.startsWith('appendix') && sec.id !== 'references');
+      }
+      if (target) {
+        target.body = text;
+        target.source = '协同流水线撰稿';
+        updatedIds.push(target.id);
+      } else {
+        const createdId = `workflow-sec-${i + 1}`;
+        nextSections.push({ id: createdId, title: rawTitle || `第 ${i + 1} 节`, body: text, source: '协同流水线撰稿' });
+        updatedIds.push(createdId);
+      }
+    }
+    if (!updatedIds.length) return;
+    const nextReport = { ...base, report: nextSections };
+    const outcome = restoreReportVersion(nextReport, expected);
+    if (outcome !== 'applied') {
+      setReviewNotice(outcome === 'conflict' ? '原稿或研究资料已更新，请重试写入章节。' : '无法写入工作区草稿，请检查本地存储。');
+      return;
+    }
+    setStage('paper');
+    setCopilotOpen(false);
+    pickSection(updatedIds[0]);
+    requestAnimationFrame(() => choreo.playChaptersTypewriter(nextReport, updatedIds));
+    setReviewNotice(`已将 ${updatedIds.length} 节协同撰稿成果以老式打字机模式写入报告画布。`);
+  }, [blankReport, choreo, pickSection, restoreReportVersion, setCopilotOpen, setStage]);
+
   // Lookups wait for the knowledge index, then answer in place of their placeholder, in their own conversation.
   const pendingLookup = useMemo(() => book.threads.flatMap(t => t.messages).find(m => m.role === 'pending'), [book]);
   const { ready: knowledgeReady, search } = knowledge;
@@ -980,8 +1107,76 @@ export default function AgentShell() {
   const todayTokens = book.threads.reduce((total, t) => total + t.messages.reduce((sum, m) => m.role === 'agent' && m.at >= today && m.model?.usage ? sum + m.model.usage.inputTokens + m.model.usage.outputTokens : sum, 0), 0);
   const exportThread = thread && messages.length > 0 ? () => exportRecord(thread) : null;
 
+  const commitStudioReport = useCallback((nextContent: EditorContent, message: string, nextDesign?: Questionnaire | null) => {
+    if (visibleCandidate && !visibleCandidate.pending) {
+      setCandidate(prev => prev ? { ...prev, preview: nextContent } : null);
+      setStage('paper');
+      setReviewNotice(`${message}（已同步至当前候选稿预览，采纳后永久落盘）`);
+      return;
+    }
+    const source = latest.current.reportSource;
+    const resolvedDesign = nextDesign ?? source.design ?? newQuestionnaire();
+    const outcome = applyCandidate({
+      design: resolvedDesign,
+      dataset: source.dataset ?? null,
+      report: nextContent,
+      blueprint: decomposeTopic(nextContent.title || resolvedDesign.title || '专题实证调研'),
+    }, source);
+    setStage('paper');
+    if (outcome === 'applied') {
+      setReviewNotice(message);
+      threads.append([{ ...stamp(), role: 'agent', turn: { lines: [[span(message, 'dim')]] } }]);
+    } else {
+      setReviewNotice('工作区资料正在同步中，请稍候片刻重试写入。');
+    }
+  }, [applyCandidate, setStage, visibleCandidate]);
+
+  const saveStudioSvgArtifact = useCallback((title: string, svg: string) => {
+    const cleanName = title.replace(/[\\/:*?"<>|]/g, '-').slice(0, 60) || 'evix-studio-asset';
+    void artifacts.onImport(
+      new File([new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })], `${cleanName}.svg`, { type: 'image/svg+xml' }),
+      'diagram',
+      { origin: '证见创作工坊', classification: 'simulated' },
+    );
+  }, [artifacts]);
+
+  const addSteeringNote = useCallback((raw: string) => {
+    const clean = raw.trim();
+    if (!clean) return;
+    setSteeringNotes(prev => (prev.includes(clean) ? prev : [...prev.slice(-7), clean]));
+  }, []);
+
+  const rewriteSectionWithIdea = useCallback((sectionId: string, quote: string, idea: string) => {
+    const secTitle = paperContent.report.find(s => s.id === sectionId)?.title ?? sectionId;
+    addSteeringNote(`[${secTitle}] ${idea}`);
+    setAnnotations(prev => prev.map(a => a.sectionId === sectionId && a.note === idea ? { ...a, status: 'applied' } : a));
+    sayFromTool(`/起草 ${secTitle} 请针对选段「${quote.slice(0, 48)}」按以下思路精修重写：${idea}`);
+  }, [paperContent.report, addSteeringNote, sayFromTool]);
+
+  const handleSelectionAction = useCallback((sel: PaperSelectionAction) => {
+    if (sel.action === 'qa') {
+      const tokens = sel.text.split(/[\s，。、；！？（）()]+/u).filter(t => t.length >= 2).slice(0, 6);
+      setQaHighlightTerms(tokens.length ? tokens : [sel.text.slice(0, 12)]);
+      setSideOpen(true);
+      setActiveStudio('qa');
+      pickSection(sel.sectionId);
+      return;
+    }
+    const idea = quickSteeringDraft.trim() || (sel.action === 'rewrite' ? '增强因果分析密度与数据佐证，精简空泛套话' : '待复核论据与统计口径');
+    setAnnotations(prev => [
+      { id: `ann-${Date.now().toString(36)}`, sectionId: sel.sectionId, quote: sel.text, note: idea, status: sel.action === 'rewrite' ? 'applied' : 'open' },
+      ...prev.slice(0, 29),
+    ]);
+    setSideOpen(true);
+    setActiveStudio('steering');
+    if (sel.action === 'rewrite') {
+      setQuickSteeringDraft('');
+      rewriteSectionWithIdea(sel.sectionId, sel.text, idea);
+    }
+  }, [quickSteeringDraft, rewriteSectionWithIdea, setSideOpen, pickSection]);
+
   return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}><GenerationProvider value={generation}>
-    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? (output ? 'output' : 'none')} data-expanded={expanded && !!panel}>
+    <div className={`workbench ${styles.shell}`} data-theme={theme} data-side={sideOpen ? 'open' : 'closed'} data-panel={panel ?? (output ? 'output' : 'none')} data-expanded={expanded && !!panel} data-studio-open={activeStudio ? 'true' : undefined}>
       <CursorTrail />
       <a className={styles.skip} href="#agent-command-line" onClick={event => { event.preventDefault(); focusInput(); }}>跳到输入框</a>
 
@@ -994,6 +1189,7 @@ export default function AgentShell() {
         <button ref={modulesRef} type="button" className={styles.railButton} aria-label="模块" title="模块" aria-haspopup="dialog" aria-expanded={railMenu === 'modules'} aria-pressed={!!panel && panel !== 'overview'} onClick={() => setRailMenu(railMenu === 'modules' ? null : 'modules')}><Icon name="grid" /></button>
         <button type="button" className={styles.railButton} aria-label="项目全景" title="项目全景" aria-pressed={panel === 'overview'} onClick={() => panel === 'overview' ? closePanel() : go('overview')}><Icon name="lamp" /></button>
         <button type="button" className={styles.railButton} aria-label={`知识镜搜索（${shortcut}）`} title={`知识镜搜索（${shortcut}）`} onClick={knowledge.openSearch}><Icon name="book" /></button>
+        <Link href="/workspace" className={styles.railButton} aria-label="返回研究工作台" title="返回经典工作台"><Icon name="home" /></Link>
         <span className={styles.spacer} />
         <button type="button" className={styles.railButton} aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'} title={theme === 'dark' ? '浅色' : '深色'} onClick={event => switchTheme(theme === 'dark' ? 'light' : 'dark', event)}><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
         {owner && owner !== 'guest'
@@ -1050,11 +1246,44 @@ export default function AgentShell() {
         stages={stages} openRoom={panel} onRoom={go} outputs={outputs} openOutput={output?.id ?? null} onOutput={id => { window.location.hash = `output/${encodeURIComponent(id)}`; }}
         todayTokens={todayTokens} onModels={() => go('services')} onExport={exportThread}
         onLogout={() => { setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}
+        activeStudio={activeStudio}
+        onOpenStudio={tab => setActiveStudio(tab)}
+        steeringCount={steeringNotes.length}
+        studioContent={activeStudio ? <StudioPanel
+          activeTab={activeStudio}
+          onSelectTab={setActiveStudio}
+          onClose={() => setActiveStudio(null)}
+          content={paperContent}
+          design={design ?? null}
+          onSaveDesign={nextDesign => {
+            const merged = { ...paperContent, design: nextDesign };
+            commitStudioReport(merged, '已同步极简问卷结构到研究工作台。', nextDesign);
+          }}
+          onUpdateReport={(next, msg, nextDesign) => commitStudioReport(next, msg, nextDesign)}
+          onSaveArtifact={saveStudioSvgArtifact}
+          onJumpToSection={sectionId => { setStage('paper'); requestAnimationFrame(() => pickSection(sectionId)); }}
+          highlightTerms={qaHighlightTerms}
+          onHighlightChange={setQaHighlightTerms}
+          onOpenKnowledge={knowledge.openSearch}
+          onAskExternalAi={q => { setCopilotOpen(true); agent.send(q); }}
+          steeringNotes={steeringNotes}
+          onAddSteering={addSteeringNote}
+          onRemoveSteering={idx => setSteeringNotes(prev => prev.filter((_, i) => i !== idx))}
+          annotations={annotations}
+          onAddAnnotation={ann => setAnnotations(prev => [{ id: `ann-${Date.now().toString(36)}`, status: 'open', ...ann }, ...prev])}
+          onToggleAnnotationStatus={id => setAnnotations(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'applied' ? 'open' : 'applied' } : a))}
+          onRemoveAnnotation={id => setAnnotations(prev => prev.filter(a => a.id !== id))}
+          onRewriteWithIdea={rewriteSectionWithIdea}
+          signedIn={!!account?.authenticated}
+          currentUserEmail={email}
+          csrfToken={account?.csrfToken}
+        /> : null}
         nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })} liveWriting={liveWriting} /> : undefined} />
 
       <main className={styles.main} aria-label={stage === 'paper' ? '报告' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
+          <Link href="/workspace" className={styles.backWorkbench} aria-label="返回研究工作台">← 返回工作台</Link>
           <span className={styles.topTitle}>{stage === 'paper' ? paperContent.title : thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
             <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
@@ -1099,6 +1328,21 @@ export default function AgentShell() {
             onJumpToSection={pickSection}
             docFormat={docFormat}
             onChangeDocFormat={setDocFormat}
+            projectId={projectId}
+            signedIn={!!account?.authenticated}
+            fullReportSummary={visibleCandidate ? {
+              used: true,
+              modelLabel: reportService ? `${reportService.label}（${reportService.model}）` : null,
+              sectionCount: visibleCandidate.receipts.length || visibleCandidate.preview.report.length,
+              note: `研究模式：${REPORT_MODES[visibleCandidate.mode]}，回执 ${visibleCandidate.receipts.length} 条`,
+            } : null}
+            onWriteAiAppendix={lines => sendToReport({
+              id: crypto.randomUUID(),
+              node: 'appendix.ai',
+              source: 'AI 使用说明',
+              items: lines.map(text => ({ kind: 'paragraph', text })),
+            })}
+            onOpenPreflightPanel={() => go('preflight')}
           />
           {reviewNotice && <p className={styles.reviewNotice} role="status">{reviewNotice}</p>}
           {reportVersions.length > 0 && <details className={styles.versions}>
@@ -1120,7 +1364,7 @@ export default function AgentShell() {
               onCancel={() => stopReportRun()}
               onDiscard={() => { stopReportRun(); setCandidate(null); setReportWriting(readReportScope(), null); setReviewNotice('候选稿已丢弃，原稿保留。'); }}
               onSelectSection={pickSection}
-              onToggleSectionLock={id => setLockedSections(previous => { const ids = previous.runId === visibleCandidate.runId ? previous.ids : []; return { runId: visibleCandidate.runId, ids: ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id] }; })}
+              onToggleSectionLock={toggleSectionLock}
               onApply={() => {
                 const result = visibleCandidate.result, pack = visibleCandidate.pack;
                 const scope = readReportScope();
@@ -1138,6 +1382,50 @@ export default function AgentShell() {
               <ul>{visibleCandidate.receipts.map(receipt => <li key={receipt.id}><a href={`/api/agent/report-sections/${encodeURIComponent(receipt.id)}`} target="_blank" rel="noreferrer">{blueprintNode(receipt.nodeId)?.title ?? receipt.nodeId} ↗</a><span>{({ dispatched: '已发出 · 待核对', ready: '已返回', failed: '失败', unknown: '结果待核对', running: '处理中' } as Record<string, string>)[receipt.status] ?? '待核对'}</span></li>)}</ul>
             </details>
           </>}
+          <div className={styles.steeringStrip} role="region" aria-label="实时想法插话与安全审阅控制">
+            <input
+              className={styles.steeringInput}
+              value={quickSteeringDraft}
+              onChange={e => setQuickSteeringDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && quickSteeringDraft.trim()) {
+                  e.preventDefault();
+                  addSteeringNote(quickSteeringDraft);
+                  setQuickSteeringDraft('');
+                }
+              }}
+              placeholder="实时插入想法到生成过程，或输入改写想法后直接在下方 A4 正文划词重写…"
+            />
+            <button
+              type="button"
+              className={styles.steeringBtn}
+              disabled={!quickSteeringDraft.trim()}
+              onClick={() => {
+                addSteeringNote(quickSteeringDraft);
+                setQuickSteeringDraft('');
+                setSideOpen(true);
+                setActiveStudio('steering');
+              }}
+            >
+              + 注入流程 ({steeringNotes.length})
+            </button>
+            <button
+              type="button"
+              className={styles.steeringBtn}
+              aria-pressed={activeStudio === 'qa'}
+              onClick={() => { setSideOpen(true); setActiveStudio(activeStudio === 'qa' ? null : 'qa'); }}
+            >
+              Q/A 标红 ({qaHighlightTerms.length})
+            </button>
+            <button
+              type="button"
+              className={styles.steeringBtn}
+              aria-pressed={watermarkEnabled}
+              onClick={() => setWatermarkEnabled(v => !v)}
+            >
+              🛡 审阅水印
+            </button>
+          </div>
           <ReportLiveTheater
             paperRef={paperRef}
             robotRole={choreo.robotRole}
@@ -1151,8 +1439,8 @@ export default function AgentShell() {
             activeSectionId={pickedSection}
             onPick={setPickedSection}
             label="报告实时排版"
-            writingActive={!!liveWriting?.active}
-            workState={reportWorkState(liveWriting)}
+            writingActive={!!liveWriting?.active || !!choreo.typingState || !!choreo.reviewState || !!workflowWorkState}
+            workState={reportWorkState(liveWriting) ?? workflowWorkState ?? choreo.workState ?? null}
             typingState={choreo.typingState}
             reviewState={choreo.reviewState}
             formatScanSectionId={choreo.formatScanSectionId}
@@ -1160,6 +1448,14 @@ export default function AgentShell() {
             onCatalogHover={(attr, id) => choreo.triggerXrefSynapse(attr, id, false)}
             onCatalogClick={(attr, id) => choreo.triggerXrefSynapse(attr, id, true)}
             docFormat={docFormat}
+            sectionDiffs={paperSectionDiffs}
+            onToggleDiffLock={visibleCandidate ? toggleSectionLock : undefined}
+            onApplyRevisionDiff={revision.onApply}
+            onKeepRevisionDiff={revision.onKeep}
+            highlightTerms={qaHighlightTerms}
+            annotations={annotations}
+            onSelectionAction={handleSelectionAction}
+            watermarkText={watermarkEnabled ? `证见 EVI-X · ${email || '内部审阅副本'} · 防未授权摘抄与外传` : null}
           />
         </div>}
         {stage === 'paper' && !copilotOpen && <button type="button" className={styles.copilotPill} onClick={() => setCopilotOpen(true)}>
@@ -1193,7 +1489,9 @@ export default function AgentShell() {
               threads.append([{ ...stamp(), role: 'agent', turn: generation.start(brief, destination) }]);
             }}
             simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
-              startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }} />
+              startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }}
+            onWorkflowWorkState={setWorkflowWorkState}
+            onAdoptWorkflowOutput={adoptWorkflowOutput} />
           </details>
           {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={stage === 'paper' && !!reportWorkState(liveWriting)} onAction={agent.perform} onAnswer={agent.answer} />}
         </div>
@@ -1207,9 +1505,9 @@ export default function AgentShell() {
       <section ref={artifactPanelRef} className={styles.panel} hidden={!panel && !output && !inspecting && !artifactOpen} aria-label={artifactOpen ? '成果架' : here ? here.name : output ? '产出' : inspecting ? '写作检查器' : '模块'} data-dialog-background
         onKeyDown={event => { if (artifactOpen && event.key === 'Escape') { event.stopPropagation(); setArtifactOpen(false); } }}
         data-inspector={inspecting || artifactOpen || undefined} style={{ ['--panel-w' as string]: `${artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth}px` }}>
-        {artifactOpen && <ArtifactShelf {...artifacts} error={artifacts.error??artifactNotice} onClose={()=>setArtifactOpen(false)} onExample={()=>void addInfographicExample()} />}
+        {artifactOpen && <ArtifactShelf {...artifacts} error={artifacts.error??artifactNotice} onClose={()=>setArtifactOpen(false)} onExample={()=>void addInfographicExample()} onLocate={locateArtifact} />}
         {!artifactOpen && inspecting && <ReportInspector content={paperContent} picked={pickedSection} benchmark={paperBenchmark}
-          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} revision={<SectionRevision {...revision} />} />}
+          advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} onJumpToIssue={sectionId => { if (stage !== 'paper') { setStage('paper'); requestAnimationFrame(() => pickSection(sectionId)); } else { pickSection(sectionId); } }} revision={<SectionRevision {...revision} />} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {!artifactOpen && here && <header className={styles.panelHead}>
           <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>

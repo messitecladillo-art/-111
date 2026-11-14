@@ -4,6 +4,7 @@ Every call owns a fresh Session and commits its reservation before network I/O.
 No request Session, credential, prompt, or response body enters workflow state.
 """
 import asyncio
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import timedelta, timezone
 from threading import Event
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session as DBSession
 from application.agent_model_bindings import ROLE_STEPS, validate_role_bindings
 from application.services.agent_task_execution import ExecutionPlan
 from application.workflow_model_adapter import model_handler, public_materials, instruction_hashes
+from application.workflow_data_tools import TOOL_VERSION, DataToolError, SurveyDataTools, snapshot, supported_refs
 from infrastructure.database.models import AgentTaskExecution, Operation, RateEvent, User, now
 from infrastructure.security import config_view, decrypt, keyed
 from multi_agent.agents.contracts import AgentRole
@@ -55,15 +57,32 @@ class WorkflowModels:
             resolve_service=lambda sid: self.owned_service(session, user, sid))
         services = {step: config_view(self.owned_service(session, user, binding['serviceId']))
                     for step, binding in selected.items()}
+        datasets, missing = [], []
+        if role is AgentRole.DATA:
+            datasets, missing = self._datasets(session, row.project_id, state.input_artifact_refs)
         payload = {'taskId': row.id, 'projectId': row.project_id, 'inputRevision': row.revision,
                    'inputHash': fingerprint(row.state), 'role': role.value, 'materials': materials,
                    'steps': services, 'maxCalls': len(selected),
                    'instructionHashes': instruction_hashes(role),
                    'maxOutputTokens': sum(config['maxOutputTokens'] for config in services.values()),
                    'derivedContent': 'bounded_previous_step_results_and_trusted_tool_results',
-                   'available': role is not AgentRole.DATA,
-                   'missingTools': ['load_dataset', 'analyze_dataset'] if role is AgentRole.DATA else []}
+                   'available': not missing, 'missingTools': missing}
+        if role is AgentRole.DATA:
+            payload.update({'dataTool': TOOL_VERSION, 'datasets': datasets,
+                            'dataDisclosure': 'aggregate_statistics_only_no_rows_no_open_text'})
         return {**payload, 'previewHash': fingerprint(payload)}
+
+    @staticmethod
+    def _datasets(session, project_id, refs):
+        # Only backend-owned survey releases have a trusted reader. Other refs
+        # (browser files, free-form ids) keep the role unavailable.
+        if not supported_refs(refs):
+            return [], ['load_dataset', 'analyze_dataset']
+        try:
+            datasets = [snapshot(session, project_id, ref) for ref in refs]
+        except DataToolError:
+            return [], ['load_dataset', 'analyze_dataset']
+        return datasets, (['collected_responses'] if any(item['rowCount'] == 0 for item in datasets) else [])
 
     def prepare(self, *, row, user, session, data, check_session, execution_id):
         state = WorkflowState.from_dict(row.state)
@@ -84,7 +103,9 @@ class WorkflowModels:
         invocation = ModelInvocation(runtime=self, engine=session.get_bind(), actor_id=user.id,
             project_id=row.project_id, task_id=row.id, execution_id=execution_id,
             preview=deepcopy(preview), check_session=check_session)
-        sync_handler = model_handler(role, invocation.invoke)
+        tools = (SurveyDataTools(open_session=invocation.data_session, project_id=row.project_id,
+                                 expected=preview['datasets']).tools() if role is AgentRole.DATA else None)
+        sync_handler = model_handler(role, invocation.invoke, tools)
 
         async def handler(current):
             try:
@@ -123,6 +144,18 @@ class ModelInvocation:
                 or fingerprint(row.state) != self.prepared_hash):
             raise ApiError(409, 'workflow_invocation_inactive', '该次执行已结束或需要对账。')
         return user
+
+    @contextmanager
+    def data_session(self):
+        """A trusted tool read under the same fence as a model call, read-only."""
+        if self.stopped.is_set():
+            raise ProviderFailure('workflow_invocation_inactive')
+        with DBSession(self.engine, expire_on_commit=False) as session:
+            self._fence(session)
+            try:
+                yield session
+            finally:
+                session.rollback()
 
     def invoke(self, step, messages):
         if step not in self.preview['steps'] or self.stopped.is_set():

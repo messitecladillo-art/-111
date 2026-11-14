@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import LandingDemo from '@/components/landing/LandingDemo';
+import CorpusObservatory from '@/components/landing/CorpusObservatory';
 import styles from '@/components/landing/LandingExplore.module.css';
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function ExplorePage() {
     <main className={styles.main}>
       <div className={styles.intro}><p>从问题，到有依据的行动。</p><h1>动手试试证见。</h1></div>
       <section id="demo" className={styles.demo} aria-label="产品交互演示"><LandingDemo/></section>
+      <section id="corpus" aria-labelledby="corpus-title" style={{ marginTop: 48 }}><CorpusObservatory compact/></section>
       <section id="questions" className={styles.questions} aria-labelledby="questions-title"><h2 id="questions-title">开始之前</h2>{[
         ['证见适合谁？', '面向市场调查与分析大赛参赛团队，以及需要设计问卷、分析数据、撰写研究报告的小团队。'],
         ['如何连接模型？', '在个人模型服务中配置 API Key，再为问卷生成等任务选择模型。'],

@@ -46,15 +46,15 @@
 .linkButton:disabled { color: var(--wb-muted); cursor: not-allowed; }
 .linkButton[aria-pressed="true"] { color: var(--wb-gold-text); }
 .closeButton { margin-left: auto; width: 28px; height: 28px; border: 1px solid var(--wb-line); border-radius: 50%; background: transparent; color: var(--wb-muted); font-size: 16px; line-height: 1; cursor: pointer; }
-.segmented { display: inline-flex; padding: 3px; border: 1px solid var(--wb-line); border-radius: 999px; background: var(--wb-well); }
-.segmented button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--wb-muted); font: 700 12.5px/1 var(--wb-sans); cursor: pointer; white-space: nowrap; }
+.segmented { display: inline-flex; align-items: center; padding: 3px; border: 1px solid var(--wb-line); border-radius: 999px; background: var(--wb-well); }
+.segmented button { display: inline-flex; align-items: center; justify-content: center; height: 28px; min-height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--wb-muted); font: 700 12.5px/1 var(--wb-sans); cursor: pointer; white-space: nowrap; }
 .segmented button[aria-pressed="true"] { background: var(--wb-surface); color: var(--wb-text); box-shadow: 0 1px 3px rgba(10, 31, 51, .14); }
 .segmented button:disabled { opacity: .45; cursor: not-allowed; }
 .inlineField { display: inline-flex; align-items: center; gap: 8px; color: var(--wb-muted); font-size: 12.5px; font-weight: 700; }
-.inlineField select { min-height: 32px; padding: 0 8px; border: 1px solid var(--wb-line-strong); border-radius: 8px; background: var(--wb-surface); color: var(--wb-text); font: 600 13px var(--wb-sans); }
+.inlineField select { width: auto; height: 34px; min-height: 34px; padding: 0 10px; border: 1px solid var(--wb-line-strong); border-radius: 8px; background: var(--wb-surface); color: var(--wb-text); font: 600 13px/32px var(--wb-sans); vertical-align: middle; box-sizing: border-box; }
 .checkLine { display: inline-flex; align-items: center; gap: 8px; color: var(--wb-muted); font-size: 12.5px; font-weight: 600; }
 .checkLine input { width: 16px; height: 16px; accent-color: var(--wb-accent); }
-.searchField input { min-height: 32px; width: 150px; padding: 0 10px; border: 1px solid var(--wb-line-strong); border-radius: 8px; background: var(--wb-surface); color: var(--wb-text); font: 600 13px var(--wb-sans); }
+.searchField input { height: 34px; min-height: 34px; width: 150px; padding: 0 10px; border: 1px solid var(--wb-line-strong); border-radius: 8px; background: var(--wb-surface); color: var(--wb-text); font: 600 13px/32px var(--wb-sans); box-sizing: border-box; }
 .field { display: grid; gap: 6px; }
 .field > span { font-size: 13.5px; font-weight: 750; }
 .field small { color: var(--wb-muted); font-weight: 500; }

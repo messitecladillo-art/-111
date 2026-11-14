@@ -15,11 +15,14 @@ import { buildLiteratureStudy, emptyLiteratureStudy, type LiteratureStudy } from
 import { adoptedLiteratureLines } from '@/lib/agent/literature-handoff';
 import { literatureWorkspaceReceipt, literatureEvidenceReference, type LiteratureWorkspaceSnapshot } from '@/lib/topic-lab/workspace';
 import { literatureEvidenceReferencesEqual } from '@/lib/topic-lab/evidence-reference';
+import type { ReportWorkState } from '@/lib/agent/report-work';
+import type { WorkflowRole, WorkflowTaskRecord } from '@/lib/agent/workflow-task-client';
 import TopicAgent from '@/components/topic-advisor/TopicAgent';
 import RegionPicker from '@/components/topic-advisor/RegionPicker';
 import ResearchJourney, { type JourneyModelRoute, type ResearchJourneyStep } from './ResearchJourney';
 import LiteratureStudyPanel from './LiteratureStudyPanel';
 import ResearchSimulationPanel, { type ResearchSimulationHost } from './ResearchSimulationPanel';
+import WorkflowTaskPanel from './WorkflowTaskPanel';
 import styles from './ResearchWorkspace.module.css';
 
 export type ResearchWorkspaceProps = {
@@ -34,6 +37,8 @@ export type ResearchWorkspaceProps = {
   onLiteratureToReport?: (lines: string[]) => void;
   literature: LiteratureWorkspaceSnapshot | null; onLiterature: (value: LiteratureWorkspaceSnapshot | null) => void;
   simulation?: ResearchSimulationHost;
+  onWorkflowWorkState?: (state: ReportWorkState | null) => void;
+  onAdoptWorkflowOutput?: (role: WorkflowRole, output: Record<string, unknown>, task: WorkflowTaskRecord) => void;
 };
 type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
@@ -359,6 +364,21 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
       key={JSON.stringify(draft.selected.brief)}
       topic={draft.selected} host={props.simulation} sourceLines={sourceLines} disabled={!ready || busy || conflict}
       canSave={!!owner && owner !== 'guest'} />}
+    {typeof WorkflowTaskPanel === 'function' && <WorkflowTaskPanel
+      owner={owner}
+      projectId={projectId}
+      identityEpoch={identityEpoch}
+      services={props.services}
+      defaultServiceId={props.defaultServiceId}
+      direction={draft.direction}
+      brief={draft.selected?.brief ?? null}
+      selected={draft.selected?.selected ?? null}
+      literatureStudy={draft.literatureStudy ?? null}
+      disabled={!ready || busy || conflict}
+      onOpenSettings={props.onOpenSettings}
+      onWorkStateChange={props.onWorkflowWorkState}
+      onAdoptOutput={props.onAdoptWorkflowOutput}
+    />}
     {receipt?.status === 'ready' && <details className={styles.result}><summary>文献分析回执 · {receipt.summary.records} 条</summary><p>共现节点 {receipt.map.nodes.length} · 论文网络节点 {receipt.papers.nodes.length}</p><code>{receipt.resultHash}</code><button type="button" onClick={() => props.onOpenStage('literature')}>查看词云与图谱</button></details>}
     <details className={styles.advisor}><summary>与选题顾问继续推敲</summary><TopicAgent profile={draft.profile} projectId={projectId} cacheNamespace={`research:${projectId ?? 'local'}`} readOnly={!ready || conflict}
       onProfileChange={profile => changeResearchInput(value => ({ ...value, profile }))}

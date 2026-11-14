@@ -22,6 +22,9 @@ export const ADVANCED_NODES: Readonly<Record<string, string>> = { validity: 'dat
 export function suggestedNode(r: ResultSnapshot): string {
   if (ADVANCED_NODES[r.method]) return ADVANCED_NODES[r.method];
   switch (r.method) {
+    case 'wordcloud': return 'intro.literature';
+    case 'framework': case 'diagram': return 'design.content';
+    case 'infographic': return 'sample.descriptive';
     case 'frequency': case 'numeric': return DEMOGRAPHIC.test(r.variables?.[0] ?? '') ? 'sample.profile' : 'sample.descriptive';
     case 'crosstab': case 'groups': case 'pearson': case 'spearman': return 'compare.tests';
     case 'alpha': return 'data.testing';
@@ -36,6 +39,7 @@ export function suggestedExhibits(r: ResultSnapshot): ExhibitKind[] {
   // An advanced result is its table, and its own figure when the result carries one (lib/method-figures.ts).
   if (ADVANCED_NODES[r.method]) return r.metrics.length && r.metrics.every(m => m.label.includes('｜')) ? ['table', 'chart'] : ['table'];
   switch (r.method) {
+    case 'wordcloud': case 'framework': case 'diagram': case 'infographic':
     case 'frequency': case 'crosstab': case 'groups': case 'numeric': return ['chart'];
     case 'pearson': case 'spearman': return [];
     default: return ['table'];
@@ -131,6 +135,7 @@ export function resultPlaced(content: EditorContent, r: ResultSnapshot): boolean
 
 /** Method names as the result catalogue shows them. */
 export const METHOD_LABELS: Record<string, string> = {
+  wordcloud: '文献关键词词云', framework: '研究技术路线图', diagram: '研究结构流程图', infographic: '描述性统计复合信息图',
   frequency: '频数分析', crosstab: '交叉分析与卡方检验', groups: '分组均值比较', numeric: '数值描述', pearson: 'Pearson 相关', spearman: 'Spearman 相关',
   alpha: '信度分析', 'quality-control': '问卷质量筛查', 'sampling-frame': '抽样设计',
   validity: '因子分析（效度）', regression: '线性回归', logistic: 'Logistic 回归', ipa: '重要性—表现分析（IPA）', cluster: '聚类分析', ahp: '层次分析（AHP）',

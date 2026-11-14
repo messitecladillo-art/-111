@@ -236,6 +236,14 @@ export function readingParagraph(r: ResultSnapshot, refs: ResultRefs = {}): stri
     // A sampling frame is part of the design, not a sample: it has units, not respondents.
     case 'sampling-frame': { const name = literal(r.title.replace(/抽样框$/u, ''));
       return refs.table ? `${referenceToken('table', refs.table)}列出了${name}各阶段的抽样框与入样单位。` : `${name}采用分阶段抽样，各阶段的抽样框与入样单位须以表格列出。`; }
+    case 'wordcloud': {
+      const top = r.rows.slice(0, 4).map(item => `“${String(item[0])}”`).join('、');
+      return `${lead(refs)}围绕研究主题共提取 ${r.n} 个核心关键词，高频聚焦于${top || '研究重点维度'}，系统勾勒出既有文献的关注焦点与演进脉络。`;
+    }
+    case 'framework': case 'diagram':
+      return `${lead(refs)}系统呈现了${literal(r.title)}的 ${r.n} 个核心环节与递进路径，将文献脉络、问卷测量与实证建模整合为闭环研究框架。`;
+    case 'infographic':
+      return `${lead(refs)}以多面板复合信息图直观展示了「${literal(r.title)}」的核心样本分布与维度表现（涉及关键指标 ${r.rows.length} 项），所有数值均直接锁定自冻结分析快照。`;
     default: return `${lead(refs)}${literal(r.title)}的有效样本为 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}。`;
   }
 }

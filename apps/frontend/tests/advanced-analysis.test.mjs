@@ -241,3 +241,14 @@ test('tables beyond what the exports take are refused at computation', () => {
   assert.match(runAdvanced({ method: 'ipa', performance: Array.from({ length: 15 }, (_, i) => i), importance: null, overall: 29 }, wide, []).refused, /至多 14 个/);
   assert.match(runAdvanced({ method: 'validity', items: Array.from({ length: 25 }, (_, i) => i) }, wide, []).refused, /至多 24 个/);
 });
+
+test('cluster k="auto" scans candidate k=[2..5] by silhouette and aligns rowAssignments to table.rows', () => {
+  const autoCluster = runAdvanced({ method: 'cluster', variables: [0, 3, 6], k: 'auto' }, table, ['99']);
+  assert.ok(!('refused' in autoCluster));
+  assert.ok(autoCluster.silhouetteScan && autoCluster.silhouetteScan.length === 4);
+  const best = autoCluster.silhouetteScan.reduce((a, b) => (b.mean > a.mean ? b : a));
+  assert.equal(autoCluster.chosenK, best.k);
+  assert.equal(autoCluster.writing.table.rows.length, best.k);
+  assert.equal(autoCluster.rowAssignments?.length, table.rows.length);
+  assert.equal(autoCluster.rowAssignments?.filter(x => x !== null).length, autoCluster.n);
+});

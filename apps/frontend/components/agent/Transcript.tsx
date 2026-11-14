@@ -127,9 +127,15 @@ function Card({ card, message, onAction, onAnswer }: { card: AgentCard; message:
     </ol>
     <p className={styles.origin}><b aria-hidden="true">◉</b>来处</p>
   </div>;
+  const maxCols = card.columns ? Math.max(1, ...card.lines.map(l => l.length)) : 1;
+  const gridColumns = maxCols === 1
+    ? 'minmax(0, 1fr)'
+    : maxCols === 2
+      ? 'fit-content(140px) minmax(0, 1fr)'
+      : `repeat(${maxCols - 1}, fit-content(24%)) minmax(0, 1fr)`;
   return <div className={styles.card}>
     <span className={styles.cardTitle}>{card.title}</span>
-    {card.columns ? <div className={styles.cardGrid} style={{ gridTemplateColumns: `repeat(${Math.max(...card.lines.map(l => l.length)) - 1}, max-content) minmax(0, 1fr)` }}>
+    {card.columns ? <div className={styles.cardGrid} style={{ gridTemplateColumns: gridColumns }}>
       {card.lines.map((line, i) => <p key={i}>{line.map((span, j) => <span key={j}><Spans line={[span]} at={message.at} /></span>)}</p>)}
     </div> : <div className={styles.cardLines}>{card.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}</div>}
     {!!card.links?.length && <div className={styles.cardLinks}>

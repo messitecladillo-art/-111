@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type CSSProperties, type Ref } from 'react';
+import { CORPUS_RESERVE_SUMMARY } from '@/data/zhengda-empirical-anatomy';
 import { percent } from '@/lib/agent/glyphs';
 import { roomLight, type Illumination, type ProjectView } from '@/lib/agent/illumination';
 import { roomById, type RoomId } from '@/lib/agent/rooms';
@@ -59,6 +60,12 @@ export default function Lobby({ light, view, traces, onOpen, onSay, headingRef }
       <div className={styles.gallery}><span>参考</span>
         <a href="#cases">获奖案例</a><a href="#silicon">硅基样本</a><span className={styles.note}>只作参照，不替你下结论。</span>
       </div>
+      <p className={styles.note} style={{ marginTop: 8 }}>
+        知识底座已吸收 <strong>{CORPUS_RESERVE_SUMMARY.totalReports}</strong> 篇历届国奖（{CORPUS_RESERVE_SUMMARY.totalPages.toLocaleString()} 页）·{' '}
+        <strong>{CORPUS_RESERVE_SUMMARY.surveyFiles}</strong> 份 {CORPUS_RESERVE_SUMMARY.surveyCategories} 类标准问卷 ·{' '}
+        <strong>{CORPUS_RESERVE_SUMMARY.topics2027}</strong> 个 2027 前沿选题 ·{' '}
+        <strong>12</strong> 大高频计量范式与 <strong>8</strong> 张标准三线表模板。
+      </p>
     </section>
 
     <section className={styles.section} aria-labelledby="lobby-blind">

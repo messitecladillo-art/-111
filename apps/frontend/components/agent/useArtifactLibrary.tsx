@@ -231,5 +231,6 @@ export function useArtifactLibrary(options: ArtifactLibraryOptions) {
     ...(record.value.type === 'file' ? { useLabel: '下载原图', useAction: 'download' as const, thumbnailUrl: record.value.dataUrl } : {}),
   }));
   const unavailableReason = !scope || options.readCurrent().scope !== scope ? '账号与项目尚未确认，请重新连接后操作素材。' : undefined;
-  return { items, selectedId: shown.selectedId, preview, busy: shown.busy, error: shown.error, unavailableReason, onSelect, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, count: new Set(items.map(item => item.familyId)).size };
+  const recordOf = useCallback((id: string) => shown.library.records.find(record => record.id === id) ?? null, [shown.library.records]);
+  return { items, selectedId: shown.selectedId, preview, busy: shown.busy, error: shown.error, unavailableReason, onSelect, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, recordOf, count: new Set(items.map(item => item.familyId)).size };
 }

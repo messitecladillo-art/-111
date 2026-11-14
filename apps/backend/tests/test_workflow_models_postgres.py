@@ -3,6 +3,7 @@ import json
 from contextlib import ExitStack
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier, Event
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -48,6 +49,8 @@ class SyntheticSteps:
                 'objectives': ['Design a testable pilot'], 'population': 'To confirm', 'geography': 'Hubei',
                 'period': 'To confirm', 'feasibility': {'status': 'proposed'},
             }}
+        elif step == 'analyze_data':
+            result = {'summary': 'Synthetic summary of trusted aggregates.'}
         elif step == 'review_deliverable':
             result = {'summary': 'Synthetic review of the proposal only.', 'deliverable': {
                 'decision': 'approve', 'stage': task['review_stage'],
@@ -235,6 +238,60 @@ def test_data_model_execution_is_not_a_substitute_for_real_analysis_tools(model_
     assert preview['available'] is False and preview['missingTools'] == ['load_dataset', 'analyze_dataset']
     response = advance(owner, path, 0, consent(owner, path))
     assert response.status_code == 409 and provider.calls == []
+
+
+def test_data_role_reads_owned_survey_release_and_reports_tool_values(model_harness, settings):
+    from tests.test_surveys_postgres import publish
+    app, login, provider = model_harness
+    owner, model, _ = login()
+    p, _ = project(owner)
+    release, _ = publish(owner, p)
+    ref = f'survey-release:{release["id"]}'
+    task = owner.post(f'/api/projects/{p["id"]}/agent-tasks', json={
+        'taskType': 'data_analysis', 'requirements': {'goal': 'Synthetic analysis'}, 'inputArtifactRefs': [ref],
+        'modelPlan': {'schemaVersion': 1, 'default': {'serviceId': model['id'], 'revision': model['revision']}}}).json()
+    path = f'/api/projects/{p["id"]}/agent-tasks/{task["id"]}'
+    empty = owner.get(path + '/model-preview').json()
+    assert empty['available'] is False and empty['missingTools'] == ['collected_responses']
+    with TestClient(app, headers={'origin': settings.allowed_origins[0]}) as public:
+        for i, (choice, score, note) in enumerate([('yes', 4, 'synthetic-private-open-text'), ('yes', 2, None), ('no', None, None)]):
+            answers = {'choice': choice, **({'score': score} if score else {}), **({'text': note} if note else {})}
+            sent = public.post(f'/api/surveys/{release["token"]}/responses', json={'idempotencyKey': str(uuid4()), 'answers': answers})
+            assert sent.status_code == 201, sent.text
+    preview = owner.get(path + '/model-preview').json()
+    assert preview['available'] is True and preview['datasets'][0]['rowCount'] == 3
+    assert preview['dataDisclosure'] == 'aggregate_statistics_only_no_rows_no_open_text'
+    approved = {'accepted': True, 'previewHash': preview['previewHash'], 'maxCalls': preview['maxCalls']}
+    response = advance(owner, path, 0, approved)
+    assert response.status_code == 200, response.text
+    value = response.json()
+    deliverable = value['state']['agent_outputs']['data']['deliverable']
+    assert deliverable['data_status'] == 'analyzed' and deliverable['input_artifact_refs'] == [ref]
+    score = next(item for item in deliverable['descriptive_statistics'] if item['variable'] == 'Q2')
+    assert (score['n_shown'], score['n_valid'], score['mean']) == (2, 2, 3.0)
+    assert [step for step, _, _ in provider.calls] == ['inspect_data', 'clean_data', 'analyze_data']
+    assert 'synthetic-private-open-text' not in json.dumps(value)
+
+
+def test_data_snapshot_change_after_preview_requires_new_consent(model_harness, settings):
+    from tests.test_surveys_postgres import publish
+    app, login, provider = model_harness
+    owner, model, _ = login()
+    p, _ = project(owner)
+    release, _ = publish(owner, p)
+    task = owner.post(f'/api/projects/{p["id"]}/agent-tasks', json={
+        'taskType': 'data_analysis', 'requirements': {'goal': 'Synthetic analysis'},
+        'inputArtifactRefs': [f'survey-release:{release["id"]}'],
+        'modelPlan': {'schemaVersion': 1, 'default': {'serviceId': model['id'], 'revision': model['revision']}}}).json()
+    path = f'/api/projects/{p["id"]}/agent-tasks/{task["id"]}'
+    with TestClient(app, headers={'origin': settings.allowed_origins[0]}) as public:
+        submit = lambda: public.post(f'/api/surveys/{release["token"]}/responses',
+                                     json={'idempotencyKey': str(uuid4()), 'answers': {'choice': 'no'}})
+        assert submit().status_code == 201
+        approved = consent(owner, path)
+        assert submit().status_code == 201
+    assert advance(owner, path, 0, approved).status_code == 422
+    assert provider.calls == []
 
 
 def test_two_accounts_execute_with_separate_personal_configs_and_inputs(model_harness):

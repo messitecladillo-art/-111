@@ -623,7 +623,7 @@ function CanvasPanel({ dataset, design, projectId }: { dataset: DatasetValue | n
  */
 export function useWorkbenchModules(observeReport = false, projectId: string|null = null) {
   const { session, identityEpoch, loading, isCurrentAccount, isCurrentIdentity } = useHostedSession();
-  const draftOwner = observeReport && !loading && session ? (session.authenticated && session.user?.id ? session.user.id : 'guest') : null;
+  const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
   const identityScope=JSON.stringify(['workspace',session?.user?.id??null,identityEpoch]);
   const workspaceScope=JSON.stringify([identityScope,projectId]);
   const scopeTicket=useMemo(()=>({scope:workspaceScope}),[workspaceScope]);

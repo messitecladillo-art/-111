@@ -16,6 +16,7 @@ import HeroAtmosphere from './HeroAtmosphere';
 import TourAtmosphere from './TourAtmosphere';
 import CaseEvidence, { type EvidencePage } from './CaseEvidence';
 import HeroShowcase from './HeroShowcase';
+import CorpusObservatory from './CorpusObservatory';
 
 const HEADLINE = ['让每个问题，', '都循证抵达行动'] as const;
 
@@ -467,6 +468,7 @@ export default function LandingPage() {
           <a href="#silicon">硅基样本</a>
           <a href="#calendar">赛程</a>
           <a href="#awards">案例</a>
+          <a href="#corpus">语料图谱</a>
           <Link href="/explore">了解证见</Link>
           <Link href="/chronicle">寻证之旅</Link>
         </nav>
@@ -609,6 +611,12 @@ export default function LandingPage() {
           </div>)}
         </div>
         <p className={styles.sectionFoot} data-reveal><Link href="/workspace#cases">打开报告案例库 ↗</Link></p>
+      </section>
+
+      <section id="corpus" className={styles.section} aria-labelledby="corpus-title">
+        <div data-reveal>
+          <CorpusObservatory />
+        </div>
       </section>
 
       <section id="deep-read" className={`${styles.section} ${styles.deepReadSection}`} aria-labelledby="deep-read-title">

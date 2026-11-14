@@ -1,0 +1,3851 @@
+{
+  "schema": "zhengda-award-archive/v1",
+  "capturedAt": "2026-11-14",
+  "provenance": "user_provided_local_archive",
+  "disclaimer": "收录自用户提供的 2015–2025 历届正大杯国奖报告本地 PDF 合集（按题名与 SHA-256 指纹去重，不含官网逐篇公告反向核验，仅作题录共现、突现与结构设计参照，不含正文字节公开分发）。",
+  "totalReports": 204,
+  "yearSpan": [
+    2014,
+    2025
+  ],
+  "cpPropositions": 7,
+  "records": [
+    {
+      "id": "zd-archive-2014-001",
+      "title": "余额宝使用现状及产品发展分析报告——基于武汉市七大城区抽样调查",
+      "hook": "余额宝使用现状及产品发展分析报告",
+      "subtitle": "基于武汉市七大城区抽样调查",
+      "year": 2014,
+      "edition": "第四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险",
+        "武汉"
+      ],
+      "pages": 92,
+      "sha256Prefix": "c877c01243394903",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2014-002",
+      "title": "大学生烘焙类食品消费习惯调查及产品定制",
+      "hook": "",
+      "subtitle": "大学生烘焙类食品消费习惯调查及产品定制",
+      "year": 2014,
+      "edition": "第四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生"
+      ],
+      "pages": 81,
+      "sha256Prefix": "21d065cd332f22d4",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2014-003",
+      "title": "居民健康状况对保健食品市场影响的调查—以石家庄为例",
+      "hook": "居民健康状况对保健食品市场影响的调查",
+      "subtitle": "以石家庄为例",
+      "year": 2014,
+      "edition": "第四届",
+      "award": "省赛一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "石家庄"
+      ],
+      "pages": 24,
+      "sha256Prefix": "6eecb5f22c4bb743",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2014-004",
+      "title": "西式快餐冲击下的中式快餐的发展对策分析—以永和豆浆和肯德基为例",
+      "hook": "西式快餐冲击下的中式快餐的发展对策分析",
+      "subtitle": "以永和豆浆和肯德基为例",
+      "year": 2014,
+      "edition": "第四届",
+      "award": "省赛一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖"
+      ],
+      "pages": 18,
+      "sha256Prefix": "1831d7b928b45127",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2014-005",
+      "title": "试看“新交规”能否博石家庄市民青睐",
+      "hook": "",
+      "subtitle": "试看“新交规”能否博石家庄市民青睐",
+      "year": 2014,
+      "edition": "第四届",
+      "award": "省赛一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "石家庄"
+      ],
+      "pages": 23,
+      "sha256Prefix": "8eccd594f0377899",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-006",
+      "title": "“众”视手机安全，“旨”为隐私保险",
+      "hook": "",
+      "subtitle": "“众”视手机安全，“旨”为隐私保险",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险"
+      ],
+      "pages": 53,
+      "sha256Prefix": "fd655e51c421d51e",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-007",
+      "title": "“爸爸妈妈，我从哪里来？” ——基于五地家庭性教育的现状及差异调查分析",
+      "hook": "“爸爸妈妈，我从哪里来？”",
+      "subtitle": "基于五地家庭性教育的现状及差异调查分析",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给"
+      ],
+      "pages": 89,
+      "sha256Prefix": "1644735953628d04",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-008",
+      "title": "“读研热”的冷思考—关于财经类高校读研情况的调查",
+      "hook": "“读研热”的冷思考",
+      "subtitle": "关于财经类高校读研情况的调查",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 172,
+      "sha256Prefix": "3119cf192ac40222",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-009",
+      "title": "“钟灵毓秀 曲水流觞”传统文化类综艺节目传播特征及传播效果分析",
+      "hook": "",
+      "subtitle": "“钟灵毓秀 曲水流觞”传统文化类综艺节目传播特征及传播效果分析",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "满意度与意愿"
+      ],
+      "pages": 65,
+      "sha256Prefix": "9641f9c5bcad77e1",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-010",
+      "title": "共享概念下共赢理念的实现——以石家庄ofo共享单车为例",
+      "hook": "共享概念下共赢理念的实现",
+      "subtitle": "以石家庄ofo共享单车为例",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "石家庄"
+      ],
+      "pages": 80,
+      "sha256Prefix": "bbd3dced96b71a8c",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-011",
+      "title": "大学生烘焙类食品消费习惯调查及产品定制——以太原为例",
+      "hook": "大学生烘焙类食品消费习惯调查及产品定制",
+      "subtitle": "以太原为例",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生",
+        "太原"
+      ],
+      "pages": 81,
+      "sha256Prefix": "ddcf0bfc471018a4",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-012",
+      "title": "大学生电商平台消费金融产品使用偏好及风险防范—心机乌提提团队",
+      "hook": "大学生电商平台消费金融产品使用偏好及风险防范",
+      "subtitle": "心机乌提提团队",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售",
+        "青年与大学生",
+        "金融与保险",
+        "满意度与意愿"
+      ],
+      "pages": 74,
+      "sha256Prefix": "3d58d2a1ca23fa2b",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-013",
+      "title": "微校企示录——辽宁省轻纺行业校企联盟平台“微信小程序”用户需求调查",
+      "hook": "微校企示录",
+      "subtitle": "辽宁省轻纺行业校企联盟平台“微信小程序”用户需求调查",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售",
+        "辽宁"
+      ],
+      "pages": 71,
+      "sha256Prefix": "ce07a07e1781811c",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-014",
+      "title": "惠民安邦 让中药飞——在中医院开展中药饮片配送与中药药事咨询的市场前景分析",
+      "hook": "惠民安邦 让中药飞",
+      "subtitle": "在中医院开展中药饮片配送与中药药事咨询的市场前景分析",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食"
+      ],
+      "pages": 102,
+      "sha256Prefix": "54daa4b95e0dd2d1",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-015",
+      "title": "掌上世界——手游用户行为特征识别分析和营销策略探究",
+      "hook": "掌上世界",
+      "subtitle": "手游用户行为特征识别分析和营销策略探究",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "品牌建设与营销策略"
+      ],
+      "pages": 97,
+      "sha256Prefix": "3dcb3f15abf0c960",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-016",
+      "title": "智能手环使用现状及产品发展分析报告—基于电商平台消费者购买评价的文本挖掘与武汉市的抽样调查",
+      "hook": "智能手环使用现状及产品发展分析报告",
+      "subtitle": "基于电商平台消费者购买评价的文本挖掘与武汉市的抽样调查",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售",
+        "武汉"
+      ],
+      "pages": 81,
+      "sha256Prefix": "1e6779cacc66db50",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-017",
+      "title": "有爱，无碍！我们在行动中——杭州市残疾人停车位发展现状调查研究",
+      "hook": "有爱，无碍！我们在行动中",
+      "subtitle": "杭州市残疾人停车位发展现状调查研究",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "杭州"
+      ],
+      "pages": 70,
+      "sha256Prefix": "0d0a0835b53c9ed5",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-018",
+      "title": "滴水思情，奈何“愁”—基于移动互联网公益的捐赠行为意愿研究",
+      "hook": "滴水思情，奈何“愁”",
+      "subtitle": "基于移动互联网公益的捐赠行为意愿研究",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 68,
+      "sha256Prefix": "a0e4a92351004990",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-019",
+      "title": "辽宁省域跨境电商转型阶段下的人才需求现状分析",
+      "hook": "",
+      "subtitle": "辽宁省域跨境电商转型阶段下的人才需求现状分析",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "辽宁"
+      ],
+      "pages": 92,
+      "sha256Prefix": "bfff87b035da8734",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-020",
+      "title": "顾客为何不‘粉’我—基于南京超级物种新零售模式的调查研究",
+      "hook": "顾客为何不‘粉’我",
+      "subtitle": "基于南京超级物种新零售模式的调查研究",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售",
+        "南京"
+      ],
+      "pages": 177,
+      "sha256Prefix": "a0cecd5cb96812a6",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-021",
+      "title": "风雨中的伴履—G 品牌进军跑鞋市场策略研究",
+      "hook": "风雨中的伴履",
+      "subtitle": "G 品牌进军跑鞋市场策略研究",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "品牌建设与营销策略"
+      ],
+      "pages": 59,
+      "sha256Prefix": "e9936301b2a98bdb",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2015-022",
+      "title": "鸡蛋餐餐见，品牌谁优选——上海市正大品牌鸡蛋消费驱动与障碍研究",
+      "hook": "鸡蛋餐餐见，品牌谁优选",
+      "subtitle": "上海市正大品牌鸡蛋消费驱动与障碍研究",
+      "year": 2015,
+      "edition": "第五届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "品牌建设与营销策略",
+        "上海"
+      ],
+      "pages": 69,
+      "sha256Prefix": "53023a94bffea15e",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2016-023",
+      "title": "“我的权益，我做主！”——天津市消费者权益保护调查",
+      "hook": "“我的权益，我做主！”",
+      "subtitle": "天津市消费者权益保护调查",
+      "year": 2016,
+      "edition": "第六届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "天津"
+      ],
+      "pages": 47,
+      "sha256Prefix": "22c080b759f5964e",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2016-024",
+      "title": "“汽车随处可见，商机谁来发现”—石家庄市区汽车用品市场调查",
+      "hook": "“汽车随处可见，商机谁来发现”",
+      "subtitle": "石家庄市区汽车用品市场调查",
+      "year": 2016,
+      "edition": "第六届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳",
+        "石家庄"
+      ],
+      "pages": 35,
+      "sha256Prefix": "afd1876e3c1769ce",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2016-025",
+      "title": "“陪着他们走”——基于中学生的教育供给侧改革调查",
+      "hook": "“陪着他们走”",
+      "subtitle": "基于中学生的教育供给侧改革调查",
+      "year": 2016,
+      "edition": "第六届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "儿童与教育供给"
+      ],
+      "pages": 43,
+      "sha256Prefix": "7dcbb4adf6732c11",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2016-026",
+      "title": "以旧换“心”，“爱”随心行",
+      "hook": "",
+      "subtitle": "以旧换“心”，“爱”随心行",
+      "year": 2016,
+      "edition": "第六届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 40,
+      "sha256Prefix": "465a02e6372b15c4",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2016-027",
+      "title": "智能手环使用现状及产品发展分析",
+      "hook": "",
+      "subtitle": "智能手环使用现状及产品发展分析",
+      "year": 2016,
+      "edition": "第六届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 81,
+      "sha256Prefix": "7ba7de1020ed961b",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2016-028",
+      "title": "“微”中见“影”——这个营销不太冷",
+      "hook": "“微”中见“影”",
+      "subtitle": "这个营销不太冷",
+      "year": 2016,
+      "edition": "第六届",
+      "award": "省赛一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 79,
+      "sha256Prefix": "55c962f56c0448cb",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-029",
+      "title": "“众”视手机安全，“旨”为隐私保险基于XXX市区手机使用信息安全调查信息研究",
+      "hook": "",
+      "subtitle": "“众”视手机安全，“旨”为隐私保险基于XXX市区手机使用信息安全调查信息研究",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险"
+      ],
+      "pages": 53,
+      "sha256Prefix": "bd5794b98f09f382",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-030",
+      "title": "“健”钟情定终“身”——基于石家庄的健身市场调查",
+      "hook": "“健”钟情定终“身”",
+      "subtitle": "基于石家庄的健身市场调查",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "石家庄"
+      ],
+      "pages": 65,
+      "sha256Prefix": "aee9076a57da715b",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-031",
+      "title": "“夕阳红灿，乐来知否？”老年文娱精准推荐及标准化老年活动中心模拟建设——基于武汉市老年人文娱生活现状及问题研究",
+      "hook": "“夕阳红灿，乐来知否？”老年文娱精准推荐及标准化老年活动中心模拟建设",
+      "subtitle": "基于武汉市老年人文娱生活现状及问题研究",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "武汉"
+      ],
+      "pages": 92,
+      "sha256Prefix": "d363ad44fbdf569a",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-032",
+      "title": "“读研热”的冷思考调查",
+      "hook": "",
+      "subtitle": "“读研热”的冷思考调查",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 172,
+      "sha256Prefix": "d55036d1d223e98e",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-033",
+      "title": "传承百年技艺，弘扬工匠精神——2017 年藁城宫灯市场供应情况调查",
+      "hook": "传承百年技艺，弘扬工匠精神",
+      "subtitle": "2017 年藁城宫灯市场供应情况调查",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "藁城"
+      ],
+      "pages": 42,
+      "sha256Prefix": "f880720a7db93a37",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-034",
+      "title": "摩拜能否真的“摩拜”——基于摩拜单车用户使用满意度评价及前景分析",
+      "hook": "摩拜能否真的“摩拜”",
+      "subtitle": "基于摩拜单车用户使用满意度评价及前景分析",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 82,
+      "sha256Prefix": "fa6bd3fa3a23027b",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-035",
+      "title": "聚焦都市边缘群体 探究农工市民化现状",
+      "hook": "",
+      "subtitle": "聚焦都市边缘群体 探究农工市民化现状",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 47,
+      "sha256Prefix": "760a79cdc8536cab",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2017-036",
+      "title": "辽宁装备制造业实现工业4.0的调查分析",
+      "hook": "",
+      "subtitle": "辽宁装备制造业实现工业4.0的调查分析",
+      "year": 2017,
+      "edition": "第七届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "辽宁"
+      ],
+      "pages": 39,
+      "sha256Prefix": "95d9a86ae286a62f",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2018-037",
+      "title": "“爸爸妈妈，我从哪里来？”---基于五地家庭性教育现状及差异调查分析",
+      "hook": "",
+      "subtitle": "“爸爸妈妈，我从哪里来？”---基于五地家庭性教育现状及差异调查分析",
+      "year": 2018,
+      "edition": "第八届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给"
+      ],
+      "pages": 89,
+      "sha256Prefix": "db4aba5b40a78d87",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2018-038",
+      "title": "“轻食主义，精致生活”——关于北京市消费者轻食消费的调查与分析",
+      "hook": "“轻食主义，精致生活”",
+      "subtitle": "关于北京市消费者轻食消费的调查与分析",
+      "year": 2018,
+      "edition": "第八届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "北京"
+      ],
+      "pages": 54,
+      "sha256Prefix": "7ee77d3900f90601",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2018-039",
+      "title": "互联网金融冲击下地方中小银行业务转型与创新发展的调查研究",
+      "hook": "",
+      "subtitle": "互联网金融冲击下地方中小银行业务转型与创新发展的调查研究",
+      "year": 2018,
+      "edition": "第八届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险"
+      ],
+      "pages": 85,
+      "sha256Prefix": "9680b8acb84c692b",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-040",
+      "title": "你喜欢“智慧鲜生”吗？——基于北京市的智慧零售生鲜便利店新模式探索研究",
+      "hook": "你喜欢“智慧鲜生”吗？",
+      "subtitle": "基于北京市的智慧零售生鲜便利店新模式探索研究",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "北京"
+      ],
+      "pages": 73,
+      "sha256Prefix": "1d5b6180c91c1cec",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-041",
+      "title": "分分钟好好吃顿饭——来自武汉市方便餐市场的调查证据",
+      "hook": "分分钟好好吃顿饭",
+      "subtitle": "来自武汉市方便餐市场的调查证据",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "武汉"
+      ],
+      "pages": 57,
+      "sha256Prefix": "9fb2f883d8df00b6",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-042",
+      "title": "发现你，了解你，“蒸”服你——上海市速冻饺子市场需求及消费行为研究",
+      "hook": "发现你，了解你，“蒸”服你",
+      "subtitle": "上海市速冻饺子市场需求及消费行为研究",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "上海"
+      ],
+      "pages": 128,
+      "sha256Prefix": "b2f0f89416a0803f",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-043",
+      "title": "来吃鸡吗？——95后对油炸鸡肉类食品喜爱度调查（基于郑州市的调查报告）",
+      "hook": "来吃鸡吗？",
+      "subtitle": "95后对油炸鸡肉类食品喜爱度调查（基于郑州市的调查报告）",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生",
+        "郑州"
+      ],
+      "pages": 73,
+      "sha256Prefix": "b00c0f3189573d42",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-044",
+      "title": "心心相“饮”，“食”全十美——基于饮食消费驱动分析的理想餐厅模型建立",
+      "hook": "心心相“饮”，“食”全十美",
+      "subtitle": "基于饮食消费驱动分析的理想餐厅模型建立",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 69,
+      "sha256Prefix": "45c55a97d5f82c8f",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-045",
+      "title": "炸鸡心掷，未来可期——95后对油炸鸡肉食品喜爱度调查",
+      "hook": "炸鸡心掷，未来可期",
+      "subtitle": "95后对油炸鸡肉食品喜爱度调查",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生"
+      ],
+      "pages": 51,
+      "sha256Prefix": "0bb1a351998b523c",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-046",
+      "title": "石家庄市速冻饺子市场及消费行为研究",
+      "hook": "",
+      "subtitle": "石家庄市速冻饺子市场及消费行为研究",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "石家庄"
+      ],
+      "pages": 47,
+      "sha256Prefix": "c6ee49d622916ba5",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2019-047",
+      "title": "徽风皖韵.黄梅飘香--安徽省大学生对黄梅戏认知现状与传承意愿的调查研究",
+      "hook": "",
+      "subtitle": "徽风皖韵.黄梅飘香--安徽省大学生对黄梅戏认知现状与传承意愿的调查研究",
+      "year": 2019,
+      "edition": "第九届",
+      "award": "国奖（本地合集未分等）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿"
+      ],
+      "pages": 117,
+      "sha256Prefix": "0fcddfed50aceae2",
+      "sourceTag": "2015-2019正大杯市调大赛国奖报告合集（55篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-048",
+      "title": "“一带一路”战略下，小语种有望成为香饽饽？——小语种市场现状及学习的驱动与障碍研究",
+      "hook": "“一带一路”战略下，小语种有望成为香饽饽？",
+      "subtitle": "小语种市场现状及学习的驱动与障碍研究",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 77,
+      "sha256Prefix": "1a4546cce9b44679",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-049",
+      "title": "“动”无止境 “膳”矢有恒，付费意愿与持续使用意愿调查分析——健康饮食类APP",
+      "hook": "“动”无止境 “膳”矢有恒，付费意愿与持续使用意愿调查分析",
+      "subtitle": "健康饮食类APP",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 109,
+      "sha256Prefix": "2a0307111c4afce4",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-050",
+      "title": "“叮！主动健康警告”——成都市中青年群体主动健康现状探究",
+      "hook": "“叮！主动健康警告”",
+      "subtitle": "成都市中青年群体主动健康现状探究",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "成都"
+      ],
+      "pages": 100,
+      "sha256Prefix": "506c36874c257827",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-051",
+      "title": "“国潮”文化，独领风骚——“国潮服装”品牌市场调查研究",
+      "hook": "“国潮”文化，独领风骚",
+      "subtitle": "“国潮服装”品牌市场调查研究",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "品牌建设与营销策略"
+      ],
+      "pages": 76,
+      "sha256Prefix": "74cf8713a6cc2e86",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-052",
+      "title": "“郁见美好”——关于成都市大学生抑郁症调查研究",
+      "hook": "“郁见美好”",
+      "subtitle": "关于成都市大学生抑郁症调查研究",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "成都"
+      ],
+      "pages": 62,
+      "sha256Prefix": "27e96f888fda5b55",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-053",
+      "title": "挥锦布绣，蜀中之宝——成都市蜀绣文创市场研究",
+      "hook": "挥锦布绣，蜀中之宝",
+      "subtitle": "成都市蜀绣文创市场研究",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 85,
+      "sha256Prefix": "a132f83c02fdd149",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-054",
+      "title": "李宁“潮”前走，国货正当时——李宁产品消费现状及前景分析",
+      "hook": "李宁“潮”前走，国货正当时",
+      "subtitle": "李宁产品消费现状及前景分析",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 97,
+      "sha256Prefix": "2d1eb95f7a17f83f",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-055",
+      "title": "爱情“三十六计”——对大学开设恋爱课的探究与分析",
+      "hook": "爱情“三十六计”",
+      "subtitle": "对大学开设恋爱课的探究与分析",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 107,
+      "sha256Prefix": "77d927592e774a0a",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-056",
+      "title": "破解“墓地圍城”讓生命回歸自然——成都市生态殡葬消费者需求的调研与分析",
+      "hook": "破解“墓地圍城”讓生命回歸自然",
+      "subtitle": "成都市生态殡葬消费者需求的调研与分析",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 124,
+      "sha256Prefix": "f0bde80c395db5cf",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-057",
+      "title": "茶馆“相”遇妙，沧海一“声”笑——相声观众偏好分析与付费意愿调查",
+      "hook": "茶馆“相”遇妙，沧海一“声”笑",
+      "subtitle": "相声观众偏好分析与付费意愿调查",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 86,
+      "sha256Prefix": "41d3d154f6fba795",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-058",
+      "title": "银发也好学——成都地区老年大学市场化现状调查",
+      "hook": "银发也好学",
+      "subtitle": "成都地区老年大学市场化现状调查",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "成都"
+      ],
+      "pages": 84,
+      "sha256Prefix": "0931d4b2c310d071",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-059",
+      "title": "食品领“鲜”，美味相约——成都市社区生鲜店消费分析及市场挖掘",
+      "hook": "食品领“鲜”，美味相约",
+      "subtitle": "成都市社区生鲜店消费分析及市场挖掘",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 100,
+      "sha256Prefix": "c6d988bae00e62b3",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-060",
+      "title": "“何以为家”——代际冲突视角下的非居家养老研究",
+      "hook": "“何以为家”",
+      "subtitle": "代际冲突视角下的非居家养老研究",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老"
+      ],
+      "pages": 112,
+      "sha256Prefix": "c25a4b74ee8e1962",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2020-061",
+      "title": "景点变身记之从“网红”到“永红”De 距离——以重庆网红景点为例",
+      "hook": "景点变身记之从“网红”到“永红”De 距离",
+      "subtitle": "以重庆网红景点为例",
+      "year": 2020,
+      "edition": "第十届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "重庆"
+      ],
+      "pages": 65,
+      "sha256Prefix": "f27d2ae0287b85ea",
+      "sourceTag": "2020正大杯市调大赛国奖报告合集（14篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-062",
+      "title": "“互联生活快步走，移民、难民，不掉队！”中老年人互联网生活调查研究——以保定市为例",
+      "hook": "“互联生活快步走，移民、难民，不掉队！”中老年人互联网生活调查研究",
+      "subtitle": "以保定市为例",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老"
+      ],
+      "pages": 68,
+      "sha256Prefix": "f5604f9eb7632846",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-063",
+      "title": "“厕”头“厕”尾，“方便”更方便了吗？——成都市五城区公厕革命开展情况调查",
+      "hook": "“厕”头“厕”尾，“方便”更方便了吗？",
+      "subtitle": "成都市五城区公厕革命开展情况调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 84,
+      "sha256Prefix": "c4c40947e458fcd7",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-064",
+      "title": "“后浪”席卷下的清洁浪花——基于北京市Z世代清洁需求的调查",
+      "hook": "“后浪”席卷下的清洁浪花",
+      "subtitle": "基于北京市Z世代清洁需求的调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "北京"
+      ],
+      "pages": 93,
+      "sha256Prefix": "5ee054ddc643bda8",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-065",
+      "title": "“本草迎风长，国药当自强”——中医药品牌价值及其影响因素研究",
+      "hook": "“本草迎风长，国药当自强”",
+      "subtitle": "中医药品牌价值及其影响因素研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "品牌建设与营销策略"
+      ],
+      "pages": 70,
+      "sha256Prefix": "1791d3f7a0ab3571",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-066",
+      "title": "“深化直播助农，推动乡村振兴”——关于农民对直播销售农产品使用意向影响因素的调查（以丹东市为例）",
+      "hook": "“深化直播助农，推动乡村振兴”",
+      "subtitle": "关于农民对直播销售农产品使用意向影响因素的调查（以丹东市为例）",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售"
+      ],
+      "pages": 107,
+      "sha256Prefix": "5ddc26888f41afa1",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-067",
+      "title": "“特”别忠于你——泡泡玛特消费者品牌忠诚度培养机制及潜在市场挖掘",
+      "hook": "“特”别忠于你",
+      "subtitle": "泡泡玛特消费者品牌忠诚度培养机制及潜在市场挖掘",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "品牌建设与营销策略"
+      ],
+      "pages": 97,
+      "sha256Prefix": "ba47b018f4622569",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-068",
+      "title": "“秋天的第一杯奶茶”，是什么吸引了你？——基于大学生消费偏好的奶茶营销策略研究",
+      "hook": "“秋天的第一杯奶茶”，是什么吸引了你？",
+      "subtitle": "基于大学生消费偏好的奶茶营销策略研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生",
+        "满意度与意愿",
+        "品牌建设与营销策略"
+      ],
+      "pages": 55,
+      "sha256Prefix": "709c18be77412e9b",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-069",
+      "title": "“虽骂但买”，超前点播成常态？——关于大学生对超前点播的态度及需求的调查",
+      "hook": "“虽骂但买”，超前点播成常态？",
+      "subtitle": "关于大学生对超前点播的态度及需求的调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 53,
+      "sha256Prefix": "58c45978ea3f0b26",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-070",
+      "title": "“青丝搔更少，防脱要趁早”——武汉市大学生防脱发洗发水使用现状与发展策略研究",
+      "hook": "“青丝搔更少，防脱要趁早”",
+      "subtitle": "武汉市大学生防脱发洗发水使用现状与发展策略研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "武汉"
+      ],
+      "pages": 73,
+      "sha256Prefix": "769da112a0b877cc",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-071",
+      "title": "“面”面俱到，“霜”管齐下——徐州市儿童面霜市场的调查分析",
+      "hook": "“面”面俱到，“霜”管齐下",
+      "subtitle": "徐州市儿童面霜市场的调查分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给"
+      ],
+      "pages": 118,
+      "sha256Prefix": "e64697072ec4038d",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-072",
+      "title": "互联网快车，不能丢下“银发族”——信息化时代下的中老年人对互联网APP 的使用现状及满意度调查",
+      "hook": "互联网快车，不能丢下“银发族”",
+      "subtitle": "信息化时代下的中老年人对互联网APP 的使用现状及满意度调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "满意度与意愿"
+      ],
+      "pages": 69,
+      "sha256Prefix": "04cded5e5211e330",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-073",
+      "title": "优而“告”知、“广”流传——网络视频广告的用户体验与接受意愿研究",
+      "hook": "优而“告”知、“广”流传",
+      "subtitle": "网络视频广告的用户体验与接受意愿研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 97,
+      "sha256Prefix": "6c88b61cfe32efda",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-074",
+      "title": "及人之老，食为天年——老年助餐配餐服务市场调查（南通市崇川区）",
+      "hook": "及人之老，食为天年",
+      "subtitle": "老年助餐配餐服务市场调查（南通市崇川区）",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老"
+      ],
+      "pages": 96,
+      "sha256Prefix": "3e66e3973f23730d",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-075",
+      "title": "双“管”齐下，“手”到擒来——手机APP在我国大学生自我管理中的应用现状和前景分析——以开封市为例",
+      "hook": "双“管”齐下，“手”到擒来",
+      "subtitle": "手机APP在我国大学生自我管理中的应用现状和前景分析——以开封市为例",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 133,
+      "sha256Prefix": "50435f86a1d7ddaf",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-076",
+      "title": "咖啡遇速溶，回味无穷——大学生速溶咖啡市场现状和消费者需求的调查",
+      "hook": "咖啡遇速溶，回味无穷",
+      "subtitle": "大学生速溶咖啡市场现状和消费者需求的调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生"
+      ],
+      "pages": 69,
+      "sha256Prefix": "d43bc5b6b58f835a",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-077",
+      "title": "工作健康何处求，保健养生解君忧——年轻白领保健品市场情况及用户需求调研",
+      "hook": "工作健康何处求，保健养生解君忧",
+      "subtitle": "年轻白领保健品市场情况及用户需求调研",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食"
+      ],
+      "pages": 100,
+      "sha256Prefix": "170ae4690f6e24af",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-078",
+      "title": "心有所守，行有所止——关于呼和浩特市大学生底线思维现状的调查研究",
+      "hook": "心有所守，行有所止",
+      "subtitle": "关于呼和浩特市大学生底线思维现状的调查研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 97,
+      "sha256Prefix": "f61bb1885b11b164",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-079",
+      "title": "打造多元虚拟人物，创设崭新偶像时代——广州市大学生群体虚拟偶像消费需求偏好调查",
+      "hook": "打造多元虚拟人物，创设崭新偶像时代",
+      "subtitle": "广州市大学生群体虚拟偶像消费需求偏好调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿",
+        "广州"
+      ],
+      "pages": 67,
+      "sha256Prefix": "20c48f8919af44a8",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-080",
+      "title": "推“尘”出新，让文物“活”起来——河南博物院考古盲盒系列产品消费与市场前景分析",
+      "hook": "推“尘”出新，让文物“活”起来",
+      "subtitle": "河南博物院考古盲盒系列产品消费与市场前景分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售"
+      ],
+      "pages": 72,
+      "sha256Prefix": "6a4b6037a33afebc",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-081",
+      "title": "新生势起，老店重妍——基于桃源村与新生代消费者调查研究",
+      "hook": "新生势起，老店重妍",
+      "subtitle": "基于桃源村与新生代消费者调查研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费"
+      ],
+      "pages": 69,
+      "sha256Prefix": "a329acc89616a1c2",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-082",
+      "title": "欢迎光“临”·“期”待邂逅——成都市“临期食品”的消费者购买行为分析及发展方向创新探究",
+      "hook": "欢迎光“临”·“期”待邂逅",
+      "subtitle": "成都市“临期食品”的消费者购买行为分析及发展方向创新探究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 105,
+      "sha256Prefix": "62655db05eb283ca",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-083",
+      "title": "汴水流，泗水流，寡头割据与六强争霸——重庆瓶装水市场发展现状及消费需求分析",
+      "hook": "汴水流，泗水流，寡头割据与六强争霸",
+      "subtitle": "重庆瓶装水市场发展现状及消费需求分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "重庆"
+      ],
+      "pages": 136,
+      "sha256Prefix": "41564dccc27e0575",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-084",
+      "title": "灯火阑珊处，古老川剧焕青春——基于成都市川剧发展现状的调查研究",
+      "hook": "灯火阑珊处，古老川剧焕青春",
+      "subtitle": "基于成都市川剧发展现状的调查研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 99,
+      "sha256Prefix": "e3c6784cc0519c7d",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-085",
+      "title": "相由心“声”——以德云社为例的传统艺术IP发展战略研究",
+      "hook": "相由心“声”",
+      "subtitle": "以德云社为例的传统艺术IP发展战略研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 132,
+      "sha256Prefix": "df743b099fcc24a3",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-086",
+      "title": "老吾老以及人之老——基于福州市人口老龄化数字鸿沟影响因素分析",
+      "hook": "老吾老以及人之老",
+      "subtitle": "基于福州市人口老龄化数字鸿沟影响因素分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "福州"
+      ],
+      "pages": 91,
+      "sha256Prefix": "19f8573bce573d26",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-087",
+      "title": "老有颐养，“智”暖夕阳——沈阳市智慧护理养老产品的使用意愿及前景的调查",
+      "hook": "老有颐养，“智”暖夕阳",
+      "subtitle": "沈阳市智慧护理养老产品的使用意愿及前景的调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "满意度与意愿",
+        "沈阳"
+      ],
+      "pages": 120,
+      "sha256Prefix": "d55dfe114e60e2e1",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-088",
+      "title": "视频围剿之战，B站如何突围——关于福建省大学生bilibili使用情况及满意度影响因素的调查",
+      "hook": "视频围剿之战，B站如何突围",
+      "subtitle": "关于福建省大学生bilibili使用情况及满意度影响因素的调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿"
+      ],
+      "pages": 56,
+      "sha256Prefix": "b2430e5e64c6f0b8",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-089",
+      "title": "“便利生活，一点到家”——京东到家使用现状及发展前景分析",
+      "hook": "“便利生活，一点到家”",
+      "subtitle": "京东到家使用现状及发展前景分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 98,
+      "sha256Prefix": "fe48dd652bf997cf",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-090",
+      "title": "“农”情厚意·“多多”益善——拼多多农产品购买现状调查及创新探究",
+      "hook": "“农”情厚意·“多多”益善",
+      "subtitle": "拼多多农产品购买现状调查及创新探究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 126,
+      "sha256Prefix": "05ae9fa920b80de2",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-091",
+      "title": "且将新火试新茶——基于成都地区茶馆的市场调研",
+      "hook": "且将新火试新茶",
+      "subtitle": "基于成都地区茶馆的市场调研",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "成都"
+      ],
+      "pages": 96,
+      "sha256Prefix": "d09748c54eb552b1",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-092",
+      "title": "乌球子树老来红，嵌入养老助幸福——基于成都市和美社区的嵌入式养老模式路径探索和对策分析",
+      "hook": "乌球子树老来红，嵌入养老助幸福",
+      "subtitle": "基于成都市和美社区的嵌入式养老模式路径探索和对策分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "成都"
+      ],
+      "pages": 99,
+      "sha256Prefix": "200a378f7b485f8d",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-093",
+      "title": "增“墙”免疫力，健康“森”呼吸——环保墙面材料消费者人群特征及市场前景分析",
+      "hook": "增“墙”免疫力，健康“森”呼吸",
+      "subtitle": "环保墙面材料消费者人群特征及市场前景分析",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳"
+      ],
+      "pages": 128,
+      "sha256Prefix": "44ec0ad7d1505ffd",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-094",
+      "title": "学子惜“金”，视之有度——成都本科学生基金投资现状与风险防范调查研究",
+      "hook": "学子惜“金”，视之有度",
+      "subtitle": "成都本科学生基金投资现状与风险防范调查研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 91,
+      "sha256Prefix": "1479f8ce08181b98",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-095",
+      "title": "拒绝我行我“塑”，争做“可塑”之财——影响消费者在农贸市场使用可降解塑料意愿的因素探究",
+      "hook": "拒绝我行我“塑”，争做“可塑”之财",
+      "subtitle": "影响消费者在农贸市场使用可降解塑料意愿的因素探究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 99,
+      "sha256Prefix": "40335886ac6cc88f",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-096",
+      "title": "新兴之水，可以潦源——基于成都市的瓶装水市场调查",
+      "hook": "新兴之水，可以潦源",
+      "subtitle": "基于成都市的瓶装水市场调查",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "成都"
+      ],
+      "pages": 81,
+      "sha256Prefix": "150ad408d650a8ca",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-097",
+      "title": "拭揉抹吹画戴扯，颦蹙哂斥川剧来——成都市大学生偏好视角下川剧传承调查及其对策研究",
+      "hook": "拭揉抹吹画戴扯，颦蹙哂斥川剧来",
+      "subtitle": "成都市大学生偏好视角下川剧传承调查及其对策研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿",
+        "成都"
+      ],
+      "pages": 67,
+      "sha256Prefix": "d16eb96884ef1ca6",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2021-098",
+      "title": "智在清洁，享在生活——美的清洁产品消费趋势的调查研究",
+      "hook": "智在清洁，享在生活",
+      "subtitle": "美的清洁产品消费趋势的调查研究",
+      "year": 2021,
+      "edition": "第十一届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 64,
+      "sha256Prefix": "780b8dd02304aeee",
+      "sourceTag": "2021正大杯市调大赛国奖报告合集（38篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-099",
+      "title": "“云领时尚，宠爱有家”云领养市场挖掘及增长策略探究——以上海市为例",
+      "hook": "“云领时尚，宠爱有家”云领养市场挖掘及增长策略探究",
+      "subtitle": "以上海市为例",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "上海"
+      ],
+      "pages": 86,
+      "sha256Prefix": "54fdaa63e644af0d",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-100",
+      "title": "“剧中风景，戏里山水”景区沉浸式剧本游戏市场现状及前景分析——以《宽窄十二市》为例",
+      "hook": "“剧中风景，戏里山水”景区沉浸式剧本游戏市场现状及前景分析",
+      "subtitle": "以《宽窄十二市》为例",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费"
+      ],
+      "pages": 121,
+      "sha256Prefix": "8d3d7e7caa6eb10e",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-101",
+      "title": "“医带医路”绘就乡村振兴壮美画卷——基于分级诊疗策略演化博弈模型的江西省农村居民就医机构的选择的调查研究",
+      "hook": "“医带医路”绘就乡村振兴壮美画卷",
+      "subtitle": "基于分级诊疗策略演化博弈模型的江西省农村居民就医机构的选择的调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "江西"
+      ],
+      "pages": 68,
+      "sha256Prefix": "744cb35ab2f418da",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-102",
+      "title": "“卫画流年·津韵千载”——杨柳青年画认知现状及传承意愿调查研究",
+      "hook": "“卫画流年·津韵千载”",
+      "subtitle": "杨柳青年画认知现状及传承意愿调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿"
+      ],
+      "pages": 94,
+      "sha256Prefix": "7c45df7d7de59d97",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-103",
+      "title": "“斜”手同行，“杠”出未来——关于当代青年群体对“斜杠青年”的感知与态度调查",
+      "hook": "“斜”手同行，“杠”出未来",
+      "subtitle": "关于当代青年群体对“斜杠青年”的感知与态度调查",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 117,
+      "sha256Prefix": "ba39e1a7a7611559",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-104",
+      "title": "“种草”之火，可以燎原——南京市居民“种草”消费的市场调研与分析",
+      "hook": "“种草”之火，可以燎原",
+      "subtitle": "南京市居民“种草”消费的市场调研与分析",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "南京"
+      ],
+      "pages": 113,
+      "sha256Prefix": "a53e325b4be15897",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-105",
+      "title": "“虾”门的世界——深加工虾厦门地区市场调研",
+      "hook": "“虾”门的世界",
+      "subtitle": "深加工虾厦门地区市场调研",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "厦门"
+      ],
+      "pages": 82,
+      "sha256Prefix": "403cb566c1cad367",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-106",
+      "title": "一展宏图志，逐梦家乡情——乡村振兴战略下昆明市大学生返乡创业意愿的调查分析",
+      "hook": "一展宏图志，逐梦家乡情",
+      "subtitle": "乡村振兴战略下昆明市大学生返乡创业意愿的调查分析",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿",
+        "昆明"
+      ],
+      "pages": 98,
+      "sha256Prefix": "41031965e136b719",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-107",
+      "title": "一样的“宠”爱，不一样的“保”贝——北京市宠物猫医疗保险市场调查分析",
+      "hook": "一样的“宠”爱，不一样的“保”贝",
+      "subtitle": "北京市宠物猫医疗保险市场调查分析",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险",
+        "北京"
+      ],
+      "pages": 90,
+      "sha256Prefix": "94b2b8f7b90f132d",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-108",
+      "title": "保温杯里泡枸杞，今天您养生了吗——成都市中年人群健康保健产品市场情况及需求研究",
+      "hook": "保温杯里泡枸杞，今天您养生了吗",
+      "subtitle": "成都市中年人群健康保健产品市场情况及需求研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "成都"
+      ],
+      "pages": 107,
+      "sha256Prefix": "faf0afec8ccdfbf9",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-109",
+      "title": "千年府城，古今交融——太原市文庙片区城市更新路径探究",
+      "hook": "千年府城，古今交融",
+      "subtitle": "太原市文庙片区城市更新路径探究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "太原"
+      ],
+      "pages": 86,
+      "sha256Prefix": "0973c4ef910aa31c",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-110",
+      "title": "地拥金陵势，城回江水流——景区文化传承与建筑改造现状调查研究（以南京市为例）",
+      "hook": "地拥金陵势，城回江水流",
+      "subtitle": "景区文化传承与建筑改造现状调查研究（以南京市为例）",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "南京"
+      ],
+      "pages": 121,
+      "sha256Prefix": "992fa864bd855c05",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-111",
+      "title": "密室不神“密”，监管有所依——政策新规背景下基于上海市密室细分市场的行业发展策略研究",
+      "hook": "密室不神“密”，监管有所依",
+      "subtitle": "政策新规背景下基于上海市密室细分市场的行业发展策略研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "上海"
+      ],
+      "pages": 125,
+      "sha256Prefix": "15b98c15660c2af9",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-112",
+      "title": "富“农”不迟，从“险”开始——关于潜江市农户对小龙虾养殖保险需求影响因素的调研",
+      "hook": "富“农”不迟，从“险”开始",
+      "subtitle": "关于潜江市农户对小龙虾养殖保险需求影响因素的调研",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险"
+      ],
+      "pages": 107,
+      "sha256Prefix": "6d45f51c5c52a6fa",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-113",
+      "title": "寻味童年时光，留声青春记忆——大学生对怀旧产品购买意愿影响因素探究",
+      "hook": "寻味童年时光，留声青春记忆",
+      "subtitle": "大学生对怀旧产品购买意愿影响因素探究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿"
+      ],
+      "pages": 83,
+      "sha256Prefix": "01685adde4ba1d1d",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-114",
+      "title": "徽阁画栋妆清碧，减碳添绿筑轩楼——“双碳”背景下对安徽四市绿色建筑市场前景及消费者行为的调查意愿分析",
+      "hook": "徽阁画栋妆清碧，减碳添绿筑轩楼",
+      "subtitle": "“双碳”背景下对安徽四市绿色建筑市场前景及消费者行为的调查意愿分析",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳",
+        "满意度与意愿"
+      ],
+      "pages": 152,
+      "sha256Prefix": "e29a873b7562dde4",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-115",
+      "title": "成熟食品品牌在互联网环境下的品牌年轻化探索——以大白兔奶糖为例",
+      "hook": "成熟食品品牌在互联网环境下的品牌年轻化探索",
+      "subtitle": "以大白兔奶糖为例",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "品牌建设与营销策略"
+      ],
+      "pages": 118,
+      "sha256Prefix": "2e679982c8fde997",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-116",
+      "title": "数字富农，电商先行——数字乡村背景下农户参与电商营销意愿的影响因素调查分析（以沈阳市为例）",
+      "hook": "数字富农，电商先行",
+      "subtitle": "数字乡村背景下农户参与电商营销意愿的影响因素调查分析（以沈阳市为例）",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿",
+        "沈阳"
+      ],
+      "pages": 106,
+      "sha256Prefix": "df86d4c6ca9ada5a",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-117",
+      "title": "无糖不迷路，“饮”领新生态——基于江浙沪消费者的无糖饮品消费驱动与优化研究",
+      "hook": "无糖不迷路，“饮”领新生态",
+      "subtitle": "基于江浙沪消费者的无糖饮品消费驱动与优化研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 125,
+      "sha256Prefix": "3bd6029218cfd451",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-118",
+      "title": "海洋命运共同体下的大连海洋文化建设与发展调查",
+      "hook": "",
+      "subtitle": "海洋命运共同体下的大连海洋文化建设与发展调查",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "大连"
+      ],
+      "pages": 81,
+      "sha256Prefix": "6c61e6b4207aef97",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-119",
+      "title": "物奔诸户，情向客心——以北京市为例的即时配送平台用户群体及其发展前景调查研究",
+      "hook": "物奔诸户，情向客心",
+      "subtitle": "以北京市为例的即时配送平台用户群体及其发展前景调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "北京"
+      ],
+      "pages": 95,
+      "sha256Prefix": "bf99d1a0291d1fda",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-120",
+      "title": "资本事农桑，农民更小康？——农户满意度视角下资本下乡对农村三生空间影响的实证研究",
+      "hook": "资本事农桑，农民更小康？",
+      "subtitle": "农户满意度视角下资本下乡对农村三生空间影响的实证研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 39,
+      "sha256Prefix": "e5fe40c15581037e",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-121",
+      "title": "长安逢Z世，文创孕新生——西安文创产品消费现状及影响因素的调查研究（以Z世代为例）",
+      "hook": "长安逢Z世，文创孕新生",
+      "subtitle": "西安文创产品消费现状及影响因素的调查研究（以Z世代为例）",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "西安"
+      ],
+      "pages": 84,
+      "sha256Prefix": "72af2a4d58f701e0",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-122",
+      "title": "防“脱”于未然，打赢头发保卫战——大学生群体脱发现状及其养发需求市场研究",
+      "hook": "防“脱”于未然，打赢头发保卫战",
+      "subtitle": "大学生群体脱发现状及其养发需求市场研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 98,
+      "sha256Prefix": "337a0395af984fa5",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-123",
+      "title": "陕西省地理标志农产品市场发展现状及对乡村振兴支持度调查研究",
+      "hook": "",
+      "subtitle": "陕西省地理标志农产品市场发展现状及对乡村振兴支持度调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "陕西"
+      ],
+      "pages": 101,
+      "sha256Prefix": "d9e86e4aee5edb6b",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-124",
+      "title": "黔岭黄金果，“佳”值谁与知？——贵州刺梨产品的消费者购买行为及消费趋势调研",
+      "hook": "黔岭黄金果，“佳”值谁与知？",
+      "subtitle": "贵州刺梨产品的消费者购买行为及消费趋势调研",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "贵州"
+      ],
+      "pages": 105,
+      "sha256Prefix": "8618883dc02e5da6",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-125",
+      "title": "“中国式”仓储会员店的X未来，路向“盒”方？——盒马X会员店的本土化策略调查研究",
+      "hook": "“中国式”仓储会员店的X未来，路向“盒”方？",
+      "subtitle": "盒马X会员店的本土化策略调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 123,
+      "sha256Prefix": "a4b5bf5ec9906cbe",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-126",
+      "title": "“沉浸”or“沉迷”——基于上海市大学生的剧本杀参与对玩家心理影响调研",
+      "hook": "“沉浸”or“沉迷”",
+      "subtitle": "基于上海市大学生的剧本杀参与对玩家心理影响调研",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "上海"
+      ],
+      "pages": 96,
+      "sha256Prefix": "d6da65f0b0741694",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-127",
+      "title": "“疫”起欢聚，“情”吃火锅——疫情下上海市火锅行业的消费者忠诚度及发展策略探究（以海底捞企业为例）",
+      "hook": "“疫”起欢聚，“情”吃火锅",
+      "subtitle": "疫情下上海市火锅行业的消费者忠诚度及发展策略探究（以海底捞企业为例）",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "上海"
+      ],
+      "pages": 128,
+      "sha256Prefix": "4cce7b9d76e6544d",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-128",
+      "title": "且将新火试“新茶”——从Z世代消费驱动看新式茶饮未来走向",
+      "hook": "且将新火试“新茶”",
+      "subtitle": "从Z世代消费驱动看新式茶饮未来走向",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "青年与大学生"
+      ],
+      "pages": 119,
+      "sha256Prefix": "6917fe90a1142155",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-129",
+      "title": "今天，您还在为孩子焦虑吗？关于“双减”后家长的教育焦虑程度及原因调查分析（以广东省为例)",
+      "hook": "",
+      "subtitle": "今天，您还在为孩子焦虑吗？关于“双减”后家长的教育焦虑程度及原因调查分析（以广东省为例)",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给"
+      ],
+      "pages": 98,
+      "sha256Prefix": "15921290348288f5",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-130",
+      "title": "僦屋未定，何以安家？——上海市租赁社区发展现状及大众租房偏好研究",
+      "hook": "僦屋未定，何以安家？",
+      "subtitle": "上海市租赁社区发展现状及大众租房偏好研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿",
+        "上海"
+      ],
+      "pages": 111,
+      "sha256Prefix": "8a2ade6334e32f1c",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-131",
+      "title": "双管齐下降负担，减出教育新精彩：济南市义务教育阶段——学生家长对“双减”政策态度调研",
+      "hook": "双管齐下降负担，减出教育新精彩：济南市义务教育阶段",
+      "subtitle": "学生家长对“双减”政策态度调研",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给",
+        "济南"
+      ],
+      "pages": 60,
+      "sha256Prefix": "172eba9f512ba6f2",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-132",
+      "title": "景区文创产品购买意愿调查及潜在用户发掘——以武汉市为例",
+      "hook": "景区文创产品购买意愿调查及潜在用户发掘",
+      "subtitle": "以武汉市为例",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "满意度与意愿",
+        "武汉"
+      ],
+      "pages": 63,
+      "sha256Prefix": "d6fb9c24f110ffe6",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-133",
+      "title": "“孤”芳自赏，“独”乐无穷——重庆市孤独经济发展现状及孤独人群消费偏好调查",
+      "hook": "“孤”芳自赏，“独”乐无穷",
+      "subtitle": "重庆市孤独经济发展现状及孤独人群消费偏好调查",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 92,
+      "sha256Prefix": "3b9b5972853d014f",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-134",
+      "title": "“打破内卷枷锁，探索破圈之路”——在校大学生非理性竞争行为研究",
+      "hook": "“打破内卷枷锁，探索破圈之路”",
+      "subtitle": "在校大学生非理性竞争行为研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 70,
+      "sha256Prefix": "cdf4a734a6d1e9aa",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-135",
+      "title": "大学生兼职情况调查——以花溪大学城为例",
+      "hook": "大学生兼职情况调查",
+      "subtitle": "以花溪大学城为例",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 81,
+      "sha256Prefix": "d43cef770a791803",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-136",
+      "title": "灵魂相拥，治愈孤独—— Soul App用户粘性的影响因素分析和差异化策略建议",
+      "hook": "灵魂相拥，治愈孤独",
+      "subtitle": "Soul App用户粘性的影响因素分析和差异化策略建议",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 92,
+      "sha256Prefix": "c26798ee2341bc2b",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-137",
+      "title": "菁菁校园，何触烟霞——大学生吸烟现状及原因调查研究",
+      "hook": "菁菁校园，何触烟霞",
+      "subtitle": "大学生吸烟现状及原因调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 106,
+      "sha256Prefix": "9c38a14df637f3b1",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2022-138",
+      "title": "重视个人信息，为个人信息保驾护航——基于花溪大学城大学生信息安全调查研究",
+      "hook": "重视个人信息，为个人信息保驾护航",
+      "subtitle": "基于花溪大学城大学生信息安全调查研究",
+      "year": 2022,
+      "edition": "第十二届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 65,
+      "sha256Prefix": "7f60a6209a6671a1",
+      "sourceTag": "2022正大杯市调大赛国奖报告合集（41篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-139",
+      "title": "“口袋博物馆，云端文化宴”——云博物馆用户满意度及发展路径研究",
+      "hook": "“口袋博物馆，云端文化宴”",
+      "subtitle": "云博物馆用户满意度及发展路径研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "满意度与意愿",
+        "品牌建设与营销策略"
+      ],
+      "pages": 111,
+      "sha256Prefix": "baef38dd6b91e22a",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-140",
+      "title": "“有所托，育儿亦无忧”——“三孩政策”背景下合肥市双职工家庭托育意愿样态分析与市场激活策略研究",
+      "hook": "“有所托，育儿亦无忧”",
+      "subtitle": "“三孩政策”背景下合肥市双职工家庭托育意愿样态分析与市场激活策略研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给",
+        "满意度与意愿",
+        "合肥"
+      ],
+      "pages": 179,
+      "sha256Prefix": "9584aaabaebb0de7",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-141",
+      "title": "“清馨艾叶添，舒身亦延年”——重庆主城区居民对艾草产品的认知及其消费特征的调查",
+      "hook": "“清馨艾叶添，舒身亦延年”",
+      "subtitle": "重庆主城区居民对艾草产品的认知及其消费特征的调查",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 106,
+      "sha256Prefix": "c3eff01787718200",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-142",
+      "title": "“莓”问题！——丹东九九草莓消费者需求调查及市场机会挖掘分析",
+      "hook": "“莓”问题！",
+      "subtitle": "丹东九九草莓消费者需求调查及市场机会挖掘分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "市场调查实证"
+      ],
+      "pages": 154,
+      "sha256Prefix": "2c74dd561816b506",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-143",
+      "title": "“零糖浪潮袭万众，告别负担一身轻”——“减糖”背景下基于广西区年轻群体对无糖饮料的消费意愿调查及创新策略分析",
+      "hook": "“零糖浪潮袭万众，告别负担一身轻”",
+      "subtitle": "“减糖”背景下基于广西区年轻群体对无糖饮料的消费意愿调查及创新策略分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿"
+      ],
+      "pages": 116,
+      "sha256Prefix": "0340937be875516c",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-144",
+      "title": "“露”出本心，“营”造自然——重庆市主城区短途露营市场现状与消费偏好分析",
+      "hook": "“露”出本心，“营”造自然",
+      "subtitle": "重庆市主城区短途露营市场现状与消费偏好分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 85,
+      "sha256Prefix": "d8db9c49b6df24db",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-145",
+      "title": "冰消“冻”释，“食”遇新春——基于南京市主城区冷冻速食产品市场调查及消费者特征研究",
+      "hook": "冰消“冻”释，“食”遇新春",
+      "subtitle": "基于南京市主城区冷冻速食产品市场调查及消费者特征研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "南京"
+      ],
+      "pages": 78,
+      "sha256Prefix": "23cc82502810a21d",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-146",
+      "title": "新生活，心生活——A品牌高端养老社区客户体验调查",
+      "hook": "新生活，心生活",
+      "subtitle": "A品牌高端养老社区客户体验调查",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "品牌建设与营销策略"
+      ],
+      "pages": 88,
+      "sha256Prefix": "13152f9d93d3f0b0",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-147",
+      "title": "深耕文旅 露营进击：武汉市露营旅游消费意愿的影响因素与潜在客户挖掘研究",
+      "hook": "深耕文旅 露营进击",
+      "subtitle": "武汉市露营旅游消费意愿的影响因素与潜在客户挖掘研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "满意度与意愿",
+        "武汉"
+      ],
+      "pages": 137,
+      "sha256Prefix": "92f2d49e625fc145",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-148",
+      "title": "“低碳之风，惠及你我”——武汉市碳普惠平台的发展现状及参与意愿分析",
+      "hook": "“低碳之风，惠及你我”",
+      "subtitle": "武汉市碳普惠平台的发展现状及参与意愿分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳",
+        "满意度与意愿",
+        "武汉"
+      ],
+      "pages": 107,
+      "sha256Prefix": "893de520ef237ee3",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-149",
+      "title": "“您的银发，谁来守护？”——基于IPA模型的武汉市社区养老现状评价及需求挖掘",
+      "hook": "“您的银发，谁来守护？”",
+      "subtitle": "基于IPA模型的武汉市社区养老现状评价及需求挖掘",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "武汉"
+      ],
+      "pages": 85,
+      "sha256Prefix": "8578afdaedaaff77",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-150",
+      "title": "“我”还是“我们”——武汉市大学生婚恋观及婚恋意愿影响因素调查",
+      "hook": "“我”还是“我们”",
+      "subtitle": "武汉市大学生婚恋观及婚恋意愿影响因素调查",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿",
+        "武汉"
+      ],
+      "pages": 99,
+      "sha256Prefix": "7064f3773b07168d",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-151",
+      "title": "“江月本无主，独者即得之”——孤独经济下“新速食”产品消费者现状分析",
+      "hook": "“江月本无主，独者即得之”",
+      "subtitle": "孤独经济下“新速食”产品消费者现状分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖"
+      ],
+      "pages": 69,
+      "sha256Prefix": "e5e5c5d9b17f9706",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-152",
+      "title": "“生命之舟，何去何从？——基于武汉市的家庭生命教育与青年自杀意念调查研究",
+      "hook": "“生命之舟，何去何从？",
+      "subtitle": "基于武汉市的家庭生命教育与青年自杀意念调查研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "儿童与教育供给",
+        "武汉"
+      ],
+      "pages": 77,
+      "sha256Prefix": "45e3cadefc4ee229",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-153",
+      "title": "“食在广州，菜出增城”——国家地理标志产品广州迟菜心购买意愿及营销策略分析",
+      "hook": "“食在广州，菜出增城”",
+      "subtitle": "国家地理标志产品广州迟菜心购买意愿及营销策略分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿",
+        "品牌建设与营销策略",
+        "广州"
+      ],
+      "pages": 68,
+      "sha256Prefix": "d9e70d93b8df783a",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-154",
+      "title": "微“研”大“益”：武汉市大学生微公益认知及行为调查",
+      "hook": "微“研”大“益”",
+      "subtitle": "武汉市大学生微公益认知及行为调查",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿",
+        "武汉"
+      ],
+      "pages": 90,
+      "sha256Prefix": "bbc92ba1c9395265",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-155",
+      "title": "每逢佳节倍惆怅，夺命连环催结婚——催婚行为下广州未婚青年婚恋意愿影响因素调查研究",
+      "hook": "每逢佳节倍惆怅，夺命连环催结婚",
+      "subtitle": "催婚行为下广州未婚青年婚恋意愿影响因素调查研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "满意度与意愿",
+        "广州"
+      ],
+      "pages": 124,
+      "sha256Prefix": "33d5c1cb21fec4ed",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-156",
+      "title": "清爽自有味，鲜辣新国潮——成都地区烧椒酱市场现状及前景分析",
+      "hook": "清爽自有味，鲜辣新国潮",
+      "subtitle": "成都地区烧椒酱市场现状及前景分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "成都"
+      ],
+      "pages": 123,
+      "sha256Prefix": "a0d1c7acd80803d2",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-157",
+      "title": "湾湾烟波乐趣多，岛岛奇景美心窝——珠三角游客对广东海岛旅游的消费倾向及潜在市场分析",
+      "hook": "湾湾烟波乐趣多，岛岛奇景美心窝",
+      "subtitle": "珠三角游客对广东海岛旅游的消费倾向及潜在市场分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费"
+      ],
+      "pages": 164,
+      "sha256Prefix": "bc0f5210637bc458",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-158",
+      "title": "睡够了吗？“双减政策”下中小学生睡眠问题调查分析",
+      "hook": "",
+      "subtitle": "睡够了吗？“双减政策”下中小学生睡眠问题调查分析",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给"
+      ],
+      "pages": 74,
+      "sha256Prefix": "89a009279aa49d5f",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-159",
+      "title": "青年有为，养生有道——便携式按摩仪消费现状研究及产品功能挖掘",
+      "hook": "青年有为，养生有道",
+      "subtitle": "便携式按摩仪消费现状研究及产品功能挖掘",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "青年与大学生"
+      ],
+      "pages": 70,
+      "sha256Prefix": "2445627e2c04c197",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-160",
+      "title": "“双碳”目标下对武汉市居民绿色食品消费现状及影响因素的调查研究",
+      "hook": "",
+      "subtitle": "“双碳”目标下对武汉市居民绿色食品消费现状及影响因素的调查研究",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳",
+        "武汉"
+      ],
+      "pages": 104,
+      "sha256Prefix": "afadaff8f007d845",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2023-161",
+      "title": "中华老字号餐饮企业品牌发展现状与消费者满意度调查——以杭州地区老字号餐饮品牌为例",
+      "hook": "中华老字号餐饮企业品牌发展现状与消费者满意度调查",
+      "subtitle": "以杭州地区老字号餐饮品牌为例",
+      "year": 2023,
+      "edition": "第十三届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "饮品茶咖",
+        "满意度与意愿",
+        "品牌建设与营销策略",
+        "杭州"
+      ],
+      "pages": 71,
+      "sha256Prefix": "85dde52d6f21557b",
+      "sourceTag": "2023正大杯市调大赛国奖报告合集（23篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-162",
+      "title": "“轻”生活，“食”健康——关于长春市中式轻食消费偏好及其影响因素的调查分析",
+      "hook": "“轻”生活，“食”健康",
+      "subtitle": "关于长春市中式轻食消费偏好及其影响因素的调查分析",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "满意度与意愿",
+        "长春"
+      ],
+      "pages": 70,
+      "sha256Prefix": "5f99585299e45d69",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-163",
+      "title": "“轻”食“轻”心，慢嚼健康——武汉市轻食消费现状及其优化路径分析",
+      "hook": "“轻”食“轻”心，慢嚼健康",
+      "subtitle": "武汉市轻食消费现状及其优化路径分析",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "武汉"
+      ],
+      "pages": 134,
+      "sha256Prefix": "072f37649e5857aa",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-164",
+      "title": "“银发旅游，乐享夕阳”银发文旅产品市场现状与发展前景研究——以武汉市为例",
+      "hook": "“银发旅游，乐享夕阳”银发文旅产品市场现状与发展前景研究",
+      "subtitle": "以武汉市为例",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "智慧养老",
+        "文旅消费",
+        "武汉"
+      ],
+      "pages": 73,
+      "sha256Prefix": "0c1912c1408e2b6d",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-165",
+      "title": "“预”趋所向，品“正”所好——郑州市预制菜市场及消费者研究",
+      "hook": "“预”趋所向，品“正”所好",
+      "subtitle": "郑州市预制菜市场及消费者研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "预制菜",
+        "郑州"
+      ],
+      "pages": 159,
+      "sha256Prefix": "e85abbabc94859ea",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-166",
+      "title": "世遗古城处，非遗簪花焕新生——基于泉州市蟳埔簪花体验意愿及文化认知情况的研究",
+      "hook": "世遗古城处，非遗簪花焕新生",
+      "subtitle": "基于泉州市蟳埔簪花体验意愿及文化认知情况的研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "满意度与意愿",
+        "泉州"
+      ],
+      "pages": 138,
+      "sha256Prefix": "cead58f4d09d5c53",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-167",
+      "title": "前月浮梁买茶去，今朝一品江南茗——乡村振兴战略背景下浮梁茶的发展路径研究",
+      "hook": "前月浮梁买茶去，今朝一品江南茗",
+      "subtitle": "乡村振兴战略背景下浮梁茶的发展路径研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "品牌建设与营销策略",
+        "浮梁"
+      ],
+      "pages": 103,
+      "sha256Prefix": "84f69bcdc5a9c5cd",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-168",
+      "title": "就在不远处，偶遇你的健康乌托邦——正大集团在上海地区推广健康售货机的市场调查分析",
+      "hook": "就在不远处，偶遇你的健康乌托邦",
+      "subtitle": "正大集团在上海地区推广健康售货机的市场调查分析",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "健康轻食",
+        "上海"
+      ],
+      "pages": 114,
+      "sha256Prefix": "43a76c34631a5225",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-169",
+      "title": "智能浪潮下的教育革新——高校师生视角下生成式人工智能的评估与发展探究",
+      "hook": "智能浪潮下的教育革新",
+      "subtitle": "高校师生视角下生成式人工智能的评估与发展探究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "生成式AI",
+        "青年与大学生",
+        "儿童与教育供给"
+      ],
+      "pages": 54,
+      "sha256Prefix": "ce4ddd0bce981ecb",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-170",
+      "title": "横店变“竖店”？还需当机立“短”——泛娱乐背景下“微短剧”的文化消费业态探析",
+      "hook": "横店变“竖店”？还需当机立“短”",
+      "subtitle": "泛娱乐背景下“微短剧”的文化消费业态探析",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "研究生组",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费"
+      ],
+      "pages": 123,
+      "sha256Prefix": "f2c82bc7b13f5a78",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-171",
+      "title": "贵州大山金果果，绿色致富好生活——贵州省刺梨产业发展及推广因素研究",
+      "hook": "贵州大山金果果，绿色致富好生活",
+      "subtitle": "贵州省刺梨产业发展及推广因素研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "贵州"
+      ],
+      "pages": 82,
+      "sha256Prefix": "96f7c564d5364b54",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-172",
+      "title": "踏遍春山不思还，与你相约梵净山——贵州梵净山旅游客源市场调研及对策研究",
+      "hook": "踏遍春山不思还，与你相约梵净山",
+      "subtitle": "贵州梵净山旅游客源市场调研及对策研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国一等奖",
+      "group": "研究生组",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "贵州"
+      ],
+      "pages": 94,
+      "sha256Prefix": "7add88694ee6074d",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-173",
+      "title": "“千年底蕴，鸢都潍坊”——潍坊风筝体验式旅游可行性及发展策略探究",
+      "hook": "“千年底蕴，鸢都潍坊”",
+      "subtitle": "潍坊风筝体验式旅游可行性及发展策略探究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "文旅消费",
+        "潍坊"
+      ],
+      "pages": 91,
+      "sha256Prefix": "0a46b6bb4cfc0d9a",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-174",
+      "title": "“守住不虑的底线，做最值得的自己”基于“一核双环”路径探究的大学生就业焦虑影响因素调查",
+      "hook": "",
+      "subtitle": "“守住不虑的底线，做最值得的自己”基于“一核双环”路径探究的大学生就业焦虑影响因素调查",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 88,
+      "sha256Prefix": "ee31f32d0ad24093",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-175",
+      "title": "云“播”见乡农，共“商”致富经——直播电商服务对农产品的消费研究",
+      "hook": "云“播”见乡农，共“商”致富经",
+      "subtitle": "直播电商服务对农产品的消费研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "研究生组",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售"
+      ],
+      "pages": 121,
+      "sha256Prefix": "5ac701c650efc52c",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-176",
+      "title": "对“酒”当歌，“智能”几何——长三角地区酒店智能语音客服消费者接受度调查",
+      "hook": "对“酒”当歌，“智能”几何",
+      "subtitle": "长三角地区酒店智能语音客服消费者接受度调查",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿",
+        "长三角"
+      ],
+      "pages": 137,
+      "sha256Prefix": "56705c0741bbbf64",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-177",
+      "title": "河口古韵，研墨流芳——基于研学旅游的老河口木版年画保护传承行为意愿调研",
+      "hook": "河口古韵，研墨流芳",
+      "subtitle": "基于研学旅游的老河口木版年画保护传承行为意愿调研",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "文旅消费",
+        "满意度与意愿"
+      ],
+      "pages": 85,
+      "sha256Prefix": "d361b2ba002c9f5b",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-178",
+      "title": "短视频方兴未艾，“昔日风采”何处寻？——传统文化类短视频的传播现状及传播效果调研",
+      "hook": "短视频方兴未艾，“昔日风采”何处寻？",
+      "subtitle": "传统文化类短视频的传播现状及传播效果调研",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "满意度与意愿"
+      ],
+      "pages": 61,
+      "sha256Prefix": "6bb0a37ba3501ff6",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-179",
+      "title": "读书破万卷？实减出真知！后“双减”时代家长教育内卷多元化影响因素及行为迁移调查研究",
+      "hook": "",
+      "subtitle": "读书破万卷？实减出真知！后“双减”时代家长教育内卷多元化影响因素及行为迁移调查研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "儿童与教育供给"
+      ],
+      "pages": 67,
+      "sha256Prefix": "64932cb020d3ef7b",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-180",
+      "title": "赤水清华酿玉浆，珠联璧合映华章——“联名热”背景下对新老品牌跨界产品消费意愿及影响因素研究",
+      "hook": "赤水清华酿玉浆，珠联璧合映华章",
+      "subtitle": "“联名热”背景下对新老品牌跨界产品消费意愿及影响因素研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "直播电商与新零售",
+        "满意度与意愿",
+        "品牌建设与营销策略"
+      ],
+      "pages": 63,
+      "sha256Prefix": "41f59a93c4df1d16",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-181",
+      "title": "“孤”芳自赏，“独”乐无穷——重庆市孤独经济发展现状及孤独人群消费偏好调查+报告 (1)",
+      "hook": "“孤”芳自赏，“独”乐无穷",
+      "subtitle": "重庆市孤独经济发展现状及孤独人群消费偏好调查+报告 (1)",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "国奖（本地合集未标注等级）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 92,
+      "sha256Prefix": "54058b9a601ef397",
+      "sourceTag": "2024补充合集",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-182",
+      "title": "“清馨艾叶添，舒身亦延年”——重庆主城区居民对艾草产品的认知及其消费特性的调查 报告",
+      "hook": "“清馨艾叶添，舒身亦延年”",
+      "subtitle": "重庆主城区居民对艾草产品的认知及其消费特性的调查 报告",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "国奖（本地合集未标注等级）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "健康轻食",
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 106,
+      "sha256Prefix": "ac3cf18b967f8aa7",
+      "sourceTag": "2024补充合集",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-183",
+      "title": "“认真生活，偶尔快乐”——重庆市居民对福利彩票购买意愿的市场调查研究",
+      "hook": "“认真生活，偶尔快乐”",
+      "subtitle": "重庆市居民对福利彩票购买意愿的市场调查研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "国奖（本地合集未标注等级）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "金融与保险",
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 86,
+      "sha256Prefix": "1b3071abdb06a882",
+      "sourceTag": "2024补充合集",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-184",
+      "title": "“露”出本心，“营”造自然——重庆市主城区短途露营市场现状与消费偏好分析-参赛报告 (2)",
+      "hook": "“露”出本心，“营”造自然",
+      "subtitle": "重庆市主城区短途露营市场现状与消费偏好分析-参赛报告 (2)",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "国奖（本地合集未标注等级）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "满意度与意愿",
+        "重庆"
+      ],
+      "pages": 85,
+      "sha256Prefix": "1613fd14d8581c08",
+      "sourceTag": "2024补充合集",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-185",
+      "title": "冰消“冻”释，“食”遇新春—基于南京市主城区冷冻速食产品市场调查及消费者特征研究 报告 (1)",
+      "hook": "冰消“冻”释，“食”遇新春",
+      "subtitle": "基于南京市主城区冷冻速食产品市场调查及消费者特征研究 报告 (1)",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "国奖（本地合集未标注等级）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "饮品茶咖",
+        "南京"
+      ],
+      "pages": 78,
+      "sha256Prefix": "c62cc3247b63421f",
+      "sourceTag": "2024补充合集",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-186",
+      "title": "基于STP理论和KANO模型的大学生新蓝领职业认同与市场适配度研究——以武汉市为例",
+      "hook": "基于STP理论和KANO模型的大学生新蓝领职业认同与市场适配度研究",
+      "subtitle": "以武汉市为例",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "国奖（本地合集未标注等级）",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生",
+        "KANO与STP",
+        "武汉"
+      ],
+      "pages": 83,
+      "sha256Prefix": "6ef88c2e744d4b9c",
+      "sourceTag": "2024补充合集",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2024-187",
+      "title": "“岁月无声，困境有声”——散工市场中大龄农民工有机嵌入的影响因素调查与纾困策略研究",
+      "hook": "“岁月无声，困境有声”",
+      "subtitle": "散工市场中大龄农民工有机嵌入的影响因素调查与纾困策略研究",
+      "year": 2024,
+      "edition": "第十四届",
+      "award": "海峡两岸赛国奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "青年与大学生"
+      ],
+      "pages": 206,
+      "sha256Prefix": "67e04ad7a761b266",
+      "sourceTag": "2024正大杯市调大赛国奖报告合集（20篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-188",
+      "title": "“丸”启新篇“丸”转未来——聚焦山东省鸡肉丸市场 探析正大食品品牌健康",
+      "hook": "“丸”启新篇“丸”转未来",
+      "subtitle": "聚焦山东省鸡肉丸市场 探析正大食品品牌健康",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "饮品茶咖",
+        "品牌建设与营销策略",
+        "山东"
+      ],
+      "pages": 65,
+      "sha256Prefix": "699dd051171582ac",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-189",
+      "title": "“子母联袂共突围，无抗育雏悦宝妈”——正大集团正榆无抗鸡肉品牌建设与针对上海市宝妈的精准营销策略探究",
+      "hook": "“子母联袂共突围，无抗育雏悦宝妈”",
+      "subtitle": "正大集团正榆无抗鸡肉品牌建设与针对上海市宝妈的精准营销策略探究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "饮品茶咖",
+        "青年与大学生",
+        "女性与性别经济",
+        "品牌建设与营销策略",
+        "上海"
+      ],
+      "pages": 64,
+      "sha256Prefix": "eacbff10a29654dd",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-190",
+      "title": "“陪”你医路，“护”航健康——西安市“无陪护病房”试点的满意度及影响因素分析",
+      "hook": "“陪”你医路，“护”航健康",
+      "subtitle": "西安市“无陪护病房”试点的满意度及影响因素分析",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "无陪护病房",
+        "满意度与意愿",
+        "西安"
+      ],
+      "pages": 64,
+      "sha256Prefix": "4e06f13efe466e70",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-191",
+      "title": "“饺”尽心思，“味”来可期——北京市正大创意水饺新品方案设计与可行性研究",
+      "hook": "“饺”尽心思，“味”来可期",
+      "subtitle": "北京市正大创意水饺新品方案设计与可行性研究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "研究生组",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "饮品茶咖",
+        "北京"
+      ],
+      "pages": 65,
+      "sha256Prefix": "809607c61a14cef6",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-192",
+      "title": "小智在线，烦恼不见——AI客服对消费者在线购买意愿的影响及其服务优化调查研究",
+      "hook": "小智在线，烦恼不见",
+      "subtitle": "AI客服对消费者在线购买意愿的影响及其服务优化调查研究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "研究生组",
+      "isCpProposition": false,
+      "keywords": [
+        "生成式AI",
+        "满意度与意愿"
+      ],
+      "pages": 96,
+      "sha256Prefix": "bd4be89d8df2a593",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-193",
+      "title": "正大好咖，“啡”你莫属——正大预包装咖啡消费特征、产品定位和营销渠道新机遇",
+      "hook": "正大好咖，“啡”你莫属",
+      "subtitle": "正大预包装咖啡消费特征、产品定位和营销渠道新机遇",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "研究生组",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "饮品茶咖",
+        "品牌建设与营销策略"
+      ],
+      "pages": 62,
+      "sha256Prefix": "c4671a1a3f59b679",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-194",
+      "title": "菜逢其时，预领未来：正大集团预制菜新产品市场调查研究——基于产品-消费者-行业的多维分析",
+      "hook": "菜逢其时，预领未来：正大集团预制菜新产品市场调查研究",
+      "subtitle": "基于产品-消费者-行业的多维分析",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": true,
+      "keywords": [
+        "正大命题",
+        "预制菜"
+      ],
+      "pages": 65,
+      "sha256Prefix": "6c8cb1ddbe32027e",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-195",
+      "title": "革物智之，智之而后能净——浙江省智慧“无废城市”满意度与提升路径分析",
+      "hook": "革物智之，智之而后能净",
+      "subtitle": "浙江省智慧“无废城市”满意度与提升路径分析",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国一等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳",
+        "满意度与意愿",
+        "浙江"
+      ],
+      "pages": 65,
+      "sha256Prefix": "688c4ee3728fb47d",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-196",
+      "title": "“智”启服务新潮，“能”解客户烦扰——基于南昌市消费者电商平台智能客服使用现状及前景分析",
+      "hook": "“智”启服务新潮，“能”解客户烦扰",
+      "subtitle": "基于南昌市消费者电商平台智能客服使用现状及前景分析",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "生成式AI",
+        "直播电商与新零售",
+        "南昌"
+      ],
+      "pages": 64,
+      "sha256Prefix": "980a9d35dc6a5532",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-197",
+      "title": "“省补助力，绿行无忧”——江西省省补背景下新能源汽车消费者购买意愿研究",
+      "hook": "“省补助力，绿行无忧”",
+      "subtitle": "江西省省补背景下新能源汽车消费者购买意愿研究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "新能源与双碳",
+        "满意度与意愿",
+        "江西"
+      ],
+      "pages": 67,
+      "sha256Prefix": "5776624ae745466a",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-198",
+      "title": "“红韵领航，蓝海共兴”青岛地区红色旅游资源开发现状与提升策略研究——以海军博物馆为例",
+      "hook": "“红韵领航，蓝海共兴”青岛地区红色旅游资源开发现状与提升策略研究",
+      "subtitle": "以海军博物馆为例",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "非遗文旅",
+        "文旅消费",
+        "品牌建设与营销策略",
+        "青岛"
+      ],
+      "pages": 41,
+      "sha256Prefix": "ac610684b31ad923",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-199",
+      "title": "去“粉红税”标签，显女性独立风采——长城欧拉品牌市场定位与策略研究",
+      "hook": "去“粉红税”标签，显女性独立风采",
+      "subtitle": "长城欧拉品牌市场定位与策略研究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "女性与性别经济",
+        "品牌建设与营销策略"
+      ],
+      "pages": 64,
+      "sha256Prefix": "718ea3b251941ea7",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-200",
+      "title": "山水有清音，何处不桃源——周边游客选择县域旅游影响因素与可持续发展路径探析（以密云、丹江口、沙县为例）",
+      "hook": "山水有清音，何处不桃源",
+      "subtitle": "周边游客选择县域旅游影响因素与可持续发展路径探析（以密云、丹江口、沙县为例）",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "文旅消费",
+        "品牌建设与营销策略",
+        "密云",
+        "丹江口",
+        "沙县"
+      ],
+      "pages": 79,
+      "sha256Prefix": "5b35e3c05117e0be",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-201",
+      "title": "新质新赋能，低空催业生——基于UTAUT-II理论的“六城”大学生对低空行业认知现状及有机嵌入意愿调研",
+      "hook": "新质新赋能，低空催业生",
+      "subtitle": "基于UTAUT-II理论的“六城”大学生对低空行业认知现状及有机嵌入意愿调研",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "低空经济",
+        "青年与大学生",
+        "UTAUT-II模型",
+        "满意度与意愿"
+      ],
+      "pages": 49,
+      "sha256Prefix": "29e1bdb87b92c3a1",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-202",
+      "title": "智驭风起穿云际，未来车行迎曙光——“长株潭都市圈”市民对无人驾驶出租车认知现状及行为意愿调查分析",
+      "hook": "智驭风起穿云际，未来车行迎曙光",
+      "subtitle": "“长株潭都市圈”市民对无人驾驶出租车认知现状及行为意愿调查分析",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "无人驾驶",
+        "满意度与意愿",
+        "长株潭"
+      ],
+      "pages": 66,
+      "sha256Prefix": "c8f01fddb6e4630b",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-203",
+      "title": "聚势腾飞纳人才，新质赋能展动力——“低空经济”视域下消费者对民用无人机操控技术认知现状与资质认证意愿研究",
+      "hook": "聚势腾飞纳人才，新质赋能展动力",
+      "subtitle": "“低空经济”视域下消费者对民用无人机操控技术认知现状与资质认证意愿研究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国三等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "低空经济",
+        "满意度与意愿"
+      ],
+      "pages": 118,
+      "sha256Prefix": "0ce42fe8069f835a",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    },
+    {
+      "id": "zd-archive-2025-204",
+      "title": "“智”创学海，“自”得真知——生成式AI在武汉市大学生自主学习中的应用研究",
+      "hook": "“智”创学海，“自”得真知",
+      "subtitle": "生成式AI在武汉市大学生自主学习中的应用研究",
+      "year": 2025,
+      "edition": "第十五届",
+      "award": "全国二等奖",
+      "group": "本科组/未标注",
+      "isCpProposition": false,
+      "keywords": [
+        "生成式AI",
+        "青年与大学生",
+        "武汉"
+      ],
+      "pages": 105,
+      "sha256Prefix": "eee48afb7da2c1d9",
+      "sourceTag": "2025正大杯市调大赛国奖报告合集（17篇）",
+      "provenance": "user_provided_local_archive"
+    }
+  ]
+}

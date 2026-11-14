@@ -23,3 +23,12 @@ def register_routes(app, *, settings, db, auth, membership):
     def remove_member(team_id: str, user_id: str, user=Depends(auth), session=Depends(db)):
         service.remove_member(team_id=team_id, user_id=user_id, user=user, session=session)
         return Response(status_code=204)
+
+    @app.get('/api/teams/{team_id}/presence')
+    def presence(team_id: str, user=Depends(auth), session=Depends(db)):
+        return service.presence(team_id=team_id, user=user, session=session)
+
+    @app.post('/api/teams/{team_id}/presence')
+    async def heartbeat_presence(team_id: str, request: Request, user=Depends(auth), session=Depends(db)):
+        data = await body(request, ('status',), optional=('note',), limit=512)
+        return service.heartbeat_presence(team_id=team_id, user=user, session=session, data=data)

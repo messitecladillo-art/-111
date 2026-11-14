@@ -23,7 +23,7 @@ const BORROWED = /汉超|蒜鸟|武汉城市足球|跨界连接器|母洞察|76\
 
 test('a teaching simulation: its questionnaire maps every question, its answers are drawn one by one, its results are computed on them', async () => {
   const pack = await buildDemoPack(TOPIC);
-  assert.equal(pack.design.questions.length, 12);
+  assert.equal(pack.design.questions.length, 20);
   assert.equal(questionnaireIssues(pack.design).filter(i => i.level === 'blocker').length, 0);
   assert.ok(pack.design.questions.every(questionIsMapped));
 
@@ -34,7 +34,7 @@ test('a teaching simulation: its questionnaire maps every question, its answers 
   // One topic, one simulation in every engine: the simulator uses only arithmetic IEEE 754 fixes exactly (no Math.log or
   // Math.cos, no random-comparator sort). This fingerprint was produced in Node and in the browser alike.
   const raw = (await import('../lib/agent/demo-study.ts')).buildDemoStudy;
-  assert.equal((await raw('城市社区助餐服务的使用体验、满意度与持续使用意愿调查')).dataset.sourceHash.slice(0, 16), '21796f08a535951d');
+  assert.equal((await raw('城市社区助餐服务的使用体验、满意度与持续使用意愿调查')).dataset.sourceHash.slice(0, 16), 'c34907e3ceddb089');
   const simulator = (await import('node:fs')).readFileSync(new URL('../lib/agent/demo-study.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(simulator.replace(/\/\/[^\n]*/gu, ''), /Math\.(log|cos|sin|exp|pow|tan|atan)\b|\.sort\(\(\) =>/u);
   const distinct = new Set(rows.map(r => r.join('|'))).size;
@@ -66,6 +66,34 @@ test('a teaching simulation: its questionnaire maps every question, its answers 
   assert.ok(ai.body.includes(UNDRAFTED_NOTE), 'no model has drafted anything yet');
   assert.ok(ai.body.includes(`剔除`) && ai.body.includes(`保留 ${rows.length} 份`));
   assert.ok(!pack.report.report.some(s => /^参考文献/u.test(s.title) && /体育科学|中国高等教育|中国劳动|经济研究/u.test(s.body)), 'no invented journal article is cited');
+  // P1/P2/P3 upgrade invariants: version 3 with approved frame & TOC, 0 blank subsections, downstream Cluster cross-tabs, and valid verified citations
+  const { danglingReferences } = await import('../lib/report-numbering.ts');
+  assert.equal(pack.report.version, 3);
+  assert.equal(pack.report.reportFormat?.options.includeToc, true);
+  assert.equal(pack.report.reportFrame?.status, 'approved');
+  assert.deepEqual(danglingReferences(pack.report), []);
+  assert.ok(results.some(r => r.method === 'crosstab' && r.variables?.[0] === '聚类人群分群'), 'cluster feeds downstream crosstab');
+  assert.equal(pack.report.references?.length, 7);
+  assert.ok(pack.report.references?.every(r => r.verification === 'verified'));
+  const blankBodySections = pack.report.report.filter(s => (!/^[一二三四五六七八九十]+、/u.test(s.title) && s.title !== '参考文献') && !s.body.trim());
+  assert.deepEqual(blankBodySections, [], 'every content section starts with structured prose instead of blank skeleton');
+  const { figurePlan, figureSVG } = await import('../lib/report-figures.ts');
+  const { isDiagramMethod } = await import('../lib/diagram-figures.ts');
+  const { figureInk } = await import('../lib/figure-palette.ts');
+  const ink = figureInk(pack.report);
+  const chartKinds = new Set();
+  for (const sec of pack.report.report) {
+    for (const block of sec.blocks ?? []) {
+      if (block.kind !== 'chart') continue;
+      const result = results.find(x => x.id === block.evidenceId);
+      assert.ok(result, `chart block ${block.id} has registered result`);
+      const svg = await figureSVG(result, block.valueColumn ?? 1, ink, pack.report.visualStyle);
+      assert.ok(svg.includes('<svg') && !/\.\d{3,}%/u.test(svg), `clean SVG for ${block.id}`);
+      chartKinds.add(isDiagramMethod(result.method) ? result.method : figurePlan(result, block.valueColumn ?? 1, ink).kind);
+    }
+  }
+  assert.ok(chartKinds.has('scree') && chartKinds.has('likert'), 'EFA scree and diverging likert plots active');
+  assert.ok(chartKinds.size >= 10, `expected >= 10 distinct chart types, got ${[...chartKinds].join(',')}`);
 });
 
 test('any topic gets its own structure, worded for it and carrying no number', () => {

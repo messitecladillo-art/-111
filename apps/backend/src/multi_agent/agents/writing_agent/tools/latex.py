@@ -25,7 +25,7 @@ MAX_FILES = 32 * 1024 * 1024
 ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular array figure tikzpicture axis".split())
 COMMANDS = frozenset((
     "section subsection subsubsection paragraph subparagraph par newline linebreak textbf textit emph textrm textsf texttt textnormal underline textsuperscript textsubscript "
-    "item caption label ref eqref centering toprule midrule bottomrule multicolumn small noindent "
+    "item caption label ref eqref centering toprule midrule bottomrule multicolumn small noindent hangindent hangafter "
     "textbackslash textasciitilde textasciicircum textdegree textendash textemdash textquotedblleft textquotedblright "
     "frac dfrac tfrac sqrt overline widehat widetilde hat bar vec dot ddot tilde acute grave breve check mathrm mathbf mathit mathsf mathtt mathcal mathbb mathop operatorname text "
     "left right middle big Big bigg Bigg bigl bigr Bigl Bigr biggl biggr Biggl Biggr "
@@ -336,6 +336,14 @@ def validate_body(content, figure_count=0, image_count=0):
                 _, i = argument(i, r"c", "合并列须居中。")
             elif command in ("label", "ref", "eqref"):
                 _, i = argument(i, r"[A-Za-z][A-Za-z0-9:_-]{0,63}", "交叉引用须使用英文字母开头的固定标识。")
+            elif command == "hangindent":
+                match = re.match(r"=[1-9][0-9]?(?:\.[0-9]+)?(?:em|pt|bp|mm|cm)", content[i:])
+                if not match: fail("悬挂缩进仅支持固定正尺寸，例如 =2em。", start)
+                i += match.end()
+            elif command == "hangafter":
+                match = re.match(r"=[1-9][0-9]?", content[i:])
+                if not match: fail("悬挂行数仅支持正整数，例如 =1。", start)
+                i += match.end()
             continue
         i += 1
     if depth or stack: fail("花括号或环境尚未闭合。", len(content))
