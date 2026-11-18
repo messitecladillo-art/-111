@@ -47,8 +47,12 @@ def test_a_new_address_registers_only_with_a_usable_code(harness, settings, pg_e
     client, cid = request_code(app, settings, "new@example.test", " " + invite["code"].lower().replace("-", " ") + " ")
     response = verify(client, settings, cid, deliveries[cid][1])
     assert response.status_code == 200, response.text
-    client.headers.update({"origin": settings.allowed_origins[0], "x-csrf-token": response.json()["csrfToken"]})
-    assert client.get("/api/teams").status_code == 200, "an account registered by code is admitted"
+    registered = response.json()
+    client.headers.update({"origin": settings.allowed_origins[0], "x-csrf-token": registered["csrfToken"]})
+    teams = client.get("/api/teams")
+    assert teams.status_code == 200, "an account registered by code is admitted"
+    default_teams = teams.json()["teams"]
+    assert len(default_teams) == 1 and default_teams[0]["role"] == "owner"
     listed = admin.get("/api/invites").json()["invites"][0]
     assert listed["uses"] == 1 and listed["status"] == "used_up"
     with pg_engine.connect() as connection:
@@ -56,10 +60,15 @@ def test_a_new_address_registers_only_with_a_usable_code(harness, settings, pg_e
     # The code is used up: a second address gets no mail.
     _, cid = request_code(app, settings, "other@example.test", invite["code"])
     assert cid not in deliveries
-    # The registered account signs in again without a code.
+    # Logout revokes the session; the registered account can return without another invitation.
+    assert client.post("/api/auth/logout").status_code == 204
+    assert client.get("/api/session").json()["authenticated"] is False
     forget_rate(pg_engine)
     client, cid = request_code(app, settings, "new@example.test")
-    assert verify(client, settings, cid, deliveries[cid][1]).status_code == 200
+    signed_in = verify(client, settings, cid, deliveries[cid][1])
+    assert signed_in.status_code == 200
+    assert signed_in.json()["user"] == registered["user"]
+    assert client.get("/api/teams").json()["teams"] == default_teams
 
 
 def test_codes_are_issued_only_by_listed_administrators_and_revocation_stops_registration(harness, settings, pg_engine):

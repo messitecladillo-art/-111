@@ -27,18 +27,19 @@ def create_dependencies(settings, engine):
         if lock:
             query = query.with_for_update()
         row = session.execute(query.execution_options(populate_existing=True)).scalar_one_or_none() if token else None
-        if row is None or row.revoked_at is not None or row.expires_at <= now():
+        user = None
+        if row is not None and row.revoked_at is None and row.expires_at > now():
+            user = session.get(User, row.user_id)
+        # Admitted: an address on the operator's list, or an account registered by invitation code.
+        if user is None or (user.email not in settings.invited_emails and user.invite_id is None):
             if required:
                 raise ApiError(401, "session_required", "请先登录。")
             return None, None
-        user = session.get(User, row.user_id)
-        # Admitted: an address on the operator's list, or an account registered by invitation code.
-        if user is None or (user.email not in settings.invited_emails and user.invite_id is None):
-            raise ApiError(401, "session_required", "请先登录。")
         session.execute(sql_text("SELECT set_config('evix.user_id', :user_id, true)"), {"user_id": user.id})
         if request.method not in ("GET", "HEAD"):
             origin(request)
-            if not hmac.compare_digest(request.headers.get("x-csrf-token", ""), row.csrf):
+            csrf = request.headers.get("x-csrf-token", "")
+            if not csrf.isascii() or not hmac.compare_digest(csrf, row.csrf):
                 raise ApiError(403, "csrf_required", "会话操作校验失败，请刷新。")
         return user, row
 
