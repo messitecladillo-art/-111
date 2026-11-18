@@ -48,6 +48,9 @@ def test_auth_replay_attempts_rate_uniform_and_logout(harness, settings, pg_engi
     assert client.post("/api/auth/verify", json={"challengeId": cid, "code": mail[cid][1]}, headers={"origin": settings.allowed_origins[0]}).status_code == 401
     token = a.cookies.get(settings.cookie_name)
     assert a.post("/api/auth/logout", headers={"x-csrf-token": "wrong"}).status_code == 403
+    malformed_csrf = a.post("/api/auth/logout", headers=[(b"x-csrf-token", b"\xff")])
+    assert malformed_csrf.status_code == 403
+    assert malformed_csrf.json()["error"]["code"] == "csrf_required"
     assert a.post("/api/auth/logout").status_code == 204
     replay = TestClient(app)
     replay.cookies.set(settings.cookie_name, token)
@@ -59,6 +62,9 @@ def test_invitation_removal_and_undelivered_code_fail(harness, settings, pg_engi
     a, session = login()
     settings.invited_emails.remove("a@example.test")
     assert a.get("/api/services").status_code == 401
+    signed_out = a.get("/api/session")
+    assert signed_out.status_code == 200
+    assert signed_out.json() == {"authenticated": False, "mode": settings.mode, "providerMode": settings.provider_mode}
     client = TestClient(app)
 
     async def fail_mail(*args):

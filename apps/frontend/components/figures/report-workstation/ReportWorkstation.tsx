@@ -137,8 +137,8 @@ export default function ReportWorkstation({
 }) {
   const root = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState(false);
-  const [hotPart, setHotPart] = useState<keyof typeof PART_CALLOUTS | null>(null);
   const [visible, setVisible] = useState(false);
+  const [hotPart, setHotPart] = useState<keyof typeof PART_CALLOUTS | null>(null);
   const pageVisible = useSyncExternalStore(subscribePage, pageSnapshot, () => false);
   const reduced = useSyncExternalStore(subscribeMotion, motionSnapshot, () => true);
   const id = useId();

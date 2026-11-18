@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
 import { imageSize, parseCoverImage, parseFrameImage, coverImageTitlepage } from '../lib/page-art.ts';
-import { applyCoverImage, applyFrameImage, applyReportFrame, createEditorContent, draftTextBytes, parseEditorContent } from '../lib/editor-model.ts';
+import { applyCoverImage, applyFrameImage, createEditorContent, draftTextBytes, parseEditorContent } from '../lib/editor-model.ts';
 import { buildLatexSource, latexCompileInput, latexCompileKey } from '../lib/latex-report.ts';
 import { buildDocx } from '../lib/editor-export.ts';
 

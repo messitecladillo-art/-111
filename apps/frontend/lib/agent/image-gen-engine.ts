@@ -11,7 +11,7 @@
 
 import type { EditorContent } from '../editor-model.ts';
 import { descriptiveInfographicSVG } from '../diagram-figures.ts';
-import { digestText, parseResultSnapshot, resultPayload, type ResultSnapshot } from '../research-quality.ts';
+import { digestText, parseResultSnapshot, resultPayload, verifyResearchQuality, type ResultSnapshot } from '../research-quality.ts';
 
 export type ImageModelProvider = 'gemini' | 'imagen' | 'openai_compatible';
 
@@ -127,9 +127,18 @@ export interface ExtractedDescriptiveStats {
   highlightFinding: string;
 }
 
+/** A composite uses one dataset, classification and analysis denominator; unrelated results stay separate. */
+function descriptiveSources(content: EditorContent): ResultSnapshot[] {
+  const results = (content.quality?.results ?? []).filter(result => result.n > 0
+    && !['infographic', 'framework', 'diagram', 'wordcloud', 'sampling-frame'].includes(result.method));
+  const primary = results.find(result => result.method === 'frequency') ?? results.find(result => result.method === 'quality-control') ?? results[0];
+  return primary ? results.filter(result => result.sourceHash === primary.sourceHash && result.classification === primary.classification
+    && result.n === primary.n && result.total === primary.total) : [];
+}
+
 /** 从当前报告已冻结的 ResultSnapshot 中无幻觉提取描述性统计摘要 */
 export function extractDescriptivePanelsFromReport(content: EditorContent): ExtractedDescriptiveStats {
-  const results = content.quality?.results ?? [];
+  const results = descriptiveSources(content);
   const freqResults = results.filter(r => r.method === 'frequency');
   const qcResult = results.find(r => r.method === 'quality-control');
   const primarySampleResult = freqResults[0] ?? qcResult ?? results.find(r => r.n > 0);
@@ -144,17 +153,19 @@ export function extractDescriptivePanelsFromReport(content: EditorContent): Extr
     for (const row of fr.rows.slice(0, 3)) {
       const cat = String(row[0] ?? '').trim();
       if (!cat || /合计|总计|valid|total/iu.test(cat)) continue;
-      const pctRaw = pctCol >= 0 ? row[pctCol] : row[2] ?? row[1];
+      if (pctCol < 0 && countCol < 0) continue;
+      const pctRaw = row[pctCol >= 0 ? pctCol : countCol];
+      if (pctRaw === null || pctRaw === undefined || String(pctRaw).trim() === '') continue;
       const numVal =
         typeof pctRaw === 'number'
           ? pctRaw
           : Number(String(pctRaw ?? '').replace(/[%％]/gu, '').trim());
-      if (Number.isFinite(numVal) && distributions.length < 5) {
+      if (Number.isFinite(numVal) && numVal >= 0 && numVal <= (pctCol >= 0 ? 100 : sampleN) && distributions.length < 5) {
         const prefix = fr.variables?.[0] ? `${fr.variables[0].slice(0, 5)}·` : '';
         distributions.push({
           label: `${prefix}${cat}`,
           value: Number(numVal.toFixed(1)),
-          unit: pctCol >= 0 || String(pctRaw).includes('%') ? '%' : countCol >= 0 ? '份' : '%',
+          unit: pctCol >= 0 ? '%' : '份',
         });
       }
     }
@@ -167,7 +178,7 @@ export function extractDescriptivePanelsFromReport(content: EditorContent): Extr
       if (m.label.endsWith('｜表现') && typeof m.value === 'number' && Number.isFinite(m.value)) {
         const dimName = m.label.slice(0, m.label.lastIndexOf('｜'));
         if (dimName !== '分界线' && dimensionMeans.length < 5) {
-          dimensionMeans.push({ label: dimName, value: Number(m.value.toFixed(2)), unit: '/ 5.0' });
+          dimensionMeans.push({ label: dimName, value: Number(m.value.toFixed(2)), unit: '原量纲' });
         }
       }
     }
@@ -175,17 +186,11 @@ export function extractDescriptivePanelsFromReport(content: EditorContent): Extr
   if (!dimensionMeans.length) {
     const profile = results.find(r => r.method === 'profile');
     if (profile) {
-      const byDim = new Map<string, number[]>();
       for (const m of profile.metrics) {
-        if (!m.label.includes('｜') || m.label.startsWith('人数｜') || typeof m.value !== 'number') continue;
-        const dim = m.label.slice(0, m.label.lastIndexOf('｜'));
-        if (!byDim.has(dim)) byDim.set(dim, []);
-        byDim.get(dim)!.push(m.value);
-      }
-      for (const [dim, vals] of byDim) {
+        if (!m.label.includes('｜') || m.label.startsWith('人数｜') || typeof m.value !== 'number' || !Number.isFinite(m.value)) continue;
         if (dimensionMeans.length >= 5) break;
-        const avg = vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length);
-        dimensionMeans.push({ label: dim, value: Number(avg.toFixed(2)), unit: '/ 5.0' });
+        // Keep each observed subgroup metric; an unweighted average is not a population mean.
+        dimensionMeans.push({ label: m.label, value: Number(m.value.toFixed(2)), unit: '原量纲' });
       }
     }
   }
@@ -194,15 +199,16 @@ export function extractDescriptivePanelsFromReport(content: EditorContent): Extr
   const alphaMetric = alphaSnap?.metrics.find(m => /alpha|α/iu.test(m.label) && typeof m.value === 'number');
   const reliabilityAlpha = typeof alphaMetric?.value === 'number' ? Number(alphaMetric.value.toFixed(3)) : null;
 
-  const firstConfirmed = content.quality?.findings.find(f => f.status === 'confirmed') ?? content.quality?.findings[0];
+  const firstConfirmed = content.quality?.findings.find(f => f.status === 'confirmed' && f.evidenceIds.length > 0
+    && f.evidenceIds.every(id => results.some(result => result.id === id && f.confirmedHashes[id] === result.resultHash)));
   let highlightFinding = firstConfirmed?.interpretation?.split(/[。\n]/u)[0]?.trim() ?? '';
   if (!highlightFinding && dimensionMeans.length >= 2) {
     const sorted = [...dimensionMeans].sort((a, b) => a.value - b.value);
-    highlightFinding = `最低表现项为「${sorted[0].label}」(${sorted[0].value})，最高为「${sorted[sorted.length - 1].label}」(${sorted[sorted.length - 1].value})。`;
+    highlightFinding = `已登记指标：${sorted.map(item => `${item.label} ${item.value}`).slice(0, 3).join('；')}。`;
   }
   if (!highlightFinding) {
     highlightFinding = results.length
-      ? `已接入 ${results.length} 项冻结分析快照（样本 n = ${sampleN}），信息图面板实时绑定。`
+      ? `引用 ${results.length} 项同源同分母分析快照（分析样本 n = ${sampleN}）。`
       : '尚未运行实证统计计算；当前展示框架概念布局，计算结果就绪后自动回填。';
   }
 
@@ -287,49 +293,47 @@ export async function buildInfographicResultSnapshot(params: {
   prompt?: string;
   classification?: ResultSnapshot['classification'];
 }): Promise<ResultSnapshot> {
-  const stats = extractDescriptivePanelsFromReport(params.content);
   const existing = params.content.quality?.results ?? [];
-  const classification =
-    params.classification
-    ?? (existing.some(r => r.classification === 'simulated')
-      ? 'simulated'
-      : existing.some(r => r.classification === 'user_provided')
-        ? 'user_provided'
-        : 'public');
+  if (params.content.quality) await verifyResearchQuality(params.content.quality);
+  const stats = extractDescriptivePanelsFromReport(params.content), sources = descriptiveSources(params.content);
+  const classification = sources[0]?.classification ?? 'simulated';
+  if (params.classification && params.classification !== classification) throw Error('派生图形须保留来源结果的数据分类。');
   const resolvedTitle = cleanInfographicTitle(params.title, params.content.title, '描述性统计复合信息图');
-  const sourceHash =
-    existing.find(r => /^[a-f0-9]{64}$/.test(r.sourceHash))?.sourceHash
-    ?? (await digestText(JSON.stringify({ title: resolvedTitle, prompt: params.prompt ?? '' })));
+  const sourceHash = await digestText(JSON.stringify(sources.map(result => ({ id: result.id, resultHash: result.resultHash,
+    sourceHash: result.sourceHash, classification: result.classification, n: result.n, total: result.total })).sort((a, b) => a.id.localeCompare(b.id))));
 
   const rows: (string | number | null)[][] = [
-    ['KPI', '有效样本量 n', stats.sampleN, '份 · 已质控'],
-    ['KPI', '已冻结分析结果', stats.resultCount, '项快照'],
+    ['KPI', '分析样本量 n', sources.length ? stats.sampleN : '未登记', sources.length ? '份' : '待计算'],
+    ['KPI', '同源同分母分析结果', stats.resultCount, '项快照'],
     ...(stats.reliabilityAlpha !== null ? [['KPI', '量表 Cronbach α', stats.reliabilityAlpha, '内部一致性']] : []),
     ...stats.distributions.map(d => ['频数分布', d.label, d.value, d.unit]),
     ...stats.dimensionMeans.map(d => ['均值评价', d.label, d.value, d.unit]),
-    ['结论摘要', stats.highlightFinding.slice(0, 64), 1, '已锁定冻结数据'],
+    ['结论摘要', stats.highlightFinding.slice(0, 64), null, sources.length ? '依据已登记来源快照' : '概念布局，无调查结果'],
+    ...sources.map(result => ['来源快照', result.id, result.resultHash, result.sourceHash]),
   ];
 
   const metrics = [
-    { label: '有效样本量', value: stats.sampleN },
+    { label: '分析样本量', value: stats.sampleN },
     { label: '涵盖分布与维度指标数', value: stats.distributions.length + stats.dimensionMeans.length },
   ];
 
   const unsigned = parseResultSnapshot({
     id: `infographic-${Date.now().toString(36)}`,
     title: resolvedTitle,
-    sourceName: 'EVI-X AI 生图与统计信息图工坊',
+    sourceName: sources.length ? '已登记分析快照的同源派生图形' : '概念布局（无调查数据）',
     sourceUrl: '',
     sourceHash,
     resultHash: '0'.repeat(64),
     classification,
     method: 'infographic',
-    n: stats.sampleN || rows.length,
-    total: Math.max(stats.sampleN, stats.totalN, rows.length),
+    n: stats.sampleN,
+    total: stats.totalN,
     headers: ['面板区域', '指标项', '数值', '单位/说明'],
     rows,
     metrics,
-    warnings: stats.resultCount ? [] : ['当前报告尚未登记定量统计结果，仅展示框架占位结构。'],
+    warnings: sources.length ? ['图形引用来源快照行所列的结果版本；分析样本量不等同于已通过质控的有效答卷数。',
+      ...(existing.length > sources.length ? ['不同来源、数据分类或分析分母的结果未合并到本图。'] : [])]
+      : ['当前报告尚无可用定量统计结果，仅展示概念布局，未生成受访者数据。'],
     variables: ['样本分布', '核心维度'],
   });
 

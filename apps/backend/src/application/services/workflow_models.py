@@ -39,6 +39,7 @@ class WorkflowModels:
     def __init__(self, *, settings, provider, load, owned_service):
         self.settings, self.provider = settings, provider
         self.load, self.owned_service = load, owned_service
+        self.grants = None
 
     def preview(self, *, row, user, session):
         state = WorkflowState.from_dict(row.state)
@@ -92,9 +93,15 @@ class WorkflowModels:
         # Preserve the existing data-input gate, without asking to bill a model.
         if role is AgentRole.DATA and not state.input_artifact_refs:
             return ExecutionPlan(WorkflowEngine({}).prepare_step(state))
-        preview = self.preview(row=row, user=user, session=session)
+        grant_id = data.get('modelGrantId')
+        if grant_id is not None:
+            if 'modelConsent' in data or self.grants is None:
+                raise ApiError(422, 'invalid_model_grant', '请使用一种明确的模型授权。')
+            preview = self.grants.prepare_role(row=row, user=user, session=session, grant_id=grant_id)
+        else:
+            preview = self.preview(row=row, user=user, session=session)
         consent = data.get('modelConsent')
-        if (type(consent) is not dict or set(consent) != {'accepted', 'previewHash', 'maxCalls'}
+        if grant_id is None and (type(consent) is not dict or set(consent) != {'accepted', 'previewHash', 'maxCalls'}
                 or consent['accepted'] is not True or type(consent['maxCalls']) is not int
                 or consent['maxCalls'] != preview['maxCalls'] or consent['previewHash'] != preview['previewHash']):
             raise ApiError(422, 'model_consent_required', '请核对当前材料、模型分工和调用上限后确认。')
@@ -102,7 +109,7 @@ class WorkflowModels:
             raise ApiError(409, 'workflow_tools_unavailable', '数据读取和统计执行工具尚未接入此流程。')
         invocation = ModelInvocation(runtime=self, engine=session.get_bind(), actor_id=user.id,
             project_id=row.project_id, task_id=row.id, execution_id=execution_id,
-            preview=deepcopy(preview), check_session=check_session)
+            preview=deepcopy(preview), check_session=check_session, grant_id=grant_id)
         tools = (SurveyDataTools(open_session=invocation.data_session, project_id=row.project_id,
                                  expected=preview['datasets']).tools() if role is AgentRole.DATA else None)
         sync_handler = model_handler(role, invocation.invoke, tools)
@@ -117,15 +124,20 @@ class WorkflowModels:
 
         prepared = WorkflowEngine({role: handler}).prepare_step(state)
         invocation.prepared_hash = fingerprint(prepared.state.to_dict())
-        return ExecutionPlan(prepared, MODEL_ROLE_TIMEOUT, MODEL_ROLE_LEASE)
+        return ExecutionPlan(prepared, MODEL_ROLE_TIMEOUT, MODEL_ROLE_LEASE,
+            invocation.check_publish if grant_id is not None else None)
 
 
 class ModelInvocation:
-    def __init__(self, *, runtime, engine, actor_id, project_id, task_id, execution_id, preview, check_session):
+    def __init__(self, *, runtime, engine, actor_id, project_id, task_id, execution_id, preview, check_session, grant_id=None):
         self.runtime, self.engine = runtime, engine
         self.actor_id, self.project_id, self.task_id = actor_id, project_id, task_id
         self.execution_id, self.preview, self.check_session = execution_id, preview, check_session
         self.stopped, self.prepared_hash = Event(), None
+        self.grant_id = grant_id
+
+    def check_publish(self, session, user, row):
+        self.runtime.grants.load_record(session, user, row, self.grant_id, lock=True, allow_exhausted=True)
 
     def _identity(self, session):
         session.execute(sql_text("SELECT set_config('evix.user_id', :id, true)"), {'id': self.actor_id})
@@ -143,6 +155,8 @@ class ModelInvocation:
                 or parent.base_revision != self.preview['inputRevision'] or parent.input_hash != self.preview['inputHash']
                 or fingerprint(row.state) != self.prepared_hash):
             raise ApiError(409, 'workflow_invocation_inactive', '该次执行已结束或需要对账。')
+        if self.grant_id is not None:
+            self.runtime.grants.load_record(session, user, row, self.grant_id, allow_exhausted=True)
         return user
 
     @contextmanager
@@ -187,12 +201,18 @@ class ModelInvocation:
             key = decrypt(runtime.settings, service)
             if key in canonical(messages):
                 raise ProviderFailure('sensitive_input')
+            if self.grant_id is not None:
+                row = runtime.load(session=session, user=user, project_id=self.project_id, task_id=self.task_id, lock=True)
+                runtime.grants.validate_invocation(session=session, user=user, row=row,
+                    grant_id=self.grant_id, step=step, reserve=True)
             record = {'schema': SCOPE, 'id': call_id, 'taskId': self.task_id, 'projectId': self.project_id,
                       'executionId': self.execution_id, 'step': step, 'status': 'running',
                       'inputRevision': self.preview['inputRevision'], 'inputHash': input_hash,
                       'consentHash': self.preview['previewHash'], 'serviceId': service.id,
                       'serviceRevision': service.revision, 'providerMode': runtime.settings.provider_mode,
                       'startedAt': iso(now()), 'finishedAt': None, 'resultHash': None, 'usage': None, 'errorCode': None}
+            if self.grant_id is not None:
+                record['grantId'] = self.grant_id
             session.add(Operation(user_id=self.actor_id, scope=SCOPE, key=call_id, payload_hash=input_hash, response=record))
             session.add(RateEvent(scope=scope))
             session.commit()

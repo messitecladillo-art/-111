@@ -99,6 +99,8 @@ function componentHarness({ owner = 'owner-old', projectId = 'project-old', read
   const jsx = (type, props) => ({ type, props });
   const imports = {
     react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx },
+    // This fixture owns only the browser draft and supplies no hosted execution host.
+    './useWorkflowExecution': { useWorkflowExecution: () => ({ enabled: false, task: null, busy: false, loading: false }) },
     '@/lib/diagnosis-actions': { parseDiagnosisBriefSource }, '@/lib/agent/research-stages': { RESEARCH_STAGES: [{ id: 'topic' }] },
     '@/lib/agent/research-workspace': { emptyResearchWorkspaceDraft: emptyDraft,
       readResearchWorkspace: read ?? (async () => ({ revision: 0, draft: null })),

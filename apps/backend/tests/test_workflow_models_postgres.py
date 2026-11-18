@@ -265,6 +265,7 @@ def test_data_role_reads_owned_survey_release_and_reports_tool_values(model_harn
     response = advance(owner, path, 0, approved)
     assert response.status_code == 200, response.text
     value = response.json()
+    assert 'data' in value['state']['agent_outputs'], (value['status'], value['state']['errors'], owner.get(path + '/model-calls').json())
     deliverable = value['state']['agent_outputs']['data']['deliverable']
     assert deliverable['data_status'] == 'analyzed' and deliverable['input_artifact_refs'] == [ref]
     score = next(item for item in deliverable['descriptive_statistics'] if item['variable'] == 'Q2')
