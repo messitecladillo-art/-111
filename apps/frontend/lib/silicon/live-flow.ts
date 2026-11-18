@@ -253,7 +253,7 @@ function buildRoundPack(
   scenarioId: string,
 ): InterviewRoundPack {
   const scenario = run.settings.scenarios.find(s => s.id === scenarioId) ?? run.settings.scenarios[0] ?? NO_SCENARIO;
-  const matrixHeader = ['受访者 (personaId)', ...questions.map(q => q.variable || q.id)];
+  const matrixHeader = ['受访者', ...questions.map(q => q.variable || q.id)];
   const matrixRows: InterviewRoundPack['matrixRows'] = [];
   const transcriptsByPersona: Record<string, InterviewTurnItem[]> = {};
 
@@ -334,6 +334,7 @@ export function buildAtypicaFlowBlueprint(input: {
 }): AtypicaFlowBlueprint {
   const { design, attributes, personas, settings, run } = input;
   const studyTitle = design.title.trim() || '专题市场调查预测试';
+  const cleanPlanSubject = studyTitle.replace(/（教学模拟）$/u, '').trim() || studyTitle;
   const population = design.population.trim() || '目标调研受访人群';
   const attrSummary = attributes.map(a => `${a.label}（${a.levels.map(l => l.label).slice(0, 3).join('/')}）`).join(' × ');
   const scenarioNames = settings.scenarios.map(s => s.label).filter(Boolean);
@@ -386,7 +387,8 @@ export function buildAtypicaFlowBlueprint(input: {
     scenarioId,
   );
 
-  const findings = pretestFindings(design, run);
+  const rawFindings = pretestFindings(design, run);
+  const findings = rawFindings.filter(f => f.kind !== 'static:pilot_missing');
   const fidelity = fidelityReport(design, run, input.expectations ?? []);
   const minutes = estimateMinutes(design);
   const blockers = findings.filter(f => f.level === 'blocker').length + questionnaireIssues(design).filter(i => i.level === 'blocker').length;
@@ -512,7 +514,7 @@ export function buildAtypicaFlowBlueprint(input: {
     panelId: String(10000 + (hashSeed(tokenBase) % 89999)),
     timelineToken: shortToken(tokenBase),
     planCard: {
-      title: `研究计划：${studyTitle} · 硅基全流程预测试`,
+      title: `预测试方案 · 《${cleanPlanSubject}》`,
       background: `围绕「${studyTitle}」（目标总体：${population}），当前问卷包含 ${design.questions.length} 道题项${scenarioNames.length ? `及 ${scenarioNames.length} 个对照情境（${scenarioNames.join('、')}）` : ''}。为避免直接投放产生高跳出与理解偏差，先以硅基样本队列执行全流程模拟推演。`,
       goals: [
         '识别表述模糊、带诱导倾向或缺乏「不适用」出口的题项',
@@ -523,14 +525,14 @@ export function buildAtypicaFlowBlueprint(input: {
       methods: [
         '1. 按最大余数法锁定配额，构建具象口癖与生活境况的 AI 受访人设',
         '2. 执行 3 轮分主题 1v1 访谈与跨组焦点小组圆桌讨论',
-        '3. 计算 Cramér V 与多样熵，输出可回溯至个体 personaId 的预测试诊断报告',
+        '3. 计算 Cramér V 与多样熵，输出可回溯至个体受访编码的预测试诊断报告',
       ],
       deliverable: `结构化预测试诊断报告 · 全量模拟样本矩阵 (${run.responses.length} 条回答) · 3D 空间群像分布`,
     },
     clarificationOptions: [
       {
         id: 'focus',
-        prompt: `关于「${studyTitle}」，本轮推演重点校验哪类风险?`,
+        prompt: '本轮预测试重点校验哪类风险？',
         choices: [
           { id: 'pretest', label: '题干歧义、选项漏斗与跳题路径排雷' },
           { id: 'scenario', label: '跨情境态度对比与敏感性检验' },
@@ -599,7 +601,7 @@ export function buildAtypicaFlowBlueprint(input: {
       {
         title: '三维空间分布策略 · 3D 硅基舞台',
         badge: `${personas.length} 位在场`,
-        body: `全部 ${personas.length} 位受访者按 \`stageLayout()\` 黄金角螺线进驻 3D 舞台；选中任一受访者或按核心问题着色时，其脚底光环与站位弧线同步聚类刷新。`,
+        body: `全部 ${personas.length} 位受访者按黄金角螺线排布进驻 3D 舞台；选中任一受访者或按核心问题着色时，其脚底光环与站位弧线同步聚类刷新。`,
       },
     ],
     enrichedPersonas,
@@ -613,7 +615,7 @@ export function buildAtypicaFlowBlueprint(input: {
     discussionSummary: `已完成 ${cast.length} 位不同层级受访者的跨组交锋：从「${anchorQ?.variable || 'Q1'}」实际打分延伸到真实使用情境限制，识别出「选项缺少边界」与「口语预期不对称」两条具体改进线索。`,
     discussionTurns,
     report: {
-      kicker: 'EVI-X × SILICON PRETEST REPORT',
+      kicker: '证见 · 硅基样本预测试报告',
       title: studyTitle,
       subtitle: '从语义歧义排查到真实生活情境校准',
       lead: `本轮围绕目标总体「${population}」，调用 ${personas.length} 位分层硅基受访者完成 ${run.responses.filter(r => r.status === 'ok').length} 份沉浸式试答与 4 席焦点小组交叉质询。所有结论均严格限制为“问卷预测试与流程演练”，已精准锚定至个体受访者编号与题干。`,
@@ -629,7 +631,7 @@ export function buildAtypicaFlowBlueprint(input: {
         {
           tag: '语义与认知负荷',
           title: warnings > 0 ? `定位 ${warnings} 处易引发歧义或困惑的表述` : '题干口语自然度表现均衡',
-          detail: findings.find(f => f.level !== 'blocker')?.message || '受访者均能按现有选项给出明确落点，未触发大面积“难以理解”备注。',
+          detail: findings.find(f => f.level !== 'blocker')?.message || `受访者对「${anchorQ?.variable || 'Q1'}」等核心题项均能给出明确落点，建议重点复核低频用户的“不适用”选项出口。`,
         },
         {
           tag: '样本区分度校准',
@@ -657,7 +659,15 @@ export function buildAtypicaFlowBlueprint(input: {
       },
       findings,
       actionChecklist: [
-        ...(findings.slice(0, 3).map(f => `${f.questionId ? `核对题项：${design.questions.find(q => q.id === f.questionId)?.variable || f.questionId}` : '核对变量插槽'} — ${f.message}`)),
+        ...(findings.length
+          ? findings.slice(0, 3).map(f => {
+              const varLabel = f.questionId ? (design.questions.find(q => q.id === f.questionId)?.variable || f.questionId) : '整体测量设计';
+              return `核对 ${varLabel} — ${f.message}`;
+            })
+          : [
+              `复核题项 ${anchorQ?.variable || 'Q1'} 与反向题组边界：确认低频/无经历受访者是否需要「不适用 / 跳过」出口。`,
+              `校验情境变量对量表均值的影响幅度，观察极值选择是否存在社会赞许性趋同。`,
+            ]),
         '导出本轮完整硅基 CSV 送入「数据分析」模块演练信效度检验脚本（标注为 simulated）。',
         '进入真实预调查（Pilot n=30~50）对比真实受访者作答耗时与各维度方差分布。',
       ],

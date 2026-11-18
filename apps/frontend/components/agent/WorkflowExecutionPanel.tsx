@@ -33,6 +33,7 @@ export type WorkflowExecutionPanelProps = {
   onRevise: (feedback: string) => void;
   onOpenSettings: () => void;
   onOpenAnalysis: () => void;
+  onOpenSilicon?: () => void;
   onRoleSelectionChange: (role: WorkflowRole, serviceId: string | null) => void;
   onPrepare?: () => void;
   onNewTask?: () => void;
@@ -118,7 +119,7 @@ function frozenModels(steps: Record<string, Service>, roles: readonly WorkflowRo
 export default function WorkflowExecutionPanel({ task, taskKind = 'full_research', phasePreview, grant, calls, services,
   roleSelections, canManage, busy = false, loading = false, error = '', reconciling = false, sourceChanged = false,
   restored = false, onAuthorize, onContinue, onRefresh, onCancel, onApprove, onRevise, onOpenSettings,
-  onOpenAnalysis, onRoleSelectionChange, onPrepare, onNewTask, surveys = [], onBindDataset }: WorkflowExecutionPanelProps) {
+  onOpenAnalysis, onOpenSilicon, onRoleSelectionChange, onPrepare, onNewTask, surveys = [], onBindDataset }: WorkflowExecutionPanelProps) {
   const id = useId();
   const [acceptedPhase, setAcceptedPhase] = useState<string | null>(null);
   const [feedbackDraft, setFeedbackDraft] = useState({ checkpoint: '', text: '' });
@@ -258,6 +259,15 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
             {remaining.length > 0 && <details className={styles.more}><summary>展开完整阶段内容</summary><dl className={styles.fields}>
               {remaining.map(([key, value]) => <div key={key}><dt>{FIELD_LABELS[key] ?? key}</dt><dd>{content(value)}</dd></div>)}</dl></details>}
             {hasContent(output.unresolved_questions) && <div className={styles.outputNote}><strong>待补充的问题</strong>{content(output.unresolved_questions)}</div>}
+            {role === 'survey' && (
+              <div className={styles.actions}>
+                {onOpenSilicon ? (
+                  <button type="button" className={styles.textButton} onClick={onOpenSilicon}>用硅基样本预测试这套问卷</button>
+                ) : (
+                  <a className={styles.textButton} href="/workspace#silicon">前往「硅基样本」预测试 ↗</a>
+                )}
+              </div>
+            )}
             <details className={styles.raw}><summary>查看原始结构化结果</summary><pre className={styles.json} tabIndex={0}>{JSON.stringify(output, null, 2)}</pre></details>
           </article>;
         })}</section>}
@@ -276,13 +286,20 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
             onClick={() => { if (mutationAllowed && feedback.trim()) onRevise(feedback.trim()); }}>{humanReview ? '提交修改意见' : '提交补充说明'}</button></div>
       </section>}
 
-      {needsData && <div className={styles.attention}><p>研究已到真实数据环节。请先导入并核查数据，才能继续分析。</p>
+      {needsData && <div className={styles.attention}><p>研究已到真实数据环节。请先导入并核查数据，才能继续分析；如需在回收前检查问卷跳题与表述，可先运行硅基预测试。</p>
         {!!surveys.length && onBindDataset && <label>选择已回收的调查<select aria-label="选择已回收的调查" disabled={!mutationAllowed}
           value={surveySelection.taskId === task.id ? surveySelection.id : ''} onChange={event => setSurveySelection({ taskId: task.id, id: event.target.value })}>
           <option value="">请选择调查</option>{surveys.map(item => <option key={item.id} value={item.id} disabled={!item.responseCount}>{item.title} · {item.responseCount} 份{item.classification === 'synthetic' ? ' · 合成数据' : ''}</option>)}</select>
           <button type="button" className={styles.primary} disabled={!mutationAllowed || surveySelection.taskId !== task.id || !surveys.some(item => item.id === surveySelection.id && item.responseCount > 0)}
             onClick={() => { if (mutationAllowed && surveySelection.taskId === task.id && surveys.some(item => item.id === surveySelection.id && item.responseCount > 0)) onBindDataset(surveySelection.id); }}>使用这份调查数据</button></label>}
-        <button type="button" className={styles.secondary} onClick={onOpenAnalysis}>前往数据分析</button></div>}
+        <div className={styles.actions}>
+          <button type="button" className={styles.secondary} onClick={onOpenAnalysis}>前往数据分析</button>
+          {onOpenSilicon ? (
+            <button type="button" className={styles.textButton} onClick={onOpenSilicon}>唤起硅基预测试流程</button>
+          ) : (
+            <a className={styles.textButton} href="/workspace#silicon">前往「硅基样本」预测试 ↗</a>
+          )}
+        </div></div>}
       {task.status === 'blocked' && !unknown && !cancelled && <p className={styles.notice}>流程暂时停止。请核对已有成果、待补材料与执行记录，再决定下一步。</p>}
       {task.state.errors.length > 0 && <details className={styles.raw}><summary>查看处理说明</summary>{content(task.state.errors)}</details>}
 

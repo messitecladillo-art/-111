@@ -136,7 +136,7 @@ export default function ResearchSimulationPanel({ topic, host, sourceLines, disa
             <button type="button" disabled={disabled || busy || occupied} onClick={() => void run()}>确认演练问卷并运行</button>
             {host.openTheater && (
               <button type="button" disabled={disabled || busy} onClick={() => host.openTheater?.(prepared.design, topic.brief)}>
-                ⚡ 在 Atypica × 硅基剧场实时推演
+                用硅基样本预测试
               </button>
             )}
           </div>

@@ -99,7 +99,8 @@ export function demoRun(design: Questionnaire, attributes: PersonaAttribute[], p
       const flagged = staticIssues.some(i => i.questionId === question.id && i.level === 'blocker');
       const unclear = flagged && rng() < 0.45 ? '演示引擎：此题存在结构阻断项，模拟受访者无法确定如何作答。' : '';
       const refused = !question.required && rng() < 0.03;
-      const value = refused ? null : demoValue(question, stance, rng);
+      const traitMatched = !refused ? matchTraitChoice(question, persona) : null;
+      const value = refused ? null : (traitMatched ?? demoValue(question, stance, rng));
       answers.set(question.id, { questionId: question.id, value, shown: true, refused, unclear });
       carried = stance;
     }
@@ -111,6 +112,55 @@ export function demoRun(design: Questionnaire, attributes: PersonaAttribute[], p
     attributes, personas, settings: { ...settings, scenarios, models: [DEMO_MODEL] }, responses,
     notes: ['离线演示引擎生成的随机可复现答案，只用于走查问卷逻辑、界面与分析流程；不代表任何人群，不能作为预测试结论或调查数据。'],
   };
+}
+
+function normalizeAgeRange(raw: string): [number, number] | null {
+  const pair = raw.match(/(\d{2})\s*[–—\-~至]\s*(\d{2})/u);
+  if (pair) return [Number(pair[1]), Number(pair[2])];
+  const singleNum = raw.match(/(\d{2})/u);
+  if (singleNum) {
+    const n = Number(singleNum[1]);
+    return /以上|及/u.test(raw) ? [n, 120] : /以下/u.test(raw) ? [0, n] : [n, n];
+  }
+  return null;
+}
+
+function matchTraitChoice(question: DesignQuestion, persona: Persona): AnswerValue | null {
+  if (question.type !== 'single' || !question.choices.length) return null;
+  const stem = `${question.variable} ${question.construct} ${question.text}`;
+  const choices = question.choices;
+
+  // 1) Gender matching
+  const gender = persona.traits.gender?.trim();
+  if (gender && /性别|男女/u.test(stem)) {
+    const hit = choices.find(c => c.label.includes(gender));
+    if (hit) return hit.code;
+  }
+
+  // 2) Age bracket matching (avoid e.g. 18-24 persona answering 46-59)
+  const ageRaw = persona.traits.age?.trim();
+  if (ageRaw && /年龄|岁数/u.test(stem)) {
+    const pRange = normalizeAgeRange(ageRaw);
+    if (pRange) {
+      const pMid = (pRange[0] + Math.min(95, pRange[1])) / 2;
+      const hit = choices.find(c => {
+        const cRange = normalizeAgeRange(c.label);
+        return cRange ? pMid >= cRange[0] && pMid <= cRange[1] : false;
+      });
+      if (hit) return hit.code;
+    }
+  }
+
+  // 3) Exact/substring overlap for status/occupation/grade/group background items
+  if (question.purpose === 'background') {
+    const vals = Object.values(persona.traits).map(v => v.trim()).filter(v => v.length >= 2);
+    for (const v of vals) {
+      const hit = choices.find(c => c.label.includes(v) || v.includes(c.label));
+      if (hit) return hit.code;
+    }
+  }
+
+  return null;
 }
 
 function demoValue(question: DesignQuestion, stance: number, rng: () => number): AnswerValue {

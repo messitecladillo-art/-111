@@ -132,7 +132,7 @@ export const COMMANDS: readonly Command[] = [
   { name: '全报告', args: '课题或留空', line: '根据当前研究资料起草报告候选稿，保留逐节回执供审阅', words: ['fullreport', 'autoreport'] },
   { name: '密钥', line: '打开个人模型服务，安全配置报告模型', words: ['apikey', 'key'] },
   { name: '铸造', args: '任意课题或留空', line: '生成一套教学模拟研究：问卷、模拟作答，以及在模拟数据上实际计算的结果与报告', words: ['forge', 'award', 'benchmark', 'demo'] },
-  { name: '硅基推演', args: '人群或课题', line: '启动 Atypica × 硅基样本 1:1 实时推演（人设构建、1v1深访、焦点小组与预测试报告）', words: ['atypica', 'theater'] },
+  { name: '硅基推演', args: '人群或课题', line: '在当前流程内唤起硅基预测试演播室（分层人设、1v1 深访、圆桌追问与预测试诊断）', words: ['atypica', 'theater', 'silicon'] },
   { name: '备赛', line: '正大杯备赛八个阶段与下一步', words: ['coach', 'guide'] },
   { name: '绘图', args: '图题或维度', line: '把已登记结果画成图（5 类图型 · 4 套配色 · 可编辑标签）', words: ['plot', 'chart'] },
   { name: '编程', args: '方法或语言', line: 'Python / R / SPSS 分析脚本与 LaTeX 三线表（取自已登记结果）', words: ['code', 'script'] },
@@ -469,7 +469,7 @@ function draftTarget(ctx: RouterContext, arg: string): Routed {
 function open(room: Room, ctx: RouterContext): AgentTurn {
   const siliconLaunch = room.id === 'silicon'
     ? recommend({
-        label: '⚡ 启动 Atypica × 硅基 1:1 实时推演剧场',
+        label: '唤起内置硅基推演流程',
         action: {
           type: 'siliconTheater',
           topic: ctx.projectTitle,

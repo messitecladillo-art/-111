@@ -822,7 +822,16 @@ export function SiliconTheaterStudioView({
             {' · '}
             {data.domainLabel}
           </span>
-          <span className={styles.siliconHonestBadge}>模拟回答 · 与真实调查分开</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className={styles.siliconHonestBadge}>模拟回答 · 与真实调查分开</span>
+            <button
+              type="button"
+              className={styles.siliconRefreshBtn}
+              onClick={() => setSeed(s => s + 1)}
+            >
+              换一批人设
+            </button>
+          </div>
         </div>
 
         <div className={styles.siliconCastStrip}>
@@ -842,38 +851,6 @@ export function SiliconTheaterStudioView({
             核心观测维度：{data.dimensions.join(' · ')}
           </p>
         )}
-      </div>
-
-      <div className={styles.studioActions}>
-        <button
-          type="button"
-          className={styles.studioPrimaryBtn}
-          onClick={() =>
-            onAction({
-              type: 'siliconTheater',
-              topic: data.topic,
-              templateKey,
-              size,
-              autoPlay: true,
-            })
-          }
-        >
-          ⚡ 启动 1:1 Atypica 实时推演剧场
-        </button>
-        <button
-          type="button"
-          className={styles.studioSecondaryBtn}
-          onClick={() => setSeed(s => s + 1)}
-        >
-          ↻ 换一批受访人设
-        </button>
-        <button
-          type="button"
-          className={styles.studioSecondaryBtn}
-          onClick={() => onAction({ type: 'open', room: 'silicon' })}
-        >
-          打开右栏 3D 硅基舞台
-        </button>
       </div>
     </div>
   );

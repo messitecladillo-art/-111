@@ -14,7 +14,7 @@
 import type { ResultSnapshot } from '../research-quality.ts';
 import { presentResult } from '../report-tables.ts';
 import { draftFacts } from './draft.ts';
-import { decomposeTopic, type DemoBlueprint } from './demo-study.ts';
+import { buildDemoQuestionnaire, decomposeTopic, type DemoBlueprint } from './demo-study.ts';
 import { lightBar, percent } from './glyphs.ts';
 import { LIT_ROOMS, roomLight } from './illumination.ts';
 import type { AgentCard, AgentLink, AgentTurn, Line, Mark, RouterContext, Span } from './router.ts';
@@ -808,6 +808,9 @@ export function buildSiliconTheaterCardData(ctx: RouterContext, query = ''): Sil
   const bp = resolveActiveBlueprint(ctx, query);
   const hasBoundDesign = Boolean(ctx.design && ctx.design.questions.length > 0);
   const templateHint = `${query} ${ctx.design?.population ?? ''} ${ctx.design?.title ?? ''} ${bp.title}`;
+  const defaultQuestionCount = hasBoundDesign
+    ? ctx.design!.questions.length
+    : buildDemoQuestionnaire(bp).questions.length;
   return {
     topic: ctx.design?.title?.trim() || bp.title,
     shortTitle: bp.shortTitle,
@@ -815,7 +818,7 @@ export function buildSiliconTheaterCardData(ctx: RouterContext, query = ''): Sil
     templateKey: inferSiliconTemplate(templateHint),
     size: 24,
     hasBoundDesign,
-    questionCount: hasBoundDesign ? ctx.design!.questions.length : 12,
+    questionCount: defaultQuestionCount,
     populationLabel: ctx.design?.population?.trim() || `${bp.groupA} / ${bp.groupB}`,
     dimensions: bp.dimensions.map(d => d.short).slice(0, 5),
   };
@@ -827,24 +830,24 @@ export function buildSiliconTheaterTurn(ctx: RouterContext, query = ''): AgentTu
     lines: [
       [
         t('已就绪 '),
-        t('Atypica × 硅基样本 1:1 实时推演剧场', 'strong'),
+        t('硅基样本预测试流程', 'strong'),
         t(`（《${studio.shortTitle}》· `),
         t(studio.hasBoundDesign ? `绑定当前项目 ${studio.questionCount} 题问卷` : `自动构念 ${studio.questionCount} 题问卷`, 'teal'),
         t(' · '),
         t(`${studio.size} 位分层硅基受访者`, 'gold'),
-        t('）。所有回答标注为「硅基模拟 · 与真实调查分开」，推演结果可直接送入数据分析或写入报告预测试笔记。'),
+        t('）。所有回答标注为「硅基模拟 · 与真实调查分开」，推演结果可直接送入数据分析或写入预测试记录。'),
       ],
     ],
     cards: [
       {
         kind: 'silicon-theater',
-        title: `Atypica × 硅基推演 · 《${studio.shortTitle}》`,
+        title: `硅基预测试推演 · 《${studio.shortTitle}》`,
         studio,
       },
     ],
     chips: [
       recommend({
-        label: '⚡ 进入 1:1 实时推演主舞台',
+        label: '启动内置硅基推演',
         action: {
           type: 'siliconTheater',
           topic: studio.topic,
@@ -854,7 +857,7 @@ export function buildSiliconTheaterTurn(ctx: RouterContext, query = ''): AgentTu
         },
         primary: true,
       }),
-      { label: '打开右栏 3D 硅基舞台', action: { type: 'open', room: 'silicon' } },
+      { label: '前往工作台「硅基样本」↗', action: { type: 'href', href: '/workspace#silicon' } },
       say('生成教学模拟全案', `生成《${studio.shortTitle}》教学模拟研究`),
     ],
   };

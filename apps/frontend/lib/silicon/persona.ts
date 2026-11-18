@@ -198,7 +198,32 @@ export type PersonaProfile = {
   toneRule: string;
 };
 
-const ALIAS_SURNAMES = ['林同学', '小满', '老周', '阿穗', '陈姐', '小吴', '方老师', '阿哲', '苏敏', '边边', '小唐', '大伟'] as const;
+const ALIAS_SURNAMES = ['林同学', '小满', '阿穗', '小吴', '方老师', '阿哲', '苏敏', '边边', '小唐', '周女士', '陈先生', '赵明'] as const;
+
+const FEMALE_YOUNG_ALIASES = ['林同学', '小满', '阿穗', '苏敏', '小夏', '若晴'] as const;
+const FEMALE_MID_ALIASES = ['陈姐', '方老师', '周女士', '苏敏', '林姐', '许芳'] as const;
+const FEMALE_SENIOR_ALIASES = ['陈奶奶', '周阿姨', '林老师', '刘阿姨'] as const;
+const MALE_YOUNG_ALIASES = ['小吴', '阿哲', '小唐', '陈同学', '周同学', '程远'] as const;
+const MALE_MID_ALIASES = ['老周', '大伟', '方老师', '陈先生', '张工', '赵明'] as const;
+const MALE_SENIOR_ALIASES = ['周伯', '陈叔', '老张', '方老师'] as const;
+
+function pickDemographicAlias(persona: Persona, hash: number): string {
+  const gender = persona.traits.gender ?? '';
+  const ageText = `${persona.traits.age ?? ''} ${persona.traits.grade ?? ''} ${persona.traits.occupation ?? ''}`;
+  const isSenior = /60|65|银发|退休|高龄|老人/u.test(ageText);
+  const isYoung = /18[–—\-~]?24|25[–—\-~]?29|大一|大二|大三|大四|本科|研究生|博士|学生/u.test(ageText);
+  let pool: readonly string[] = ALIAS_SURNAMES;
+  if (/女/u.test(gender)) {
+    pool = isSenior ? FEMALE_SENIOR_ALIASES : isYoung ? FEMALE_YOUNG_ALIASES : FEMALE_MID_ALIASES;
+  } else if (/男/u.test(gender)) {
+    pool = isSenior ? MALE_SENIOR_ALIASES : isYoung ? MALE_YOUNG_ALIASES : MALE_MID_ALIASES;
+  } else if (isSenior) {
+    pool = ['方老师', '陈前辈', '周老师', '林老师'];
+  } else if (isYoung) {
+    pool = ['林同学', '小满', '阿穗', '小吴', '阿哲', '小唐'];
+  }
+  return pool[(hash >>> 4) % pool.length];
+}
 
 const VOICE_BANK: ReadonlyArray<{
   prefix: string;
@@ -262,7 +287,7 @@ export function synthesizePersonaProfile(
 ): PersonaProfile {
   const h = hash32(persona.id);
   const voice = VOICE_BANK[h % VOICE_BANK.length];
-  const surname = ALIAS_SURNAMES[(h >>> 4) % ALIAS_SURNAMES.length];
+  const surname = pickDemographicAlias(persona, h);
   const traitValues = attributes.map(a => persona.traits[a.key]).filter(Boolean);
   const ageOrGrade = persona.traits.age || persona.traits.grade || '';
   const jobOrMajor = persona.traits.occupation || persona.traits.major || persona.traits.living || '';

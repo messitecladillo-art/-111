@@ -537,13 +537,13 @@ export default function QuickSurveyStudio({
                       seed: personaSeed,
                       population,
                     });
-                    setStatus('✓ 已将当前问卷送入 Atypica × 硅基 1:1 实时预测试推演剧场。');
+                    setStatus('✓ 已在内置预测试流程中调出硅基样本推演。');
                   } else {
                     setLiveTheaterModalOpen(true);
                   }
                 }}
               >
-                ⚡ 硅基预测试推演
+                硅基预测试推演
               </button>
             </div>
           </div>
@@ -728,17 +728,29 @@ function QuickSurveyTheaterModal({
         position: 'fixed',
         inset: 0,
         zIndex: 85,
-        background: 'rgba(7, 17, 28, 0.78)',
+        background: 'oklch(12% 0.01 180 / 0.46)',
         backdropFilter: 'blur(8px)',
         display: 'grid',
         placeItems: 'center',
-        padding: 18,
+        padding: 16,
       }}
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div style={{ width: 'min(1320px, 100%)' }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="硅基预测试内置推演"
+        style={{
+          width: 'min(1320px, 100%)',
+          height: 'min(88vh, 840px)',
+          borderRadius: '14px',
+          overflow: 'hidden',
+          border: '1px solid var(--wb-line-strong, rgba(10, 31, 51, 0.2))',
+          background: 'var(--wb-bg, #f3efe5)',
+        }}
+      >
         <AtypicaLiveTheater
           design={payload.design}
           attributes={attributes}

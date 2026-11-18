@@ -84,7 +84,7 @@ import type { DatasetHandoff } from '@/components/silicon/ResultsBoard';
 
 const AtypicaLiveTheater = dynamic(() => import('@/components/silicon/AtypicaLiveTheater'), {
   ssr: false,
-  loading: () => <div className={styles.theaterLoading}>正在挂载 Atypica × 硅基 1:1 实时推演剧场…</div>,
+  loading: () => <div className={styles.theaterLoading}>正在准备硅基样本预测试流程…</div>,
 });
 import { canAcceptReportCandidate, hasUserResearchSource, mergeReportCandidate, reportChanges, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
 import { canPublishStudioResult, sameWorkspaceIdentity, type StudioPublicationIdentity, type WorkspaceIdentity } from '@/lib/agent/integration-safety';
@@ -304,6 +304,7 @@ export default function AgentShell() {
   const [researchOpen, setResearchOpen] = useState(false);
   const [benchStation, setBenchStation] = useState<WorkKind>('survey');
   const [theaterConfig, setTheaterConfig] = useState<{
+    open: boolean;
     topic: string;
     templateKey: SiliconTemplateKey;
     size: number;
@@ -311,6 +312,7 @@ export default function AgentShell() {
     customDesign: Questionnaire | null;
     playKey: number;
   }>({
+    open: false,
     topic: '',
     templateKey: 'residents',
     size: 24,
@@ -395,6 +397,7 @@ export default function AgentShell() {
   }, [readReportScope, setReportWriting]);
   // Before any report exists in this browser the paper shows the blank template, as the editor would open it.
   const [blankReport] = useState(createEditorContent);
+  const [mobileTheaterControls, setMobileTheaterControls] = useState(false);
   const shortcut = useSyncExternalStore(subscribeNothing, searchKey, () => '⌘K');
   // The report is re-scored as it is typed; deferring keeps typing in the editor ahead of the benchmark.
   const deferredView = useDeferredValue(view);
@@ -688,6 +691,7 @@ export default function AgentShell() {
       const topicHint = opts?.topic?.trim() || opts?.design?.title || snap.design?.title || snap.liveReport?.title || '';
       const popHint = opts?.design?.population || snap.design?.population || '';
       setTheaterConfig(prev => ({
+        open: true,
         topic: topicHint,
         templateKey: opts?.templateKey ?? (topicHint || popHint ? inferSiliconTemplate(`${topicHint} ${popHint}`) : prev.templateKey),
         size: opts?.size ?? prev.size,
@@ -695,15 +699,17 @@ export default function AgentShell() {
         customDesign: opts?.design !== undefined ? opts.design : prev.customDesign,
         playKey: prev.playKey + 1,
       }));
-      setExpanded(false);
-      setStage('theater');
-      setCopilotOpen(Boolean(opts?.openCopilot));
+      if (opts?.openCopilot !== undefined) setCopilotOpen(Boolean(opts.openCopilot));
     },
-    [setCopilotOpen, setExpanded, setStage],
+    [setCopilotOpen],
   );
 
+  const closeSiliconTheater = useCallback(() => {
+    setTheaterConfig(prev => (prev.open ? { ...prev, open: false } : prev));
+  }, []);
+
   const liveTheaterBundle = useMemo(() => {
-    if (stage !== 'theater') return null;
+    if (!theaterConfig.open) return null;
     const activeDesign =
       theaterConfig.customDesign ??
       design ??
@@ -732,7 +738,7 @@ export default function AgentShell() {
     };
     const run = demoRun(activeDesign, attrs, panel, runSettings);
     return { design: activeDesign, sourceLabel, attrs, panel, runSettings, run };
-  }, [stage, theaterConfig, design]);
+  }, [theaterConfig, design]);
   const stopChoreography = choreo.stop;
   const stopReportRun = useCallback((reason = '已取消运行；原稿已保留。已发出的调用可能仍计费，请核对回执。') => {
     preparingReport.current = null;
@@ -1343,7 +1349,7 @@ export default function AgentShell() {
                   links: [
                     { label: '定位到问卷设计器', action: { type: 'open', room: 'design' }, primary: true },
                     {
-                      label: '⚡ 用 Atypica × 硅基样本预测试',
+                      label: '用硅基样本预测试',
                       action: {
                         type: 'siliconTheater',
                         topic: built.title,
@@ -1357,7 +1363,7 @@ export default function AgentShell() {
                 }],
                 chips: [
                   {
-                    label: '⚡ 1:1 硅基样本实时预测试',
+                    label: '启动内置硅基预测试',
                     action: {
                       type: 'siliconTheater',
                       topic: built.title,
@@ -1392,7 +1398,7 @@ export default function AgentShell() {
                 chips: [
                   { label: '查看问卷设计', action: { type: 'open', room: 'design' }, primary: true },
                   {
-                    label: '⚡ 用硅基样本实时预测试',
+                    label: '用硅基样本预测试',
                     action: {
                       type: 'siliconTheater',
                       topic: built.title,
@@ -1695,12 +1701,12 @@ export default function AgentShell() {
                 );
                 collectedCards.push({
                   kind: 'silicon-theater',
-                  title: `Atypica × 硅基推演 · 《${studio.shortTitle}》`,
+                  title: `硅基预测试推演 · 《${studio.shortTitle}》`,
                   studio,
                 });
                 if (!collectedChips.some(ch => ch.action.type === 'siliconTheater')) {
                   collectedChips.unshift({
-                    label: '⚡ 进入 1:1 Atypica 推演主舞台',
+                    label: '启动内置硅基推演',
                     action: {
                       type: 'siliconTheater',
                       topic: studio.topic,
@@ -1716,7 +1722,6 @@ export default function AgentShell() {
                     topic: studio.topic,
                     templateKey: studio.templateKey,
                     size: studio.size,
-                    openCopilot: false,
                   });
                 }
               }
@@ -2180,23 +2185,16 @@ export default function AgentShell() {
         /> : null}
         nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} onDraftSection={sec => sayFromTool(`起草「${sec}」`)} onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })} liveWriting={liveWriting} /> : undefined} />
 
-      <main className={styles.main} aria-label={stage === 'paper' ? '报告' : stage === 'theater' ? '硅基推演剧场' : stage === 'advisors' ? '专家顾问' : '对话'} data-stage={stage} data-dialog-background>
+      <main className={styles.main} aria-label={stage === 'paper' ? '报告' : stage === 'advisors' ? '专家顾问' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
           {(!sideOpen || expanded) && <Link href="/workspace" className={styles.backWorkbench} aria-label="返回研究工作台">← 工作台</Link>}
           <span className={styles.topTitle}>
-            {stage === 'paper'
-              ? paperContent.title
-              : stage === 'theater'
-                ? liveTheaterBundle?.design.title ?? 'Atypica × 硅基实时推演剧场'
-                : thread?.title ?? '新对话'}
+            {stage === 'paper' ? paperContent.title : thread?.title ?? '新对话'}
             {projectLabel && <small>{projectLabel}</small>}
           </span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
             <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
-            <button type="button" aria-pressed={stage === 'theater'} onClick={() => launchSiliconTheater()} title="Atypica × 硅基样本 1:1 实时推演剧场">
-              <i className={styles.stageDot} aria-hidden="true" />硅基推演
-            </button>
             <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
             <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
@@ -2232,167 +2230,6 @@ export default function AgentShell() {
           </details>
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
-        {stage === 'theater' && liveTheaterBundle && (
-          <div className={styles.theaterStage} role="region" aria-label="Atypica × 硅基实时推演剧场">
-            <div className={styles.theaterRibbon}>
-              <div className={styles.theaterRibbonMeta}>
-                <span className={styles.theaterSourcePill}>问卷源：{liveTheaterBundle.sourceLabel} · {liveTheaterBundle.design.questions.length} 题</span>
-                <span className={styles.theaterHonestTag}>硅基模拟 · 与真实调查分开</span>
-              </div>
-              <div className={styles.theaterRibbonControls}>
-                <select
-                  aria-label="选择硅基受访人群模板"
-                  className={styles.theaterRibbonSelect}
-                  value={theaterConfig.templateKey}
-                  onChange={e =>
-                    setTheaterConfig(prev => ({
-                      ...prev,
-                      templateKey: e.target.value as SiliconTemplateKey,
-                      playKey: prev.playKey + 1,
-                    }))
-                  }
-                >
-                  <option value="residents">城市与社区居民</option>
-                  <option value="students">高校大学生</option>
-                  <option value="seniors">银发高龄群体</option>
-                </select>
-                <select
-                  aria-label="选择硅基推演样本量"
-                  className={styles.theaterRibbonSelect}
-                  value={String(theaterConfig.size)}
-                  onChange={e =>
-                    setTheaterConfig(prev => ({
-                      ...prev,
-                      size: Number(e.target.value) || 24,
-                      playKey: prev.playKey + 1,
-                    }))
-                  }
-                >
-                  <option value="12">12 位硅基人设</option>
-                  <option value="24">24 位硅基人设</option>
-                  <option value="36">36 位硅基人设</option>
-                </select>
-                <button
-                  type="button"
-                  className={styles.theaterRibbonBtn}
-                  onClick={() =>
-                    setTheaterConfig(prev => ({
-                      ...prev,
-                      seed: prev.seed + 1,
-                      playKey: prev.playKey + 1,
-                    }))
-                  }
-                >
-                  ↻ 换一批受访者
-                </button>
-                {theaterConfig.customDesign && (
-                  <button
-                    type="button"
-                    className={styles.theaterRibbonBtn}
-                    onClick={() =>
-                      setTheaterConfig(prev => ({
-                        ...prev,
-                        customDesign: null,
-                        playKey: prev.playKey + 1,
-                      }))
-                    }
-                  >
-                    恢复项目问卷
-                  </button>
-                )}
-                <button type="button" className={styles.theaterRibbonBtn} onClick={() => go('silicon')}>
-                  右栏 3D 舞台
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.theaterMountInner}>
-              <AtypicaLiveTheater
-                key={`${theaterConfig.templateKey}:${theaterConfig.size}:${theaterConfig.seed}:${theaterConfig.playKey}:${liveTheaterBundle.design.title}`}
-                design={liveTheaterBundle.design}
-                attributes={liveTheaterBundle.attrs}
-                personas={liveTheaterBundle.panel}
-                settings={liveTheaterBundle.runSettings}
-                run={liveTheaterBundle.run}
-                autoPlay
-                onClose={() => setStage('chat')}
-                onSendToAnalysis={(handoff: DatasetHandoff) => {
-                  sendSiliconToAnalysis(handoff);
-                  threads.append([
-                    {
-                      ...stamp(),
-                      role: 'agent',
-                      turn: {
-                        lines: [
-                          [
-                            span('已将 Atypica × 硅基推演数据集 '),
-                            span(`「${handoff.name}」`, 'strong'),
-                            span(`（${liveTheaterBundle.run.responses.length} 条硅基模拟作答，含「硅基模拟」溯源列）导入右侧「数据分析」面板。`),
-                          ],
-                          [span('可直接在右侧运行卡方/信效度/回归，或在对话中一键生成可编辑三线表与矢量图。', 'dim')],
-                        ],
-                        chips: [
-                          { label: '打开图表工坊', action: { type: 'say', text: '打开图表工坊' }, primary: true },
-                          { label: '生成复现代码', action: { type: 'say', text: '打开代码工坊' } },
-                          { label: '定位数据分析', action: { type: 'open', room: 'analysis' } },
-                        ],
-                      },
-                    },
-                  ]);
-                  setCopilotOpen(false);
-                }}
-                onOpenReportAction={(bp: AtypicaFlowBlueprint) => {
-                  const summaryBlock = [
-                    `【Atypica × 硅基预测试推演结论（${bp.enrichedPersonas.length} 位分层受访者 · 阻断 ${bp.report.metrics.blockers} · 预警 ${bp.report.metrics.warnings} · 模拟答案仅用于题干质控）】`,
-                    ...bp.report.actionChecklist,
-                    bp.discussionSummary ? `焦点小组讨论摘要：${bp.discussionSummary}` : '',
-                  ]
-                    .filter(Boolean)
-                    .join('\n');
-                  const hasQuestionnaireNode = paperContent.report.some(sec => sec.id === 'design.questionnaire');
-                  const targetSecId = hasQuestionnaireNode ? 'design.questionnaire' : (paperContent.report[1]?.id ?? paperContent.report[0]?.id);
-                  const nextReport = paperContent.report.map(sec =>
-                    sec.id === targetSecId
-                      ? {
-                          ...sec,
-                          body: sec.body.trim() ? `${sec.body.trim()}\n\n${summaryBlock}` : summaryBlock,
-                        }
-                      : sec,
-                  );
-                  commitStudioReport(
-                    { ...paperContent, report: nextReport },
-                    '已将 Atypica × 硅基预测试洞察与焦点小组结论写入报告，并切至 A4 成文镜台。',
-                    liveTheaterBundle.design,
-                  );
-                  if (targetSecId) requestAnimationFrame(() => pickSection(targetSecId));
-                  threads.append([
-                    {
-                      ...stamp(),
-                      role: 'agent',
-                      turn: {
-                        lines: [
-                          [span('已将预测试阻断提示与受访者焦点小组分歧写入报告正文，并切换至 A4 排版视图。')],
-                        ],
-                        chips: [
-                          {
-                            label: '让大模型按此发现精修问卷',
-                            action: {
-                              type: 'say',
-                              text: `请结合刚才 ${bp.enrichedPersonas.length} 位硅基受访者的预测试阻断（${bp.report.metrics.blockers}项）和焦点小组讨论意见，优化「${liveTheaterBundle.design.title}」的题干与选项设计。`,
-                            },
-                            primary: true,
-                          },
-                          { label: '打开撰稿工坊', action: { type: 'say', text: '打开撰稿工坊' } },
-                        ],
-                      },
-                    },
-                  ]);
-                  setCopilotOpen(true);
-                }}
-              />
-            </div>
-          </div>
-        )}
         {stage === 'advisors' && (
           <Advisors
             benchmark={paperBenchmark}
@@ -2578,15 +2415,6 @@ export default function AgentShell() {
                       <span>接入密钥</span>
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className={styles.brainSecondaryBtn}
-                    onClick={() => launchSiliconTheater({ openCopilot: false })}
-                    title="启动 Atypica × 硅基样本 1:1 实时推演剧场"
-                  >
-                    <Icon name="bolt" />
-                    <span>硅基推演</span>
-                  </button>
                   <button type="button" className={styles.brainSecondaryBtn} aria-expanded={researchOpen} onClick={() => setResearchOpen(open => !open)}>
                     <Icon name="spark" />
                     <span>{researchOpen ? '收起路线' : '研究路线'}</span>
@@ -2639,9 +2467,9 @@ export default function AgentShell() {
                     },
                     {
                       kind: 'survey' as const,
-                      tag: '05 / ATYPICA · 硅基推演',
-                      title: 'Atypica × 硅基样本 1:1 实时预测试与深访',
-                      desc: '装配分层硅基受访者、开展 3 轮深访与焦点小组碰撞，产出现场矩阵与诊断报告。',
+                      tag: '05 · 硅基预测试',
+                      title: '分层硅基受访者预测试与焦点深访',
+                      desc: '按需呼出内置硅基预测试演播室，运行分层模拟试答、3 轮访谈与焦点圆桌排查题干盲区。',
                       prompt: '/硅基推演',
                     },
                   ].map(card => (
@@ -2702,9 +2530,9 @@ export default function AgentShell() {
                       topic: brief.title,
                       templateKey: inferSiliconTemplate(`${brief.title} ${brief.population}`),
                       design: simDesign,
-                      openCopilot: false,
                     }),
                 }}
+                onOpenSiliconFlow={() => launchSiliconTheater()}
                 onWorkflowWorkState={setWorkflowWorkState} />
             </section>
           {!!messages.length && <Transcript activeCallIds={new Set(activeCalls.filter(c => c.owner === owner && c.epoch === identityEpoch).map(c => c.id))} messages={messages} scrollRef={scrollRef} workInPaper={false} writingModelStatus={writingModelStatus} onAction={performAction} onAnswer={agent.answer} />}
@@ -2934,6 +2762,197 @@ export default function AgentShell() {
                   ))}
                 </div>
               </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {theaterConfig.open && liveTheaterBundle && (
+        <div
+          className={styles.theaterModalBackdrop}
+          role="presentation"
+          onClick={event => { if (event.target === event.currentTarget) closeSiliconTheater(); }}
+          onKeyDown={event => { if (event.key === 'Escape') closeSiliconTheater(); }}
+        >
+          <section className={styles.theaterModalShell} role="dialog" aria-modal="true" aria-label="硅基预测试内置流程">
+            <header className={styles.theaterModalHead}>
+              <div className={styles.theaterModalTopRow}>
+                <div className={styles.theaterRibbonMeta}>
+                  <span className={styles.theaterSourcePill}>{liveTheaterBundle.sourceLabel} · {liveTheaterBundle.design.questions.length} 题</span>
+                  <span className={styles.theaterHonestTag}>硅基模拟 · 与真实调查分开</span>
+                </div>
+                <div className={styles.theaterModalPrimaryActions}>
+                  <button
+                    type="button"
+                    className={`${styles.theaterRibbonBtn} ${styles.mobileControlsBtn}`}
+                    aria-expanded={mobileTheaterControls}
+                    onClick={() => setMobileTheaterControls(v => !v)}
+                  >
+                    {mobileTheaterControls ? '收起 ▴' : '队列 ▾'}
+                  </button>
+                  <Link href="/workspace#silicon" className={styles.theaterRibbonBtn} onClick={closeSiliconTheater}>
+                    去「硅基样本」↗
+                  </Link>
+                  <button type="button" className={styles.theaterCloseBtn} aria-label="关闭硅基推演窗口" onClick={closeSiliconTheater}>
+                    <Icon name="close" />
+                  </button>
+                </div>
+              </div>
+              <div className={styles.theaterRibbonControls} data-mobile-open={mobileTheaterControls ? 'true' : 'false'}>
+                <select
+                  aria-label="选择硅基受访人群模板"
+                  className={styles.theaterRibbonSelect}
+                  value={theaterConfig.templateKey}
+                  onChange={e =>
+                    setTheaterConfig(prev => ({
+                      ...prev,
+                      templateKey: e.target.value as SiliconTemplateKey,
+                      playKey: prev.playKey + 1,
+                    }))
+                  }
+                >
+                  <option value="residents">城市与社区居民</option>
+                  <option value="students">高校大学生</option>
+                  <option value="seniors">银发高龄群体</option>
+                </select>
+                <select
+                  aria-label="选择硅基推演样本量"
+                  className={styles.theaterRibbonSelect}
+                  value={String(theaterConfig.size)}
+                  onChange={e =>
+                    setTheaterConfig(prev => ({
+                      ...prev,
+                      size: Number(e.target.value) || 24,
+                      playKey: prev.playKey + 1,
+                    }))
+                  }
+                >
+                  <option value="12">12 位人设</option>
+                  <option value="24">24 位人设</option>
+                  <option value="36">36 位人设</option>
+                </select>
+                <button
+                  type="button"
+                  className={styles.theaterRibbonBtn}
+                  onClick={() =>
+                    setTheaterConfig(prev => ({
+                      ...prev,
+                      seed: prev.seed + 1,
+                      playKey: prev.playKey + 1,
+                    }))
+                  }
+                >
+                  换一批受访者
+                </button>
+                {theaterConfig.customDesign && (
+                  <button
+                    type="button"
+                    className={styles.theaterRibbonBtn}
+                    onClick={() =>
+                      setTheaterConfig(prev => ({
+                        ...prev,
+                        customDesign: null,
+                        playKey: prev.playKey + 1,
+                      }))
+                    }
+                  >
+                    恢复项目问卷
+                  </button>
+                )}
+              </div>
+            </header>
+
+            <div className={styles.theaterMountInner}>
+              <AtypicaLiveTheater
+                key={`${theaterConfig.templateKey}:${theaterConfig.size}:${theaterConfig.seed}:${theaterConfig.playKey}:${liveTheaterBundle.design.title}`}
+                design={liveTheaterBundle.design}
+                attributes={liveTheaterBundle.attrs}
+                personas={liveTheaterBundle.panel}
+                settings={liveTheaterBundle.runSettings}
+                run={liveTheaterBundle.run}
+                autoPlay
+                modalMode
+                canCallBrain={Boolean(projectId) && effectiveBrain.available}
+                reportActionLabel="写入「报告」方案节"
+                onClose={closeSiliconTheater}
+                onSendToAnalysis={(handoff: DatasetHandoff) => {
+                  sendSiliconToAnalysis(handoff);
+                  closeSiliconTheater();
+                  threads.append([
+                    {
+                      ...stamp(),
+                      role: 'agent',
+                      turn: {
+                        lines: [
+                          [
+                            span('已将硅基预测试数据集 '),
+                            span(`「${handoff.name}」`, 'strong'),
+                            span(`（${liveTheaterBundle.run.responses.length} 条硅基模拟作答，含「硅基模拟」溯源列）导入右侧「数据分析」面板。`),
+                          ],
+                          [span('可直接在右侧运行卡方/信效度/回归，或在对话中生成可编辑三线表与矢量图。', 'dim')],
+                        ],
+                        chips: [
+                          { label: '打开图表工坊', action: { type: 'say', text: '打开图表工坊' }, primary: true },
+                          { label: '定位数据分析', action: { type: 'open', room: 'analysis' } },
+                        ],
+                      },
+                    },
+                  ]);
+                }}
+                onOpenReportAction={(bp: AtypicaFlowBlueprint) => {
+                  const summaryBlock = [
+                    `【硅基预测试推演结论（${bp.enrichedPersonas.length} 位分层受访者 · 阻断 ${bp.report.metrics.blockers} · 预警 ${bp.report.metrics.warnings} · 模拟答案仅用于题干质控）】`,
+                    ...bp.report.actionChecklist,
+                    bp.discussionSummary ? `焦点小组讨论摘要：${bp.discussionSummary}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join('\n');
+                  const targetSec =
+                    paperContent.report.find(sec => sec.id === 'design.questionnaire') ??
+                    paperContent.report.find(sec => /调查方案|问卷/u.test(sec.title)) ??
+                    paperContent.report[2] ??
+                    paperContent.report[1] ??
+                    paperContent.report[0];
+                  const targetSecId = targetSec?.id;
+                  const nextReport = paperContent.report.map(sec =>
+                    sec.id === targetSecId
+                      ? {
+                          ...sec,
+                          body: sec.body.trim() ? `${sec.body.trim()}\n\n${summaryBlock}` : summaryBlock,
+                        }
+                      : sec,
+                  );
+                  commitStudioReport(
+                    { ...paperContent, report: nextReport },
+                    '已将硅基预测试洞察与焦点小组结论写入报告，并切至成文视图。',
+                    liveTheaterBundle.design,
+                  );
+                  closeSiliconTheater();
+                  if (targetSecId) requestAnimationFrame(() => pickSection(targetSecId));
+                  threads.append([
+                    {
+                      ...stamp(),
+                      role: 'agent',
+                      turn: {
+                        lines: [
+                          [span('已将预测试阻断提示与焦点小组分歧写入报告正文，并切换至报告视图。')],
+                        ],
+                        chips: [
+                          {
+                            label: '让大模型按此发现精修问卷',
+                            action: {
+                              type: 'say',
+                              text: `请结合刚才 ${bp.enrichedPersonas.length} 位硅基受访者的预测试阻断（${bp.report.metrics.blockers}项）和焦点小组意见，优化「${liveTheaterBundle.design.title}」的题干与选项设计。`,
+                            },
+                            primary: true,
+                          },
+                          { label: '打开撰稿工坊', action: { type: 'say', text: '打开撰稿工坊' } },
+                        ],
+                      },
+                    },
+                  ]);
+                }}
+              />
             </div>
           </section>
         </div>

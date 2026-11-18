@@ -9,6 +9,13 @@
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+:global(html[data-silicon-theater="open"]) .dockContainer {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(20px);
 }
 
 .dockContainer > * {
@@ -247,7 +254,7 @@
 }
 
 .dockInput::placeholder {
-  color: rgba(247, 244, 237, 0.54);
+  color: rgba(247, 244, 237, 0.72);
 }
 
 .agentLink {
@@ -298,6 +305,9 @@
   .dockContainer {
     width: calc(100vw - 16px);
     bottom: 10px;
+  }
+  .dockInput {
+    font-size: 16px;
   }
   .agentLink {
     display: none;

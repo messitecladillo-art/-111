@@ -39,6 +39,7 @@ export type ResearchWorkspaceProps = {
   simulation?: ResearchSimulationHost;
   execution?: WorkflowExecutionHost;
   onWorkflowWorkState?: (state: ReportWorkState | null) => void;
+  onOpenSiliconFlow?: () => void;
 };
 type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
@@ -361,6 +362,7 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
       onRefresh={execution.onRefresh} onCancel={execution.onCancel} onApprove={execution.onApprove} onRevise={execution.onRevise}
       onRoleSelectionChange={execution.onRoleSelectionChange} onOpenSettings={props.onOpenSettings} onOpenAnalysis={() => props.onOpenStage('analysis')}
       surveys={execution.surveys} onBindDataset={execution.onBindDataset}
+      onOpenSilicon={props.onOpenSiliconFlow ?? (() => props.onOpenStage('pilot'))}
       onNewTask={execution.onNewTask} />}
     <details className={styles.literature} ref={literaturePanel}>
       <summary>选题与文献研究 <small>原文摘录 · 文献对照 · 候选选题</small></summary>

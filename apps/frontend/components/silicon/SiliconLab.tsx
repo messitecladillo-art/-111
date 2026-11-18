@@ -86,7 +86,26 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const [, setClock] = useState(0);
   const abort = useRef<AbortController | null>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
+  const theaterMountRef = useRef<HTMLDivElement>(null);
   const theatreRef = useRef<HTMLElement>(null), barRef = useRef<HTMLDivElement>(null);
+
+  // When embedded live theater expands, duck bottom global docks so nothing covers the studio flow.
+  useEffect(() => {
+    if (!liveTheaterOpen) {
+      delete document.documentElement.dataset.siliconTheater;
+      return;
+    }
+    document.documentElement.dataset.siliconTheater = 'open';
+    requestAnimationFrame(() => {
+      theaterMountRef.current?.scrollIntoView({
+        block: 'start',
+        behavior: reducedMotion ? 'auto' : 'smooth',
+      });
+    });
+    return () => {
+      delete document.documentElement.dataset.siliconTheater;
+    };
+  }, [liveTheaterOpen, reducedMotion]);
   const navigationRef = useKeyedListMotion<HTMLElement>({ ids: STEPS.map(s => s.id), activeId: step, markerAxis: 'horizontal' });
   useEffect(() => {
     const bar = barRef.current, theatre = theatreRef.current;
@@ -287,7 +306,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
         {run && groupChoice.startsWith('answer:') && run.settings.models.length > 1 && <label className={styles.stageSelect}><span>模型</span><select value={activeModel} onChange={e => setStageModel(e.target.value)}>{run.settings.models.map(m => <option key={m} value={m}>{m}</option>)}</select></label>}
         <button type="button" className={styles.viewToggle} aria-pressed={showFlat} disabled={!webgl} onClick={() => setFlat(v => !v)}>{showFlat ? '3D 舞台' : '平面名册'}</button>
         <button type="button" className={`${styles.viewToggle} ${styles.atypicaToggle}`} aria-pressed={liveTheaterOpen} onClick={openLiveTheater}>
-          {liveTheaterOpen ? '✕ 收起实时剧场' : '⚡ 1:1 实时推演剧场'}
+          {liveTheaterOpen ? '收起实时推演 ×' : '内置实时推演'}
         </button>
         <span className={styles.theatreMeta} role="status">{personas.length} 位 · {settings.scenarios.length || 1} 个情境 · {engineLabel}{running ? ` · 正在等待${progress ? ` · 进度 ${progress.done}/${progress.total}` : ''}` : run ? (stale ? ' · 结果已过期' : run.status === 'outcome_unknown' ? ' · 待对账' : ' · 已运行') : ' · 未运行'}</span>
       </div>
@@ -299,7 +318,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
     </header>
 
     {liveTheaterOpen && liveRunData && (
-      <div className={styles.theaterMount}>
+      <div ref={theaterMountRef} className={styles.theaterMount}>
         <AtypicaLiveTheater
           design={liveRunData.design}
           attributes={panelAttributes}
@@ -308,6 +327,9 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
           run={liveRunData.run}
           expectations={config.expectations}
           autoPlay
+          embeddedMode
+          canCallBrain={Boolean(runner)}
+          reportActionLabel="导入本页结果检验"
           onClose={() => setLiveTheaterOpen(false)}
           onSendToAnalysis={onSendToAnalysis}
           onOpenReportAction={() => {
