@@ -818,12 +818,22 @@ export default function PaperPages({
             >
               <i aria-hidden="true">{a.glyph}</i>
               <span>{a.name.replace(/顾问$/u, '')}</span>
-              <small>{writingAdvisor === a.id ? '撰写中' : n ? `${n} 处` : '待命'}</small>
+              {(writingAdvisor === a.id || n > 0) && (
+                <small>{writingAdvisor === a.id ? '撰写中' : `${n} 处`}</small>
+              )}
             </button>
           );
         })}
         <span className={css.dockGap} />
-        <label className={css.markToggle}><input type="checkbox" checked={marks} onChange={e => setMarks(e.target.checked)} />分工标注</label>
+        <div className={css.status} data-over={over || undefined}>
+          <span>{docFormat === 'word' ? 'Word' : 'LaTeX'} · {mainPages}{over ? ` > ${MAIN_PAGE_LIMIT}` : `/${MAIN_PAGE_LIMIT}`} 页{appendixPages ? ` +${appendixPages}` : ''}</span>
+          <span className={css.zoom}>
+            <button type="button" onClick={() => step(-1)} aria-label="缩小">−</button>
+            <button type="button" onClick={() => setZoomChoice('fit')} aria-pressed={zoomChoice === 'fit'} title="适合宽度">{Math.round(zoom * 100)}%</button>
+            <button type="button" onClick={() => step(1)} aria-label="放大">+</button>
+          </span>
+        </div>
+        <label className={css.markToggle}><input type="checkbox" checked={marks} onChange={e => setMarks(e.target.checked)} />分工</label>
       </div>
 
       {workState && !workPlacement && <aside className={css.workDock} data-screen-only="true" aria-label="报告生成状态">
@@ -912,14 +922,6 @@ export default function PaperPages({
       </div>
       </div>
 
-      <div className={css.status} data-over={over || undefined}>
-        <span>{docFormat === 'word' ? 'Word 版式' : 'LaTeX 版式'} · A4 · 正文 {mainPages} 页{over ? `，超出 ${MAIN_PAGE_LIMIT} 页上限` : ` / ${MAIN_PAGE_LIMIT}`}{appendixPages ? ` · 附录 ${appendixPages} 页` : ''}</span>
-        <span className={css.zoom}>
-          <button type="button" onClick={() => step(-1)} aria-label="缩小">−</button>
-          <button type="button" onClick={() => setZoomChoice('fit')} aria-pressed={zoomChoice === 'fit'} title="适合宽度">{Math.round(zoom * 100)}%</button>
-          <button type="button" onClick={() => step(1)} aria-label="放大">+</button>
-        </span>
-      </div>
       {measurer}
     </div>
   );

@@ -10,10 +10,11 @@
 @media print { .workDock, .workOverlay, .caret, .page p[data-typing-line]::before, .page p[data-typing-line]::after { display: none !important; background: none !important; } }
 
 /* —— Advisor plugins —— */
-.dock { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; inline-size: min(100%, 816px); padding: 4px 8px; border: 1px solid var(--c-line, oklch(0% 0 0 / 0.08)); border-radius: 11px; background: color-mix(in srgb, var(--c-bg, #ffffff) 78%, transparent); backdrop-filter: blur(10px); font: 11.5px/1.2 var(--c-sans, system-ui, -apple-system, "Microsoft YaHei", sans-serif); }
-.plugin { --tone: #5b6b7a; display: inline-flex; align-items: center; gap: 5px; block-size: 25px; padding: 0 8px 0 4px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--c-dim, oklch(0% 0 0 / 0.54)); font: inherit; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
-.plugin i { display: inline-grid; place-items: center; inline-size: 17px; block-size: 17px; border-radius: 50%; background: var(--c-hover, oklch(0% 0 0 / 0.05)); color: var(--c-dim, #6b7370); font-style: normal; font-weight: 650; font-size: 10px; transition: background-color 150ms ease, color 150ms ease; }
-.plugin small { color: var(--c-faint, oklch(0% 0 0 / 0.35)); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.dock { position: relative; z-index: 1; display: flex; flex-wrap: nowrap; align-items: center; gap: 3px; inline-size: min(100%, 816px); overflow-x: auto; scrollbar-width: none; padding: 4px 8px; border: 1px solid var(--c-line, oklch(0% 0 0 / 0.08)); border-radius: 10px; background: color-mix(in srgb, var(--c-bg, #ffffff) 82%, transparent); backdrop-filter: blur(10px); font: 11px/1.2 var(--c-sans, system-ui, -apple-system, "Microsoft YaHei", sans-serif); }
+.dock::-webkit-scrollbar { display: none; }
+.plugin { --tone: #5b6b7a; flex: none; display: inline-flex; align-items: center; gap: 4px; block-size: 24px; padding: 0 7px 0 3px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--c-muted, rgba(7, 26, 43, 0.72)); font: inherit; white-space: nowrap; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.plugin i { display: inline-grid; place-items: center; inline-size: 16px; block-size: 16px; border-radius: 50%; background: var(--c-hover, oklch(0% 0 0 / 0.06)); color: var(--c-fg, #071a2b); font-style: normal; font-weight: 650; font-size: 9.5px; transition: background-color 150ms ease, color 150ms ease; }
+.plugin small { color: var(--c-muted, rgba(7, 26, 43, 0.56)); font-size: 10px; font-variant-numeric: tabular-nums; }
 .plugin:hover { background: var(--c-hover, oklch(0% 0 0 / 0.04)); color: var(--c-fg, #171a19); }
 .plugin:hover i { background: var(--tone); color: #fff; }
 .plugin:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
@@ -154,11 +155,11 @@
 @keyframes format-scan { 50% { background: rgba(198, 139, 44, .1); } }
 .box[data-dim="true"] { opacity: .32; transition: opacity .2s ease; }
 
-/* —— Status: pages against the limit, and the scale —— */
-.status { position: sticky; bottom: 14px; z-index: 4; justify-self: center; display: flex; align-items: center; gap: 10px; margin-right: 0; padding: 4px 6px 4px 12px; border: 1px solid var(--c-line, oklch(0% 0 0 / 0.09)); border-radius: 999px; background: color-mix(in srgb, var(--c-raise, #fcfdfc) 88%, transparent); backdrop-filter: blur(12px); box-shadow: 0 4px 16px -6px oklch(0% 0 0 / 0.16); color: var(--c-dim, #6b7370); font: 11.5px/1 var(--c-mono, system-ui, -apple-system, sans-serif); font-variant-numeric: tabular-nums; }
+/* —— Status: integrated cleanly in the document ribbon —— */
+.status { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 8px; border: 1px solid var(--c-line, oklch(0% 0 0 / 0.09)); border-radius: 999px; background: color-mix(in srgb, var(--c-surface, #faf7f0) 90%, transparent); color: var(--c-muted, rgba(7, 26, 43, 0.72)); font: 10.5px/1 var(--c-mono, system-ui, -apple-system, sans-serif); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .status[data-over] { border-color: #e7a59a; color: #b42318; }
-.zoom { display: inline-flex; gap: 2px; }
-.zoom button { min-inline-size: 26px; block-size: 24px; padding: 0 6px; border: 0; border-radius: 999px; background: transparent; color: var(--c-ink, #171a19); font: inherit; cursor: pointer; }
+.zoom { display: inline-flex; gap: 1px; }
+.zoom button { min-inline-size: 20px; block-size: 19px; padding: 0 4px; border: 0; border-radius: 999px; background: transparent; color: var(--c-fg, #171a19); font: inherit; cursor: pointer; }
 .zoom button:hover { background: var(--c-hover, #eef2f0); }
 .zoom button:focus-visible { outline: 2px solid var(--c-primary, #1a4a35); outline-offset: 1px; }
 .zoom button[aria-pressed="true"] { color: var(--c-fg, #171a19); font-weight: 650; }

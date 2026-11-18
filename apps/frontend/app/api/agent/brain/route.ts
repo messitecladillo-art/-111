@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { ChatContext, ChatLine, TokenUsage } from '@/lib/agent/chat';
 import type { BrainPresetId, BrainStepTrace, BrainToolCall, CustomBrainOverride } from '@/lib/agent/brain-client';
 import { AGENT_TOOL_SPECS, toOpenAiToolDefinitions, validateToolAction } from '@/lib/agent/tools-schema';
+import { upstreamFetch } from '@/lib/agent/upstream-fetch';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,7 @@ type BrainPostBody = {
   step?: unknown;
   steps?: unknown;
   custom?: CustomBrainOverride;
+  noTools?: unknown;
 };
 
 function resolveServerBrain(): { preset: BrainPresetId; provider: string; endpoint: string; model: string; apiKey: string } | null {
@@ -115,6 +117,7 @@ function buildSystemPrompt(context: ChatContext, step: number): string {
     '   - 了解项目进度、缺什么证据、下一步怎么走 -> 调用 `light` / `blind` / `next` / `results`',
     '   - 询问统计学概念、公式、方法适用前提 -> 调用 `lookup` 查询知识镜词条',
     '   - 想看成文报告视图或专家顾问圆桌 -> 调用 `stage`（paper / advisors / chat）',
+    '   - 想做硅基样本预测试、Atypica 1:1 实时深访、焦点小组碰撞或 3D 受访者舞台 -> 调用 `open`（`room: "silicon"`），工具回执将自动挂载 Atypica × 硅基实时推演剧场卡片与主舞台入口',
     '   - 需要交互式作图、生成 Python/R/SPSS/LaTeX 代码、章节润色卡或备赛路径 -> 调用 `studio`（chart / code / writing / coach）',
     '   - 想展开问卷设计、抽样、数据分析、研究画布、获奖案例、提交体检等右侧模块 -> 调用 `open`',
     '   - 用户表示“跑个示例 / 教学模拟 / 先看完整样板” -> 调用 `simulate`',
@@ -258,25 +261,28 @@ export async function POST(req: Request) {
     }
   }
 
+  const disableTools = body.noTools === true || rawStep >= MAX_STEPS;
   const startedAt = Date.now();
   try {
-    const upstream = await fetch(resolved.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resolved.apiKey}`,
+    const upstream = await upstreamFetch(
+      resolved.endpoint,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resolved.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: resolved.model,
+          messages,
+          ...(disableTools ? {} : { tools: toOpenAiToolDefinitions(), tool_choice: 'auto' }),
+          temperature: body.noTools === true ? 0.25 : 0.45,
+          max_tokens: 2200,
+          stream: false,
+        }),
       },
-      body: JSON.stringify({
-        model: resolved.model,
-        messages,
-        tools: toOpenAiToolDefinitions(),
-        tool_choice: rawStep >= MAX_STEPS ? 'none' : 'auto',
-        temperature: 0.45,
-        max_tokens: 1800,
-        stream: false,
-      }),
-      signal: AbortSignal.timeout(40_000),
-    });
+      { timeoutMs: 40_000, attempts: 2 },
+    );
 
     const data = (await upstream.json().catch(() => null)) as {
       error?: { message?: string; code?: string };

@@ -20,6 +20,13 @@ import {
 import type { ResultSnapshot } from '@/lib/research-quality';
 import styles from './Studio.module.css';
 
+const STYLE_PRESETS = [
+  { id: 'architectural', label: '🏛 建筑纸模', clause: '视觉风格：Warm daylight architectural paper model diorama, crisp studio rim light, clean negative space, zero garbled text.' },
+  { id: 'etching', label: '🖋 社科版画', clause: '视觉风格：Editorial risograph and copperplate ink aesthetic, warm limestone and deep teal ink palette, calm geometric rhythm.' },
+  { id: 'still_life', label: '📷 编辑静物', clause: '视觉风格：Minimalist editorial still-life photography, natural window sidelight, tactile archival paper & brass props.' },
+  { id: 'axon_blueprint', label: '📐 等轴蓝图', clause: '视觉风格：Precision isometric technical blueprint diagram, fine hairline calibration ticks, warm cream and slate contrast.' },
+] as const;
+
 export default function ImageWorkshopStudio({
   content,
   onUpdateReport,
@@ -32,7 +39,8 @@ export default function ImageWorkshopStudio({
   onJumpToSection?: (sectionId: string) => void;
 }) {
   const [task, setTask] = useState<ReportImageTaskId>('descriptive_infographic');
-  const [modelId, setModelId] = useState<string>(IMAGE_GEN_MODELS[0].id);
+  const [modelId, setModelId] = useState<string>('gemini-nano-banana-2.1');
+  const [providerReady, setProviderReady] = useState<Record<string, boolean>>({});
   const defaultSecId = useMemo(
     () =>
       content.report.find(s => /描述|样本|现状/u.test(s.title))?.id
@@ -49,6 +57,7 @@ export default function ImageWorkshopStudio({
   const [baseUrl, setBaseUrl] = useState('');
   const [customModelName, setCustomModelName] = useState('');
   const [showGatewayConfig, setShowGatewayConfig] = useState(false);
+  const [stylePresetId, setStylePresetId] = useState<string | null>(null);
 
   const [generating, setGenerating] = useState(false);
   const [liveImageUrl, setLiveImageUrl] = useState<string | null>(null);
@@ -56,8 +65,19 @@ export default function ImageWorkshopStudio({
   const [latestSnapshot, setLatestSnapshot] = useState<ResultSnapshot | null>(null);
   const [previewSvg, setPreviewSvg] = useState<string>('');
   const [status, setStatus] = useState(
-    '已挂载报告冻结统计快照：点击「调用生图」即可驱动 Nano Banana / Imagen 或合成描述统计复合图。',
+    '已挂载报告冻结统计快照：描述统计复合图直接锁死真实数值。',
   );
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch('/api/agent/image-gen', { signal: ctrl.signal })
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: { providers?: Record<string, boolean> } | null) => {
+        if (data?.providers) setProviderReady(data.providers);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
 
   const accentHex = `#${(ACCENT[content.accent] || '0F766E').replace('#', '')}`;
   const stats = useMemo(() => extractDescriptivePanelsFromReport(content), [content]);
@@ -118,8 +138,22 @@ export default function ImageWorkshopStudio({
 
   const refreshPromptFromReport = () => {
     const nextPrompt = buildReportDrivenImagePrompt(content, task, targetSectionId || defaultSecId);
+    setStylePresetId(null);
     setPrompt(nextPrompt);
     setStatus(`已从报告《${content.title || '当前课题'}》（n=${stats.sampleN}）重新提取统计字段与配图提示词。`);
+  };
+
+  const toggleStylePreset = (preset: (typeof STYLE_PRESETS)[number]) => {
+    const cleaned = prompt
+      .replace(/\n*视觉风格：[^\n]+$/u, '')
+      .trimEnd();
+    if (stylePresetId === preset.id) {
+      setStylePresetId(null);
+      setPrompt(cleaned);
+      return;
+    }
+    setStylePresetId(preset.id);
+    setPrompt(cleaned ? `${cleaned}\n${preset.clause}` : preset.clause);
   };
 
   const handleGenerate = async () => {
@@ -148,6 +182,7 @@ export default function ImageWorkshopStudio({
           baseUrl: baseUrl.trim() || undefined,
           customModelName: customModelName.trim() || undefined,
         }),
+        signal: AbortSignal.timeout(95_000),
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -209,40 +244,64 @@ export default function ImageWorkshopStudio({
     try {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1000;
-        canvas.height = 1414;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.fillStyle = isFrame ? 'rgba(255,255,255,0)' : '#fcfaf5';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (viewMode === 'live' && liveImageUrl) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        } else {
-          ctx.drawImage(img, 60, 400, 880, 495);
-        }
-        const pngBase64 = canvas.toDataURL('image/png').split(',')[1] ?? '';
-        const note = `${activeModelSpec.shortLabel} · ${activeTaskSpec.label}`;
-        const next = isFrame
-          ? applyFrameImage(content, {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 1000;
+          canvas.height = 1414;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.fillStyle = isFrame ? 'rgba(255,255,255,0)' : '#fcfaf5';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          if (viewMode === 'live' && liveImageUrl) {
+            const scale = Math.max(canvas.width / Math.max(1, img.naturalWidth), canvas.height / Math.max(1, img.naturalHeight));
+            const drawW = img.naturalWidth * scale;
+            const drawH = img.naturalHeight * scale;
+            ctx.drawImage(img, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+          } else {
+            ctx.drawImage(img, 60, 400, 880, 495);
+          }
+          const note = `${activeModelSpec.shortLabel} · ${activeTaskSpec.label}`;
+          if (isFrame) {
+            const pngBase64 = canvas.toDataURL('image/png').split(',')[1] ?? '';
+            const next = applyFrameImage(content, {
               schema: 'FrameImage/v1',
               mime: 'image/png',
               data: pngBase64,
               widthPx: 1000,
               heightPx: 1414,
               note,
-            })
-          : applyCoverImage(content, {
-              schema: 'CoverImage/v1',
-              mime: 'image/png',
-              data: pngBase64,
-              widthPx: 1000,
-              heightPx: 1414,
-              note,
             });
-        onUpdateReport(next, `已将生成图像应用为 1000×1414 A4 ${isFrame ? '学术页框' : '报告封面'}。`);
-        setStatus(`✓ 已应用为 1000×1414 A4 ${isFrame ? '学术页框' : '报告封面'}。`);
+            onUpdateReport(next, '已将生成图像应用为 1000×1414 A4 学术页框。');
+            setStatus('✓ 已应用为 1000×1414 A4 学术页框。');
+            return;
+          }
+
+          let encodedMime: 'image/png' | 'image/jpeg' = 'image/png';
+          let encodedBase64 = canvas.toDataURL('image/png').split(',')[1] ?? '';
+          const approxBytes = (b64: string) => Math.floor(b64.length * 0.75);
+          if (approxBytes(encodedBase64) > 960_000) {
+            encodedMime = 'image/jpeg';
+            for (const quality of [0.88, 0.8, 0.72, 0.62, 0.5]) {
+              const candidate = canvas.toDataURL('image/jpeg', quality).split(',')[1] ?? '';
+              encodedBase64 = candidate;
+              if (approxBytes(candidate) <= 960_000) break;
+            }
+          }
+          const next = applyCoverImage(content, {
+            schema: 'CoverImage/v1',
+            mime: encodedMime,
+            data: encodedBase64,
+            widthPx: 1000,
+            heightPx: 1414,
+            note,
+          });
+          onUpdateReport(next, '已将生成图像应用为 1000×1414 A4 报告封面。');
+          setStatus('✓ 已应用为 1000×1414 A4 报告封面。');
+        } catch (innerErr) {
+          setStatus(innerErr instanceof Error ? innerErr.message : 'A4 图像应用失败。');
+        }
       };
+      img.onerror = () => setStatus('A4 图像加载失败，请重新生成后再应用。');
       img.src = src;
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'A4 图像应用失败。');
@@ -276,7 +335,7 @@ export default function ImageWorkshopStudio({
       </div>
 
       {/* 1. 生图任务选择 */}
-      <div className={styles.segBar} role="tablist" aria-label="生图任务类型">
+      <div className={styles.taskGrid} role="tablist" aria-label="生图任务类型">
         {REPORT_IMAGE_TASKS.map(t => (
           <button
             key={t.id}
@@ -292,8 +351,8 @@ export default function ImageWorkshopStudio({
 
       {/* 2. 模型引擎 + 目标章节 + 提示词 */}
       <div className={styles.panel}>
-        <div className={styles.row}>
-          <label className={styles.field} style={{ flex: 2, minWidth: 160 }}>
+        <div className={styles.row} style={{ flexWrap: 'nowrap' }}>
+          <label className={styles.field} style={{ flex: '1.6 1 0' }}>
             <span>生图模型引擎</span>
             <select
               className={styles.select}
@@ -308,7 +367,7 @@ export default function ImageWorkshopStudio({
               ))}
             </select>
           </label>
-          <label className={styles.field} style={{ flex: 1.4, minWidth: 120 }}>
+          <label className={styles.field} style={{ flex: '1 1 0' }}>
             <span>插入目标章节</span>
             <select
               className={styles.select}
@@ -329,11 +388,11 @@ export default function ImageWorkshopStudio({
 
         <div className={styles.row} style={{ justifyContent: 'space-between' }}>
           <span className={styles.badge}>
-            {activeTaskSpec.aspect} · {activeModelSpec.badge}
+            {activeTaskSpec.aspect} · {providerReady[activeModelSpec.provider] ? `在线 · ${activeModelSpec.shortLabel}` : activeModelSpec.badge}
           </span>
           <div className={styles.row}>
             <button type="button" className={styles.btn} onClick={refreshPromptFromReport}>
-              ⚡ 从报告提取 Prompt
+              提取 Prompt
             </button>
             <button
               type="button"
@@ -341,7 +400,7 @@ export default function ImageWorkshopStudio({
               aria-expanded={showGatewayConfig}
               onClick={() => setShowGatewayConfig(v => !v)}
             >
-              {showGatewayConfig ? '收起 API 配置' : 'API 网关配置'}
+              {showGatewayConfig ? '收起配置' : '网关配置'}
             </button>
           </div>
         </div>
@@ -376,6 +435,20 @@ export default function ImageWorkshopStudio({
             </div>
           </div>
         )}
+
+        <div className={styles.stylePresetBar} role="group" aria-label="快捷美术风格预设">
+          {STYLE_PRESETS.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              className={styles.stylePresetChip}
+              aria-pressed={stylePresetId === p.id}
+              onClick={() => toggleStylePreset(p)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
 
         <label className={styles.field}>
           <span>报告需求生图提示词（遵循 research-descriptive-infographics 规范）</span>
@@ -421,7 +494,7 @@ export default function ImageWorkshopStudio({
 
         {viewMode === 'live' && liveImageUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element -- displays user/model generated image data URL directly */
-          <img className={styles.previewImg} src={liveImageUrl} alt={activeTaskSpec.label} />
+          <img key={liveImageUrl.slice(0, 64)} className={styles.previewImg} src={liveImageUrl} alt={activeTaskSpec.label} />
         ) : (
           previewSvg && <div className={styles.previewSvg} dangerouslySetInnerHTML={{ __html: previewSvg }} />
         )}

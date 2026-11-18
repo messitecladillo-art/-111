@@ -37,34 +37,25 @@ export default function Advisors({
     const hasIssues = reading.issues.length > 0;
     return (
       <article key={advisor.id} className={styles.card} data-hired={on} style={{ ['--i' as string]: index, ['--tone' as string]: tone }}>
+        <span className={styles.watermarkGlyph} aria-hidden="true">{advisor.glyph}</span>
         <div className={styles.cardTop}>
           <div className={styles.cardTitleGroup}>
             <span className={styles.skillTag}>{advisor.skill}</span>
+            <div className={styles.statusRibbon}>
+              <span className={styles.ribbonStat}>负责 {advisor.checks.length} 项</span>
+              <span className={styles.ribbonDot} aria-hidden="true">·</span>
+              <span className={styles.ribbonStat} data-pass="true">通过 {reading.passed}</span>
+              <span className={styles.ribbonDot} aria-hidden="true">·</span>
+              <span className={styles.ribbonStat} data-alert={hasIssues}>
+                {hasIssues ? `${reading.issues.length} 待处理` : '全部通过'}
+              </span>
+            </div>
             <h3>{advisor.name}</h3>
           </div>
-          <span className={styles.glyph} aria-hidden="true">{advisor.glyph}</span>
+          <span className={styles.statePill} data-active={on}>{on ? '已就位' : '待命'}</span>
         </div>
 
         <p className={styles.line}>{advisor.line}</p>
-
-        <dl className={styles.meta}>
-          <div>
-            <dt>负责体检</dt>
-            <dd>{advisor.checks.length} 项</dd>
-          </div>
-          <div>
-            <dt>已通过</dt>
-            <dd className={styles.passed}>{reading.passed}</dd>
-          </div>
-          <div>
-            <dt>待处理</dt>
-            <dd data-alert={hasIssues}>{reading.issues.length} 项</dd>
-          </div>
-          <div>
-            <dt>在席状态</dt>
-            <dd className={on ? styles.activeState : undefined}>{on ? '已就位' : '未就位'}</dd>
-          </div>
-        </dl>
 
         <ul className={styles.rules}>
           {advisor.rules.map(rule => (

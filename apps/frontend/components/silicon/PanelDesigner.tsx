@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { LabConfig } from '@/lib/silicon/config';
-import { PANEL_TEMPLATES, SILICON_LIMITS, attributeIssues, fidelityRisk, panelMarginals, quotaCounts, type Persona, type PersonaAttribute } from '@/lib/silicon/persona';
+import { PANEL_TEMPLATES, SILICON_LIMITS, attributeIssues, fidelityRisk, panelMarginals, quotaCounts, synthesizePersonaProfile, type Persona, type PersonaAttribute } from '@/lib/silicon/persona';
 import PersonaAvatar from './PersonaAvatar';
 import styles from './SiliconLab.module.css';
 import { useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
@@ -93,12 +93,22 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
       <div className={styles.blockHead}><h3 id="sx-roster">硅基受访者名册</h3><p>点选人物可调整外观与背景；外观只供辨认，不进入模型设定。</p></div>
       {elevated > 0 && <p className={styles.riskNote}><b>画像核验</b>{elevated} 位画像涉及{reasons.join('、')}，需结合真人预调查核对。</p>}
       <ul ref={rosterRef} className={styles.roster}>
-        {visiblePersonas.map((p, i) => <li key={p.id} data-motion-id={p.id}>
-          <button type="button" aria-pressed={selectedId === p.id} onClick={() => onSelect(p.id)}>
-            <PersonaAvatar appearance={p.appearance} size={42}/>
-            <span><strong>{p.code}{risks[i].level === 'elevated' && <i className={styles.riskDot} title={`保真度风险：${risks[i].reasons.join('、')}`} aria-label="保真度风险较高"/>}</strong><small>{config.attributes.map(a => p.traits[a.key]).filter(Boolean).join(' · ')}</small></span>
-          </button>
-        </li>)}
+        {visiblePersonas.map((p, i) => {
+          const profile = synthesizePersonaProfile(p, config.attributes);
+          return <li key={p.id} data-motion-id={p.id}>
+            <button type="button" aria-pressed={selectedId === p.id} title={profile.catchphrase} onClick={() => onSelect(p.id)}>
+              <PersonaAvatar appearance={p.appearance} size={42}/>
+              <span>
+                <strong>
+                  <span className={styles.aliasName}>{profile.alias}</span>
+                  <code className={styles.codePill}>{p.code}</code>
+                  {risks[i].level === 'elevated' && <i className={styles.riskDot} title={`保真度风险：${risks[i].reasons.join('、')}`} aria-label="保真度风险较高"/>}
+                </strong>
+                <small>{config.attributes.map(a => p.traits[a.key]).filter(Boolean).join(' · ')}</small>
+              </span>
+            </button>
+          </li>;
+        })}
       </ul>
       {personas.length > ROSTER_PREVIEW && <button type="button" className={styles.linkButton} onClick={() => setShowAll(v => !v)}>{showAll ? '收起名册' : `显示全部 ${personas.length} 位`}</button>}
     </section>

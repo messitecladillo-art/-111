@@ -332,8 +332,8 @@ export default function QuestionnaireStudio({onSnapshot,onAnalyze,briefSource,on
           <hr/><button type="button" onClick={()=>exportFile('text')}>导出问卷草稿</button><button type="button" onClick={()=>exportFile('dictionary')}>导出变量字典</button>
         </div></details>
         <QuestionnairePlatformExport design={design} revision={previewRevision} blocked={reading||hasPendingNumbers||!!confirmation}/>
-        <button type="button" className={styles.primary} onClick={()=>exportFile('backup')}>下载备份</button>
-        {onAnalyze&&<button type="button" className={styles.analysisLink} disabled={reading||hasPendingNumbers} onClick={sendToAnalysis}>用于数据分析 →</button>}
+        <button type="button" onClick={()=>exportFile('backup')}>下载备份</button>
+        {onAnalyze&&<button type="button" className={styles.primary} disabled={reading||hasPendingNumbers} onClick={sendToAnalysis}>用于数据分析 →</button>}
       </div>
       <input type="file" hidden ref={input} accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void importFile(file);}}/>
     </header>

@@ -1,4 +1,4 @@
-.studio { min-width:0; color:var(--wb-text); font-size:16px; }
+.studio { container-type: inline-size; container-name: questionnaire-studio; min-width:0; color:var(--wb-text); font-size:16px; }
 .studio * { min-width:0; box-sizing:border-box; }
 .studio h2,.studio h3,.studio h4,.studio h5,.studio p { margin:0; }
 .studio h3 { font-size:16px; line-height:1.5; }
@@ -160,6 +160,15 @@
 .confirmDialog p { margin:14px 0 24px; font-size:15px; }
 .confirmDialog>div { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 @media(min-width:1281px) { .outline,.preview { position:sticky; top:16px; max-height:calc(100dvh - 40px); overflow:auto; scrollbar-width:thin; } }
+@container questionnaire-studio (max-width: 960px) {
+  .workspace { grid-template-columns:190px minmax(0,1fr); }
+  .mobileTabs { display:flex; gap:6px; margin:0 0 14px; }
+  .workspace[data-mobile-pane=edit]>.preview { display:none; }
+  .workspace[data-mobile-pane=preview] { grid-template-columns:minmax(0,1fr); }
+  .workspace[data-mobile-pane=preview]>.outline,.workspace[data-mobile-pane=preview]>.card { display:none; }
+  .previewHeading { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:center; }
+  .paper { max-width:760px; margin:auto; }
+}
 @media(max-width:1280px) {
  .workspace { grid-template-columns:190px minmax(0,1fr); }
  .mobileTabs { display:flex; gap:6px; margin:0 0 14px; }

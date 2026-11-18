@@ -115,6 +115,7 @@ export default function StudioPanel({
   onToggleAnnotationStatus,
   onRemoveAnnotation,
   onRewriteWithIdea,
+  onOpenMainTheater,
   teamId,
   signedIn,
   currentUserEmail,
@@ -141,6 +142,12 @@ export default function StudioPanel({
   onToggleAnnotationStatus: (id: string) => void;
   onRemoveAnnotation: (id: string) => void;
   onRewriteWithIdea: (sectionId: string, quote: string, idea: string) => void;
+  onOpenMainTheater?: (payload: {
+    design: Questionnaire;
+    templateKey: 'residents' | 'students' | 'seniors';
+    seed: number;
+    population: string;
+  }) => void;
   teamId?: string | null;
   signedIn: boolean;
   currentUserEmail?: string;
@@ -222,6 +229,7 @@ export default function StudioPanel({
           design={design}
           onSaveDesign={onSaveDesign}
           onUpdateReport={onUpdateReport}
+          onOpenMainTheater={onOpenMainTheater}
         />
       )}
       {activeTab === 'qa' && (

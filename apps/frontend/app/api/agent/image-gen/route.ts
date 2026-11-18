@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
 import { IMAGE_GEN_MODELS, type ReportImageTaskId } from '@/lib/agent/image-gen-engine';
+import { upstreamFetch } from '@/lib/agent/upstream-fetch';
 
 export const runtime = 'nodejs';
+
+export async function GET() {
+  const geminiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
+  const openAiKey = (process.env.OPENAI_API_KEY || process.env.IMAGE_GEN_API_KEY || '').trim();
+  return NextResponse.json(
+    {
+      providers: {
+        gemini: Boolean(geminiKey),
+        imagen: Boolean(geminiKey),
+        openai_compatible: Boolean(openAiKey),
+      },
+    },
+    { headers: { 'cache-control': 'no-store' } },
+  );
+}
 
 interface ImageGenRequestBody {
   modelId?: string;
@@ -39,6 +55,7 @@ export async function POST(req: Request) {
   // Read optional user-provided key or server environment credentials
   const userKey = (body.apiKey ?? '').trim();
   const userBase = (body.baseUrl ?? '').trim().replace(/\/+$/u, '');
+
   const geminiKey =
     spec.provider === 'gemini' || spec.provider === 'imagen'
       ? userKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ''
@@ -54,17 +71,20 @@ export async function POST(req: Request) {
       const host = userBase || 'https://generativelanguage.googleapis.com';
       const targetModel = userBase ? body.modelId || modelName : modelName;
       const endpoint = `${host}/v1beta/models/${encodeURIComponent(targetModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
-      const upstream = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ['IMAGE', 'TEXT'],
-          },
-        }),
-        signal: AbortSignal.timeout(45_000),
-      });
+      const upstream = await upstreamFetch(
+        endpoint,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseModalities: ['IMAGE', 'TEXT'],
+            },
+          }),
+        },
+        { timeoutMs: 45_000, attempts: 2 },
+      );
 
       if (upstream.ok) {
         const json = (await upstream.json()) as {

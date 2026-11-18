@@ -109,9 +109,16 @@ function dialPivot(path: string): string | undefined {
   return m ? `${m[1]}px ${m[2]}px` : undefined;
 }
 
+const PART_CALLOUTS: Record<'feeder' | 'gantry' | 'carriage' | 'output', string> = {
+  feeder: '01 压印纸匣 · 原始题项与约束录入',
+  gantry: '02 龙门导轨 · 抽样与效度标尺校准',
+  carriage: '03 主轴笔架 · 计量建模与检验推导',
+  output: '04 成稿纸盘 · 标准化五章三线表输出',
+};
+
 /** Screen-only illustration. Phase/readout are props; no timer changes task state. */
 export default function ReportWorkstation({
-  state, compact = false, kind = 'report', inline = false, heading, countUnit, inspectable = false, paused = false, telemetry,
+  state, compact = false, kind = 'report', inline = false, heading, countUnit, inspectable = false, paused = false, telemetry, dialScore,
 }: {
   state: ReportWorkState;
   compact?: boolean;
@@ -125,9 +132,12 @@ export default function ReportWorkstation({
   inspectable?: boolean;
   /** Optional screen-only typewriter telemetry driving carriage travel and keybar strike cadence. */
   telemetry?: WorkstationTelemetry;
+  /** Optional continuous 0..1 score reflected smoothly on the brass gauge needle. */
+  dialScore?: number;
 }) {
   const root = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState(false);
+  const [hotPart, setHotPart] = useState<keyof typeof PART_CALLOUTS | null>(null);
   const [visible, setVisible] = useState(false);
   const pageVisible = useSyncExternalStore(subscribePage, pageSnapshot, () => false);
   const reduced = useSyncExternalStore(subscribeMotion, motionSnapshot, () => true);
@@ -150,7 +160,8 @@ export default function ReportWorkstation({
   const driven = moving && typeof telemetry?.lineRatio === 'number';
   const lineRatio = driven ? Math.max(0, Math.min(1, telemetry!.lineRatio!)) : 0;
   const strikeParity = moving && typeof telemetry?.strikeTick === 'number' ? telemetry.strikeTick % 2 : undefined;
-  const dialRatio = total > 0 ? Math.max(0, Math.min(1, (completed + (driven ? lineRatio * 0.65 : 0)) / total)) : moving ? 0.38 : 0;
+  const baseRatio = total > 0 ? Math.max(0, Math.min(1, (completed + (driven ? lineRatio * 0.65 : 0)) / total)) : moving ? 0.38 : 0;
+  const dialRatio = typeof dialScore === 'number' && Number.isFinite(dialScore) ? Math.max(baseRatio, Math.max(0, Math.min(1, dialScore))) : baseRatio;
   const dialAngle = Math.round(-75 + dialRatio * 205);
   const needleOrigin = dialPivot(DIAL_NEEDLE);
   const paperDashOffset = Math.max(0, 260 - Math.round((total > 0 ? dialRatio : lineRatio) * 260));
@@ -167,12 +178,22 @@ export default function ReportWorkstation({
     data-typing={driven || undefined} data-paused={paused || undefined} data-compact={compact || undefined}
     aria-label={`${LABELS[kind]}状态`} aria-busy={busy}>
     {inspectable && <header className={styles.header}>
-      <span className={styles.eyebrow}>结构查看</span>
+      <span className={styles.eyebrow}>
+        {hotPart ? <span className={styles.partCallout}>◈ {PART_CALLOUTS[hotPart]}</span> : '结构查看 · 悬停组件可识读'}
+      </span>
       <button type="button" className={styles.inspect} aria-expanded={expanded} aria-controls={`${id}-drawing`}
         onClick={() => setExpanded(v => !v)}>{expanded ? '收起结构' : '展开结构'}<span aria-hidden="true">{expanded ? '−' : '+'}</span></button>
     </header>}
     <div id={`${id}-drawing`} className={styles.drawing} style={drawingStyle}>
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className={styles.machine} role="img" aria-label={`${LABELS[kind]}处理装置：材料输入、处理笔架与结果纸盘`}>
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        className={styles.machine}
+        data-inspectable={inspectable || undefined}
+        role="img"
+        aria-label={`${LABELS[kind]}处理装置：材料输入、处理笔架与结果纸盘`}
+        onClick={inspectable ? () => setExpanded(v => !v) : undefined}
+        onMouseLeave={inspectable ? () => setHotPart(null) : undefined}
+      >
         <ellipse className={styles.ground} cx={SHADOW[0]} cy={SHADOW[1] + 4} rx="171" ry="31" />
         <Parts parts={BASE} />
         <path className={styles.detailLine} d={SEAMS} />
@@ -182,16 +203,16 @@ export default function ReportWorkstation({
         {moving && PAPER[kind] && (
           <path className={styles.paperLinesActive} d={PAPER[kind]} style={{ strokeDashoffset: paperDashOffset }} />
         )}
-        <g className={styles.feeder}><Parts parts={FEEDER} /></g>
-        <g className={styles.gantry}><Parts parts={FRAME} /></g>
-        <g className={styles.carriage}>
+        <g className={styles.feeder} data-hot={hotPart === 'feeder' || undefined} onMouseEnter={inspectable ? () => setHotPart('feeder') : undefined}><Parts parts={FEEDER} /></g>
+        <g className={styles.gantry} data-hot={hotPart === 'gantry' || undefined} onMouseEnter={inspectable ? () => setHotPart('gantry') : undefined}><Parts parts={FRAME} /></g>
+        <g className={styles.carriage} data-hot={hotPart === 'carriage' || undefined} onMouseEnter={inspectable ? () => setHotPart('carriage') : undefined}>
           <g className={styles.headMotion} data-driven={driven || undefined} data-returning={(driven && telemetry?.returning) || undefined}>
             <g className={styles.striker} data-strike={strikeParity}>
               <Parts parts={CARRIAGE} />
             </g>
           </g>
         </g>
-        <g className={styles.output}><Parts parts={OUTPUT} /></g>
+        <g className={styles.output} data-hot={hotPart === 'output' || undefined} onMouseEnter={inspectable ? () => setHotPart('output') : undefined}><Parts parts={OUTPUT} /></g>
         <Parts parts={CONTROL} />
         <path className={styles.ticks} d={DIAL.minor} />
         <path className={styles.detailLine} d={DIAL.major} />

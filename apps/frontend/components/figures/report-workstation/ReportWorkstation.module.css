@@ -171,19 +171,22 @@
 
 .stageShell .workstation {
   max-inline-size: none;
-  padding: 10px 14px 12px;
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--c-elev, #fffef9) 62%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  padding: 6px 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 :global([data-theme="dark"]) .stageShell .workstation {
-  background: rgba(12, 18, 26, 0.56);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: transparent;
+  box-shadow: none;
 }
 
 .stageShell .workstation[data-compact="true"] .machine {
-  block-size: 132px;
+  block-size: 160px;
 }
 
 .stageTop {
@@ -282,18 +285,64 @@
   background: rgba(255, 255, 255, 0.55);
 }
 
+:global([data-theme="dark"]) .stageTab {
+  color: rgba(245, 241, 232, 0.72);
+}
+
 :global([data-theme="dark"]) .stageTab:hover {
-  background: rgba(255, 255, 255, 0.09);
+  color: #f5f1e8;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .stageTab[aria-selected="true"] {
-  background: var(--c-fg, #071a2b);
-  color: var(--c-bg, #f7f4ed);
+  background: #071a2b;
+  color: #faf7f0;
   font-weight: 600;
   box-shadow: 0 2px 8px -2px rgba(7, 26, 43, 0.25);
 }
 
 .stageTab[aria-selected="true"] code {
-  opacity: 0.9;
-  color: var(--c-gold, #fbbf24);
+  opacity: 0.95;
+  color: #f4b942;
+}
+
+:global([data-theme="dark"]) .stageTab[aria-selected="true"] {
+  background: #2dd4bf;
+  color: #051817;
+  box-shadow: 0 2px 10px -2px rgba(45, 212, 191, 0.42);
+}
+
+:global([data-theme="dark"]) .stageTab[aria-selected="true"] code {
+  opacity: 1;
+  color: #042f2c;
+}
+
+.machine[data-inspectable="true"] {
+  cursor: pointer;
+}
+
+.machine[data-inspectable="true"] .feeder,
+.machine[data-inspectable="true"] .gantry,
+.machine[data-inspectable="true"] .carriage,
+.machine[data-inspectable="true"] .output {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease;
+}
+
+.machine[data-inspectable="true"] [data-hot="true"] .edge {
+  stroke: var(--press-accent);
+  stroke-width: 1.15;
+}
+
+.machine[data-inspectable="true"] [data-hot="true"] {
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--press-accent) 28%, transparent));
+}
+
+.partCallout {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--press-accent);
+  font-family: var(--c-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  font-weight: 600;
 }

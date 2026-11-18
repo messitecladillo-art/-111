@@ -187,3 +187,114 @@ export function describePersona(persona: Persona, attributes: PersonaAttribute[]
   const parts = attributes.map(a => `${a.label}：${persona.traits[a.key] ?? '未设定'}`);
   return persona.background.trim() ? `${parts.join('；')}。背景：${persona.background.trim()}` : `${parts.join('；')}。`;
 }
+
+export type PersonaProfile = {
+  alias: string;
+  archetype: string;
+  provenance: string;
+  tags: string[];
+  catchphrase: string;
+  monologue: string;
+  toneRule: string;
+};
+
+const ALIAS_SURNAMES = ['林同学', '小满', '老周', '阿穗', '陈姐', '小吴', '方老师', '阿哲', '苏敏', '边边', '小唐', '大伟'] as const;
+
+const VOICE_BANK: ReadonlyArray<{
+  prefix: string;
+  habitTag: string;
+  catchphrase: string;
+  toneRule: string;
+  focusCue: string;
+}> = [
+  {
+    prefix: '效率实用派',
+    habitTag: '怕填长卷',
+    catchphrase: '别跟我绕弯子，选项写得含糊我直接就点最中间那个“一般”过去了。',
+    toneRule: '语速偏快、先讲结论与时间成本，常用“说白了/懒得算/直接看”。',
+    focusCue: '会第一时间挑出题干冗余、选项重叠或手机端滑屏过长的题项。',
+  },
+  {
+    prefix: '细看成分党',
+    habitTag: '细节抠字眼',
+    catchphrase: '“性价比高”太虚了，你得问清楚到底是因为分量足、价格稳还是回购优惠多。',
+    toneRule: '注重边界与前提条件，爱追问“你这里指的是哪种情况？”。',
+    focusCue: '容易发现量表维度概念混杂（把“质量”和“服务态度”揉成一题）的问题。',
+  },
+  {
+    prefix: '日常体验派',
+    habitTag: '重现场感受',
+    catchphrase: '我选东西全看当下的体感和顺手程度，参数再好看用着别扭也是白搭。',
+    toneRule: '口语生活化、常举最近一周亲身经历的小细节，带感性直观判断。',
+    focusCue: '擅长补充研究者容易遗漏的具体使用场景与情绪触发点。',
+  },
+  {
+    prefix: '口碑观望派',
+    habitTag: '随手对照点评',
+    catchphrase: '一般不会当场拍板，都是先翻几条真实差评，确定没踩坑才敢继续用。',
+    toneRule: '措辞留有余地、善于横向对比不同备选方案，偶用“看情况/还得比一比”。',
+    focusCue: '对社会赞许性偏差敏感，遇到引导性过强的正面题干会本能质疑。',
+  },
+  {
+    prefix: '精算性价比派',
+    habitTag: '价格锚点敏锐',
+    catchphrase: '涨一块两块倒无所谓，主要是份量暗地缩水或者附加条件太多让人膈应。',
+    toneRule: '数字意识强，回答里常自带金额、频次或时间间隔估算。',
+    focusCue: '会敏锐指出收入/花费区间划分不均、选项跨度不合理等尺度缺陷。',
+  },
+  {
+    prefix: '随缘轻度派',
+    habitTag: '偶尔触发消费',
+    catchphrase: '有些问题其实是重度用户才会想的，我一个月才碰一次实在答不上来。',
+    toneRule: '直白坦率、不愿被强迫在“同意/不同意”里硬站队。',
+    focusCue: '最能暴露“缺少『不知道 / 不适用 / 跳过』选项导致硬填中间值”的污染风险。',
+  },
+];
+
+/**
+ * Synthesizes an Atypica-caliber behavioral dossier deterministically from a synthetic
+ * respondent's traits, seed id and optional researcher background. Remains strictly labeled synthetic.
+ */
+export function synthesizePersonaProfile(
+  persona: Persona,
+  attributes: PersonaAttribute[],
+  topic = '调查专题',
+): PersonaProfile {
+  const h = hash32(persona.id);
+  const voice = VOICE_BANK[h % VOICE_BANK.length];
+  const surname = ALIAS_SURNAMES[(h >>> 4) % ALIAS_SURNAMES.length];
+  const traitValues = attributes.map(a => persona.traits[a.key]).filter(Boolean);
+  const ageOrGrade = persona.traits.age || persona.traits.grade || '';
+  const jobOrMajor = persona.traits.occupation || persona.traits.major || persona.traits.living || '';
+  const originOrCity = persona.traits.city || persona.traits.origin || persona.traits.area || '';
+
+  const leadTrait = [jobOrMajor, ageOrGrade, originOrCity].filter(Boolean).slice(0, 2).join(' · ') || traitValues.slice(0, 2).join(' · ');
+  const alias = `${voice.prefix} · ${surname}`;
+  const archetype = leadTrait ? `${leadTrait}` : `配额画像 (${persona.code})`;
+
+  const extraTags = traitValues.slice(0, 3);
+  const tags = Array.from(new Set([...extraTags, voice.habitTag, voice.prefix])).slice(0, 5);
+
+  const traitSentence = attributes
+    .map(a => `${a.label}为「${persona.traits[a.key] ?? '未设定'}」`)
+    .slice(0, 5)
+    .join('，');
+  const bgNote = persona.background.trim()
+    ? `你的具体生活境况是：${persona.background.trim()}。`
+    : '你的判断主要来自过去三个月真实且琐碎的日常习惯与消费取舍。';
+
+  const monologue = [
+    `你要始终以「${alias}」（${persona.code}）的第一视角作答与讨论。当前人口学与分层属性为：${traitSentence}。${bgNote}`,
+    `在参与《${topic || '本项调查'}》时，${voice.focusCue}遇到表述模糊、缺乏“不适用”出口或带明显诱导的题项时，请直接用真实受访者的困惑口气指出来，不要用官话或“综上所述”等模板词汇敷衍打高分。`,
+  ].join('\n\n');
+
+  return {
+    alias,
+    archetype,
+    provenance: `硅基田野画像 · 配额锚点 ${persona.code}（与真实样本隔离）`,
+    tags,
+    catchphrase: voice.catchphrase,
+    monologue,
+    toneRule: voice.toneRule,
+  };
+}

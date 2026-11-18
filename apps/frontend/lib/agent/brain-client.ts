@@ -54,6 +54,7 @@ export type BrainTurnRequest = {
   step: number;
   steps?: BrainStepTrace[];
   custom?: CustomBrainOverride;
+  noTools?: boolean;
 };
 
 export async function fetchBrainStatus(signal?: AbortSignal): Promise<BrainStatus> {

@@ -204,18 +204,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 8px 7px 14px;
-  border: 1px solid rgba(7, 26, 43, 0.16);
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 254, 249, 0.96), rgba(250, 247, 240, 0.94));
-  backdrop-filter: blur(22px);
-  box-shadow: 0 4px 16px -6px rgba(7, 26, 43, 0.14), 0 18px 40px -18px rgba(7, 26, 43, 0.24);
+  padding: 6px 8px 6px 12px;
+  border: 1px solid rgba(247, 244, 237, 0.16);
+  border-radius: 999px;
+  background: rgba(10, 21, 34, 0.78);
+  backdrop-filter: blur(22px) saturate(1.45);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 18px 40px -14px rgba(0, 0, 0, 0.65);
   transition: border-color 150ms, box-shadow 180ms;
 }
 
 .capsule:focus-within {
-  border-color: rgba(15, 118, 110, 0.62);
-  box-shadow: 0 0 0 3px rgba(0, 179, 164, 0.14), 0 18px 40px -18px rgba(7, 26, 43, 0.28);
+  border-color: rgba(79, 209, 193, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 3px rgba(79, 209, 193, 0.16), 0 18px 44px -14px rgba(0, 0, 0, 0.72);
 }
 
 .brandToggle {
@@ -224,9 +225,9 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border: 1px solid rgba(244, 185, 66, 0.28);
+  border: 1px solid rgba(244, 185, 66, 0.34);
   border-radius: 50%;
-  background: rgba(244, 185, 66, 0.14);
+  background: rgba(244, 185, 66, 0.15);
   cursor: pointer;
   flex: none;
 }
@@ -240,24 +241,24 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #071a2b;
-  font: 14px/1.55 var(--c-sans, system-ui, -apple-system, sans-serif);
+  color: #f7f4ed;
+  font: 13.5px/1.5 var(--c-sans, system-ui, -apple-system, sans-serif);
   padding: 3px 2px;
 }
 
 .dockInput::placeholder {
-  color: rgba(7, 26, 43, 0.46);
+  color: rgba(247, 244, 237, 0.54);
 }
 
 .agentLink {
   display: inline-flex;
   align-items: center;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 11px;
   border-radius: 999px;
-  border: 1px solid rgba(7, 26, 43, 0.12);
-  background: rgba(250, 247, 240, 0.94);
-  color: #071a2b;
+  border: 1px solid rgba(247, 244, 237, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f4ed;
   font-size: 11.5px;
   font-weight: 500;
   text-decoration: none;
@@ -266,26 +267,26 @@
 }
 
 .agentLink:hover {
-  border-color: #0f766e;
-  color: #0f766e;
+  border-color: #4fd1c1;
+  color: #4fd1c1;
 }
 
 .sendBtn {
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: 50%;
-  background: #071a2b;
-  color: #faf7f0;
+  background: #f4b942;
+  color: #071a2b;
   cursor: pointer;
   flex: none;
   transition: opacity 140ms, transform 140ms, background-color 140ms;
 }
 
 .sendBtn:hover:not(:disabled) {
-  background: #0f766e;
+  background: #4fd1c1;
 }
 
 .sendBtn:disabled {

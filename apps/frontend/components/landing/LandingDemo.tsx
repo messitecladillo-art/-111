@@ -1,9 +1,18 @@
 'use client';
 
-import { useId, useReducer, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useId, useMemo, useReducer, useState } from 'react';
+import { newQuestion, newQuestionnaire } from '@/lib/questionnaire';
+import { generatePanel, PANEL_TEMPLATES } from '@/lib/silicon/persona';
+import { demoRun } from '@/lib/silicon/run';
 import styles from './LandingDemo.module.css';
 
-type DemoView = 'questionnaire' | 'sample' | 'report';
+const AtypicaLiveTheater = dynamic(() => import('@/components/silicon/AtypicaLiveTheater'), {
+  ssr: false,
+  loading: () => <div style={{ padding: 32, color: '#a1a1aa' }}>正在挂载 1:1 硅基实时推演剧场…</div>,
+});
+
+type DemoView = 'questionnaire' | 'sample' | 'report' | 'live';
 export type SampleMode = 'concentrated' | 'distributed';
 export type DemoQuestion = { id: string; title: string; short: string; purpose: string; options: string[] };
 export type DemoState = { questions: DemoQuestion[]; history: DemoQuestion[][]; editingKey: string | null; sampleMode: SampleMode };
@@ -92,11 +101,12 @@ function ViewIcon({ view }: { view: DemoView }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
     {view === 'questionnaire' ? <><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="m8 8 1 1 2-2m-3 6 1 1 2-2m3-4h2m-2 5h2M8 17h8"/></>
       : view === 'sample' ? <><path d="M4 20h16M6 17v-5m6 5V5m6 12V9"/><circle cx="6" cy="9" r="1"/><circle cx="18" cy="6" r="1"/></>
-      : <><path d="M14 3H6a1 1 0 0 0-1 1v16h14V8l-5-5Z"/><path d="M14 3v5h5M8 12h8m-8 4h6"/></>}
+      : view === 'report' ? <><path d="M14 3H6a1 1 0 0 0-1 1v16h14V8l-5-5Z"/><path d="M14 3v5h5M8 12h8m-8 4h6"/></>
+      : <><circle cx="12" cy="12" r="8"/><path d="m10 8.5 6 3.5-6 3.5V8.5Z"/></>}
   </svg>;
 }
 
-const VIEW_LABELS: Record<DemoView, string> = { questionnaire: '问卷设计', sample: '样本核验', report: '报告预览' };
+const VIEW_LABELS: Record<DemoView, string> = { questionnaire: '问卷设计', sample: '样本核验', report: '报告预览', live: '硅基实时演示' };
 
 export default function LandingDemo() {
   const [view, setView] = useState<DemoView>('questionnaire');
@@ -108,10 +118,54 @@ export default function LandingDemo() {
   const sample = sampleSummary(state.sampleMode);
   const distributed = state.sampleMode === 'distributed';
 
+  const liveTheaterBundle = useMemo(() => {
+    if (view !== 'live') return null;
+    const design = newQuestionnaire();
+    design.title = '人们为什么选择这家店？';
+    design.population = state.sampleMode === 'distributed' ? '3 个商圈 / 2 个时段消费人群' : '门店周边雨天午间到店人群';
+    design.objective = '把生活场景直觉转化为可比较的选店驱动因素与改善优先级';
+    design.questions = state.questions.map((dq, i) => {
+      const q = newQuestion(`demo-${dq.id}`, `Q${i + 1}`);
+      q.text = dq.title;
+      q.type = 'single';
+      q.choices = dq.options.filter(Boolean).map((opt, oi) => ({ code: String(oi + 1), label: opt }));
+      if (!q.choices.length) q.choices = [{ code: '1', label: '一般' }, { code: '2', label: '较好' }];
+      return q;
+    });
+    const ratingQ = newQuestion('demo-sat', 'SAT_OVR');
+    ratingQ.text = '如果在{情境}消费，你对整体体验的满意程度如何？';
+    ratingQ.type = 'likert';
+    ratingQ.min = 1;
+    ratingQ.max = 5;
+    ratingQ.minLabel = '很不满意';
+    ratingQ.maxLabel = '非常满意';
+    design.questions.push(ratingQ);
+
+    const openQ = newQuestion('demo-idea', 'IDEA');
+    openQ.text = '如果只能先改一处地方，你会先动哪里？';
+    openQ.type = 'text';
+    design.questions.push(openQ);
+
+    const attrs = PANEL_TEMPLATES.residents.attributes;
+    const panel = generatePanel({ attributes: attrs, size: 24, allocation: 'quota', seed: 42, background: design.population });
+    const runSettings = {
+      engine: 'demo' as const,
+      memory: 'carry' as const,
+      shuffleOptions: false,
+      scenarios: state.sampleMode === 'distributed'
+        ? [{ id: 's-noon', label: '工作日午间', text: '工作日午间时段' }, { id: 's-eve', label: '周末晚间高峰', text: '周末晚间高峰时段' }]
+        : [{ id: 's-rain', label: '雨天午间', text: '雨天午间单店' }],
+      models: [],
+    };
+    const run = demoRun(design, attrs, panel, runSettings);
+    return { design, attrs, panel, runSettings, run };
+  }, [view, state.questions, state.sampleMode]);
+
   function chooseView(next: DemoView) {
     dispatch({ type: 'end-edit' }); setView(next);
     setNotice(next === 'questionnaire' ? '可以直接修改题目和选项，试着把问题问得更具体。'
       : next === 'sample' ? '切换采样方式，观察相同数量的记录覆盖了谁。'
+      : next === 'live' ? '同步你刚编辑的题目与采样方式，1:1 实时演练 Atypica 流程。'
       : '报告中的样本数字与当前合成示例一致。点击依据可以追溯输入。');
   }
   function chooseSample(mode: SampleMode) {
@@ -183,6 +237,17 @@ export default function LandingDemo() {
           </div>
           <div className={styles.reportEnd}><span>问题 → 输入 → 判断 → 下一步</span><p>正式工作台可编辑报告并本地导出 Word。</p><a href="/workspace#editor">打开报告编辑工具 <span aria-hidden="true">↗</span></a></div>
         </div>}
+        {view === 'live' && liveTheaterBundle && <div style={{ padding: 12 }} role="region" aria-label="1:1 硅基实时推演剧场">
+          <AtypicaLiveTheater
+            design={liveTheaterBundle.design}
+            attributes={liveTheaterBundle.attrs}
+            personas={liveTheaterBundle.panel}
+            settings={liveTheaterBundle.runSettings}
+            run={liveTheaterBundle.run}
+            autoPlay
+          />
+        </div>}
+
         <div className={styles.statusLine} role="status" aria-live="polite"><span aria-hidden="true"/> {notice}</div>
       </div>
     </div>

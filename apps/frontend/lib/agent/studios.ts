@@ -29,7 +29,7 @@ const recommend = (link: AgentLink): AgentLink => ({ ...link, primary: true });
  */
 export function resolveActiveBlueprint(ctx: RouterContext, query = ''): DemoBlueprint {
   const cleanedQuery = query
-    .replace(/^[/／]?(?:生成)?(?:国奖|铸造|标杆|教学模拟研究|全链条演示|绘图工坊|画图工坊|制图工坊|图表工坊|绘图|画图|制图|代码工坊|编程|代码|写作工坊|撰稿工坊|撰稿|润色|备赛路线|备赛|教练)\s*[·:：\-—]*\s*/iu, '')
+    .replace(/^[/／]?(?:生成|启动|运行)?(?:国奖|铸造|标杆|教学模拟研究|全链条演示|atypica|硅基推演|硅基深访|硅基访谈|硅基剧场|实时推演|绘图工坊|画图工坊|制图工坊|图表工坊|绘图|画图|制图|代码工坊|编程|代码|写作工坊|撰稿工坊|撰稿|润色|备赛路线|备赛|教练)\s*[·:：\-—]*\s*/iu, '')
     .replace(/^(?:五维|ipa|列联|卡方|帕累托|摘要|抽样|实证|对策|答辩)\s*[·:：\-—]*\s*/iu, '')
     .trim();
   const designRoom = ctx.light.rooms.find(r => r.room === 'design');
@@ -646,7 +646,12 @@ export function buildDemoTurn(ctx: RouterContext, query = ''): AgentTurn {
     ],
     cards,
     chips: [
-      recommend(say('按当前选题看图表', `打开图表工坊 · ${bp.shortTitle}`)),
+      recommend({
+        label: '⚡ 启动 Atypica × 硅基实时推演',
+        action: { type: 'siliconTheater', topic: bp.title, templateKey: inferSiliconTemplate(`${bp.title} ${ctx.design?.population ?? ''}`), size: 24, autoPlay: true },
+        primary: true,
+      }),
+      say('按当前选题看图表', `打开图表工坊 · ${bp.shortTitle}`),
       say('按当前选题看代码', `打开代码工坊 · ${bp.shortTitle}`),
       say('按当前选题看写作模板', `打开撰稿工坊 · ${bp.shortTitle}`),
       say('查看备赛路线'),
@@ -775,6 +780,82 @@ export function buildWritingStudioTurn(ctx: RouterContext, query = ''): AgentTur
       say('打开图表工坊', `打开图表工坊 · ${bp.shortTitle}`),
       say('打开代码工坊', `打开代码工坊 · ${bp.shortTitle}`),
       say('生成教学模拟研究'),
+    ],
+  };
+}
+
+export type SiliconTemplateKey = 'residents' | 'students' | 'seniors';
+
+export type SiliconTheaterCardData = {
+  topic: string;
+  shortTitle: string;
+  domainLabel: string;
+  templateKey: SiliconTemplateKey;
+  size: number;
+  hasBoundDesign: boolean;
+  questionCount: number;
+  populationLabel: string;
+  dimensions: string[];
+};
+
+export function inferSiliconTemplate(raw: string): SiliconTemplateKey {
+  if (/老年|老人|银发|高龄|助餐|养老|社区食堂|退休/u.test(raw)) return 'seniors';
+  if (/大学|高校|校园|本科|研究生|学生|青春|Z世代|二次元/u.test(raw)) return 'students';
+  return 'residents';
+}
+
+export function buildSiliconTheaterCardData(ctx: RouterContext, query = ''): SiliconTheaterCardData {
+  const bp = resolveActiveBlueprint(ctx, query);
+  const hasBoundDesign = Boolean(ctx.design && ctx.design.questions.length > 0);
+  const templateHint = `${query} ${ctx.design?.population ?? ''} ${ctx.design?.title ?? ''} ${bp.title}`;
+  return {
+    topic: ctx.design?.title?.trim() || bp.title,
+    shortTitle: bp.shortTitle,
+    domainLabel: bp.domainLabel,
+    templateKey: inferSiliconTemplate(templateHint),
+    size: 24,
+    hasBoundDesign,
+    questionCount: hasBoundDesign ? ctx.design!.questions.length : 12,
+    populationLabel: ctx.design?.population?.trim() || `${bp.groupA} / ${bp.groupB}`,
+    dimensions: bp.dimensions.map(d => d.short).slice(0, 5),
+  };
+}
+
+export function buildSiliconTheaterTurn(ctx: RouterContext, query = ''): AgentTurn {
+  const studio = buildSiliconTheaterCardData(ctx, query);
+  return {
+    lines: [
+      [
+        t('已就绪 '),
+        t('Atypica × 硅基样本 1:1 实时推演剧场', 'strong'),
+        t(`（《${studio.shortTitle}》· `),
+        t(studio.hasBoundDesign ? `绑定当前项目 ${studio.questionCount} 题问卷` : `自动构念 ${studio.questionCount} 题问卷`, 'teal'),
+        t(' · '),
+        t(`${studio.size} 位分层硅基受访者`, 'gold'),
+        t('）。所有回答标注为「硅基模拟 · 与真实调查分开」，推演结果可直接送入数据分析或写入报告预测试笔记。'),
+      ],
+    ],
+    cards: [
+      {
+        kind: 'silicon-theater',
+        title: `Atypica × 硅基推演 · 《${studio.shortTitle}》`,
+        studio,
+      },
+    ],
+    chips: [
+      recommend({
+        label: '⚡ 进入 1:1 实时推演主舞台',
+        action: {
+          type: 'siliconTheater',
+          topic: studio.topic,
+          templateKey: studio.templateKey,
+          size: studio.size,
+          autoPlay: true,
+        },
+        primary: true,
+      }),
+      { label: '打开右栏 3D 硅基舞台', action: { type: 'open', room: 'silicon' } },
+      say('生成教学模拟全案', `生成《${studio.shortTitle}》教学模拟研究`),
     ],
   };
 }

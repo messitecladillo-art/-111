@@ -33,9 +33,9 @@ export function useShowCode(owner: string | null): [boolean, (on: boolean) => vo
   return [value === '1', useCallback((on: boolean) => set(on ? '1' : '0'), [set])];
 }
 
-/** What fills the centre: the conversation, or the report itself with the conversation as a copilot beside it. */
-export type Stage = 'chat' | 'paper' | 'advisors';
-export const useStage = (owner: string | null) => useChoice<Stage>(owner, 'evix.agent.stage.v1:', ['chat', 'paper', 'advisors'], 'chat');
+/** What fills the centre: the conversation, the 1:1 Atypica silicon theater, the report itself, or the advisor roundtable. */
+export type Stage = 'chat' | 'theater' | 'paper' | 'advisors';
+export const useStage = (owner: string | null) => useChoice<Stage>(owner, 'evix.agent.stage.v1:', ['chat', 'theater', 'paper', 'advisors'], 'chat');
 
 /** The advisors this person has hired, as a comma list; the snapshot is the stored string, so it is stable between reads. */
 export function useHired(owner: string | null): [string[], (ids: string[]) => void] {

@@ -107,13 +107,13 @@
 .heroLead{max-width:660px;margin-top:22px!important;font-size:clamp(16px,1.55vw,19px);color:var(--mist);text-wrap:pretty}
 .heroActions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:28px}
 @media (prefers-reduced-motion:no-preference){
-  .char{animation:charIn 1.15s var(--ease) both;animation-delay:calc(var(--ci) * 60ms + .2s)}
-  .heroFoil{animation:foilIn 1.5s var(--ease) .75s both,foilShift 8s ease-in-out 2.3s infinite alternate}
-  .badge{animation:fadeUp 1s var(--ease) both}
-  .heroLead{animation:fadeUp 1.1s var(--ease) 1.05s both}
-  .heroActions{animation:fadeUp 1.1s var(--ease) 1.2s both}
-  .eclipse[data-variant=hero]{animation:eclipseRise 2.2s var(--ease) both}
-  .heroWindowWrap{animation:windowRise 1.8s var(--ease) 1s both}
+  .char{animation:charIn .65s var(--ease) both;animation-delay:calc(var(--ci) * 24ms + .04s)}
+  .heroFoil{animation:foilIn .75s var(--ease) .28s both,foilShift 8s ease-in-out 1.4s infinite alternate}
+  .badge{animation:fadeUp .55s var(--ease) both}
+  .heroLead{animation:fadeUp .6s var(--ease) .32s both}
+  .heroActions{animation:fadeUp .6s var(--ease) .4s both}
+  .eclipse[data-variant=hero]{animation:eclipseRise 1.2s var(--ease) both}
+  .heroWindowWrap{animation:windowRise .95s var(--ease) .35s both}
 }
 @keyframes charIn{from{opacity:0;transform:translateY(.5em) rotateX(-85deg);filter:blur(14px)}to{opacity:1;transform:none;filter:blur(0)}}
 @keyframes foilIn{from{opacity:0;clip-path:inset(0 100% 0 0);transform:translateY(.15em)}to{opacity:1;clip-path:inset(0 0 0 0);transform:none}}

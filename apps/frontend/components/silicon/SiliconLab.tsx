@@ -8,7 +8,7 @@ import type { DesignSnapshot } from '@/lib/questionnaire-mapping';
 import { defaultConfig, parseConfig, type LabConfig } from '@/lib/silicon/config';
 import { siliconExampleQuestionnaire } from '@/lib/silicon/example';
 import { NEUTRAL_HALO, stageCategoryColor } from '@/lib/silicon/palette';
-import { ACCESSORY_KINDS, FIGURE_PALETTE, HAIR_TONES, HAT_KINDS, attributeIssues, describePersona, fidelityRisk, generatePanel, type AccessoryKind, type Appearance, type HatKind, type Persona, type PersonaAttribute } from '@/lib/silicon/persona';
+import { ACCESSORY_KINDS, FIGURE_PALETTE, HAIR_TONES, HAT_KINDS, attributeIssues, describePersona, fidelityRisk, generatePanel, synthesizePersonaProfile, type AccessoryKind, type Appearance, type HatKind, type Persona, type PersonaAttribute } from '@/lib/silicon/persona';
 import { NO_SCENARIO, answerLabel, demoRun, designFingerprint, renderQuestionText, type RunProgress, type RunSettings, type SiliconAnswer, type SiliconRun, type SiliconRunRequest } from '@/lib/silicon/run';
 import type { FigureActivity, StageFigure, StageTip } from './PersonaStage';
 import PanelDesigner from './PanelDesigner';
@@ -20,6 +20,10 @@ import styles from './SiliconLab.module.css';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 
 const PersonaStage = dynamic(() => import('./PersonaStage'), { ssr: false, loading: () => <div className={styles.stageLoading} role="status">正在搭建舞台…</div> });
+const AtypicaLiveTheater = dynamic(() => import('./AtypicaLiveTheater'), {
+  ssr: false,
+  loading: () => <div className={styles.stageLoading} role="status">正在开启 1:1 实时推演剧场…</div>,
+});
 
 export type SiliconRunner = {
   models: ModelOption[];
@@ -67,6 +71,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const [visited, setVisited] = useState<Step[]>(['panel']);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [flat, setFlat] = useState(false);
+  const [liveTheaterOpen, setLiveTheaterOpen] = useState(false);
   const [webgl, setWebgl] = useState(true);
   const [stageGroup, setStageGroup] = useState('none');
   const [stageScenario, setStageScenario] = useState('');
@@ -170,17 +175,20 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const describe = useCallback((id: string): StageTip | null => {
     const p = personas.find(x => x.id === id);
     if (!p) return null;
+    const profile = synthesizePersonaProfile(p, panelAttributes, design.title);
     const risk = fidelityRisk(p);
     const resp = responseOf(id);
     const q = groupChoice.startsWith('answer:') ? runDesign?.questions.find(x => x.id === groupChoice.slice(7)) : null;
     const answer = q && resp ? resp.answers.find(a => a.questionId === q.id) : null;
     return {
-      title: p.code,
+      title: `${profile.alias} · ${p.code}`,
       meta: panelAttributes.map(a => p.traits[a.key]).filter(Boolean).join(' · '),
-      lines: answer ? [answer.shown ? (answer.refused ? '跳过了这道题' : `回答：${answerLabel(q!, answer.value)}`) : '没有看到这道题'] : [],
+      lines: answer
+        ? [answer.shown ? (answer.refused ? '跳过了这道题' : `回答：${answerLabel(q!, answer.value)}`) : '没有看到这道题', `“${profile.catchphrase.slice(0, 26)}…”`]
+        : [`“${profile.catchphrase.slice(0, 32)}…”`],
       flag: risk.level === 'elevated' ? `保真度风险：${risk.reasons.join('、')}` : undefined,
     };
-  }, [personas, responseOf, groupChoice, runDesign, panelAttributes]);
+  }, [personas, responseOf, groupChoice, runDesign, panelAttributes, design.title]);
 
   const editPersona = (id: string, patch: { appearance?: Appearance; background?: string }) => update({ overrides: { ...config.overrides, [id]: { ...config.overrides[id], ...patch } } });
 
@@ -225,6 +233,23 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   const gotoStep = (next: Step) => { setStep(next); setVisited(v => v.includes(next) ? v : [...v, next]); requestAnimationFrame(() => stepsRef.current?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })); };
   const focusQuestion = (questionId: string) => { if (runDesign?.questions.some(q => q.id === questionId && (q.type === 'single' || q.type === 'likert'))) setStageGroup(`answer:${questionId}`); window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' }); };
 
+  const openLiveTheater = () => {
+    if (!run || stale) {
+      const designAtRun = structuredClone(design);
+      const next = demoRun(designAtRun, panelAttributes, personas, settings);
+      setRun(next);
+      setRunDesign(designAtRun);
+    }
+    setLiveTheaterOpen(v => !v);
+  };
+
+  const liveRunData = useMemo(() => {
+    if (!liveTheaterOpen) return null;
+    if (run && runDesign && !stale) return { design: runDesign, run };
+    const snap = structuredClone(design);
+    return { design: snap, run: demoRun(snap, panelAttributes, personas, settings) };
+  }, [liveTheaterOpen, run, runDesign, stale, design, panelAttributes, personas, settings]);
+
   const groupOptions = [
     { value: 'none', label: '全体站位' },
     ...panelAttributes.map(a => ({ value: `attr:${a.key}`, label: `按${a.label}分组` })),
@@ -243,7 +268,7 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       </nav>
     <header ref={theatreRef} className={styles.theatre} data-layout={showFlat || narrow ? 'stacked' : 'overlay'} data-flat={showFlat} data-received={!!reveal}>
       <div className={styles.stage}>
-        {showFlat ? <FlatStage figures={figures} groups={groups} personas={personas} selectedId={selectedId} onSelect={setSelectedId}/> :
+        {showFlat ? <FlatStage figures={figures} groups={groups} personas={personas} attributes={panelAttributes} selectedId={selectedId} onSelect={setSelectedId}/> :
           <PersonaStage figures={figures} groups={groups} selectedId={selectedId} onSelect={setSelectedId} describe={describe} reducedMotion={reducedMotion} onFallback={() => setWebgl(false)} stacked={narrow} label={`3D 舞台：${personas.length} 位硅基受访者${groups.length > 1 ? `，分为 ${groups.length} 组` : ''}。可拖动旋转，点击人物查看设定；同样的信息可在平面名册中浏览。`}/>}
       </div>
       <div className={styles.theatreTop}>
@@ -257,10 +282,13 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       </div>
       <div ref={barRef} className={styles.theatreBar}>
         <label className={styles.stageSelect}><span>舞台分组</span><select value={groupChoice} onChange={e => setStageGroup(e.target.value)}>{groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
-        <label className={styles.stageSelect}><span>选中画像</span><select aria-label="选择舞台画像" value={selected?.id ?? ''} onChange={e => setSelectedId(e.target.value || null)}><option value="">查看全体</option>{personas.map(p => <option key={p.id} value={p.id}>{p.code} · {panelAttributes.map(a => p.traits[a.key]).filter(Boolean).join(' · ')}</option>)}</select></label>
+        <label className={styles.stageSelect}><span>选中画像</span><select aria-label="选择舞台画像" value={selected?.id ?? ''} onChange={e => setSelectedId(e.target.value || null)}><option value="">查看全体</option>{personas.map(p => <option key={p.id} value={p.id}>{synthesizePersonaProfile(p, panelAttributes).alias} ({p.code}) · {panelAttributes.map(a => p.traits[a.key]).filter(Boolean).join(' · ')}</option>)}</select></label>
         {run && groupChoice.startsWith('answer:') && run.settings.scenarios.length > 1 && <label className={styles.stageSelect}><span>情境</span><select value={activeScenario} onChange={e => setStageScenario(e.target.value)}>{run.settings.scenarios.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>}
         {run && groupChoice.startsWith('answer:') && run.settings.models.length > 1 && <label className={styles.stageSelect}><span>模型</span><select value={activeModel} onChange={e => setStageModel(e.target.value)}>{run.settings.models.map(m => <option key={m} value={m}>{m}</option>)}</select></label>}
         <button type="button" className={styles.viewToggle} aria-pressed={showFlat} disabled={!webgl} onClick={() => setFlat(v => !v)}>{showFlat ? '3D 舞台' : '平面名册'}</button>
+        <button type="button" className={`${styles.viewToggle} ${styles.atypicaToggle}`} aria-pressed={liveTheaterOpen} onClick={openLiveTheater}>
+          {liveTheaterOpen ? '✕ 收起实时剧场' : '⚡ 1:1 实时推演剧场'}
+        </button>
         <span className={styles.theatreMeta} role="status">{personas.length} 位 · {settings.scenarios.length || 1} 个情境 · {engineLabel}{running ? ` · 正在等待${progress ? ` · 进度 ${progress.done}/${progress.total}` : ''}` : run ? (stale ? ' · 结果已过期' : run.status === 'outcome_unknown' ? ' · 待对账' : ' · 已运行') : ' · 未运行'}</span>
       </div>
       {legend.length > 0 && <ul className={styles.stageLegend} aria-label="光环颜色图例">{legend.map(l => <li key={l.label}><i style={{ background: l.color }}/>{l.label}</li>)}</ul>}
@@ -269,6 +297,26 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
       </button>}
       {selected && <PersonaInspector persona={selected} attributes={panelAttributes} run={run} runDesign={runDesign} response={responseOf(selected.id) ?? null} sharedBackground={config.background} onClose={() => setSelectedId(null)} onEdit={patch => editPersona(selected.id, patch)} onReset={() => { const { [selected.id]: _removed, ...rest } = config.overrides; void _removed; update({ overrides: rest }); }}/>}
     </header>
+
+    {liveTheaterOpen && liveRunData && (
+      <div className={styles.theaterMount}>
+        <AtypicaLiveTheater
+          design={liveRunData.design}
+          attributes={panelAttributes}
+          personas={personas}
+          settings={settings}
+          run={liveRunData.run}
+          expectations={config.expectations}
+          autoPlay
+          onClose={() => setLiveTheaterOpen(false)}
+          onSendToAnalysis={onSendToAnalysis}
+          onOpenReportAction={() => {
+            setLiveTheaterOpen(false);
+            gotoStep('results');
+          }}
+        />
+      </div>
+    )}
 
     <div className={styles.workflow} ref={stepsRef}>
       <div className={styles.stepBody}>
@@ -293,15 +341,15 @@ export default function SiliconLab({ designSnapshot = null, runner = null, onSen
   </section>;
 }
 
-function FlatStage({ figures, groups, personas, selectedId, onSelect }: { figures: StageFigure[]; groups: ReadonlyArray<{ key: string; label: string }>; personas: Persona[]; selectedId: string | null; onSelect: (id: string) => void }) {
+function FlatStage({ figures, groups, personas, attributes, selectedId, onSelect }: { figures: StageFigure[]; groups: ReadonlyArray<{ key: string; label: string }>; personas: Persona[]; attributes: PersonaAttribute[]; selectedId: string | null; onSelect: (id: string) => void }) {
   const byId = new Map(personas.map(p => [p.id, p]));
   const listRef = useKeyedListMotion<HTMLDivElement>({ ids: figures.map(f => f.id), activeId: selectedId });
   return <div ref={listRef} className={styles.flatStage}>
     {groups.map(g => { const members = figures.filter(f => f.group === g.key); return members.length ? <section key={g.key} aria-label={`${g.label}，${members.length} 位`}>
       {groups.length > 1 && <h3>{g.label}<small>{members.length} 位</small></h3>}
-      <ul>{members.map(f => { const p = byId.get(f.id)!; return <li key={f.id} data-motion-id={f.id} data-activity={f.activity}>
-        <button type="button" aria-pressed={selectedId === f.id} onClick={() => onSelect(f.id)} style={f.halo ? { boxShadow: `inset 0 -3px 0 ${f.halo}` } : undefined} aria-label={`${f.code}${f.activity === 'flagged' ? '，有作答困惑' : ''}`}>
-          <PersonaAvatar appearance={p.appearance} size={40}/><span>{f.code}</span>
+      <ul>{members.map(f => { const p = byId.get(f.id)!; const prof = synthesizePersonaProfile(p, attributes); return <li key={f.id} data-motion-id={f.id} data-activity={f.activity}>
+        <button type="button" aria-pressed={selectedId === f.id} onClick={() => onSelect(f.id)} style={f.halo ? { boxShadow: `inset 0 -3px 0 ${f.halo}` } : undefined} aria-label={`${prof.alias} (${f.code})${f.activity === 'flagged' ? '，有作答困惑' : ''}`}>
+          <PersonaAvatar appearance={p.appearance} size={40}/><span>{prof.alias.split(' · ').pop()}</span>
         </button>
       </li>; })}</ul>
     </section> : null; })}
@@ -317,25 +365,37 @@ function PersonaInspector({ persona, attributes, run, runDesign, response, share
   const tabsRef = useKeyedListMotion<HTMLDivElement>({ ids: ['profile', 'look', 'answers'], activeId: tab, markerAxis: 'horizontal' });
   const headRef = useContentReveal<HTMLElement>({ token: persona.id });
   const answerRef = useContentReveal<HTMLDivElement>({ token: response && run ? `${run.id}:${persona.id}:${response.scenarioId}:${response.model}` : null, enabled: tab === 'answers' });
+  const profile = synthesizePersonaProfile(persona, attributes, run?.questionnaire.title);
   const risk = fidelityRisk(persona);
   const look = persona.appearance;
   const set = (patch: Partial<Appearance>) => onEdit({ appearance: { ...look, ...patch } });
   const answers = new Map<string, SiliconAnswer>();
   const scenario = run?.settings.scenarios.find(s => s.id === response?.scenarioId) ?? NO_SCENARIO;
-  return <aside className={styles.inspector} id="sx-inspector" aria-label={`${persona.code} 的设定`}>
+  return <aside className={styles.inspector} id="sx-inspector" aria-label={`${profile.alias} (${persona.code}) 的设定`}>
     <header ref={headRef}>
       <PersonaAvatar appearance={look} size={56}/>
-      <div><strong>{persona.code}</strong><small>{attributes.map(a => persona.traits[a.key]).filter(Boolean).join(' · ')}</small>{risk.level === 'elevated' && <span className={styles.riskTag}>保真度风险 · {risk.reasons.join('、')}</span>}</div>
+      <div>
+        <strong>{profile.alias} <code className={styles.codePill}>{persona.code}</code></strong>
+        <small>{profile.archetype} · {attributes.map(a => persona.traits[a.key]).filter(Boolean).slice(0, 3).join(' · ')}</small>
+        {risk.level === 'elevated' && <span className={styles.riskTag}>保真度风险 · {risk.reasons.join('、')}</span>}
+      </div>
       <button type="button" className={styles.iconButton} onClick={onClose} aria-label="关闭设定面板">×</button>
     </header>
     <div ref={tabsRef} className={styles.miniTabs} role="group" aria-label="设定面板内容"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
-      <button type="button" data-motion-id="profile" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}>设定</button>
+      <button type="button" data-motion-id="profile" aria-pressed={tab === 'profile'} onClick={() => setTab('profile')}>人设档案</button>
       <button type="button" data-motion-id="look" aria-pressed={tab === 'look'} onClick={() => setTab('look')}>外观</button>
-      <button type="button" data-motion-id="answers" aria-pressed={tab === 'answers'} disabled={!run} onClick={() => setTab('answers')}>作答记录</button>
+      <button type="button" data-motion-id="answers" aria-pressed={tab === 'answers'} disabled={!run} onClick={() => setTab('answers')}>访谈实录</button>
     </div>
     <div className={styles.inspectorBody} hidden={tab !== 'profile'}>
+      <p className={styles.provenanceLine}>{profile.provenance}</p>
+      <div className={styles.tagPills}>{profile.tags.map(t => <span key={t} className={styles.tagPill}>{t}</span>)}</div>
+      <blockquote className={styles.personaQuote}>“{profile.catchphrase}”</blockquote>
+      <div className={styles.personaDossier}>
+        {profile.monologue.split('\n\n').map((para, i) => <p key={i}>{para}</p>)}
+        <small>语调准则：{profile.toneRule}</small>
+      </div>
       <dl className={styles.traits}>{attributes.map(a => <div key={a.key}><dt>{a.label}</dt><dd>{persona.traits[a.key] ?? '未设定'}</dd></div>)}</dl>
-      <label className={styles.wideField}><span>个人背景（覆盖共同背景）</span><textarea rows={3} maxLength={240} value={persona.background} placeholder={sharedBackground || '例如：家住校外，每周取件 3 次左右。'} onChange={e => onEdit({ background: e.target.value })}/></label>
+      <label className={styles.wideField}><span>个人背景（覆盖共同背景）</span><textarea rows={2} maxLength={240} value={persona.background} placeholder={sharedBackground || '例如：家住校外，每周取件 3 次左右。'} onChange={e => onEdit({ background: e.target.value })}/></label>
       <details className={styles.promptPreview}><summary>模型将看到的身份设定</summary><p>{describePersona(persona, attributes)}</p><small>外观只用于舞台辨认，不发送给模型。</small></details>
     </div>
     <div className={styles.inspectorBody} hidden={tab !== 'look'}>
@@ -346,16 +406,25 @@ function PersonaInspector({ persona, attributes, run, runDesign, response, share
       <label className={styles.inlineField}><span>身高</span><input type="range" min={0.86} max={1.14} step={0.01} value={look.height} onChange={e => set({ height: Number(e.target.value) })}/></label>
       <button type="button" className={styles.linkButton} onClick={onReset}>恢复默认外观与背景</button>
     </div>
-    {run && runDesign && <div ref={answerRef} className={styles.inspectorBody} hidden={tab !== 'answers'} tabIndex={0} role="region" aria-label={`${persona.code} 的作答记录`}>
+    {run && runDesign && <div ref={answerRef} className={styles.inspectorBody} hidden={tab !== 'answers'} tabIndex={0} role="region" aria-label={`${profile.alias} 的访谈实录`}>
       {!response ? <p className={styles.hint}>这位受访者没有参加当前情境 / 模型的运行。</p> : response.status === 'failed' ? <p className={styles.errorNote}>本次调用失败：{response.error || '未返回原因'}</p> : response.status === 'outcome_unknown' ? <p className={styles.errorNote}>调用结果未知（{response.error || '未返回原因'}）：供应商可能已处理并计费，未自动重发。</p> :
-        <ol className={styles.transcript}>{runDesign.questions.map(q => {
+        <ol className={styles.chatTranscript}>{runDesign.questions.map(q => {
           const a = response.answers.find(x => x.questionId === q.id);
           const text = renderQuestionText(runDesign, q, scenario, answers);
           if (a) answers.set(q.id, a);
           if (!a || !a.shown) return null;
-          return <li key={q.id}><p>{text}</p><strong>{a.refused ? '（跳过）' : answerLabel(q, a.value)}</strong>{a.unclear && <em>{a.unclear}</em>}</li>;
+          return <li key={q.id} className={styles.chatExchange}>
+            <div className={styles.chatHost}><span>证见主持</span><p>{text}</p></div>
+            <div className={styles.chatGuest}>
+              <span>{profile.alias}</span>
+              <div>
+                <strong>{a.refused ? '（跳过本题）' : answerLabel(q, a.value)}</strong>
+                {a.unclear && <em>💭 {a.unclear}</em>}
+              </div>
+            </div>
+          </li>;
         })}</ol>}
-      <p className={styles.small}>{run.engine === 'demo' ? '来源：离线随机作答。' : '来源：模型模拟作答。'}</p>
+      <p className={styles.small}>{run.engine === 'demo' ? '来源：离线演示引擎推演（仅供预测试）。' : '来源：硅基模型模拟作答。'}</p>
     </div>}
   </aside>;
 }

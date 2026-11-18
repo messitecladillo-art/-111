@@ -130,14 +130,6 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
       onClick={() => { onClick(); setMenu(null); }}>{label}{extra.note && <small>{extra.note}</small>}</button>;
 
   return <div ref={wrap} className={styles.composerWrap}>
-    <div className={styles.contextRow}>
-      <button type="button" className={styles.contextChip} aria-haspopup="menu" aria-expanded={menu === 'project'} onClick={() => toggle('project')}>
-        <Icon name="folder" />{project ? project.label : '选择项目'}
-      </button>
-      <span className={styles.contextChip} data-static="true" title={project ? '这段对话归入云端项目，模型提案存在项目里' : '对话和模块里的草稿都留在这台电脑的浏览器里'}>
-        <Icon name={project ? 'cloud' : 'monitor'} />{project ? '云端项目' : '本地草稿'}
-      </span>
-    </div>
     {menu === 'project' && <div className={styles.menu} data-place="above" role="menu" aria-label="选择项目" aria-describedby={account !== 'ready' ? 'agent-project-note' : undefined} style={{ left: 10 }}>
       {account !== 'ready' ? <>
         <p id="agent-project-note" className={styles.menuNote} aria-hidden="true">登录后，可以把对话归入你的项目；模型提案也会存进项目。</p>
@@ -153,6 +145,17 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
       </>}
     </div>}
     <form className={styles.composer} onSubmit={event => { event.preventDefault(); send(value); }}>
+      <div className={styles.composerContextBar}>
+        <button type="button" className={styles.contextInlineBtn} aria-haspopup="menu" aria-expanded={menu === 'project'} onClick={() => toggle('project')}>
+          <Icon name="folder" /><span>{project ? project.label : '选择项目'}</span><Icon name="down" />
+        </button>
+        <span className={styles.contextDivider} aria-hidden="true">/</span>
+        <span className={styles.contextBadge} title={project ? '这段对话归入云端项目，模型提案存在项目里' : '对话和模块里的草稿都留在这台电脑的浏览器里'}>
+          <Icon name={project ? 'cloud' : 'monitor'} />{project ? '云端项目' : '本地草稿'}
+        </span>
+        <span className={styles.spacer} />
+        <span className={styles.slashInlineHint}>键入 <kbd>/</kbd> 呼出指令</span>
+      </div>
       {options.length > 0 && <div className={styles.menu} data-place="above" id="agent-commands" role="listbox" aria-label="命令" style={{ left: 8, right: 8, maxWidth: 'none' }}>
         {options.map((command, i) => <div key={command.name} id={`agent-command-${i}`} role="option" aria-selected={i === selected} className={styles.option}
           onPointerDown={event => event.preventDefault()} onPointerEnter={() => setActive(i)} onClick={() => complete(i, true)}>
@@ -162,7 +165,7 @@ export default function Composer({ onSend, inputRef, account, onNeedLists, proje
       <textarea ref={inputRef} id="agent-command-line" rows={1} value={value} spellCheck={false} enterKeyHint="send"
         onCompositionStart={()=>{composing.current=true;}}
         onCompositionEnd={()=>{composing.current=false;if(queued.current.length){const additions=queued.current.splice(0),epoch=draftEpoch.current;window.setTimeout(()=>{if(epoch!==draftEpoch.current)return;const next=[draftValue.current,...additions].filter(Boolean).join('\n\n');draftValue.current=next;setValue(next);},0);}}}
-        placeholder="用自然语言交流研究思路、核查数据或调度模块（键入 / 呼出快捷命令）" aria-label="对证见说" aria-autocomplete="list"
+        placeholder="用自然语言交流研究思路、核查数据或调度模块" aria-label="对证见说" aria-autocomplete="list"
         aria-controls={options.length ? 'agent-commands' : undefined} aria-activedescendant={selected >= 0 ? `agent-command-${selected}` : undefined}
         onChange={event => change(event.target.value)} onKeyDown={key} />
       <div className={styles.toolbar}>

@@ -4,13 +4,15 @@ import { useMemo, useState } from 'react';
 import { distribution, estimateMinutes, fidelityReport, pretestFindings, refLabel, type Expectation, type FidelityReport, type Finding, type VarRef, type Verdict } from '@/lib/silicon/assess';
 import { disclosureText, siliconCsv, siliconRunJson } from '@/lib/silicon/export';
 import type { Questionnaire } from '@/lib/questionnaire';
-import type { SiliconRun } from '@/lib/silicon/run';
+import { synthesizePersonaProfile } from '@/lib/silicon/persona';
+import { answerLabel, NO_SCENARIO, renderQuestionText, type SiliconAnswer, type SiliconRun } from '@/lib/silicon/run';
 import AnswerChart from './AnswerChart';
+import PersonaAvatar from './PersonaAvatar';
 import styles from './SiliconLab.module.css';
 import { useContentReveal, useKeyedListMotion } from '@/components/motion/useWorkspaceMotion';
 
 export type DatasetHandoff = { id: string; name: string; csv: string };
-type Tab = 'findings' | 'fidelity' | 'answers' | 'export';
+type Tab = 'findings' | 'theater' | 'fidelity' | 'answers' | 'export';
 type Props = {
   design: Questionnaire; run: SiliconRun; stale: boolean; expectations: Expectation[];
   setExpectations: (next: Expectation[]) => void; onSendToAnalysis?: (handoff: DatasetHandoff) => void;
@@ -41,7 +43,7 @@ export default function ResultsBoard({ design, run, stale, expectations, setExpe
   const ok = run.responses.filter(r => r.status === 'ok').length, unknown = run.responses.filter(r => r.status === 'outcome_unknown').length, failed = run.responses.length - ok - unknown;
   const minutes = estimateMinutes(design);
   const counts = { blocker: findings.filter(f => f.level === 'blocker').length, warning: findings.filter(f => f.level === 'warning').length };
-  const tabsRef = useKeyedListMotion<HTMLDivElement>({ ids: ['findings', 'fidelity', 'answers', 'export'], activeId: tab, markerAxis: 'horizontal' });
+  const tabsRef = useKeyedListMotion<HTMLDivElement>({ ids: ['findings', 'theater', 'fidelity', 'answers', 'export'], activeId: tab, markerAxis: 'horizontal' });
   const statsRef = useContentReveal<HTMLDivElement>({ token: run.id });
 
   return <div className={styles.results}>
@@ -53,9 +55,9 @@ export default function ResultsBoard({ design, run, stale, expectations, setExpe
       <article><span>估计作答时长</span><strong>{minutes.low}–{minutes.high} 分钟</strong><small>按字数与题型估算，非实测</small></article>
     </div>
     <div ref={tabsRef} className={styles.tabs} role="tablist" aria-label="结果类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
-      {([['findings', '预测试发现'], ['fidelity', '保真度检验'], ['answers', '答案分布'], ['export', '导出与披露']] as Array<[Tab, string]>).map(([key, label]) =>
+      {([['findings', '预测试发现'], ['theater', '访谈与圆桌'], ['fidelity', '保真度检验'], ['answers', '答案分布'], ['export', '导出与披露']] as Array<[Tab, string]>).map(([key, label]) =>
         <button type="button" role="tab" key={key} data-motion-id={key} id={`sx-tab-${key}`} aria-selected={tab === key} aria-controls={`sx-panel-${key}`} tabIndex={tab === key ? 0 : -1} onClick={() => setTab(key)} onKeyDown={e => {
-          const keys: Tab[] = ['findings', 'fidelity', 'answers', 'export'];
+          const keys: Tab[] = ['findings', 'theater', 'fidelity', 'answers', 'export'];
           if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
           e.preventDefault();
           const next = keys[(keys.indexOf(key) + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length];
@@ -63,6 +65,7 @@ export default function ResultsBoard({ design, run, stale, expectations, setExpe
         }}>{label}</button>)}
     </div>
     <div role="tabpanel" id="sx-panel-findings" aria-labelledby="sx-tab-findings" className={styles.tabPanel} hidden={tab !== 'findings'}><FindingsList findings={findings} design={design} onFocusQuestion={onFocusQuestion}/></div>
+    <div role="tabpanel" id="sx-panel-theater" aria-labelledby="sx-tab-theater" className={styles.tabPanel} hidden={tab !== 'theater'}><InterviewTheaterPanel design={design} run={run} onFocusQuestion={onFocusQuestion}/></div>
     <div role="tabpanel" id="sx-panel-fidelity" aria-labelledby="sx-tab-fidelity" className={styles.tabPanel} hidden={tab !== 'fidelity'}><Fidelity report={report} design={design} run={run} expectations={expectations} setExpectations={setExpectations}/></div>
     <div role="tabpanel" id="sx-panel-answers" aria-labelledby="sx-tab-answers" className={styles.tabPanel} hidden={tab !== 'answers'}><Answers design={design} run={run}/></div>
     <div role="tabpanel" id="sx-panel-export" aria-labelledby="sx-tab-export" className={styles.tabPanel} hidden={tab !== 'export'}><ExportPanel design={design} run={run} onSendToAnalysis={onSendToAnalysis}/></div>
@@ -188,5 +191,204 @@ function ExportPanel({ design, run, onSendToAnalysis }: { design: Questionnaire;
     </div>
     <label className={styles.wideField}><span>AI 使用说明（可放入报告的方法部分，最后一段请据实填写）</span><textarea readOnly rows={7} value={text}/></label>
     <button type="button" className={styles.linkButton} onClick={() => { void navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }); }}>{copied ? '已复制' : '复制说明文字'}</button>
+  </div>;
+}
+
+function InterviewTheaterPanel({ design, run, onFocusQuestion }: { design: Questionnaire; run: SiliconRun; onFocusQuestion: (questionId: string) => void }) {
+  const [mode, setMode] = useState<'interview' | 'roundtable' | 'matrix'>('interview');
+  const respondents = useMemo(() => run.personas.slice(0, 10), [run.personas]);
+  const [activeId, setActiveId] = useState<string>(respondents[0]?.id ?? '');
+  const [copiedTable, setCopiedTable] = useState(false);
+
+  const activePersona = respondents.find(p => p.id === activeId) ?? respondents[0] ?? null;
+  const profiles = useMemo(
+    () => new Map(respondents.map(p => [p.id, synthesizePersonaProfile(p, run.attributes, design.title)])),
+    [respondents, run.attributes, design.title],
+  );
+  const scenario = run.settings.scenarios[0] ?? NO_SCENARIO;
+  const activeResponse = activePersona ? run.responses.find(r => r.personaId === activePersona.id && r.scenarioId === scenario.id) ?? run.responses.find(r => r.personaId === activePersona.id) : null;
+  const keyQuestions = useMemo(() => design.questions.slice(0, 5), [design.questions]);
+
+  const roundtableTurns = useMemo(() => {
+    const cast = respondents.slice(0, 4);
+    const focusQ = design.questions.find(q => q.type === 'likert') ?? design.questions[0];
+    return cast.map((p, idx) => {
+      const prof = profiles.get(p.id)!;
+      const next = cast[(idx + 1) % cast.length];
+      const nextProf = profiles.get(next.id)!;
+      const resp = run.responses.find(r => r.personaId === p.id && r.status === 'ok');
+      const ans = focusQ && resp ? resp.answers.find(a => a.questionId === focusQ.id) : undefined;
+      const ansText = ans && ans.shown && focusQ ? (ans.refused ? '跳过未作答' : answerLabel(focusQ, ans.value)) : '视具体情境而定';
+      const reaction = idx === 0
+        ? `我先直说自己的第一反应：面对「${focusQ?.text.slice(0, 22) || design.title}」，我的选择是「${ansText}」。${prof.catchphrase}`
+        : `接着前面几位说的，我（${prof.archetype}）其实挺有同感，但站我日常习惯来看，「${ansText}」背后最卡人的一点是选项缺少真实生活边界——${prof.catchphrase}`;
+      const cueReason = idx < cast.length - 1
+        ? `由「${nextProf.archetype}」视角补充对照组反应，检验不同层级受访者是否对同一题干产生歧义`
+        : '收束本轮焦点讨论，交由研究者核对是否拆解双关题干';
+      return {
+        persona: p,
+        profile: prof,
+        answerText: ansText,
+        reaction,
+        unclear: ans?.unclear?.trim() || '',
+        nextName: idx < cast.length - 1 ? nextProf.alias : null,
+        cueReason,
+      };
+    });
+  }, [respondents, design.questions, design.title, profiles, run.responses]);
+
+  const matrixMarkdown = useMemo(() => {
+    const header = ['受访者（花名 · 编号）', ...keyQuestions.map(q => q.variable || q.id)];
+    const rows = respondents.map(p => {
+      const prof = profiles.get(p.id)!;
+      const resp = run.responses.find(r => r.personaId === p.id);
+      const cells = keyQuestions.map(q => {
+        const a = resp?.answers.find(x => x.questionId === q.id);
+        if (!a || !a.shown) return '未显示';
+        return a.refused ? '跳过' : answerLabel(q, a.value);
+      });
+      return [ `${prof.alias} (${p.code})`, ...cells ];
+    });
+    return [
+      `| ${header.join(' | ')} |`,
+      `| ${header.map(() => '---').join(' | ')} |`,
+      ...rows.map(r => `| ${r.join(' | ')} |`),
+    ].join('\n');
+  }, [respondents, keyQuestions, profiles, run.responses]);
+
+  if (!activePersona) return <div className={styles.emptyState}><p>暂无可播放的硅基受访者实录。</p></div>;
+
+  const activeProfile = profiles.get(activePersona.id)!;
+  const answerMemory = new Map<string, SiliconAnswer>();
+
+  return <div className={styles.theaterWrap}>
+    <div className={styles.theaterHead}>
+      <div className={styles.theaterModePills} role="tablist" aria-label="访谈呈现模式">
+        <button type="button" role="tab" aria-selected={mode === 'interview'} onClick={() => setMode('interview')}>💬 1v1 访谈实录</button>
+        <button type="button" role="tab" aria-selected={mode === 'roundtable'} onClick={() => setMode('roundtable')}>🔥 焦点小组圆桌</button>
+        <button type="button" role="tab" aria-selected={mode === 'matrix'} onClick={() => setMode('matrix')}>⊞ 受访者溯源矩阵</button>
+      </div>
+      <span className={styles.simBanner}>硅基模拟实录 · 严禁充当真实访谈样本</span>
+    </div>
+
+    {mode === 'interview' && (
+      <>
+        <div className={styles.theaterPersonaBar}>
+          <PersonaAvatar appearance={activePersona.appearance} size={46}/>
+          <div>
+            <strong>{activeProfile.alias} <code className={styles.codePill}>{activePersona.code}</code></strong>
+            <small>{activeProfile.archetype}</small>
+            <div className={styles.tagPills}>{activeProfile.tags.map(t => <span key={t} className={styles.tagPill}>{t}</span>)}</div>
+          </div>
+          <blockquote className={styles.inlineQuote}>“{activeProfile.catchphrase}”</blockquote>
+        </div>
+
+        <ol className={styles.chatTranscript}>
+          {design.questions.map((q, qi) => {
+            const a = activeResponse?.answers.find(x => x.questionId === q.id);
+            const promptText = renderQuestionText(design, q, scenario, answerMemory);
+            if (a) answerMemory.set(q.id, a);
+            if (!a || !a.shown) return null;
+            return <li key={q.id} className={styles.chatExchange}>
+              <div className={styles.chatHost}>
+                <span>证见主持 · Q{qi + 1} ({q.variable})</span>
+                <p>{promptText}</p>
+              </div>
+              <div className={styles.chatGuest}>
+                <PersonaAvatar appearance={activePersona.appearance} size={28}/>
+                <div>
+                  <span className={styles.chatGuestName}>{activeProfile.alias}</span>
+                  <strong>{a.refused ? '（选择跳过 / 不适用）' : answerLabel(q, a.value)}</strong>
+                  {a.unclear && (
+                    <em>
+                      💭 {a.unclear}{' '}
+                      <button type="button" className={styles.linkButton} onClick={() => onFocusQuestion(q.id)}>核查此题 →</button>
+                    </em>
+                  )}
+                </div>
+              </div>
+            </li>;
+          })}
+        </ol>
+
+        <div className={styles.respondentSwitcher} role="tablist" aria-label="切换受访者">
+          {respondents.map(p => {
+            const prof = profiles.get(p.id)!;
+            const hasFlag = run.responses.some(r => r.personaId === p.id && r.answers.some(a => a.unclear.trim()));
+            return <button key={p.id} type="button" role="tab" aria-selected={activePersona.id === p.id} className={styles.respondentPill} onClick={() => setActiveId(p.id)}>
+              <PersonaAvatar appearance={p.appearance} size={24}/>
+              <span>{prof.alias.split(' · ').pop()}</span>
+              <code className={styles.codePill}>{p.code}</code>
+              {hasFlag && <i className={styles.riskDot} title="该受访者在部分题目触发理解困惑" aria-label="有作答困惑"/>}
+            </button>;
+          })}
+        </div>
+      </>
+    )}
+
+    {mode === 'roundtable' && (
+      <div className={styles.roundtableList}>
+        <div className={styles.moderatorCard}>
+          <strong>● 证见主持 · 圆桌议题</strong>
+          <p>围绕《{design.title || '当前调查问卷'}》，请 4 位不同画像受访者互相回应刚才最容易卡顿或引起歧义的问题。</p>
+        </div>
+        {roundtableTurns.map((turn, idx) => (
+          <div key={turn.persona.id} className={styles.roundtableTurn}>
+            <div className={styles.roundtableSpeaker}>
+              <PersonaAvatar appearance={turn.persona.appearance} size={36}/>
+              <div>
+                <div className={styles.roundtableMeta}>
+                  <strong>{turn.profile.alias}</strong>
+                  <span className={styles.tagPill}>{turn.profile.archetype}</span>
+                  <code className={styles.codePill}>{turn.persona.code}</code>
+                </div>
+                <p>{turn.reaction}</p>
+                {turn.unclear && <em className={styles.roundtableFlag}>💭 题干阻断反馈：{turn.unclear}</em>}
+              </div>
+            </div>
+            {turn.nextName && (
+              <details className={styles.turnCue}>
+                <summary>@ {turn.nextName} · 接麦调度原因 ▾</summary>
+                <p>第 {idx + 1} 棒 → 下一位：{turn.cueReason}</p>
+              </details>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+
+    {mode === 'matrix' && (
+      <div className={styles.matrixBox}>
+        <div className={styles.matrixBar}>
+          <strong>受访者作答溯源矩阵（{respondents.length} 位 × {keyQuestions.length} 题）</strong>
+          <button type="button" className={styles.linkButton} onClick={() => { void navigator.clipboard?.writeText(matrixMarkdown).then(() => { setCopiedTable(true); setTimeout(() => setCopiedTable(false), 1800); }); }}>
+            {copiedTable ? '✓ 已复制 Markdown 表格' : '复制 Markdown 矩阵'}
+          </button>
+        </div>
+        <div className={styles.matrixScroll}>
+          <table className={styles.matrixTable}>
+            <thead>
+              <tr>
+                <th>受访者（花名 · 编号）</th>
+                {keyQuestions.map(q => <th key={q.id} title={q.text}>{q.variable || q.id}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {respondents.map(p => {
+                const prof = profiles.get(p.id)!;
+                const resp = run.responses.find(r => r.personaId === p.id);
+                return <tr key={p.id}>
+                  <td><button type="button" className={styles.linkButton} onClick={() => { setActiveId(p.id); setMode('interview'); }}>{prof.alias} <code>{p.code}</code></button></td>
+                  {keyQuestions.map(q => {
+                    const a = resp?.answers.find(x => x.questionId === q.id);
+                    return <td key={q.id}>{!a || !a.shown ? '未显示' : a.refused ? '跳过' : answerLabel(q, a.value)}</td>;
+                  })}
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
   </div>;
 }

@@ -166,6 +166,23 @@
 .viewToggle { cursor: pointer; }
 .viewToggle:hover:not(:disabled) { border-color: rgba(79, 209, 193, 0.6); }
 .viewToggle:disabled { opacity: 0.5; cursor: not-allowed; }
+.atypicaToggle {
+  border-color: rgba(57, 255, 90, 0.45);
+  background: rgba(34, 197, 94, 0.14);
+  color: #bbf7d0;
+  font-weight: 600;
+}
+.atypicaToggle:hover:not(:disabled) {
+  border-color: rgba(57, 255, 90, 0.85);
+  background: rgba(34, 197, 94, 0.24);
+}
+.atypicaToggle[aria-pressed="true"] {
+  background: #22c55e;
+  color: #08120a;
+}
+.theaterMount {
+  margin: 0;
+}
 .theatreMeta { margin-left: auto; font-size: 12px; color: rgba(241, 236, 224, 0.62); font-family: var(--wb-mono); letter-spacing: 0.02em; }
 .theatre[data-received="true"] .theatreMeta { animation: receipt 620ms var(--ease-arrive); }
 @keyframes receipt { from { color: #ffe3a6; } to { color: rgba(241,236,224,.62); } }
@@ -704,3 +721,254 @@
   .theatre:has(.inspector) .theatreTitle { max-width: calc(100% - 360px); }
   .theatre[data-layout="overlay"]:has(.inspector) { min-height: max(520px, calc(var(--sx-bar-height, 64px) + 420px)); }
 }
+
+/* ───────── Atypica-inspired Enriched Persona Dossiers & Interview Theater ───────── */
+.aliasName {
+  font-family: var(--wb-sans);
+  font-weight: 600;
+  color: var(--wb-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.codePill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--wb-well);
+  border: 1px solid var(--wb-line);
+  font-family: var(--wb-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--wb-muted);
+  white-space: nowrap;
+}
+.provenanceLine {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--wb-muted);
+}
+.tagPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--wb-line);
+  background: var(--wb-well);
+  color: var(--wb-text);
+  font-size: 11px;
+  font-weight: 500;
+}
+.personaQuote {
+  margin: 0;
+  padding: 8px 11px;
+  border-left: 3px solid var(--wb-accent);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--wb-accent) 7%, var(--wb-well));
+  font-size: 12.5px;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--wb-text);
+}
+.personaDossier {
+  display: grid;
+  gap: 7px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--wb-line);
+  background: var(--wb-well);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.personaDossier p { margin: 0; }
+.personaDossier small { color: var(--wb-accent); font-weight: 500; }
+
+.chatTranscript {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.chatExchange {
+  display: grid;
+  gap: 7px;
+}
+.chatHost {
+  justify-self: end;
+  max-width: 86%;
+  padding: 8px 12px;
+  border-radius: 12px 12px 2px 12px;
+  border: 1px solid color-mix(in srgb, var(--wb-accent) 45%, var(--wb-line));
+  background: color-mix(in srgb, var(--wb-accent) 8%, var(--wb-surface));
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.chatHost span {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--wb-mono);
+  font-size: 10.5px;
+  color: var(--wb-accent);
+  font-weight: 600;
+}
+.chatHost p { margin: 0; color: var(--wb-text); }
+.chatGuest {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  max-width: 90%;
+}
+.chatGuest > div {
+  padding: 8px 12px;
+  border-radius: 2px 12px 12px 12px;
+  border: 1px solid var(--wb-line);
+  background: var(--wb-surface);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.chatGuestName {
+  display: block;
+  font-size: 11px;
+  color: var(--wb-muted);
+  margin-bottom: 2px;
+}
+.chatGuest strong { color: var(--wb-text); }
+.chatGuest em {
+  display: block;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px dashed var(--wb-line);
+  font-style: normal;
+  font-size: 12px;
+  color: var(--sx-bad);
+}
+
+.theaterWrap { display: grid; gap: 14px; }
+.theaterHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.theaterModePills {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--wb-well);
+  border: 1px solid var(--wb-line);
+}
+.theaterModePills button {
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--wb-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.theaterModePills button[aria-selected="true"] {
+  background: var(--wb-surface);
+  color: var(--wb-text);
+  font-weight: 600;
+  box-shadow: var(--wb-shadow);
+}
+.theaterPersonaBar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--wb-line);
+  background: var(--wb-surface);
+}
+.theaterPersonaBar small {
+  display: block;
+  margin: 2px 0 6px;
+  color: var(--wb-muted);
+  font-size: 12px;
+}
+.inlineQuote {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding: 7px 11px;
+  border-left: 3px solid var(--wb-accent);
+  background: var(--wb-well);
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  font-style: italic;
+}
+.respondentSwitcher {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.respondentPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 5px 10px 5px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--wb-line);
+  background: var(--wb-surface);
+  color: var(--wb-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.respondentPill[aria-selected="true"] {
+  border-color: var(--wb-accent);
+  background: color-mix(in srgb, var(--wb-accent) 12%, var(--wb-surface));
+  font-weight: 600;
+}
+.roundtableList { display: grid; gap: 12px; }
+.moderatorCard {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--wb-accent) 45%, var(--wb-line));
+  background: color-mix(in srgb, var(--wb-accent) 8%, var(--wb-surface));
+}
+.moderatorCard strong { font-size: 12.5px; color: var(--wb-accent); }
+.moderatorCard p { margin: 4px 0 0; font-size: 13px; line-height: 1.55; }
+.roundtableTurn { display: grid; gap: 6px; }
+.roundtableSpeaker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--wb-line);
+  background: var(--wb-surface);
+}
+.roundtableMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 5px; }
+.roundtableSpeaker p { margin: 0; font-size: 13px; line-height: 1.6; }
+.roundtableFlag { display: block; margin-top: 6px; font-style: normal; font-size: 12px; color: var(--sx-bad); }
+.turnCue {
+  justify-self: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--wb-line-strong);
+  background: var(--wb-well);
+  font-size: 11.5px;
+  color: var(--wb-muted);
+}
+.turnCue summary { cursor: pointer; font-family: var(--wb-mono); }
+.turnCue p { margin: 4px 0 2px; font-size: 11.5px; color: var(--wb-text); }
+.matrixBox { display: grid; gap: 10px; }
+.matrixBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.matrixScroll { overflow-x: auto; border: 1px solid var(--wb-line); border-radius: 10px; }
+.matrixTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.matrixTable th, .matrixTable td { padding: 8px 10px; border-bottom: 1px solid var(--wb-line); text-align: left; white-space: nowrap; }
+.matrixTable th { background: var(--wb-well); font-family: var(--wb-mono); font-size: 11.5px; color: var(--wb-muted); }

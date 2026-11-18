@@ -21,6 +21,8 @@ export default function AnatomyStageCard({
   litCount,
   totalRooms = 4,
   defaultKind = 'survey',
+  activeKind,
+  onKindChange,
   busy = false,
 }: {
   overallScore: number;
@@ -28,9 +30,16 @@ export default function AnatomyStageCard({
   litCount: number;
   totalRooms?: number;
   defaultKind?: WorkKind;
+  activeKind?: WorkKind;
+  onKindChange?: (kind: WorkKind) => void;
   busy?: boolean;
 }) {
-  const [kind, setKind] = useState<WorkKind>(defaultKind);
+  const [internalKind, setInternalKind] = useState<WorkKind>(defaultKind);
+  const kind = activeKind ?? internalKind;
+  const selectKind = (next: WorkKind) => {
+    setInternalKind(next);
+    onKindChange?.(next);
+  };
   const current = STATIONS.find((s) => s.kind === kind) ?? STATIONS[0];
   const pct = Math.round(Math.max(0, Math.min(1, overallScore)) * 100);
   const phase = busy ? 'writing' : 'waiting';
@@ -55,7 +64,7 @@ export default function AnatomyStageCard({
               role="tab"
               aria-selected={kind === s.kind}
               className={styles.stageTab}
-              onClick={() => setKind(s.kind)}
+              onClick={() => selectKind(s.kind)}
             >
               <code>{s.short}</code>
               <span>{s.label}</span>
@@ -70,6 +79,7 @@ export default function AnatomyStageCard({
         kind={kind}
         heading={`${current.label}装置 · ${current.short}`}
         countUnit="环"
+        dialScore={overallScore}
         state={{
           phase,
           completed: litCount,

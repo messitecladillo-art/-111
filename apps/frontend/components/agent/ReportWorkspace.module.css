@@ -59,8 +59,11 @@
 .issueHint { margin-top: 2px; padding-left: 12px; font-size: 11px; color: var(--c-accent); font-weight: 500; opacity: 0.9; }
 
 /* The bar over the paper: crisp single-row glass studio bar matching the A4 sheet without horizontal clipping. */
-.toolbarWrap { position: sticky; top: 0; z-index: 3; max-width: min(100%, 960px); margin: 0 auto 10px; }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1px; width: fit-content; max-width: 100%; margin: 0 auto; padding: 3px 4px; border: 1px solid var(--c-line); border-radius: 14px; background: color-mix(in srgb, var(--c-raise) 88%, transparent); box-shadow: 0 2px 6px oklch(0% 0 0 / 0.045), 0 10px 26px -14px oklch(0% 0 0 / 0.16); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.toolbarWrap { position: sticky; top: 0; z-index: 3; max-width: min(100%, 840px); margin: 0 auto 6px; }
+.toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 1px; width: fit-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; margin: 0 auto; padding: 3px 4px; border: 1px solid var(--c-line); border-radius: 12px; background: color-mix(in srgb, var(--c-raise) 88%, transparent); box-shadow: 0 2px 6px oklch(0% 0 0 / 0.045), 0 10px 26px -14px oklch(0% 0 0 / 0.16); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.toolbar::-webkit-scrollbar { display: none; }
+.formatSeg { display: inline-flex; flex: none; padding: 2px; border-radius: 8px; background: var(--c-hover); }
+.formatSeg button { height: 22px; padding: 0 6px; border-radius: 6px; font-size: 10.5px; }
 .toolbar button { display: inline-flex; flex: none; flex-direction: row; align-items: center; gap: 3px; min-width: 0; height: 28px; padding: 0 5.5px; border: 0; border-radius: 9px; background: transparent; color: var(--c-dim); font: inherit; font-size: 11px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color 150ms var(--c-ease), color 150ms var(--c-ease), transform 120ms var(--c-ease); }
 .toolbar button svg { width: 13px; height: 13px; flex: none; }
 .toolbar button:hover:not(:disabled) { background: var(--c-hover); color: var(--c-fg); }

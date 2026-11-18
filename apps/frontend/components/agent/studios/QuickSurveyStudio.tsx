@@ -1,30 +1,69 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
 import type { EditorContent } from '@/lib/editor-model';
 import { parseEditorContent } from '@/lib/editor-model';
 import type { Questionnaire } from '@/lib/questionnaire';
 import { buildQuickQuestionnaire } from '@/lib/agent/studio-tools';
+import { demoRun, NO_SCENARIO } from '@/lib/silicon/run';
+
 import { reviewWjxExport } from '@/lib/questionnaire-platform-export';
 import QuestionnairePlatformExport from '@/components/design/QuestionnairePlatformExport';
 import {
   SURVEY_17_CATEGORY_TEMPLATES,
   SURVEY_DESIGN_BEST_PRACTICES,
 } from '@/data/zhengda-corpus-2015-2027';
-import { generateInterviewCorpus } from '@/lib/agent/interview-corpus-deai';
+import { detectAiFlavor, generateInterviewCorpus } from '@/lib/agent/interview-corpus-deai';
+import PersonaAvatar from '@/components/silicon/PersonaAvatar';
+import {
+  generatePanel,
+  PANEL_TEMPLATES,
+  synthesizePersonaProfile,
+  type Persona,
+  type PersonaProfile,
+} from '@/lib/silicon/persona';
 import styles from './Studio.module.css';
+
+const AtypicaLiveTheater = dynamic(() => import('@/components/silicon/AtypicaLiveTheater'), {
+  ssr: false,
+});
+
+interface RoundtableTurn {
+  code: string;
+  alias: string;
+  archetype: string;
+  reply: string;
+  aiFlavorScore: number;
+  nextAlias?: string;
+  cueReason?: string;
+}
 
 export default function QuickSurveyStudio({
   content,
   design,
   onUpdateReport,
+  onOpenMainTheater,
 }: {
   content: EditorContent;
   design: Questionnaire | null;
   onSaveDesign?: (next: Questionnaire) => Promise<void> | void;
   onUpdateReport: (next: EditorContent, message: string, nextDesign?: Questionnaire | null) => void;
+  onOpenMainTheater?: (payload: {
+    design: Questionnaire;
+    templateKey: 'residents' | 'students' | 'seniors';
+    seed: number;
+    population: string;
+  }) => void;
 }) {
-  const [subMode, setSubMode] = useState<'survey' | 'interview'>('survey');
+  const [subMode, setSubMode] = useState<'survey' | 'personas' | 'interview'>('survey');
+  const [templateKey, setTemplateKey] = useState<'residents' | 'students' | 'seniors'>('residents');
+  const [personaSeed, setPersonaSeed] = useState(2026);
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>('');
+  const [roundtableTopic, setRoundtableTopic] = useState('');
+  const [roundtableBusy, setRoundtableBusy] = useState(false);
+  const [liveRoundtable, setLiveRoundtable] = useState<RoundtableTurn[] | null>(null);
+  const [liveTheaterModalOpen, setLiveTheaterModalOpen] = useState(false);
   const [title, setTitle] = useState(design?.title || content.title || '专题实证调查问卷');
   const [population, setPopulation] = useState(design?.population || '目标受访青年与常住居民群体');
   const [groupQuestion, setGroupQuestion] = useState('您的主要使用/参与频率属于？');
@@ -88,6 +127,116 @@ export default function QuickSurveyStudio({
 
   const exportReview = useMemo(() => reviewWjxExport(quickDesign), [quickDesign]);
 
+  const activeTemplate = PANEL_TEMPLATES[templateKey] ?? PANEL_TEMPLATES.residents;
+  const siliconPersonas = useMemo<Array<{ persona: Persona; profile: PersonaProfile }>>(() => {
+    const list = generatePanel({
+      attributes: activeTemplate.attributes,
+      size: 6,
+      allocation: 'quota',
+      seed: personaSeed,
+      background: population,
+    });
+    return list.map(persona => ({
+      persona,
+      profile: synthesizePersonaProfile(persona, activeTemplate.attributes, title),
+    }));
+  }, [activeTemplate, personaSeed, population, title]);
+
+  const activePersonaEntry =
+    siliconPersonas.find(item => item.persona.id === selectedPersonaId) ?? siliconPersonas[0] ?? null;
+
+  const fallbackRoundtable = useMemo<RoundtableTurn[]>(() => {
+    const cast = siliconPersonas.slice(0, 4);
+    return cast.map((entry, idx) => {
+      const next = cast[idx + 1];
+      const dim = dims[idx % Math.max(1, dims.length)] || '核心体验';
+      const reply =
+        idx === 0
+          ? `拿《${title}》来说，我填问卷最烦一上来全是“非常满意到非常不满意”的套话；你要问「${dim}」，不如直接拆出最近一次实际掏钱时到底嫌弃哪块。${entry.profile.catchphrase}`
+          : `我赞同前面 ${cast[0].profile.alias.split(' · ').pop()} 说的！不过按我（${entry.profile.archetype}）的日常习惯，光看「${dim}」还不够，像我平常更在乎现场排队值不值得折腾。`;
+      return {
+        code: entry.persona.code,
+        alias: entry.profile.alias,
+        archetype: entry.profile.archetype,
+        reply,
+        aiFlavorScore: detectAiFlavor(reply).score,
+        nextAlias: next?.profile.alias,
+        cueReason: next
+          ? `接力邀请「${next.profile.archetype}」从对照组角度补充遗漏构念`
+          : undefined,
+      };
+    });
+  }, [siliconPersonas, dims, title]);
+
+  const roundtableTurns = liveRoundtable ?? fallbackRoundtable;
+
+  const runLiveRoundtable = async () => {
+    setRoundtableBusy(true);
+    setStatus('正在召唤 4 位硅基人设接入大模型召开实时焦点小组圆桌…');
+    const cast = siliconPersonas.slice(0, 4);
+    const promptIssue =
+      roundtableTopic.trim()
+      || `围绕《${title}》量表维度（${dims.slice(0, 4).join('、')}）讨论真实顾虑与问卷设计盲区`;
+    const castBrief = cast
+      .map(
+        (c, i) =>
+          `${i + 1}. ${c.profile.alias} (${c.persona.code}, ${c.profile.archetype}, 语调:${c.profile.toneRule})`,
+      )
+      .join('\n');
+
+    try {
+      const res = await fetch('/api/agent/brain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 1,
+          noTools: true,
+          context: { topic: title, stage: 'silicon-focus-group' },
+          message: [
+            `请模拟以下 4 位“硅基焦点小组受访者”围绕议题「${promptIssue}」进行 4 轮口语化互评讨论。`,
+            `人物列表：\n${castBrief}`,
+            '严格要求：',
+            '1) 仅输出纯 JSON 数组，4 个对象，每项字段为 {"code":"S-001","reply":"真实口语回应，70-120字，必须点名回应前一位的某个具体观点","nextReason":"为什么要交给下一位接麦，18字内"}；',
+            '2) 严禁使用“综上所述/值得注意的是/赋能/抓手”等 AI 套话，要像真人微信语音聊生活细节。',
+          ].join('\n'),
+        }),
+        signal: AbortSignal.timeout(35_000),
+      });
+      const json = (await res.json()) as { ok?: boolean; reply?: string; error?: string };
+      const raw = json.reply ?? '';
+      const arrMatch = /\[[\s\S]*\]/u.exec(raw);
+      if (res.ok && json.ok && arrMatch) {
+        const parsed = JSON.parse(arrMatch[0]) as Array<{ code?: string; reply?: string; nextReason?: string }>;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const formatted: RoundtableTurn[] = parsed.slice(0, 4).map((item, idx) => {
+            const match = cast[idx];
+            const replyText = String(item.reply ?? '').trim() || fallbackRoundtable[idx]?.reply || '';
+            const next = cast[idx + 1];
+            return {
+              code: match?.persona.code ?? item.code ?? `S-00${idx + 1}`,
+              alias: match?.profile.alias ?? `受访者 ${idx + 1}`,
+              archetype: match?.profile.archetype ?? '硅基样本',
+              reply: replyText,
+              aiFlavorScore: detectAiFlavor(replyText).score,
+              nextAlias: next?.profile.alias,
+              cueReason: next ? String(item.nextReason ?? '').trim() || '不同分层群体接力互评' : undefined,
+            };
+          });
+          setLiveRoundtable(formatted);
+          setStatus('✓ 实调大模型完成 4 人硅基焦点小组实时互评（已检测去 AI 味评分）。');
+          return;
+        }
+      }
+      setLiveRoundtable(fallbackRoundtable);
+      setStatus(`模型未返回有效 JSON（${json.error ?? '已启用本地语料推演'}），已切换本地硅基圆桌推演。`);
+    } catch (err) {
+      setLiveRoundtable(fallbackRoundtable);
+      setStatus(`已切换本地硅基圆桌推演（${err instanceof Error ? err.message : '网络回退'}）。`);
+    } finally {
+      setRoundtableBusy(false);
+    }
+  };
+
   const applyAndSyncSurvey = async () => {
     const summaryText = [
       `问卷设计方案已确认（共 ${quickDesign.questions.length} 题）：围绕「${title}」对${population}开展调研。`,
@@ -140,9 +289,19 @@ export default function QuickSurveyStudio({
   return (
     <div className={styles.studio}>
       <div className={styles.studioHeader}>
-        <h4>{subMode === 'survey' ? '极简问卷快搭' : '定性深访语料 (去AI味)'}</h4>
+        <h4>
+          {subMode === 'survey'
+            ? '极简问卷快搭'
+            : subMode === 'personas'
+              ? '硅基受访人设与焦点圆桌'
+              : '定性深访语料 (去AI味)'}
+        </h4>
         <span className={styles.monoTag}>
-          {subMode === 'survey' ? `${quickDesign.questions.length} 题量表` : `${interviewCorpus.transcripts.length} 位受访者`}
+          {subMode === 'survey'
+            ? `${quickDesign.questions.length} 题量表`
+            : subMode === 'personas'
+              ? `${siliconPersonas.length} 位人设`
+              : `${interviewCorpus.transcripts.length} 位受访者`}
         </span>
       </div>
 
@@ -153,7 +312,15 @@ export default function QuickSurveyStudio({
           aria-pressed={subMode === 'survey'}
           onClick={() => setSubMode('survey')}
         >
-          📝 定量问卷快搭
+          📝 问卷快搭
+        </button>
+        <button
+          type="button"
+          className={`${styles.segBtn} ${subMode === 'personas' ? styles.segBtnActive : ''}`}
+          aria-pressed={subMode === 'personas'}
+          onClick={() => setSubMode('personas')}
+        >
+          🎭 人设与圆桌
         </button>
         <button
           type="button"
@@ -161,11 +328,158 @@ export default function QuickSurveyStudio({
           aria-pressed={subMode === 'interview'}
           onClick={() => setSubMode('interview')}
         >
-          🎙️ 深访语料与三级编码
+          🎙️ 深访语料库
         </button>
       </div>
 
-      {subMode === 'survey' ? (
+      {subMode === 'personas' ? (
+        <>
+          <div className={styles.panel}>
+            <div className={styles.row} style={{ justifyContent: 'space-between' }}>
+              <select
+                className={styles.select}
+                style={{ flex: '1 1 130px' }}
+                aria-label="选择硅基画像人群模板"
+                value={templateKey}
+                onChange={e => {
+                  setTemplateKey(e.target.value as 'residents' | 'students' | 'seniors');
+                  setLiveRoundtable(null);
+                }}
+              >
+                <option value="residents">城市居民样本</option>
+                <option value="students">在校大学生样本</option>
+                <option value="seniors">银发人群样本</option>
+              </select>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => {
+                  setPersonaSeed(Math.floor(Math.random() * 90000) + 1000);
+                  setLiveRoundtable(null);
+                }}
+              >
+                🎲 换一批人设
+              </button>
+            </div>
+
+            <div className={styles.personaGrid} role="listbox" aria-label="硅基受访人设名册">
+              {siliconPersonas.map(({ persona, profile }) => (
+                <button
+                  key={persona.id}
+                  type="button"
+                  role="option"
+                  aria-selected={activePersonaEntry?.persona.id === persona.id}
+                  aria-pressed={activePersonaEntry?.persona.id === persona.id}
+                  className={styles.personaCardBtn}
+                  onClick={() => setSelectedPersonaId(persona.id)}
+                >
+                  <PersonaAvatar appearance={persona.appearance} size={36} />
+                  <div className={styles.personaCardMeta}>
+                    <strong>{profile.alias}</strong>
+                    <small>{persona.code} · {profile.tags.slice(0, 2).join(' · ')}</small>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {activePersonaEntry && (
+              <div className={styles.personaDossierCard} aria-label="选中硅基人设档案">
+                <div className={styles.heroHead}>
+                  <div className={styles.row}>
+                    <PersonaAvatar appearance={activePersonaEntry.persona.appearance} size={40} />
+                    <div>
+                      <strong style={{ fontSize: 12.5 }}>{activePersonaEntry.profile.alias}</strong>
+                      <div className={styles.muted}>{activePersonaEntry.profile.provenance}</div>
+                    </div>
+                  </div>
+                  <span className={styles.monoTag}>{activePersonaEntry.persona.code}</span>
+                </div>
+                <div className={styles.row} style={{ gap: 4 }}>
+                  {activePersonaEntry.profile.tags.map(t => (
+                    <span key={t} className={styles.badge}>{t}</span>
+                  ))}
+                </div>
+                <blockquote className={styles.personaQuoteBox}>
+                  “{activePersonaEntry.profile.catchphrase}”
+                </blockquote>
+                <div style={{ whiteSpace: 'pre-wrap' }}>{activePersonaEntry.profile.monologue}</div>
+                <div className={styles.muted}>语调风格：{activePersonaEntry.profile.toneRule}</div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.panel}>
+            <div className={styles.heroHead}>
+              <strong style={{ fontSize: 12 }}>🔥 焦点小组圆桌讨论（4 人互评）</strong>
+              <span className={styles.monoTag}>{liveRoundtable ? '大模型实演' : '示例预演'}</span>
+            </div>
+            <input
+              className={styles.input}
+              value={roundtableTopic}
+              onChange={e => setRoundtableTopic(e.target.value)}
+              placeholder={`聚焦讨论：围绕《${title}》量表盲区与消费痛点`}
+            />
+            <div className={styles.row}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                style={{ flex: 1 }}
+                disabled={roundtableBusy}
+                onClick={() => void runLiveRoundtable()}
+              >
+                {roundtableBusy ? '⏳ 4 位人设正在互评讨论…' : '✦ 实调大模型召开实时圆桌'}
+              </button>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => {
+                  if (onOpenMainTheater) {
+                    onOpenMainTheater({
+                      design: design ?? quickDesign,
+                      templateKey,
+                      seed: personaSeed,
+                      population,
+                    });
+                    setStatus('✓ 已同步人设与问卷到中央 Atypica 1:1 实时推演剧场。');
+                  } else {
+                    setLiveTheaterModalOpen(true);
+                  }
+                }}
+              >
+                ⚡ 1:1 实时全流程剧场
+              </button>
+              <a className={styles.btn} href="/workspace#silicon">
+                3D 舞台 ↗
+              </a>
+            </div>
+
+            <ul className={styles.list}>
+              {roundtableTurns.map(turn => {
+                const speaker = siliconPersonas.find(s => s.persona.code === turn.code)?.persona;
+                return (
+                  <li key={turn.code} className={styles.itemCard}>
+                    <div className={styles.heroHead}>
+                      <div className={styles.row}>
+                        {speaker && <PersonaAvatar appearance={speaker.appearance} size={26} />}
+                        <strong style={{ fontSize: 11.5 }}>{turn.alias}</strong>
+                        <span className={styles.monoTag}>{turn.archetype}</span>
+                      </div>
+                      <span className={styles.badge}>AI味 {turn.aiFlavorScore}/100</span>
+                    </div>
+                    <p style={{ margin: '2px 0', fontSize: 12, lineHeight: 1.55 }}>{turn.reply}</p>
+                    {turn.nextAlias && turn.cueReason && (
+                      <details className={styles.turnCuePill}>
+                        <summary>@ {turn.nextAlias} · 接麦原因 ▾</summary>
+                        <p>{turn.cueReason}</p>
+                      </details>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </>
+      ) : subMode === 'survey' ? (
         <>
           <div className={styles.panel}>
             <label className={styles.field}>
@@ -208,9 +522,30 @@ export default function QuickSurveyStudio({
               自动附加注意力甄别题（拦截机械作答废卷）
             </label>
 
-            <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => void applyAndSyncSurvey()}>
-              ✦ 一键生成问卷并同步至报告
-            </button>
+            <div className={styles.row}>
+              <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} style={{ flex: 1 }} onClick={() => void applyAndSyncSurvey()}>
+                ✦ 一键生成问卷并同步至报告
+              </button>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => {
+                  if (onOpenMainTheater) {
+                    onOpenMainTheater({
+                      design: quickDesign,
+                      templateKey,
+                      seed: personaSeed,
+                      population,
+                    });
+                    setStatus('✓ 已将当前问卷送入 Atypica × 硅基 1:1 实时预测试推演剧场。');
+                  } else {
+                    setLiveTheaterModalOpen(true);
+                  }
+                }}
+              >
+                ⚡ 硅基预测试推演
+              </button>
+            </div>
           </div>
 
           <div className={styles.panel}>
@@ -323,6 +658,104 @@ export default function QuickSurveyStudio({
       )}
 
       <div className={styles.statusBar}>{status}</div>
+
+      {liveTheaterModalOpen && (
+        <QuickSurveyTheaterModal
+          design={design ?? quickDesign}
+          attributes={activeTemplate.attributes}
+          seed={personaSeed}
+          population={population}
+          onClose={() => setLiveTheaterModalOpen(false)}
+          onImportFindings={summaryLines => {
+            const nextReport = content.report.map(sec =>
+              sec.id === 'design.questionnaire'
+                ? {
+                    ...sec,
+                    body: sec.body.trim()
+                      ? `${sec.body.trim()}\n\n${summaryLines.join('\n')}`
+                      : summaryLines.join('\n'),
+                  }
+                : sec,
+            );
+            onUpdateReport({ ...content, report: nextReport }, '已将 Atypica × 硅基实时推演预测试结论写入「问卷设计」章节。');
+            setStatus('✓ 已将 1:1 实时推演预测试结论写入报告「问卷设计」节。');
+            setLiveTheaterModalOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function QuickSurveyTheaterModal({
+  design,
+  attributes,
+  seed,
+  population,
+  onClose,
+  onImportFindings,
+}: {
+  design: Questionnaire;
+  attributes: (typeof PANEL_TEMPLATES)['residents']['attributes'];
+  seed: number;
+  population: string;
+  onClose: () => void;
+  onImportFindings: (lines: string[]) => void;
+}) {
+  const payload = useMemo(() => {
+    const cleanDesign = structuredClone(design);
+    const panel = generatePanel({
+      attributes,
+      size: 24,
+      allocation: 'quota',
+      seed,
+      background: population,
+    });
+    const settings = {
+      engine: 'demo' as const,
+      memory: 'carry' as const,
+      shuffleOptions: false,
+      scenarios: [NO_SCENARIO],
+      models: [],
+    };
+    const run = demoRun(cleanDesign, attributes, panel, settings);
+    return { design: cleanDesign, panel, settings, run };
+  }, [design, attributes, seed, population]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 85,
+        background: 'rgba(7, 17, 28, 0.78)',
+        backdropFilter: 'blur(8px)',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 18,
+      }}
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div style={{ width: 'min(1320px, 100%)' }}>
+        <AtypicaLiveTheater
+          design={payload.design}
+          attributes={attributes}
+          personas={payload.panel}
+          settings={payload.settings}
+          run={payload.run}
+          autoPlay
+          modalMode
+          onClose={onClose}
+          onOpenReportAction={bp =>
+            onImportFindings([
+              `【硅基预测试推演结论（${bp.enrichedPersonas.length} 位分层画像 · 阻塞 ${bp.report.metrics.blockers} · 提示 ${bp.report.metrics.warnings}）】`,
+              ...bp.report.actionChecklist,
+            ])
+          }
+        />
+      </div>
     </div>
   );
 }

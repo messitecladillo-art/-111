@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@evix/shared"],
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
+  devIndicators: { position: "bottom-right" },
   async headers() {
     return [
       {

@@ -718,6 +718,14 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     try{pack=customPack??await buildDemoPack(id==='current'?undefined:id,expected.design);}catch{return false;}
     return applyCandidate(pack,expected)==='applied';
   },[currentScope,applyCandidate]);
+  const sendSiliconToAnalysis = useCallback(
+    (handoff: { id: string; name: string; csv: string }) => {
+      if (!currentScope()) return;
+      handoffs.publish('dataset', handoff);
+      window.location.hash = 'analysis';
+    },
+    [currentScope, handoffs],
+  );
   const dataset=exchange.dataset;
   const view=useMemo<ProjectView>(()=>({design:exchange.design?.design??null,dataset:dataset?{name:dataset.name,rows:dataset.table.rows.length,simulated:dataset.kind==='simulated',hash:dataset.sourceHash,screened:dataset.lineage.some(step=>step.startsWith('质控'))}:null,report,resultPending:!!exchange.pending.result}),[exchange.design,dataset,report,exchange.pending.result]);
   const panels = useMemo<Record<WorkbenchPanel, ReactNode>>(() => {
@@ -763,7 +771,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
       defense: <DefenseStudio />,
       analysis: <SurveyLab key={`${workspaceScope}:${benchmarkEpoch}`} initialDataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{if(!currentScope())return;handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={datasetDelivery} onDatasetTransferHandled={datasetHandled} onDatasetChange={datasetChanged}/>,
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} projectId={projectId} />,
-      silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={handoff=>{if(!currentScope())return;handoffs.publish('dataset',handoff);window.location.hash='analysis';}}/>,
+      silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={sendSiliconToAnalysis}/>,
       design: <QuestionnaireStudio key={`${workspaceScope}:${benchmarkEpoch}`} initialDesign={exchange.design?.design??null} localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={designChanged} onAnalyze={snapshot=>{if(!currentScope())return;handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
       diagnose: <DiagnosisPanel projectPaletteId={report?.visualStyle?.paletteId} incomingSource={topicInput?.scope===workspaceScope?topicInput.source:null} requestedMode={diagnosisMode?.scope===workspaceScope?diagnosisMode:undefined} literature={exchange.literature} onLiterature={receiveLiterature} onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <ProjectPortal />,
@@ -772,7 +780,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     };
     return Object.fromEntries(Object.entries(entries).map(([key,panel])=>[key,cloneElement(panel as ReactElement,{key:`${workspaceScope}:${(panel as ReactElement).key??key}`})])) as Record<WorkbenchPanel,ReactNode>;
   }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion,topicInput,diagnosisMode,receiveLiterature]);
-  return {panels,view,research,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection,applyArtifact};
+  return {panels,view,research,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection,applyArtifact,sendSiliconToAnalysis};
 }
 
 export default function EviXPlatform() {

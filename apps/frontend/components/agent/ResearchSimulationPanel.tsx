@@ -12,6 +12,7 @@ export type ResearchSimulationHost = {
   apply: (pack: DemoPack, expected: ReportRunSource) => 'applied' | 'conflict' | 'storage_failed';
   openReport: () => void;
   startWriting: (title: string) => void;
+  openTheater?: (design: Questionnaire, brief: TopicProjectDocument['brief']) => void;
 };
 
 type Preparation = {
@@ -130,7 +131,16 @@ export default function ResearchSimulationPanel({ topic, host, sourceLines, disa
             {question.type === 'likert' && <small>{question.min} {question.minLabel} → {question.max} {question.maxLabel}</small>}
           </li>)}</ol>
         </details>
-        {!computed && <button type="button" disabled={disabled || busy || occupied} onClick={() => void run()}>确认演练问卷并运行</button>}
+        {!computed && (
+          <div className={styles.simulationActions}>
+            <button type="button" disabled={disabled || busy || occupied} onClick={() => void run()}>确认演练问卷并运行</button>
+            {host.openTheater && (
+              <button type="button" disabled={disabled || busy} onClick={() => host.openTheater?.(prepared.design, topic.brief)}>
+                ⚡ 在 Atypica × 硅基剧场实时推演
+              </button>
+            )}
+          </div>
+        )}
       </>}
       {progress && <p role="status">{progress}</p>}
       {computed && !changed && <section className={styles.simulationResult} aria-label="教学模拟运行回执">

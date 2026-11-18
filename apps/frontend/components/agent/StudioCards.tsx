@@ -8,10 +8,14 @@ import {
   type ChartStudioCardData,
   type CodeStudioCardData,
   type CodeStudioLang,
+  type SiliconTheaterCardData,
+  type SiliconTemplateKey,
   type StudioChartKind,
   type StudioPaletteId,
   type WritingStudioCardData,
 } from '@/lib/agent/studios';
+import { generatePanel, PANEL_TEMPLATES, synthesizePersonaProfile } from '@/lib/silicon/persona';
+import PersonaAvatar from '@/components/silicon/PersonaAvatar';
 import styles from './AgentShell.module.css';
 
 const xmlEsc = (s: string) =>
@@ -743,6 +747,133 @@ export function WritingStudioView({
           复制润色定稿
         </button>
         {statusMsg ? <span className={styles.studioStatusNote}>{statusMsg}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+const SILICON_TEMPLATE_LABELS: Record<SiliconTemplateKey, string> = {
+  residents: '城市与社区居民',
+  students: '在校大学生',
+  seniors: '银发高龄群体',
+};
+
+export function SiliconTheaterStudioView({
+  data,
+  onAction,
+}: {
+  data: SiliconTheaterCardData;
+  onAction: (action: AgentAction) => void;
+}) {
+  const [templateKey, setTemplateKey] = useState<SiliconTemplateKey>(data.templateKey);
+  const [size, setSize] = useState<number>(data.size);
+  const [seed, setSeed] = useState<number>(2026);
+
+  const tpl = PANEL_TEMPLATES[templateKey] ?? PANEL_TEMPLATES.residents;
+  const previewCast = useMemo(() => {
+    const panel = generatePanel({
+      attributes: tpl.attributes,
+      size,
+      allocation: 'quota',
+      seed,
+      background: data.populationLabel || tpl.description,
+    });
+    return panel.slice(0, 6).map(persona => ({
+      persona,
+      profile: synthesizePersonaProfile(persona, tpl.attributes),
+    }));
+  }, [tpl, size, seed, data.populationLabel]);
+
+  return (
+    <div className={styles.studioWrap}>
+      <div className={styles.studioToolbar}>
+        <label className={styles.studioFieldWide}>
+          <span>硅基受访人群画像模板</span>
+          <select
+            value={templateKey}
+            onChange={e => setTemplateKey(e.target.value as SiliconTemplateKey)}
+            className={styles.studioSelect}
+          >
+            {(['residents', 'students', 'seniors'] as const).map(key => (
+              <option key={key} value={key}>
+                {SILICON_TEMPLATE_LABELS[key]} · {PANEL_TEMPLATES[key]?.description}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.studioField}>
+          <span>分层样本量</span>
+          <select
+            value={String(size)}
+            onChange={e => setSize(Number(e.target.value) || 24)}
+            className={styles.studioSelect}
+          >
+            <option value="12">12 位（快速深访）</option>
+            <option value="24">24 位（标准全流程）</option>
+            <option value="36">36 位（高置信预测试）</option>
+          </select>
+        </label>
+      </div>
+
+      <div className={styles.siliconPreviewBox}>
+        <div className={styles.siliconPreviewHead}>
+          <span>
+            {data.hasBoundDesign ? `绑定项目问卷 · ${data.questionCount} 题` : `自动构念问卷 · ${data.questionCount} 题`}
+            {' · '}
+            {data.domainLabel}
+          </span>
+          <span className={styles.siliconHonestBadge}>模拟回答 · 与真实调查分开</span>
+        </div>
+
+        <div className={styles.siliconCastStrip}>
+          {previewCast.map(({ persona, profile }) => (
+            <div key={persona.id} className={styles.siliconCastPill} title={`${profile.alias} · ${profile.archetype}`}>
+              <PersonaAvatar appearance={persona.appearance} size={24} />
+              <div>
+                <strong>{profile.alias}</strong>
+                <small>{persona.code} · {profile.archetype}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {!!data.dimensions.length && (
+          <p className={styles.siliconDimsLine}>
+            核心观测维度：{data.dimensions.join(' · ')}
+          </p>
+        )}
+      </div>
+
+      <div className={styles.studioActions}>
+        <button
+          type="button"
+          className={styles.studioPrimaryBtn}
+          onClick={() =>
+            onAction({
+              type: 'siliconTheater',
+              topic: data.topic,
+              templateKey,
+              size,
+              autoPlay: true,
+            })
+          }
+        >
+          ⚡ 启动 1:1 Atypica 实时推演剧场
+        </button>
+        <button
+          type="button"
+          className={styles.studioSecondaryBtn}
+          onClick={() => setSeed(s => s + 1)}
+        >
+          ↻ 换一批受访人设
+        </button>
+        <button
+          type="button"
+          className={styles.studioSecondaryBtn}
+          onClick={() => onAction({ type: 'open', room: 'silicon' })}
+        >
+          打开右栏 3D 硅基舞台
+        </button>
       </div>
     </div>
   );

@@ -663,24 +663,24 @@ export function PaperToolbar({
         <span className={styles.toolbarRule} aria-hidden="true" />
 
         {/* Dual Engine Switcher: LaTeX Compilation (Primary) vs Word Template (Secondary) */}
-        <button
-          type="button"
-          aria-pressed={docFormat === 'latex'}
-          onClick={() => onChangeDocFormat?.('latex')}
-          title="浏览器中的学术样式预览；下载的源码需单独编译核验"
-        >
-          <Icon name="code" />
-          <span>学术预览</span>
-        </button>
-        <button
-          type="button"
-          aria-pressed={docFormat === 'word'}
-          onClick={() => onChangeDocFormat?.('word')}
-          title="浏览器中的 Word 样式预览；导出后需核对实际分页"
-        >
-          <Icon name="book" />
-          <span>Word 预览</span>
-        </button>
+        <span className={styles.formatSeg} role="group" aria-label="文档预览版式">
+          <button
+            type="button"
+            aria-pressed={docFormat === 'latex'}
+            onClick={() => onChangeDocFormat?.('latex')}
+            title="浏览器中的学术样式预览；下载的源码需单独编译核验"
+          >
+            学术
+          </button>
+          <button
+            type="button"
+            aria-pressed={docFormat === 'word'}
+            onClick={() => onChangeDocFormat?.('word')}
+            title="浏览器中的 Word 样式预览；导出后需核对实际分页"
+          >
+            Word
+          </button>
+        </span>
 
         {docFormat === 'latex' ? (
           <>
@@ -691,7 +691,7 @@ export function PaperToolbar({
               title="查看或下载实时生成的 XeLaTeX (.tex) 完整排版源码"
             >
               <Icon name="panel" />
-              <span>.tex 源码</span>
+              <span>.tex</span>
             </button>
             <button
               type="button"
@@ -699,7 +699,7 @@ export function PaperToolbar({
               title="打开浏览器打印，可另存为 PDF；这是浏览器预览，不是 LaTeX 编译结果"
             >
               <Icon name="download" />
-              <span>打印 / PDF</span>
+              <span>PDF</span>
             </button>
           </>
         ) : (
@@ -710,7 +710,7 @@ export function PaperToolbar({
             title="导出可编辑的 Word 草稿，导出文件仍需验收"
           >
             <Icon name="download" />
-            <span>{exportingDocx ? '导出中…' : '导出 .docx'}</span>
+            <span>{exportingDocx ? '导出中…' : '.docx'}</span>
           </button>
         )}
 
@@ -726,7 +726,7 @@ export function PaperToolbar({
           title="按竞赛提交格式构建 Word 并执行本地匿名与合规预检"
         >
           <Icon name="check" />
-          <span>{preflightState.running ? '预检中…' : '参赛预检'}</span>
+          <span>{preflightState.running ? '预检…' : '预检'}</span>
         </button>
 
         <button
@@ -768,13 +768,13 @@ export function PaperToolbar({
             title="回放当前已有的正文和图表；只有本轮记录的实际修订才显示纠错"
           >
             <Icon name="bolt" />
-            <span>回放呈现</span>
+            <span>回放</span>
           </button>
         )}
 
         <button type="button" onClick={onEdit} title="打开原稿，在完整编辑器里修改">
           <Icon name="external" />
-          <span>{previewOnly ? '编辑原稿' : '编辑'}</span>
+          <span>{previewOnly ? '原稿' : '编辑'}</span>
         </button>
       </div>
 

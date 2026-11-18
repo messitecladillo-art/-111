@@ -7,7 +7,7 @@ import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
 import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
 import { Icon } from './icons';
-import { ChartStudioView, CodeStudioView, WritingStudioView, type WritingModelStatus } from './StudioCards';
+import { ChartStudioView, CodeStudioView, SiliconTheaterStudioView, WritingStudioView, type WritingModelStatus } from './StudioCards';
 import ReportWorkstation from '@/components/figures/report-workstation/ReportWorkstation';
 import type { Message, ModelCall, ToolExecution } from './threads';
 import styles from './AgentShell.module.css';
@@ -42,13 +42,14 @@ export default memo(function Transcript({ messages, scrollRef, activeCallIds, wo
 
 function MessageView({ message, active, showWork, onAction, onAnswer, writingModelStatus }: { message: Message; active: boolean; showWork: boolean } & Handlers) {
   if (message.role === 'user') return <div className={`${styles.message} ${styles.user}`}><p>{message.text}</p></div>;
-  if (message.role === 'pending') return <div className={styles.message}><div className={styles.reply}>
+  if (message.role === 'pending') return <div className={styles.message} data-role="agent" data-live="true"><div className={styles.reply}>
     {showWork ? <ReportWorkstation inline kind="research" heading="正在查询知识镜"
       state={{ phase: 'writing', detail: message.query, completed: 0, total: 0 }} />
       : <p>正在查知识镜「{message.query}」</p>}
   </div></div>;
   const { turn } = message;
-  return <div className={styles.message}>
+  const isLive = active || message.model?.status === 'running';
+  return <div className={styles.message} data-role="agent" data-live={isLive ? 'true' : undefined}>
     {message.model && <StepHead model={message.model} at={message.at} active={active} />}
     <div className={styles.reply}>
       {message.reasoning && <details className={styles.reasoningBox}>
@@ -311,6 +312,7 @@ function Card({ card, message, onAction, onAnswer, writingModelStatus }: { card:
   if (card.kind === 'chart-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>STUDIO</span><span className={styles.cardTitle}>{card.title}</span></div><ChartStudioView data={card.studio} onAction={onAction} /></div>;
   if (card.kind === 'code-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>STUDIO</span><span className={styles.cardTitle}>{card.title}</span></div><CodeStudioView data={card.studio} onAction={onAction} /></div>;
   if (card.kind === 'writing-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>STUDIO</span><span className={styles.cardTitle}>{card.title}</span></div><WritingStudioView data={card.studio} onAction={onAction} modelStatus={writingModelStatus} /></div>;
+  if (card.kind === 'silicon-theater') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>ATYPICA × SILICON</span><span className={styles.cardTitle}>{card.title}</span></div><SiliconTheaterStudioView data={card.studio} onAction={onAction} /></div>;
   if (card.kind === 'trace') return <div className={`${styles.card} ${styles.trace}`}>
     <div className={styles.cardHead}><span className={styles.cardKindPill}>TRACE</span><span className={styles.cardTitle}>回溯 · {card.reference}</span></div>
     <p className={styles.traceHead}><b>{card.reference}</b>{card.title}</p>

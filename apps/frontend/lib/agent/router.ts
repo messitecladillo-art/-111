@@ -22,9 +22,13 @@ import {
   buildCoachTurn,
   buildCodeStudioTurn,
   buildDemoTurn,
+  buildSiliconTheaterTurn,
   buildWritingStudioTurn,
+  inferSiliconTemplate,
   type ChartStudioCardData,
   type CodeStudioCardData,
+  type SiliconTheaterCardData,
+  type SiliconTemplateKey,
   type WritingStudioCardData,
 } from './studios.ts';
 
@@ -70,7 +74,11 @@ export type AgentAction =
   /** Switches the active workspace stage between chat, paper, and advisors on demand. */
   | { type: 'stage'; stage: 'chat' | 'paper' | 'advisors' }
   /** Inserts text/code/chart-reading paragraphs produced in an interactive studio card into a blueprint section. */
-  | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[] };
+  | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[] }
+  /** Generates a structured local-draft questionnaire through the direct Research Brain in guest mode. */
+  | { type: 'draftLocalQuestionnaire'; brief: string }
+  /** Opens or plays the 1:1 Atypica × Silicon Respondents live theater inside Agent main stage. */
+  | { type: 'siliconTheater'; topic?: string; templateKey?: SiliconTemplateKey; size?: number; autoPlay?: boolean; design?: Questionnaire };
 /** A primary link is the one step the agent recommends; a turn has at most one. */
 export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
@@ -93,7 +101,9 @@ export type AgentCard =
   /** High-freedom multi-language (Python / R / SPSS / LaTeX) Statistical Code Studio card. */
   | { kind: 'code-studio'; title: string; studio: CodeStudioCardData }
   /** High-freedom evidence-bound Co-Authoring & 5W1H Defense Writing Studio card. */
-  | { kind: 'writing-studio'; title: string; studio: WritingStudioCardData };
+  | { kind: 'writing-studio'; title: string; studio: WritingStudioCardData }
+  /** Interactive Atypica × Silicon Respondents live theater launch card inside Agent chat. */
+  | { kind: 'silicon-theater'; title: string; studio: SiliconTheaterCardData };
 export type AgentTurn = { lines: Line[]; cards?: AgentCard[]; chips?: AgentLink[]; chipsLabel?: string; act?: AgentAction };
 /** `traces` are the report's exhibits with their paths back (provenance.ts); the shell computes them with the light. */
 /** `room` is the module open in the side panel, or null while only the conversation shows. */
@@ -122,6 +132,7 @@ export const COMMANDS: readonly Command[] = [
   { name: '全报告', args: '课题或留空', line: '根据当前研究资料起草报告候选稿，保留逐节回执供审阅', words: ['fullreport', 'autoreport'] },
   { name: '密钥', line: '打开个人模型服务，安全配置报告模型', words: ['apikey', 'key'] },
   { name: '铸造', args: '任意课题或留空', line: '生成一套教学模拟研究：问卷、模拟作答，以及在模拟数据上实际计算的结果与报告', words: ['forge', 'award', 'benchmark', 'demo'] },
+  { name: '硅基推演', args: '人群或课题', line: '启动 Atypica × 硅基样本 1:1 实时推演（人设构建、1v1深访、焦点小组与预测试报告）', words: ['atypica', 'theater'] },
   { name: '备赛', line: '正大杯备赛八个阶段与下一步', words: ['coach', 'guide'] },
   { name: '绘图', args: '图题或维度', line: '把已登记结果画成图（5 类图型 · 4 套配色 · 可编辑标签）', words: ['plot', 'chart'] },
   { name: '编程', args: '方法或语言', line: 'Python / R / SPSS 分析脚本与 LaTeX 三线表（取自已登记结果）', words: ['code', 'script'] },
@@ -456,10 +467,32 @@ function draftTarget(ctx: RouterContext, arg: string): Routed {
 }
 
 function open(room: Room, ctx: RouterContext): AgentTurn {
-  if (room.id === ctx.room) return { lines: [[t(room.name, 'strong'), t('已经在右侧打开。')], [t(room.line, 'dim')]] };
+  const siliconLaunch = room.id === 'silicon'
+    ? recommend({
+        label: '⚡ 启动 Atypica × 硅基 1:1 实时推演剧场',
+        action: {
+          type: 'siliconTheater',
+          topic: ctx.projectTitle,
+          templateKey: inferSiliconTemplate(`${ctx.projectTitle ?? ''} ${ctx.design?.population ?? ''}`),
+          size: 24,
+          autoPlay: true,
+        },
+        primary: true,
+      })
+    : null;
+  if (room.id === ctx.room) return {
+    lines: [[t(room.name, 'strong'), t('已经在右侧打开。')], [t(room.line, 'dim')]],
+    ...(siliconLaunch ? { chips: [siliconLaunch] } : {}),
+  };
   return {
     lines: [[t('在右侧打开'), t(room.name, 'strong'), t('。')]],
-    cards: [{ kind: 'tool', title: `打开 · ${room.name}`, lines: [[t(room.line, 'dim')], ...(lit(room.id) ? [lightLine(room.id, ctx.light)] : [])] }],
+    cards: [{
+      kind: 'tool',
+      title: `打开 · ${room.name}`,
+      lines: [[t(room.line, 'dim')], ...(lit(room.id) ? [lightLine(room.id, ctx.light)] : [])],
+      ...(siliconLaunch ? { links: [siliconLaunch] } : {}),
+    }],
+    ...(siliconLaunch ? { chips: [siliconLaunch] } : {}),
     act: { type: 'open', room: room.id },
   };
 }
@@ -491,6 +524,7 @@ function slash(body: string, ctx: RouterContext): Routed {
     case '全报告': return { turn: buildFullReportTurn(ctx, arg) };
     case '密钥': return { turn: buildApiKeyTurn() };
     case '铸造': return { turn: buildDemoTurn(ctx, arg) };
+    case '硅基推演': return { turn: buildSiliconTheaterTurn(ctx, arg) };
     case '备赛': return { turn: buildCoachTurn(ctx) };
     case '绘图': return { turn: buildChartStudioTurn(ctx, arg) };
     case '编程': return { turn: buildCodeStudioTurn(ctx, arg) };
@@ -525,6 +559,7 @@ const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情�
 const SEAL = /印鉴|九门印鉴|核验印鉴|循证印鉴|核验码/u;
 const FULL_REPORT = /(?:自动|一键|全流程|ai|大模型).{0,6}(?:生成|起草|撰写|写)(?:整份|全篇|完整|全套|全)?报告|(?:生成|起草|撰写)全报告/iu;
 const DEMO = /铸造|教学模拟研究|全链条演示|国奖标杆|标杆样板/u;
+const SILICON_THEATER = /(atypica|硅基.{0,10}(?:推演|剧场|深访|访谈|圆桌)|实时推演剧场|1[:：]1\s*(?:实时)?推演)/iu;
 const COACH = /备赛|参赛指南|八阶|国奖路线|怎么拿国奖/u;
 const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?(?:\s*[·:：]\s*.+)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
 const CODE_STUDIO = /^(?:打开)?(?:编程|写代码|统计编程|代码工坊|三线表代码|复现代码|python代码|r代码|spss代码)(?:工坊)?(?:\s*[·:：]\s*.+)?$|生成.*(?:python|r语言|spss|latex).*代码/iu;
@@ -562,6 +597,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (SEAL.test(input)) return { turn: sealStatus(ctx) };
   if (FULL_REPORT.test(input)) return { turn: buildFullReportTurn(ctx, input.replace(FULL_REPORT, '').trim()) };
   if (DEMO.test(input)) return { turn: buildDemoTurn(ctx, input) };
+  if (SILICON_THEATER.test(input)) return { turn: buildSiliconTheaterTurn(ctx, input) };
   if (COACH.test(input)) return { turn: buildCoachTurn(ctx) };
   if (PLOT_STUDIO.test(input)) return { turn: buildChartStudioTurn(ctx, input) };
   if (CODE_STUDIO.test(input)) return { turn: buildCodeStudioTurn(ctx, input) };

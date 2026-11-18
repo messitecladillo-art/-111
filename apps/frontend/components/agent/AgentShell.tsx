@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { flushSync } from 'react-dom';
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
 import AnatomyPrismMark from '@/components/figures/report-workstation/AnatomyPrismMark';
 import AnatomyStageCard from '@/components/figures/report-workstation/AnatomyStageCard';
+import type { WorkKind } from '@/components/figures/report-workstation/ReportWorkstation';
 import { useWorkbenchModules } from '@/components/EviXPlatform';
 import { WorkbenchNavProvider, type WorkbenchNav, type WorkbenchPanel } from '@/components/WorkbenchShell';
 import { useHostedSession } from '@/components/hosted/HostedSession';
@@ -50,7 +52,7 @@ import { matchBlueprintNode } from '@/lib/report-blueprint';
 import type { InsertItem } from '@/lib/report-insert';
 import { benchmarkReport } from '@/lib/report-benchmark';
 import { createEditorContent, type EditorContent } from '@/lib/editor-model';
-import { newQuestionnaire, type Questionnaire } from '@/lib/questionnaire';
+import { newQuestion, newQuestionnaire, type AnalysisPlan, type DesignQuestion, type Questionnaire, type QuestionType } from '@/lib/questionnaire';
 import { METHOD_LABELS } from '@/lib/report-placement';
 import { applyFigureChange, figureOf, parseFigureRequest } from '@/lib/agent/figure-tweak';
 import Sidebar from './Sidebar';
@@ -73,7 +75,18 @@ import ResearchWorkspace from './ResearchWorkspace';
 type Chain = { step: number; results: ToolResult[]; seen: Set<string>; service: Service; after: string; owner: string; epoch: number };
 import styles from './AgentShell.module.css';
 import type { FullReportGenerationResult, FullReportPack, ProjectResearchMode } from '@/lib/agent/full-report-pipeline';
-import { decomposeTopic } from '@/lib/agent/demo-study';
+import { buildDemoQuestionnaire, decomposeTopic } from '@/lib/agent/demo-study';
+import { buildSiliconTheaterCardData, inferSiliconTemplate, type SiliconTemplateKey } from '@/lib/agent/studios';
+import { siliconExampleQuestionnaire } from '@/lib/silicon/example';
+import { generatePanel, PANEL_TEMPLATES } from '@/lib/silicon/persona';
+import { demoRun, NO_SCENARIO } from '@/lib/silicon/run';
+import type { AtypicaFlowBlueprint } from '@/lib/silicon/live-flow';
+import type { DatasetHandoff } from '@/components/silicon/ResultsBoard';
+
+const AtypicaLiveTheater = dynamic(() => import('@/components/silicon/AtypicaLiveTheater'), {
+  ssr: false,
+  loading: () => <div className={styles.theaterLoading}>正在挂载 Atypica × 硅基 1:1 实时推演剧场…</div>,
+});
 import { canAcceptReportCandidate, hasUserResearchSource, mergeReportCandidate, reportChanges, reportSourceKey, type ReportRunSource } from '@/lib/agent/report-run';
 import { buildPaperSectionDiffs, locateArtifactTarget } from '@/lib/agent/paper-diff';
 import { fullReportInputRevision } from '@/lib/agent/full-report-request';
@@ -138,6 +151,104 @@ function savedPanelWidth(): number | null {
   return null;
 }
 
+function buildGuestDraftGateTurn(brief: string, provider: string, model: string): AgentTurn {
+  return {
+    lines: [[span('本地问卷起草前请确认：', 'dim')]],
+    cards: [
+      {
+        kind: 'confirm',
+        title: `起草本地研究问卷 · ${brief.slice(0, 30)}`,
+        lines: [
+          [span('研究简报：', 'dim'), span(brief.slice(0, 140))],
+          [span('将直接调用当前直连大脑「'), span(`${provider} · ${model}`, 'strong'), span('」生成含甄别题、人口学变量与测量量表的结构化题库，并写入右侧「问卷设计」本地草稿，无需登录云端。')],
+        ],
+        confirm: { label: '确认生成本地问卷', action: { type: 'draftLocalQuestionnaire', brief }, primary: true },
+        cancel: '暂不生成',
+      },
+    ],
+  };
+}
+
+function parseJsonObjectFromReply(raw: string): Record<string, unknown> | null {
+  const cleaned = raw.trim();
+  const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/iu);
+  const candidates = [fenced?.[1]?.trim(), cleaned];
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) candidates.push(cleaned.slice(firstBrace, lastBrace + 1));
+  for (const item of candidates) {
+    if (!item) continue;
+    try {
+      const parsed = JSON.parse(item) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch { /* try next candidate */ }
+  }
+  return null;
+}
+
+function buildLocalQuestionnaireFromReply(brief: string, rawReply: string): Questionnaire {
+  const base = newQuestionnaire();
+  const parsed = parseJsonObjectFromReply(rawReply);
+  const shortTopic = brief.replace(/^课题[：:]\s*/u, '').split(/[。；\n]/u)[0]?.trim().slice(0, 32) || '专题调研';
+  const title = typeof parsed?.title === 'string' && parsed.title.trim() ? parsed.title.trim().slice(0, 60) : `${shortTopic}调查问卷`;
+  const objective = typeof parsed?.objective === 'string' && parsed.objective.trim() ? parsed.objective.trim() : `围绕「${brief.slice(0, 100)}」评估核心构念、消费偏好与改进驱动路径。`;
+  const population = typeof parsed?.population === 'string' && parsed.population.trim() ? parsed.population.trim() : '目标受众及潜在消费群体';
+  const introduction = typeof parsed?.introduction === 'string' && parsed.introduction.trim()
+    ? parsed.introduction.trim()
+    : '您好！我们正在开展一项学术市场调查，所有作答严格匿名且仅用于统计分析，预计占用您 3~5 分钟，衷心感谢您的配合！';
+  const rawQuestions = Array.isArray(parsed?.questions) ? parsed.questions : [];
+  const validTypes = new Set<QuestionType>(['single', 'multi', 'likert', 'number', 'text']);
+  const validAnalyses = new Set<AnalysisPlan>(['undecided', 'description', 'comparison', 'association', 'measurement', 'coding', 'routing']);
+  const questions: DesignQuestion[] = rawQuestions
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object' && typeof item.text === 'string' && item.text.trim().length > 0)
+    .slice(0, 20)
+    .map((item, idx) => {
+      const varCode = `Q${idx + 1}`;
+      const q = newQuestion(`ai-draft-${Date.now().toString(36)}-${idx + 1}`, varCode);
+      const qType = typeof item.type === 'string' && validTypes.has(item.type as QuestionType) ? (item.type as QuestionType) : 'single';
+      const purpose = item.purpose === 'screening' || item.purpose === 'background' ? item.purpose : 'research';
+      const analysis = typeof item.analysis === 'string' && validAnalyses.has(item.analysis as AnalysisPlan) ? (item.analysis as AnalysisPlan) : (qType === 'likert' ? 'measurement' : qType === 'text' ? 'coding' : purpose === 'screening' ? 'routing' : 'description');
+      const rawChoices = Array.isArray(item.choices) ? item.choices : [];
+      const choices = rawChoices
+        .map((c, ci) => {
+          if (typeof c === 'string' && c.trim()) return { code: String(ci + 1), label: c.trim() };
+          if (c && typeof c === 'object' && typeof (c as { label?: unknown }).label === 'string') {
+            return { code: String((c as { code?: unknown }).code ?? ci + 1), label: String((c as { label: string }).label).trim() };
+          }
+          return null;
+        })
+        .filter((c): c is { code: string; label: string } => !!c && c.label.length > 0);
+      return {
+        ...q,
+        variable: varCode,
+        text: String(item.text).trim(),
+        type: qType,
+        required: true,
+        purpose,
+        researchQuestion: typeof item.researchQuestion === 'string' ? item.researchQuestion.trim() : brief.slice(0, 48),
+        construct: typeof item.construct === 'string' && item.construct.trim() ? item.construct.trim() : (purpose === 'screening' ? '样本甄别' : purpose === 'background' ? '人口学特征' : '核心测量构念'),
+        analysis,
+        decisionUse: typeof item.decisionUse === 'string' && item.decisionUse.trim() ? item.decisionUse.trim() : '用于核心群体对比与回归/聚类分析',
+        source: '研究大脑直连起草',
+        choices: qType === 'single' || qType === 'multi' ? (choices.length >= 2 ? choices : q.choices) : [],
+        min: qType === 'likert' ? 1 : qType === 'number' ? 0 : null,
+        max: qType === 'likert' ? 5 : null,
+        minLabel: qType === 'likert' ? (typeof item.minLabel === 'string' && item.minLabel.trim() ? item.minLabel.trim() : '非常不同意') : '',
+        maxLabel: qType === 'likert' ? (typeof item.maxLabel === 'string' && item.maxLabel.trim() ? item.maxLabel.trim() : '非常同意') : '',
+      };
+    });
+
+  if (!questions.length) {
+    const q1 = { ...newQuestion('draft-q1', 'Q1'), text: `请问您近期是否接触或消费过「${brief.slice(0, 24)}」相关产品或服务？`, type: 'single' as const, purpose: 'screening' as const, construct: '准入甄别', analysis: 'routing' as const, decisionUse: '过滤非目标受访者，保证样本口径纯净', choices: [{ code: '1', label: '是，近半年内有过体验' }, { code: '2', label: '曾了解但未实际体验' }, { code: '3', label: '从未听说（终止作答）' }], required: true };
+    const q2 = { ...newQuestion('draft-q2', 'Q2'), text: '您的年龄段属于？', type: 'single' as const, purpose: 'background' as const, construct: '人口统计学基线', analysis: 'description' as const, decisionUse: '与统计年鉴人口结构核对加权', choices: [{ code: '1', label: '18~25 岁' }, { code: '2', label: '26~35 岁' }, { code: '3', label: '36~45 岁' }, { code: '4', label: '46 岁及以上' }], required: true };
+    const q3 = { ...newQuestion('draft-q3', 'Q3'), text: '整体而言，该品类或服务的核心品质与性价比达到我的预期。', type: 'likert' as const, purpose: 'research' as const, construct: '感知价值与品质', researchQuestion: brief.slice(0, 40), analysis: 'measurement' as const, decisionUse: 'CFA/SEM 潜变量测度与满意度归因', min: 1, max: 5, minLabel: '非常不同意', maxLabel: '非常同意', choices: [], required: true };
+    const q4 = { ...newQuestion('draft-q4', 'Q4'), text: '如果身边亲友询问类似消费选择，我愿意主动推荐该产品或品牌。', type: 'likert' as const, purpose: 'research' as const, construct: '口碑推荐意愿', researchQuestion: brief.slice(0, 40), analysis: 'association' as const, decisionUse: '复购与推荐转化路径预测', min: 1, max: 5, minLabel: '非常不愿意', maxLabel: '非常愿意', choices: [], required: true };
+    const q5 = { ...newQuestion('draft-q5', 'Q5'), text: '针对现有体验中您最不满意的一个细节，您希望品牌方如何改进？', type: 'text' as const, purpose: 'research' as const, construct: '开放性痛点洞察', researchQuestion: brief.slice(0, 40), analysis: 'coding' as const, decisionUse: '质性主题聚类补全量表盲区', choices: [], required: false };
+    questions.push(q1, q2, q3, q4, q5);
+  }
+  return { ...base, title, objective, population, introduction, questions };
+}
+
 /**
  * 证见 Agent, laid out like Codex: an icon rail, a sidebar of projects and conversations, one conversation in the
  * middle, and every workbench module opening in a panel on the right, kept mounted once opened. The panel follows the
@@ -160,7 +271,7 @@ export default function AgentShell() {
     return { owner: owner && owner !== 'guest' && isCurrentAccount(owner, identityEpoch) ? owner : null, epoch: identityEpoch,
       thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
   }, [owner, identityEpoch, isCurrentAccount]);
-  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research } = useWorkbenchModules(true, projectId);
+  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research, sendSiliconToAnalysis } = useWorkbenchModules(true, projectId);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
   const preparingReport = useRef<{ id: string; scope: ReportRunScope } | null>(null);
@@ -186,6 +297,22 @@ export default function AgentShell() {
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [researchOpen, setResearchOpen] = useState(false);
+  const [benchStation, setBenchStation] = useState<WorkKind>('survey');
+  const [theaterConfig, setTheaterConfig] = useState<{
+    topic: string;
+    templateKey: SiliconTemplateKey;
+    size: number;
+    seed: number;
+    customDesign: Questionnaire | null;
+    playKey: number;
+  }>({
+    topic: '',
+    templateKey: 'residents',
+    size: 24,
+    seed: 2026,
+    customDesign: null,
+    playKey: 0,
+  });
   const [pickedSection, setPickedSection] = useState<string | null>(null);
   const [docFormat, setDocFormat] = useState<DocFormatMode>('latex');
   const [activeStudio, setActiveStudio] = useState<StudioTabId | null>(null);
@@ -321,7 +448,7 @@ export default function AgentShell() {
   // conversation its minimum. Widths are read through stores so the first client render matches the server's.
   const savedWidth = useSyncExternalStore(subscribeNothing, savedPanelWidth, () => null);
   const [draggedWidth, setPanelWidth] = useState<number | null>(null);
-  const room = viewport - RAIL - GUTTERS - (sideOpen ? (activeStudio ? 448 : SIDEBAR) : 0);
+  const room = viewport - RAIL - GUTTERS - (sideOpen ? (activeStudio ? 412 : SIDEBAR) : 0);
   const available = Math.max(MIN_PANEL, room - MIN_TALK);
   const panelWidth = Math.min(available, draggedWidth ?? savedWidth ?? Math.round(Math.min(1240, Math.max(MIN_PANEL, room * 0.7))));
   const [dragging, setDragging] = useState(false);
@@ -540,8 +667,67 @@ export default function AgentShell() {
   const report = deferredView.report, design = deferredView.design, dataset = deferredView.dataset, liveReport = view.report;
   // The editor must be mounted to take a figure change; it then stays mounted, hidden, as a visited module does.
   const mountEditor = useCallback(() => setVisited(v => v.includes('editor') ? v : [...v, 'editor']), []);
-  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, sessionError, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes, stage, expanded });
-  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, sessionError, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes, stage, expanded }; });
+  const latest = useRef({ projectId, reportScope, reportSource, csrfToken: account?.csrfToken, sessionError, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes, stage, expanded, effectiveBrain, customBrain, applyCandidate, blankReport });
+  useLayoutEffect(() => { latest.current = { projectId, reportScope, reportSource, csrfToken: account?.csrfToken, sessionError, panel, light, theme, knowledge, traces, held, plan, report, liveReport, design, dataset, generation, owner, identityEpoch, isCurrentAccount, lastPanel, toggleSide, chatMode, chatService, reportService, mutate, outputId, tweakFigure, mountEditor, stepSection, steeringNotes, stage, expanded, effectiveBrain, customBrain, applyCandidate, blankReport }; });
+
+  const launchSiliconTheater = useCallback(
+    (opts?: {
+      topic?: string;
+      templateKey?: SiliconTemplateKey;
+      size?: number;
+      seed?: number;
+      design?: Questionnaire | null;
+      openCopilot?: boolean;
+    }) => {
+      const snap = latest.current;
+      const topicHint = opts?.topic?.trim() || opts?.design?.title || snap.design?.title || snap.liveReport?.title || '';
+      const popHint = opts?.design?.population || snap.design?.population || '';
+      setTheaterConfig(prev => ({
+        topic: topicHint,
+        templateKey: opts?.templateKey ?? (topicHint || popHint ? inferSiliconTemplate(`${topicHint} ${popHint}`) : prev.templateKey),
+        size: opts?.size ?? prev.size,
+        seed: opts?.seed ?? prev.seed,
+        customDesign: opts?.design !== undefined ? opts.design : prev.customDesign,
+        playKey: prev.playKey + 1,
+      }));
+      setExpanded(false);
+      setStage('theater');
+      setCopilotOpen(Boolean(opts?.openCopilot));
+    },
+    [setCopilotOpen, setExpanded, setStage],
+  );
+
+  const liveTheaterBundle = useMemo(() => {
+    if (stage !== 'theater') return null;
+    const activeDesign =
+      theaterConfig.customDesign ??
+      design ??
+      (theaterConfig.topic.trim() ? buildDemoQuestionnaire(decomposeTopic(theaterConfig.topic.trim())) : siliconExampleQuestionnaire());
+    const sourceLabel = theaterConfig.customDesign
+      ? '工坊/流程定制问卷'
+      : design
+        ? '当前项目问卷'
+        : theaterConfig.topic.trim()
+          ? '按课题自动构念'
+          : '内置示例问卷';
+    const attrs = PANEL_TEMPLATES[theaterConfig.templateKey]?.attributes ?? PANEL_TEMPLATES.residents.attributes;
+    const panel = generatePanel({
+      attributes: attrs,
+      size: theaterConfig.size,
+      allocation: 'quota',
+      seed: theaterConfig.seed,
+      background: activeDesign.population || theaterConfig.topic || '分层硅基预测试受访人群',
+    });
+    const runSettings = {
+      engine: 'demo' as const,
+      memory: 'carry' as const,
+      shuffleOptions: false,
+      scenarios: [NO_SCENARIO],
+      models: [],
+    };
+    const run = demoRun(activeDesign, attrs, panel, runSettings);
+    return { design: activeDesign, sourceLabel, attrs, panel, runSettings, run };
+  }, [stage, theaterConfig, design]);
   const stopChoreography = choreo.stop;
   const stopReportRun = useCallback((reason = '已取消运行；原稿已保留。已发出的调用可能仍计费，请核对回执。') => {
     preparingReport.current = null;
@@ -614,7 +800,14 @@ export default function AgentShell() {
       const routed = route(text, { room: panel, light, theme, traces, results: held, plan, projectTitle: report?.title || design?.title, design, datasetName: dataset?.name });
       if ('draft' in routed) { threads.append([user]); askDraft(routed.draft); return; }
       // Drafting with a model always starts with the user's consent, never with a call.
-      if ('generate' in routed) { threads.append([user, { ...stamp(), role: 'agent', turn: generation.start(routed.generate) }]); return; }
+      if ('generate' in routed) {
+        const brain = latest.current.effectiveBrain;
+        const turnOut = generation.account !== 'ready' && brain.available
+          ? buildGuestDraftGateTurn(routed.generate, brain.provider, brain.model)
+          : generation.start(routed.generate);
+        threads.append([user, { ...stamp(), role: 'agent', turn: turnOut }]);
+        return;
+      }
       if ('lookup' in routed) { threads.append([user, { ...stamp(), role: 'pending', query: routed.lookup, explicit: routed.explicit }]); return; }
       threads.append([user, { ...stamp(), role: 'agent', turn: routed.turn }]);
       if (routed.turn.act) perform(routed.turn.act);
@@ -1087,6 +1280,139 @@ export default function AgentShell() {
           say([span(`已将工坊产出「${action.title}」写入中间报告画布对应章节，可在编辑器顶部随时撤销。`, 'dim')]);
           break;
         }
+        case 'draftLocalQuestionnaire': {
+          const snap = latest.current;
+          const waitingMsg: Message = {
+            ...stamp(),
+            role: 'agent',
+            model: {
+              service: snap.effectiveBrain.provider,
+              provider: snap.effectiveBrain.preset,
+              modelName: snap.effectiveBrain.model,
+              step: 1,
+              status: 'running',
+            },
+            turn: { lines: [[span(`已确认：正在调用「${snap.effectiveBrain.provider}」生成「${action.brief.slice(0, 28)}」结构化问卷草案…`, 'dim')]] },
+          };
+          threads.append([waitingMsg]);
+          const jsonPrompt = `请针对调研需求「${action.brief}」设计一份可直接用于市场调研大赛的高信效度问卷，严格只返回一个 JSON 对象（不要输出多余解释）：\n{\n  "title": "问卷主标题",\n  "objective": "一句研究目的",\n  "population": "目标总体说明",\n  "introduction": "匿名卷首语",\n  "questions": [\n    { "text": "题干", "type": "single|multi|likert|text", "purpose": "screening|background|research", "construct": "构念名称", "analysis": "routing|description|comparison|association|measurement|coding", "decisionUse": "统计用途", "choices": ["选项A", "选项B"] }\n  ]\n}\n要求：1) 开头必放1题甄别题；2) 含2题人口学变量（区间互斥穷尽）；3) 核心构念拆细到具体可测维度，含4-6道5级李克特量表题；4) 结尾含1道开放建议题；总量约8-10题。`;
+          void sendBrainTurn({
+            message: jsonPrompt,
+            history: [],
+            context: chatContext(snap.panel, snap.light, snap.traces, snap.held),
+            step: 1,
+            noTools: true,
+            ...(snap.customBrain ? { custom: snap.customBrain } : {}),
+          }).then((resp) => {
+            const cur = latest.current;
+            const built = buildLocalQuestionnaireFromReply(action.brief, resp.reply);
+            const src = cur.reportSource;
+            cur.applyCandidate({
+              design: built,
+              dataset: src.dataset ?? null,
+              report: src.report ?? cur.blankReport,
+              blueprint: decomposeTopic(built.title),
+            }, src);
+            go('design');
+            threads.patch(waitingMsg.id, m => m.role === 'agent' ? {
+              ...m,
+              model: {
+                service: resp.provider,
+                provider: cur.effectiveBrain.preset,
+                modelName: resp.model,
+                step: 1,
+                status: 'ready',
+                usage: resp.usage ?? undefined,
+                latencyMs: resp.latencyMs,
+              },
+              turn: {
+                lines: [
+                  [span('已为你生成本地研究问卷 '), span(`「${built.title}」`, 'strong'), span(`（共 ${built.questions.length} 题），并同步打开右侧「问卷设计」面板。`)],
+                  [span('提示：你可以直接在右侧逐题微调量表构念与跳答条件，再切回「对话」让大脑继续生成抽样方案。', 'dim')],
+                ],
+                cards: [{
+                  kind: 'tool',
+                  title: `本地问卷草案已落盘 · ${built.questions.length} 题`,
+                  columns: true,
+                  lines: built.questions.slice(0, 6).map(q => [span(`${q.variable} · ${q.construct}`, 'teal'), span(q.text)]),
+                  links: [
+                    { label: '定位到问卷设计器', action: { type: 'open', room: 'design' }, primary: true },
+                    {
+                      label: '⚡ 用 Atypica × 硅基样本预测试',
+                      action: {
+                        type: 'siliconTheater',
+                        topic: built.title,
+                        templateKey: inferSiliconTemplate(`${built.title} ${built.population}`),
+                        size: 24,
+                        autoPlay: true,
+                        design: built,
+                      },
+                    },
+                  ],
+                }],
+                chips: [
+                  {
+                    label: '⚡ 1:1 硅基样本实时预测试',
+                    action: {
+                      type: 'siliconTheater',
+                      topic: built.title,
+                      templateKey: inferSiliconTemplate(`${built.title} ${built.population}`),
+                      size: 24,
+                      autoPlay: true,
+                      design: built,
+                    },
+                    primary: true,
+                  },
+                ],
+              },
+            } : m);
+          }).catch((error) => {
+            const cur = latest.current;
+            const built = buildLocalQuestionnaireFromReply(action.brief, '');
+            const src = cur.reportSource;
+            cur.applyCandidate({
+              design: built,
+              dataset: src.dataset ?? null,
+              report: src.report ?? cur.blankReport,
+              blueprint: decomposeTopic(built.title),
+            }, src);
+            go('design');
+            threads.patch(waitingMsg.id, m => m.role === 'agent' ? {
+              ...m,
+              model: { service: cur.effectiveBrain.provider, provider: cur.effectiveBrain.preset, modelName: cur.effectiveBrain.model, step: 1, status: 'ready' },
+              turn: {
+                lines: [
+                  [span('外部模型返回超时，已启用本地结构化模板生成 '), span(`「${built.title}」`, 'strong'), span(`（${built.questions.length} 题，原因：${(error as Error)?.message ?? '超时'}），可直接编辑。`, 'dim')],
+                ],
+                chips: [
+                  { label: '查看问卷设计', action: { type: 'open', room: 'design' }, primary: true },
+                  {
+                    label: '⚡ 用硅基样本实时预测试',
+                    action: {
+                      type: 'siliconTheater',
+                      topic: built.title,
+                      templateKey: inferSiliconTemplate(`${built.title} ${built.population}`),
+                      size: 24,
+                      autoPlay: true,
+                      design: built,
+                    },
+                  },
+                ],
+              },
+            } : m);
+          });
+          break;
+        }
+        case 'siliconTheater': {
+          launchSiliconTheater({
+            topic: action.topic,
+            templateKey: action.templateKey,
+            size: action.size,
+            design: action.design,
+            openCopilot: false,
+          });
+          break;
+        }
       }
     };
     const answer = (id: string, answered: 'confirmed' | 'cancelled', action?: AgentAction) => {
@@ -1100,7 +1426,7 @@ export default function AgentShell() {
       else focusInput();
     };
     return { send, perform, answer };
-  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, choreo, blankReport, readReportScope, setReportWriting, startCall, finishCall]);
+  }, [go, closePanel, setStage, pickSection, focusInput, sendToReport, loadBenchmark, choreo, blankReport, readReportScope, setReportWriting, startCall, finishCall, launchSiliconTheater]);
 
   const runBrainConversation = useCallback(async (rawText: string) => {
     const currentOwner = latest.current.owner;
@@ -1286,23 +1612,12 @@ export default function AgentShell() {
               resultSummary = '已生成问卷草案确认卡';
               toolOutputText = `已在对话下方弹出问卷草案生成确认卡片：${routed.generate.slice(0, 100)}。`;
             } else {
-              agent.perform({ type: 'open', room: 'design' });
-              collectedCards.push({
-                kind: 'tool',
-                title: '问卷设计构念台 · 实时协同起草',
-                lines: [
-                  [span('研究简报：', 'dim'), span(routed.generate.slice(0, 140))],
-                  [span('当前使用直连推理大脑，已在右侧展开「问卷设计」面板对照；可将下方结构化问卷矩阵直接填入工坊。', 'dim')],
-                ],
-                links: [
-                  { label: '展开问卷设计面板', action: { type: 'open', room: 'design' } },
-                  { label: '打开极简问卷工坊', action: { type: 'say', text: '/问卷工坊' } },
-                ],
-              });
-              execItem.status = 'done';
-              resultSummary = '已开启问卷设计构念协同';
+              const gateTurn = buildGuestDraftGateTurn(routed.generate, effectiveBrain.provider, effectiveBrain.model);
+              threads.appendAfter(pendingMsg.id, { ...stamp(), role: 'agent', turn: gateTurn });
+              execItem.status = 'awaiting_confirm';
+              resultSummary = '已生成本地问卷确认卡';
               execItem.action = { type: 'open', room: 'design' };
-              toolOutputText = `当前处于免登录直连推理大脑模式（无需云端登录确认卡），已在右侧打开「问卷设计」面板并与研究简报（${routed.generate.slice(0, 120)}）对齐。请直接在当前回复中输出完整、可落地的结构化问卷设计（含甄别题、构念映射表、量表题项与分析口径），不要说“确认卡片已弹在对话下方”。`;
+              toolOutputText = `已在对话下方弹出本地问卷生成确认卡片（需用户点击“确认生成本地问卷”后才会调用模型写入「问卷设计」面板）。请向用户简要说明本问卷将拆解的关键构念维度、甄别逻辑与量表设计思路，不要要求用户登录。`;
             }
           } else if ('lookup' in routed) {
             for (const s = Date.now(); stillCurrent() && !latest.current.knowledge.ready && Date.now() - s < 8000;) {
@@ -1352,7 +1667,59 @@ export default function AgentShell() {
             toolOutputText = turnText(turnOut);
             const preview = toolOutputText.replace(/\s+/gu, ' ').trim();
             resultSummary = preview.slice(0, 40) + (preview.length > 40 ? '…' : '');
-            if (tc.action.tool === 'open') execItem.action = { type: 'open', room: tc.action.args.room };
+            if (tc.action.tool === 'open') {
+              execItem.action = { type: 'open', room: tc.action.args.room };
+              if (tc.action.args.room === 'silicon' && !collectedCards.some(c => c.kind === 'silicon-theater')) {
+                const snap = latest.current;
+                const studio = buildSiliconTheaterCardData(
+                  {
+                    room: snap.panel,
+                    light: snap.light,
+                    theme: snap.theme,
+                    traces: snap.traces,
+                    results: snap.held,
+                    plan: snap.plan,
+                    projectTitle: snap.report?.title || snap.design?.title,
+                    design: snap.design,
+                    datasetName: snap.dataset?.name,
+                  },
+                  rawText,
+                );
+                collectedCards.push({
+                  kind: 'silicon-theater',
+                  title: `Atypica × 硅基推演 · 《${studio.shortTitle}》`,
+                  studio,
+                });
+                if (!collectedChips.some(ch => ch.action.type === 'siliconTheater')) {
+                  collectedChips.unshift({
+                    label: '⚡ 进入 1:1 Atypica 推演主舞台',
+                    action: {
+                      type: 'siliconTheater',
+                      topic: studio.topic,
+                      templateKey: studio.templateKey,
+                      size: studio.size,
+                      autoPlay: true,
+                    },
+                    primary: true,
+                  });
+                }
+                if (/(atypica|推演|剧场|深访|焦点小组|1[:：]1)/iu.test(rawText)) {
+                  launchSiliconTheater({
+                    topic: studio.topic,
+                    templateKey: studio.templateKey,
+                    size: studio.size,
+                    openCopilot: false,
+                  });
+                }
+              }
+            }
+            else if (tc.action.tool === 'simulate') {
+              execItem.action = {
+                type: 'siliconTheater',
+                topic: tc.action.args.topic || latest.current.design?.title || rawText,
+                autoPlay: true,
+              };
+            }
             else if (tc.action.tool === 'stage') execItem.action = { type: 'stage', stage: tc.action.args.view };
             else if (tc.action.tool === 'light' || tc.action.tool === 'blind' || tc.action.tool === 'next') execItem.action = { type: 'open', room: 'overview' };
             else if (tc.action.tool === 'results') execItem.action = { type: 'open', room: 'analysis' };
@@ -1433,7 +1800,7 @@ export default function AgentShell() {
       finishCall(pendingMsg.id);
       if (brainAbortRef.current === controller) brainAbortRef.current = null;
     }
-  }, [agent, customBrain, effectiveBrain, finishCall, setCopilotOpen, startCall]);
+  }, [agent, customBrain, effectiveBrain, finishCall, launchSiliconTheater, setCopilotOpen, startCall]);
 
   const dispatchUserMessage = useCallback((raw: string) => {
     const text = raw.trim();
@@ -1686,8 +2053,9 @@ export default function AgentShell() {
   }, [quickSteeringDraft, rewriteSectionWithIdea, setSideOpen, pickSection]);
 
   const overlayDock = stage !== 'chat' || (expanded && !!panel);
-  const dockPanelReserve = !overlayDock && (panel || output || inspecting || artifactOpen)
-    ? (artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth)
+  const hasRightSidePanel = !(expanded && panel) && (panel || output || inspecting || artifactOpen);
+  const dockPanelReserve = hasRightSidePanel
+    ? (artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth) + 8
     : 0;
   const composerElement = (
     <Composer
@@ -1819,25 +2187,46 @@ export default function AgentShell() {
           onToggleAnnotationStatus={id => setAnnotations(prev => prev.map(a => a.id === id ? { ...a, status: a.status === 'applied' ? 'open' : 'applied' } : a))}
           onRemoveAnnotation={id => setAnnotations(prev => prev.filter(a => a.id !== id))}
           onRewriteWithIdea={rewriteSectionWithIdea}
+          onOpenMainTheater={payload =>
+            launchSiliconTheater({
+              topic: payload.design.title,
+              templateKey: payload.templateKey,
+              seed: payload.seed,
+              design: payload.design,
+              openCopilot: false,
+            })
+          }
           signedIn={!!account?.authenticated}
           currentUserEmail={email}
           csrfToken={account?.csrfToken}
         /> : null}
         nav={stage === 'paper' ? <ReportNav content={paperContent} picked={pickedSection} onPick={pickSection} onSay={sayFromTool} onDraftSection={sec => sayFromTool(`起草「${sec}」`)} onStartFullReport={topic => agent.perform({ type: 'generateFullReport', topic: topic ?? '' })} liveWriting={liveWriting} /> : undefined} />
 
-      <main className={styles.main} aria-label={stage === 'paper' ? '报告' : '对话'} data-stage={stage} data-dialog-background>
+      <main className={styles.main} aria-label={stage === 'paper' ? '报告' : stage === 'theater' ? '硅基推演剧场' : stage === 'advisors' ? '专家顾问' : '对话'} data-stage={stage} data-dialog-background>
         <header className={styles.top}>
           {!sideOpen && <button type="button" className={styles.iconButton} aria-label="展开侧栏（Ctrl B）" title="展开侧栏（Ctrl B）" onClick={() => setSideOpen(true)}><Icon name="sidebar" /></button>}
-          <Link href="/workspace" className={styles.backWorkbench} aria-label="返回研究工作台">← 工作台</Link>
-          <span className={styles.topTitle}>{stage === 'paper' ? paperContent.title : thread?.title ?? '新对话'}{projectLabel && <small>{projectLabel}</small>}</span>
+          {(!sideOpen || expanded) && <Link href="/workspace" className={styles.backWorkbench} aria-label="返回研究工作台">← 工作台</Link>}
+          <span className={styles.topTitle}>
+            {stage === 'paper'
+              ? paperContent.title
+              : stage === 'theater'
+                ? liveTheaterBundle?.design.title ?? 'Atypica × 硅基实时推演剧场'
+                : thread?.title ?? '新对话'}
+            {projectLabel && <small>{projectLabel}</small>}
+          </span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
             <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
+            <button type="button" aria-pressed={stage === 'theater'} onClick={() => launchSiliconTheater()} title="Atypica × 硅基样本 1:1 实时推演剧场">
+              <i className={styles.stageDot} aria-hidden="true" />硅基推演
+            </button>
             <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
             <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
-          <span className={styles.workState} data-busy={!!running || looking || !!liveWriting?.active} role="status">
-            <i aria-hidden="true" />{liveWriting?.active ? `实时撰稿中 · ${liveWriting.completed}/${liveWriting.total} 节` : running?.model ? `推理中 · 第 ${running.model.step} 步 · ${running.model.service}` : looking ? '查阅知识镜' : '就绪'}
-          </span>
+          {(!!running || looking || !!liveWriting?.active) && (
+            <span className={styles.workState} data-busy="true" role="status">
+              <i aria-hidden="true" />{liveWriting?.active ? `实时撰稿中 · ${liveWriting.completed}/${liveWriting.total} 节` : running?.model ? `推理中 · 第 ${running.model.step} 步 · ${running.model.service}` : '查阅知识镜'}
+            </span>
+          )}
           <button type="button" className={styles.lightGaugePill} onClick={() => go('overview')} title="查看全站证据照度与盲区全景">
             <LightBar score={light.overall} />
             <span>照度 {percent(light.overall)}</span>
@@ -1849,7 +2238,7 @@ export default function AgentShell() {
           </button>
           <ArtifactShelfLauncher count={artifacts.count} open={artifactOpen} onClick={openArtifactShelf} />
           <span className={styles.spacer} />
-          <button type="button" className={styles.chip} onClick={() => go('services')} aria-label="模型配置">模型配置</button>
+          <button type="button" className={`${styles.chip} ${styles.topConfigBtn}`} onClick={() => go('services')} aria-label="模型配置">模型配置</button>
           <details className={styles.topMore} onKeyDown={event => {
             if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); }
           }} onBlur={event => {
@@ -1865,6 +2254,167 @@ export default function AgentShell() {
           </details>
           {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
         </header>
+        {stage === 'theater' && liveTheaterBundle && (
+          <div className={styles.theaterStage} role="region" aria-label="Atypica × 硅基实时推演剧场">
+            <div className={styles.theaterRibbon}>
+              <div className={styles.theaterRibbonMeta}>
+                <span className={styles.theaterSourcePill}>问卷源：{liveTheaterBundle.sourceLabel} · {liveTheaterBundle.design.questions.length} 题</span>
+                <span className={styles.theaterHonestTag}>硅基模拟 · 与真实调查分开</span>
+              </div>
+              <div className={styles.theaterRibbonControls}>
+                <select
+                  aria-label="选择硅基受访人群模板"
+                  className={styles.theaterRibbonSelect}
+                  value={theaterConfig.templateKey}
+                  onChange={e =>
+                    setTheaterConfig(prev => ({
+                      ...prev,
+                      templateKey: e.target.value as SiliconTemplateKey,
+                      playKey: prev.playKey + 1,
+                    }))
+                  }
+                >
+                  <option value="residents">城市与社区居民</option>
+                  <option value="students">高校大学生</option>
+                  <option value="seniors">银发高龄群体</option>
+                </select>
+                <select
+                  aria-label="选择硅基推演样本量"
+                  className={styles.theaterRibbonSelect}
+                  value={String(theaterConfig.size)}
+                  onChange={e =>
+                    setTheaterConfig(prev => ({
+                      ...prev,
+                      size: Number(e.target.value) || 24,
+                      playKey: prev.playKey + 1,
+                    }))
+                  }
+                >
+                  <option value="12">12 位硅基人设</option>
+                  <option value="24">24 位硅基人设</option>
+                  <option value="36">36 位硅基人设</option>
+                </select>
+                <button
+                  type="button"
+                  className={styles.theaterRibbonBtn}
+                  onClick={() =>
+                    setTheaterConfig(prev => ({
+                      ...prev,
+                      seed: prev.seed + 1,
+                      playKey: prev.playKey + 1,
+                    }))
+                  }
+                >
+                  ↻ 换一批受访者
+                </button>
+                {theaterConfig.customDesign && (
+                  <button
+                    type="button"
+                    className={styles.theaterRibbonBtn}
+                    onClick={() =>
+                      setTheaterConfig(prev => ({
+                        ...prev,
+                        customDesign: null,
+                        playKey: prev.playKey + 1,
+                      }))
+                    }
+                  >
+                    恢复项目问卷
+                  </button>
+                )}
+                <button type="button" className={styles.theaterRibbonBtn} onClick={() => go('silicon')}>
+                  右栏 3D 舞台
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.theaterMountInner}>
+              <AtypicaLiveTheater
+                key={`${theaterConfig.templateKey}:${theaterConfig.size}:${theaterConfig.seed}:${theaterConfig.playKey}:${liveTheaterBundle.design.title}`}
+                design={liveTheaterBundle.design}
+                attributes={liveTheaterBundle.attrs}
+                personas={liveTheaterBundle.panel}
+                settings={liveTheaterBundle.runSettings}
+                run={liveTheaterBundle.run}
+                autoPlay
+                onClose={() => setStage('chat')}
+                onSendToAnalysis={(handoff: DatasetHandoff) => {
+                  sendSiliconToAnalysis(handoff);
+                  threads.append([
+                    {
+                      ...stamp(),
+                      role: 'agent',
+                      turn: {
+                        lines: [
+                          [
+                            span('已将 Atypica × 硅基推演数据集 '),
+                            span(`「${handoff.name}」`, 'strong'),
+                            span(`（${liveTheaterBundle.run.responses.length} 条硅基模拟作答，含「硅基模拟」溯源列）导入右侧「数据分析」面板。`),
+                          ],
+                          [span('可直接在右侧运行卡方/信效度/回归，或在对话中一键生成可编辑三线表与矢量图。', 'dim')],
+                        ],
+                        chips: [
+                          { label: '打开图表工坊', action: { type: 'say', text: '打开图表工坊' }, primary: true },
+                          { label: '生成复现代码', action: { type: 'say', text: '打开代码工坊' } },
+                          { label: '定位数据分析', action: { type: 'open', room: 'analysis' } },
+                        ],
+                      },
+                    },
+                  ]);
+                  setCopilotOpen(false);
+                }}
+                onOpenReportAction={(bp: AtypicaFlowBlueprint) => {
+                  const summaryBlock = [
+                    `【Atypica × 硅基预测试推演结论（${bp.enrichedPersonas.length} 位分层受访者 · 阻断 ${bp.report.metrics.blockers} · 预警 ${bp.report.metrics.warnings} · 模拟答案仅用于题干质控）】`,
+                    ...bp.report.actionChecklist,
+                    bp.discussionSummary ? `焦点小组讨论摘要：${bp.discussionSummary}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join('\n');
+                  const hasQuestionnaireNode = paperContent.report.some(sec => sec.id === 'design.questionnaire');
+                  const targetSecId = hasQuestionnaireNode ? 'design.questionnaire' : (paperContent.report[1]?.id ?? paperContent.report[0]?.id);
+                  const nextReport = paperContent.report.map(sec =>
+                    sec.id === targetSecId
+                      ? {
+                          ...sec,
+                          body: sec.body.trim() ? `${sec.body.trim()}\n\n${summaryBlock}` : summaryBlock,
+                        }
+                      : sec,
+                  );
+                  commitStudioReport(
+                    { ...paperContent, report: nextReport },
+                    '已将 Atypica × 硅基预测试洞察与焦点小组结论写入报告，并切至 A4 成文镜台。',
+                    liveTheaterBundle.design,
+                  );
+                  if (targetSecId) requestAnimationFrame(() => pickSection(targetSecId));
+                  threads.append([
+                    {
+                      ...stamp(),
+                      role: 'agent',
+                      turn: {
+                        lines: [
+                          [span('已将预测试阻断提示与受访者焦点小组分歧写入报告正文，并切换至 A4 排版视图。')],
+                        ],
+                        chips: [
+                          {
+                            label: '让大模型按此发现精修问卷',
+                            action: {
+                              type: 'say',
+                              text: `请结合刚才 ${bp.enrichedPersonas.length} 位硅基受访者的预测试阻断（${bp.report.metrics.blockers}项）和焦点小组讨论意见，优化「${liveTheaterBundle.design.title}」的题干与选项设计。`,
+                            },
+                            primary: true,
+                          },
+                          { label: '打开撰稿工坊', action: { type: 'say', text: '打开撰稿工坊' } },
+                        ],
+                      },
+                    },
+                  ]);
+                  setCopilotOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        )}
         {stage === 'advisors' && (
           <Advisors
             benchmark={paperBenchmark}
@@ -2027,82 +2577,115 @@ export default function AgentShell() {
         <div ref={scrollRef} className={styles.scroll}>
           {!messages.length && (
             <section className={styles.empty} aria-label="证见 Agent 研究大脑">
-              <div className={styles.emptyHero}>
-                <AnatomyPrismMark size={78} running={!!running || looking} />
-                <div className={styles.emptyEyebrow}>EVI-X OPTICAL HARNESS · 证见镜室操作系统</div>
-                <h1 tabIndex={-1}>以对话为中枢，按需唤醒整座实证研究工坊</h1>
-                <p className={styles.emptyLead}>
-                  {chatService
-                    ? `已绑定「${chatService.label}（${chatService.model}）」；右侧工作台照度 ${percent(light.overall)}，共配备 ${AGENT_TOOL_SPECS.length} 项证见工具。`
-                    : effectiveBrain.available
-                      ? `推理大脑「${effectiveBrain.provider} · ${effectiveBrain.model}」已直连就绪；当前全站照度 ${percent(light.overall)}，随问随调报告、问卷、知识镜与交互工坊。`
-                      : brainStatus === null
-                        ? `正在探测研究大脑直连服务与工具能力；当前全站照度 ${percent(light.overall)}，可随时输入研究问题。`
-                        : `当前工作区照度 ${percent(light.overall)}（离线规则引擎模式）。可点击下方任一研究情境试运行，或点击右上角引擎胶囊接入推理密钥。`}
-                </p>
-              </div>
-
-              <AnatomyStageCard
-                overallScore={light.overall}
-                blindCount={light.blind.length}
-                litCount={light.rooms.filter(r => r.score > 0).length}
-                totalRooms={light.rooms.length}
-                busy={!!running || looking}
-              />
-
-              <div className={styles.bentoGrid} role="group" aria-label="典型研究调度情境">
-                {[
-                  {
-                    tag: 'OPTICAL PROBE · 照度巡检',
-                    title: '全站证据体检与盲区诊断',
-                    desc: '读取四象限照度、定位尚未补全的研究盲区并给出下一步动线。',
-                    prompt: '帮我扫描当前项目各模块的证据照度，目前还缺哪些核心证据？下一步该优先完善哪一块？',
-                  },
-                  {
-                    tag: 'SIMULATION · 全链演示',
-                    title: '铸造社区助餐教学模拟全案',
-                    desc: '围绕「社区养老助餐服务」生成完整问卷、模拟样本与合规模板。',
-                    prompt: '请围绕「社区养老助餐服务满意度与优化路径」生成一套教学模拟研究样板，并切到报告视图讲讲结构。',
-                  },
-                  {
-                    tag: 'KNOWLEDGE MIRROR · 公式溯源',
-                    title: '设计效应 DEFF 与样本量校验',
-                    desc: '检索知识镜已审核词条，核对精确 LaTeX 公式与抽样框适用边界。',
-                    prompt: '什么是抽样设计效应（DEFF）？请用知识镜查一下公式，并说说正大杯多阶段抽样里怎么设定它。',
-                  },
-                  {
-                    tag: 'STUDIO HARNESS · 工坊协同',
-                    title: '设计多维满意度对比与作图脚本',
-                    desc: '推导统计检验方案，并在对话内直接呼出交互式图表 / 统计编程工坊。',
-                    prompt: '我想研究青年群体 AI 消费满意度的群体差异，帮我设计实证检验思路并打开统计绘图工坊。',
-                  },
-                ].map(card => (
+              <header className={styles.emptyHeaderBar}>
+                <div className={styles.emptyTitleBlock}>
+                  <div className={styles.emptyEyebrow}>
+                    <span className={styles.livePulse} data-online={effectiveBrain.available ? 'true' : 'false'} aria-hidden="true" />
+                    EVI-X OPTICAL HARNESS · 证见镜室操作系统
+                  </div>
+                  <h1 tabIndex={-1}>以对话为中枢，按需唤醒整座实证研究工坊</h1>
+                  <p className={styles.emptyLead}>
+                    {chatService
+                      ? `已绑定「${chatService.label}（${chatService.model}）」；全站照度 ${percent(light.overall)} · 共配备 ${AGENT_TOOL_SPECS.length} 项证见工具。`
+                      : effectiveBrain.available
+                        ? `推理大脑「${effectiveBrain.provider} · ${effectiveBrain.model}」直连就绪，悬停右侧镜片同步切换工位。`
+                        : brainStatus === null
+                          ? `正在探测研究大脑直连服务与工具能力；当前全站照度 ${percent(light.overall)}。`
+                          : `当前工作区照度 ${percent(light.overall)}（离线规则引擎模式）。`}
+                  </p>
+                </div>
+                <div className={styles.emptyHeaderActions}>
+                  {!effectiveBrain.available && (
+                    <button type="button" className={styles.brainSecondaryBtn} onClick={() => setBrainModalOpen(true)}>
+                      <Icon name="bolt" />
+                      <span>接入密钥</span>
+                    </button>
+                  )}
                   <button
-                    key={card.title}
                     type="button"
-                    className={styles.bentoCard}
-                    onClick={() => sendFromDock(card.prompt)}
+                    className={styles.brainSecondaryBtn}
+                    onClick={() => launchSiliconTheater({ openCopilot: false })}
+                    title="启动 Atypica × 硅基样本 1:1 实时推演剧场"
                   >
-                    <span className={styles.bentoTag}>{card.tag}</span>
-                    <strong className={styles.bentoTitle}>{card.title}</strong>
-                    <span className={styles.bentoDesc}>{card.desc}</span>
-                    <span className={styles.bentoPrompt}>“{card.prompt}”</span>
+                    <Icon name="bolt" />
+                    <span>硅基推演</span>
                   </button>
-                ))}
-              </div>
+                  <button type="button" className={styles.brainSecondaryBtn} aria-expanded={researchOpen} onClick={() => setResearchOpen(open => !open)}>
+                    <Icon name="spark" />
+                    <span>{researchOpen ? '收起路线' : '研究路线'}</span>
+                  </button>
+                </div>
+              </header>
 
-              <div className={styles.brainToolbar}>
-                <button type="button" className={styles.brainSecondaryBtn} onClick={() => setBrainModalOpen(true)}>
-                  <Icon name="bolt" />
-                  <span>{effectiveBrain.available ? `${effectiveBrain.provider} · ${AGENT_TOOL_SPECS.length} 项工具矩阵` : `查看 ${AGENT_TOOL_SPECS.length} 项证见工具与密钥设置`}</span>
-                </button>
-                <button type="button" className={styles.brainSecondaryBtn} aria-expanded={researchOpen} onClick={() => setResearchOpen(open => !open)}>
-                  <Icon name="spark" />
-                  <span>{researchOpen ? '收起研究路线表单' : '展开研究路线表单（按需使用）'}</span>
-                </button>
-                <span className={styles.brainSlashHint}>
-                  键入 <kbd>/</kbd> 随时调出快捷命令
-                </span>
+              <div className={styles.opticalBenchGrid}>
+                <div className={styles.benchInstrumentCol}>
+                  <AnatomyStageCard
+                    overallScore={light.overall}
+                    blindCount={light.blind.length}
+                    litCount={light.rooms.filter(r => r.score > 0).length}
+                    totalRooms={light.rooms.length}
+                    activeKind={benchStation}
+                    onKindChange={setBenchStation}
+                    busy={!!running || looking}
+                  />
+                </div>
+
+                <div className={styles.bentoGrid} role="group" aria-label="典型研究调度情境">
+                  {[
+                    {
+                      kind: 'survey' as const,
+                      tag: '01 / FORM · 照度巡检',
+                      title: '全站证据体检与问卷构念校准',
+                      desc: '扫描四象限照度、定位尚未补全的研究盲区并规划问卷构念。',
+                      prompt: '帮我扫描当前项目各模块的证据照度，目前还缺哪些核心证据？下一步该优先完善哪一块？',
+                    },
+                    {
+                      kind: 'analysis' as const,
+                      tag: '02 / STAT · 工坊协同',
+                      title: '多维统计检验与交互绘图工坊',
+                      desc: '推导卡方/回归/SEM/SHAP方案，在对话内直接呼出统计绘图工坊。',
+                      prompt: '我想研究青年群体 AI 消费满意度的群体差异，帮我设计实证检验思路并打开统计绘图工坊。',
+                    },
+                    {
+                      kind: 'research' as const,
+                      tag: '03 / REF · 公式溯源',
+                      title: '设计效应 DEFF 与样本量校验',
+                      desc: '检索知识镜已审核词条，核对精确 LaTeX 公式与抽样框边界。',
+                      prompt: '什么是抽样设计效应（DEFF）？请用知识镜查一下公式，并说说正大杯多阶段抽样里怎么设定它。',
+                    },
+                    {
+                      kind: 'report' as const,
+                      tag: '04 / TYPE · 全链演示',
+                      title: '铸造社区助餐教学模拟全案',
+                      desc: '生成完整问卷、模拟样本与实测结果，直接切入 A4 成文镜台。',
+                      prompt: '请围绕「社区养老助餐服务满意度与优化路径」生成一套教学模拟研究样板，并切到报告视图讲讲结构。',
+                    },
+                    {
+                      kind: 'survey' as const,
+                      tag: '05 / ATYPICA · 硅基推演',
+                      title: 'Atypica × 硅基样本 1:1 实时预测试与深访',
+                      desc: '装配分层硅基受访者、开展 3 轮深访与焦点小组碰撞，产出现场矩阵与诊断报告。',
+                      prompt: '/硅基推演',
+                    },
+                  ].map(card => (
+                    <button
+                      key={card.title}
+                      type="button"
+                      className={styles.bentoCard}
+                      data-active={benchStation === card.kind ? 'true' : undefined}
+                      onMouseEnter={() => setBenchStation(card.kind)}
+                      onFocus={() => setBenchStation(card.kind)}
+                      onClick={() => sendFromDock(card.prompt)}
+                    >
+                      <div className={styles.bentoTop}>
+                        <span className={styles.bentoTag}>{card.tag}</span>
+                        <span className={styles.bentoArrow} aria-hidden="true">↗</span>
+                      </div>
+                      <strong className={styles.bentoTitle}>{card.title}</strong>
+                      <span className={styles.bentoDesc}>{card.desc}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </section>
           )}
@@ -2132,8 +2715,19 @@ export default function AgentShell() {
                     `调查对象：${input.population}`, `地区：${input.geography}`].join('\n');
                   threads.append([{ ...stamp(), role: 'agent', turn: generation.start(brief, destination) }]);
                 }}
-                simulation={{ source: reportSource, apply: applyCandidate, openReport: () => go('editor'),
-                  startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }) }}
+                simulation={{
+                  source: reportSource,
+                  apply: applyCandidate,
+                  openReport: () => go('editor'),
+                  startWriting: title => agent.perform({ type: 'generateFullReport', topic: title, mode: 'demonstration' }),
+                  openTheater: (simDesign, brief) =>
+                    launchSiliconTheater({
+                      topic: brief.title,
+                      templateKey: inferSiliconTemplate(`${brief.title} ${brief.population}`),
+                      design: simDesign,
+                      openCopilot: false,
+                    }),
+                }}
                 onWorkflowWorkState={setWorkflowWorkState}
                 onAdoptWorkflowOutput={adoptWorkflowOutput} />
             </section>
@@ -2175,13 +2769,16 @@ export default function AgentShell() {
         </div>}
       </section>
 
-      <div className={styles.floatingDock} data-overlay={overlayDock || undefined} data-dialog-background>
+      <div className={styles.floatingDock} data-overlay={overlayDock || undefined} data-folded={overlayDock && !copilotOpen ? 'true' : undefined} data-dialog-background>
         {overlayDock && !copilotOpen && (
-          <div className={styles.dockTrayRow}>
-            <button type="button" className={styles.dockTrayPill} onClick={() => setCopilotOpen(true)}>
+          <div className={styles.overlayMiniBar} role="region" aria-label="证见 AI 快捷副驾">
+            <button type="button" className={styles.overlayMiniPrompt} onClick={() => { setCopilotOpen(true); requestAnimationFrame(() => focusInput()); }}>
               <BrandMark size={15} />
-              <span>{running || looking ? '证见大脑思考中…' : messages.length ? `展开对话记录 (${messages.length})` : '展开对话抽屉'}</span>
-              {running || looking ? <i aria-label="工作中" /> : null}
+              <span>向证见大脑提问、下达指令或改写本节…</span>
+              <kbd>/</kbd>
+            </button>
+            <button type="button" className={styles.overlayMiniExpand} onClick={() => setCopilotOpen(true)} aria-label={messages.length ? `展开对话记录 (${messages.length})` : '展开对话抽屉'}>
+              {running || looking ? <><i aria-label="工作中" />思考中…</> : messages.length ? `对话 (${messages.length}) ▴` : '展开对话抽屉 ▴'}
             </button>
           </div>
         )}
@@ -2204,7 +2801,7 @@ export default function AgentShell() {
             </div>
           </section>
         )}
-        <div className={styles.dockComposerWrap} data-overlay={overlayDock || undefined}>
+        <div className={styles.dockComposerWrap} data-overlay={overlayDock || undefined} hidden={overlayDock && !copilotOpen}>
           {composerElement}
         </div>
       </div>

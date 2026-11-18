@@ -30,7 +30,7 @@ export const ROOMS: readonly Room[] = [
   { id: 'editor', name: '报告与 PPT', glyph: '报', group: 'path', line: '按蓝图写报告，排版 Word 与 PPT，对标体检。', command: '报告', aliases: ['报告与 PPT', '报告室', '报告', '写作', '论文', '排版', '幻灯片', 'PPT', 'Word', '摘要', '参考文献'] },
   { id: 'defense', name: '路演答辩', glyph: '答', group: 'path', line: '按主题演练追问，定位证据，编排讲述时间。', command: '答辩', aliases: ['路演答辩', '答辩室', '答辩', '路演', '演练', '追问', '讲稿'] },
   { id: 'cases', name: '获奖案例', glyph: '案', group: 'gallery', line: '对照真实获奖案例；它只作参照，不替你下结论。', command: '案例', aliases: ['获奖案例', '案例库', '案例', '获奖', '范例', '往届'] },
-  { id: 'silicon', name: '硅基样本', glyph: '硅', group: 'gallery', line: '让 AI 扮演设定人群预答问卷，在真人作答前发现问题。', command: '硅基', aliases: ['硅基样本', '硅基', '模拟作答', '预答', '预测试', '虚拟样本', '模拟人群'] },
+  { id: 'silicon', name: '硅基样本', glyph: '硅', group: 'gallery', line: '让 AI 扮演设定人群预答问卷，并可随时启动 Atypica 1:1 实时深访与焦点小组推演。', command: '硅基', aliases: ['硅基样本', '硅基', '模拟作答', '预答', '预测试', '虚拟样本', '模拟人群', 'atypica', '硅基推演', '深访推演', '焦点小组', '硅基访谈', '实时推演'] },
   { id: 'exam', name: '网赛刷题', glyph: '网', group: 'tools', line: '按章节练习，重做错题，用模拟自测掌握调查方法。', command: '题库', aliases: ['网赛刷题', '网赛题库', '网赛', '刷题', '题库', '错题', '练习'] },
   { id: 'preflight', name: '提交前体检', glyph: '提', group: 'tools', line: '检查身份与编辑残留，定位文件部件并下载记录。', command: '提交', aliases: ['提交前体检', '提交前', '提交检查', '匿名检查', '编辑残留', '元数据'] },
   { id: 'workspace', name: '项目门户', glyph: '项', group: 'tools', line: '创建团队项目，保存协作登记与问卷版本。', command: '项目', aliases: ['项目门户', '团队项目', '协作', '生命周期'] },
