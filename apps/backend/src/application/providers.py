@@ -1,3 +1,4 @@
+from shared.errors import ProviderFailure
 import json
 
 from infrastructure.llm import ChatCompletionClient
@@ -19,7 +20,8 @@ class LiveProvider(ChatCompletionClient):
 
     async def answer(self, config, key, message, spec):
         """One simulated-respondent turn for a 硅基样本 run; `spec` is for fixtures only."""
-        return await self.complete(config, key, message, 65536)
+        limit = 196608 if spec.get("mode") == "interview_pretest" else 65536
+        return await self.complete(config, key, message, limit)
 
     async def agent_chat(self, config, key, message):
         """One turn of the 证见 Agent conversation; the prompt itself stays within agent_chat.PROMPT_BYTES."""
@@ -69,6 +71,8 @@ class FixtureProvider:
                                           {"text": "合成测试拟稿引用第一条事实：{F1}。"}]}, ensure_ascii=False)
 
     async def answer(self, config, key, message, spec):
+        if spec.get("mode") == "interview_pretest":
+            raise ProviderFailure("provider_rejected")
         self.calls += 1
         # Conspicuously synthetic answers: first option, lowest point, a labelled placeholder text.
         def pick(item):
