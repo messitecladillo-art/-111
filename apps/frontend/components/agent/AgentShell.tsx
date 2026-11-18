@@ -112,6 +112,7 @@ function subscribeHash(listener: () => void) {
 function currentPanel(): RoomId | null {
   return agentPanelFromHash(window.location.hash);
 }
+const CHAT_HASH = '#chat';
 const currentHash = () => window.location.hash;
 const serverHash = () => '';
 /** A registered result opened beside the conversation, `#output/<id>`; it takes the panel's place while no module is open. */
@@ -283,6 +284,7 @@ export default function AgentShell() {
   const researchStage = researchStageFromHash(agentHash);
   const [researchStageVisit, setResearchStageVisit] = useState(0);
   const researchOverview = agentHash === RESEARCH_OVERVIEW_HASH;
+  const explicitChat = agentHash === CHAT_HASH;
   const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research, sendSiliconToAnalysis } = useWorkbenchModules(true, projectId, researchStage, researchStageVisit);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
@@ -305,10 +307,10 @@ export default function AgentShell() {
   const outputId = useSyncExternalStore(subscribeHash, currentOutput, () => null);
   const [showCode, setShowCode] = useShowCode(owner);
   const [preferredStage, setPreferredStage] = useStage(owner);
-  const stage = researchStage === 'report' ? 'paper' : researchOverview ? 'chat' : preferredStage;
+  const stage = researchStage === 'report' ? 'paper' : researchOverview || explicitChat ? 'chat' : preferredStage;
   const setStage = useCallback((next: typeof preferredStage) => {
     const hash = window.location.hash;
-    if ((hash === RESEARCH_OVERVIEW_HASH && next !== 'chat') || (researchStageFromHash(hash) === 'report' && next !== 'paper')) {
+    if (((hash === RESEARCH_OVERVIEW_HASH || hash === CHAT_HASH) && next !== 'chat') || (researchStageFromHash(hash) === 'report' && next !== 'paper')) {
       window.location.hash = '';
     }
     setPreferredStage(next);
@@ -316,7 +318,7 @@ export default function AgentShell() {
   const [hired, setHired] = useHired(owner);
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const researchOpen = researchOverview || (!messages.length && !panel && !outputId && stage === 'chat');
+  const researchOpen = researchOverview || (!agentHash && !messages.length && stage === 'chat');
   const displayedResearchStage = researchStage ?? (panel ? defaultResearchStage(panel) : stage === 'paper' ? 'report' : null);
   const [benchStation, setBenchStation] = useState<WorkKind>('survey');
   const [theaterConfig, setTheaterConfig] = useState<{
@@ -560,6 +562,13 @@ export default function AgentShell() {
     if (window.location.hash === hash) setResearchStageVisit(visit => visit + 1);
     else window.location.hash = hash;
   }, []);
+  const openChat = () => {
+    if (!panel && !outputId) {
+      if (!explicitChat) window.location.assign(CHAT_HASH);
+    } else {
+      setStage('chat');
+    }
+  };
   const openResearchOverview = useCallback(() => {
     setArtifactOpen(false);
     setCopilotOpen(false);
@@ -2222,7 +2231,7 @@ export default function AgentShell() {
             {projectLabel && <small>{projectLabel}</small>}
           </span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
-            <button type="button" aria-pressed={stage === 'chat' && !researchOverview} onClick={() => { if (researchOverview) closePanel(); setStage('chat'); }}><Icon name="chat" />对话</button>
+            <button type="button" aria-pressed={stage === 'chat' && !researchOpen} onClick={openChat}><Icon name="chat" />对话</button>
             <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
             <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
@@ -2636,7 +2645,7 @@ export default function AgentShell() {
               <b>证见 AI</b>
               <small>{thread?.title ?? '新对话'}</small>
               <span className={styles.spacer} />
-              <button type="button" className={styles.chip} onClick={() => { if (researchOverview) closePanel(); setExpanded(false); setStage('chat'); }}>回到对话</button>
+              <button type="button" className={styles.chip} onClick={() => { setExpanded(false); openChat(); }}>回到对话</button>
               <button type="button" className={styles.iconButton} aria-label="收起对话抽屉" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
             </div>
             <div ref={scrollRef} className={styles.scroll}>

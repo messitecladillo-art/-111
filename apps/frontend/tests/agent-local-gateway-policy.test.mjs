@@ -146,3 +146,31 @@ test('oversized local input is rejected before a provider request', async () => 
   assert.equal((await route.POST(request({ message: 'Synthetic', context: {}, extra: 'x'.repeat(120_000) }))).status, 400);
   assert.equal(calls.length, 0);
 });
+
+test('image readiness follows the authorized gateway without disclosing key values', async () => {
+  const read = new Request(localOrigin + '/api/agent/image-gen', {
+    headers: { host: '127.0.0.1:3180', 'sec-fetch-site': 'same-origin', referer: localOrigin + '/agent' },
+  });
+  for (const enabled of [true, false]) {
+    const { route, calls } = harness('image-gen', enabled ? localEnv : { ...localEnv, NODE_ENV: 'production' });
+    const response = await route.GET(read);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await response.json(), {
+      providers: { gemini: enabled, imagen: enabled, openai_compatible: enabled },
+    });
+    assert.equal(calls.length, 0);
+  }
+});
+
+test('explicit no-tools calls neither expose tools to the provider nor accept returned tool requests', async () => {
+  const { route, calls } = harness('brain', localEnv, async () => Response.json({ choices: [{ message: {
+    content: 'Synthetic answer',
+    tool_calls: [{ id: 'test-call', function: { name: 'light', arguments: '{}' } }],
+  } }] }));
+  const response = await route.POST(request({ message: 'Synthetic', context: {}, noTools: true }));
+  assert.equal(response.status, 200);
+  const upstream = JSON.parse(calls[0].options.body);
+  assert.equal(Object.hasOwn(upstream, 'tools'), false);
+  assert.equal(Object.hasOwn(upstream, 'tool_choice'), false);
+  assert.deepEqual((await response.json()).toolCalls, []);
+});
