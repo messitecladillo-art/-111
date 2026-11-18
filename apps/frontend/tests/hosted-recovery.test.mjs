@@ -50,7 +50,7 @@ function mount(relative, mocks, props, internalExport, globals = {}) {
   if (relative.endsWith('/HostedReport.tsx')) imports['./useHostedReport'] = hostedReportHookModule(hooks, { auth: imports['./HostedSession'], api: imports['./api-client'], globals });
   const source = fs.readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, queueMicrotask, window: { confirm: () => true }, location: { reload() {} }, ...globals };
+  const box = { exports: {}, require: name => { assert.ok(name in imports, `Unmocked boundary: ${name}`); return imports[name]; }, console, crypto, structuredClone, JSON, queueMicrotask, window: { location: { pathname: '/projects/' + projectId, hash: '' }, confirm: () => true, addEventListener() {}, removeEventListener() {} }, location: { reload() {} }, ...globals };
   vm.runInNewContext(compiled + (internalExport ? `\nexports.__tested = ${internalExport};` : ''), box);
   const component = internalExport ? box.exports.__tested : box.exports.default;
   return {
