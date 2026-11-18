@@ -56,7 +56,7 @@ function mount(imports) {
         return compile(file);
       }
       throw Error(`Unmocked dependency ${name}`);
-    },JSON,crypto,structuredClone,console,TextEncoder,TextDecoder,URL,URLSearchParams,queueMicrotask,setTimeout,clearTimeout,window:{confirm:()=>true},location:{reload(){}}};
+    },JSON,crypto,structuredClone,console,TextEncoder,TextDecoder,URL,URLSearchParams,queueMicrotask,setTimeout,clearTimeout,window:{location:{pathname:'/projects/'+projectId,hash:''},confirm:()=>true,addEventListener(){},removeEventListener(){}},location:{reload(){}}};
     modules.set(filename,box.exports);
     const source=fs.readFileSync(filename,'utf8');
     const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;

@@ -23,7 +23,7 @@ import { blueprintNode } from '@/lib/report-blueprint';
 import { SYNTHESIS_NODES, draftFacts, draftLine, draftRequest, draftText, reportOutline, sectionText, type DraftReceipt, type Fact } from '@/lib/agent/draft';
 import { reportPlan } from '@/lib/agent/report-plan';
 import { readDraft, sendDraft } from './draft-client';
-import { ROOM_GROUPS, ROOMS, isRoomId, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
+import { ROOM_GROUPS, ROOMS, roomById, type RoomGroup, type RoomId } from '@/lib/agent/rooms';
 import { lookupTurn, route, standingFindings, toolTurn, type AgentAction, type AgentTurn, type Line, type Mark, type ResultsView, type Span } from '@/lib/agent/router';
 import { AGENT_HANDOFF_KEY, parseHandoffPayload } from '@/lib/agent/dock';
 import { readChatTurn, sendChatTurn } from './chat-client';
@@ -63,7 +63,9 @@ import { fetchBrainStatus, sendBrainTurn, type BrainPresetId, type BrainStatus, 
 import { AGENT_TOOL_SPECS, toolSpecById, type AgentToolCategory } from '@/lib/agent/tools-schema';
 import type { Service } from '@evix/shared';
 import { eligibleModelServices, getStageModelPreferences, getServerStageModelPreferences, matchesModelConsent, resolveStageModelRoute, setDefaultModelPreference, setStageModelPreference, subscribeModelPreferences, type ModelConsentBinding, type ModelTask } from '@/lib/agent/model-routing';
-import { MODEL_CALL_IDS, type ModelCallId, type ResearchStageId } from '@/lib/agent/research-stages';
+import { MODEL_CALL_IDS, RESEARCH_STAGES, type ModelCallId, type ResearchStageId } from '@/lib/agent/research-stages';
+import { RESEARCH_OVERVIEW_HASH, agentPanelFromHash, defaultResearchStage, researchStageFromHash, researchStageHash } from '@/lib/agent/research-navigation';
+import ResearchRouteBar from './ResearchRouteBar';
 import type { JourneyModelRoute } from './ResearchJourney';
 import ResearchWorkspace from './ResearchWorkspace';
 
@@ -108,9 +110,11 @@ function subscribeHash(listener: () => void) {
 }
 /** The module open in the side panel, read from the address: none, the overview, or a workbench module. */
 function currentPanel(): RoomId | null {
-  const hash = window.location.hash.slice(1);
-  return hash === 'lifecycle' ? 'workspace' : isRoomId(hash) ? hash : null;
+  return agentPanelFromHash(window.location.hash);
 }
+const CHAT_HASH = '#chat';
+const currentHash = () => window.location.hash;
+const serverHash = () => '';
 /** A registered result opened beside the conversation, `#output/<id>`; it takes the panel's place while no module is open. */
 function currentOutput(): string | null {
   const match = /^#output\/(.{1,400})$/.exec(window.location.hash);
@@ -276,7 +280,12 @@ export default function AgentShell() {
     return { owner: owner && isCurrentIdentity(owner === 'guest' ? null : owner, identityEpoch) ? owner : null,
       epoch: identityEpoch, thread: selected?.id ?? null, project: selected ? selected.projectId : live.draftProject };
   }, [owner, identityEpoch, isCurrentIdentity]);
-  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research, sendSiliconToAnalysis } = useWorkbenchModules(true, projectId);
+  const agentHash = useSyncExternalStore(subscribeHash, currentHash, serverHash);
+  const researchStage = researchStageFromHash(agentHash);
+  const [researchStageVisit, setResearchStageVisit] = useState(0);
+  const researchOverview = agentHash === RESEARCH_OVERVIEW_HASH;
+  const explicitChat = agentHash === CHAT_HASH;
+  const { panels, view, reportSource, publishProposal, sendToReport, tweakFigure, loadBenchmark, applyCandidate, reportVersions, restoreReportVersion, readRevisionSnapshot, reviseSection, applyArtifact, research, sendSiliconToAnalysis } = useWorkbenchModules(true, projectId, researchStage, researchStageVisit);
   const reportScope = `${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`;
   const activeReportRun = useRef<ReportRunHandle | null>(null);
   const preparingReport = useRef<{ id: string; scope: ReportRunScope } | null>(null);
@@ -297,11 +306,20 @@ export default function AgentShell() {
   const panel = useSyncExternalStore(subscribeHash, currentPanel, () => null);
   const outputId = useSyncExternalStore(subscribeHash, currentOutput, () => null);
   const [showCode, setShowCode] = useShowCode(owner);
-  const [stage, setStage] = useStage(owner);
+  const [preferredStage, setPreferredStage] = useStage(owner);
+  const stage = researchStage === 'report' ? 'paper' : researchOverview || explicitChat ? 'chat' : preferredStage;
+  const setStage = useCallback((next: typeof preferredStage) => {
+    const hash = window.location.hash;
+    if (((hash === RESEARCH_OVERVIEW_HASH || hash === CHAT_HASH) && next !== 'chat') || (researchStageFromHash(hash) === 'report' && next !== 'paper')) {
+      window.location.hash = '';
+    }
+    setPreferredStage(next);
+  }, [setPreferredStage]);
   const [hired, setHired] = useHired(owner);
   // In the report stage the conversation is a copilot card; it starts folded to a pill, as an assistant waits to be asked.
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const [researchOpen, setResearchOpen] = useState(false);
+  const researchOpen = researchOverview || (!agentHash && !messages.length && stage === 'chat');
+  const displayedResearchStage = researchStage ?? (panel ? defaultResearchStage(panel) : stage === 'paper' ? 'report' : null);
   const [benchStation, setBenchStation] = useState<WorkKind>('survey');
   const [theaterConfig, setTheaterConfig] = useState<{
     open: boolean;
@@ -460,16 +478,17 @@ export default function AgentShell() {
   const available = Math.max(MIN_PANEL, room - MIN_TALK);
   const panelWidth = Math.min(available, draggedWidth ?? savedWidth ?? Math.round(Math.min(1240, Math.max(MIN_PANEL, room * 0.7))));
   const [dragging, setDragging] = useState(false);
-  const [lastPanel, setLastPanel] = useState<RoomId | null>(null);
-  const [lastModule, setLastModule] = useState<RoomId>('overview');
-  const [shownPanel, setShownPanel] = useState(panel);
+  const [lastPanel, setLastPanel] = useState<{ room: RoomId; hash: string } | null>(null);
+  const [lastModule, setLastModule] = useState('#overview');
+  const [shownHash, setShownHash] = useState(serverHash);
   const [canvasReturn, setCanvasReturn] = useState<{ nodeId: string; title: string } | null>(null);
   const [canvasFocus, setCanvasFocus] = useState<{ nodeId: string; token: number } | null>(null);
-  if (shownPanel !== panel) {
-    setShownPanel(panel);
-    if (panel) setLastPanel(panel);
-    if (panel && panel !== 'canvas') setLastModule(panel);
-    if (!panel) setExpanded(false);
+  if (shownHash !== agentHash) {
+    setShownHash(agentHash);
+    if (panel) setLastPanel({ room: panel, hash: agentHash });
+    if (panel && panel !== 'canvas') setLastModule(agentHash);
+    if (researchStage) setExpanded(!!panel);
+    else if (!panel || (panel !== 'services' && researchStageFromHash(shownHash))) setExpanded(false);
   }
 
   const inputRef = useRef<HTMLTextAreaElement>(null), scrollRef = useRef<HTMLDivElement>(null), headingRef = useRef<HTMLHeadingElement>(null);
@@ -497,9 +516,9 @@ export default function AgentShell() {
   // Every way to the input goes through here. While the panel fills the screen the input is hidden, so the conversation
   // comes back first, synchronously, and a "/" typed to get there still lands in it.
   const focusInput = useCallback(() => {
-    if (inputRef.current?.offsetParent === null) flushSync(() => setExpanded(false));
+    if (inputRef.current?.offsetParent === null) flushSync(() => { setExpanded(false); setCopilotOpen(true); });
     inputRef.current?.focus();
-  }, [setExpanded]);
+  }, [setExpanded, setCopilotOpen]);
   const go = useCallback((id: RoomId) => {
     if (id === 'services') { setArtifactOpen(false); setExpanded(true); }
     if (currentPanel() !== id) window.location.hash = id;
@@ -537,14 +556,30 @@ export default function AgentShell() {
     return [call, { selectedServiceId: stagePreferences.steps[call] ?? null, effectiveServiceId: selected.service?.id ?? null, source }];
   })), [lists.services, stagePreferences]);
   const openResearchStage = useCallback((id: ResearchStageId) => {
-    research.open(id);
-    const destinations: Record<ResearchStageId, RoomId> = {
-      topic: 'diagnose', diagnosis: 'diagnose', literature: 'diagnose', questionnaire: 'design', sampling: 'sampling',
-      pilot: 'silicon', collection: 'workspace', quality: 'analysis', analysis: 'analysis', findings: 'editor', report: 'editor',
-      review: 'preflight', export: 'editor', defense: 'defense',
-    };
-    go(destinations[id]);
-  }, [go, research]);
+    setArtifactOpen(false);
+    setRailMenu(null);
+    const hash = researchStageHash(id);
+    if (window.location.hash === hash) setResearchStageVisit(visit => visit + 1);
+    else window.location.hash = hash;
+  }, []);
+  const openChat = () => {
+    if (!panel && !outputId) {
+      if (!explicitChat) window.location.assign(CHAT_HASH);
+    } else {
+      setStage('chat');
+    }
+  };
+  const openResearchOverview = useCallback(() => {
+    setArtifactOpen(false);
+    setCopilotOpen(false);
+    setExpanded(false);
+    setRailMenu(null);
+    if (window.location.hash !== RESEARCH_OVERVIEW_HASH) window.location.hash = RESEARCH_OVERVIEW_HASH;
+    else scrollRef.current?.scrollTo({ top: 0 });
+  }, [setExpanded, setCopilotOpen]);
+  useEffect(() => {
+    if (researchOverview) scrollRef.current?.scrollTo({ top: 0 });
+  }, [researchOverview]);
 
   const revisionScope = useCallback((): ReportRunScope => {
     const b = threads.view(owner), t = b.threads.find(item => item.id === b.active);
@@ -660,15 +695,16 @@ export default function AgentShell() {
   };
 
   // A panel opened by the user takes focus at its heading; one opened from the composer leaves the keyboard there.
-  const lastFocusPanel = useRef<RoomId | null | undefined>(undefined);
+  const lastFocusPanel = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     if (panel !== currentPanel()) return;
-    if (lastFocusPanel.current === undefined || lastFocusPanel.current === panel) { lastFocusPanel.current = panel; return; }
-    lastFocusPanel.current = panel;
+    const destination = researchStage ?? panel;
+    if (lastFocusPanel.current === undefined || lastFocusPanel.current === destination) { lastFocusPanel.current = destination; return; }
+    lastFocusPanel.current = destination;
     if (!panel || panel === 'canvas' || document.activeElement === inputRef.current) return;
     const frame = requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
     return () => cancelAnimationFrame(frame);
-  }, [panel]);
+  }, [panel, researchStage]);
 
   // What the agent routes against is read when a message is sent, so its handlers stay stable.
   const toggleSide = () => setSideOpen(!sideOpen);
@@ -701,12 +737,12 @@ export default function AgentShell() {
       }));
       if (opts?.openCopilot !== undefined) setCopilotOpen(Boolean(opts.openCopilot));
     },
-    [setCopilotOpen],
+    [setCopilotOpen, setTheaterConfig],
   );
 
   const closeSiliconTheater = useCallback(() => {
     setTheaterConfig(prev => (prev.open ? { ...prev, open: false } : prev));
-  }, []);
+  }, [setTheaterConfig]);
 
   const liveTheaterBundle = useMemo(() => {
     if (!theaterConfig.open) return null;
@@ -1813,7 +1849,7 @@ export default function AgentShell() {
       finishCall(pendingMsg.id);
       if (brainAbortRef.current === controller) brainAbortRef.current = null;
     }
-  }, [agent, customBrain, effectiveBrain, finishCall, launchSiliconTheater, setCopilotOpen, startCall]);
+  }, [agent, customBrain, effectiveBrain, finishCall, launchSiliconTheater, readWorkspaceIdentity, setCopilotOpen, startCall]);
 
   const dispatchUserMessage = useCallback((raw: string) => {
     const text = raw.trim();
@@ -1911,7 +1947,7 @@ export default function AgentShell() {
       if ((event.ctrlKey || event.metaKey) && event.key === '\\') {
         event.preventDefault();
         const reopen = latest.current.lastPanel;
-        if (currentPanel()) window.location.hash = ''; else if (reopen) window.location.hash = reopen;
+        if (currentPanel()) window.location.hash = ''; else if (reopen) window.location.hash = reopen.hash;
       }
       if (event.key === 'Escape') setRailMenu(null);
       if (!typing && (event.key === '[' || event.key === ']') && !event.ctrlKey && !event.metaKey && !event.altKey) latest.current.stepSection(event.key === ']' ? 1 : -1);
@@ -2035,7 +2071,8 @@ export default function AgentShell() {
     }
   }, [quickSteeringDraft, rewriteSectionWithIdea, setSideOpen, pickSection]);
 
-  const overlayDock = stage !== 'chat' || (expanded && !!panel);
+  const hideChatColumn = stage !== 'chat' || (expanded && !!panel);
+  const overlayDock = hideChatColumn || researchOpen;
   const hasRightSidePanel = !(expanded && panel) && (panel || output || inspecting || artifactOpen);
   const dockPanelReserve = hasRightSidePanel
     ? (artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth) + 8
@@ -2095,7 +2132,7 @@ export default function AgentShell() {
           <p id="agent-account-note" className={styles.menuNote} aria-hidden="true">{email}</p>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('workspace'); setRailMenu(null); }}>项目门户</button>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { go('services'); setRailMenu(null); }}>模型服务</button>
-          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { closePanel(); setStage('chat'); setRailMenu(null); }}>研究路线</button>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={openResearchOverview}>研究路线</button>
           {/* Signing out asks first when this tab still holds unsaved drafts. */}
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { setRailMenu(null); setAccountNotice(''); logout().catch(error => setAccountNotice(errorMessage(error))); }}>退出登录</button>
         </div>}
@@ -2194,7 +2231,7 @@ export default function AgentShell() {
             {projectLabel && <small>{projectLabel}</small>}
           </span>
           <span className={styles.stageSwitch} role="group" aria-label="中间显示">
-            <button type="button" aria-pressed={stage === 'chat'} onClick={() => setStage('chat')}><Icon name="chat" />对话</button>
+            <button type="button" aria-pressed={stage === 'chat' && !researchOpen} onClick={openChat}><Icon name="chat" />对话</button>
             <button type="button" aria-pressed={stage === 'paper'} onClick={() => setStage('paper')}><Icon name="book" />报告</button>
             <button type="button" aria-pressed={stage === 'advisors'} onClick={() => setStage('advisors')}><Icon name="lamp" />顾问{hired.length ? <small>{hired.length}</small> : null}</button>
           </span>
@@ -2228,8 +2265,9 @@ export default function AgentShell() {
               {exportThread && <button type="button" onClick={event => { exportThread(); event.currentTarget.closest('details')?.removeAttribute('open'); }}><Icon name="download" />导出对话记录</button>}
             </div>
           </details>
-          {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel).name}（Ctrl \\）`} onClick={() => go(lastPanel)}><Icon name="panel" /></button>}
+          {!panel && lastPanel && <button type="button" className={styles.iconButton} aria-label={`重新打开${roomById(lastPanel.room).name}（Ctrl \\）`} title={`重新打开${roomById(lastPanel.room).name}（Ctrl \\）`} onClick={() => { window.location.hash = lastPanel.hash; }}><Icon name="panel" /></button>}
         </header>
+        {(!panel || artifactOpen) && <ResearchRouteBar current={displayedResearchStage} overviewActive={researchOpen && !artifactOpen} onSelect={openResearchStage} onOverview={openResearchOverview} />}
         {stage === 'advisors' && (
           <Advisors
             benchmark={paperBenchmark}
@@ -2387,9 +2425,9 @@ export default function AgentShell() {
             watermarkText={watermarkEnabled ? `证见 EVI-X · ${email || '内部审阅副本'} · 防未授权摘抄与外传` : null}
           />
         </div>}
-        <div className={styles.chatColumn} hidden={overlayDock}>
+        <div className={styles.chatColumn} hidden={hideChatColumn}>
         <div ref={scrollRef} className={styles.scroll}>
-          {!messages.length && (
+          {!messages.length && !researchOpen && (
             <section className={styles.empty} aria-label="证见 Agent 研究大脑">
               <header className={styles.emptyHeaderBar}>
                 <div className={styles.emptyTitleBlock}>
@@ -2415,9 +2453,9 @@ export default function AgentShell() {
                       <span>接入密钥</span>
                     </button>
                   )}
-                  <button type="button" className={styles.brainSecondaryBtn} aria-expanded={researchOpen} onClick={() => setResearchOpen(open => !open)}>
+                  <button type="button" className={styles.brainSecondaryBtn} onClick={openResearchOverview}>
                     <Icon name="spark" />
-                    <span>{researchOpen ? '收起路线' : '研究路线'}</span>
+                    <span>研究路线</span>
                   </button>
                 </div>
               </header>
@@ -2496,10 +2534,14 @@ export default function AgentShell() {
           )}
             <section className={styles.researchDrawer} aria-label="研究路线" hidden={!researchOpen}>
               <div className={styles.researchDrawerHead}>
-                <span><Icon name="spark" />研究路线</span>
-                <small>选题 · 文献 · 问卷 · 分析</small>
-                <span className={styles.spacer} />
-                <button type="button" className={styles.chip} onClick={() => setResearchOpen(false)}>收起</button>
+                <h1>{projectLabel || '研究案卷'}</h1>
+                <div className={styles.researchProject}>
+                  {projects.length > 0 && <select aria-label="当前研究项目" value={projectId ?? ''} onChange={event => threads.draft(event.target.value || null)}>
+                    <option value="">本地研究</option>
+                    {projects.map(project => <option key={project.id} value={project.id}>{project.label}</option>)}
+                  </select>}
+                  <a href={projectId ? '/projects/' + encodeURIComponent(projectId) : '/projects'}>{projectId ? '项目资料' : '团队项目'}</a>
+                </div>
               </div>
               <ResearchWorkspace key={`${owner ?? 'loading'}:${identityEpoch}:${projectId ?? 'local'}`}
                 owner={owner} projectId={projectId} identityEpoch={identityEpoch} services={lists.services}
@@ -2548,22 +2590,34 @@ export default function AgentShell() {
           advisors={ADVISORS.filter(a => hired.includes(a.id)).map(a => advisorReading(a, paperBenchmark))} onSay={sayFromTool} onDraftSection={sec => sayFromTool(`起草「${sec}」`)} onEdit={() => go('editor')} onAdvisors={() => setStage('advisors')} onJumpToIssue={sectionId => { if (stage !== 'paper') { setStage('paper'); requestAnimationFrame(() => pickSection(sectionId)); } else { pickSection(sectionId); } }} revision={<SectionRevision {...revision} />} />}
         <div className={styles.resize} data-dragging={dragging} role="separator" aria-orientation="vertical" aria-label="拖动调整面板宽度" onPointerDown={startResize} />
         {!artifactOpen && here && <header className={styles.panelHead}>
-          <h2 ref={headingRef} tabIndex={-1}>{here.name}</h2>
+          <h2 ref={headingRef} tabIndex={-1}>{RESEARCH_STAGES.find(item => item.id === researchStage)?.label ?? here.name}</h2>
           {lit && <span className={styles.panelLight}><LightBar score={lit.score} /><b>{percent(lit.score)}</b>{lit.summary}</span>}
           <span className={styles.spacer} />
-          {panel !== 'overview' && <button type="button" className={styles.codeToggle} onClick={() => setExpanded(true)}><Icon name="edit" />展开编辑</button>}
+          {panel !== 'overview' && !expanded && <button type="button" className={styles.codeToggle} onClick={() => setExpanded(true)}><Icon name="edit" />展开编辑</button>}
           <button type="button" className={styles.iconButton} aria-pressed={expanded} aria-label={expanded ? '还原，显示对话' : '铺满，暂时收起对话'}
             title={expanded ? '还原，显示对话' : '铺满，暂时收起对话'} onClick={() => setExpanded(!expanded)}><Icon name={expanded ? 'shrink' : 'expand'} /></button>
           <button type="button" className={styles.iconButton} aria-label="关闭面板（Ctrl \）" title="关闭面板（Ctrl \）" onClick={closePanel}><Icon name="close" /></button>
         </header>}
+        {panel && (!artifactOpen || expanded) && <ResearchRouteBar current={displayedResearchStage} overviewActive={researchOpen && !artifactOpen} onSelect={openResearchStage} onOverview={openResearchOverview} />}
         {!artifactOpen && output && <OutputPanel key={output.id} result={output} showCode={showCode} onClose={closePanel} onOpenAnalysis={() => go('analysis')} onSay={sendFromDock}
           figure={deferredView.report ? figureOf(deferredView.report, output) : null} visualStyle={deferredView.report?.visualStyle} />}
         <div className={styles.panelBody} data-room={panel ?? undefined} hidden={!panel || artifactOpen}>
+          {researchStage === 'collection' && <section className={styles.routeLanding} aria-label="调查收集安排">
+            <h3>{projectLabel || '准备发布问卷'}</h3>
+            <p>{projectId ? '在项目里选择已保存的问卷版本，创建发布链接并查看回收进度。' : '先选择有已保存问卷的团队项目。'}</p>
+            <a href={projectId ? '/projects/' + encodeURIComponent(projectId) + '#collection' : '/projects'}>{projectId ? '打开发布与回收' : '前往团队项目'} <span aria-hidden="true">↗</span></a>
+          </section>}
+          {researchStage === 'pilot' && <section className={styles.routeLanding} aria-label="预测试入口">
+            <h3>试答与访谈推演</h3>
+            <p>用当前问卷检查题目理解、选项覆盖和跳题，再记录修订。</p>
+            <button type="button" onClick={() => launchSiliconTheater({ design: latest.current.design ?? null })}>打开硅基推演 <span aria-hidden="true">↗</span></button>
+          </section>}
+          {researchStage === 'review' && <div className={styles.routeSecondary}><button type="button" onClick={() => go('preflight')}>检查提交文件与匿名信息 ↗</button></div>}
           {panel === 'overview' && <Lobby light={light} view={deferredView} traces={traces.length} onOpen={go} onSay={sendFromDock} headingRef={null} />}
           {/* The report editor stays mounted, hidden, while the report fills the centre: the paper shows its content and the
               toolbar writes through it. */}
           {(Object.keys(panels) as WorkbenchPanel[]).filter(id => id !== 'overview' && (visited.includes(id) || (id === 'editor' && stage === 'paper'))).map(id =>
-            <div key={id} className={styles.pane} data-workbench-panel={id} hidden={panel !== id}>{panels[id]}</div>)}
+            <div key={id} className={styles.pane} data-workbench-panel={id} hidden={panel !== id || (id === 'workspace' && researchStage === 'collection')}>{panels[id]}</div>)}
         </div>
         {canvasReturn && panel && panel !== 'canvas' && <div className={styles.canvasReturn} role="region" aria-label="画布返回">
           <button type="button" onClick={backToCanvas}>⟲ 返回画布{canvasReturn.title ? ` · ${canvasReturn.title}` : ''}</button>
@@ -2576,7 +2630,7 @@ export default function AgentShell() {
           <div className={styles.overlayMiniBar} role="region" aria-label="证见 AI 快捷副驾">
             <button type="button" className={styles.overlayMiniPrompt} onClick={() => { setCopilotOpen(true); requestAnimationFrame(() => focusInput()); }}>
               <BrandMark size={15} />
-              <span>向证见大脑提问、下达指令或改写本节…</span>
+              <span>{researchOpen ? '继续对话、添加资料或下达指令' : '向证见提问、下达指令或改写本节…'}</span>
               <kbd>/</kbd>
             </button>
             <button type="button" className={styles.overlayMiniExpand} onClick={() => setCopilotOpen(true)} aria-label={messages.length ? `展开对话记录 (${messages.length})` : '展开对话抽屉'}>
@@ -2591,7 +2645,7 @@ export default function AgentShell() {
               <b>证见 AI</b>
               <small>{thread?.title ?? '新对话'}</small>
               <span className={styles.spacer} />
-              <button type="button" className={styles.chip} onClick={() => { setExpanded(false); setStage('chat'); }}>回到对话</button>
+              <button type="button" className={styles.chip} onClick={() => { setExpanded(false); openChat(); }}>回到对话</button>
               <button type="button" className={styles.iconButton} aria-label="收起对话抽屉" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
             </div>
             <div ref={scrollRef} className={styles.scroll}>

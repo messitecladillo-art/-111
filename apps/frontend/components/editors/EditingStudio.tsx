@@ -4,6 +4,7 @@ import { applyFigureChange, type FigureTweak } from '@/lib/agent/figure-tweak';
 import { applyArtifactToReport, type ArtifactRecord } from '@/lib/agent/artifact-library';
 import { applySectionRevision, type RevisionSnapshot, type SectionRevisionProposal, type RevisionApplyResult } from '@/lib/agent/section-revision';
 import type { ReportRunScope } from '@/lib/agent/report-work';
+import type { ResearchStageId } from '@/lib/agent/research-stages';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
 import { ACCENTS, applyCoverImage, applyFrameImage, applyReportFrame, createEditorContent, draftTextBytes, EDITOR_LIMITS, EDITOR_SIZE_LABEL, PAGE_ART_DRAFT_BYTES, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
@@ -73,11 +74,13 @@ function subscribeNarrowScreen(listener: () => void) {
 }
 const isNarrowScreen = () => window.matchMedia("(max-width: 600px)").matches;
 
-export default function EditingStudio({revisionInputVersion="standalone",localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,figureTweak,onFigureTweakHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false}:{revisionInputVersion?:string;localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
+export default function EditingStudio({revisionInputVersion="standalone",localOnly=false,projectBinding,controllerRef,resultProposal,resultFigures,resultVisualStyle,onResultHandled,aiUsageLedger,onRefreshAi,aiLoading,reportInsert,onReportInsertHandled,figureTweak,onFigureTweakHandled,questionnaire=null,onContentChange,initialContent,savedInBrowser=false,requestedResearchStage=null,researchStageVisit=0}:{revisionInputVersion?:string;localOnly?:boolean;projectBinding?:ProjectEditorBinding;controllerRef?:Ref<EditingStudioHandle>;resultProposal?:ResultSnapshot|null;onResultHandled?:()=>void;resultFigures?:ReportFigure[];resultVisualStyle?:ProjectVisualStyle;aiUsageLedger?:unknown;onRefreshAi?:()=>void;aiLoading?:boolean;reportInsert?:ReportInsert|null;onReportInsertHandled?:()=>void;questionnaire?:Questionnaire|null;onContentChange?:(content:EditorContent)=>void;
   /** A local draft to start from; `savedInBrowser` says the caller keeps the draft in this browser as it changes. */
   initialContent?:EditorContent|null;savedInBrowser?:boolean;
   /** A figure changed in the conversation; applied once as an undoable step. */
-  figureTweak?:FigureTweak|null;onFigureTweakHandled?:()=>void}={}) {
+  figureTweak?:FigureTweak|null;onFigureTweakHandled?:()=>void;
+  requestedResearchStage?: ResearchStageId | null; researchStageVisit?: number;
+}={}) {
   const hostedSession = useHostedSession();
   const projectBound = !!projectBinding;
   const readOnly = projectBinding?.readOnly === true;
@@ -110,6 +113,24 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const [blankReportConfirm, setBlankReportConfirm] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const benchmarkRef = useRef<HTMLDivElement>(null);
+  const stageRequest = requestedResearchStage ? requestedResearchStage + ':' + researchStageVisit : null;
+  const [appliedResearchStage, setAppliedResearchStage] = useState<string | null>(null);
+  if (stageRequest !== appliedResearchStage) {
+    setAppliedResearchStage(stageRequest);
+    if (requestedResearchStage === 'report' || requestedResearchStage === 'findings'
+      || requestedResearchStage === 'review' || requestedResearchStage === 'export') {
+      setMode('report');
+      setFileLibraryOpen(false);
+      setQualityOpen(requestedResearchStage === 'findings');
+      setToolsOpen(requestedResearchStage === 'review');
+    }
+  }
+  useEffect(() => {
+    if (requestedResearchStage !== 'review') return;
+    const benchmark = benchmarkRef.current?.querySelector('details');
+    if (benchmark) benchmark.open = true;
+  }, [requestedResearchStage, stageRequest]);
   const [storyboardGeneration, setStoryboardGeneration] = useState(0);
   const [identityFrozen, setIdentityFrozen] = useState(false);
   const identityTransition = useRef(false);
@@ -662,11 +683,18 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       <div className={styles.history}><button type="button" onClick={undo} disabled={readOnly || !past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={readOnly || !future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       <button type="button" className={styles.toolsToggle} aria-expanded={toolsOpen} aria-controls="editor-tools" onClick={()=>setToolsOpen(value=>!value)}>{mode==='slides'?'创作工具':'报告工具'}<span aria-hidden="true">{toolsOpen?'−':'+'}</span></button>
       <button ref={qualityToggleRef} type="button" aria-pressed={qualityOpen} aria-controls="editor-quality" onClick={()=>setQualityOpen(value=>!value)}>发现与矢量编排</button>
-      {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}<button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button></div>}
+      {mode!=='latex'&&<div className={styles.exports}>{mode === "slides" && <button ref={presentationTrigger} type="button" onClick={() => { setPresentIndex(selectedIndex); setShowNotes(false); setPresenting(true); }}>演示预览</button>}{requestedResearchStage !== 'export' && <button type="button" className={styles.primary} onClick={() => void exportFile(mode === "report" ? "docx" : "pptx")} disabled={exporting}>{exporting ? "正在生成…" : mode === "report" ? "导出 Word 报告正文" : "导出 PPTX 草稿"}</button>}</div>}
     </div>
+    {requestedResearchStage === 'export' && <div className={styles.toolbar} role="group" aria-label="成果导出选项" aria-busy={exporting}>
+      <button type="button" className={styles.primary} disabled={exporting} onClick={() => void exportFile('docx')}>导出 Word 报告正文</button>
+      <button type="button" disabled={exporting || !content.report.some(section => reportPart(section.title) === 'appendix')} onClick={() => void exportFile('appendix')}>单独导出 Word 附录</button>
+      <button type="button" disabled={exporting} onClick={() => void exportFile('pptx')}>导出 PPTX 草稿</button>
+      {exporting && <span role="status">正在生成…</span>}
+    </div>}
     {mode==='report'&&blankReportConfirm&&<div className={styles.notice} role="region" aria-label="空白报告确认"><span>将当前 {content.report.length} 个章节替换为一个空白章节？PPT 和 LaTeX 正文保留，替换后可撤销。</span><button type="button" onClick={()=>setBlankReportConfirm(false)}>取消</button><button type="button" disabled={locked} onClick={startBlankReport}>从空白开始</button></div>}
     <div id="editor-tools" className={styles.toolsPanel} hidden={!toolsOpen} aria-label="报告辅助工具">
-      {mode==='report'&&<div className={styles.toolActions}><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button><button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button></div>}
+      {mode==='report'&&<div className={styles.toolActions}><button type="button" disabled={locked} aria-expanded={blankReportConfirm} onClick={()=>setBlankReportConfirm(value=>!value)}>空白报告</button>{requestedResearchStage !== 'export' && <button type="button" disabled={exporting||!content.report.some(s=>reportPart(s.title)==='appendix')} onClick={()=>void exportFile('appendix')}>单独导出 Word 附录</button>}</div>}
+      {mode==='report'&&<div ref={benchmarkRef}><BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>{setQualityOpen(true);setToolsOpen(false);qualityToggleRef.current?.focus();}}/></div>}
       <ResearchMaterialLibrary context="report"/>
     {mode!=='slides'&&<ReportFramePanel key={(content.reportFrame?.id??'none')+':'+(content.reportFrame?.review?.definitionSha256??'draft')} frame={content.reportFrame} visualStyle={content.visualStyle??{schema:'ProjectVisualStyle/v1',paletteId:content.accent==='burgundy'?'plum':content.accent,version:1}} reviewer={hostedSession.session?.user?.id??'local-user'} disabled={locked} onApply={frame=>{if(!canMutate())return;edit(applyReportFrame(current.current,frame));}} onPalette={visualStyle=>{if(!canMutate())return;const next={...current.current,version:3 as const,visualStyle};if(next.reportFrame)next.reportFrame={...next.reportFrame,status:'vector_draft',review:null};edit(parseEditorContent(next));}}/>}
     {mode==='report'&&<EvidenceAppendicesPanel content={content} projectId={projectBinding?.projectId} aiLedger={aiUsageLedger} onRefreshAi={onRefreshAi} aiLoading={aiLoading} disabled={locked} onApply={(sections,base)=>{
@@ -676,7 +704,6 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       setMessage('已将所选证据附录加入报告，可继续编辑或撤销。');return true;
     }}/>}
     {mode!=='slides'&&<fieldset disabled={readOnly} style={{border:0,padding:0,margin:0,minWidth:0}} aria-label="报告格式设置"><ReportFormatPanel value={reportSettings} onChange={settings=>edit({...content,reportFormat:settings})} sections={content.report} coverImage={content.coverImage} onCoverImage={(cover,palette)=>{if(!canMutate())return;edit(applyCoverImage(current.current,cover,palette));}} figurePalette={content.figurePalette} frameImage={content.frameImage} onFrameImage={frame=>{if(!canMutate())return;edit(applyFrameImage(current.current,frame));}}/></fieldset> }
-    {mode==='report'&&<BenchmarkPanel content={content} disabled={locked} onInsert={insertFromBlueprint} onApplyBlueprint={applyBlueprint} onNavigate={navigate} onOpenFindings={()=>{setQualityOpen(true);setToolsOpen(false);qualityToggleRef.current?.focus();}}/>}
     </div>
     <div id="editor-quality" hidden={!qualityOpen}><QualityStudio content={content} onChange={next=>edit(parseEditorContent(next))} disabled={locked}/></div>
     <div hidden={mode!=='latex'}><LatexWorkbench content={content} onChange={next=>{edit(next);}} projectId={projectBinding?.projectId} onSave={projectBinding ? ()=>{if(canMutate())projectBinding.onSave();} : undefined} disabled={locked}/></div>

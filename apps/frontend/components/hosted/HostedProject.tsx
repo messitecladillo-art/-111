@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { newQuestionnaire, parseCollection, parseProjectResponse, summarizeProposal, parseService, ROLE_LABELS, type MembershipRole, type Project, type Proposal, type ProposalSummary, type Questionnaire, type QuestionnaireHead, type QuestionnaireVersionSummary, type Service } from '@evix/shared';
 import {canonical,type DesignSnapshot} from '@/lib/questionnaire-mapping';
 import TopicQuestionnaireProposal from '@/components/topic-advisor/TopicQuestionnaireProposal';
@@ -38,6 +38,15 @@ type TopicReconciliation={versionId:string;beforeBinding:TopicQuestionnaireBindi
 type GenerationRequest = QuestionnaireGenerationRequest;
 type CachedProject={head:QuestionnaireHead|null;headBinding?:TopicQuestionnaireBinding|null;initial:Questionnaire;snapshot:DesignSnapshot|null;sourceProposal?:string;proposal:Proposal|null;brief:string;pendingSave:SaveRequest|null;pendingBinding?:TopicQuestionnaireBinding|null;pendingTopicApply?:PendingTopicApply|null;topicReconciliation?:TopicReconciliation|null;pendingGeneration:GenerationRequest|null;saveUncertain:boolean;generationUncertain:boolean;conflict:boolean;tab?:ProjectTab};
 
+function subscribeProjectHash(onChange: () => void) {
+  window.addEventListener('hashchange', onChange);
+  window.addEventListener('popstate', onChange);
+  return () => {
+    window.removeEventListener('hashchange', onChange);
+    window.removeEventListener('popstate', onChange);
+  };
+}
+
 export default function HostedProject({ projectId }: { projectId: string }) {
   const { identityEpoch } = useHostedSession();
   return <LoginRequired><ProjectEditor key={`${identityEpoch}:${projectId}`} projectId={projectId}/></LoginRequired>;
@@ -69,13 +78,27 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const [readonlyDesign,setReadonlyDesign]=useState<Questionnaire|null>(null);
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [generating, setGenerating] = useState(false), [reading, setReading] = useState(false);
   const [saveUncertain, setSaveUncertain] = useState(!!cached?.pendingSave||cached?.saveUncertain||false), [generationUncertain, setGenerationUncertain] = useState(!!cached?.pendingGeneration||cached?.generationUncertain||false), [conflict, setConflict] = useState(cached?.conflict||false);
-  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [tab, setTab] = useState<ProjectTab>(cached?.tab || 'design');
+  const [error, setError] = useState(''), [notice, setNotice] = useState('');
+  const [projectTab, setProjectTab] = useState<ProjectTab>(cached?.tab || 'design');
+  const readCollectionLink = useCallback(() =>
+    window.location.pathname === `/projects/${projectId}` && window.location.hash === '#collection',
+  [projectId]);
+  const collectionLinked = useSyncExternalStore(subscribeProjectHash, readCollectionLink, () => false);
+  const tab = collectionLinked ? 'collection' : projectTab;
+  const setTab = useCallback((next: ProjectTab) => {
+    setProjectTab(next);
+    if (readCollectionLink() && next !== 'collection') window.location.hash = '';
+  }, [readCollectionLink]);
+  const openCollection = () => {
+    if (!readCollectionLink()) window.location.hash = '#collection';
+  };
   const [topicOpened, setTopicOpened] = useState(cached?.tab === 'topic');
   const [defenseOpened, setDefenseOpened] = useState(cached?.tab === 'defense');
   const [collectionOpened, setCollectionOpened] = useState(cached?.tab === 'collection');
   const [reportOpened, setReportOpened] = useState(cached?.tab === 'report');
-  const proposeEvidence = useCallback((section:ReportSection) => { handoffs.publish('report',{id:crypto.randomUUID(),section}); setReportOpened(true); setTab('report'); }, [handoffs]);
-  const openResearchEditor = useCallback((section: 'design' | 'report') => { if (section === 'report') setReportOpened(true); setTab(section); }, []);
+  if (tab === 'collection' && !collectionOpened) setCollectionOpened(true);
+  const proposeEvidence = useCallback((section:ReportSection) => { handoffs.publish('report',{id:crypto.randomUUID(),section}); setReportOpened(true); setTab('report'); }, [handoffs, setTab]);
+  const openResearchEditor = useCallback((section: 'design' | 'report') => { if (section === 'report') setReportOpened(true); setTab(section); }, [setTab]);
   const [analysisOpened, setAnalysisOpened] = useState(cached?.tab === 'analysis');
   const [siliconOpened, setSiliconOpened] = useState(cached?.tab === 'silicon'), [siliconMaxCalls, setSiliconMaxCalls] = useState<number | undefined>();
   const alive = useRef(true), latest = useRef<DesignSnapshot | null>(cached?.snapshot||null), draftRevision = useRef(0), headRef = useRef<QuestionnaireHead | null>(cached?.head||null);
@@ -115,13 +138,13 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   const saveState = saving ? 'saving' : saveUncertain ? 'uncertain' : conflict ? 'conflict' : dirty ? 'dirty' : revision ? 'saved' : 'empty';
   const topicDisabledReason=saving?'正在等待本次保存回执，请保留当前提案。':saveUncertain?'保存回执尚待核对。请使用原保存请求核对，所选字段仍保留。':reading?'正在读取版本与来源绑定，请稍后继续。':conflict?'云端基础版本需要核对，请先选择保留草稿或载入已保存版本。':!bindingReady?'正在核对来源绑定，请稍后继续。':'';
   const { cacheDraft, setUnsaved } = auth, userId = auth.session?.user?.id;
-  useLayoutEffect(()=>{if(initial&&userId)cacheDraft(cacheKey,{head,headBinding,initial,snapshot,sourceProposal,proposal,brief,pendingSave:pendingSave.current,pendingBinding:pendingBinding.current,pendingTopicApply:pendingTopicApply.current,topicReconciliation,pendingGeneration:pendingGeneration.current,saveUncertain:saveUncertain||saving,generationUncertain:generationUncertain||generating,conflict,tab} satisfies CachedProject,dirty||saving||saveUncertain||generating||generationUncertain,userId);},[cacheKey,head,headBinding,initial,snapshot,sourceProposal,proposal,brief,saveUncertain,generationUncertain,conflict,dirty,saving,generating,userId,cacheDraft,tab,topicReconciliation]);
+  useLayoutEffect(()=>{if(initial&&userId)cacheDraft(cacheKey,{head,headBinding,initial,snapshot,sourceProposal,proposal,brief,pendingSave:pendingSave.current,pendingBinding:pendingBinding.current,pendingTopicApply:pendingTopicApply.current,topicReconciliation,pendingGeneration:pendingGeneration.current,saveUncertain:saveUncertain||saving,generationUncertain:generationUncertain||generating,conflict,tab:projectTab} satisfies CachedProject,dirty||saving||saveUncertain||generating||generationUncertain,userId);},[cacheKey,head,headBinding,initial,snapshot,sourceProposal,proposal,brief,saveUncertain,generationUncertain,conflict,dirty,saving,generating,userId,cacheDraft,projectTab,topicReconciliation]);
   const onSnapshot = useCallback((next: DesignSnapshot) => {if(!currentAccount())return; latest.current = next; draftRevision.current++;publishedRevision.current=draftRevision.current; setSnapshot(next); }, [currentAccount]);
   const detach = useCallback(() => setSourceProposal(undefined), []);
   const acknowledgeLoad = useCallback((id:string,accepted:boolean) => {setLoad(value=>value?.id===id?undefined:value);if(loadCompletion.current?.id===id){loadCompletion.current.resolve(accepted);loadCompletion.current=null;}}, []);
   const onEditorEdit=useCallback(()=>{if(currentAccount()&&writableRef.current)draftRevision.current++;},[currentAccount]);
   const sourceChange=useCallback((source:TopicQuestionnaireSource|null)=>{if(!currentAccount())return;sourceEpoch.current++;sourceLive.current=source;if(selectedSource.current&&canonical(selectedSource.current)!==canonical(source)){selectedSource.current=null;setTopicSource(null);}},[currentAccount]);
-  const startQuestionnaire=useCallback((brief:TopicResearchBrief,version:TopicVersionSummary,decisionRevision:number)=>{const source={brief:structuredClone(brief),version:structuredClone(version),dirty:false,decisionRevision};if(!currentAccount()||!writableRef.current||!sourceLive.current||canonical(source)!==canonical(sourceLive.current))return;selectedSource.current=source;setTopicSource(source);setTopicProposalOpen(true);setTab('design');},[currentAccount]);
+  const startQuestionnaire=useCallback((brief:TopicResearchBrief,version:TopicVersionSummary,decisionRevision:number)=>{const source={brief:structuredClone(brief),version:structuredClone(version),dirty:false,decisionRevision};if(!currentAccount()||!writableRef.current||!sourceLive.current||canonical(source)!==canonical(sourceLive.current))return;selectedSource.current=source;setTopicSource(source);setTopicProposalOpen(true);setTab('design');},[currentAccount,setTab]);
   function rememberHead(value: QuestionnaireHead | null) { headRef.current = value; setHead(value); }
   function loadPaired(intent:Omit<HostedDesignLoad,'id'>):Promise<boolean>{const id=crypto.randomUUID();loadCompletion.current?.resolve(false);return new Promise(resolve=>{loadCompletion.current={id,resolve};setLoad({id,...intent});});}
   const reloadVersions = useCallback(async (before?: number) => {
@@ -154,7 +177,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
         setHeadBinding(sidecar?.binding??null);headBindingRef.current=sidecar?.binding??null;setBindingReady(true);
         setProject(data.project); setRole(data.membershipRole);
         if(cached){if((saved?.revision||0)!==(cached.head?.revision||0)){setConflict(true);setNotice('已恢复本标签页的草稿；云端版本已变化，请先核对最新版本。');}else setNotice('已恢复本标签页的编辑与撤销历史。未保存内容仅在当前登录会话内保留。');}
-        else{rememberHead(saved);setInitial(saved?.design||newQuestionnaire());if(!saved){setTopicOpened(true);setTab('topic');}}
+        else{rememberHead(saved);setInitial(saved?.design||newQuestionnaire());if(!saved){setTopicOpened(true);setProjectTab('topic');}}
         setServices(connections); setServiceId(connections.find(s => s.capabilities.includes('questionnaire'))?.id || '');
         void reloadVersions(); void reloadProposals();
       } catch (e) { if (currentAccount() && !cancelled) setError(errorMessage(e)); }
@@ -323,7 +346,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
   if (!project || !initial) return <div className="hosted-empty"><h2>暂时无法打开项目</h2><p role="alert">{error}</p><Link href="/projects">返回项目列表</Link></div>;
   return <ResearchViewHost identityKey={`${auth.identityEpoch}:${projectId}`} projectTitle={project.title} activeSection={tab} onOpenEditor={openResearchEditor}><div data-knowledge-context="active" data-knowledge-module={tab === 'report' ? 'editor' : tab === 'topic' ? 'diagnose' : tab} data-knowledge-tags={tab === 'analysis' ? 'inference' : tab === 'design' ? 'scale' : tab === 'report' ? 'report' : undefined}>
     <div className="hosted-project-heading"><div><Link href="/projects">← 我的项目</Link><h2>{project.title}</h2><span className="hosted-small">{ROLE_LABELS[role]}{tab === 'design' && <> · 问卷 {revision ? `v${revision}` : '尚未保存'}</>}</span></div>{tab === 'design' && <div className="hosted-actions"><button onClick={() => snapshot && downloadQuestionnaire(snapshot.design)} disabled={!snapshot}>下载当前设计</button><button className="hosted-primary" onClick={() => void save()} disabled={!writable || !snapshot || snapshot.pending || saving || reading || conflict || saveUncertain || !dirty}>{saving ? '正在保存…' : '保存新版本'}</button></div>}</div>
-    <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="topic" aria-pressed={tab === 'topic'} onClick={() => { setTopicOpened(true); setTab('topic'); }}>选题与研究简报</button><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="collection" aria-pressed={tab === 'collection'} onClick={() => { setCollectionOpened(true); setTab('collection'); }}>发布与回收</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>数据分析</button><button data-motion-id="report" aria-pressed={tab === 'report'} onClick={() => { setReportOpened(true); setTab('report'); }}>报告与 PPT</button><button data-motion-id="defense" aria-pressed={tab === 'defense'} onClick={() => { setDefenseOpened(true); setTab('defense'); }}>路演与答辩</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
+    <div ref={tabMotion} className="hosted-tabs" role="group" aria-label="项目工作区"><span className="hosted-tab-marker" data-motion-marker aria-hidden="true"/><button data-motion-id="topic" aria-pressed={tab === 'topic'} onClick={() => { setTopicOpened(true); setTab('topic'); }}>选题与研究简报</button><button data-motion-id="design" aria-pressed={tab === 'design'} onClick={() => setTab('design')}>问卷设计</button><button data-motion-id="silicon" aria-pressed={tab === 'silicon'} onClick={() => { setSiliconOpened(true); setTab('silicon'); }}>硅基样本</button><button data-motion-id="collection" aria-pressed={tab === 'collection'} onClick={openCollection}>发布与回收</button><button data-motion-id="analysis" aria-pressed={tab === 'analysis'} onClick={() => { setAnalysisOpened(true); setTab('analysis'); }}>数据分析</button><button data-motion-id="report" aria-pressed={tab === 'report'} onClick={() => { setReportOpened(true); setTab('report'); }}>报告与 PPT</button><button data-motion-id="defense" aria-pressed={tab === 'defense'} onClick={() => { setDefenseOpened(true); setTab('defense'); }}>路演与答辩</button><button data-motion-id="members" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>团队成员</button></div>
     {error && <p className="hosted-alert" role="alert">{error}</p>}{notice && <p className="hosted-notice" role="status">{notice}</p>}
     {(proposal || generationUncertain) && tab !== 'design' && <p className="hosted-notice"><span>{generationUncertain?'模型调用待核对，原请求已保留。':'模型提案已保留，可返回问卷设计查看。'}</span><button onClick={()=>setTab('design')}>查看生成结果与状态</button></p>}
     {saveUncertain && <div className="hosted-notice"><p>上次保存尚待核对。重试会使用原内容和原请求标识；本页新编辑仍保留。</p><button disabled={saving} onClick={() => void save()}>核对并重试原保存</button></div>}

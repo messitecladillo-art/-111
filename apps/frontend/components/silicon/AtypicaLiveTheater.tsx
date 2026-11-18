@@ -158,6 +158,7 @@ export default function AtypicaLiveTheater({
   const [extraDiscussionTurns, setExtraDiscussionTurns] = useState<DiscussionTurnItem[]>([]);
   const [followupDraft, setFollowupDraft] = useState('');
   const [followupBusy, setFollowupBusy] = useState(false);
+  const followupSequence = useRef(0);
   const [expandedReasons, setExpandedReasons] = useState<Record<string, boolean>>({});
   const [collapsedReplies, setCollapsedReplies] = useState<Record<string, boolean>>({});
 
@@ -235,6 +236,7 @@ export default function AtypicaLiveTheater({
   const submitFollowupQuestion = async (questionText: string) => {
     const clean = questionText.trim();
     if (!clean || followupBusy) return;
+    const followupId = ++followupSequence.current;
     setFollowupDraft('');
     setFollowupBusy(true);
     focusRightView('discussion', false);
@@ -242,7 +244,7 @@ export default function AtypicaLiveTheater({
     setPlaying(false);
 
     const modTurn: DiscussionTurnItem = {
-      id: `mod-live-${Date.now().toString(36)}`,
+      id: `mod-live-${followupId}`,
       speakerType: 'moderator',
       alias: canCallBrain ? '证见 · 焦点主持人（实时追问）' : '证见 · 焦点主持人（离线模拟推演）',
       roleBadge: canCallBrain ? '实时追问' : '离线演练 · 未绑定正式项目',
@@ -295,7 +297,7 @@ export default function AtypicaLiveTheater({
       }
       const deai = detectAiFlavor(replyText);
       liveReplies.push({
-        id: `persona-live-${entry.persona.id}-${Date.now().toString(36)}-${i}`,
+        id: `persona-live-${entry.persona.id}-${followupId}-${i}`,
         speakerType: 'persona',
         personaId: entry.persona.id,
         code: entry.persona.code,

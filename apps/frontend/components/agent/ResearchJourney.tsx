@@ -130,29 +130,29 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
     </li>;
   };
 
-  return <section className={styles.journey} aria-labelledby={`${id}-title`} aria-busy={busy}>
-    <header className={styles.header}>
-      <div><span className={styles.eyebrow}>证见 · 研究助手</span><h1 id={`${id}-title`}>从一个想法，<br />走向有据可循的发现。</h1><p>告诉证见你的方向，一起找证据、做研究。</p></div>
-      <svg className={styles.researchMark} viewBox="0 0 120 120" fill="none" aria-hidden="true"><path d="M60 8 111 37v46l-51 29L9 83V37L60 8Z" /><path d="m60 26 35 20v37L60 103 25 83V46l35-20Z" /><path d="m60 43 21 12v25L60 92 39 80V55l21-12Z" /><path d="M9 37 60 66l51-29M60 66v46M25 46l35 20 35-20" /><circle cx="60" cy="66" r="5" /></svg>
-    </header>
-
+  return <section className={styles.journey} aria-labelledby={`${id}-direction-label`} aria-busy={busy}>
     <form className={styles.intake} onSubmit={submit}>
-      <label htmlFor={`${id}-direction`}>你想研究什么？</label>
+      <label id={`${id}-direction-label`} htmlFor={`${id}-direction`}>你想研究什么？</label>
       <textarea id={`${id}-direction`} value={direction} maxLength={2000} rows={3}
         placeholder="例如：想研究大学生使用 AI 后的学习习惯，还没有具体题目。"
         disabled={disabled || busy} onChange={event => onDirectionChange(event.target.value)}
         onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); if (!busy && !disabled && direction.trim()) onStart(direction.trim()); } }} />
       <div className={styles.intakeActions}>
-        <label className={styles.defaultModel} htmlFor={`${id}-default`}><span>默认模型</span><select id={`${id}-default`}
-          value={defaultServiceId ?? ''} disabled={disabled || busy || servicesLoading}
-          aria-invalid={defaultMissing || undefined} onChange={event => onDefaultServiceChange(event.target.value || null)}>
-          <option value="">按任务设置</option>
-          {defaultMissing && <option value={defaultServiceId!} disabled>原模型已不可用</option>}
-          {services.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
-        </select></label>
-        <button className={styles.textButton} type="button" onClick={onOpenSettings}>管理模型</button>
+        <details className={styles.intakeModel}>
+          <summary>模型设置</summary>
+          <div className={styles.intakeModelOptions}>
+            <label className={styles.defaultModel} htmlFor={`${id}-default`}><span>默认模型</span><select id={`${id}-default`}
+              value={defaultServiceId ?? ''} disabled={disabled || busy || servicesLoading}
+              aria-invalid={defaultMissing || undefined} onChange={event => onDefaultServiceChange(event.target.value || null)}>
+              <option value="">按任务设置</option>
+              {defaultMissing && <option value={defaultServiceId!} disabled>原模型已不可用</option>}
+              {services.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
+            </select></label>
+            <button className={styles.textButton} type="button" onClick={onOpenSettings}>管理模型</button>
+          </div>
+        </details>
         {onLocalStart && <button className={styles.textButton} type="button" disabled={busy || disabled || !direction.trim()} onClick={() => onLocalStart(direction.trim())}>先本地整理</button>}
-        <button className={styles.primary} type="submit" disabled={busy || disabled || !direction.trim()}>{busy ? '正在推进…' : '开始推进'}</button>
+        <button className={styles.primary} type="submit" disabled={busy || disabled || !direction.trim()}>{busy ? '正在推进…' : '开始研究'}</button>
       </div>
     </form>
     {!direction && <div className={styles.suggestions} role="group" aria-label="试试这些研究方向">{DIRECTIONS.map(([label, text]) => <button key={label} type="button" disabled={busy || disabled} onClick={() => onDirectionChange(text)}>{label}<span aria-hidden="true">↗</span></button>)}</div>}

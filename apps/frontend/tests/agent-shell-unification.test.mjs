@@ -70,3 +70,29 @@ test('research workspace uses project identity rather than conversation identity
   assert.equal(handler(workspace, 'literature'), 'research.literature');
   assert.equal(handler(workspace, 'onLiterature'), 'research.setLiterature');
 });
+
+test('research routes distinguish subviews that share a panel and preserve legacy room links', async () => {
+  const rooms = await import('../lib/agent/rooms.ts');
+  const catalog = await import('../lib/agent/research-stages.ts');
+  const path = new URL('../lib/agent/research-navigation.ts', import.meta.url);
+  const { outputText } = ts.transpileModule(fs.readFileSync(path, 'utf8'), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  });
+  const exports = {};
+  vm.runInNewContext(outputText, { exports, require: name => {
+    if (name === './rooms') return rooms;
+    if (name === './research-stages') return catalog;
+    throw Error('Unexpected route dependency: ' + name);
+  } });
+  const { researchStageHash, researchStageFromHash, agentPanelFromHash } = exports;
+  const locations = catalog.RESEARCH_STAGES.map(stage => researchStageHash(stage.id));
+  assert.equal(new Set(locations).size, catalog.RESEARCH_STAGES.length);
+  assert.deepEqual(locations.map(researchStageFromHash), catalog.RESEARCH_STAGES.map(stage => stage.id));
+  assert.equal(agentPanelFromHash('#research/diagnosis'), 'diagnose');
+  assert.equal(agentPanelFromHash('#research/literature'), 'diagnose');
+  assert.equal(agentPanelFromHash('#research/report'), null);
+  assert.equal(agentPanelFromHash('#research/review'), 'editor');
+  assert.equal(agentPanelFromHash('#lifecycle'), 'workspace');
+  assert.equal(agentPanelFromHash('#output/123'), null);
+  assert.equal(researchStageFromHash('#research/design'), null);
+});
