@@ -22,3 +22,22 @@ def register_routes(app, *, settings, engine, generator, db, auth, owned_project
     @app.post('/api/projects/{project_id}/silicon-runs/{run_id}/cancel')
     def cancel_silicon_run(project_id: str, run_id: str, user=Depends(auth), session=Depends(db)):
         return service.cancel_silicon_run(project_id=project_id, run_id=run_id, user=user, session=session)
+
+
+    @app.post('/api/projects/{project_id}/silicon-pretests', status_code=202)
+    async def start_interview_pretest(project_id: str, request: Request, user=Depends(auth), session=Depends(db)):
+        project, _ = owned_project(session, user, project_id, edit=True)
+        data = await body(request, ('design', 'topic', 'serviceId', 'serviceRevision', 'idempotencyKey', 'consent'))
+        return await service.start_silicon_run(project_id=project_id, user=user, session=session, data=data, p=project, pretest=True)
+
+    @app.get('/api/projects/{project_id}/silicon-pretests')
+    def list_interview_pretests(project_id: str, user=Depends(auth), session=Depends(db)):
+        return service.list_silicon_runs(project_id=project_id, user=user, session=session, pretest=True)
+
+    @app.get('/api/projects/{project_id}/silicon-pretests/{run_id}')
+    def get_interview_pretest(project_id: str, run_id: str, user=Depends(auth), session=Depends(db)):
+        return service.get_silicon_run(project_id=project_id, run_id=run_id, user=user, session=session, pretest=True)
+
+    @app.post('/api/projects/{project_id}/silicon-pretests/{run_id}/cancel')
+    def cancel_interview_pretest(project_id: str, run_id: str, user=Depends(auth), session=Depends(db)):
+        return service.cancel_silicon_run(project_id=project_id, run_id=run_id, user=user, session=session, pretest=True)
