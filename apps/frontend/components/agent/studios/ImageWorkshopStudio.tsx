@@ -414,7 +414,7 @@ export default function ImageWorkshopStudio({
                 style={{ flex: 1 }}
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
-                placeholder="Gemini / OpenAI / Proxy API Key（留空则自动读服务端环境变量或用复合引擎）"
+                placeholder="Gemini / OpenAI API Key（仅限启用的本地网关）"
               />
             </div>
             <div className={styles.row}>
@@ -423,7 +423,7 @@ export default function ImageWorkshopStudio({
                 style={{ flex: 1 }}
                 value={baseUrl}
                 onChange={e => setBaseUrl(e.target.value)}
-                placeholder="可选 Base URL（兼容代理网关地址）"
+                placeholder="可选 Base URL（支持固定供应商地址）"
               />
               <input
                 className={styles.input}

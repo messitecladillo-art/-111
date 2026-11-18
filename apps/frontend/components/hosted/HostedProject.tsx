@@ -90,7 +90,7 @@ function ProjectEditor({ projectId }: { projectId: string }) {
     if (readCollectionLink() && next !== 'collection') window.location.hash = '';
   }, [readCollectionLink]);
   const openCollection = () => {
-    if (!readCollectionLink()) window.location.hash = 'collection';
+    if (!readCollectionLink()) window.location.hash = '#collection';
   };
   const [topicOpened, setTopicOpened] = useState(cached?.tab === 'topic');
   const [defenseOpened, setDefenseOpened] = useState(cached?.tab === 'defense');

@@ -63,7 +63,7 @@ export const IMAGE_GEN_MODELS: readonly ImageGenModelSpec[] = [
     shortLabel: 'Flux 兼容网关',
     provider: 'openai_compatible',
     apiModel: 'black-forest-labs/FLUX.1-schnell',
-    badge: '自定义 BaseURL',
+    badge: '需供应商支持',
   },
 ];
 

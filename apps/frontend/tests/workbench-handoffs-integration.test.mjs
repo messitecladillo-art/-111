@@ -76,7 +76,7 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
     ...mocks,
   };
   if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; imports['./questionnaire-proposal-repository'] = questionnaireProposalRepositoryModule(); imports['@/lib/questionnaire-proposals'] = questionnaireProposalContract; }
-  const window = { location: { hash: '' }, confirm: () => true, addEventListener() {}, removeEventListener() {}, scrollTo() {} };
+  const window = { location: { pathname: props.projectId ? '/projects/' + props.projectId : '/workspace', hash: '' }, confirm: () => true, addEventListener() {}, removeEventListener() {}, scrollTo() {} };
   const code = ts.transpileModule(fs.readFileSync(new URL(relative, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText;
@@ -284,6 +284,7 @@ test('hosted design, silicon and collection routes keep frozen transfers while p
   data.origin.kind = 'changed';
   assert.equal(child(screen, 'SurveyLab').props.datasetTransfer.origin.kind, 'silicon');
   await open(screen, '发布与回收');
+  assert.equal(screen.window.location.hash, '#collection');
   const collection = { ...dataset(), name: '回收数据.csv', origin: { kind: 'collection', projectId: projectA, releaseId: versionId, versionId, questionnaireRevision: 1, classification: 'synthetic', snapshotHash: 'a'.repeat(64), generatedAt: timestamp, design: shared.newQuestionnaire() } };
   child(screen, 'SurveyCollection').props.onAnalyze(collection); await screen.settle();
   collection.origin.design.title = '外部改写来源';
