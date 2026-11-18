@@ -514,9 +514,9 @@ export default function AgentShell() {
   // Every way to the input goes through here. While the panel fills the screen the input is hidden, so the conversation
   // comes back first, synchronously, and a "/" typed to get there still lands in it.
   const focusInput = useCallback(() => {
-    if (inputRef.current?.offsetParent === null) flushSync(() => setExpanded(false));
+    if (inputRef.current?.offsetParent === null) flushSync(() => { setExpanded(false); setCopilotOpen(true); });
     inputRef.current?.focus();
-  }, [setExpanded]);
+  }, [setExpanded, setCopilotOpen]);
   const go = useCallback((id: RoomId) => {
     if (id === 'services') { setArtifactOpen(false); setExpanded(true); }
     if (currentPanel() !== id) window.location.hash = id;
@@ -562,11 +562,12 @@ export default function AgentShell() {
   }, []);
   const openResearchOverview = useCallback(() => {
     setArtifactOpen(false);
+    setCopilotOpen(false);
     setExpanded(false);
     setRailMenu(null);
     if (window.location.hash !== RESEARCH_OVERVIEW_HASH) window.location.hash = RESEARCH_OVERVIEW_HASH;
     else scrollRef.current?.scrollTo({ top: 0 });
-  }, [setExpanded]);
+  }, [setExpanded, setCopilotOpen]);
   useEffect(() => {
     if (researchOverview) scrollRef.current?.scrollTo({ top: 0 });
   }, [researchOverview]);
@@ -2061,7 +2062,8 @@ export default function AgentShell() {
     }
   }, [quickSteeringDraft, rewriteSectionWithIdea, setSideOpen, pickSection]);
 
-  const overlayDock = stage !== 'chat' || (expanded && !!panel);
+  const hideChatColumn = stage !== 'chat' || (expanded && !!panel);
+  const overlayDock = hideChatColumn || researchOpen;
   const hasRightSidePanel = !(expanded && panel) && (panel || output || inspecting || artifactOpen);
   const dockPanelReserve = hasRightSidePanel
     ? (artifactOpen ? 360 : inspecting ? INSPECTOR : panelWidth) + 8
@@ -2414,7 +2416,7 @@ export default function AgentShell() {
             watermarkText={watermarkEnabled ? `证见 EVI-X · ${email || '内部审阅副本'} · 防未授权摘抄与外传` : null}
           />
         </div>}
-        <div className={styles.chatColumn} hidden={overlayDock}>
+        <div className={styles.chatColumn} hidden={hideChatColumn}>
         <div ref={scrollRef} className={styles.scroll}>
           {!messages.length && !researchOpen && (
             <section className={styles.empty} aria-label="证见 Agent 研究大脑">
@@ -2619,7 +2621,7 @@ export default function AgentShell() {
           <div className={styles.overlayMiniBar} role="region" aria-label="证见 AI 快捷副驾">
             <button type="button" className={styles.overlayMiniPrompt} onClick={() => { setCopilotOpen(true); requestAnimationFrame(() => focusInput()); }}>
               <BrandMark size={15} />
-              <span>向证见大脑提问、下达指令或改写本节…</span>
+              <span>{researchOpen ? '继续对话、添加资料或下达指令' : '向证见提问、下达指令或改写本节…'}</span>
               <kbd>/</kbd>
             </button>
             <button type="button" className={styles.overlayMiniExpand} onClick={() => setCopilotOpen(true)} aria-label={messages.length ? `展开对话记录 (${messages.length})` : '展开对话抽屉'}>
@@ -2634,7 +2636,7 @@ export default function AgentShell() {
               <b>证见 AI</b>
               <small>{thread?.title ?? '新对话'}</small>
               <span className={styles.spacer} />
-              <button type="button" className={styles.chip} onClick={() => { setExpanded(false); setStage('chat'); }}>回到对话</button>
+              <button type="button" className={styles.chip} onClick={() => { if (researchOverview) closePanel(); setExpanded(false); setStage('chat'); }}>回到对话</button>
               <button type="button" className={styles.iconButton} aria-label="收起对话抽屉" title="收起" onClick={() => setCopilotOpen(false)}><Icon name="down" /></button>
             </div>
             <div ref={scrollRef} className={styles.scroll}>
