@@ -67,6 +67,7 @@ import type { FigureTweak } from '@/lib/agent/figure-tweak';
 import { literatureEvidenceReference, type LiteratureWorkspaceSnapshot, type LiteratureEvidenceReference } from '@/lib/topic-lab/workspace';
 import { parseLiteratureEvidenceReference, literatureEvidenceReferencesEqual } from '@/lib/topic-lab/evidence-reference';
 import type { ResearchStageId } from '@/lib/agent/research-stages';
+import { researchStageHash } from '@/lib/agent/research-navigation';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -388,7 +389,13 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
     setForm((current) => ({ ...current, [field]: value }));
   };
   useEffect(()=>()=>{requestEpoch.current++;},[]);
-  const openMode=(next:"advisor"|"readiness"|"topics")=>{setMode(next);if(next==="topics")setTopicsOpened(true);};
+  const openMode = (next: 'advisor' | 'readiness' | 'topics') => {
+    setMode(next);
+    if (next === 'topics') setTopicsOpened(true);
+    if (requestedMode && requestedMode.mode !== next) {
+      window.location.assign(researchStageHash(next === 'topics' ? 'literature' : next === 'readiness' ? 'diagnosis' : 'topic'));
+    }
+  };
   const applyTopic=(topic:{title:string;decisionOwner:string;population?:string;geography?:string;problem?:string;evidence?:LiteratureEvidenceReference})=>{
     let evidence:LiteratureEvidenceReference|null=null;
     try{if(topic.evidence){evidence=parseLiteratureEvidenceReference(topic.evidence);if(!evidenceCurrent(evidence))throw Error('文献语料或参数已变化，请重新生成选题画像。');}}
@@ -484,7 +491,7 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
               </dl>
               <p>{result.transitionPlan.note}</p>
             </div>}
-            {resultSource&&<DiagnosisActions codes={result.actionCodes} source={resultSource} onPrepare={source=>{onBriefSource?.(source);window.location.hash='design';}}/>}
+            {resultSource&&<DiagnosisActions codes={result.actionCodes} source={resultSource} onPrepare={source=>{onBriefSource?.(source);window.location.hash=requestedMode ? researchStageHash('questionnaire') : 'design';}}/>}
           </>}
         </div>
       </div>
@@ -621,7 +628,7 @@ function CanvasPanel({ dataset, design, projectId }: { dataset: DatasetValue | n
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
-export function useWorkbenchModules(observeReport = false, projectId: string|null = null) {
+export function useWorkbenchModules(observeReport = false, projectId: string|null = null, requestedResearchStage: ResearchStageId | null = null, researchStageVisit = 0) {
   const { session, identityEpoch, loading, isCurrentAccount, isCurrentIdentity } = useHostedSession();
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
   const identityScope=JSON.stringify(['workspace',session?.user?.id??null,identityEpoch]);
@@ -643,7 +650,12 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
   const storedDraft=useMemo(()=>draftOwner&&typeof window!=='undefined'?readReportDraft(draftOwner,projectId):null,[draftOwner,projectId]);
   const { store: handoffs, snapshot: exchange } = useWorkbenchHandoffs(workspaceScope,identityScope);
   const [topicInput,setTopicInput]=useState<{scope:string;source:DiagnosisBriefSource}|null>(null);
-  const [diagnosisMode,setDiagnosisMode]=useState<{scope:string;id:string;mode:'advisor'|'readiness'|'topics'}|null>(null);
+  const routedDiagnosis = useMemo(() => {
+    const mode = requestedResearchStage === 'topic' ? 'advisor'
+      : requestedResearchStage === 'diagnosis' ? 'readiness'
+        : requestedResearchStage === 'literature' ? 'topics' : null;
+    return mode ? { id: ['research', requestedResearchStage, researchStageVisit].join('/'), mode } as const : undefined;
+  }, [requestedResearchStage, researchStageVisit]);
   const receiveTopic=useCallback((source:DiagnosisBriefSource)=>{
     if(!currentScope())return;
     const parsed=parseDiagnosisBriefSource(source),live=handoffs.getSnapshot().literature;
@@ -662,8 +674,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     if(pending?.payload.schemaVersion===2&&(!snapshot||!literatureEvidenceReferencesEqual(pending.payload.literature,literatureEvidenceReference(snapshot))))handoffs.acknowledge('brief',pending.deliveryId);
     handoffs.setLiterature(snapshot);
   },[currentScope,handoffs]);
-  const openResearch=useCallback((stage:ResearchStageId)=>{if(!currentScope()||!['topic','diagnosis','literature'].includes(stage))return;setDiagnosisMode({scope:workspaceScope,id:crypto.randomUUID(),mode:stage==='literature'?'topics':stage==='diagnosis'?'readiness':'advisor'});},[currentScope,workspaceScope]);
-  const research=useMemo(()=>({topic:receiveTopic,retractTopic,literature:exchange.literature,setLiterature:receiveLiterature,open:openResearch}),[receiveTopic,retractTopic,exchange.literature,receiveLiterature,openResearch]);
+  const research=useMemo(()=>({topic:receiveTopic,retractTopic,literature:exchange.literature,setLiterature:receiveLiterature}),[receiveTopic,retractTopic,exchange.literature,receiveLiterature]);
   const datasetChanged=useCallback((value:DatasetValue|null)=>{if(currentScope())handoffs.setDataset(value);},[handoffs,currentScope]);
   const designChanged=useCallback((snapshot:DesignSnapshot)=>{if(currentScope())handoffs.setDesign(snapshot);},[handoffs,currentScope]);
   const revisionInputVersion=useMemo(()=>({dataset:exchange.dataset,design:exchange.design,pending:[exchange.pending.design,exchange.pending.dataset,exchange.pending.result],token:crypto.randomUUID()}),[exchange.dataset,exchange.design,exchange.pending.design,exchange.pending.dataset,exchange.pending.result]);
@@ -767,19 +778,19 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
       preflight: <SubmissionPreflight />,
       sampling: <SamplingWorkbench dataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} />,
       cases: <CaseLibrary />,
-      editor: <EditingStudio controllerRef={revisionEditor} revisionInputVersion={revisionInputVersion.token} localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={`${workspaceScope}:${benchmarkEpoch}`} initialContent={report??storedDraft} savedInBrowser={!!draftOwner}/>,
+      editor: <EditingStudio requestedResearchStage={requestedResearchStage} researchStageVisit={researchStageVisit} controllerRef={revisionEditor} revisionInputVersion={revisionInputVersion.token} localOnly resultProposal={registration?.result} resultFigures={registration?.figures} resultVisualStyle={registration?.visualStyle} onResultHandled={resultHandled} reportInsert={reportInsert} onReportInsertHandled={()=>setReportInsert(null)} questionnaire={exchange.design?.design??null} onContentChange={observeReport?reportChanged:undefined} figureTweak={figureTweak} onFigureTweakHandled={figureTweakHandled} key={`${workspaceScope}:${benchmarkEpoch}`} initialContent={report??storedDraft} savedInBrowser={!!draftOwner}/>,
       defense: <DefenseStudio />,
-      analysis: <SurveyLab key={`${workspaceScope}:${benchmarkEpoch}`} initialDataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{if(!currentScope())return;handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={datasetDelivery} onDatasetTransferHandled={datasetHandled} onDatasetChange={datasetChanged}/>,
+      analysis: <SurveyLab requestedResearchStage={requestedResearchStage} researchStageVisit={researchStageVisit} key={`${workspaceScope}:${benchmarkEpoch}`} initialDataset={exchange.dataset} onReportInsert={insert=>{setReportInsert(insert);window.location.hash="editor";}} onResultSnapshot={(result,figures,visualStyle)=>{if(!currentScope())return;handoffs.publish('result',{result,figures,visualStyle});window.location.hash="editor";}} designSnapshot={exchange.design} designTransfer={exchange.pending.design?.payload} datasetTransfer={datasetDelivery} onDatasetTransferHandled={datasetHandled} onDatasetChange={datasetChanged}/>,
       canvas: <CanvasPanel dataset={exchange.dataset} design={exchange.design} projectId={projectId} />,
       silicon: <SiliconLab designSnapshot={exchange.design} onSendToAnalysis={sendSiliconToAnalysis}/>,
       design: <QuestionnaireStudio key={`${workspaceScope}:${benchmarkEpoch}`} initialDesign={exchange.design?.design??null} localOnly agentProposal={exchange.pending.questionnaire?.payload ?? null} onAgentHandled={proposalHandled} briefSource={exchange.pending.brief?.payload} onBriefHandled={briefHandled} onSnapshot={designChanged} onAnalyze={snapshot=>{if(!currentScope())return;handoffs.setDesign(snapshot);handoffs.publish('design',{id:crypto.randomUUID(),snapshot});}} />,
-      diagnose: <DiagnosisPanel projectPaletteId={report?.visualStyle?.paletteId} incomingSource={topicInput?.scope===workspaceScope?topicInput.source:null} requestedMode={diagnosisMode?.scope===workspaceScope?diagnosisMode:undefined} literature={exchange.literature} onLiterature={receiveLiterature} onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
+      diagnose: <DiagnosisPanel projectPaletteId={report?.visualStyle?.paletteId} incomingSource={topicInput?.scope===workspaceScope?topicInput.source:null} requestedMode={routedDiagnosis} literature={exchange.literature} onLiterature={receiveLiterature} onBriefSource={source=>{if(!currentScope())return;if(source)handoffs.publish('brief',source);else briefHandled();}} />,
       workspace: <ProjectPortal />,
       rules: <RuleWorkbench />,
       services: <><p className="hosted-notice"><Link href="/services">打开个人模型服务页面 →</Link></p><HostedServices/></>,
     };
     return Object.fromEntries(Object.entries(entries).map(([key,panel])=>[key,cloneElement(panel as ReactElement,{key:`${workspaceScope}:${(panel as ReactElement).key??key}`})])) as Record<WorkbenchPanel,ReactNode>;
-  }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion,topicInput,diagnosisMode,receiveLiterature]);
+  }, [exchange,handoffs,resultHandled,briefHandled,proposalHandled,reportInsert,observeReport,reportChanged,draftOwner,storedDraft,report,benchmarkEpoch,figureTweak,figureTweakHandled,workspaceScope,projectId,currentScope,setReportInsert,datasetChanged,designChanged,datasetDelivery,datasetHandled,revisionInputVersion,topicInput,receiveLiterature,requestedResearchStage,researchStageVisit,routedDiagnosis,sendSiliconToAnalysis]);
   return {panels,view,research,publishProposal,sendToReport:setReportInsert,tweakFigure,loadBenchmark,setLiveReport:reportChanged,reportSource,applyCandidate,reportVersions,restoreReportVersion,readRevisionSnapshot,reviseSection,applyArtifact,sendSiliconToAnalysis};
 }
 

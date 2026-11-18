@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ResearchStageId } from "@/lib/agent/research-stages";
 import type { DatasetValue } from "@/lib/canvas/execute";
 import { Tex } from "@/components/math/Tex";
 import AdvancedMethods from "./AdvancedMethods";
@@ -48,7 +49,7 @@ function saveText(content: string, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function SurveyLab({initialDataset=null,designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetTransferHandled,onDatasetChange,onEvidenceProposal,onResultSnapshot,onReportInsert}:{initialDataset?:DatasetValue|null;designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetTransferHandled?:()=>void;onDatasetChange?:(value:DatasetValue|null)=>void;onEvidenceProposal?:(section:ReportSection)=>void;onResultSnapshot?:(result:ResultSnapshot,figures?:ReportFigure[],visualStyle?:ProjectVisualStyle)=>void;onReportInsert?:(insert:ReportInsert)=>void}={}) {
+export default function SurveyLab({initialDataset=null,designSnapshot=null,designTransfer=null,datasetTransfer=null,onDatasetTransferHandled,onDatasetChange,onEvidenceProposal,onResultSnapshot,onReportInsert,requestedResearchStage=null,researchStageVisit=0}:{initialDataset?:DatasetValue|null;designSnapshot?:DesignSnapshot|null;designTransfer?:DesignTransfer|null;datasetTransfer?:DatasetTransfer|null;onDatasetTransferHandled?:()=>void;onDatasetChange?:(value:DatasetValue|null)=>void;onEvidenceProposal?:(section:ReportSection)=>void;onResultSnapshot?:(result:ResultSnapshot,figures?:ReportFigure[],visualStyle?:ProjectVisualStyle)=>void;onReportInsert?:(insert:ReportInsert)=>void;requestedResearchStage?:ResearchStageId|null;researchStageVisit?:number}={}) {
   const [initialSnapshot]=useState(()=>initialDataset?structuredClone(initialDataset):null);
   const [retainedSnapshot,setRetainedSnapshot]=useState(initialSnapshot);
   const [mapping,setMapping]=useState<Mapping|null>(null);
@@ -74,6 +75,8 @@ export default function SurveyLab({initialDataset=null,designSnapshot=null,desig
   const [routingPolicy,setRoutingPolicy]=useState<RoutingPolicy>("strict");
   const [routingApproval,setRoutingApproval]=useState<string|null>(null);
   const [section, setSection] = useState<"data" | "mapping" | "recipes" | "reliability" | "advanced">("data");
+  const stageRequest = requestedResearchStage ? requestedResearchStage + ':' + researchStageVisit : null;
+  const [appliedResearchStage, setAppliedResearchStage] = useState<string | null>(null);
   const [seenTransfer, setSeenTransfer] = useState("");
   const [detail, setDetail] = useState<number | null>(null);
   const [interpretation, setInterpretation] = useState<"numeric" | "category">("numeric");
@@ -330,6 +333,15 @@ export default function SurveyLab({initialDataset=null,designSnapshot=null,desig
   if (sourceTransfer && sourceTransfer.id !== seenTransfer) {
     setSeenTransfer(sourceTransfer.id);
     setSection("mapping");
+  }
+
+  const restoringDataset = requestedResearchStage === 'analysis' && !!retainedSnapshot && !dataset && !reading && !error;
+  if (stageRequest !== appliedResearchStage && !restoringDataset) {
+    setAppliedResearchStage(stageRequest);
+    if (requestedResearchStage === 'quality' || requestedResearchStage === 'analysis') {
+      setSection(requestedResearchStage === 'quality' || !dataset ? 'data' : interpretationPending ? 'mapping' : 'recipes');
+      if (!dataset) setImportOpen(true);
+    }
   }
 
   const inResults = section === "recipes" || section === "reliability" || section === "advanced";

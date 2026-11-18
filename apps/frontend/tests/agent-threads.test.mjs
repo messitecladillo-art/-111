@@ -232,3 +232,18 @@ test('refresh turns full-report running into reconcilable unknown without changi
   assert.equal(threads.find(full.id).model.status,'ready');
   assert.equal(JSON.parse(local.getItem(`evix.agent.threads.v1:${owner}`)).threads[0].messages.find(m=>m.id===full.id).model.status,'ready');
 });
+
+test('the empty draft project survives refresh only in the same tab and identity', async () => {
+  const { threads: original } = await import('../components/agent/threads.ts?draft-project-original');
+  original.bind('draft-project-owner');
+  original.setProject('project-1');
+  assert.equal(local.getItem('evix.agent.draft-project.v1:draft-project-owner'), null);
+
+  const { threads: fresh } = await import('../components/agent/threads.ts?draft-project-refresh');
+  fresh.bind('draft-project-other-owner');
+  assert.equal(fresh.view('draft-project-other-owner').draftProject, null);
+  fresh.bind('draft-project-owner');
+  assert.equal(fresh.view('draft-project-owner').draftProject, 'project-1');
+  fresh.setProject(null);
+  assert.equal(session.getItem('evix.agent.draft-project.v1:draft-project-owner'), null);
+});

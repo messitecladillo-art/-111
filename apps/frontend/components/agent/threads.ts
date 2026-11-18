@@ -57,6 +57,7 @@ type Stored = { threads: Thread[]; active: string | null; removed: string[] };
 
 /** Earlier versions kept one transcript per tab: v2 recorded its owner and is carried over; v1 did not and is dropped. */
 const PREFIX = 'evix.agent.threads.v1:', TRANSCRIPT = 'evix.agent.transcript.v2', LEGACY = ['evix.agent.transcript.v1', TRANSCRIPT];
+const DRAFT_PROJECT_PREFIX = 'evix.agent.draft-project.v1:';
 const MESSAGE_LIMIT = 160, THREAD_LIMIT = 60, REMOVED_LIMIT = 200;
 const EMPTY: Book = { threads: [], active: null, draftProject: null };
 let owner: string | null = null;
@@ -87,8 +88,17 @@ function read(id: string): Stored {
 }
 // Keep the active in-memory stream running. Its equal-version persisted copy records uncertainty, not activity.
 const kept = (thread: Thread):Thread => ({ ...thread, messages: thread.messages.filter(m => m.role !== 'pending').map(m=>m.role==='agent'&&m.model?.reportRunId&&m.model.status==='running'?{...m,model:{...m.model,status:'unknown' as const}}:m) });
+function readDraftProject(id: string): string | null {
+  try { return window.sessionStorage.getItem(DRAFT_PROJECT_PREFIX + id); } catch { return null; }
+}
 function persist() {
   if (owner === null) return;
+  // Keep the empty draft's project across reloads in this tab without syncing it to other tabs.
+  try {
+    const key = DRAFT_PROJECT_PREFIX + owner;
+    if (book.draftProject) window.sessionStorage.setItem(key, book.draftProject);
+    else window.sessionStorage.removeItem(key);
+  } catch { /* Without tab storage the selected project stays in memory only. */ }
   try { storage(owner)?.setItem(PREFIX + owner, JSON.stringify({ threads: book.threads.map(kept), active: book.active, removed })); } catch { /* Without storage the conversations stay in memory only. */ }
 }
 function notify() { for (const listener of listeners) listener(); }
@@ -202,7 +212,7 @@ export const threads = {
     for (const key of [...LEGACY, ...(visited?.threads.length ? [PREFIX + 'guest'] : [])]) { try { window.sessionStorage.removeItem(key); } catch { /* Nothing to remove without storage. */ } }
     const carried = new Map([...(visited?.threads ?? []), ...(earlier ? [earlier] : []), ...unbound.threads].map(t => [t.id, t]));
     const wanted = [unbound.active, earlier?.id, visited?.active, restored.active];
-    commit({ threads: [...carried.values()], active: wanted.find(Boolean) ?? null, draftProject: null });
+    commit({ threads: [...carried.values()], active: wanted.find(Boolean) ?? null, draftProject: readDraftProject(id) });
     // Past the cap the wanted conversation may be gone; the next one still held opens instead.
     const open = wanted.find(t => t && book.threads.some(held => held.id === t)) ?? null;
     if (open !== book.active) commit({ ...book, active: open });

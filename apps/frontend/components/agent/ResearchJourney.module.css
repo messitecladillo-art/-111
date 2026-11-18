@@ -11,33 +11,29 @@
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
-  padding: 20px 28px 40px;
+  padding: 14px 0 26px;
   container-type: inline-size;
 }
 .journey * { box-sizing: border-box; }
 .journey :is(h1, h2, h3, p) { margin: 0; }
-.header { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 22px; }
-.eyebrow { display: block; margin-bottom: 16px; color: var(--journey-accent); font-size: 12px; font-weight: 600; letter-spacing: .12em; }
-.header h1 { font-size: clamp(26px, 3.4cqi, 38px); font-weight: 600; line-height: 1.4; letter-spacing: -.025em; text-wrap: balance; }
-.header p { margin-top: 14px; color: var(--journey-muted); }
-.researchMark { flex: none; width: 112px; height: 112px; stroke: var(--journey-accent); stroke-width: .8; opacity: .5; }
-.researchMark circle { fill: var(--c-gold, #9a5b06); stroke: none; }
-.researchMark path:nth-child(2) { stroke: var(--c-gold, #9a5b06); }
 .journey button { font: inherit; cursor: pointer; }
 .journey button:disabled { opacity: .5; cursor: not-allowed; }
 .textButton { flex-shrink: 0; padding: 4px 0; border: 0; color: var(--journey-accent); background: transparent; }
 .textButton:hover { text-decoration: underline; text-underline-offset: 4px; }
-.intake { padding: 18px; border: 1px solid var(--c-line-strong, #d2d9d6); border-radius: 18px; background: var(--c-raise, #fff); box-shadow: 0 6px 24px -16px color-mix(in srgb, var(--journey-fg) 25%, transparent); transition: border-color 180ms; }
+.intake { padding: 18px; border: 1px solid var(--c-line-strong, #d2d9d6); border-radius: 14px; background: var(--c-raise, #fff); box-shadow: 0 6px 24px -16px color-mix(in srgb, var(--journey-fg) 25%, transparent); transition: border-color 180ms; }
 .intake:focus-within { border-color: var(--journey-accent); }
 .intake > label { display: block; margin-bottom: 10px; font-size: 16px; font-weight: 500; }
 .journey textarea { display: block; width: 100%; min-width: 0; padding: 11px 12px; resize: vertical; min-height: 94px; max-height: 300px; border: 1px solid var(--journey-line); border-radius: 9px; color: var(--journey-fg); background: var(--journey-bg); font: inherit; line-height: 1.8; }
 .journey textarea::placeholder { color: var(--journey-muted); }
-.intakeActions { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+.intakeActions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.intakeActions .primary { margin-inline-start: auto; }
+.intakeModel > summary { cursor: pointer; color: var(--journey-muted); padding: 7px 3px; }
+.intakeModelOptions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px; padding: 4px 0 8px; }
 .defaultModel { display: grid; gap: 6px; flex: 1; max-width: 320px; min-width: 180px; color: var(--journey-muted); }
 .journey select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid var(--c-line-strong, #d2d9d6); border-radius: 7px; background: var(--journey-bg); color: var(--journey-fg); font: inherit; font-size: 13px; height: 36px; min-height: 36px; padding: 0 10px; line-height: 34px; vertical-align: middle; }
 .journey :is(select, textarea):disabled { background-color: var(--c-side, #f8faf9); color: var(--journey-muted); }
 .journey select[aria-invalid="true"] { border-color: var(--c-warn, #c2410c); }
-.primary { min-height: 40px; padding: 8px 20px; border: 1px solid transparent; border-radius: 999px; color: var(--c-obsidian-fg, #fff); background: var(--c-obsidian, var(--journey-accent)); font-weight: 550 !important; transition: opacity 150ms, transform 120ms; }
+.primary { min-height: 40px; padding: 8px 20px; border: 1px solid transparent; border-radius: 999px; color: var(--c-bg); background: var(--journey-accent); font-weight: 550 !important; transition: opacity 150ms, transform 120ms; }
 .primary:hover:not(:disabled) { opacity: 0.88; }
 .suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .suggestions button { display: inline-flex; align-items: center; gap: 20px; min-height: 34px; padding: 5px 12px; border: 1px solid var(--journey-line); border-radius: 8px; background: transparent; color: var(--journey-muted); font-size: 12px; transition: background 120ms, border-color 120ms; }
@@ -98,9 +94,6 @@
   .step { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 14px; }
 }
 @container (max-width: 520px) {
-  .header { gap: 12px; }
-  .header h1 { font-size: 28px; }
-  .researchMark { width: 72px; height: 72px; }
   .intake { padding: 16px; }
   .defaultModel { max-width: none; flex-basis: 100%; }
   .primary { flex: 1; min-width: 0; padding-inline: 14px; }
