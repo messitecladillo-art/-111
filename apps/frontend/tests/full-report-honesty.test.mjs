@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   PLAN_NODE,
   awaitsResults,
+  buildFullReportSectionPrompt,
   buildSectionTokens,
   categoryLabels,
   buildSkillPackContract,
@@ -297,4 +298,29 @@ test('a revision that leaves the problem standing is not kept', async () => {
   assert.equal(res.summary.revisedSections, 0);
   assert.ok(res.report.report.some(s => s.body.includes('导致了复游意愿上升')), 'the original stays, and the report check keeps flagging it');
   assert.ok(benchmarkReport(res.report).checks.some(c => c.id === 'causal' && c.status !== 'pass'));
+});
+
+test('mounted 7-skill corpus rules inject 65-page limit, method contracts and causal checks', async () => {
+  const pack = await buildDemoPack('');
+  const contract = buildSkillPackContract(pack, decomposeTopic(''), 'demonstration');
+  const mkResult = method => ({ ...pack.report.quality.results[0], id: `r-${method}`, method, title: method });
+  const held = {
+    results: [mkResult('sem'), mkResult('xgboost'), mkResult('lda'), mkResult('ipa')],
+    findings: pack.report.quality.findings ?? [],
+    pending: false,
+    placed: ['r-sem', 'r-xgboost', 'r-lda', 'r-ipa'],
+  };
+  const modelPrompt = buildFullReportSectionPrompt({ nodeId: 'drivers.model', content: pack.report, design: pack.design, held, contract, tokens });
+  assert.match(modelPrompt, /六十五页篇幅上限/u);
+  assert.doesNotMatch(modelPrompt, /三十页篇幅上限/u);
+  assert.match(modelPrompt, /结构方程（SEM\/CFA）/u);
+  assert.match(modelPrompt, /SHAP/u);
+  assert.match(modelPrompt, /文本挖掘与舆情分析/u);
+  assert.match(modelPrompt, /评价与优先级模型/u);
+  const sugPrompt = buildFullReportSectionPrompt({ nodeId: 'conclusion.suggestions', content: pack.report, design: pack.design, held, contract, tokens });
+  assert.match(sugPrompt, /四要素闭环/u);
+
+  const report = structuredClone(pack.report);
+  report.report = [{ id: 's-c', title: '一、分析', body: '消费能力与推荐意愿呈正相关，说明推荐意愿完全取决于消费能力。', source: '' }];
+  assert.ok(benchmarkReport(report).checks.some(c => c.id === 'causal' && c.status !== 'pass'));
 });

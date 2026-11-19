@@ -266,7 +266,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   // Read sentence by sentence: "避免统一补贴造成错配" beside a correlation in the next sentence is no causal reading of
   // it, and "不能说明…导致…" is the caution itself. A correlation and a causal verb in one sentence is.
   const causalSentence = (sentence: string) => /相关|关联/.test(sentence)
-    && /导致|造成|决定了|引起了|使得/.test(sentence.replace(/(?:不|未|并非|而非|不能|无法)[^。；，,]{0,6}(?:导致|造成|决定了|引起了|使得)/gu, ''));
+    && /(?:导致|造成|决定了|引起了|使得|取决于)/.test(sentence.replace(/(?:不|未|并非|而非|不能|无法)[^。；，,]{0,6}(?:导致|造成|决定了|引起了|使得|取决于)/gu, ''));
   const causal = paragraphs.filter(l => l.split(/(?<=[。；！？!?])/u).some(causalSentence));
   add('causal', 'actions', '相关不写成因果', prose.length ? (causal.length === 0 ? 1 : causal.length === 1 ? 0.5 : 0) : null,
     causal.length ? `${causal.length} 段在相关性结果旁使用了因果措辞，如「${causal[0].slice(0, 24)}…」。` : '没有发现把相关写成因果的措辞。');

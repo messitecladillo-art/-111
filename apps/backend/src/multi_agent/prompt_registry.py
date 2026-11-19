@@ -7,9 +7,10 @@ from importlib.resources import files
 from typing import Any, Mapping
 
 from multi_agent.agents.contracts import AgentRole
+from multi_agent.skill_guidance import role_corpus_guidance
 
 
-PROMPT_VERSION = "zhengda-v0.1"
+PROMPT_VERSION = "zhengda-v0.2-corpus"
 MAX_TASK_BYTES = 120_000
 
 
@@ -53,6 +54,7 @@ def build_messages(role: AgentRole | str, task: Mapping[str, Any], *, step: str 
         if not instruction or len(instruction.encode("utf-8")) > 10_000:
             raise PromptError("Invalid step prompt")
         system += "\n\n当前内部工作流步骤（中间步骤的输出格式以本段为准）：\n" + instruction
+    system += "\n\n" + role_corpus_guidance(role)
     return [
         {"role": "system", "content": system},
         {

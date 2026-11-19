@@ -760,7 +760,7 @@ export function buildFullReportSectionPrompt(input: {
       ? `交代本次质量筛查实际采用的规则：${applied.join('、')}（各规则是剔除还是仅标记，以筛查结果表为准）；没有采用的规则（如作答时长、逻辑矛盾）不写成已经做过。样本量与回收率只用资料中对应的 {F编号}，资料没有的计数不写。`
       : '资料中没有登记质量筛查结果：只写拟采用的筛查规则，并写明筛查结果尚未登记，不写任何计数。');
   } else if (input.nodeId === 'conclusion.suggestions') {
-    specificRules.push('每条对策建议对应一条实证结论，并写明执行主体、实施步骤与评估指标；评估指标写指标名称，不写目标数值。');
+    specificRules.push('每条对策建议须严格落成【实证断点（对应前文结论与图表 {G编号}）→ 精准执行主体 → 具体工程、渠道或机制抓手 → 可考核评估指标名称与追踪口径】四要素闭环；评估指标只写指标名称与口径，不擅自杜撰目标数值。');
   }
   if (pending) {
     specificRules.push('本节尚无对应的登记结果：只写本节拟采用的分析思路与要回答的问题，写到的每种分析都用“拟”“计划”标明尚未进行，并明确写出“本节分析结果尚未登记”，不写任何结果、检验结论或诊断。');
@@ -780,7 +780,11 @@ export function buildFullReportSectionPrompt(input: {
     ...(registered(/^sampling-frame$/u)
       ? []
       : ['资料中没有登记抽样框：不用“随机抽样、分层抽样、整群抽样、多阶段抽样、系统抽样、PPS 抽样”等名称声称已完成抽样，不推定采用过便利或配额抽样；如实写明抽样方式与覆盖范围待确认，外推须谨慎；']),
-    ...(registered(/cluster|kmeans/iu) ? ['不用参与聚类的输入变量做显著性检验来自证分群有效；'] : []),
+    ...(registered(/cluster|kmeans|k-?modes|lpa/iu) ? ['聚类或潜剖面分析必须报告轮廓系数或信息准则等定类依据，且严禁用参与聚类的原变量做显著性检验来自证分群有效；'] : []),
+    ...(registered(/sem|cfa|path|amos/iu) ? ['结构方程（SEM/CFA）在横截面下仅检验协方差结构相容性，不得声称证实因果方向或动态演化；如实汇报拟合指标，不得将有序李克特量表以邻近均值简单插补；'] : []),
+    ...(registered(/rf|xgb|lgb|gbdt|tree|forest|shap|boost/iu) ? ['树模型与机器学习归因须围绕已登记误差指标与 SHAP 或局部边缘效应解释非线性拐点，严禁先聚类再拿同一批变量做分类预测循环自证准确率；'] : []),
+    ...(registered(/lda|sentiment|text|nlp|wordcloud|tfidf|cooccur/iu) ? ['文本挖掘与舆情分析必须显式标明所提维度如何转译为后文问卷构念或对策抓手，避免沦为孤立词云，并交代网评人群对全体的覆盖偏差；'] : []),
+    ...(registered(/ipa|servperf|topsis|ahp|entropy|fuzzy|kano|conjoint/iu) ? ['评价与优先级模型须写明权重或象限阈值来源，紧扣高重要度低表现短板确立整改先后序，避免无实证锚点的空心矩阵填表；'] : []),
   ];
   const material = {
     mode: input.contract.mode,
@@ -832,7 +836,7 @@ export function buildFullReportSectionPrompt(input: {
     steeringBlock +
     rhetoricBlock +
     '\n【写作体例】\n' +
-    '中文学术调查报告语体，先亮核心判断、再摆证据、最后交代适用边界；写三到五段，每段一百到二百二十字，言简意赅以免主报告超过竞赛三十页篇幅上限。\n' +
+    '中文学术调查报告语体（兼顾母洞察统摄，短句立判接带括号统计复句错落行文）；图文互文讲究自然衔接（先点明为何看图再精准指代 {G编号}，重点拆解极值反差、分布形态或非显著断点并顺势引出下阶解释，避免机械八股套话）；定量图只从冻结结果提取，概念配图不写虚构数值；章尾按逻辑缺口自然过渡，每段一百到二百二十字，合并提交件（含标题页、摘要、目录、正文与参考文献）控制在竞赛六十五页篇幅上限内。\n' +
     (specificRules.length ? `【本节专项要求】\n${specificRules.join('\n')}\n` : '') +
     '只输出严格合法的 JSON 对象：{"paragraphs":[{"text":"段落正文"}]}，不要输出任何额外解释。\n' +
     `资料 JSON：${JSON.stringify(material)}`
