@@ -38,3 +38,37 @@
    may be wide while the panel sits beside the sidebar), otherwise below it. */
 @container (max-width: 1080px) { .body { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .body { grid-template-columns: 1fr; } }
+
+@media (forced-colors: active) {
+  .panel :is(button, input, select, textarea):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .method,
+  .setup,
+  .result,
+  .field select,
+  .field input,
+  .field textarea,
+  .matrix input,
+  .panel .primary,
+  .figure {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .panel .primary,
+  .method[aria-checked="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .tableWrap table,
+  .tableWrap th {
+    border-color: CanvasText !important;
+  }
+}

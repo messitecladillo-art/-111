@@ -46,3 +46,47 @@
 .diagnostics li[data-severity=error] { color: var(--wb-risk); }
 .diagnostics button { min-height: 28px; flex-shrink: 0; font-size: 12px; }
 .workbench button:focus-visible,.workbench a:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 3px; }
+@media (max-width: 860px) {
+  .panes { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
+  .sourcePane, .previewPane { min-width: 0; }
+  .sourcePane { border-right: 0; border-bottom: 1px solid var(--wb-line); min-height: 360px; }
+  .previewPane { min-height: 320px; }
+  .statusRow, .sourceFooter, .confirm, .diagnostics li { flex-wrap: wrap; }
+}
+
+@media (forced-colors: active) {
+  .workbench button:focus-visible,
+  .workbench a:focus-visible,
+  .workbench .code:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .workbench,
+  .workbench button,
+  .workbench .code,
+  .paperIcon,
+  .confirm {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .workbench .primary,
+  .tabs button[aria-pressed=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .toolbar,
+  .panes,
+  .sourcePane,
+  .paneBar,
+  .insertBar,
+  .sourceFooter,
+  .diagnostics {
+    border-color: CanvasText;
+  }
+}

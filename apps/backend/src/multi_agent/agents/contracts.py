@@ -100,7 +100,7 @@ class ToolResult(BaseModel):
     @classmethod
     def nonblank_references(cls, values):
         if any(not value.strip() or len(value) > 512 for value in values):
-            raise ValueError("Invalid tool artifact/evidence reference")
+            raise ValueError("工具产物或证据引用标识无效。")
         return values
 
 
@@ -120,7 +120,7 @@ class AgentRunState(BaseModel):
     current_step: str | None = None
     completed_steps: list[str] = Field(default_factory=list)
     step_results: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    tool_calls: list[ToolCall] = Field(default_factory=list, max_length=32)
+    tool_calls: list[ToolCall] = Field(default_factory=list, max_length=64)
     output: AgentOutput | None = None
     errors: list[str] = Field(default_factory=list)
     unresolved_questions: list[str] = Field(default_factory=list)
@@ -148,5 +148,5 @@ AgentTool = Callable[..., ToolResult]
 
 class AgentExecutionError(RuntimeError):
     def __init__(self, state: AgentRunState):
-        super().__init__("; ".join(state.errors) or f"Agent stopped: {state.status.value}")
+        super().__init__("; ".join(state.errors) or f"当前步骤执行已中止（状态为 {state.status.value}）。")
         self.state = state.model_copy(deep=True)

@@ -119,13 +119,13 @@ export function buildChartSnapshot(table: SurveyTable, node: PlanNode, result: P
       const label = textCell(row[0]), values = groups.get(label); check(values !== undefined && values.length === numberCell(row[1]));
       const d = distribution(table.headers[x], label, values!); return d ? [d] : [];
     });
-    snapshot.statistics = ['各组只使用当前配对范围内的有效数值；误差线为样本标准差。', '四分位数：Type 7；箱线须：Tukey 1.5 IQR 范围内的最远观测值；若小样本插值四分位超出该观测值，须端止于相应四分位。', '直方图：Sturges 等宽箱；KDE：Gaussian / Silverman robust；ECDF：并列值合并。'];
+    snapshot.statistics = ['各组只使用当前配对范围内的有效数值，误差线表示样本标准差。', '四分位数采用 Type 7 口径，箱线须取 Tukey 1.5 IQR 范围内的最远观测值；若小样本插值四分位超出该观测值，须端止于相应四分位。', '直方图采用 Sturges 等宽分箱，核密度曲线采用 Gaussian 核与稳健 Silverman 带宽，经验分布合并并列值。'];
   } else if (node.method === 'numeric') {
     const x = column(node.x), values = table.rows.flatMap(row => { if (isMissing(row[x], missingCodes)) return []; const value = finiteNumber(row[x]); return value === null ? [] : [value]; });
     check(values.length === result.n);
     const d = distribution(table.headers[x], table.headers[x], values); snapshot.distributions = d ? [d] : [];
     snapshot.yLabel = '频数';
-    snapshot.statistics = ['四分位数：Type 7；箱线须：Tukey 1.5 IQR 范围内的最远观测值；若小样本插值四分位超出该观测值，须端止于相应四分位。', '直方图：Sturges 等宽箱，左闭右开，末箱右闭；常量单箱。', 'KDE：Gaussian / Silverman robust；ECDF：并列值合并。'];
+    snapshot.statistics = ['四分位数采用 Type 7 口径，箱线须取 Tukey 1.5 IQR 范围内的最远观测值；若小样本插值四分位超出该观测值，须端止于相应四分位。', '直方图采用 Sturges 等宽分箱（左闭右开、末箱右闭，常量取单箱）。', '核密度曲线采用 Gaussian 核与稳健 Silverman 带宽，经验分布合并并列值。'];
   } else {
     check(node.method === 'pearson' || node.method === 'spearman');
     const x = column(node.x), y = column(node.y), values: [number, number][] = [];

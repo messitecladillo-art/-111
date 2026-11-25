@@ -10,7 +10,7 @@ import type { TopicProfile, TopicRecommendation } from '../topic-advisor/types.t
 import { parseTopicSourceVersions, type TopicRefinement, type TopicSourceVersions } from '../topic-proposal.ts';
 import agentSourceVersionData from '../../content/topic-advisor/topic-agent-source-versions.json' with { type: 'json' };
 import { rejectDuplicateMembers } from '../questionnaire.ts';
-import { buildTopicFirstWeekPlan, selectTopicResearchCandidates } from './research.ts';
+import { buildTopicFirstWeekPlan, sanitizeTopicDisplayText, selectTopicResearchCandidates } from './research.ts';
 export { buildTopicFirstWeekPlan, interpretTopicResearchFocus } from './research.ts';
 
 const agentVersionData = parseTopicSourceVersions(agentSourceVersionData);
@@ -26,8 +26,8 @@ export type TopicAgentTurn = { schemaVersion: 1; id: string; status: 'running' |
 export const TOPIC_AGENT_INTENTS: ReadonlyArray<{ id: AgentIntent; label: string }> = [{ id: 'recommend', label: '寻找方向' }, { id: 'compare', label: '比较取舍' }, { id: 'refine', label: '深入选题' }, { id: 'plan', label: '安排验证' }];
 const bundle = parseTopicBundle({ catalog, sources, model, events });
 const uuidPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
-const fail = (): never => { throw Error('选题 Agent 记录格式无效。'); };
-function record(value: unknown, allowed: string[]): Record<string, unknown> { const row = object(value, '选题 Agent'); if (Object.keys(row).some(key => !allowed.includes(key))) fail(); return row; }
+const fail = (): never => { throw Error('选题顾问记录格式无效。'); };
+function record(value: unknown, allowed: string[]): Record<string, unknown> { const row = object(value, '选题顾问记录'); if (Object.keys(row).some(key => !allowed.includes(key))) fail(); return row; }
 function text(value: unknown, max = 1200, empty = false): string { if (typeof value !== 'string' || value.length > max || !empty && !value.trim() || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) fail(); return value as string; }
 function list(value: unknown, count: number, max = 160): string[] { if (!Array.isArray(value) || value.length > count) fail(); for (let index = 0; index < (value as unknown[]).length; index++) { const descriptor = Object.getOwnPropertyDescriptor(value, String(index)); if (!descriptor || !Object.hasOwn(descriptor, 'value')) fail(); } const items = (value as unknown[]).map(item => text(item, max)); if (new Set(items).size !== items.length) fail(); return items; }
 function enumeration<T extends string>(value: unknown, allowed: readonly T[]): T { if (typeof value !== 'string' || !allowed.includes(value as T)) fail(); return value as T; }
@@ -115,7 +115,7 @@ export function parseTopicAgentTurn(raw: unknown): TopicAgentTurn {
 export async function verifyTopicAgentTurn(raw: TopicAgentTurn, request: TopicAgentRequest, expectedVersions: TopicSourceVersions = TOPIC_AGENT_SOURCE_VERSIONS): Promise<void> {
   const turn = parseTopicAgentTurn(raw);
   const versions = parseTopicSourceVersions(expectedVersions), expected = topicAgentFingerprintMaterial(request, versions);
-  if (stableStringify(projectField(turn)) !== stableStringify(projectField(request)) || turn.id !== request.idempotencyKey || turn.catalogVersion !== request.catalogVersion || turn.message !== request.message || turn.intent !== request.intent || turn.parentTurnId !== request.parentTurnId || turn.mode !== request.mode || turn.serviceId !== request.serviceId || turn.serviceRevision !== request.serviceRevision || stableStringify(turn.profile) !== stableStringify(request.profile) || stableStringify(turn.candidateIds) !== stableStringify(request.candidateIds) || stableStringify(turn.sourceVersions) !== stableStringify(versions) || turn.inputFingerprint !== await digest(expected)) throw Error('选题 Agent 回执与本次材料不一致，请核对原请求。');
+  if (stableStringify(projectField(turn)) !== stableStringify(projectField(request)) || turn.id !== request.idempotencyKey || turn.catalogVersion !== request.catalogVersion || turn.message !== request.message || turn.intent !== request.intent || turn.parentTurnId !== request.parentTurnId || turn.mode !== request.mode || turn.serviceId !== request.serviceId || turn.serviceRevision !== request.serviceRevision || stableStringify(turn.profile) !== stableStringify(request.profile) || stableStringify(turn.candidateIds) !== stableStringify(request.candidateIds) || stableStringify(turn.sourceVersions) !== stableStringify(versions) || turn.inputFingerprint !== await digest(expected)) throw Error('选题顾问回执与本次材料不一致，请核对原请求。');
 }
 
 /** Read an owned server transcript without treating historical proposals as current approval. */
@@ -177,11 +177,29 @@ export async function runLocalTopicAgent({ profile: input, message: rawMessage, 
   const sourceList = bundle.sources.sources.filter(source => sourceIds.includes(source.id));
   const narrowing = intent === 'refine' && selected.length ? ['你想先把哪一个方向缩小到明确人群、使用情境和要支持的决定？'] : [];
   const questions = [...new Set([...selection.questions, ...narrowing, ...clarification(profile)])].slice(0, 5);
-  const items: TopicRefinement[] = selected.map(item => ({ patternId: item.patternId, title: item.title.slice(0, 160), researchQuestion: item.question.slice(0, 600), decisionOwner: item.decisionOwner.slice(0, 600), decision: item.decision.slice(0, 600), whyHere: [...item.matchReasons, ...(intent === 'refine' ? [`可从这些差异点缩小范围：${bundle.catalog.patterns.find(pattern => pattern.id === item.patternId)?.differentiators.join('；') ?? ''}`] : []), ...item.scopeLimits.slice(0, 1)].join('；').slice(0, 600) || '结合当前团队条件形成的待验证方向。', firstWeekPlan: buildTopicFirstWeekPlan(profile, bundle.catalog.patterns.find(pattern => pattern.id === item.patternId)!), unknowns: [...new Set([...item.blockers, ...item.unknowns])].slice(0, 8).map(step => step.slice(0, 300)), sourceIds: item.sourceIds.slice(0, 20) }));
+  const items: TopicRefinement[] = selected.map(item => {
+    const diffList = bundle.catalog.patterns.find(pattern => pattern.id === item.patternId)?.differentiators.map(sanitizeTopicDisplayText).filter(Boolean).join('、') ?? '';
+    const whyParts = [
+      ...item.matchReasons.map(sanitizeTopicDisplayText),
+      ...(intent === 'refine' && diffList ? [`可围绕${diffList}等差异点进一步收窄范围`] : []),
+      ...item.scopeLimits.slice(0, 1).map(sanitizeTopicDisplayText),
+    ].filter(Boolean);
+    return {
+      patternId: item.patternId,
+      title: sanitizeTopicDisplayText(item.title).slice(0, 160),
+      researchQuestion: sanitizeTopicDisplayText(item.question).slice(0, 600),
+      decisionOwner: sanitizeTopicDisplayText(item.decisionOwner).slice(0, 600),
+      decision: sanitizeTopicDisplayText(item.decision).slice(0, 600),
+      whyHere: whyParts.join('；').slice(0, 600) || '结合当前团队条件形成的待验证方向。',
+      firstWeekPlan: buildTopicFirstWeekPlan(profile, bundle.catalog.patterns.find(pattern => pattern.id === item.patternId)!),
+      unknowns: [...new Set([...item.blockers, ...item.unknowns].map(sanitizeTopicDisplayText).filter(Boolean))].slice(0, 8).map(step => step.slice(0, 300)),
+      sourceIds: item.sourceIds.slice(0, 20),
+    };
+  });
   const changed = prior && profileFingerprint(prior.profile) !== profileFingerprint(profile);
   let reply = selected.length ? `${changed ? '团队条件已更新，我已重新检查可行性。' : prior ? '接着上一轮，我们继续缩小研究范围。' : '先从能够取得证据的方向开始。'}\n本轮查阅了已登记资料，并用地区、时间、经费和触达条件筛选出 ${selected.length} 个待验证方向。` : `${changed ? '团队条件已更新，我已重新检查可行性。\n' : ''}当前条件下，没有可直接推进的候选方向。先核实可接触的人群、调查范围和资源，再放宽研究问题。`;
   reply += `\n${selection.explanation}`;
-  if (intent === 'compare' && selected.length) reply += `\n比较时优先看样本能否触达、结果会改变谁的决定，以及第一周能否取得反例。${selected.map(item => `\n${item.title}：${item.blockers[0] ?? item.unknowns[0] ?? item.decision}`).join('')}`;
+  if (intent === 'compare' && selected.length) reply += `\n比较时优先看样本能否触达、结果会改变谁的决定，以及第一周能否取得反例。${selected.map(item => `\n对于“${sanitizeTopicDisplayText(item.title)}”，需优先核实${sanitizeTopicDisplayText(item.blockers[0] ?? item.unknowns[0] ?? item.decision)}`).join('')}`;
   else if (intent === 'plan' && selected.length) reply += '\n先完成下方第一周计划，再根据实际联系和查证记录决定保留、缩小或放弃题目。';
   else if (intent === 'refine') reply += '\n把范围压到一个明确人群、一个使用情境和一个决策问题；创新点要能通过新证据检验。';
   if (questions.length) reply += '\n还有几个执行条件未确认，补充后我会重新筛选。';
@@ -200,12 +218,12 @@ export async function runLocalTopicAgent({ profile: input, message: rawMessage, 
 export function proposeTopicProfile(input: TopicProfile, raw: string): { profile: TopicProfile; changes: string[] } | null {
   const profile = clone(parseExecutableTopicProfile(input)), message = text(raw).normalize('NFKC').split(/[。；;\n]/u).filter(clause => !/如果|假如|假设|比如|例如|可能|不确定|尚未确认/.test(clause)).join('。'), changes: string[] = [];
   const places = TOPIC_REGION_CATALOG.records.filter(place => place.level === 'prefecture' && new RegExp(`(?:我在|位于|所在地[是为：:]?|地区[是为：:]?|城市[是为：:]?|调研地点[是为：:]?)\\s*${place.name.replace(/市$/, '')}(?:市|[，,。；;\\s]|$)`).test(message));
-  if (places.length === 1) { const place = places[0], ref = { code: place.code, catalogVersion: TOPIC_REGION_CATALOG.catalogVersion }; const path = regionPath(ref); profile.schemaVersion = 2; profile.regionRef = ref; profile.region = path[0]?.name ?? ''; profile.city = place.name; changes.push(`调查地区：${place.name}`); }
+  if (places.length === 1) { const place = places[0], ref = { code: place.code, catalogVersion: TOPIC_REGION_CATALOG.catalogVersion }; const path = regionPath(ref); profile.schemaVersion = 2; profile.regionRef = ref; profile.region = path[0]?.name ?? ''; profile.city = place.name; changes.push(`调查地区设为${place.name}`); }
   const days = message.match(/(?:时间|调研时间|能用|有)\s*(\d{1,4})\s*天/);
-  if (days && Number(days[1]) <= 3660) { profile.days = Number(days[1]); changes.push(`调研时间：${profile.days} 天`); }
+  if (days && Number(days[1]) <= 3660) { profile.days = Number(days[1]); changes.push(`调研时间设为 ${profile.days} 天`); }
   const budget = message.match(/(?:预算|经费)\s*(?:是|为|约|有|只有|大约|：|:)?\s*(\d{1,8})\s*元/);
-  if (budget) { profile.budgetYuan = Number(budget[1]); changes.push(`调研经费：${profile.budgetYuan} 元`); }
+  if (budget) { profile.budgetYuan = Number(budget[1]); changes.push(`调研经费设为 ${profile.budgetYuan} 元`); }
   const channels = [{ id: 'campus_students', terms: '大学生|在校生|高校学生' }, { id: 'community_residents', terms: '社区居民' }, { id: 'merchants', terms: '商户|商家' }, { id: 'jobseekers', terms: '求职者' }, { id: 'firms', terms: '企业管理方|企业负责人' }, { id: 'event_organizer', terms: '活动组织方|赛事组织方' }];
-  for (const channel of channels) { const denied = new RegExp(`(?:不能|无法|没法|不可)\\s*(?:联系|接触|访问)(?:到)?\\s*(?:${channel.terms})`).test(message), confirmed = !denied && new RegExp(`(?:可以|能够|能|已经|已确认可以)\\s*(?:联系|接触|访问)(?:到)?\\s*(?:${channel.terms})`).test(message); if (denied || confirmed) { profile.access[channel.id] = denied ? 'unavailable' : 'confirmed'; const name = channel.terms.split('|')[0]; changes.push(`${name}渠道：${denied ? '不可用' : '已确认'}`); } }
+  for (const channel of channels) { const denied = new RegExp(`(?:不能|无法|没法|不可)\\s*(?:联系|接触|访问)(?:到)?\\s*(?:${channel.terms})`).test(message), confirmed = !denied && new RegExp(`(?:可以|能够|能|已经|已确认可以)\\s*(?:联系|接触|访问)(?:到)?\\s*(?:${channel.terms})`).test(message); if (denied || confirmed) { profile.access[channel.id] = denied ? 'unavailable' : 'confirmed'; const name = channel.terms.split('|')[0]; changes.push(`${name}渠道标记为${denied ? '不可用' : '已确认'}`); } }
   return changes.length ? { profile: parseExecutableTopicProfile(profile), changes } : null;
 }

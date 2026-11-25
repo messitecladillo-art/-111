@@ -87,11 +87,11 @@ export default function CaseEvidence({ pages, onOpen, motion }: {
       <ol ref={listRef} className={styles.readings} aria-label="报告证据阅读路线">
         {pages.map((item, index) => <li key={item.id} data-evidence-step={index} data-active={index === active}>
           <div className={styles.readingCopy}>
-            <span className={styles.overline}><b>{String(index + 1).padStart(2, '0')}</b> / {item.name}</span>
+            <span className={styles.overline}><b>{String(index + 1).padStart(2, '0')}</b> · {item.name}</span>
             <h3>{item.heading}</h3>
             <p className={styles.readingLead}>{item.detail}</p>
             <div className={styles.citation}>
-              <span>原文定位：第 {item.page} 页 · {item.title}</span>
+              <span>原文定位在第 {item.page} 页 · {item.title}</span>
               <p>{item.text}</p>
             </div>
             <div className={styles.tags}>{item.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
@@ -113,21 +113,21 @@ export default function CaseEvidence({ pages, onOpen, motion }: {
           <g fill="#ffe4a0"><circle cx="150" cy="457" r="4"/><circle cx="760" cy="328" r="4"/><path d="m253 175 5 8-5 8-5-8zm442 525 5 8-5 8-5-8z"/></g>
           <g fill="#72e6d5"><circle cx="730" cy="638" r="3"/><circle cx="304" cy="774" r="3"/></g>
         </svg>
-        <div className={styles.stageTop}><span>CASE STUDY / EVIDENCE ATLAS</span><b>{String(active + 1).padStart(2, '0')} <small>/ {String(pages.length).padStart(2, '0')}</small></b></div>
+        <div className={styles.stageTop}><span>实证案例 · 证据图谱</span><b>{String(active + 1).padStart(2, '0')} <small>/ {String(pages.length).padStart(2, '0')}</small></b></div>
         <div className={styles.paperScene}>
           <span className={styles.watermark} aria-hidden="true">{page.step}</span>
           <div className={styles.paperDeck}>
             {pages.map((item, index) => {
               const offset = index - active;
               return <div className={styles.paperLayer} key={item.id} data-current={index === active} aria-hidden={index !== active} style={{ '--offset': offset, '--distance': Math.abs(offset), zIndex: pages.length - Math.abs(offset) } as CSSProperties}>
-                {index === active ? <button type="button" className={styles.paperButton} onClick={() => onOpen(item)} aria-label={`放大结构导览：${item.name}；原文定位第 ${item.page} 页`}>
+                {index === active ? <button type="button" className={styles.paperButton} onClick={() => onOpen(item)} aria-label={`放大结构导览 ${item.name}（原文定位第 ${item.page} 页）`}>
                   <img src={`${item.imageBase}.svg`} width={560} height={792} alt={item.alt} loading="lazy" decoding="async"/>
                   <span className={styles.zoomHint}>结构导览 <span aria-hidden="true">↗</span></span>
                 </button> : <img src={`${item.imageBase}.svg`} width={560} height={792} alt="" loading="lazy" decoding="async"/>}
               </div>;
             })}
           </div>
-          <div className={styles.pageFlag}><span>{page.step}</span><div><b>{page.name}</b><small>PAGE {String(page.page).padStart(2, '0')}</small></div></div>
+          <div className={styles.pageFlag}><span>{page.step}</span><div><b>{page.name}</b><small>第 {String(page.page).padStart(2, '0')} 页</small></div></div>
           <div className={styles.pageLabel}><i/><span>{page.title}</span></div>
         </div>
         <nav className={styles.route} aria-label="选择证据环节">

@@ -3,15 +3,18 @@
  * It understands slash commands and a fixed set of everyday phrasings. Anything else it says it cannot understand
  * rather than guessing, and knowledge questions are answered from the reviewed knowledge base verbatim, with sources.
  */
+import { COMMANDS, matchCommands, type Command } from './commands.ts';
 import { lightBar, percent } from './glyphs.ts';
-import { LIT_ROOMS, roomLight, type Illumination, type LightCheck } from './illumination.ts';
-import { exhibitKey, type Trace, type TraceStep } from './provenance.ts';
+import type { Illumination, LightCheck } from './illumination.ts';
+import type { Trace, TraceStep } from './provenance.ts';
 import { ROOMS, roomById, type Room, type RoomId } from './rooms.ts';
 import type { ChatAction } from './chat.ts';
 import type { Questionnaire } from '../questionnaire.ts';
-import { blueprintNode } from '../report-blueprint.ts';
-import { draftableNode } from './draft.ts';
-import { sectionState, type ReportPlan } from './report-plan.ts';
+import type { ReferenceEntry } from '../references.ts';
+import { blueprintNode, matchBlueprintNode, type BlueprintNode } from '../report-blueprint.ts';
+import type { CountyGazetteerProfile } from '../resource-library/china-county-gazetteer.ts';
+import type { SmartRecommendationBundle } from '../resource-library/smart-recommender.ts';
+import type { PlanSection, ReportPlan } from './report-plan.ts';
 import { METHOD_LABELS, suggestedNode } from '../report-placement.ts';
 import { findingNeedsReview, type ResearchFinding, type ResultSnapshot } from '../research-quality.ts';
 import type { QuestionnaireGenerationRequest } from '../questionnaire-proposals.ts';
@@ -71,10 +74,14 @@ export type AgentAction =
   | { type: 'setApiKey'; apiKey: string }
   /** Opens the LLM consent & fact-grounded section drafting flow directly from studio/outline buttons. */
   | { type: 'draftSection'; node: string; draft?: string }
-  /** Switches the active workspace stage between chat, paper, and advisors on demand. */
-  | { type: 'stage'; stage: 'chat' | 'paper' | 'advisors' }
-  /** Inserts text/code/chart-reading paragraphs produced in an interactive studio card into a blueprint section. */
-  | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[] }
+  /** Switches the active workspace stage between chat, paper, advisors, and library on demand. */
+  | { type: 'stage'; stage: 'chat' | 'paper' | 'advisors' | 'library' }
+  /** Inserts text/code/chart-reading paragraphs or a verified table snapshot produced in an interactive card into a blueprint section. */
+  | { type: 'insertStudioBlock'; node: string; title: string; paragraphs: string[]; tableResult?: ResultSnapshot; tableCaption?: string }
+  /** Registers a structured verified bibliographic entry into `content.references[]`. */
+  | { type: 'insertReference'; entry: ReferenceEntry }
+  /** Registers a structured empirical finding (plus optional backing ResultSnapshot) into `content.quality.findings[]`. */
+  | { type: 'insertFinding'; finding: ResearchFinding; result?: ResultSnapshot; node?: string; paragraph?: string }
   /** Generates a structured local-draft questionnaire through the direct Research Brain in guest mode. */
   | { type: 'draftLocalQuestionnaire'; brief: string }
   /** Opens or plays the 1:1 Atypica × Silicon Respondents live theater inside Agent main stage. */
@@ -83,7 +90,7 @@ export type AgentAction =
 export type AgentLink = { label: string; action: AgentAction; primary?: true };
 export type AgentCard =
   /** With `columns`, each line is a row and each span a cell, aligned under the row above. */
-  | { kind: 'tool'; title: string; lines: Line[]; links?: AgentLink[]; columns?: boolean }
+  | { kind: 'tool'; title: string; lines: Line[]; links?: AgentLink[]; columns?: boolean; previewSvgDataUri?: string; previewAlt?: string }
   | { kind: 'confirm'; title: string; lines: Line[]; confirm: AgentLink; cancel: string }
   | { kind: 'entry'; id: string; name: string; english?: string; definition: string; formula?: string; sources: string[]; reviewed: boolean }
   | { kind: 'trace'; reference: string; title: string; steps: TraceStep[] }
@@ -118,47 +125,36 @@ export type RouterContext = { room: RoomId | null; light: Illumination; theme?: 
   projectTitle?: string;
   design?: Questionnaire | null;
   datasetName?: string };
-/** Either an answer, or a knowledge lookup the shell runs before answering with `lookupTurn`. */
-export type Routed = { turn: AgentTurn } | { lookup: string; explicit: boolean }
+/** Either an answer, a knowledge/county/resource lookup resolved by the shell, or a model consent handoff. */
+export type Routed =
+  | { turn: AgentTurn }
+  | { lookup: string; explicit: boolean }
+  | { lookupCounty: string }
+  | { recommendResource: { query?: string; ctx: RouterContext } }
   /** A request to draft a questionnaire with the user's model service; the shell asks for consent before any call. */
   | { generate: string }
   /** A request to draft a report section (a blueprint node) with the user's model service; consent comes first too. */
   | { draft: string };
 
-export type Command = { name: string; args?: string; line: string; words: readonly string[] };
-const ROOM_COMMANDS: Command[] = ROOMS.map(r => ({ name: r.command, line: `打开${r.name}`, words: [r.id] }));
-export const COMMANDS: readonly Command[] = [
-  { name: '下一步', line: '按研究动线给出最该做的一件事', words: ['next'] },
-  { name: '全报告', args: '课题或留空', line: '根据当前研究资料起草报告候选稿，保留逐节回执供审阅', words: ['fullreport', 'autoreport'] },
-  { name: '密钥', line: '打开个人模型服务，安全配置报告模型', words: ['apikey', 'key'] },
-  { name: '铸造', args: '任意课题或留空', line: '生成一套教学模拟研究：问卷、模拟作答，以及在模拟数据上实际计算的结果与报告', words: ['forge', 'award', 'benchmark', 'demo'] },
-  { name: '硅基推演', args: '人群或课题', line: '在当前流程内唤起硅基预测试演播室（分层人设、1v1 深访、圆桌追问与预测试诊断）', words: ['atypica', 'theater', 'silicon'] },
-  { name: '备赛', line: '正大杯备赛八个阶段与下一步', words: ['coach', 'guide'] },
-  { name: '绘图', args: '图题或维度', line: '把已登记结果画成图（5 类图型 · 4 套配色 · 可编辑标签）', words: ['plot', 'chart'] },
-  { name: '编程', args: '方法或语言', line: 'Python / R / SPSS 分析脚本与 LaTeX 三线表（取自已登记结果）', words: ['code', 'script'] },
-  { name: '撰稿', args: '章节或模板', line: '章节写作模板、事实胶囊注入与合规体检', words: ['compose', 'polish'] },
-  { name: '照度', line: '各模块的证据完整度', words: ['status'] },
-  { name: '印鉴', line: '生成九门循证核验码与四阶证据摘要', words: ['seal', 'certificate'] },
-  { name: '盲区', line: '光到不了的角落，以及去哪里补', words: ['gaps', 'blind'] },
-  { name: '来处', args: '图表编号', line: '沿光路回溯报告里一个图表的数字从哪里来', words: ['trace', 'origin'] },
-  { name: '结果', args: '标题或方法', line: '已登记的分析结果：方法、有效样本与主要统计量', words: ['results'] },
-  { name: '写入', line: '把还没写进报告的登记结果按蓝图写进对应章节，改动前确认', words: ['place'] },
-  { name: '写报告', line: '按蓝图逐节看报告写到哪、缺什么，下一步做什么', words: ['plan'] },
-  { name: '起草', args: '章节', line: '用你的模型服务按本项目的事实起草一节，数字只从登记结果填入', words: ['write'] },
-  { name: '生成', args: '研究需求', line: '用你的模型服务起草问卷，确认后才调用', words: ['generate', 'draft'] },
-  { name: '查', args: '概念或方法', line: '在知识镜中查定义、公式与出处', words: ['lookup', 'search'] },
-  ...ROOM_COMMANDS,
-  { name: '夜', line: '切换到深色主题', words: ['dark'] },
-  { name: '昼', line: '切换到浅色主题', words: ['day'] },
-  { name: '清空', line: '删除这段对话，项目数据不受影响', words: ['clear'] },
-  { name: '经典', line: '打开经典工作台', words: ['classic'] },
-  { name: '帮助', line: '全部命令与常用说法', words: ['help', '?'] },
-];
-/** Commands whose name or English word starts with what follows the slash; all of them for a bare slash. */
-export function matchCommands(prefix: string): Command[] {
-  const p = prefix.trim().toLowerCase();
-  return COMMANDS.filter(c => !p || c.name.startsWith(p) || c.words.some(w => w.startsWith(p)));
-}
+export { COMMANDS, matchCommands, type Command };
+
+const LIT_ROOMS = ['design', 'sampling', 'analysis', 'editor'] as const satisfies readonly RoomId[];
+const roomLight = (light: Illumination, room: RoomId) => light.rooms.find(r => r.room === room) ?? null;
+const exhibitKey = (text: string) =>
+  text
+    .replace(/\s+/gu, '')
+    .replace(/[０-９]/gu, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0))
+    .replace(/[－—.．]/gu, '-');
+const draftableNode = (text: string): BlueprintNode | null => {
+  const node = matchBlueprintNode(text.trim());
+  return node && (node.kind === 'section' || node.kind === 'abstract') ? node : null;
+};
+const sectionState = (s: PlanSection): 'missing' | 'empty' | 'partial' | 'done' => {
+  if (!s.present) return 'missing';
+  if (!s.written && s.needs.every(n => !n.met)) return 'empty';
+  if ((s.length && s.written < s.length[0]) || s.needs.some(n => !n.met)) return 'partial';
+  return 'done';
+};
 
 const t = (text: string, mark?: Mark): Span => mark ? { text, mark } : { text };
 const say = (label: string, text = label): AgentLink => ({ label, action: { type: 'say', text } });
@@ -175,7 +171,7 @@ export function mentionedRooms(text: string): Room[] {
 
 function help(): AgentTurn {
   return {
-    lines: [[t('我是'), t('证见', 'strong'), t('。当前是'), t('指令模式', 'teal'), t('：可直接使用自然中文对话触发功能；在输入框敲入 '), t('/', 'teal'), t(' 即可调出全部隐藏快捷命令。也可在右下角切换「用模型对话」。')]],
+    lines: [[t('我是'), t('证见', 'strong'), t('。当前处于'), t('指令模式', 'teal'), t('，可直接使用自然中文对话触发功能；在输入框敲入 '), t('/', 'teal'), t(' 即可调出全部隐藏快捷命令。也可在右下角切换“用模型对话”。')]],
     cards: [
       {
         kind: 'tool',
@@ -190,10 +186,10 @@ function help(): AgentTurn {
       },
       {
         kind: 'tool',
-        title: '隐藏命令与模型接入',
+        title: '隐藏命令与服务接入',
         lines: [
           [t('快捷命令已默认隐藏，在输入框键入 '), t('/', 'teal'), t(' 即可弹出全部 '), t(String(COMMANDS.length), 'gold'), t(' 项命令菜单。')],
-          [t('在「模型设置」中接入 API Key 后，可在「撰稿工坊」或输入框右下角切换「用模型对话」直接起草正文。', 'dim')],
+          [t('在“服务设置”中完成接入后，可在“撰稿工坊”或输入框右下角切换“用模型对话”直接起草正文。', 'dim')],
         ],
       },
     ],
@@ -203,7 +199,7 @@ function help(): AgentTurn {
 
 function lightLine(id: RoomId, light: Illumination): Line {
   const r = roomLight(light, id);
-  if (!r) return [t('证据完整度：这个模块尚未接入', 'dim')];
+  if (!r) return [t('该模块的证据完整度暂未纳入统计', 'dim')];
   return [t('照度 '), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(` ${percent(r.score)}`, 'gold'), t(`　${r.summary}`, 'dim')];
 }
 
@@ -212,13 +208,13 @@ function status(ctx: RouterContext, scope?: RoomId): AgentTurn {
   if (scope) {
     const r = roomLight(light, scope)!;
     return {
-      lines: [[t(`${named(scope)}的照度 `), t(percent(r.score), 'gold'), t('，逐项如下：')]],
+      lines: [[t(`${named(scope)}的照度 `), t(percent(r.score), 'gold'), t('，逐项核查结果如下。')]],
       cards: [{ kind: 'tool', title: `读取 · ${named(scope)}`, columns: true, lines: r.checks.slice(0, 12).map(c => [t(c.passed ? '✓' : '✕', c.passed ? 'gold' : 'error'), t(c.label), t(c.detail, 'dim')]) }],
       chips: [say('下一步做什么')],
     };
   }
   return {
-    lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度只计算能看到证据的模块：问卷、抽样、分析与报告；其他模块接入 Agent 主循环后再计算。', 'dim')]],
+    lines: [[t('整体照度 '), t(percent(light.overall), 'gold'), t('。')], [t('照度当前计算已承载证据的问卷、抽样、分析与报告四个核心模块。', 'dim')]],
     cards: [{ kind: 'tool', title: '读取 · 项目照度', columns: true, lines: light.rooms.map(r => [t(named(r.room)), t(lightBar(r.score), r.score > 0 ? 'gold' : 'dim'), t(percent(r.score), 'gold'), t(r.summary, 'dim')]) }],
     chips: [recommend(say('下一步做什么')), say('还缺什么')],
   };
@@ -245,7 +241,7 @@ function sealStatus(ctx: RouterContext): AgentTurn {
   return {
     lines: [
       [t('九门循证核验码 '), t(digest, 'gold'), t(' · 整体照度 '), t(percent(light.overall), 'gold'), t('。')],
-      [t('无征不信：每一项结论须绑定上游问卷、抽样与分析结果指纹。', 'dim')],
+      [t('每一项研究结论均须绑定上游问卷、抽样与分析结果校验码。', 'dim')],
     ],
     cards: [{
       kind: 'tool',
@@ -260,10 +256,10 @@ function sealStatus(ctx: RouterContext): AgentTurn {
 function blindSpots(ctx: RouterContext, scope?: RoomId): AgentTurn {
   const spots = ctx.light.blind.filter(c => !scope || c.room === scope);
   const where = scope ? named(scope) : '项目';
-  if (!spots.length) return { lines: [[t(`${where}没有盲区：`), t('检查全部通过', 'gold'), t('。')]], chips: [recommend(say('下一步做什么'))] };
+  if (!spots.length) return { lines: [[t(`${where}没有盲区，`), t('检查全部通过', 'gold'), t('。')]], chips: [recommend(say('下一步做什么'))] };
   const shown = spots.slice(0, 8), rooms = [...new Set(shown.map(c => c.go))];
   return {
-    lines: [[t(`${where}里光到不了的角落有 `), t(String(spots.length), 'gold'), t(' 处，按研究动线排列：')]],
+    lines: [[t(`${where}里光到不了的角落有 `), t(String(spots.length), 'gold'), t(' 处，按研究动线依次列出。')]],
     cards: [{
       kind: 'tool', title: '读取 · 盲区',
       lines: [...shown.map((c: LightCheck) => [t('✕ ', 'error'), t(`${named(c.room)} · `, 'dim'), t(c.label), t(`　${c.detail}`, 'dim')]),
@@ -277,7 +273,7 @@ function buildFullReportTurn(ctx: RouterContext, rawTopic = ''): AgentTurn {
   const topic=rawTopic.trim()||ctx.projectTitle?.trim()||'当前研究课题';
   const action:AgentAction={type:'generateFullReport',topic:rawTopic.trim()||ctx.projectTitle?.trim()||''};
   return {
-    lines:[[t('从当前项目资料生成'),t('可审阅的报告候选稿','strong'),t('。')],[t(`课题：「${topic}」；主体章节与综合章节分阶段起草，完成后检查再采纳。`,'dim')]],
+    lines:[[t('从当前项目资料生成'),t('可审阅的报告候选稿','strong'),t('。')],[t(`围绕课题“${topic}”，主体章节与综合章节将分阶段起草，完成后核查再采纳。`,'dim')]],
     cards:[{kind:'tool',title:'本轮生成计划',lines:[
       [t('输入与模式','teal'),t('　使用当前问卷、数据与登记结果；研究计划、教学模拟和项目实证明确分开。','dim')],
       [t('检查与修订','teal'),t('　逐项记录已通过、待复核和未执行检查，展示实际修改前后的正文。','dim')],
@@ -289,7 +285,7 @@ function buildFullReportTurn(ctx: RouterContext, rawTopic = ''): AgentTurn {
 }
 
 function buildApiKeyTurn(): AgentTurn {
-  return {lines:[[t('请在个人模型服务中配置密钥，并启用报告能力。不要把密钥写入对话。','dim')]],chips:[{label:'打开模型服务',action:{type:'open',room:'services'},primary:true}]};
+  return {lines:[[t('请在个人服务设置中完成接入并启用报告能力，请勿在对话中直接输入访问凭据。','dim')]],chips:[{label:'打开服务设置',action:{type:'open',room:'services'},primary:true}]};
 }
 
 function nextStep(ctx: RouterContext): AgentTurn {
@@ -311,10 +307,10 @@ function trace(ctx: RouterContext, arg = ''): AgentTurn {
   const chosen = wanted ? traces.filter(x => exhibitKey(x.reference) === key || x.title.includes(wanted)) : traces.length === 1 ? traces : [];
   if (chosen.length === 1) {
     const x = chosen[0];
-    return { lines: [[t(x.reference, 'strong'), t(`「${x.title}」的数字，沿光路回到来处：`)]], cards: [{ kind: 'trace', reference: x.reference, title: x.title, steps: x.steps }] };
+    return { lines: [[t(x.reference, 'strong'), t(`“${x.title}”的数字，沿光路回到来处。`)]], cards: [{ kind: 'trace', reference: x.reference, title: x.title, steps: x.steps }] };
   }
   return {
-    lines: wanted ? [[t('报告里没有'), t(`「${wanted}」`, 'strong'), t('，可以回溯的图表有：')]] : [[t('报告里有 '), t(String(traces.length), 'gold'), t(' 个来自登记结果的图表，回溯哪一个？')]],
+    lines: wanted ? [[t('报告里没有'), t(`“${wanted}”`, 'strong'), t('，可以回溯的图表如下。')]] : [[t('报告里有 '), t(String(traces.length), 'gold'), t(' 个来自登记结果的图表，回溯哪一个？')]],
     chips: traces.slice(0, 8).map(x => say(`${x.reference} ${x.title}`.slice(0, 26), `回溯：${x.reference}`)),
   };
 }
@@ -354,14 +350,14 @@ function results(ctx: RouterContext, query = ''): AgentTurn {
   };
   const chosen = wanted ? all.filter(r => [r.title, isFrame(r) ? `抽样框 ${methodName(r)}` : `${r.method} ${methodName(r)}`, ...(r.variables ?? [])].join(' ').toLowerCase().includes(wanted)) : all;
   if (!chosen.length) return {
-    lines: [[t('登记的结果里没有'), t(`「${query.trim()}」`, 'strong'), t('，现有的是：')]],
+    lines: [[t('登记的结果里没有'), t(`“${query.trim()}”`, 'strong'), t('，现有结果如下。')]],
     chips: all.slice(0, 6).map(r => say(r.title.slice(0, 20), `筛选结果：${r.title.slice(0, 20)}`)),
   };
   const analyses = chosen.filter(r => !isFrame(r)), frames = chosen.filter(isFrame);
   const shown = analyses.slice(0, wanted ? 4 : 8), simulated = analyses.filter(r => r.classification === 'simulated').length;
   // A finding whose results changed after it was confirmed is not shown as confirmed; the user re-confirms it first.
   const confirmed = wanted ? [] : standingFindings(held), stale = wanted ? 0 : held.findings.filter(f => f.status === 'confirmed').length - confirmed.length;
-  const about = wanted ? `与「${query.trim()}」有关的` : '';
+  const about = wanted ? `与“${query.trim()}”有关的` : '';
   return {
     lines: [
       analyses.length
@@ -405,10 +401,10 @@ function place(ctx: RouterContext): AgentTurn {
   for (const r of waiting) { const title = blueprintNode(suggestedNode(r)).title; sections.set(title, [...(sections.get(title) ?? []), r]); }
   const simulated = waiting.filter(r => r.classification === 'simulated').length;
   return {
-    lines: [[t('把 '), t(String(waiting.length), 'gold'), t(' 项还没写进报告的登记结果按蓝图写入之前，请确认：')]],
+    lines: [[t('把 '), t(String(waiting.length), 'gold'), t(' 项还没写进报告的登记结果按蓝图写入之前，请确认。')]],
     cards: [{ kind: 'confirm', title: `写入报告 · ${waiting.length} 项结果`,
       lines: [
-        ...[...sections].map(([title, rs]) => [t(`「${title}」`, 'strong'), t(`　${rs.map(r => r.title).join('、')}`, 'dim')]),
+        ...[...sections].map(([title, rs]) => [t(`“${title}”`, 'strong'), t(`　${rs.map(r => r.title).join('、')}`, 'dim')]),
         [t('每项写入方法说明与公式（同一方法只写一次）、图或表与读数段落，数字都来自登记结果；章节不存在时按蓝图新建。', 'dim')],
         ...(simulated ? [[t(`其中 ${simulated} 项来自教学模拟数据，报告里需要如实标注。`, 'dim')]] : []),
         [t('写入后可在报告与 PPT 里撤销。', 'dim')],
@@ -437,13 +433,13 @@ function writePlan(ctx: RouterContext): AgentTurn {
     if (s.kind === 'chapter') return [t(s.title, 'strong')];
     const state = sectionState(s), missing = s.needs.filter(n => !n.met).map(n => n.label);
     return [t(`　${STATE_GLYPH[state]} `, state === 'done' ? 'gold' : 'dim'), t(s.title),
-      t(state === 'missing' ? '　未建' : `　已写 ${s.written} 字${s.length ? `（建议 ${s.length[0]}–${s.length[1]}）` : ''}${missing.length ? ` · 还缺：${missing.join('、')}` : ''}`, 'dim')];
+      t(state === 'missing' ? '　未建' : `　已写 ${s.written} 字${s.length ? `（建议 ${s.length[0]}–${s.length[1]}）` : ''}${missing.length ? ` · 尚缺 ${missing.join('、')}` : ''}`, 'dim')];
   });
-  const draftChip = (s: { title: string; node: string }): AgentLink => ({ label: `起草「${s.title}」`.slice(0, 26), action: { type: 'draftSection', node: s.node } });
+  const draftChip = (s: { title: string; node: string }): AgentLink => ({ label: `起草“${s.title}”`.slice(0, 26), action: { type: 'draftSection', node: s.node } });
   const next = unplaced ? recommend(say('把结果写进报告')) : empty.length ? recommend(draftChip(empty[0])) : recommend(say('报告还缺什么'));
   return {
     lines: [
-      plan.score === null ? [t('按蓝图逐节看报告：')] : [t('报告体检 '), t(String(Math.round(plan.score)), 'gold'), t(` 分，适用的 ${plan.total} 项检查通过 ${plan.passed} 项。按蓝图逐节看：`)],
+      plan.score === null ? [t('按蓝图逐节查看报告进度。')] : [t('报告体检 '), t(String(Math.round(plan.score)), 'gold'), t(` 分，适用的 ${plan.total} 项检查通过 ${plan.passed} 项，各节进度如下。`)],
       [t(unplaced ? `还有 ${unplaced} 项登记结果没写进报告，先把它们写进对应章节；` : '', 'dim'),
         t(empty.length ? `${empty.length} 节还没有内容，可以用你的模型服务按本项目的事实起草，数字只从登记结果填入。` : '每一节都已开始写。', 'dim')],
     ],
@@ -461,7 +457,7 @@ function draftTarget(ctx: RouterContext, arg: string): Routed {
   if (node) return { draft: node.id };
   const empty = ctx.plan?.sections.filter(s => s.draftable && sectionState(s) !== 'done') ?? [];
   return { turn: {
-    lines: arg ? [[t('报告蓝图里没有'), t(`「${arg}」`, 'strong'), t('这一节。')]] : [[t('起草哪一节？')]],
+    lines: arg ? [[t('报告蓝图里没有'), t(`“${arg}”`, 'strong'), t('这一节。')]] : [[t('起草哪一节？')]],
     chips: empty.length ? empty.slice(0, 6).map(s => ({ label: s.title.slice(0, 20), action: { type: 'draftSection' as const, node: s.node } })) : [say('查看报告进度')],
   } };
 }
@@ -469,7 +465,7 @@ function draftTarget(ctx: RouterContext, arg: string): Routed {
 function open(room: Room, ctx: RouterContext): AgentTurn {
   const siliconLaunch = room.id === 'silicon'
     ? recommend({
-        label: '唤起内置硅基推演流程',
+        label: '唤起样本预测试推演流程',
         action: {
           type: 'siliconTheater',
           topic: ctx.projectTitle,
@@ -509,6 +505,177 @@ const unknown = (): AgentTurn => ({
   chips: [recommend(say('下一步做什么')), say('查看使用帮助', '帮助')],
 });
 
+function buildAutonomousTurn(): AgentTurn {
+  return {
+    lines: [
+      [t('已为你准备好'), t('深度数据分析与风险排查', 'strong'), t('。')],
+      [t('将在保护受访者隐私的前提下自动核查数据质量、规避统计陷阱，并提炼核心发现与配图。', 'dim')],
+    ],
+    chips: [recommend({ label: '前往深度数据分析', action: { type: 'href', href: '#research/analysis' } }), say('查看项目照度')],
+    act: { type: 'href', href: '#research/analysis' },
+  };
+}
+
+export function formatRecommendResourceTurn(
+  query: string | undefined,
+  bundle: SmartRecommendationBundle,
+): AgentTurn {
+  const cleanQuery = (query ?? '').trim();
+  const libraryChip: AgentLink = { label: '进入研究资料库浏览全部例图', action: { type: 'stage', stage: 'library' } };
+  const lines: Line[] = [
+    ...bundle.charts.slice(0, 4).map(e => [t('图表 ', 'teal'), t(e.item.title, 'strong'), t(` — ${e.reasonBadge}`, 'dim')]),
+    ...bundle.tables.slice(0, 2).map(e => [t('三线表 ', 'teal'), t(e.item.title, 'strong'), t(` — ${e.reasonBadge}`, 'dim')]),
+    ...bundle.diagrams.slice(0, 2).map(e => [t('框架图 ', 'teal'), t(e.item.title, 'strong'), t(` — ${e.reasonBadge}`, 'dim')]),
+    ...bundle.infographics.slice(0, 2).map(e => [t('信息图板 ', 'teal'), t(e.item.label, 'strong'), t(` — ${e.reasonBadge}`, 'dim')]),
+    ...bundle.palettes.slice(0, 2).map(e => [t('配色板 ', 'teal'), t(e.item.label, 'strong'), t(` — ${e.reasonBadge}`, 'dim')]),
+  ];
+  return {
+    lines: [
+      [t(cleanQuery ? `已围绕“${cleanQuery}”智能匹配研究资料库资源。` : '已结合当前研究上下文与登记结果匹配研究资料库资源。')],
+    ],
+    cards: [{ kind: 'tool', title: '资源推荐 · 图表/三线表/框图/配色', lines, links: [libraryChip] }],
+    chips: [libraryChip],
+  };
+}
+
+export function formatLookupCountyTurn(
+  rawQuery: string,
+  hits: readonly CountyGazetteerProfile[],
+): AgentTurn {
+  const q = rawQuery.trim();
+  const libraryChip: AgentLink = { label: '打开中国县域风物志', action: { type: 'stage', stage: 'library' } };
+  if (!hits.length) {
+    return {
+      lines: [[t(`中国县域风物志中未找到与“${q}”匹配的县区档案。`)]],
+      cards: [{
+        kind: 'tool',
+        title: '区县风物检索',
+        lines: [[t('未命中区县', 'dim'), t(`　未匹配到“${q}”，可输入县区全称（如“义乌市”）或 6 位区划代码（如“330782”）。`, 'dim')]],
+        links: [libraryChip],
+      }],
+      chips: [libraryChip],
+    };
+  }
+  const dimLimit = hits.length > 1 ? 42 : 120;
+  const clipDim = (value: string) => (value.length > dimLimit ? `${value.slice(0, dimLimit - 1)}…` : value);
+  const lines: Line[] = hits.flatMap((p) => {
+    const curated = p.dataOrigin !== 'provincial_baseline_synthesis';
+    const origin = curated ? '精选五维档案' : '全域基线';
+    return [
+      [
+        t(`${p.code} ${p.name}`, 'strong'),
+        t(` · ${p.provinceName} · ${p.prefectureName}`),
+        t(` · 代表地标 ${p.landmarkName}`, 'dim'),
+        t(` · ${origin}`, curated ? 'gold' : 'dim'),
+      ],
+      [t('标签 ', 'teal'), t(p.tags.join('、') || '区域基线特征', 'dim')],
+      [t('政 ', 'teal'), t(clipDim(p.features.politicsGovernance))],
+      [t('经 ', 'teal'), t(clipDim(p.features.economyIndustry))],
+      [t('文 ', 'teal'), t(clipDim(p.features.cultureHeritage))],
+      [t('社 ', 'teal'), t(clipDim(p.features.societyLivelihood))],
+      [t('俗 ', 'teal'), t(clipDim(p.features.customsLifestyle))],
+    ];
+  });
+  return {
+    lines: [[t(`共命中 ${hits.length} 条中国县域风物档案（覆盖全国 2,845 个县域）。`)]],
+    cards: [{ kind: 'tool', title: '区县风物检索', lines, links: [libraryChip] }],
+    chips: [libraryChip],
+  };
+}
+
+function buildRunAutonomousToolTurn(goalArg = '', datasetMode?: 'planted_trap_benchmark' | 'inline_dataset'): AgentTurn {
+  const goal = goalArg.trim() || '调研数据深度分析与核心人群差异检验';
+  const modeLabel = datasetMode === 'inline_dataset'
+    ? '当前项目调研数据'
+    : datasetMode === 'planted_trap_benchmark'
+      ? '示例调研数据集'
+      : '优先分析当前项目数据（样本不足时自动用示例数据集体验）';
+  const theaterChip: AgentLink = { label: '前往数据分析', action: { type: 'href', href: '#research/analysis' } };
+  return {
+    lines: [
+      [t('已为你准备发起 '), t('深度数据分析', 'strong'), t('。')],
+      [t(`围绕“${goal}”开展检验 · 数据取自${modeLabel}`, 'dim')],
+    ],
+    cards: [{
+      kind: 'tool',
+      title: '深度数据分析',
+      lines: [
+        [t('分析重点 ', 'teal'), t(goal)],
+        [t('数据来源 ', 'teal'), t(modeLabel, 'dim')],
+        [t('质量保障 ', 'teal'), t('自动脱敏保护 · 规避常见统计误区 · 结果可直接写入报告', 'dim')],
+      ],
+      links: [theaterChip],
+    }],
+    chips: [theaterChip],
+  };
+}
+
+function buildVerifyCitationToolTurn(query?: string, doi?: string): AgentTurn {
+  const cleanQuery = (query ?? '').trim();
+  const cleanDoi = (doi ?? '').trim();
+  const target = cleanDoi ? `DOI ${cleanDoi}` : cleanQuery ? `关键词“${cleanQuery}”` : '方法学参考文献';
+  const paperChip: AgentLink = { label: '打开文献交叉引用工作台', action: { type: 'stage', stage: 'paper' } };
+  return {
+    lines: [
+      [t('已为你准备 '), t('文献核验', 'strong'), t('。')],
+      [t(`本次核验对象为${target}（仅采纳可核实来源的文献信息，绝不编造引用）`, 'dim')],
+    ],
+    cards: [{
+      kind: 'tool',
+      title: '文献核验',
+      lines: [
+        ...(cleanDoi ? [[t('目标 DOI ', 'teal'), t(cleanDoi)]] : []),
+        ...(cleanQuery ? [[t('检索关键词 ', 'teal'), t(cleanQuery)]] : []),
+        ...(!cleanDoi && !cleanQuery ? [[t('核验提示 ', 'teal'), t('请在对话或“文献交叉引用”面板提供 DOI 或关键词', 'dim')]] : []),
+        [t('核验方式 ', 'teal'), t('权威学术库与方法学文献目录联合核对', 'dim')],
+      ],
+      links: [paperChip],
+    }],
+    chips: [paperChip],
+  };
+}
+
+export const CHART_KIND_LABEL_ZH: Readonly<Record<'auto' | 'bar' | 'line' | 'forest' | 'dumbbell', string>> = {
+  auto: '自动适配',
+  bar: '柱状对比图',
+  line: '折线趋势图',
+  forest: '效应对比图',
+  dumbbell: '差异对比图',
+};
+
+function buildRenderSandboxPlotToolTurn(
+  ctx: RouterContext,
+  snapshotId?: string,
+  chartKind: 'auto' | 'bar' | 'line' | 'forest' | 'dumbbell' = 'auto',
+): AgentTurn {
+  const results = ctx.results?.results ?? [];
+  const cleanId = (snapshotId ?? '').trim();
+  const target = cleanId
+    ? results.find(r => r.id === cleanId)
+    : [...results].reverse().find(r => !isFrame(r) && r.method !== 'quality-control')
+      ?? [...results].reverse().find(r => !isFrame(r));
+  const kindLabel = CHART_KIND_LABEL_ZH[chartKind] ?? '自动适配';
+  const theaterChip: AgentLink = { label: '前往图表生成', action: { type: 'href', href: '#research/analysis' } };
+  const chartChip: AgentLink = { label: '打开交互绘图工坊', action: { type: 'say', text: '/绘图' } };
+  return {
+    lines: [
+      [t('已为你准备 '), t('高清统计配图生成', 'strong'), t('。')],
+      [t(target ? `配图基于“${target.title}” · 图表样式为${kindLabel}` : `配图对象为${cleanId || '最新分析结果'} · 图表样式为${kindLabel}`, 'dim')],
+    ],
+    cards: [{
+      kind: 'tool',
+      title: '高清图表生成',
+      lines: [
+        [t('配图对象 ', 'teal'), t(target ? `${target.title}（n=${target.n}）` : cleanId || '尚无可用分析结果，请先运行数据分析', 'dim')],
+        [t('图表样式 ', 'teal'), t(kindLabel)],
+        [t('交付形式 ', 'teal'), t('高清矢量配图 · 可直接收藏至素材架并插入报告', 'dim')],
+      ],
+      links: [theaterChip, chartChip],
+    }],
+    chips: [theaterChip, chartChip],
+  };
+}
+
 function slash(body: string, ctx: RouterContext): Routed {
   const [head = '', ...rest] = body.split(/\s+/u), arg = rest.join(' ').trim(), word = head.toLowerCase();
   const command = COMMANDS.find(c => c.name === head || c.words.includes(word));
@@ -521,6 +688,7 @@ function slash(body: string, ctx: RouterContext): Routed {
   if (room) return { turn: open(room, ctx) };
   switch (command.name) {
     case '下一步': return { turn: nextStep(ctx) };
+    case '自主探索': return { turn: buildAutonomousTurn() };
     case '全报告': return { turn: buildFullReportTurn(ctx, arg) };
     case '密钥': return { turn: buildApiKeyTurn() };
     case '铸造': return { turn: buildDemoTurn(ctx, arg) };
@@ -542,7 +710,7 @@ function slash(body: string, ctx: RouterContext): Routed {
       : { turn: { lines: [[t('查什么？例如 '), t('/查 设计效应', 'teal'), t('。')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] } };
     case '夜': return { turn: ctx.theme === 'dark' ? { lines: [[t('现在就是深色主题。')]] } : { lines: [[t('已切换到深色主题。')]], act: { type: 'theme', theme: 'dark' } } };
     case '昼': return { turn: ctx.theme === 'light' ? { lines: [[t('现在就是浅色主题。')]] } : { lines: [[t('已切换到浅色主题。')]], act: { type: 'theme', theme: 'light' } } };
-    case '清空': return { turn: { lines: [[t('删除之前请确认：')]], cards: [{ kind: 'confirm', title: '删除这段对话', lines: [[t('只删除这段对话记录；问卷、数据与报告都不受影响。', 'dim')]], confirm: { label: '删除', action: { type: 'clear' } }, cancel: '保留' }] } };
+    case '清空': return { turn: { lines: [[t('删除之前请先确认。')]], cards: [{ kind: 'confirm', title: '删除这段对话', lines: [[t('只删除这段对话记录；问卷、数据与报告都不受影响。', 'dim')]], confirm: { label: '删除', action: { type: 'clear' } }, cancel: '保留' }] } };
     case '经典': return { turn: { lines: [[t('经典工作台保留了全部模块的原样排布。')]], chips: [{ label: '打开经典工作台 ↗', action: { type: 'href', href: ctx.room ? `/workspace#${ctx.room}` : '/workspace' } }] } };
     default: return { turn: help() };
   }
@@ -554,6 +722,7 @@ const DAY = /(浅色|日间|亮色|白天)(主题|模式)|(切换?到|换成|改
 const GENERATE = /(生成|起草|拟一份|出一份|写一份|做一份|帮我出|帮我写|帮我做|帮我拟)[^。！？]{0,30}?问卷|问卷(初稿|草稿|草案)/u;
 const HELP = /^(帮助|help|你能做什么|你会什么|你可以做什么|能做什么|怎么用|如何使用|有哪些命令|命令列表)$/iu;
 const NEXT = /下一步|接下来|该做什么|先做什么|从哪(里)?开始|怎么开始/u;
+const AUTONOMOUS = /^(?:启动|运行|打开|进入)?自主(?:研究|统计)?探索$|react.*探索/iu;
 const BLIND = /盲区|还缺|缺什么|缺了什么|哪里不足|哪里还暗|短板|没通过/u;
 const STATUS = /照度|进度|到哪了|到哪一步|完成了多少|整体情况|现在怎么样|项目状态/u;
 const SEAL = /印鉴|九门印鉴|核验印鉴|循证印鉴|核验码/u;
@@ -564,12 +733,113 @@ const COACH = /备赛|参赛指南|八阶|国奖路线|怎么拿国奖/u;
 const PLOT_STUDIO = /^(?:打开)?(?:绘图|制图|画图|统计制图|交互绘图|图表工坊)(?:工坊)?(?:\s*[·:：]\s*.+)?$|帮我(?:画|制|绘)(?:一张|幅)?.*图/u;
 const CODE_STUDIO = /^(?:打开)?(?:编程|写代码|统计编程|代码工坊|三线表代码|复现代码|python代码|r代码|spss代码)(?:工坊)?(?:\s*[·:：]\s*.+)?$|生成.*(?:python|r语言|spss|latex).*代码/iu;
 const WRITING_STUDIO = /^(?:打开)?(?:撰稿|润色|写作工坊|撰稿工坊|答辩手卡|5w1h答辩)(?:工坊)?(?:\s*[·:：]\s*.+)?$/iu;
+const DOI_TOKEN = /\b10\.\d{4,9}\/[^\s，。；！？、)）\]\u300d]+/iu;
+const VERIFY_CITATION_TEXT = /^(?:请|帮我)?(?:核验|查证|校验|验证)(?:一下)?(?:文献|引文|参考文献|doi)(?:[：:\s]+(.+))?$/iu;
+const SANDBOX_PLOT_TEXT = /(?:python|沙盒).{0,8}(?:矢量|出图|绘图|画图)|科研矢量出图/iu;
+
+const TARGETED_SANDBOX_PLOT_TEXT =
+  /^(?:请|帮我)?(?:把|将|用)\s*([^，。；\n]{1,28}?)\s*(?:生成|画成|绘成|绘制成|做成|出成|画|绘|绘制|出)(?:一张|一幅|个)?(?:高清)?(?:效应对比图|森林图|差异对比图|哑铃图|柱状对比图|折线趋势图|统计配图|矢量配图)$/iu;
+const DIRECT_COUNTY_LOOKUP_TEXT =
+  /^(?:请|帮我)?(?:查一下|查查|查|检索|搜一下|搜索|查询)\s*(?:一下)?\s*([^\s，。；]{2,20}?)\s*(?:的)?(?:行政区划|区划代码|县域风物(?:志)?|县域档案|区县风物)$/iu;
+const DIRECT_RECALL_MEMORY_TEXT =
+  /^(?:请|帮我)?(?:查看|回顾|列出|展示|看看)(?:一下)?(?:本?项目)?(?:已记住的|历史的?|积累的?)?(?:研究)?(?:记忆|历史分析记忆|已记住的研究结论)$/iu;
+const DIRECT_STAT_BOOTSTRAP_TEXT =
+  /(?:运行|执行|做一下|计算|跑一下|测一下).{0,10}(?:bootstrap|自助抽样|自助法|置信区间)/iu;
+const DIRECT_STAT_SPEARMAN_TEXT =
+  /(?:运行|执行|做一下|计算|跑一下|测一下).{0,10}(?:spearman|斯皮尔曼|秩相关)/iu;
+const DIRECT_STAT_MANN_WHITNEY_TEXT =
+  /(?:运行|执行|做一下|计算|跑一下|测一下).{0,10}(?:mann[\s-]*whitney|曼[\s·-]*惠特尼|秩和检验|cliff)/iu;
+const DIRECT_AUTONOMOUS_AUDIT_TEXT =
+  /(?:自动|一键|深度|帮我|请)?(?:重新|再|重)?(?:核查|诊断|排查|扫描|检查|分析|运行|启动|查看|跑一次)?(?:一下)?(?:问卷|样本)?(?:数据质量|数据陷阱|统计陷阱|样本异常|统计风险|自主探索|自主分析|自主研究|最新数据诊断)/u;
+const DIRECT_GROUNDED_ABSTRACT_TEXT =
+  /(?:汇总|整理|生成|总结|合成).{0,10}(?:执行摘要|报告摘要|研究摘要|论文摘要|摘要草稿)/u;
+const DIRECT_PRESUBMISSION_AUDIT_TEXT =
+  /(?:交稿前|提交前|赛前|报告)?(?:做一次|做个|跑一下|运行|帮我|请)?(?:全面|一键)?(?:合规审查|合规体检|交稿体检|交稿审查|投稿审查|盲审检查|盲审体检|报告体检|提交前体检|合规检查)/u;
+const DIRECT_DEFINITION_EXCLUSION_TEXT =
+  /^(?:什么是|何为|啥是)|(?:是什么意思|什么意思|怎么算|怎么计算|的定义|的公式|指的是什么)$/u;
+
+export type DirectChatToolIntent =
+  | { kind: 'verify_citation'; doi?: string; query?: string }
+  | { kind: 'render_sandbox_plot'; chartKind: 'auto' | 'bar' | 'line' | 'forest' | 'dumbbell'; targetHint?: string }
+  | { kind: 'lookup_county'; query: string }
+  | { kind: 'recall_memory' }
+  | { kind: 'run_stat_preset'; presetId: 'bootstrap_ci' | 'spearman_matrix' | 'mann_whitney_cliff' }
+  | { kind: 'run_autonomous_audit'; forceFresh: boolean }
+  | { kind: 'compose_grounded_abstract' }
+  | { kind: 'audit_report_readiness' };
+
+export function parseDirectChatToolIntent(text: string): DirectChatToolIntent | null {
+  const s = text.trim().replace(/[。！？!?.，,\s]+$/u, '');
+  if (!s || /^[/／]/u.test(s)) return null;
+  const doiMatch = DOI_TOKEN.exec(s);
+  const citeMatch = VERIFY_CITATION_TEXT.exec(s);
+  if (doiMatch || citeMatch) {
+    const doi = doiMatch?.[0]?.trim();
+    const rawArg = (citeMatch?.[1] ?? '').trim();
+    const query = !doi ? (rawArg || undefined) : undefined;
+    if (doi || query) return { kind: 'verify_citation', ...(doi ? { doi } : {}), ...(query ? { query } : {}) };
+    return null;
+  }
+  const targetedPlotMatch = TARGETED_SANDBOX_PLOT_TEXT.exec(s);
+  const wantsDirectPlot =
+    Boolean(targetedPlotMatch)
+    || SANDBOX_PLOT_TEXT.test(s)
+    || /^(?:请|帮我)?(?:生成|画|绘|绘制|出)(?:一张|一幅|个)?(?:高清)?(?:效应对比图|森林图|差异对比图|哑铃图|柱状对比图|折线趋势图|统计配图|矢量配图)$/iu.test(s);
+  if (wantsDirectPlot) {
+    const chartKind: 'auto' | 'bar' | 'line' | 'forest' | 'dumbbell' =
+      /效应|森林|forest/iu.test(s) ? 'forest'
+        : /差异|哑铃|dumbbell/iu.test(s) ? 'dumbbell'
+          : /折线|趋势|line/iu.test(s) ? 'line'
+            : /柱状|条形|bar/iu.test(s) ? 'bar'
+              : 'auto';
+    const rawHint = (targetedPlotMatch?.[1] ?? '').trim();
+    const cleanedHint = rawHint.replace(/(?:的)?(?:分析结果|统计结果|结果|数据|指标)$/u, '').trim() || rawHint;
+    return {
+      kind: 'render_sandbox_plot',
+      chartKind,
+      ...(cleanedHint ? { targetHint: cleanedHint } : {}),
+    };
+  }
+  if (/县域风物(?:志)?|行政区划|区划代码|区县风物/u.test(s) && (DIRECT_COUNTY_LOOKUP_TEXT.test(s) || COUNTY_LOOKUP_TEXT.test(s))) {
+    const query = s
+      .replace(/^(?:请|帮我)?(?:查一下|查查|查|检索|搜一下|搜索|查询|看下|看看)\s*(?:一下)?\s*/u, '')
+      .replace(/(?:的)?(?:中国)?(?:行政区划|区划代码|县域风物志|县域风物|县域档案|区县风物)/gu, '')
+      .trim();
+    if (query) return { kind: 'lookup_county', query };
+  }
+  if (DIRECT_RECALL_MEMORY_TEXT.test(s)) {
+    return { kind: 'recall_memory' };
+  }
+  if (DIRECT_STAT_MANN_WHITNEY_TEXT.test(s)) {
+    return { kind: 'run_stat_preset', presetId: 'mann_whitney_cliff' };
+  }
+  if (DIRECT_STAT_SPEARMAN_TEXT.test(s)) {
+    return { kind: 'run_stat_preset', presetId: 'spearman_matrix' };
+  }
+  if (DIRECT_STAT_BOOTSTRAP_TEXT.test(s)) {
+    return { kind: 'run_stat_preset', presetId: 'bootstrap_ci' };
+  }
+  if (DIRECT_AUTONOMOUS_AUDIT_TEXT.test(s) && !DIRECT_DEFINITION_EXCLUSION_TEXT.test(s)) {
+    return {
+      kind: 'run_autonomous_audit',
+      forceFresh: /(?:重新|重跑|再跑|新跑|重新运行|重新执行|重新核查)/u.test(s),
+    };
+  }
+  if (DIRECT_GROUNDED_ABSTRACT_TEXT.test(s) && !DIRECT_DEFINITION_EXCLUSION_TEXT.test(s)) {
+    return { kind: 'compose_grounded_abstract' };
+  }
+  if (DIRECT_PRESUBMISSION_AUDIT_TEXT.test(s) && !DIRECT_DEFINITION_EXCLUSION_TEXT.test(s)) {
+    return { kind: 'audit_report_readiness' };
+  }
+  return null;
+}
+const COUNTY_LOOKUP_TEXT = /县域风物(?:志)?/u;
 const WHERE = /^(我在哪|这是哪|当前模块|打开的是什么|我在哪里)/u;
 const TRACE = /来处|溯源|回溯|从哪(里)?来|怎么(算|得)出来/u;
 const TRACE_QUERY = /(?:回溯|来处)[：:\s]+(.+)$/u;
 const PLAN = /^(?:(?:帮我|我要|开始)?(?:写|撰写|完成)(?:一份|整份|这份)?报告|(?:查看)?报告(?:怎么写|还缺什么|写到哪|写得怎么样|进度))$/u;
-const DRAFT_BRACKET = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[「“"]([^」”"\n]{2,40})[」”"](?:这一?节|一节|部分|这一?章)?(?:\s*[：:]\s*.+)?$/u;
-const DRAFT = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[「“"]?(.{2,32}?)[」”"]?(?:这一?节|一节|部分|这一?章)?$/u;
+const DRAFT_BRACKET = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[\u300c“"]([^\u300d”"\n]{2,40})[\u300d”"](?:这一?节|一节|部分|这一?章)?(?:\s*[：:]\s*.+)?$/u;
+const DRAFT = /^(?:帮我|请)?(?:起草|撰写|拟写|写一下|写)\s*[\u300c“"]?(.{2,32}?)[\u300d”"]?(?:这一?节|一节|部分|这一?章)?$/u;
 const PLACE = /(把|将)?[^。]{0,10}结果[^。]{0,4}(写|放|加)(进|入|到)报告|写入报告/u;
 const RESULTS_QUERY = /^筛选结果[：:\s]+(.+)$/u;
 const RESULTS = /结果清单|(登记|已有|现有)(了|的)?(哪些)?(分析|统计)?结果|有哪些(分析|统计|检验)?结果|(分析|统计|检验)结果(是什么|是多少|怎么样|如何|有哪些)/u;
@@ -594,6 +864,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (GENERATE.test(input)) return { generate: input };
   const scope = mentionedRooms(input).map(r => r.id).find(lit);
   if (NEXT.test(input)) return { turn: nextStep(ctx) };
+  if (AUTONOMOUS.test(input)) return { turn: buildAutonomousTurn() };
   if (SEAL.test(input)) return { turn: sealStatus(ctx) };
   if (FULL_REPORT.test(input)) return { turn: buildFullReportTurn(ctx, input.replace(FULL_REPORT, '').trim()) };
   if (DEMO.test(input)) return { turn: buildDemoTurn(ctx, input) };
@@ -602,6 +873,20 @@ export function route(raw: string, ctx: RouterContext): Routed {
   if (PLOT_STUDIO.test(input)) return { turn: buildChartStudioTurn(ctx, input) };
   if (CODE_STUDIO.test(input)) return { turn: buildCodeStudioTurn(ctx, input) };
   if (WRITING_STUDIO.test(input)) return { turn: buildWritingStudioTurn(ctx, input) };
+  {
+    const doiMatch = DOI_TOKEN.exec(input);
+    if (doiMatch) return { turn: buildVerifyCitationToolTurn(undefined, doiMatch[0]) };
+    const citeMatch = VERIFY_CITATION_TEXT.exec(input);
+    if (citeMatch) return { turn: buildVerifyCitationToolTurn(citeMatch[1]?.trim()) };
+  }
+  if (SANDBOX_PLOT_TEXT.test(input)) return { turn: buildRenderSandboxPlotToolTurn(ctx, undefined, 'auto') };
+  if (COUNTY_LOOKUP_TEXT.test(input) || DIRECT_COUNTY_LOOKUP_TEXT.test(input)) {
+    const countyQuery = input
+      .replace(/^(?:请|帮我)?(?:查一下|查查|查|检索|搜一下|搜索|查询|搜|看下|看看)\s*(?:一下)?\s*/u, '')
+      .replace(/(?:的)?(?:中国)?(?:行政区划|区划代码|县域风物志|县域风物|县域档案|区县风物)/gu, '')
+      .trim();
+    if (countyQuery) return { lookupCounty: countyQuery };
+  }
   if (BLIND.test(input)) return { turn: blindSpots(ctx, scope) };
   if (STATUS.test(input)) return { turn: status(ctx, scope) };
   if (TRACE.test(input)) {
@@ -623,7 +908,7 @@ export function route(raw: string, ctx: RouterContext): Routed {
   const verb = OPEN.exec(input), rooms = mentionedRooms(verb?.[1] ?? input);
   if (rooms.length === 1) return { turn: open(rooms[0], ctx) };
   if (rooms.length > 1) return { turn: choose(rooms.slice(0, 4)) };
-  if (verb) return { turn: { lines: [[t('没有叫'), t(`「${verb[1]}」`, 'strong'), t('这个模块。')]], chips: [say('查看使用帮助', '帮助')] } };
+  if (verb) return { turn: { lines: [[t('没有叫'), t(`“${verb[1]}”`, 'strong'), t('这个模块。')]], chips: [say('查看使用帮助', '帮助')] } };
   // A short phrase may be a term; a sentence the router cannot read is not guessed at.
   return input.length <= 16 ? { lookup: input, explicit: false } : { turn: unknown() };
 }
@@ -650,7 +935,14 @@ export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
     case 'lookup': return { lookup: action.args.query, explicit: true };
     case 'draft': return { generate: action.args.brief };
     case 'stage': {
-      const label = action.args.view === 'paper' ? '已为你切换到报告成文视图。' : action.args.view === 'advisors' ? '已为你打开专家审阅圆桌。' : '已回到对话工作区。';
+      const label =
+        action.args.view === 'paper'
+          ? '已为你切换到报告成文视图。'
+          : action.args.view === 'advisors'
+            ? '已为你打开专家审阅圆桌。'
+            : action.args.view === 'library'
+              ? '已为你打开研究资料库（含图表、三线表、框图与县域风物数据库）。'
+              : '已回到对话工作区。';
       return { turn: { lines: [[t(label)]], act: { type: 'stage', stage: action.args.view } } };
     }
     case 'studio': {
@@ -670,6 +962,16 @@ export function toolTurn(action: ChatAction, ctx: RouterContext): Routed {
       const topic = (action.args.topic ?? '').trim();
       return { turn: { ...buildDemoTurn(ctx, topic), act: { type: 'loadBenchmark', benchmarkId: topic || 'current' } } };
     }
+    case 'run_autonomous_research':
+      return { turn: buildRunAutonomousToolTurn(action.args.goal, action.args.datasetMode) };
+    case 'recommend_resource':
+      return { recommendResource: { query: action.args.query, ctx } };
+    case 'lookup_county':
+      return { lookupCounty: action.args.query };
+    case 'verify_citation':
+      return { turn: buildVerifyCitationToolTurn(action.args.query, action.args.doi) };
+    case 'render_sandbox_plot':
+      return { turn: buildRenderSandboxPlotToolTurn(ctx, action.args.snapshotId, action.args.chartKind) };
   }
 }
 
@@ -677,16 +979,16 @@ export function lookupTurn(query: string, hits: readonly KnowledgeHit[], explici
   const strong = hits.filter(h => h.match === 'name' || h.match === 'alias' || h.match === 'prefix');
   const pool = explicit ? hits : strong;
   if (!pool.length) return explicit
-    ? { lines: [[t('知识镜里没有'), t(`「${query}」`, 'strong'), t('。')], [t('换一个说法，或打开知识镜浏览全部词条。', 'dim')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] }
+    ? { lines: [[t('知识镜里没有'), t(`“${query}”`, 'strong'), t('。')], [t('换一个说法，或打开知识镜浏览全部词条。', 'dim')]], chips: [{ label: '打开知识镜', action: { type: 'search' } }] }
     : unknown();
   const top = pool[0], exact = top.match === 'name' || top.match === 'alias';
   if (top.ambiguous || (!exact && pool.length > 1)) return {
-    lines: [[t(`「${query}」`, 'strong'), t('在知识镜里可能指：')]],
+    lines: [[t(`“${query}”`, 'strong'), t('在知识镜里可能对应以下词条。')]],
     chips: pool.slice(0, 5).map(h => say(h.entry.name, `查一下 ${h.entry.name}`)),
   };
   const e = top.entry;
   return {
-    lines: [[t('知识镜中的'), t(`「${e.name}」`, 'strong'), t('，原文照录：')]],
+    lines: [[t('知识镜中的'), t(`“${e.name}”`, 'strong'), t('原文照录如下。')]],
     cards: [{ kind: 'entry', id: e.id, name: e.name, ...(e.englishName ? { english: e.englishName } : {}), definition: e.definition,
       ...(e.formula?.tex ? { formula: e.formula.tex } : {}), sources: e.sources.map(s => s.title).slice(0, 3), reviewed: e.review.status === 'reviewed' }],
     chips: pool.slice(1, 4).map(h => say(h.entry.name, `查一下 ${h.entry.name}`)),

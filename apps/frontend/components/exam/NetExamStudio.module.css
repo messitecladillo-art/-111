@@ -662,3 +662,60 @@
     transform:none
   }
 }
+
+@media (forced-colors: active) {
+  .studio,
+  .setup,
+  .replacePrompt,
+  .question,
+  .options > button,
+  .feedback,
+  .cardRail,
+  .cards button,
+  .summary {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .setup,
+  .replacePrompt,
+  .question,
+  .options > button,
+  .options > button > span,
+  .feedback,
+  .cardRail,
+  .cards button,
+  .summary,
+  .modeList li,
+  .studio button,
+  .setup input,
+  .setup select {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .metrics,
+  .metrics > div,
+  .feedback details > div,
+  .navigation,
+  .about {
+    border-color: CanvasText;
+  }
+  .marker {
+    display: none;
+  }
+  .studio .primary,
+  .tabs button[aria-pressed=true],
+  .presets button[aria-pressed=true],
+  .questionMeta button[aria-pressed=true],
+  .options > button[aria-pressed=true],
+  .options > button[aria-pressed=true] > span,
+  .cards button[aria-current=step] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .studio :is(button, a, input, select, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

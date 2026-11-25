@@ -23,7 +23,7 @@ function mount(search = async () => []) {
     useEffect(fn, deps) { const index = at++; const previous = cells[index]; if (!previous || deps.some((value, i) => !Object.is(value, previous.deps[i]))) { cells[index] = { deps }; effects.push(() => { previous?.cleanup?.(); cells[index].cleanup = fn(); }); } },
   };
   const jsx = (type, props) => ({ type, props });
-  const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, './KnowledgeProvider': { useKnowledge: () => control }, './catalog': { DOMAINS: { stats: '统计', ml: '机器学习' } }, './KnowledgeEntryView': { default: EntryView }, './Knowledge.module.css': { default: new Proxy({}, { get: (_, name) => name }) } };
+  const imports = { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, './KnowledgeProvider': { useKnowledge: () => control }, './domains': { DOMAINS: { stats: '统计', ml: '机器学习' } }, './catalog': { DOMAINS: { stats: '统计', ml: '机器学习' } }, './KnowledgeEntryView': { default: EntryView }, './Knowledge.module.css': { default: new Proxy({}, { get: (_, name) => name }) } };
   const box = { exports: {}, require(name) { assert.ok(name in imports, name); return imports[name]; }, setTimeout(fn) { const timer = { fn }; timers.add(timer); return timer; }, clearTimeout(timer) { timers.delete(timer); } };
   vm.runInNewContext(source, box);
   const screen = {

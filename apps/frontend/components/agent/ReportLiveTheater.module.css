@@ -16,13 +16,20 @@
   overflow: visible;
 }
 
+.beamGlow {
+  fill: none;
+  stroke: rgba(15, 118, 110, 0.24);
+  stroke-width: 7;
+  stroke-linecap: round;
+  animation: beam-glow-opacity 1.3s ease-in-out infinite alternate;
+}
+
 .beamPrimary {
   fill: none;
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-dasharray: 8 6;
   animation: beam-dash 0.7s linear infinite, beam-glow 1.3s ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 6px rgba(15, 118, 110, 0.55));
 }
 
 .beamSecondary {
@@ -31,7 +38,15 @@
   stroke-linecap: round;
   stroke-dasharray: 5 8;
   animation: beam-dash-reverse 0.85s linear infinite;
-  filter: drop-shadow(0 0 6px rgba(217, 119, 6, 0.55));
+}
+
+@keyframes beam-glow-opacity {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.9;
+  }
 }
 
 @keyframes beam-dash {
@@ -70,7 +85,6 @@
   fill: #f59e0b;
   stroke: #ffffff;
   stroke-width: 1.5;
-  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
 }
 
 @keyframes node-pulse {
@@ -223,11 +237,11 @@
   }
   65% {
     opacity: 0.92;
-    transform: translate3d(-240px, 120px, 0) scale(0.76);
+    transform: translate3d(calc(var(--fly-x, -380px) * 0.65), calc(var(--fly-y, 180px) * 0.65), 0) scale(0.76);
   }
   100% {
     opacity: 0;
-    transform: translate3d(-380px, 180px, 0) scale(0.38);
+    transform: translate3d(var(--fly-x, -380px), var(--fly-y, 180px), 0) scale(0.38);
   }
 }
 
@@ -294,3 +308,41 @@
 .forgePodNote { margin: 0; padding: 20px; color: var(--c-dim); font-size: 12px; }
 @media (max-width: 600px) { .forgePod { right: 10px; width: min(250px, calc(100% - 20px)); }.cursorPill { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.synapseSvg { overflow: hidden; } }
 @media (prefers-reduced-motion: reduce) { .theaterOverlay { display: none; }.theaterOverlay * { animation: none !important; transition: none !important; } }
+
+
+@media (forced-colors: active) {
+  .cursorPill,
+  .forgePod,
+  .forgePodPreview,
+  .forgePodBars {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border: 1px solid ButtonText;
+    box-shadow: none !important;
+  }
+
+  .cursorHalo,
+  .beamGlow {
+    display: none !important;
+  }
+
+  .forgePodHead {
+    color: CanvasText !important;
+    border-bottom-color: CanvasText !important;
+  }
+
+  .beamPrimary,
+  .beamSecondary,
+  .nodeRing {
+    stroke: Highlight !important;
+  }
+
+  .cursorPill b,
+  .forgePodHead span:first-child,
+  .forgePodBars i,
+  .cursorDot {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+  }
+}

@@ -284,7 +284,7 @@ test('matching call receipts show frozen configuration and actual usage, never l
   const receipts = h.find(node => node.type === 'details' && text(node).startsWith('查看执行与调用记录'));
   assert.match(text(receipts), /synthetic-model-1/);
   assert.doesNotMatch(text(receipts), /edited-after-consent/);
-  assert.match(text(receipts), /输入 42 \/ 输出 19 token/);
+  assert.match(text(receipts), /输入 42 词元 · 输出 19 词元/);
   assert.equal(receipts.props.open, undefined);
   assert.deepEqual(h.events, []);
 });

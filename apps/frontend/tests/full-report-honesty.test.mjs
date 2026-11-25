@@ -4,16 +4,20 @@ import {
   PLAN_NODE,
   awaitsResults,
   buildFullReportSectionPrompt,
+  buildRevisionPrompt,
   buildSectionTokens,
   categoryLabels,
   buildSkillPackContract,
+  finalizeReport,
   generateFullReportWithAgent,
   parseAndHydrateSectionDraft,
   sanitizeModelParagraph,
   tidyComparisons,
   unbackedAnalyses,
 } from '../lib/agent/full-report-pipeline.ts';
+import { verifyAndHydrateV2Section } from '../lib/agent/numeric-verifier.ts';
 import { buildDemoPack, decomposeTopic } from '../lib/agent/demo-study.ts';
+import { buildRichDemoPack } from '../lib/agent/rich-study.ts';
 import { benchmarkReport } from '../lib/report-benchmark.ts';
 
 const tokens = {
@@ -323,4 +327,219 @@ test('mounted 7-skill corpus rules inject 65-page limit, method contracts and ca
   const report = structuredClone(pack.report);
   report.report = [{ id: 's-c', title: '一、分析', body: '消费能力与推荐意愿呈正相关，说明推荐意愿完全取决于消费能力。', source: '' }];
   assert.ok(benchmarkReport(report).checks.some(c => c.id === 'causal' && c.status !== 'pass'));
+});
+
+test('sanitizer keeps R² and 95%置信区间 intact, maps Q21..Q45, preserves empirical statistical footnotes, and numeric-verifier guards missing methods', async () => {
+  const sanitized = sanitizeModelParagraph('题项 Q21 至 Q45 的回归拟合优度 $R^2$ 与 R² 在 95%置信区间下详见表3-1及图4-2。');
+  assert.match(sanitized, /题二十一\s*至\s*题四十五/u);
+  assert.match(sanitized, /\$R\^2\$/u);
+  assert.match(sanitized, /R²/u);
+  assert.match(sanitized, /95%置信区间/u);
+  assert.doesNotMatch(sanitized, /R平方|九五置信区间|正文中统计/u);
+  assert.match(sanitized, /文中对应统计表及文中对应统计图/u);
+
+  const kept = parseAndHydrateSectionDraft(
+    draft('模型 $R^2$ 与 R² 在 95%置信区间下的系数显著性如{G1}所示，有效样本为{F2}。'),
+    tokens,
+    results,
+  );
+  assert.equal(kept.paragraphs.length, 1);
+  assert.match(kept.paragraphs[0], /\$R\^2\$.*R².*95%置信区间/u);
+
+  // Legitimate statistical footnotes stay intact in empirical mode while internal metadata notes are stripped
+  const pack = await buildDemoPack('');
+  const cloned = structuredClone(pack.report);
+  const targetSec = cloned.report.find(s => s.id === 's-drivers-model') ?? cloned.report[0];
+  targetSec.body = '回归估计结果见正文。\n注：*** p<0.001，** p<0.01，括号内为 HC3 稳健标准误。\n注：本段为教学模拟脚本自动生成，不证明因果。';
+  const fin = finalizeReport(cloned, new Map(), new Set(), 'empirical');
+  const finSec = fin.content.report.find(s => s.id === targetSec.id);
+  assert.ok(finSec.body.includes('注：*** p<0.001'));
+  assert.equal(finSec.body.includes('脚本'), false);
+
+  // Omitted/partial context.methods in numeric-verifier never throws TypeError
+  const v2 = verifyAndHydrateV2Section(
+    draft('有效样本为{F2}份，在 95% 置信区间框架下检验结果呈正向关联。'),
+    tokens,
+    { planSection: false },
+  );
+  assert.equal(v2.paragraphs.length, 1);
+});
+
+test('numeric-verifier masks Q1..Q45, 0–100 分 / 100 分制, structural counts, registeredMethods, and negated/future methods', async () => {
+  const maskedPass = verifyAndHydrateV2Section(
+    draft(
+      '问卷涵盖 Q1–Q45 与题41至题45，共 32 道题、4 对配对与 2 组对照，核心倾向题采用 0–100 分（100 分制）评分，有效样本 {F2} 份，见{G1}。',
+    ),
+    tokens,
+    {
+      methods: ['crosstab'],
+      registeredMethods: ['crosstab', 'sem'],
+      planSection: false,
+    },
+  );
+  assert.equal(maskedPass.paragraphs.length, 1, maskedPass.dropReasons.join(' | '));
+  assert.equal(maskedPass.droppedSentences, 0);
+
+  // Unbacked point numbers are still rejected even with the new grammatical masks
+  const fakePoint = verifyAndHydrateV2Section(
+    draft('本组共有 43 份问卷完成作答，占比达到 95%。'),
+    tokens,
+    { methods: ['crosstab'], planSection: false },
+  );
+  assert.equal(fakePoint.paragraphs.length, 0);
+
+  // registeredMethods backs cross-section method mentions while keeping unregistered methods guarded
+  const crossSection = verifyAndHydrateV2Section(
+    draft(
+      '全篇已登记聚类分析与 K-means 分群；本研究暂未纳入结构方程（SEM）与随机森林，未来可结合 XGBoost 拓展，而关于 KANO 模型的跨期检验有待进一步探讨。',
+    ),
+    tokens,
+    {
+      methods: ['crosstab'],
+      registeredMethods: ['crosstab', 'cluster'],
+      planSection: false,
+    },
+  );
+  assert.equal(crossSection.paragraphs.length, 1, crossSection.dropReasons.join(' | '));
+  assert.equal(crossSection.droppedSentences, 0);
+
+  // Affirmative unbacked claim in first clause is STILL dropped even if next clause mentions future research
+  const mixedClaim = verifyAndHydrateV2Section(
+    draft('本研究构建了结构方程（SEM）验证路径，后续研究可结合随机森林扩展。'),
+    tokens,
+    {
+      methods: ['crosstab'],
+      registeredMethods: ['crosstab'],
+      planSection: false,
+    },
+  );
+  assert.equal(mixedClaim.paragraphs.length, 0);
+  assert.match(mixedClaim.dropReasons[0], /结构方程/u);
+});
+
+test('buildRevisionPrompt includes evidenceTables entity bindings and attachMissingExhibitsInFullRun caps <= 2 citations per paragraph', async () => {
+  const pack = await buildDemoPack('社区养老助餐服务满意度与优化路径');
+  const results = pack.report.quality.results;
+  const held = { results, findings: [], pending: false, placed: results.map(r => r.id) };
+  const revPrompt = buildRevisionPrompt(
+    '（一）差异检验',
+    ['样本差异见{G1}。'],
+    ['因果措辞需调整'],
+    buildSectionTokens(held, pack.report, 'compare.tests', pack.design),
+    { nodeId: 'compare.tests', held, content: pack.report },
+  );
+  assert.match(revPrompt, /登记证据三线表与行—实体对照摘要/u);
+  assert.match(revPrompt, /\| .* \|/u);
+
+  const manyExhibitsSec = {
+    id: 'sec-scatter',
+    title: '（一）多元回归与诊断模型',
+    body: '本节分析回归模型与满意度表现。',
+    source: '',
+    blocks: [
+      { id: 'ex-1', kind: 'table', text: '回归模型参数表1', evidenceId: results[0].id, valueColumn: 1 },
+      { id: 'ex-2', kind: 'chart', text: '回归模型森林图2', evidenceId: results[0].id, valueColumn: 1 },
+      { id: 'ex-3', kind: 'table', text: '回归模型参数表3', evidenceId: results[0].id, valueColumn: 1 },
+      { id: 'ex-4', kind: 'chart', text: '回归模型残差图4', evidenceId: results[0].id, valueColumn: 1 },
+      { id: 'ex-5', kind: 'table', text: '回归模型诊断表5', evidenceId: results[0].id, valueColumn: 1 },
+    ],
+  };
+  const fin = finalizeReport(
+    { ...pack.report, report: [manyExhibitsSec] },
+    new Map(),
+    new Set(['drivers.model']),
+    'demonstration',
+    { fullRun: true },
+  );
+  const updatedSec = fin.content.report[0];
+  const paraTexts = [
+    updatedSec.body,
+    ...(updatedSec.blocks ?? []).filter(b => b.kind === 'paragraph').map(b => b.text),
+  ];
+  for (const text of paraTexts) {
+    const count = (text.match(/\[\[(?:图|表):[^\]]+\]\]/gu) ?? []).length;
+    assert.ok(count <= 2, `paragraph stacked ${count} exhibit citations: ${text}`);
+  }
+  const combined = paraTexts.join('\n');
+  for (const b of manyExhibitsSec.blocks) {
+    assert.ok(combined.includes(b.id), `missing citation for ${b.id}`);
+  }
+});
+
+test('Round 3 fixes: un-suffixed OLS alias owns 3-decimal coefficients over coarse sibling decimals, abstract tokens surface core modeling exhibits, and cluster dim keeps full 10-char stem', async () => {
+  const olsSnap = {
+    id: 'res-ols',
+    title: '持续使用倾向回归结果',
+    sourceName: '回归',
+    sourceUrl: '',
+    sourceHash: 'a'.repeat(64),
+    resultHash: 'b'.repeat(64),
+    classification: 'user_provided',
+    method: 'regression',
+    n: 500,
+    total: 500,
+    headers: ['变量', '非标准化系数 B', '标准误', '标准化系数 β', 't', 'p'],
+    rows: [
+      ['专业照护与操作规范感均值', '3.269', '0.626', '0.193', '5.22', '<0.001'],
+      ['费用公开与沟通顺畅感均值', '2.649', '0.637', '0.163', '4.16', '<0.001'],
+    ],
+    metrics: [],
+    warnings: [],
+  };
+  const coarseIpaSnap = {
+    id: 'res-ipa',
+    title: 'IPA 表现与重要度',
+    sourceName: 'IPA',
+    sourceUrl: '',
+    sourceHash: 'a'.repeat(64),
+    resultHash: 'c'.repeat(64),
+    classification: 'user_provided',
+    method: 'ipa',
+    n: 500,
+    total: 500,
+    headers: ['指标', '重要度', '表现均值'],
+    rows: [
+      ['专业照护', '4.9', '3.8'],
+      ['权责边界透明', '3.3', '3.4'],
+    ],
+    metrics: [],
+    warnings: [],
+  };
+
+  const trueOlsSentence = verifyAndHydrateV2Section(
+    draft('专业照护与操作规范感对持续倾向呈正向关联（B=3.269，β=0.193，t=5.22，p<0.001）。'),
+    { facts: [], exhibits: [], references: [] },
+    { results: [olsSnap, coarseIpaSnap], methods: ['regression', 'ipa'], planSection: false },
+  );
+  assert.equal(trueOlsSentence.paragraphs.length, 1, trueOlsSentence.dropReasons.join(' | '));
+  assert.equal(trueOlsSentence.droppedSentences, 0);
+
+  const realSwapSentence = verifyAndHydrateV2Section(
+    draft('费用公开与沟通顺畅感回归估计显著（B=3.269，p<0.001）。'),
+    { facts: [], exhibits: [], references: [] },
+    { results: [olsSnap, coarseIpaSnap], methods: ['regression', 'ipa'], planSection: false },
+  );
+  assert.equal(realSwapSentence.paragraphs.length, 0);
+  assert.match(realSwapSentence.dropReasons[0], /张冠李戴/u);
+
+  const rich = await buildRichDemoPack('西安市公立医院“无陪护病房”试点患者家属满意度及影响因素研究', null, { classification: 'user_provided' });
+  const clusterSnap = rich.report.quality.results.find(r => r.method === 'cluster');
+  assert.ok(clusterSnap);
+  assert.equal(clusterSnap.rows.some(r => String(r[0]).includes('事先告低评组')), false);
+  const absTokens = buildSectionTokens(
+    { results: rich.report.quality.results, findings: [], pending: false, placed: rich.report.quality.results.map(r => r.id) },
+    rich.report.report ? rich.report : rich.report,
+    'abstract',
+    rich.design,
+  );
+  const exhibitText = absTokens.exhibits.map(e => e.text).join(' ');
+  assert.match(exhibitText, /回归/u);
+  assert.match(exhibitText, /聚类|雷达/u);
+  assert.match(exhibitText, /IPA|KANO|帕累托/u);
+  const mrSnap = rich.report.quality.results.find(r => r.method === 'multi-response');
+  assert.ok(mrSnap);
+  for (const row of mrSnap.rows) {
+    const opt = String(row[0] ?? '');
+    assert.equal(/(?:透说明|清说明|响应度衔接)/u.test(opt), false, `unexpected truncated Q26 option: ${opt}`);
+  }
 });

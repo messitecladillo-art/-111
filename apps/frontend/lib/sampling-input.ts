@@ -25,7 +25,7 @@ export function parseTable(text: string, spec: ('label' | 'number')[]): Parsed<(
     const bad = spec.findIndex((kind, k) => kind === 'number' && !Number.isFinite(values[k] as number));
     if (bad >= 0) {
       if (index === 0) { header = parts.slice(0, spec.length); return; }
-      errors.push(`第 ${index + 1} 行第 ${bad + 1} 列「${parts[bad]}」不是数值。`); return;
+      errors.push(`第 ${index + 1} 行第 ${bad + 1} 列“${parts[bad]}”不是数值。`); return;
     }
     if (spec.some((kind, k) => kind === 'label' && !(values[k] as string))) { errors.push(`第 ${index + 1} 行缺少名称。`); return; }
     rows.push(values);

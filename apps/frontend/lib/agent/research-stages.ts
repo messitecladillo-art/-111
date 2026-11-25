@@ -1,6 +1,6 @@
 /** Stable call identities describe existing call paths, independently of provider or display name. */
 export const MODEL_CALLS = {
-  'research.conversation': { label: 'Agent 对话', capability: 'research' },
+  'research.conversation': { label: '智能研究对话', capability: 'research' },
   'research.topic': { label: '选题顾问', capability: 'research' },
   'survey.questionnaire': { label: '问卷提案', capability: 'questionnaire' },
   'report.draft': { label: '章节起草', capability: 'report' },
@@ -34,10 +34,10 @@ export const RESEARCH_STAGES: readonly ResearchStage[] = Object.freeze([
   { id: 'pilot', label: '预测试', description: '组织真实预测试并记录修订；模拟样本仅用于教学或流程检查。', execution: 'manual', modelCalls: [], availability: 'manual' },
   { id: 'collection', label: '调查收集', description: '取得同意、实施调查并上传真实材料，不能用生成内容代替受访者。', execution: 'manual', modelCalls: [], availability: 'manual' },
   { id: 'quality', label: '数据质量', description: '检查已上传材料的缺失、异常和清洗记录。', execution: 'deterministic', modelCalls: [], availability: 'partial' },
-  { id: 'analysis', label: '统计分析', description: '对真实数据执行适用分析并登记可追溯结果；后台 Data 执行器尚未接通。', execution: 'deterministic', modelCalls: [], availability: 'partial' },
+  { id: 'analysis', label: '统计分析', description: '对已导入数据开展统计诊断、稳健性检验与方法修正，并登记可追溯的分析结果。', execution: 'deterministic', modelCalls: [], availability: 'available' },
   { id: 'findings', label: '发现与建议', description: '依据已登记结果组织并确认发现和行动建议。', execution: 'manual', modelCalls: [], availability: 'partial' },
   { id: 'report', label: '报告写作', description: '使用现有章节起草、修订或整稿候选路径；整稿每轮绑定一个服务。', execution: 'model', modelCalls: ['report.draft', 'report.revision', 'report.full'], availability: 'available' },
-  { id: 'review', label: '一致性审查', description: '运行现有确定性检查，保留人工审阅；完整后台 Reviewer 执行器尚未接通。', execution: 'deterministic', modelCalls: [], availability: 'partial' },
+  { id: 'review', label: '一致性审查', description: '运行数值溯源确定性检查与子群稳健性反证审查，保留人工审阅。', execution: 'deterministic', modelCalls: [], availability: 'available' },
   { id: 'export', label: '成果导出', description: '导出当前成果并核对格式、来源和匿名要求。', execution: 'deterministic', modelCalls: [], availability: 'partial' },
   { id: 'defense', label: '答辩准备', description: '用已有证据练习陈述、回答追问和检查用时。', execution: 'manual', modelCalls: [], availability: 'manual' },
 ].map(stage => Object.freeze({ ...stage, modelCalls: Object.freeze(stage.modelCalls) })) as ResearchStage[]);

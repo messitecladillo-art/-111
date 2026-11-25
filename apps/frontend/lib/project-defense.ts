@@ -1,3 +1,4 @@
+import { sectionProseText } from './editor-model.ts';
 import { parseProjectReport } from './project-report.ts';
 import { reportLinkState, type LinkState } from './report-storyboard.ts';
 
@@ -21,7 +22,10 @@ export async function projectDefenseSource(value: unknown, projectId: string): P
   const report = parseProjectReport(value, projectId);
   const bytes = new TextEncoder().encode(JSON.stringify(report.content));
   const contentHash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('');
-  const sections = report.content.report.map((section, index) => ({ id: section.id, number: index + 1, title: section.title, preview: defenseReferencePreview(section.body), body: section.body, source: section.source }));
+  const sections = report.content.report.map((section, index) => {
+    const prose = sectionProseText(section);
+    return { id: section.id, number: index + 1, title: section.title, preview: defenseReferencePreview(prose), body: prose, source: section.source };
+  });
   const slides = await Promise.all(report.content.slides.map(async (slide, index) => ({ id: slide.id, number: index + 1, title: slide.title, preview: defenseReferencePreview(slide.notes || slide.body), body: slide.body, aside: slide.aside, notes: slide.notes, sourceSectionId: slide.reportLink?.sectionId ?? null, linkState: await reportLinkState(report.content, slide) })));
   return { schema: 'project-defense-source/v1', projectId: report.projectId, reportId: report.id, revision: report.revision, title: report.title, updatedAt: report.updatedAt, contentHash, sections, slides };
 }

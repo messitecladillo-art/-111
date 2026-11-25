@@ -12,7 +12,7 @@ function decodedHeader(request: Request, key: string): string {
 }
 async function readBytes(request: Request): Promise<Uint8Array<ArrayBuffer>> {
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/octet-stream") throw new ApiError(415, "office_invalid_content_type", "上传内容须为原始 Office 文件。");
-  if (request.headers.has("content-encoding")) throw new ApiError(415, "office_encoded_body", "请直接上传未经过 HTTP 压缩的文件。");
+  if (request.headers.has("content-encoding")) throw new ApiError(415, "office_encoded_body", "请直接上传未经过传输压缩的原始文件。");
   const advertised = request.headers.get("content-length");
   if (advertised !== null && (!/^\d+$/.test(advertised) || Number(advertised) > OFFICE_LIMITS.bytes)) throw new ApiError(413, "office_file_too_large", "文件不得超过 20 MiB。");
   if (!request.body) throw new ApiError(400, "office_empty_file", "请选择有效文件。");

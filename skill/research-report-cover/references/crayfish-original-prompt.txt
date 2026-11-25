@@ -1,0 +1,19 @@
+Use case: stylized-concept / editorial report cover.
+Create a finished, exceptionally beautiful Chinese market-research report cover about Hubei crayfish. Flat full-page artwork, A4 portrait ratio 210:297, no mockup, no desk, no book spine. Original art and original hand-drawn Chinese display lettering. The visual ambition is an artfully composed illustrated publication cover, with dramatic confident brush typography and layered imagery that belongs to the topic.
+
+Exact Chinese text, correctly spelled and fully legible:
+Main title, treated as two interlocking but freely positioned phrases:
+江湖有味
+“虾”逢其时
+Research subtitle, smaller, elegantly typeset in readable dark jade Chinese:
+湖北小龙虾消费偏好、品牌认知
+与市场拓展路径研究
+Only these words. No English, no author, team, school, date, edition, award, logo, seal, badge, watermark or invented data.
+
+Art direction: warm ivory paper ground, vivid vermilion and brick-red crayfish, deep lake-jade green, light jade, restrained muted gold. Limited harmonious flat-color palette, crisp shapes, clean curves and expressive intentional linework suitable for subsequent vector tracing. Avoid photorealism, continuous gradients, raster noise, tiny speckle grain and soft glow. Richness should come from overlapping shapes, well-designed detail, scale and spatial rhythm.
+
+Composition: an asymmetrical diagonal / sweeping S-shaped composition, visually balanced like fine editorial illustration, not a business report grid. One magnificent red crayfish is the main subject, with correct recognizable crayfish anatomy: segmented curled tail, a pair of large claws, fine long antennae and small walking legs, no fantasy extra claws. Position it in a dynamic sweeping arc through the middle and lower right of the page, neither centered like a logo nor sitting in a food bowl. Its antennae curve around some lettering without making letters unreadable. Large decorative Chinese brush characters in deep dark jade and vermilion occupy the upper and middle-left, with uneven artistic baselines and a few elongated strokes. The glyphs should feel purpose-drawn for this composition: bold expressive shapes, slight organic hook strokes recalling claws and moving water, but every character remains unambiguous. Main title and crayfish work together in front/back layers, with controlled clear space around the subtitle.
+
+Hubei context: abstract flowing river-and-lake ribbons in jade and warm ivory weave through the crayfish scene, with a modest foreground of rice panicles and a few calm geometric paddy-field contours in the lower part of the page. This is conceptual illustration, not a geographic map or surveyed landscape. Use only these coherent regional motifs, no landmark collage, no generic icon clusters. A small vermilion accent shape and a few broad muted-gold water lines can balance the negative space. Keep airy margins and intentional open areas. Let the river curves and antennae connect the composition. The subtitle sits in a quiet ivory area toward the bottom, fully inside safe margins, with strong contrast and comfortable spacing.
+
+Finish: sophisticated youthful Chinese publication design, tactile cut-paper layering expressed with contour and color rather than cast shadows, exquisite organic brush lettering, beautiful silhouette from thumbnail distance, crisp detailed close-up. Complete single cover ready to review, not a contact sheet and not a cover with placeholders.

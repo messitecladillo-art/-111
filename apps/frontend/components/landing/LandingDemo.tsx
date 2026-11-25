@@ -9,7 +9,7 @@ import styles from './LandingDemo.module.css';
 
 const AtypicaLiveTheater = dynamic(() => import('@/components/silicon/AtypicaLiveTheater'), {
   ssr: false,
-  loading: () => <div style={{ padding: 32, color: '#a1a1aa' }}>正在挂载 1:1 硅基实时推演剧场…</div>,
+  loading: () => <div role="status" aria-live="polite" style={{ padding: 32, color: '#a1a1aa' }}>正在准备实时预测试演播室…</div>,
 });
 
 type DemoView = 'questionnaire' | 'sample' | 'report' | 'live';
@@ -106,7 +106,7 @@ function ViewIcon({ view }: { view: DemoView }) {
   </svg>;
 }
 
-const VIEW_LABELS: Record<DemoView, string> = { questionnaire: '问卷设计', sample: '样本核验', report: '报告预览', live: '硅基实时演示' };
+const VIEW_LABELS: Record<DemoView, string> = { questionnaire: '问卷设计', sample: '样本核验', report: '报告预览', live: '预测试演示' };
 
 export default function LandingDemo() {
   const [view, setView] = useState<DemoView>('questionnaire');
@@ -122,7 +122,7 @@ export default function LandingDemo() {
     if (view !== 'live') return null;
     const design = newQuestionnaire();
     design.title = '人们为什么选择这家店？';
-    design.population = state.sampleMode === 'distributed' ? '3 个商圈 / 2 个时段消费人群' : '门店周边雨天午间到店人群';
+    design.population = state.sampleMode === 'distributed' ? '三个商圈与两个时段的到店消费人群' : '门店周边雨天午间到店人群';
     design.objective = '把生活场景直觉转化为可比较的选店驱动因素与改善优先级';
     design.questions = state.questions.map((dq, i) => {
       const q = newQuestion(`demo-${dq.id}`, `Q${i + 1}`);
@@ -133,7 +133,9 @@ export default function LandingDemo() {
       return q;
     });
     const ratingQ = newQuestion('demo-sat', 'SAT_OVR');
-    ratingQ.text = '如果在{情境}消费，你对整体体验的满意程度如何？';
+    ratingQ.text = state.sampleMode === 'distributed'
+      ? '结合本次到店时段与商圈环境，你对整体消费体验的满意程度如何？'
+      : '结合雨天午间到店体验，你对整体消费服务的满意程度如何？';
     ratingQ.type = 'likert';
     ratingQ.min = 1;
     ratingQ.max = 5;
@@ -152,9 +154,7 @@ export default function LandingDemo() {
       engine: 'demo' as const,
       memory: 'carry' as const,
       shuffleOptions: false,
-      scenarios: state.sampleMode === 'distributed'
-        ? [{ id: 's-noon', label: '工作日午间', text: '工作日午间时段' }, { id: 's-eve', label: '周末晚间高峰', text: '周末晚间高峰时段' }]
-        : [{ id: 's-rain', label: '雨天午间', text: '雨天午间单店' }],
+      scenarios: [],
       models: [],
     };
     const run = demoRun(design, attrs, panel, runSettings);
@@ -165,7 +165,7 @@ export default function LandingDemo() {
     dispatch({ type: 'end-edit' }); setView(next);
     setNotice(next === 'questionnaire' ? '可以直接修改题目和选项，试着把问题问得更具体。'
       : next === 'sample' ? '切换采样方式，观察相同数量的记录覆盖了谁。'
-      : next === 'live' ? '同步你刚编辑的题目与采样方式，1:1 实时演练 Atypica 流程。'
+      : next === 'live' ? '同步你刚编辑的题目与采样方式，按同等结构实时演示预测试流程。'
       : '报告中的样本数字与当前合成示例一致。点击依据可以追溯输入。');
   }
   function chooseSample(mode: SampleMode) {
@@ -176,11 +176,11 @@ export default function LandingDemo() {
   return <div className={styles.demo} aria-label="证见交互产品示例">
     <div className={styles.chrome}>
       <div className={styles.windowDots} aria-hidden="true"><i/><i/><i/></div>
-      <span className={styles.windowLabel}>EVI-X / EXAMPLE PROJECT</span>
+      <span className={styles.windowLabel}>证见 · 交互示例项目</span>
     </div>
     <div className={styles.projectBar}>
       <div><span className={styles.projectEyebrow}>一个关于日常选择的研究</span><h3>人们为什么选择这家店？</h3></div>
-      <span className={styles.exampleStamp}>示例项目<br/><strong>01 / RESEARCH</strong></span>
+      <span className={styles.exampleStamp}>示例项目<br/><strong>01 · 研究立意</strong></span>
     </div>
     <div className={styles.workspace}>
       <aside className={styles.sidebar}>
@@ -194,7 +194,7 @@ export default function LandingDemo() {
       </aside>
       <div className={styles.canvas}>
         <div className={styles.toolbar}>
-          <span className={styles.breadcrumb}>示例项目 <i>/</i> {VIEW_LABELS[view]}</span>
+          <span className={styles.breadcrumb}>示例项目 <i>·</i> {VIEW_LABELS[view]}</span>
           <div className={styles.historyActions}>
             <button type="button" disabled={!state.history.length} onClick={() => { dispatch({ type: 'undo' }); setNotice('已撤销上一次问卷修改。'); }} aria-label="撤销上一次问卷修改"><span aria-hidden="true">↶</span> 撤销修改</button>
             <button type="button" onClick={() => { dispatch({ type: 'reset' }); setSelected(0); setNotice('题目、选项和采样方式已恢复为初始示例。'); }}>重置示例</button>
@@ -202,12 +202,12 @@ export default function LandingDemo() {
         </div>
 
         {view === 'questionnaire' && <div className={styles.questionnaire} role="region" aria-label="问卷设计示例">
-          <div className={styles.viewHeading}><span className={styles.eyebrow}>01 / ASK A BETTER QUESTION</span><h4>把一个好奇，写成可回答的问题。</h4><p>点击题目或选项即可改写。</p></div>
-          <div className={styles.questionIndex} role="group" aria-label="选择示例题目">{state.questions.map((q, index) => <button type="button" key={q.id} aria-pressed={selected === index} onClick={() => { setSelected(index); dispatch({ type: 'end-edit' }); setNotice(`正在编辑第 ${index + 1} 题：${q.short}。`); }}><span>0{index + 1}</span>{q.short}</button>)}</div>
+          <div className={styles.viewHeading}><span className={styles.eyebrow}>01 · 把问题问准</span><h4>把一个好奇，写成可回答的问题。</h4><p>点击题目或选项即可改写。</p></div>
+          <div className={styles.questionIndex} role="group" aria-label="选择示例题目">{state.questions.map((q, index) => <button type="button" key={q.id} aria-pressed={selected === index} onClick={() => { setSelected(index); dispatch({ type: 'end-edit' }); setNotice(`正在编辑第 ${index + 1} 题“${q.short}”。`); }}><span>0{index + 1}</span>{q.short}</button>)}</div>
           <div className={styles.questionEditor}>
             <div className={styles.questionMeta}><span>Q{selected + 1}</span><span>单选题</span><span>{question.options.length} 个选项</span></div>
             <label className={styles.titleLabel} htmlFor={`${id}-question`}>题目文字</label>
-            <textarea id={`${id}-question`} className={styles.questionTitle} value={question.title} rows={2} maxLength={180} placeholder="写下一个清楚、具体的问题" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'title', id: question.id, value: event.target.value }); setNotice('题目已修改，可撤销。'); }}/>
+            <textarea id={`${id}-question`} aria-label="题目文字" className={styles.questionTitle} value={question.title} rows={2} maxLength={180} placeholder="写下一个清楚、具体的问题" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'title', id: question.id, value: event.target.value }); setNotice('题目已修改，可撤销。'); }}/>
             <div className={styles.options}>{question.options.map((option, index) => <label key={`${question.id}-${index}`} className={styles.option}><span aria-hidden="true">{String.fromCharCode(65 + index)}</span><input aria-label={`第 ${selected + 1} 题选项 ${String.fromCharCode(65 + index)}`} value={option} maxLength={80} placeholder="填写选项内容" onBlur={() => dispatch({ type: 'end-edit' })} onChange={event => { dispatch({ type: 'option', id: question.id, index, value: event.target.value }); setNotice('选项已修改。'); }}/></label>)}</div>
             <div className={styles.optionFooter}><button type="button" className={styles.addOption} disabled={question.options.length >= DEMO_OPTION_LIMIT} onClick={() => { dispatch({ type: 'add', id: question.id }); setNotice('已添加一个可编辑选项。'); }}><span aria-hidden="true">＋</span>{question.options.length >= DEMO_OPTION_LIMIT ? '已达到 6 个选项' : '添加选项'}</button><span>最多 6 项 · 可撤销</span></div>
           </div>
@@ -215,29 +215,29 @@ export default function LandingDemo() {
         </div>}
 
         {view === 'sample' && <div className={styles.sample} role="region" aria-label="合成样本核验示例">
-          <div className={styles.viewHeading}><span className={styles.eyebrow}>02 / KNOW WHO IS REPRESENTED</span><h4>一样的数量，不一样的覆盖。</h4><p>以下 24 条记录全部为合成示例。切换采样方式，比较区域和时段。</p></div>
+          <div className={styles.viewHeading}><span className={styles.eyebrow}>02 · 核验样本代表性</span><h4>一样的数量，不一样的覆盖。</h4><p>以下 24 条记录全部为合成示例。切换采样方式，比较区域和时段。</p></div>
           <div className={styles.scenarios} role="group" aria-label="合成采样方式"><button type="button" aria-pressed={!distributed} onClick={() => chooseSample('concentrated')}><span>方式 A</span>同一家店 · 雨天午间</button><button type="button" aria-pressed={distributed} onClick={() => chooseSample('distributed')}><span>方式 B</span>多区域 · 多时段</button></div>
           <div className={styles.sampleNumbers}><div><strong>{sample.total}</strong><span>条合成记录</span></div><div><strong>{sample.areas}<small> / 3</small></strong><span>覆盖区域</span></div><div><strong>{sample.periods}<small> / 2</small></strong><span>覆盖时段</span></div></div>
           <figure className={styles.chart}>
-            <figcaption>记录的区域与时段分布 <span>单位：条</span></figcaption>
+            <figcaption>记录的区域与时段分布 <span>（单位为条）</span></figcaption>
             <div className={styles.legend}><span><i/>午间</span><span><i/>晚间</span></div>
-            {sample.rows.map(row => <div className={styles.chartRow} key={row.label}><div className={styles.chartLabel}><strong>{row.label}</strong><span>午间 {row.noon} · 晚间 {row.evening}</span></div><div className={styles.barTrack} role="img" aria-label={`${row.label}：午间 ${row.noon} 条，晚间 ${row.evening} 条，共 ${row.noon + row.evening} 条`}><span className={styles.noonBar} style={{ width: `${row.noon / sample.total * 100}%` }}/><span className={styles.eveningBar} style={{ width: `${row.evening / sample.total * 100}%` }}/></div></div>)}
+            {sample.rows.map(row => <div className={styles.chartRow} key={row.label}><div className={styles.chartLabel}><strong>{row.label}</strong><span>午间 {row.noon} · 晚间 {row.evening}</span></div><div className={styles.barTrack} role="img" aria-label={`${row.label}午间 ${row.noon} 条，晚间 ${row.evening} 条，共 ${row.noon + row.evening} 条`}><span className={styles.noonBar} style={{ width: `${row.noon / sample.total * 100}%` }}/><span className={styles.eveningBar} style={{ width: `${row.evening / sample.total * 100}%` }}/></div></div>)}
             <div className={styles.chartAxis} aria-hidden="true"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
           </figure>
           <div className={styles.sampleReading}><span>{distributed ? '覆盖更分散，仍需检查代表性。' : '先看见了谁，也要问漏掉了谁。'}</span><p>{distributed ? '24 条记录覆盖 3 个区域、2 个时段，仍属非随机样本。判断代表性还需核对招募方式、拒访与未到店人群。' : '记录仅覆盖雨天午间的到店者，遗漏其他区域、时段与未到店人群，结论只能描述这批记录。'}</p></div>
         </div>}
 
         {view === 'report' && <div className={styles.report} role="region" aria-label="研究报告结构示例">
-          <div className={styles.reportMeta}><span>RESEARCH NOTE / 01</span><span>结构化报告片段 · 合成示例</span></div>
+          <div className={styles.reportMeta}><span>研究札记 · 01</span><span>结构化报告片段 · 合成示例</span></div>
           <div className={styles.reportTitle}><span>关于一家店的选择研究</span><h4>先确认看见了谁，<br/>再解释为什么选择。</h4><p>研究备忘录 · 当前示例输入</p></div>
           <div className={styles.reportBody}>
-            <div className={styles.reportSection}><span>01</span><div><h5>研究问题</h5><p>比较具体到店情境下的选择因素，为门店改善确定值得进一步验证的方向。</p><details className={styles.evidence}><summary>查看题目依据 Q1</summary><blockquote>{state.questions[0].title || '待填写题目'}</blockquote><p>当前选项：{state.questions[0].options.map(option => option || '待填写').join('；')}。</p></details></div></div>
-            <div className={styles.reportSection}><span>02</span><div><h5>证据与适用范围</h5><p>当前 {sample.total} 条合成记录覆盖 {sample.areas} 个区域、{sample.periods} 个时段。{distributed ? '区域与时段更分散，仍需验证招募方式和目标人群覆盖。' : '记录全部来自门店周边的雨天午间，无法描述其他情境。'}</p><details className={styles.evidence}><summary>查看样本依据 S1</summary><ul>{sample.rows.map(row => <li key={row.label}>{row.label}：午间 {row.noon} 条，晚间 {row.evening} 条。</li>)}</ul><small>来源：本页固定合成数据；与“样本核验”所选方式同步。</small></details></div></div>
+            <div className={styles.reportSection}><span>01</span><div><h5>研究问题</h5><p>比较具体到店情境下的选择因素，为门店改善确定值得进一步验证的方向。</p><details className={styles.evidence}><summary>查看题目依据 Q1</summary><blockquote>{state.questions[0].title || '待填写题目'}</blockquote><p>当前共有选项“{state.questions[0].options.map(option => option || '待填写').join('”“')}”。</p></details></div></div>
+            <div className={styles.reportSection}><span>02</span><div><h5>证据与适用范围</h5><p>当前 {sample.total} 条合成记录覆盖 {sample.areas} 个区域、{sample.periods} 个时段。{distributed ? '区域与时段更分散，仍需验证招募方式和目标人群覆盖。' : '记录全部来自门店周边的雨天午间，无法描述其他情境。'}</p><details className={styles.evidence}><summary>查看样本依据 S1</summary><ul>{sample.rows.map(row => <li key={row.label}>{row.label}计午间 {row.noon} 条、晚间 {row.evening} 条。</li>)}</ul><small>数据取自本页固定合成示例，与“样本核验”所选方式实时同步。</small></details></div></div>
             <div className={styles.reportSection}><span>03</span><div><h5>下一步行动</h5><p>{distributed ? '检查未到店人群与拒访记录，再决定是否追加样本。收到真实作答后，按情境比较选择因素。' : '先补充其他时段、其他区域及未到店人群的观察，再比较不同情境下的选择因素。'}</p></div></div>
           </div>
-          <div className={styles.reportEnd}><span>问题 → 输入 → 判断 → 下一步</span><p>正式工作台可编辑报告并本地导出 Word。</p><a href="/workspace#editor">打开报告编辑工具 <span aria-hidden="true">↗</span></a></div>
+          <div className={styles.reportEnd}><span>问题 → 输入 → 判断 → 下一步</span><p>正式工作台可编辑报告并本地导出可编辑文档。</p><a href="/workspace#editor">打开报告编辑工具 <span aria-hidden="true">↗</span></a></div>
         </div>}
-        {view === 'live' && liveTheaterBundle && <div style={{ padding: 12 }} role="region" aria-label="1:1 硅基实时推演剧场">
+        {view === 'live' && liveTheaterBundle && <div style={{ padding: 12 }} role="region" aria-label="实时预测试演播室">
           <AtypicaLiveTheater
             design={liveTheaterBundle.design}
             attributes={liveTheaterBundle.attrs}

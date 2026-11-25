@@ -1,6 +1,7 @@
 import { CHART_THEMES } from './chart-theme.ts';
 import type { ChartSnapshot, ChartThemeId, FigureSettings } from './chart-types.ts';
 import type {ResultSnapshot} from './research-quality.ts';
+import { normalizeAcademicPunctuation } from './typography.ts';
 
 export const REPORT_FIGURE_KINDS = ['bar','horizontal_bar','grouped_bar','percent_stacked','heatmap','histogram','boxplot','table'] as const;
 export type ReportFigureKind = typeof REPORT_FIGURE_KINDS[number];
@@ -63,7 +64,7 @@ export function figureFromResult(result:ResultSnapshot,kind:ReportFigureKind,val
   const labels=[...new Set(result.rows.map(row=>String(row[0])))],columns=[...new Set(result.rows.map(row=>String(row[1])))],cells=new Map<string,number>();
   for(const row of result.rows){if(typeof row[2]!=='number'||row[2]<0||!Number.isInteger(row[2]))return fail();const key=JSON.stringify([row[0],row[1]]);if(cells.has(key))return fail();cells.set(key,row[2]);}
   if([...cells.values()].reduce((a,b)=>a+b,0)!==result.n)return fail();
-  return parseReportFigure({...base,xLabel:kind==='heatmap'?result.headers[1]:result.headers[0],yLabel:kind==='heatmap'?result.headers[0]:kind==='percent_stacked'?'行内占比 (%)':'频数',labels,series:columns.map(column=>({name:column,values:labels.map(label=>cells.get(JSON.stringify([label,column]))??0)})),note:kind==='percent_stacked'?'各行内构成：分母为该行全部分类频数；各行合计100%。':''});
+  return parseReportFigure({...base,xLabel:kind==='heatmap'?result.headers[1]:result.headers[0],yLabel:kind==='heatmap'?result.headers[0]:kind==='percent_stacked'?'行内占比 (%)':'频数',labels,series:columns.map(column=>({name:column,values:labels.map(label=>cells.get(JSON.stringify([label,column]))??0)})),note:kind==='percent_stacked'?'各行内构成按该行全部分类频数计，各行合计 100%。':''});
  }
  if(!Number.isInteger(valueColumn)||valueColumn<1||valueColumn>=result.headers.length)throw Error('请选择有效数值列。');
  if(result.rows.some(row=>typeof row[valueColumn]!=='number'))throw Error('所选列含缺失或非数值，请使用三线表。');
@@ -100,12 +101,13 @@ export function niceScale(low:number,high:number,most=5):{min:number;max:number;
 }
 export function reportFigureSVG(value:ReportFigure,style:ProjectVisualStyle):string {
   const f=parseReportFigure(value),palette=projectPalette(style),colors=palette.colors,ink='#263D4D';assertFormalFigureCapacity(f);
-  const out=[`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" role="img" aria-label="${escape(f.title)}"><desc>${escape(f.note)}</desc><rect width="1000" height="700" fill="#FFFFFF"/>`];
-  const label=(s:string,x:number,y:number,size=20,anchor='middle',fill=ink)=>out.push(`<text x="${x}" y="${y}" font-family="sans-serif" font-size="${size}" text-anchor="${anchor}" fill="${fill}">${escape(s)}</text>`);
+  const cleanTitle=normalizeAcademicPunctuation(f.title),cleanNote=normalizeAcademicPunctuation(f.note);
+  const out=[`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" role="img" aria-label="${escape(cleanTitle)}"><desc>${escape(cleanNote)}</desc><rect width="1000" height="700" fill="#FFFFFF"/>`];
+  const label=(s:string,x:number,y:number,size=20,anchor='middle',fill=ink)=>out.push(`<text x="${x}" y="${y}" font-family="sans-serif" font-size="${size}" text-anchor="${anchor}" fill="${fill}">${escape(normalizeAcademicPunctuation(s))}</text>`);
   const line=(x1:number,y1:number,x2:number,y2:number,color=ink,width=1)=>out.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}"/>`);
   const rect=(x:number,y:number,w:number,h:number,fill:string)=>out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`);
   const fmt=(n:number|null)=>n===null?'—':String(Number(n.toFixed(f.style.decimals)));
-  label(f.title,50,40,28,'start');label(`n = ${f.n}`,950,40,18,'end');
+  label(cleanTitle,50,40,28,'start');label(`n = ${f.n}`,950,40,18,'end');
   const top=95,bottom=500,left=f.kind==='horizontal_bar'?250:100,right=950,w=right-left,h=bottom-top;
   if(f.kind==='table'){
     if(f.table.rows.length>18||f.table.headers.length>10)throw Error('表格需分页或分拆后预览。');
@@ -138,7 +140,7 @@ export function reportFigureSVG(value:ReportFigure,style:ProjectVisualStyle):str
     labels.forEach((cat,i)=>{const slot=(horizontal?h:w)/labels.length;if(horizontal)label(cat,left-15,top+slot*(i+.62),18,'end');else label(cat,left+slot*(i+.5),bottom+32,18);
       let stacked=0;series.forEach((s,j)=>{const v=s.values[i];if(v===null)return;const fill=colors[j%colors.length];if(f.kind==='percent_stacked'){rect(left+slot*(i+.16),y(stacked+v),slot*.68,v/span*h,fill);if(f.style.showLabels&&v>=7)label(fmt(v)+'%',left+slot*(i+.5),y(stacked+v/2)+6,18,'middle',j<3?'#FFFFFF':ink);stacked+=v;}else if(horizontal){const rh=slot*.7/series.length;rect(Math.min(x(v),x(0)),top+slot*(i+.15)+j*rh,Math.abs(x(v)-x(0)),rh*.95,fill);if(f.style.showLabels)label(fmt(v),x(v)+(v<0?-8:8),top+slot*(i+.15)+(j+.7)*rh,16,v<0?'end':'start');}else{const constant=hist&&f.bins[0].start===f.bins.at(-1)!.end,binRange=hist?f.bins.at(-1)!.end-f.bins[0].start:1,bw=hist?(constant?w:(f.bins[i].end-f.bins[i].start)/binRange*w):slot*.7/series.length,px=hist?(constant?left:left+(f.bins[i].start-f.bins[0].start)/binRange*w):left+slot*(i+.15)+j*bw;rect(px,Math.min(y(v),y(0)),bw*(hist?1:.95),Math.abs(y(v)-y(0)),fill);if(f.style.showLabels)label(fmt(v),px+bw*.5,y(v)+(v<0?22:-8),16);}});
     });
-    line(left,bottom,right,bottom);if(series.length>1)series.forEach((s,i)=>{const x=left+(i%5)*w/5,y=560+Math.floor(i/5)*22,short=Array.from(s.name).slice(0,8).join('');rect(x,y-12,12,12,colors[i%colors.length]);out.push(`<text x="${x+18}" y="${y}" font-family="sans-serif" font-size="16" fill="${ink}"><title>${escape(s.name)}</title>${escape(short+(short.length<s.name.length?'…':''))}</text>`);});
+    line(left,bottom,right,bottom);if(series.length>1){const lCols=series.some(s=>Array.from(normalizeAcademicPunctuation(s.name)).length>8)?3:5,lMax=lCols===3?14:8;series.forEach((s,i)=>{const cleanName=normalizeAcademicPunctuation(s.name),x=left+(i%lCols)*w/lCols,y=560+Math.floor(i/lCols)*22,short=Array.from(cleanName).slice(0,lMax).join('');rect(x,y-12,12,12,colors[i%colors.length]);out.push(`<text x="${x+18}" y="${y}" font-family="sans-serif" font-size="16" fill="${ink}"><title>${escape(cleanName)}</title>${escape(short)}</text>`);});}
   }
   if(f.style.showBorder)out.push(`<rect x="2" y="2" width="996" height="696" fill="none" stroke="${ink}"/>`);
   label(f.kind==='horizontal_bar'?f.yLabel:f.xLabel,525,654,18);if(f.yLabel)label((f.kind==='horizontal_bar'?f.xLabel:f.yLabel).slice(0,60),50,75,18,'start');label(f.note.slice(0,75),50,685,15,'start');return out.join('')+'</svg>';

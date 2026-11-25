@@ -112,7 +112,7 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
   };
   const clear = () => {
     if (isActive(records.current.at(-1)) || !records.current.length) return;
-    if (!window.confirm('清空本页全部彩排记录？未下载的记录无法恢复。请先确认已保存彩排 JSON；答辩笔记不会被清空。')) return;
+    if (!window.confirm('清空本页全部彩排记录？未下载的记录无法恢复。请先确认已保存彩排备份文件；答辩笔记不会被清空。')) return;
     publish([]); setNow(0); setError(''); setNotice('已清空本页彩排记录。已下载的文件及答辩笔记未受影响。');
   };
 
@@ -123,7 +123,7 @@ export default function PitchRehearsal({total, reserve, weights, corpusVersion, 
   return <section ref={panel} className={styles.panel} aria-labelledby="rehearsal-title">
     <header className={styles.heading}><div><span className={styles.kicker}>把计划练一遍</span><h3 id="rehearsal-title">分段实测彩排</h3><p>逐段记录用时，对照计划复盘。</p></div><span className={styles.tag}>练习计时</span></header>
     <p className={styles.boundary}>切换模块或进入后台时自动暂停，返回后点击继续。离开前分别导出彩排记录与答辩笔记。</p>
-    <div className={styles.setup}><label>本轮报告 / 讲稿版本<input maxLength={120} value={reportVersion} onChange={e => setReportVersion(e.target.value)} disabled={active} placeholder="例如：讲稿 v3 · 10 月 2 日修订（自行填写）"/></label><button type="button" onClick={start} disabled={active || !!planError || !reportVersion.trim() || sessions.length >= MAX_ROUNDS}>{sessions.length ? '按当前计划再练一轮' : '开始本轮计时'}</button></div>
+    <div className={styles.setup}><label>本轮报告 / 讲稿版本<input maxLength={120} value={reportVersion} onChange={e => setReportVersion(e.target.value)} disabled={active} placeholder="如讲稿第三稿（10 月 2 日修订，自行填写）"/></label><button type="button" onClick={start} disabled={active || !!planError || !reportVersion.trim() || sessions.length >= MAX_ROUNDS}>{sessions.length ? '按当前计划再练一轮' : '开始本轮计时'}</button></div>
     {!!planError && <p className={styles.warning}>先修正上方时间设置，才能开始新一轮；已有记录不受影响。</p>}
     {sessions.length >= MAX_ROUNDS && <p className={styles.warning}>本页已记录 20 轮，不会自动删除旧记录。请先导出并确认保存，再清空以继续。</p>}
     {current && <>

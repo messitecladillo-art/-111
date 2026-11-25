@@ -35,3 +35,47 @@
 .panel :is(button,select,input,summary,a):focus-visible{outline:3px solid var(--wb-accent);outline-offset:3px}
 @media(max-width:750px){.header,.confirm{flex-direction:column;align-items:stretch}.header,.body{padding:18px}.state{align-self:flex-start}.inspect,.policies{grid-template-columns:1fr;gap:12px}.counts{gap:8px}.counts article{padding:12px 9px}.counts strong{font-size:27px}.counts p{font-size:14px}.panel .header h3{font-size:21px}.confirm p{max-width:none}}
 @media(max-width:410px){.counts{grid-template-columns:1fr}.counts article{display:grid;grid-template-columns:1fr auto;column-gap:15px}.counts strong{grid-column:2;grid-row:1 / span 2;margin:0}.counts p{grid-column:1}}
+
+@media (forced-colors: active) {
+  .panel,
+  .header,
+  .counts article,
+  .warning {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .panel,
+  .state,
+  .inspect select,
+  .counts article,
+  .panel .policies label,
+  .confirm button,
+  .warning {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .table :is(th, td),
+  .confirm {
+    border-color: CanvasText;
+  }
+
+  .sources a {
+    color: LinkText;
+  }
+
+  .state[data-ready=true],
+  .policies label[data-selected=true],
+  .confirm button {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .panel :is(button, select, input, summary, a):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

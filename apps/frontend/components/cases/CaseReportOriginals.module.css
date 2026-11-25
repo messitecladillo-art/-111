@@ -51,3 +51,46 @@
 .coverPlaceholder small { color:#687b87; font-size:12px; }
 .libraryTools :focus-visible,.reader :focus-visible { outline:2px solid var(--wb-accent,#087c74); outline-offset:3px; }
 @media(max-width:640px) { .readerHeader { padding:12px; align-items:flex-start; gap:10px; }.readerHeader h3 { font-size:16px; }.readerToolbar { padding:8px 10px; gap:8px; }.zoom { margin-left:0; }.readerMessage { padding:12px; }.libraryTools { padding:14px; }.libraryRow { gap:10px; } }
+
+@media (forced-colors: active) {
+  .libraryTools,
+  .fileRequirements p,
+  .reader,
+  .readerBody,
+  .readerMessage,
+  .cover,
+  .coverPlaceholder {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .libraryTools,
+  .fileRequirements p,
+  .cover,
+  .pageCanvas,
+  .libraryTools button,
+  .reader button,
+  .readerToolbar input {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .readerHeader,
+  .readerToolbar {
+    border-color: CanvasText;
+  }
+
+  .libraryTools .primary,
+  .zoom button[aria-pressed=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .libraryTools :focus-visible,
+  .reader :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

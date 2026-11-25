@@ -552,3 +552,93 @@
 .consentStamp { display: inline-block; margin-bottom: 4px; color: var(--wb-gold-text); font: 700 9px/1 var(--wb-mono); letter-spacing: 0.12em; }
 .consentDone strong { display: block; }
 @media (max-width: 720px) { .intentMenu { left: 8px; width: calc(100% - 16px); } }
+
+
+@media (forced-colors: active) {
+  .shell,
+  .rail,
+  .sessions,
+  .main,
+  .mainHeader,
+  .artifacts,
+  .composerFrame,
+  .shell .composerBox,
+  .intentMenu {
+    background: Canvas !important;
+    color: CanvasText !important;
+    box-shadow: none !important;
+  }
+
+  .main::before,
+  .sessions::after,
+  .rail::after,
+  .composerWrap::after,
+  .roomTransition {
+    display: none !important;
+  }
+
+  .railButton,
+  .newSession,
+  .searchBox,
+  .sessionRow,
+  .ghostButton,
+  .iconButton,
+  .userBubble,
+  .toolCard,
+  .consentCard,
+  .primaryButton,
+  .quickChip,
+  .composerFrame,
+  .shell .composerBox,
+  .intentToken,
+  .intentMenu,
+  .intentItem,
+  .addButton,
+  .modelSelect,
+  .modelChip,
+  .shell .sendButton,
+  .artifactCard,
+  .promptCard,
+  .loginCard,
+  .shell .mainHeader .projectSelect select,
+  .shell .consentCard .consentField select,
+  .shell .consentCard .consentField textarea {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .rail,
+  .sessions,
+  .sessionsFooter,
+  .mainHeader,
+  .artifacts,
+  .panelTabs,
+  .artifactQuestions,
+  .panelNote,
+  .contextList div,
+  .composerChrome,
+  .shell .composerFoot {
+    border-color: CanvasText !important;
+  }
+
+  .railButton[data-active="true"],
+  .sessionRow[data-active="true"],
+  .panelTab[aria-selected="true"],
+  .primaryButton,
+  .shell .sendButton:not(:disabled),
+  .addButton[data-open="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .shell :focus-visible,
+  .searchBox:focus-within,
+  .composerFrame:focus-within {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

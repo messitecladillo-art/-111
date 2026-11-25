@@ -7,6 +7,7 @@ import { EDITOR_LIMITS, type EditorContent } from './editor-model.ts';
 import { QUESTION_TYPES, type DesignQuestion, type Questionnaire } from './questionnaire.ts';
 import { METHOD_LABELS, targetSection } from './report-placement.ts';
 import { literalText } from './report-templates.ts';
+import { normalizeAcademicPunctuation } from './typography.ts';
 
 /** Option labels A … Z, then AA, AB …, so up to thirty options stay distinct. */
 const letter = (i: number): string => i < 26 ? String.fromCharCode(65 + i) : letter(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26));
@@ -44,7 +45,7 @@ function questionLines(q: DesignQuestion, index: number, all: readonly DesignQue
 /** The full questionnaire as appendix lines: title, introduction, then every question with its options. */
 export function questionnaireAppendix(q: Questionnaire): string[] {
   const lines = [q.title.trim(), ...q.introduction.split(/\r?\n/).map(l => l.trim()).filter(Boolean), ...q.questions.flatMap((x, i) => questionLines(x, i, q.questions))];
-  return lines.filter(Boolean).map(literalText);
+  return lines.filter(Boolean).map(line => normalizeAcademicPunctuation(literalText(line)));
 }
 
 /**
@@ -93,8 +94,8 @@ export function aiAppendix(answer: AiUse, content: EditorContent): string[] {
   const tools = answer.tools.trim(), uses = answer.uses.filter(Boolean), sections = answer.sections.trim();
   if (!tools || !uses.length) throw Error('请填写使用的工具与版本，并至少选择一项用途。');
   return [
-    literalText(`本研究在以下环节使用了生成式人工智能工具：${tools}。用途为${uses.join('、')}${sections ? `，涉及${sections}` : ''}。`),
-    literalText(answer.checking.trim() || DEFAULT_AI_CHECKING),
+    normalizeAcademicPunctuation(literalText(`本研究在以下环节使用了生成式人工智能工具：${tools}。用途为${uses.join('、')}${sections ? `，涉及${sections}` : ''}。`)),
+    normalizeAcademicPunctuation(literalText(answer.checking.trim() || DEFAULT_AI_CHECKING)),
     platform,
   ];
 }
@@ -108,13 +109,13 @@ export function writeAppendix(content: EditorContent, node: string, lines: reado
   const target = targetSection(content, node);
   const section = target.content.report.find(s => s.id === target.sectionId)!;
   const body = [section.body.trim(), lines.join('\n')].filter(Boolean).join('\n');
-  if (body.length > EDITOR_LIMITS.body) throw Error(`「${section.title}」的正文将超过 ${EDITOR_LIMITS.body.toLocaleString('zh-CN')} 字，请先删减或把内容分成两个附录。`);
+  if (body.length > EDITOR_LIMITS.body) throw Error(`“${normalizeAcademicPunctuation(section.title)}”的正文将超过 ${EDITOR_LIMITS.body.toLocaleString('zh-CN')} 字，请先删减或把内容分成两个附录。`);
   return { content: { ...target.content, report: target.content.report.map(s => s.id === target.sectionId ? { ...s, body } : s) }, sectionId: target.sectionId, created: target.created };
 }
 
 /** A section body with new lines after what is already there, within the body limit. */
 export function appendLines(body: string, lines: readonly string[], title: string): string {
   const next = [body.trim(), lines.join('\n')].filter(Boolean).join('\n');
-  if (next.length > EDITOR_LIMITS.body) throw Error(`「${title}」的正文将超过 ${EDITOR_LIMITS.body.toLocaleString('zh-CN')} 字，请先删减或把内容分成两个附录。`);
+  if (next.length > EDITOR_LIMITS.body) throw Error(`“${normalizeAcademicPunctuation(title)}”的正文将超过 ${EDITOR_LIMITS.body.toLocaleString('zh-CN')} 字，请先删减或把内容分成两个附录。`);
   return next;
 }

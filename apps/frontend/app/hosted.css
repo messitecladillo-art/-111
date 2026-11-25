@@ -191,3 +191,12 @@ p.hosted-empty[role=status]{overflow:hidden}
 .hosted-invite-code code{font:600 24px/1.3 var(--wb-mono);letter-spacing:.14em;color:var(--wb-text);background:var(--wb-surface);border:1px dashed var(--wb-line);border-radius:var(--wb-radius);padding:8px 16px;user-select:all}
 @media(max-width:820px){.hosted-invite-form{grid-template-columns:1fr 1fr}.hosted-invite-form label:first-child{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){.hosted-app *,.hosted-app *::before,.hosted-app *::after{animation:none!important;transition:none!important}.hosted-project-card:is(:hover,:focus-visible){transform:none}.hosted-project-card:is(:hover,:focus-visible) strong{transform:none}}
+@media(forced-colors:active){
+  .hosted-app :focus-visible,.hosted-project-card:focus-visible{outline:2px solid Highlight!important;outline-offset:2px;box-shadow:none!important}
+  .hosted-app :is(button,input:not([type=checkbox]),select,textarea),.hosted-account :is(button,a),.hosted-primary,.hosted-secondary{border:1px solid ButtonText}
+  .hosted-main a{color:LinkText;text-decoration:underline}
+  .hosted-card,.hosted-login-card,.hosted-project-card,.hosted-empty,.hosted-loading,.hosted-project-tools .hosted-project-tool,.hosted-invite-code code{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none!important}
+  .hosted-login-intro,.hosted-login-intro h2,.hosted-login-intro p{background:Canvas!important;color:CanvasText!important;-webkit-text-fill-color:CanvasText}
+  .hosted-table-wrap th,.hosted-table-wrap td,.hosted-tabs,.hosted-history>div{border-color:CanvasText!important}
+  .hosted-app .hosted-primary,.hosted-app .hosted-tabs button[aria-pressed=true],.hosted-service-card[data-selected=true]{forced-color-adjust:none;background:Highlight!important;color:HighlightText!important;border-color:Highlight!important}
+}

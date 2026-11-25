@@ -58,8 +58,8 @@ function ServicePanel() {
     if (!pending.current) {
       const maxOutputTokens = Number(form.maxOutputTokens);
       if (!form.label.trim() || !form.model.trim() || !form.capabilities.length || !Number.isInteger(maxOutputTokens) || maxOutputTokens < 128 || maxOutputTokens > 4096) { setError('请填写名称、模型、至少一项能力，以及128–4096的整数输出上限。'); return; }
-      if (!editing && !key) { setError('首次保存需要填写 API Key。'); return; }
-      if (editing && (editing.provider !== form.provider || editing.baseUrl !== form.baseUrl) && !key) { setError('更换服务商或地址需要重新填写 API Key。'); return; }
+      if (!editing && !key) { setError('首次保存需要填写访问密钥。'); return; }
+      if (editing && (editing.provider !== form.provider || editing.baseUrl !== form.baseUrl) && !key) { setError('更换服务商或地址需要重新填写访问密钥。'); return; }
       pending.current = { method: editing ? 'PUT' : 'POST', path: editing ? `/api/services/${editing.id}` : '/api/services', body: { label: form.label.trim(), provider: form.provider, baseUrl: form.baseUrl, model: form.model.trim(), maxOutputTokens, capabilities: form.capabilities, ...(key ? { apiKey: key } : {}), ...(editing ? { expectedRevision: editing.revision } : {}), idempotencyKey: crypto.randomUUID() } };
     }
     setBusy(true);
@@ -90,22 +90,22 @@ function ServicePanel() {
         <section className={styles.formCard} aria-labelledby="service-form-title">
           <header className={styles.formHeader}>
             <span className={styles.headerIcon}><ServiceIcon kind={editing ? 'key' : 'plus'}/></span>
-            <div><h2 id="service-form-title">{editing ? `修改 ${editing.label}` : '添加模型服务'}</h2><p>{editing ? '更新配置后，后续调用使用新版本。' : '保存一个名字，在研究的每一步调用。'}</p></div>
+            <div><h2 id="service-form-title">{editing ? `修改 ${editing.label}` : '添加研究服务'}</h2><p>{editing ? '更新配置后，后续调用使用新版本。' : '保存一个名字，在研究的每一步调用。'}</p></div>
           </header>
           <form onSubmit={submit}>
             <fieldset disabled={busy || uncertain || loading}>
               <div className={styles.fieldGrid}>
-                <label>配置名称<input ref={nameInput} required maxLength={80} placeholder="例如：我的研究助手" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))}/></label>
+                <label>配置名称<input ref={nameInput} required maxLength={80} placeholder="例如我的研究助手" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))}/></label>
                 <label>服务商<select value={form.provider} onChange={e => provider(e.target.value as ServiceProvider)}>{(Object.keys(providers) as ServiceProvider[]).map(value => <option key={value} value={value}>{providers[value].label}</option>)}</select></label>
               </div>
-              <label>模型 ID<input required maxLength={120} placeholder="填写服务商提供的模型 ID" value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))}/></label>
-              <label><span className={styles.labelRow}>API Key<span>{editing ? '留空保留原密钥' : '加密保存，不回显'}</span></span><input type="password" autoComplete="off" data-lpignore="true" spellCheck={false} maxLength={512} value={key} placeholder="输入 API Key" onChange={e => setKey(e.target.value)}/></label>
+              <label>服务模型名称<input required maxLength={120} placeholder="填写服务商提供的服务模型名称" value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))}/></label>
+              <label><span className={styles.labelRow}>访问密钥<span>{editing ? '留空保留原密钥' : '加密保存，不回显'}</span></span><input type="password" autoComplete="off" data-lpignore="true" spellCheck={false} maxLength={512} value={key} placeholder="输入访问密钥" onChange={e => setKey(e.target.value)}/></label>
               <fieldset className={styles.capabilities}><legend>可用任务</legend><div>{(Object.keys(CAPABILITY_LABELS) as ServiceCapability[]).map(c => <label key={c} data-checked={form.capabilities.includes(c)}><input type="checkbox" checked={form.capabilities.includes(c)} onChange={e => setForm(f => ({ ...f, capabilities: e.target.checked ? [...f.capabilities, c] : f.capabilities.filter(x => x !== c) }))}/>{CAPABILITY_LABELS[c]}</label>)}</div></fieldset>
               <details className={styles.advanced} open={form.provider === 'compatible'}>
                 <summary>高级设置<span>服务地址与输出上限</span></summary>
                 <label>服务地址<input required maxLength={512} value={form.baseUrl} readOnly={form.provider !== 'compatible'} onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))}/></label>
                 <p className={styles.fieldHelp}>兼容地址须经服务器管理员批准，不含密钥、账号参数或本机地址。</p>
-                <label>单次输出上限（tokens）<input type="number" min={128} max={4096} step={1} required value={form.maxOutputTokens} onChange={e => setForm(f => ({ ...f, maxOutputTokens: e.target.value }))}/></label>
+                <label>单次输出上限（词元）<input type="number" min={128} max={4096} step={1} required value={form.maxOutputTokens} onChange={e => setForm(f => ({ ...f, maxOutputTokens: e.target.value }))}/></label>
               </details>
               <div className={styles.formActions}>
                 <button type="submit" className={styles.primary} disabled={!editing && services.length >= 8}>{busy ? '正在保存…' : editing ? '保存修改' : '加密保存配置'}<span aria-hidden="true">→</span></button>
@@ -114,23 +114,23 @@ function ServicePanel() {
               {!editing && services.length >= 8 && <p className={styles.fieldHelp}>已达 8 项上限，移除一项后可继续添加。</p>}
             </fieldset>
           </form>
-          {uncertain && <div className="hosted-notice"><p>保存状态待核对。重试沿用原请求、原密钥和原内容。</p><div className={styles.receiptActions}><button className={styles.secondary} disabled={busy} onClick={() => void submit()}>核对并重试原保存</button><button className={styles.secondary} disabled={busy} onClick={() => { pending.current = null; setUncertain(false); setKey(''); void reload(); }}>取消重试，刷新列表</button></div></div>}
+          {uncertain && <div className="hosted-notice" role="status"><p>保存状态待核对。重试沿用原请求、原密钥和原内容。</p><div className={styles.receiptActions}><button type="button" className={styles.secondary} disabled={busy} onClick={() => void submit()}>核对并重试原保存</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => { pending.current = null; setUncertain(false); setKey(''); void reload(); }}>取消重试，刷新列表</button></div></div>}
           {busy && <p className="hosted-pending-status" role="status"><span aria-hidden="true"/>正在处理配置请求…</p>}
           <HostedReceipt text={error} tone="alert"/><HostedReceipt text={notice}/>
           <p className={styles.privacy}><ServiceIcon kind="lock"/><span>密钥不存入浏览器，仅你本人可用。</span></p>
         </section>
         <section className={styles.directory} ref={directory} aria-busy={loading} aria-labelledby="service-directory-title">
           <i className="hosted-step-marker" data-motion-marker aria-hidden="true" hidden/>
-          <header className={styles.directoryHeader}><div><h2 id="service-directory-title">已保存的服务</h2><span className={styles.count}>{services.length}<span> / 8</span></span></div><button className={styles.refresh} aria-label="刷新服务列表" data-pending={loading || undefined} disabled={loading || busy} onClick={() => void reload()}><ServiceIcon kind="refresh"/>刷新</button></header>
+          <header className={styles.directoryHeader}><div><h2 id="service-directory-title">已保存的服务</h2><span className={styles.count}>{services.length}<span> / 8</span></span></div><button type="button" className={styles.refresh} aria-label="刷新服务列表" data-pending={loading || undefined} disabled={loading || busy} onClick={() => void reload()}><ServiceIcon kind="refresh"/>刷新</button></header>
           {loading ? <div className={styles.loading} role="status"><span/>正在读取配置…</div>
             : !services.length ? <div className={styles.empty}>
               <div className={styles.emptyIllustration} aria-hidden="true"><span>Q</span><span>D</span><span>I</span><span>A</span><ServiceIcon kind="route"/></div>
               <h3>让合适的模型，接力你的研究</h3><p>添加服务后，为选题、问卷和报告安排模型。</p>
-              <button className={styles.secondary} disabled={busy || uncertain} onClick={() => nameInput.current?.focus()}><ServiceIcon kind="plus"/>添加第一个服务</button>
+              <button type="button" className={styles.secondary} disabled={busy || uncertain} onClick={() => nameInput.current?.focus()}><ServiceIcon kind="plus"/>添加第一个服务</button>
             </div>
               : <div className={styles.serviceList}>{services.map(s => <article key={s.id} data-motion-id={s.id} className={styles.serviceCard} data-selected={editing?.id === s.id}>
                 <ServiceSummary service={s}/>
-                <footer className={styles.cardActions}><button className={styles.editButton} disabled={busy || uncertain} aria-label={`修改 ${s.label} 的配置`} onClick={() => edit(s)}>修改配置<span aria-hidden="true">↗</span></button><button className={styles.removeButton} disabled={busy || uncertain} aria-label={`移除 ${s.label}`} onClick={() => void remove(s)}>移除</button></footer>
+                <footer className={styles.cardActions}><button type="button" className={styles.editButton} disabled={busy || uncertain} aria-label={`修改 ${s.label} 的配置`} onClick={() => edit(s)}>修改配置<span aria-hidden="true">↗</span></button><button type="button" className={styles.removeButton} disabled={busy || uncertain} aria-label={`移除 ${s.label}`} onClick={() => void remove(s)}>移除</button></footer>
               </article>)}</div>}
         </section>
       </div>

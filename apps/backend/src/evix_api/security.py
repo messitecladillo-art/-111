@@ -2,10 +2,53 @@
 from collections import defaultdict, deque
 import re
 import time
+import unicodedata
+from urllib.parse import quote
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 SCRAPER_UA_RE = re.compile(r"(sqlmap|nikto|nmap|masscan|acunetix|scrapy|httrack|webcopier)", re.IGNORECASE)
+_UNSAFE_FILENAME_CHARS_RE = re.compile(r'[\\/"\';<>:|?*]+')
+_EXT_RE = re.compile(r"\.([A-Za-z0-9]{1,10})$")
+
+
+def safe_content_disposition(
+    filename: str,
+    disposition: str = "attachment",
+    *,
+    fallback_stem: str = "export",
+) -> str:
+    """Build an RFC 6266 / RFC 5987 Content-Disposition header immune to CRLF splitting and quote injection."""
+    disp = str(disposition or "attachment").strip().lower()
+    if disp not in ("attachment", "inline"):
+        raise ValueError("Invalid Content-Disposition type")
+
+    safe_fallback = re.sub(r"[^A-Za-z0-9_-]+", "-", str(fallback_stem or "export")).strip("-_") or "export"
+    raw = unicodedata.normalize("NFKC", str(filename or ""))
+    # Strip CR, LF, NUL, and all Unicode control/format/line-separator characters
+    cleaned_chars = [
+        ch
+        for ch in raw
+        if ord(ch) >= 0x20 and ord(ch) != 0x7F and unicodedata.category(ch) not in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+    ]
+    cleaned = "".join(cleaned_chars).strip()
+
+    ext_match = _EXT_RE.search(cleaned)
+    ext = f".{ext_match.group(1).lower()}" if ext_match else ""
+    stem_raw = cleaned[: ext_match.start()] if ext_match else cleaned
+    stem_clean = _UNSAFE_FILENAME_CHARS_RE.sub("_", stem_raw)
+    stem_clean = re.sub(r"\.{2,}", "_", stem_clean)
+    stem_clean = re.sub(r"[\s_]+", "_", stem_clean).strip("._ -")[:100]
+    if not stem_clean:
+        stem_clean = safe_fallback
+
+    unicode_filename = f"{stem_clean}{ext}"
+    ascii_stem = re.sub(r"[^A-Za-z0-9_-]+", "_", stem_clean).strip("_-")[:80]
+    if not ascii_stem or not any(ch.isalnum() for ch in ascii_stem):
+        ascii_stem = safe_fallback
+    ascii_filename = f"{ascii_stem}{ext}"
+    rfc5987_value = quote(unicode_filename.encode("utf-8"), safe="-._~")
+    return f'{disp}; filename="{ascii_filename}"; filename*=UTF-8\'\'{rfc5987_value}'
 
 
 def _client_ip(request: Request) -> str:

@@ -31,6 +31,24 @@ const TABS: ReadonlyArray<{ id: ObservatoryTab; label: string }> = [
 const RHETORIC_BLUEPRINTS = Object.values(SECTION_RHETORICAL_BLUEPRINTS);
 const RUBRIC_COLORS = ['#94a3b8', '#7fb6ff', '#f4b942', '#4fd1c1', '#c084fc', '#fb7185'] as const;
 
+function cleanObservatoryCopy(raw: string): string {
+  return raw
+    .replace(/（(?:详?见|参见)?\{G\d+\}）/gu, '（见对应图表）')
+    .replace(/\{G\d+\}/gu, '对应图表')
+    .replace(/\{R\d+\}/gu, '')
+    .replace(/\{F\d+\}/gu, '实证指标')
+    .replace(/\[([^[\]]+)\]/gu, '（$1）')
+    .replace(/[【「]/gu, '“')
+    .replace(/[】」]/gu, '”')
+    .replace(/『/gu, '‘')
+    .replace(/』/gu, '’')
+    .replace(/Agent\s*语义造型/gu, '主题语义轮廓')
+    .replace(/\s*\(Dagre\s*自动布局\)/gu, '')
+    .replace(/正大杯高峰扩容期/gu, '赛事规模扩容期')
+    .replace(/正大杯/gu, '市调大赛')
+    .replace(/^([\u4e00-\u9fa5]{2,8})：/gu, '$1 · ');
+}
+
 function ExhibitArtwork({ kind }: { kind: VisualExhibitStat['svgKind'] }) {
   switch (kind) {
     case 'action_loop':
@@ -227,11 +245,11 @@ export default function CorpusObservatory({
       {/* Header + Minimal Segmented Pill Tabs */}
       <div className={styles.topBar}>
         <div>
-          <p className={styles.kicker}>CORPUS ATLAS · N={CORPUS_RESERVE_SUMMARY.totalReports}</p>
-          <h2 id="corpus-title" className={styles.title}>正大杯实证语料与范式图谱</h2>
+          <p className={styles.kicker}>实证范式图谱 · 共 {CORPUS_RESERVE_SUMMARY.totalReports} 篇国奖样本</p>
+          <h2 id="corpus-title" className={styles.title}>市调大赛实证语料与范式图谱</h2>
         </div>
 
-        <div className={styles.segmented} role="tablist" aria-label="正大杯实证统计图谱视图">
+        <div className={styles.segmented} role="tablist" aria-label="大赛实证统计图谱视图">
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -275,7 +293,7 @@ export default function CorpusObservatory({
       {activeTab === 'models' && (
         <div className={styles.splitGrid} role="tabpanel" aria-label="统计模型">
           <div className={styles.glassCard}>
-            <span className={styles.cardLabel}>检出率光谱 · n={CORPUS_RESERVE_SUMMARY.deepSampledDocs}</span>
+            <span className={styles.cardLabel}>方法检出率分布 · 深度抽样 {CORPUS_RESERVE_SUMMARY.deepSampledDocs} 篇</span>
             <div className={styles.spectrumList}>
               {EMPIRICAL_MODEL_STATS.map(m => (
                 <button
@@ -285,7 +303,7 @@ export default function CorpusObservatory({
                   aria-pressed={m.id === selectedModel.id}
                   onClick={() => setSelectedModelId(m.id)}
                 >
-                  <span className={styles.spectrumName}>{m.shortName}</span>
+                  <span className={styles.spectrumName}>{cleanObservatoryCopy(m.shortName)}</span>
                   <span className={styles.spectrumTrack}>
                     <span className={styles.spectrumFill} style={{ width: `${Math.max(8, m.ratePct)}%` }} />
                   </span>
@@ -316,10 +334,10 @@ export default function CorpusObservatory({
                 </text>
               </svg>
               <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
-                <strong style={{ fontSize: 15 }}>{selectedModel.shortName}</strong>
+                <strong style={{ fontSize: 15 }}>{cleanObservatoryCopy(selectedModel.shortName)}</strong>
                 <div className={styles.pillRow}>
-                  <span className={`${styles.miniPill} ${styles.goldPill}`}>{selectedModel.tier}</span>
-                  <span className={styles.miniPill}>{selectedModel.eraTrend}</span>
+                  <span className={`${styles.miniPill} ${styles.goldPill}`}>{cleanObservatoryCopy(selectedModel.tier)}</span>
+                  <span className={styles.miniPill}>{cleanObservatoryCopy(selectedModel.eraTrend)}</span>
                   <span className={styles.miniPill}>{selectedModel.sampleHits}/{selectedModel.sampleTotal} 篇</span>
                 </div>
               </div>
@@ -328,22 +346,27 @@ export default function CorpusObservatory({
             <div className={styles.pillRow}>
               {selectedModel.pairedWith.split('+').map(part => (
                 <span key={part} className={styles.miniPill} style={{ color: 'var(--obs-ivory)', borderColor: 'var(--obs-border)' }}>
-                  {part.trim()}
+                  {cleanObservatoryCopy(part.trim())}
                 </span>
               ))}
             </div>
 
-            <div className={styles.quoteLine}>{selectedModel.reportSentenceFormula}</div>
+            <div className={styles.quoteLine}>{cleanObservatoryCopy(selectedModel.reportSentenceFormula)}</div>
 
             <div>
               <button
                 type="button"
                 className={styles.actionBtn}
-                onClick={() => triggerAction(selectedModel.id, `[${selectedModel.shortName}] 要求：${selectedModel.pairedWith}`)}
+                onClick={() =>
+                  triggerAction(
+                    selectedModel.id,
+                    cleanObservatoryCopy(`围绕“${selectedModel.shortName}”，建议配套汇报 ${selectedModel.pairedWith}。`),
+                  )
+                }
               >
                 {copiedId === selectedModel.id
-                  ? onInjectSteering ? '✓ 已注入写作队列' : '✓ 已复制模型规范'
-                  : onInjectSteering ? '+ 注入模型规范' : '复制规范'}
+                  ? onInjectSteering ? '已加入写作参考' : '已复制模型规范'
+                  : onInjectSteering ? '加入模型规范' : '复制规范'}
               </button>
             </div>
           </div>
@@ -356,6 +379,7 @@ export default function CorpusObservatory({
           <div className={styles.bentoGrid}>
             {VISUAL_EXHIBIT_STATS.map(ex => {
               const active = ex.id === selectedChart.id;
+              const cleanName = cleanObservatoryCopy(ex.name);
               return (
                 <button
                   key={ex.id}
@@ -369,10 +393,10 @@ export default function CorpusObservatory({
                   </div>
                   <div style={{ display: 'grid', gap: 2 }}>
                     <div className={styles.bentoMeta}>
-                      <span className={styles.bentoTitle}>{ex.name.split('—')[0].split('/')[0].slice(0, 10)}</span>
+                      <span className={styles.bentoTitle}>{cleanName.split('—')[0].split('/')[0].slice(0, 10)}</span>
                       <span className={styles.bentoPct}>{ex.ratePct}%</span>
                     </div>
-                    <span className={styles.bentoSub}>{ex.targetSectionLabel.split(' ')[0]}</span>
+                    <span className={styles.bentoSub}>{cleanObservatoryCopy(ex.targetSectionLabel.split(' ')[0])}</span>
                   </div>
                 </button>
               );
@@ -380,9 +404,9 @@ export default function CorpusObservatory({
           </div>
           <div className={styles.insightStrip}>
             <span>
-              <strong style={{ color: 'var(--obs-gold)' }}>{selectedChart.name}</strong> · {selectedChart.upgradeTip}
+              <strong style={{ color: 'var(--obs-gold)' }}>{cleanObservatoryCopy(selectedChart.name)}</strong> · {cleanObservatoryCopy(selectedChart.upgradeTip)}
             </span>
-            <span className={styles.miniPill}>{selectedChart.targetNode}</span>
+            <span className={styles.miniPill}>{cleanObservatoryCopy(selectedChart.targetSectionLabel)}</span>
           </div>
         </div>
       )}
@@ -398,18 +422,18 @@ export default function CorpusObservatory({
                 className={`${styles.chipBtn} ${t.id === selectedTable.id ? styles.chipBtnActive : ''}`}
                 onClick={() => setSelectedTableId(t.id)}
               >
-                {t.title.split(' ')[1]} · {t.ratePct}%
+                {cleanObservatoryCopy(t.title.split(' ')[1] ?? t.title)} · {t.ratePct}%
               </button>
             ))}
           </div>
 
           <div className={styles.tableStage}>
-            <p className={styles.tableHeading}>{selectedTable.title}</p>
+            <p className={styles.tableHeading}>{cleanObservatoryCopy(selectedTable.title)}</p>
             <table className={styles.academicTable}>
               <thead>
                 <tr>
                   {selectedTable.headers.map(h => (
-                    <th key={h}>{h}</th>
+                    <th key={h}>{cleanObservatoryCopy(h)}</th>
                   ))}
                 </tr>
               </thead>
@@ -417,7 +441,7 @@ export default function CorpusObservatory({
                 {selectedTable.sampleRows.map((row, ri) => (
                   <tr key={ri}>
                     {row.map((cell, ci) => (
-                      <td key={ci}>{cell}</td>
+                      <td key={ci}>{cleanObservatoryCopy(cell)}</td>
                     ))}
                   </tr>
                 ))}
@@ -429,7 +453,7 @@ export default function CorpusObservatory({
             <div className={styles.pillRow}>
               {selectedTable.mandatoryStats.map(s => (
                 <span key={s} className={styles.miniPill}>
-                  {s}
+                  {cleanObservatoryCopy(s)}
                 </span>
               ))}
             </div>
@@ -437,10 +461,13 @@ export default function CorpusObservatory({
               type="button"
               className={styles.actionBtn}
               onClick={() =>
-                triggerAction(selectedTable.id, `[三线表核查] ${selectedTable.title} 须含：${selectedTable.mandatoryStats.join('、')}`)
+                triggerAction(
+                  selectedTable.id,
+                  cleanObservatoryCopy(`三线表核查提示，“${selectedTable.title}”应完整汇报 ${selectedTable.mandatoryStats.join('、')}。`),
+                )
               }
             >
-              {copiedId === selectedTable.id ? '✓ 已完成' : onInjectSteering ? '+ 注入核查' : '复制指标'}
+              {copiedId === selectedTable.id ? '已完成' : onInjectSteering ? '加入核查参考' : '复制指标'}
             </button>
           </div>
         </div>
@@ -453,8 +480,8 @@ export default function CorpusObservatory({
             {TITLE_RHETORIC_PATTERNS.map(pat => (
               <div key={pat.id} className={styles.formulaCard}>
                 <span className={styles.formulaPct}>{pat.sharePct}%</span>
-                <strong style={{ fontSize: 12.5 }}>{pat.formulaName.split(' + ')[0]}</strong>
-                <span style={{ fontSize: 11, color: 'var(--obs-muted)' }}>{pat.countIn204} 篇 · {pat.bestForTracks.split('、')[0]}</span>
+                <strong style={{ fontSize: 12.5 }}>{cleanObservatoryCopy(pat.formulaName.split(' + ')[0])}</strong>
+                <span style={{ fontSize: 11, color: 'var(--obs-muted)' }}>{pat.countIn204} 篇 · {cleanObservatoryCopy(pat.bestForTracks.split('、')[0])}</span>
               </div>
             ))}
           </div>
@@ -468,7 +495,7 @@ export default function CorpusObservatory({
                   className={`${styles.chipBtn} ${selectedGroup === g ? styles.chipBtnActive : ''}`}
                   onClick={() => handleGroupChange(g)}
                 >
-                  {g}
+                  {cleanObservatoryCopy(g)}
                 </button>
               ))}
             </div>
@@ -481,7 +508,7 @@ export default function CorpusObservatory({
                   className={`${styles.chipBtn} ${activeBlueprint.nodeId === n.nodeId ? styles.chipBtnActive : ''}`}
                   onClick={() => setSelectedNodeId(n.nodeId)}
                 >
-                  {n.sectionName}
+                  {cleanObservatoryCopy(n.sectionName)}
                 </button>
               ))}
             </div>
@@ -489,26 +516,31 @@ export default function CorpusObservatory({
             <div className={styles.stepFlow}>
               <div className={styles.stepNode}>
                 <span className={styles.stepBadge}>01 · 推进脉络</span>
-                <span style={{ fontSize: 12, color: 'var(--obs-ivory)' }}>{activeBlueprint.structuralArc}</span>
+                <span style={{ fontSize: 12, color: 'var(--obs-ivory)' }}>{cleanObservatoryCopy(activeBlueprint.structuralArc)}</span>
               </div>
               <div className={styles.stepNode}>
                 <span className={styles.stepBadge}>02 · 开篇起笔</span>
-                <span style={{ fontSize: 12, color: 'var(--obs-mist)' }}>{activeBlueprint.openingMove}</span>
+                <span style={{ fontSize: 12, color: 'var(--obs-mist)' }}>{cleanObservatoryCopy(activeBlueprint.openingMove)}</span>
               </div>
               <div className={styles.stepNode}>
                 <span className={styles.stepBadge}>03 · 评委关口</span>
-                <span style={{ fontSize: 12, color: 'var(--obs-gold)' }}>{activeBlueprint.judgeCheckpoint}</span>
+                <span style={{ fontSize: 12, color: 'var(--obs-gold)' }}>{cleanObservatoryCopy(activeBlueprint.judgeCheckpoint)}</span>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <span className={styles.cardLabel}>{activeBlueprint.nodeId} · 已内置 Prompt</span>
+              <span className={styles.cardLabel}>{cleanObservatoryCopy(activeBlueprint.sectionName)} · 已内置国奖写作范式</span>
               <button
                 type="button"
                 className={styles.actionBtn}
-                onClick={() => triggerAction(activeBlueprint.nodeId, `[${activeBlueprint.sectionName}] ${activeBlueprint.recommendedNotes}`)}
+                onClick={() =>
+                  triggerAction(
+                    activeBlueprint.nodeId,
+                    cleanObservatoryCopy(`围绕“${activeBlueprint.sectionName}”，${activeBlueprint.recommendedNotes}`),
+                  )
+                }
               >
-                {copiedId === activeBlueprint.nodeId ? '✓ 已完成' : onInjectSteering ? '+ 注入本节范式' : '复制本节范式'}
+                {copiedId === activeBlueprint.nodeId ? '已完成' : onInjectSteering ? '加入本节范式' : '复制本节范式'}
               </button>
             </div>
           </div>
@@ -521,7 +553,7 @@ export default function CorpusObservatory({
           <div className={styles.glassCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className={styles.cardLabel}>2014–2025 样本演进</span>
-              <span className={styles.miniPill}>{activeYearObj.year} · {activeYearObj.count} 篇 · {activeYearObj.eraTag}</span>
+              <span className={styles.miniPill}>{activeYearObj.year} · {activeYearObj.count} 篇 · {cleanObservatoryCopy(activeYearObj.eraTag)}</span>
             </div>
             <svg viewBox="0 0 462 132" width="100%" height="132" role="img" aria-label="2014到2025历届国奖数量趋势图">
               <defs>

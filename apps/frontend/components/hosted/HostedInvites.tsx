@@ -67,19 +67,19 @@ function InvitePanel() {
       <span className="hosted-kicker">邀请新成员</span><h2>发放邀请码</h2>
       <p className="hosted-small">对方在登录页填写邮箱与邀请码，收到验证码后即可注册。每个邀请码按可用次数注册账号，到期或作废后失效；已注册的账号之后直接用邮箱登录。</p>
       <form className="hosted-invite-form" onSubmit={create} aria-busy={busy}>
-        <label>用途说明<input value={label} maxLength={40} required disabled={busy} placeholder="例如：数据组队友" onChange={e => setLabel(e.target.value)}/></label>
+        <label>用途说明<input value={label} maxLength={40} required disabled={busy} placeholder="例如数据组队友" onChange={e => setLabel(e.target.value)}/></label>
         <label>可用次数<input type="number" min={1} max={50} value={maxUses} required disabled={busy} onChange={e => setMaxUses(e.target.value)}/></label>
         <label>有效天数<input type="number" min={1} max={30} value={days} required disabled={busy} onChange={e => setDays(e.target.value)}/></label>
-        <button className="hosted-primary" data-pending={busy || undefined} disabled={busy || !label.trim()}>生成邀请码</button>
+        <button type="submit" className="hosted-primary" data-pending={busy || undefined} disabled={busy || !label.trim()}>生成邀请码</button>
       </form>
-      {fresh && <div className="hosted-notice" role="status"><p>“{fresh.label}”的邀请码（只显示这一次，请现在复制并发给对方）：</p><div className="hosted-invite-code"><code>{fresh.code}</code><button type="button" className="hosted-secondary" onClick={() => void copy()}>复制</button></div></div>}
+      {fresh && <div className="hosted-notice" role="status"><p>“{fresh.label}”的邀请码（只显示这一次，请现在复制并发给对方）</p><div className="hosted-invite-code"><code>{fresh.code}</code><button type="button" className="hosted-secondary" onClick={() => void copy()}>复制</button></div></div>}
       <HostedReceipt text={notice}/><HostedReceipt text={error} tone="alert"/>
     </section>
     <section className="hosted-card">
       <h3>已发放的邀请码</h3>
       {invites.length ? <div className="hosted-table-wrap"><table><thead><tr><th>用途</th><th>已用 / 可用</th><th>状态</th><th>有效至</th><th>管理</th></tr></thead><tbody>
         {invites.map(invite => <tr key={invite.id}><td>{invite.label}</td><td>{invite.uses} / {invite.maxUses}</td><td>{STATUS_LABELS[invite.status]}</td><td>{day(invite.expiresAt)}</td>
-          <td>{invite.status === 'active' ? <button type="button" className="hosted-secondary" disabled={busy} onClick={() => void revoke(invite)}>作废</button> : '—'}</td></tr>)}
+          <td>{invite.status === 'active' ? <button type="button" className="hosted-secondary" aria-label={`作废 ${invite.label} 的邀请码`} disabled={busy} onClick={() => void revoke(invite)}>作废</button> : '—'}</td></tr>)}
       </tbody></table></div> : <p className="hosted-small">还没有发放邀请码。</p>}
     </section>
   </>;

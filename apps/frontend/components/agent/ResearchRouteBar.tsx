@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { RESEARCH_STAGES, type ResearchStageId } from '@/lib/agent/research-stages';
 import { Icon } from './icons';
+import { useKeyedListMotion } from './useEvixMotion';
 import styles from './ResearchRouteBar.module.css';
 
 const ROUTE_GROUPS: ReadonlyArray<{ id: string; label: string; steps: readonly ResearchStageId[] }> = [
@@ -27,6 +28,13 @@ export default function ResearchRouteBar({ current, overviewActive, onSelect, on
   const trigger = useRef<HTMLButtonElement>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const currentStep = RESEARCH_STAGES.find(step => step.id === current);
+  const activeGroup = ROUTE_GROUPS.find(group => !!currentStep && group.steps.includes(currentStep.id));
+  const routeMotionIds = useMemo(() => ['overview', ...ROUTE_GROUPS.map(g => g.id)], []);
+  const routeIndexRef = useKeyedListMotion<HTMLDivElement>({
+    ids: routeMotionIds,
+    activeId: overviewActive ? 'overview' : (activeGroup?.id ?? null),
+    markerAxis: 'horizontal',
+  });
 
   useEffect(() => {
     if (!openGroup) return;
@@ -53,9 +61,11 @@ export default function ResearchRouteBar({ current, overviewActive, onSelect, on
         setOpenGroup(null);
       }}
     >
-      <div className={styles.index}>
+      <div ref={routeIndexRef} className={styles.index}>
+        <span data-motion-marker className={styles.routeMarker} aria-hidden="true" />
         <button
           type="button"
+          data-motion-id="overview"
           className={styles.overview}
           aria-current={overviewActive ? 'page' : undefined}
           onClick={() => {
@@ -75,6 +85,7 @@ export default function ResearchRouteBar({ current, overviewActive, onSelect, on
             <div key={group.id} className={styles.group}>
               <button
                 type="button"
+                data-motion-id={group.id}
                 className={styles.groupButton}
                 data-active={active}
                 aria-label={group.label}

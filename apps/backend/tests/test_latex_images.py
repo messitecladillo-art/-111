@@ -19,7 +19,8 @@ def png(width, height, pad=0):
 
 def test_images_are_pngs_that_state_their_size():
     assert len(latex.checked_images([png(1600, 960)])) == 1
-    for bad in ([], [png(1600, 960)] * 25, [{**png(1600, 960), "widthPx": 1601}], [{**png(1600, 960), "mime": "image/jpeg"}],
+    assert len(latex.checked_images([png(1600, 960)] * 48)) == 48
+    for bad in ([], [png(1600, 960)] * 49, [{**png(1600, 960), "widthPx": 1601}], [{**png(1600, 960), "mime": "image/jpeg"}],
                 [{**png(1600, 960), "extra": 1}], [png(100, 960)], [png(1600, 960, 700_001)]):
         with pytest.raises(ApiError):
             latex.checked_images(bad)

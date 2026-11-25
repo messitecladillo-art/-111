@@ -43,8 +43,9 @@ def report_settings(value):
 # Mirrors EDITOR_LIMITS and QUALITY_LIMITS in the browser models: chapters and their sections are separate
 # entries, and a full report backs dozens of figures and tables with registered results.
 MAX_SECTIONS, MAX_SLIDES, MAX_RESULTS, MAX_CONTENT_BYTES = 100, 40, 120, 2_000_000
-# The page art (cover up to 1 MB, frame up to 600 KB, as base64) has caps of its own and is outside the 2 MB text cap.
-PAGE_ART_KEYS, MAX_PAGE_ART_BYTES = ("coverImage", "frameImage"), 2_300_000
+from .page_art import MAX_PAGE_ART_BYTES as _MAX_PAGE_ART_BYTES
+# The page art (cover up to 1 MB, frame up to 600 KB, and up to 12 section illustrations <= 650 KB, as base64) sits outside the 2 MB text cap.
+PAGE_ART_KEYS, MAX_PAGE_ART_BYTES = ("coverImage", "frameImage", "illustrations"), _MAX_PAGE_ART_BYTES
 QUALITY_LAYOUTS = ("cover", "problem", "chart", "comparison", "segments", "insight", "action", "closing")
 VECTOR_ASSETS = ("mosaic-edge", "focus-loop", "path-ribbon")
 # ECMAScript trim differs from Python strip for BOM and NEL. Preserve ID text
@@ -130,7 +131,7 @@ def quality_content(value):
                     bounded_number(cell, -1e100, 1e100)
                 else:
                     quality_text(cell, 2000)
-        for metric in quality_list(r["metrics"], 40):
+        for metric in quality_list(r["metrics"], 160):
             m = object_fields(metric, ("label", "value"))
             quality_text(m["label"], 160, True)
             if m["value"] is not None:
@@ -231,7 +232,7 @@ def references_content(value):
 
 
 def report_content(value):
-    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references", "visualStyle", "figures", "reportFrame", "coverImage", "frameImage", "figurePalette"))
+    x = object_fields(value, ("version", "title", "subtitle", "accent", "report", "slides"), ("reportFormat", "latex", "quality", "references", "visualStyle", "figures", "reportFrame", "coverImage", "frameImage", "figurePalette", "illustrations"))
     if "references" in x:
         references_content(x["references"])
     if type(x["version"]) is not int or x["version"] not in (1, 2, 3) or x["accent"] not in ("teal", "blue", "burgundy"):
@@ -325,7 +326,7 @@ def report_content(value):
                 unique_quality(pieces)
     validate_report_visuals(x)
     if len(canonical({k: v for k, v in x.items() if k not in PAGE_ART_KEYS}).encode("utf-8")) > MAX_CONTENT_BYTES:
-        raise ApiError(413, "payload_too_large", "草稿超过 2 MB，请拆分作品。")
+        raise ApiError(413, "payload_too_large", "报告草稿超过 2 MB 上限，请拆分章节后保存。")
     return x
 
 

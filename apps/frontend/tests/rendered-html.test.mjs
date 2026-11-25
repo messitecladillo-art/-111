@@ -157,7 +157,7 @@ test("server-renders the finished EVI-X product shell", async () => {
   assert.match(response.headers.get("permissions-policy") ?? "", /camera=\(\)/);
 
   const html = await response.text();
-  assert.match(html, /<title>证见 EVI-X｜正大杯冠军 Agent<\/title>/);
+  assert.match(html, /<title>证见 EVI-X｜实证调查研究工作台<\/title>/);
   assert.match(html, /让每个问题/);
   assert.match(html, /报告案例库/);
   assert.match(html, /Agent 诊断/);

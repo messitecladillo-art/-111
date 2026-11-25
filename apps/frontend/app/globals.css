@@ -19,16 +19,83 @@
   --radius-lg: 28px;
   --radius-md: 18px;
 
-  /* One motion vocabulary: things arrive on a single expo-out curve with no overshoot,
-     leave a little faster, and pick one of four durations. Long choreography (landing,
-     evidence flight) keeps its own explicit timings. */
+  /* One motion vocabulary: Apple Spring & Material 3 Emphasized curves for silky, zero-jank UI transitions. */
   --motion-instant: 90ms;  /* press feedback */
   --motion-fast: 160ms;    /* hover, colour and small state changes */
-  --motion-base: 220ms;    /* reveals and selection */
+  --motion-base: 240ms;    /* reveals and selection */
   --motion-slow: 320ms;    /* layout, panels and emphasis */
-  --ease-arrive: cubic-bezier(.16, 1, .3, 1);
-  --ease-move: cubic-bezier(.65, 0, .35, 1);
-  --ease-exit: cubic-bezier(.4, 0, 1, 1);
+  --ease-apple-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-m3-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-arrive: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-move: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Editorial Duotone Icon System tokens */
+  --evix-icon-ink: currentColor;
+  --evix-icon-teal: #0f766e;
+  --evix-icon-teal-fill: rgba(15, 118, 110, 0.22);
+  --evix-icon-gold: #c4933f;
+  --evix-icon-gold-soft: rgba(196, 147, 63, 0.24);
+  --evix-icon-tile-bg: #e6f4f1;
+  --evix-icon-tile-fg: #0f766e;
+
+  /* Brand motion system tokens: Optical Prism Light-Path × Xuan-Ink Settle */
+  --evix-dur-micro: 110ms;
+  --evix-dur-ray: 180ms;
+  --evix-dur-ink: 260ms;
+  --evix-dur-stage: 340ms;
+  --evix-dur-sweep: 680ms;
+  --evix-ease-prism: cubic-bezier(0.16, 1, 0.3, 1);
+  --evix-ease-ink: cubic-bezier(0.22, 0.88, 0.28, 1);
+  --evix-ease-ray: cubic-bezier(0.2, 0, 0, 1);
+  --evix-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --evix-stagger-step: 28ms;
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+:root:not([data-theme-transition="true"])::view-transition-old(root) {
+  animation: evixViewOut var(--evix-dur-ray, 180ms) var(--evix-ease-exit, cubic-bezier(0.4, 0, 1, 1)) both;
+}
+
+:root:not([data-theme-transition="true"])::view-transition-new(root) {
+  animation: evixViewIn var(--evix-dur-ink, 260ms) var(--evix-ease-prism, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+:root[data-theme-transition="true"]::view-transition-old(root),
+:root[data-theme-transition="true"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@keyframes evixViewOut {
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  to { opacity: 0; transform: translate3d(0, -4px, 0) scale(0.996); }
+}
+
+@keyframes evixViewIn {
+  from { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.996); }
+  to { opacity: 1; transform: none; }
+}
+
+.evix-route-stage {
+  animation: evixRouteEnter 260ms var(--ease-apple-spring, cubic-bezier(0.22, 1, 0.36, 1));
+  will-change: opacity, transform;
+}
+
+@keyframes evixRouteEnter {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+button:not(:disabled) {
+  transition: transform var(--motion-instant) var(--ease-apple-spring), background-color var(--motion-fast) var(--ease-m3-emphasized), border-color var(--motion-fast) var(--ease-m3-emphasized), color var(--motion-fast) var(--ease-m3-emphasized), opacity var(--motion-fast) ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.975);
 }
 
 * { box-sizing: border-box; }
@@ -526,5 +593,147 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after, ::view-transition-old(root), ::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  button:not(:disabled):active { transform: none; }
+}
+
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .skip-link,
+  .hosted-skip,
+  .site-header,
+  .site-footer,
+  .closing-cta,
+  .workbench-sidebar,
+  .workbench-topbar,
+  .wb-footer,
+  .wb-canvas-return,
+  .wb-command-dialog,
+  .drawer-layer,
+  .project-sidebar {
+    display: none !important;
+  }
+
+  .evix-route-stage {
+    animation: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .workbench,
+  .workbench.agent-app,
+  .workbench[data-view="canvas"] {
+    display: block !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .workbench-main,
+  body[data-knowledge-docked="true"] .workbench-main,
+  .workbench-content,
+  .workbench-content > main,
+  .hosted-main,
+  .workspace-shell,
+  .project-main,
+  .rule-result {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding-right: 0 !important;
+    overflow: visible !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .workbench-content {
+    padding: 0 !important;
+  }
+
+  .wb-panel:not([hidden]) {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .case-card,
+  .workspace-block,
+  .diagnose-form,
+  .diagnosis-result,
+  .source-card,
+  .resolved-rules article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .ghost-button,
+  .gold-button,
+  .header-cta,
+  .menu-button,
+  .icon-button,
+  .key-generator,
+  .case-card,
+  .source-card,
+  .workspace-shell,
+  .workspace-block,
+  .gate-pill,
+  .rule-form,
+  .rule-result,
+  .resolved-rules article,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    border: 1px solid ButtonText !important;
+    box-shadow: none !important;
+  }
+
+  .project-list-item.active,
+  .primary-button:hover,
+  .header-cta:hover {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .qdia-cards,
+  .qdia-cards article,
+  .resolved-scope,
+  table,
+  thead th,
+  tbody td {
+    border-color: CanvasText !important;
+  }
 }

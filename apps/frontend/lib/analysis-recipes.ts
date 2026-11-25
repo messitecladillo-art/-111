@@ -1,15 +1,9 @@
 import { categoryCounts, describeNumbers, finiteNumber, isMissing, profileSurvey, type SurveyTable } from './survey-analysis.ts';
 import { correlationTest, fisherExact, formatCoefficient, formatP, formatStat, holm, kruskalWallis, mannWhitney, meanInterval, oneWayAnova, chiSquareUpper, welchAnova, welchT, wilsonInterval, type Interval } from './inference.ts';
 
-export const ANALYSIS_BLOCKS = [
-  {id:'frequency',title:'频数与比例',tag:'样本结构',roles:['分类变量'],use:'回答样本由哪些人、选择或状态组成。',boundary:'单列分类题；多选题须先按选项拆列，不能将组合文本当作选项占比。'},
-  {id:'numeric',title:'数值分布',tag:'描述水平',roles:['数值变量'],use:'同时查看均值、标准差、中位数和四分位数。',boundary:'数字编码不自动等于连续变量；先核对单位、范围与异常值。'},
-  {id:'groups',title:'分组比较',tag:'组间差异',roles:['分组变量','数值变量'],use:'并排比较各组的样本数、均值与离散程度，并检验组间差异。',boundary:'两组用 Welch t 检验，三组及以上用 Welch 方差分析，均不假定方差相等；另给秩检验作稳健性对照，多组两两比较用 Holm 校正。检验不证明因果。'},
-  {id:'crosstab',title:'交叉表与关联强度',tag:'分类关联',roles:['行分类变量','列分类变量'],use:'查看交叉频数、行内比例、Pearson χ² 检验和 Cramér V。',boundary:'χ² 不作连续性校正；期望频数小于 5 的格较多时，2×2 表以 Fisher 精确检验为准，其他表按研究依据合并类别后再检验。'},
-  {id:'pearson',title:'Pearson 相关',tag:'线性关联',roles:['数值变量 X','数值变量 Y'],use:'考察两个数值变量在当前配对样本中的线性关联，附双侧检验与 95% 区间。',boundary:'区间用 Fisher z 变换；先检查线性关系和异常值，相关不证明因果。'},
-  {id:'spearman',title:'Spearman 秩相关',tag:'单调关联',roles:['有序 / 数值 X','有序 / 数值 Y'],use:'按有效配对重新排序，以平均秩处理并列值。',boundary:'p 值用 t 近似；有序编码需保持真实顺序；不适用于无序类别，也不证明因果。'},
-] as const;
-export type AnalysisMethod = typeof ANALYSIS_BLOCKS[number]['id'];
+import { ANALYSIS_BLOCKS, type AnalysisBlock, type AnalysisMethod } from './analysis-blocks-meta.ts';
+
+export { ANALYSIS_BLOCKS, type AnalysisBlock, type AnalysisMethod };
 export type Recipe = {id:string;method:AnalysisMethod;x:number|null;y:number|null;question:string};
 /** One reported test: a ready-to-cite line plus the numbers behind it. */
 export type TestReport = { name:string; line:string; p:number|null; effect?:{name:string;value:number|null;interval?:Interval|null}; statistic?:{label:string;value:number;df?:number[]} };
@@ -45,10 +39,10 @@ function groupInference(entries:[string,number[]][]):Inference|undefined {
   if(observed.length<2)return undefined;
   const notes=[SAMPLING_NOTE,MULTIPLE_NOTE];
   if(observed.length<entries.length)notes.push(`${entries.length-observed.length} 组没有有效数值，不参与检验。`);
-  const undefinedPrimary=(reason:string):Inference=>({primary:{name:'差异检验',line:`检验不定义：${reason}`,p:null},robustness:[],notes});
+  const undefinedPrimary=(reason:string):Inference=>({primary:{name:'差异检验',line:`检验不定义，${reason}`,p:null},robustness:[],notes});
   if(observed.some(([,values])=>values.length<2))return undefinedPrimary('至少一组少于 2 个有效数值，无法估计组内方差。');
   const values=observed.map(([,v])=>v),small=values.some(v=>v.length<15);
-  if(small)notes.push('有组少于 15 个有效值：均值检验对偏态和异常值敏感，请对照秩检验结果，结论不一致时以更保守者为准。');
+  if(small)notes.push('有组少于 15 个有效值，均值检验对偏态和异常值敏感，请对照秩检验结果，结论不一致时以更保守者为准。');
   if(observed.length===2){
     const w=welchT(values[0],values[1]);
     if(!w)return undefinedPrimary('两组数值都没有变异。');
@@ -131,7 +125,7 @@ export function runRecipe(table:SurveyTable,recipe:Recipe,missingCodes:string[])
         if(rowLabels.length===2&&colLabels.length===2){
           const fp=fisherExact(cells[0][0],cells[0][1],cells[1][0],cells[1][1]),fisher:TestReport={name:'Fisher 精确检验',line:`Fisher 精确检验（双侧）${formatP(fp)}`,p:fp};
           if(low){primary={...fisher,effect:chiReport.effect};robustness.push(chiReport);notes.push('2×2 表存在期望频数小于 5 的格，以 Fisher 精确检验为主要结果。');}else robustness.push(fisher);
-        }else if(sparse)notes.push('超过 20% 的格期望频数小于 5，或有格小于 1：χ² 的 p 值不可靠。请按研究依据合并类别后再检验，不要为追求显著而合并。');
+        }else if(sparse)notes.push('超过 20% 的格期望频数小于 5，或有格小于 1，χ² 的 p 值不可靠；请按研究依据合并类别后再检验，不要为追求显著而合并。');
         result.inference={primary,robustness,notes};
         result.metrics.push({label:primary.name==='Fisher 精确检验'?'p 值（Fisher 精确）':'p 值（χ² 渐近）',value:primary.p});
       }

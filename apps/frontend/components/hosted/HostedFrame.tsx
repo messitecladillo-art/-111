@@ -17,7 +17,7 @@ export function HostedReceipt({ text, tone = 'notice' }: { text: string; tone?: 
 export function AccountStatus() {
   const { session, loading, error, logout, refresh } = useHostedSession(), [notice, setNotice] = useState('');
   return <div className="hosted-account" data-state={loading ? 'loading' : error ? 'error' : session?.authenticated ? 'authenticated' : 'signed-out'} aria-busy={loading}>
-    {loading ? <span>正在核对登录状态…</span> : error ? <><span role="alert">账号服务暂未就绪</span><button onClick={() => void refresh().catch(e => setNotice(errorMessage(e)))}>重新连接</button></> : session?.authenticated ? <><span>{session.user?.email}</span><button onClick={() => void logout().catch(e => setNotice(errorMessage(e)))}>退出</button></> : <Link href="/login">邮箱登录</Link>}
+    {loading ? <span role="status">正在核对登录状态…</span> : error ? <><span role="alert">账号服务暂未就绪</span><button type="button" onClick={() => void refresh().catch(e => setNotice(errorMessage(e)))}>重新连接</button></> : session?.authenticated ? <><span>{session.user?.email}</span><button type="button" onClick={() => void logout().catch(e => setNotice(errorMessage(e)))}>退出</button></> : <Link href="/login">邮箱登录</Link>}
     {notice && <span role="alert">{notice}</span>}
   </div>;
 }
@@ -27,7 +27,7 @@ export default function HostedFrame({ title, subtitle, children, variant = 'app'
   const { openSearch } = useKnowledge();
   if (variant === 'auth') return <ThemeProvider value={theme}><div className="workbench hosted-app hosted-auth" data-theme={theme}>
     <a className="hosted-skip" href="#hosted-content">跳到主要内容</a>
-    <header className="hosted-auth-bar"><Link className="wb-brand" href="/"><BrandMark size={32}/><span><strong>证见 EVI-X</strong><small>正大杯研究工作台</small></span></Link><div className="wb-top-actions"><Link className="hosted-ghost-link" href="/workspace">先看看研究工具</Link><ThemeToggle theme={theme}/></div></header>
+    <header className="hosted-auth-bar"><Link className="wb-brand" href="/"><BrandMark size={32}/><span><strong>证见 EVI-X</strong><small>实证调查研究工作台</small></span></Link><div className="wb-top-actions"><Link className="hosted-ghost-link" href="/workspace">先看看研究工具</Link><ThemeToggle theme={theme}/></div></header>
     <main id="hosted-content" className="hosted-main hosted-auth-main" tabIndex={-1}><h1 className="hosted-sr-only">{title}</h1>{children}</main>
     <WorkbenchFooter/>
   </div></ThemeProvider>;
@@ -36,7 +36,7 @@ export default function HostedFrame({ title, subtitle, children, variant = 'app'
     <a className="hosted-skip" href="#hosted-content">跳到主要内容</a>
     <WorkbenchSidebar active={pathname === '/knowledge' ? 'knowledge' : active} inWorkspace={false} open={open} setOpen={setOpen} menuRef={menuRef} onSearch={openSearch}/>
     <div className="workbench-main">
-      <PageHeading group={pathname === '/knowledge' ? '知识与方法' : active === 'services' ? '服务与设置' : '项目管理'} title={title} description={subtitle} actions={<><button className="wb-search-toggle" onPointerDown={event => event.preventDefault()} onClick={openSearch}>全局搜索 <kbd>Ctrl K</kbd></button><AccountStatus/><ThemeToggle theme={theme}/></>}/>
+      <PageHeading group={pathname === '/knowledge' ? '知识与方法' : active === 'services' ? '服务与设置' : '项目管理'} title={title} description={subtitle} actions={<><button type="button" className="wb-search-toggle" onPointerDown={event => event.preventDefault()} onClick={openSearch}>全局搜索 <kbd>Ctrl K</kbd></button><AccountStatus/><ThemeToggle theme={theme}/></>}/>
       <div className="workbench-content"><main id="hosted-content" className="hosted-main" tabIndex={-1}>{children}</main></div>
       <WorkbenchFooter/>
     </div>

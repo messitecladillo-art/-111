@@ -16,10 +16,13 @@ export type RevisionApplyResult = { ok: true } | { ok: false; reason: string };
 
 const clip = (s: string, n: number) => s.slice(0, n);
 const lines = (s: string) => s.split(/\n+/u).filter(p => p.trim());
-// The declaration stays verbatim even when the model omits it. It is not editable prose.
+// Declarations and exhibit notes stay verbatim even when the model omits them. They are not editable prose.
 const declaration = (s: string) => /^【教学模拟数据/u.test(s.trim());
-const editableBody = (s: ReportSection) => lines(s.body).filter(p => !declaration(p));
-export const revisionProse = (s: ReportSection) => [...editableBody(s), ...(s.blocks ?? []).filter(b => b.kind === 'paragraph').flatMap(b => lines(b.text))];
+export const isExhibitNote = (s: string) => /^注[：:]/u.test(s.trim());
+const editableParagraphBlock = (b: NonNullable<ReportSection['blocks']>[number]) => b.kind === 'paragraph' && !isExhibitNote(b.text);
+const editableBody = (s: ReportSection) => lines(s.body).filter(p => !declaration(p) && !isExhibitNote(p));
+export const revisionProse = (s: ReportSection) => [...editableBody(s), ...(s.blocks ?? []).filter(editableParagraphBlock).flatMap(b => lines(b.text))];
+const normalizeMathToken = (s: string) => s.replace(/\$([^$\n]+)\$/gu, (_, inner: string) => `$${inner.replace(/\s+/gu, '')}$`);
 const basis = (c: EditorContent, design: Questionnaire | null) => JSON.stringify({ title: c.title, subtitle: c.subtitle, quality: c.quality ?? null, references: c.references ?? null, design });
 
 export function revisionProblem(anchor: RevisionAnchor, snapshot: RevisionSnapshot, design: Questionnaire | null, scope: ReportRunScope): string | null {
@@ -44,7 +47,7 @@ export function prepareSectionRevision(snapshot: RevisionSnapshot, sectionId: st
   const facts = draftFacts(held, 'section.revision');
   const request: DraftRequest = {
     schemaVersion: 1, idempotencyKey: crypto.randomUUID(),
-    section: { node: 'section.revision', title: clip(section.title || '未命名章节', 80), purpose: '修订指定章节已有正文，理顺论证与语言；不得新增调查事实、文献、实施效果或方法结果。', moves: ['保留原文研究问题与结论边界', '用登记事实支持表述，区分解释与实证结果', '改善段落衔接与准确性；不写其他章节'], needs: ['待人工复核的正文候选'], length: null },
+    section: { node: 'section.revision', title: clip(section.title || '未命名章节', 80), purpose: '修订指定章节已有正文，理顺论证与语言；不得新增调查事实、文献、实施效果或方法结果，并原样保留所有 $...$ 行内公式与 [[...]] 引用标记。', moves: ['保留原文研究问题与结论边界', '用登记事实支持表述，区分解释与实证结果', '原样保留正文中的所有行内公式（$...$）与图表文献引用标记（[[表:...]]、[[图:...]]、[[式:...]]、[[引:...]]），不得删改或省略', '改善段落衔接与准确性；不写其他章节'], needs: ['待人工复核的正文候选'], length: null },
     project: { title: clip(content.title, 80), objective: clip(design?.objective ?? '', 400), population: clip(design?.population ?? '', 200) },
     facts: facts.map(({ id, text }) => ({ id, text })),
     findings: standingFindings(held).slice(0, 20).map(f => ({ title: clip(f.title, 80), interpretation: clip(f.interpretation, 600), scope: clip(f.scope, 300), action: clip(f.action, 300) })),
@@ -72,21 +75,24 @@ export function proposalFromReceipt(prepared: PreparedRevision, receipt: DraftRe
 export function applySectionRevision(snapshot: RevisionSnapshot, design: Questionnaire | null, scope: ReportRunScope, proposal: SectionRevisionProposal): EditorContent {
   const problem = revisionProblem(proposal.anchor, snapshot, design, scope);
   if (problem) throw Error(problem);
-  if (!proposal.paragraphs.length || proposal.paragraphs.length > 8 || proposal.paragraphs.some(p => typeof p !== 'string' || !p.trim() || p.length > 2000)) throw Error('候选正文格式无效。');
+  if (!proposal.paragraphs.length || proposal.paragraphs.length > 12 || proposal.paragraphs.some(p => typeof p !== 'string' || !p.trim() || p.length > 2000)) throw Error('候选正文格式无效。');
   const section = snapshot.content.report.find(s => s.id === proposal.anchor.sectionId)!;
   const nextText = proposal.paragraphs.join('\n');
+  const normalizedNext = normalizeMathToken(nextText);
   const protectedTokens = revisionProse(section).join('\n').match(/\[\[[^\]]+\]\]|\$[^$\n]+\$/gu) ?? [];
-  if (protectedTokens.some(token => !nextText.includes(token))) throw Error('候选遗漏行内引用或公式，请在编辑器中人工修订。');
+  if (protectedTokens.some(token => (token.startsWith('$') ? !normalizedNext.includes(normalizeMathToken(token)) : !nextText.includes(token)))) throw Error('候选遗漏行内引用或公式，请在编辑器中人工修订。');
   const bodyWeight = editableBody(section).length;
-  const total = bodyWeight + (section.blocks ?? []).filter(b => b.kind === 'paragraph').reduce((n, b) => n + Math.max(1, lines(b.text).length), 0);
+  const total = bodyWeight + (section.blocks ?? []).filter(editableParagraphBlock).reduce((n, b) => n + Math.max(1, lines(b.text).length), 0);
   let consumed = 0, weight = 0;
   const take = (count: number) => {
     weight += count;
     const end = Math.round(proposal.paragraphs.length * weight / Math.max(1, total));
     const text = proposal.paragraphs.slice(consumed, end).join('\n'); consumed = end; return text;
   };
-  const body = [...lines(section.body).filter(declaration), ...(bodyWeight ? [take(bodyWeight)] : total ? [] : [nextText])].filter(Boolean).join('\n');
-  const blocks = section.blocks?.map(b => b.kind === 'paragraph' ? { ...b, text: take(Math.max(1, lines(b.text).length)) } : b);
+  const lockedBodyHead = lines(section.body).filter(declaration);
+  const lockedBodyTail = lines(section.body).filter(p => !declaration(p) && isExhibitNote(p));
+  const body = [...lockedBodyHead, ...(bodyWeight ? [take(bodyWeight)] : total ? [] : [nextText]), ...lockedBodyTail].filter(Boolean).join('\n');
+  const blocks = section.blocks?.map(b => editableParagraphBlock(b) ? { ...b, text: take(Math.max(1, lines(b.text).length)) } : b);
   const next = { ...snapshot.content, report: snapshot.content.report.map(s => s.id === section.id ? { ...s, body, ...(blocks ? { blocks } : {}) } : s) };
   return parseEditorContent(next);
 }

@@ -91,7 +91,7 @@ export default function ReportCaseLibrary() {
       <label><span className="sr-only">研究地区</span><select value={region} onChange={event => setRegion(event.target.value)}><option value="">全部地区</option>{REGIONS.map(option => <option key={option.value} value={option.value}>{option.value} · {option.count}</option>)}</select></label>
       <label><span className="sr-only">研究方法</span><select value={method} onChange={event => setMethod(event.target.value)}><option value="">全部方法</option>{METHODS.map(option => <option key={option.value} value={option.value}>{option.value} · {option.count}</option>)}</select></label>
     </div>
-    <div className={styles.results}><div className={styles.appliedFilters}><span aria-live="polite">{visible.length} 份报告</span>{method && <button type="button" className={styles.filterChip} onClick={() => setMethod('')} aria-label={`取消方法筛选：${method}`}>{method}<span aria-hidden="true">×</span></button>}</div>{filtered && <button type="button" onClick={() => { setQuery(''); setRegion(''); setMethod(''); }}>清除筛选</button>}</div>
+    <div className={styles.results}><div className={styles.appliedFilters}><span aria-live="polite">{visible.length} 份报告</span>{method && <button type="button" className={styles.filterChip} onClick={() => setMethod('')} aria-label={`取消“${method}”方法筛选`}>{method}<span aria-hidden="true">×</span></button>}</div>{filtered && <button type="button" onClick={() => { setQuery(''); setRegion(''); setMethod(''); }}>清除筛选</button>}</div>
     </div>
     {!visible.length ? <div className={styles.empty}><h3>暂时没有匹配的报告</h3><p>试试选题、地区或方法名称。</p><button type="button" onClick={() => { setQuery(''); setRegion(''); setMethod(''); }}>查看全部报告</button></div> : <div className={styles.grid}>
       {visible.map(report => <article className={styles.card} key={report.id}>
@@ -103,7 +103,7 @@ export default function ReportCaseLibrary() {
           <div className={styles.tags}><span>{report.topic[0] ?? '市场研究'}</span><span>{report.region.join(' · ')}</span></div>
           <h3>{report.title}{report.subtitle && !report.title.includes(report.subtitle) && <span>{report.subtitle}</span>}</h3>
           <p>{report.summary}</p>
-          <div className={styles.methods}>{report.methods.slice(0, 3).map(item => <button type="button" key={item} aria-label={`筛选方法：${item}`} aria-pressed={method === item} onClick={() => setMethod(current => current === item ? '' : item)}>{item}</button>)}{report.methods.length > 3 && <span title={report.methods.slice(3).join('、')}>+{report.methods.length - 3}</span>}</div>
+          <div className={styles.methods}>{report.methods.slice(0, 3).map(item => <button type="button" key={item} aria-label={`按“${item}”筛选方法`} aria-pressed={method === item} onClick={() => setMethod(current => current === item ? '' : item)}>{item}</button>)}{report.methods.length > 3 && <span title={report.methods.slice(3).join('、')}>+{report.methods.length - 3}</span>}</div>
           <button type="button" className={styles.readButton} onClick={event => openReport(report, event.currentTarget)}><span>{availableIds.includes(report.id) ? reading[report.id]?.page > 1 ? '继续阅读' : '阅读原报告' : '查看报告'}</span><span className={styles.readDestination}>{availableIds.includes(report.id) && reading[report.id]?.page > 1 && <em>第 {reading[report.id].page} 页</em>}<span aria-hidden="true">↗</span></span></button>
         </div>
         <span className={styles.number} aria-hidden="true">{String(REPORT_CASES.indexOf(report) + 1).padStart(2, '0')}</span>
@@ -118,7 +118,7 @@ export default function ReportCaseLibrary() {
             <div className={styles.guideHeading}><h3>阅读线索</h3><button type="button" disabled={page === 1} onClick={() => setPage(1)}>回到封面</button></div>
             <nav>{selected.readingGuide.map((entry, index) => <button type="button" className={activeGuide === entry ? styles.activeGuide : undefined} aria-current={activeGuide === entry ? 'location' : undefined} key={`${entry.page}-${index}`} onClick={() => setPage(entry.page)}><span><strong>{entry.label}</strong><em>p. {entry.page}</em></span><p>{entry.note}</p></button>)}</nav>
             <div className={styles.guideMethods}><h3>文中方法</h3><div className={styles.methods}>{selected.methods.map(item => <span key={item}>{item}</span>)}</div></div>
-            <details className={styles.source}><summary>文件与来源</summary><p>{selected.filename}</p><p>{selected.sourceCollection}</p>{selected.award && <p>奖项：{selected.award}</p>}<p>{selected.institution ? `学校：${selected.institution}` : '学校及奖项未独立核验'}</p><p className={styles.hash}>SHA-256 · {selected.sha256}</p></details>
+            <details className={styles.source}><summary>文件与来源</summary><p>{selected.filename}</p><p>{selected.sourceCollection}</p>{selected.award && <p>获奖情况 · {selected.award}</p>}<p>{selected.institution ? `完成院校 · ${selected.institution}` : '学校及奖项未独立核验'}</p><p className={styles.hash}>文件校验码 · {selected.sha256}</p></details>
           </aside>
           <div className={styles.reader}><CaseReportReader report={selected} initialPage={page} onPageChange={setPage} onPageRendered={recordReading} onClose={close} compact /></div>
         </div>

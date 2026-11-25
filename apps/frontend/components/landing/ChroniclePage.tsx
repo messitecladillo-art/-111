@@ -299,7 +299,7 @@ export default function ChroniclePage() {
 
       <Chapter stage={1} id="era-oracle" layout="art-left" numeral="壹" era="商" period="约公元前13—前11世纪" tag="殷墟甲骨" year="−1300" glyph="卜" title={<>先问，<br/>后验。</>}>
         <blockquote className={`${styles.quote} ${styles.reveal}`}><p>貞，卜問也。</p><cite>许慎《说文解字》</cite></blockquote>
-        <p className={`${styles.body} ${styles.reveal}`}>商代王室遇事占卜：先在龟甲兽骨的背面钻凿，再灼烧出裂纹，称为「卜兆」，据此判断吉凶，并把所问之事刻在卜兆旁。一条完整的卜辞通常有四个部分，最后的「验辞」记下事情是否应验——问题与结果刻在同一片甲骨上，三千年后仍可回查。</p>
+        <p className={`${styles.body} ${styles.reveal}`}>商代王室遇事占卜：先在龟甲兽骨的背面钻凿，再灼烧出裂纹，称为“卜兆”，据此判断吉凶，并把所问之事刻在卜兆旁。一条完整的卜辞通常有四个部分，最后的“验辞”记下事情是否应验——问题与结果刻在同一片甲骨上，三千年后仍可回查。</p>
         <ol className={`${styles.oracleParts} ${styles.reveal}`} aria-label="卜辞的四个部分">{ORACLE_PARTS.map(([name, meaning], index) => <li key={name} tabIndex={0}><em>0{index + 1}</em><strong>{name}</strong><span>{meaning}</span></li>)}</ol>
         <Bridge>先锁定届次、组别、赛区、赛道与阶段，再写清决策问题和待验证的判断；结论出来后，回到原问题逐条核对。</Bridge>
       </Chapter>
@@ -310,11 +310,11 @@ export default function ChroniclePage() {
             <p className={styles.srOnly}>子曰：“夏礼，吾能言之，杞不足征也；殷礼，吾能言之，宋不足征也。文献不足故也。足，则吾能征之矣。”</p>
             <div className={styles.slipRow} aria-hidden="true">{SLIPS.map((slip, index) => <span key={slip} style={{ '--i': index } as CSSProperties}>{slip}</span>)}</div>
           </blockquote>
-          <figcaption>朱熹注：「徵，證也。文，典籍也。獻，賢也。」</figcaption>
+          <figcaption>朱熹注：“徵，證也。文，典籍也。獻，賢也。”</figcaption>
         </figure>
         <div className={styles.split}>
-          <p className={`${styles.body} ${styles.reveal}`}>孔子能讲述夏、殷两代的礼制，却不肯下定论——杞、宋两国留存的典籍与贤人，不足以为他的话作证。「文献」一词，最早就见于这段话。证据不够时，诚实的回答是：尚不能证。</p>
-          <Bridge>缺失即未知。资料不足时，证见把它标为「未知」并列入待补材料，而不是替你补写数据、受访者或引用。</Bridge>
+          <p className={`${styles.body} ${styles.reveal}`}>孔子能讲述夏、殷两代的礼制，却不肯下定论——杞、宋两国留存的典籍与贤人，不足以为他的话作证。“文献”一词，最早就见于这段话。证据不够时，诚实的回答是：尚不能证。</p>
+          <Bridge>缺失即未知。资料不足时，证见把它标为“未知”并列入待补材料，而不是替你补写数据、受访者或引用。</Bridge>
         </div>
       </Chapter>
 
@@ -324,13 +324,13 @@ export default function ChroniclePage() {
           <span className={styles.faWhole} aria-hidden="true">灋</span><span className={styles.faEquals} aria-hidden="true">=</span>
           {FA_PARTS.map(([part, from, meaning]) => <span key={part} className={styles.faPart} data-tilt><b aria-hidden="true">{part}</b><span>{from}</span><em>{meaning}</em></span>)}
         </div>
-        <p className={`${styles.body} ${styles.reveal}`}>古文的「法」写作「灋」。许慎解释：从水，取其公平如水；从廌，即独角神兽獬豸，传说能辨曲直，以角触理亏的一方；从去，将不直者除去。后世执法官员所戴的法冠，也称「獬豸冠」。</p>
+        <p className={`${styles.body} ${styles.reveal}`}>古文的“法”写作“灋”。许慎解释：从水，取其公平如水；从廌，即独角神兽獬豸，传说能辨曲直，以角触理亏的一方；从去，将不直者除去。后世执法官员所戴的法冠，也称“獬豸冠”。</p>
         <figure className={`${styles.vitrine} ${styles.reveal}`} data-tilt>
           {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized derivative of the approved brand anchor */}
           <img src="/brand/evi-x-character-anchor-v2-960.webp" width={960} height={640} loading="lazy" decoding="async" alt="獬见：深蓝色幼年獬豸，头顶一根带四个发光节点的金色独角，胸前有青金棱镜，耳内有金色引号纹，尾端是箭头。"/>
-          <figcaption><strong>两千年后，獬豸有了新的样子。</strong>证见的守证灵兽「獬见」只有一根角，角上四个节点，依次代表问题、数据、洞察、行动。<small>AI 辅助生成、经人工验收的原创概念角色</small></figcaption>
+          <figcaption><strong>两千年后，獬豸有了新的样子。</strong>证见的守证灵兽“獬见”只有一根角，角上四个节点，依次代表问题、数据、洞察、行动。<small>AI 辅助生成、经人工验收的原创概念角色</small></figcaption>
         </figure>
-        <Bridge>证见的审计同样「触不直」：把 AI 合成的材料冒充真实田野或数据，会被判为致命问题，无法进入最终交付。</Bridge>
+        <Bridge>证见的审计同样“触不直”：把 AI 合成的材料冒充真实田野或数据，会被判为致命问题，无法进入最终交付。</Bridge>
       </Chapter>
 
       <Chapter stage={4} id="era-kaoju" layout="center" numeral="肆" era="清" period="乾嘉年间 · 约1736—1820" tag="考据学" year="1750" glyph="證" title={<>凡立一义，必凭证据。</>}>
@@ -346,7 +346,7 @@ export default function ChroniclePage() {
         <p className={`${styles.body} ${styles.reveal}`}>证见是面向市场调查与分析团队的 AI 研究工作台。它把三千年来关于证据的常识，变成一条可以追溯的工作链：</p>
         <ol className={`${styles.chain} ${styles.reveal}`} aria-label="证据链">{QDIA.map(([key, name, text], index) => <li key={key} data-tilt style={{ '--i': index } as CSSProperties}><span className={styles.chainKey} aria-hidden="true">{key}</span><strong>{name}</strong><p>{text}</p></li>)}</ol>
         <div className={`${styles.gates} ${styles.reveal}`}>
-          <p><strong>九道质量关</strong>任何一道未通过或已过期，都不会给出最终交付的「Go」。</p>
+          <p><strong>九道质量关</strong>任何一道未通过或已过期，都不会给出最终交付的“Go”。</p>
           <ol aria-label="九道质量关">{GATES.map(([seal, name]) => <li key={name}><span aria-hidden="true">{seal}</span>{name}</li>)}</ol>
         </div>
       </Chapter>

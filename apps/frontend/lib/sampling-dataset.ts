@@ -62,8 +62,8 @@ export function marginsFromShares(table: SurveyTable, controls: { column: number
   if (!(total > 0)) throw Error('权数合计须大于 0。');
   return controls.map(c => {
     const name = table.headers[c.column], sumShares = Object.values(c.shares).reduce((s, v) => s + v, 0);
-    if (Object.values(c.shares).some(v => !(v > 0))) throw Error(`「${name}」的每个类别都需要大于 0 的目标比例；样本中没有的类别请先与相邻类别合并。`);
-    if (!(sumShares > 0)) throw Error(`「${name}」的目标比例合计须大于 0。`);
+    if (Object.values(c.shares).some(v => !(v > 0))) throw Error(`“${name}”的每个类别都需要大于 0 的目标比例；样本中没有的类别请先与相邻类别合并。`);
+    if (!(sumShares > 0)) throw Error(`“${name}”的目标比例合计须大于 0。`);
     return { name, values: marginValues(table, c.column, codes), targets: Object.fromEntries(Object.entries(c.shares).map(([k, v]) => [k, v / sumShares * total])) };
   });
 }

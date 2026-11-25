@@ -64,6 +64,19 @@ export type DemoBlueprint = {
   keywords: string[];
   /** One sentence of background for the topic; it states no fact that would need a source. */
   context: string;
+  /** Topic-specific wording for the extension items Q13–Q20 (model-designed blueprints only); defaults otherwise. */
+  extension?: DemoExtension;
+};
+
+export type DemoExtensionItem = { construct: string; question: string; low: string; high: string };
+export type DemoExtension = {
+  ageBrackets: [string, string, string, string];
+  usageFreq: [string, string, string, string];
+  channels: [string, string, string, string];
+  painExtra: string;
+  /** Q15/Q16 load on the second factor, Q17/Q18 on the third. */
+  items: [DemoExtensionItem, DemoExtensionItem, DemoExtensionItem, DemoExtensionItem];
+  factorNames: [string, string, string];
 };
 
 export type DemoStudy = { blueprint: DemoBlueprint; design: Questionnaire; dataset: DatasetValue };
@@ -165,7 +178,7 @@ const TEMPLATES: readonly Template[] = [
     context: '文体活动能把人带到城市里来，但人们愿不愿意再来，取决于现场体验和交通、购票、周边消费这些配套。',
   },
   {
-    match: /正大|水饺|预制菜|咖啡|好咖|鸡肉|无抗|售货机|轻食|茶饮|速冻/u,
+    match: /正大|水饺|好咖|鸡肉|无抗/u,
     defaultTitle: '食品饮料新品口味感知、场景渠道触达与复购意愿调查',
     domainLabel: '快消食饮与正大企业命题',
     shortTitle: '正大食品与新消费',
@@ -329,6 +342,31 @@ export function decomposeTopic(rawTopic = '', existingDesign?: Questionnaire | n
     short: likerts[i]?.construct?.slice(0, 12) || short,
     question: likerts[i]?.text || question,
   });
+  const isCivic = /社区|政务|垃圾分类|环保|低碳|公益|养老|医保|医疗|托育|公交|地铁|物业|公租房|惠民|社保|志愿/u.test(input);
+  const isDigital = /软件|小程序|App|平台|系统|数字化|在线|互联网|电商|直播|算法/iu.test(input);
+  const statusCategories: [string, string, string, string] = isCivic
+    ? ['长期稳定参与使用', '经常按需使用', '仅偶尔尝试了解', '了解但尚未使用过']
+    : isDigital
+      ? ['高频深度使用', '常规按需使用', '偶尔浅层试用', '了解但尚未使用过']
+      : ['经常使用该服务', '偶尔按需体验', '早先试用后暂停', '了解但尚未使用过'];
+  const tierSpec: { construct: string; question: string; choices: [string, string, string, string] } = isCivic
+    ? {
+        construct: '可接受的月度配套支出',
+        question: `若使用${subject}相关便民增值服务，您每月最多愿意承担多少费用？`,
+        choices: ['零额外支出', '10 元及以下', '11–30 元', '30 元以上'],
+      }
+    : isDigital
+      ? {
+          construct: '每月可接受的服务支出',
+          question: `在${subject}相关服务或功能上，您每月可接受的支出区间是？`,
+          choices: ['仅用免费功能', '1–20 元', '21–50 元', '50 元以上'],
+        }
+      : {
+          construct: '单次体验可接受的费用区间',
+          question: `体验或消费${subject}时，您单次可接受的费用区间大致是？`,
+          choices: ['20 元及以下', '21–50 元', '51–100 元', '100 元以上'],
+        };
+
   return {
     id: `demo-${slug}`,
     slug,
@@ -340,25 +378,27 @@ export function decomposeTopic(rawTopic = '', existingDesign?: Questionnaire | n
     groupConstruct: single?.construct || '使用频率分组',
     groupA: single?.choices[0]?.label?.slice(0, 18) || '经常使用者',
     groupB: single?.choices[1]?.label?.slice(0, 18) || '偶尔使用者',
-    statusConstruct: '使用渠道',
-    statusCategories: ['线上线下都用过', '只用过线下', '只用过线上', '了解但还没用过'],
+    statusConstruct: '使用状态',
+    statusCategories,
     scaleConstruct: `${shortTitle}体验量表`,
     dimensions: [
       aspect(0, '核心服务质量', `您对${subject}的核心服务质量满意吗？`),
       aspect(1, '环境与设施', `您对${subject}的环境和设施满意吗？`),
-      aspect(2, '预约与信息获取', `您觉得预约${subject}、查询相关信息方便吗？`),
-      aspect(3, '交通与配套服务', `您对前往${subject}的交通和配套服务满意吗？`),
-      aspect(4, '附加体验与社群', `您对${subject}的附加体验和交流氛围满意吗？`),
+      aspect(2, '预约与信息获取', `您觉得了解${subject}的规则与使用方式方便吗？`),
+      aspect(3, '配套与衔接保障', `您对${subject}的配套支持与响应服务满意吗？`),
+      aspect(4, '综合体验与获得感', `您对${subject}的综合体验与长期价值满意吗？`),
     ],
-    mechanismConstruct: '线上线下权益互通的支持度',
-    mechanismQuestion: `如果${subject}的线上和线下权益可以互通，您支持吗？`,
+    mechanismConstruct: isCivic ? '规则透明与分步指引支持度' : '规则透明与自主选择支持度',
+    mechanismQuestion: isCivic
+      ? `如果${subject}配备清晰分步指引并公开服务规则，您支持吗？`
+      : `如果${subject}提供透明规则说明并保留本人自主选择权，您支持吗？`,
     overallSatConstruct: `${shortTitle}整体满意度`,
     overallSatQuestion: `总的来说，您对${subject}满意吗？`,
     conversionConstruct: '继续使用并推荐的意愿',
     conversionQuestion: `今后您愿意继续使用${subject}，并推荐给亲友吗？`,
-    tierConstruct: '每次的相关花费',
-    tierQuestion: `每次使用${subject}，您大约会花多少钱？`,
-    tierChoices: ['50 元及以下', '51–100 元', '101–200 元', '200 元以上'],
+    tierConstruct: tierSpec.construct,
+    tierQuestion: tierSpec.question,
+    tierChoices: tierSpec.choices,
     keywords: [shortTitle, '使用体验', '满意度', '持续使用意愿'],
     context: `${subject}能否留住使用者，取决于核心服务和配套细节；本研究据此设计问卷。`,
   };
@@ -380,7 +420,17 @@ export function buildDemoQuestionnaire(bp: DemoBlueprint): Questionnaire {
   const likert = (id: string, variable: string, text: string, construct: string, analysis: DesignQuestion['analysis'], researchQuestion: string, decisionUse: string, low = '非常不满意', high = '非常满意', purpose: DesignQuestion['purpose'] = 'research'): DesignQuestion => ({
     ...base, id, variable, text, type: 'likert', purpose, analysis, researchQuestion, construct, decisionUse, choices: [], min: 1, max: 5, minLabel: low, maxLabel: high,
   });
-  const painChoices = [bp.dimensions[0].short, bp.dimensions[1].short, bp.dimensions[2].short, '收费规则与沟通响应'];
+  const painChoices = [bp.dimensions[0].short, bp.dimensions[1].short, bp.dimensions[2].short, bp.extension?.painExtra ?? '收费规则与沟通响应'];
+  const ext = bp.extension;
+  const ages = ext?.ageBrackets ?? AGE_BRACKETS;
+  const freqs = ext?.usageFreq ?? USAGE_FREQ;
+  const channels = ext?.channels ?? OUTREACH_CHANNELS;
+  const [f1Name, f2Name, f3Name] = ext?.factorNames ?? ['核心表现', '制度规范', '信任契合'];
+  const extItem = (i: number, fallback: DemoExtensionItem): DemoExtensionItem => ext?.items[i] ?? fallback;
+  const q15 = extItem(0, { construct: '规则指引透明度', question: `关于${bp.shortTitle}的价格细则、服务边界或使用提示，信息公示是否清楚透明？`, low: '非常不清楚', high: '非常清楚' });
+  const q16 = extItem(1, { construct: '反馈响应与衔接效率', question: `遇到临时调整或使用问题时，${bp.shortTitle}相关窗口与工作人员的响应解决是否及时？`, low: '非常不满意', high: '非常满意' });
+  const q17 = extItem(2, { construct: '安全信任与口碑评价', question: `结合身边人反馈，您对${bp.shortTitle}整体运行安全性与可靠性有多放心？`, low: '非常不放心', high: '非常放心' });
+  const q18 = extItem(3, { construct: '场景契合与心理获得感', question: `「${bp.shortTitle}」的实际供给在多大程度上减轻了您的日常顾虑并契合生活需求？`, low: '非常不契合', high: '非常契合' });
   const questions: DesignQuestion[] = [
     single('q1_group', 'Q1', `您属于以下哪一类？（${bp.groupConstruct}）`, bp.groupConstruct, [bp.groupA, bp.groupB], 'background', 'comparison', '两类受访者的体验与意愿是否不同？', '作为组间比较的分组变量。'),
     single('q2_status', 'Q2', `您目前的${bp.statusConstruct}是？`, bp.statusConstruct, bp.statusCategories, 'background', 'comparison', '不同参与方式的人体验是否不同？', '描述参与结构，并作为分组变量。'),
@@ -390,20 +440,20 @@ export function buildDemoQuestionnaire(bp: DemoBlueprint): Questionnaire {
     likert('q10_overall', 'Q10', bp.overallSatQuestion, bp.overallSatConstruct, 'association', '整体满意度处于什么水平？', '作为重要性—表现分析的总体满意度。'),
     likert('q11_intention', 'Q11', bp.conversionQuestion, bp.conversionConstruct, 'association', '体验与满意度和持续意愿有怎样的关联？', '作为回归分析的结果变量。', '非常不愿意', '非常愿意'),
     single('q12_tier', 'Q12', bp.tierQuestion, bp.tierConstruct, bp.tierChoices, 'research', 'description', '受访者能接受怎样的花费？', '描述花费档位分布，并与人群细分做交叉分析。'),
-    single('q13_age', 'Q13', '您的年龄处于以下哪个区间？', '受访者年龄结构', AGE_BRACKETS, 'background', 'comparison', '不同年龄层受访者的信息触达与需求偏好有何差异？', '评估人口代表性并定位分渠道沟通策略。'),
-    single('q14_frequency', 'Q14', `过去三个月内，您体验或关注「${bp.shortTitle}」的频次大约是？`, '实际接触频次', USAGE_FREQ, 'research', 'comparison', '高频与低频用户的评价重点是否一致？', '区分习惯用户与观望流失风险群体。'),
-    likert('q15_transparency', 'Q15', `关于${bp.shortTitle}的价格细则、服务边界或使用提示，信息公示是否清楚透明？`, '规则指引透明度', 'measurement', '信息与规则透明度如何影响规范感知与满意度？', '纳入制度支持维度（F2）与 IPA 象限诊断。', '非常不清楚', '非常清楚'),
-    likert('q16_responsiveness', 'Q16', `遇到临时调整或使用问题时，${bp.shortTitle}相关窗口与工作人员的响应解决是否及时？`, '反馈响应与衔接效率', 'measurement', '异常兜底与人工响应效率处于什么水平？', '纳入制度支持维度（F2）与归因回归。'),
-    likert('q17_trust', 'Q17', `结合身边人反馈，您对${bp.shortTitle}整体运行安全性与可靠性有多放心？`, '安全信任与口碑评价', 'measurement', '安全信任与口碑背书对留存有多大拉动作用？', '纳入信任认同维度（F3）检验。', '非常不放心', '非常放心'),
-    likert('q18_fit', 'Q18', `「${bp.shortTitle}」的实际供给在多大程度上减轻了您的日常顾虑并契合生活需求？`, '场景契合与心理获得感', 'measurement', '场景契合感如何转化为长期推荐行为？', '纳入信任认同维度（F3）检验。', '非常不契合', '非常契合'),
+    single('q13_age', 'Q13', '您的年龄处于以下哪个区间？', '受访者年龄结构', ages, 'background', 'comparison', '不同年龄层受访者的信息触达与需求偏好有何差异？', '评估人口代表性并定位分渠道沟通策略。'),
+    single('q14_frequency', 'Q14', `过去三个月内，您体验或关注「${bp.shortTitle}」的频次大约是？`, '实际接触频次', freqs, 'research', 'comparison', '高频与低频用户的评价重点是否一致？', '区分习惯用户与观望流失风险群体。'),
+    likert('q15_transparency', 'Q15', q15.question, q15.construct, 'measurement', `${q15.construct}处于什么水平？`, `纳入「${f2Name}」维度（F2）与 IPA 象限诊断。`, q15.low, q15.high),
+    likert('q16_responsiveness', 'Q16', q16.question, q16.construct, 'measurement', `${q16.construct}处于什么水平？`, `纳入「${f2Name}」维度（F2）与归因回归。`, q16.low, q16.high),
+    likert('q17_trust', 'Q17', q17.question, q17.construct, 'measurement', `${q17.construct}对持续使用有多大拉动作用？`, `纳入「${f3Name}」维度（F3）检验。`, q17.low, q17.high),
+    likert('q18_fit', 'Q18', q18.question, q18.construct, 'measurement', `${q18.construct}如何转化为长期使用与推荐？`, `纳入「${f3Name}」维度（F3）检验。`, q18.low, q18.high),
     single('q19_painpoint', 'Q19', `在后续改进中，您认为「${bp.shortTitle}」最需要优先补齐的一项短板是？`, '首要改善诉求', painChoices, 'research', 'description', '受访者主观最迫切的改善环节在哪里？', '与 IPA 客观短板交叉印证并按聚类群体分派整改。'),
-    single('q20_channel', 'Q20', `如果「${bp.shortTitle}」优化规则与活动通知，您最容易看到且信赖的信息渠道是？`, '首选信息触达渠道', OUTREACH_CHANNELS, 'research', 'description', '哪类触达渠道最契合目标人群的获取习惯？', '为不同年龄与聚类人群精准配置政策宣传与落地渠道。'),
+    single('q20_channel', 'Q20', `如果「${bp.shortTitle}」有新的使用指导或服务通知，您最容易看到且信赖的信息渠道是？`, '首选信息触达渠道', channels, 'research', 'description', '哪类触达渠道最契合目标人群的获取习惯？', '为不同年龄与聚类人群精准配置宣传与落地渠道。'),
   ];
   return parseQuestionnaire(JSON.stringify({
     schema: 'questionnaire-design/v1',
     classification: 'proposed',
     title: `${bp.shortTitle}使用体验调查问卷（教学模拟）`,
-    objective: `系统评估${bp.groupA}与${bp.groupB}在${bp.shortTitle}上的参与结构、三因子体验测量（核心表现、制度规范、信任契合）、整体满意度、痛点诉求与持续使用意愿。`,
+    objective: `系统评估${bp.groupA}与${bp.groupB}在${bp.shortTitle}上的参与结构、三因子测量（${f1Name}、${f2Name}、${f3Name}）、整体满意度、痛点诉求与持续使用意愿。`,
     population: `${bp.region}的${bp.groupA}与${bp.groupB}`,
     geography: bp.region,
     period: '教学模拟，不对应真实调查时间',
@@ -568,8 +618,10 @@ export function simulateDemoResponses(bp: DemoBlueprint, design: Questionnaire, 
     Q1: bp.groupConstruct, Q2: bp.statusConstruct,
     ...Object.fromEntries(bp.dimensions.map(d => [d.code, d.short])),
     Q8: '注意力检查', Q9: bp.mechanismConstruct, Q10: bp.overallSatConstruct, Q11: bp.conversionConstruct, Q12: bp.tierConstruct,
-    Q13: '受访者年龄结构', Q14: '实际接触频次', Q15: '规则指引透明度', Q16: '反馈响应与衔接效率',
-    Q17: '安全信任与口碑评价', Q18: '场景契合与心理获得感', Q19: '首要改善诉求', Q20: '首选信息触达渠道',
+    Q13: '受访者年龄结构', Q14: '实际接触频次',
+    Q15: bp.extension?.items[0].construct ?? '规则指引透明度', Q16: bp.extension?.items[1].construct ?? '反馈响应与衔接效率',
+    Q17: bp.extension?.items[2].construct ?? '安全信任与口碑评价', Q18: bp.extension?.items[3].construct ?? '场景契合与心理获得感',
+    Q19: '首要改善诉求', Q20: '首选信息触达渠道',
   };
   return { table: { headers, rows, skippedBlankLines: 0, delimiter: ',', columnLabels }, issued };
 }
@@ -580,9 +632,116 @@ async function sha256(text: string): Promise<string> {
 const csvOf = (table: SurveyTable) => [table.headers, ...table.rows].map(row => row.map(cell => (/[",\n]/u.test(cell) ? `"${cell.replace(/"/gu, '""')}"` : cell)).join(',')).join('\n');
 
 /** The questionnaire and the raw simulated answers for a topic. */
-export async function buildDemoStudy(topic = '', existingDesign?: Questionnaire | null): Promise<DemoStudy> {
-  const blueprint = decomposeTopic(topic, existingDesign);
+export async function buildDemoStudy(topic = '', existingDesign?: Questionnaire | null, blueprintOverride?: DemoBlueprint | null): Promise<DemoStudy> {
+  const blueprint = blueprintOverride ?? decomposeTopic(topic, existingDesign);
   return simulateDemoStudy(blueprint, buildDemoQuestionnaire(blueprint));
+}
+
+const BLUEPRINT_TEXT = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]|\{|\}/u;
+/** Plain wording only: no digits (except in money tiers), no placeholders, bounded length. */
+function blueprintText(value: unknown, max: number, allowDigits = false): string | null {
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  if (!v || v.length > max || BLUEPRINT_TEXT.test(v)) return null;
+  if (!allowDigits && /[0-9０-９]/u.test(v)) return null;
+  return v;
+}
+
+/**
+ * A topic-specific survey blueprint designed by the drafting model (teaching simulation only). Every field is plain
+ * wording validated against the fixed survey structure; anything off-shape is rejected so the caller can fall back to
+ * the written templates. It carries no numbers that could pass for findings.
+ */
+export function parseDemoBlueprint(raw: string, topic: string): DemoBlueprint | null {
+  let value: unknown;
+  try {
+    const trimmed = raw.trim().replace(/^```(?:json)?\s*/u, '').replace(/\s*```$/u, '');
+    value = JSON.parse(trimmed);
+  } catch { return null; }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  const s = (key: string, max: number, digits = false) => blueprintText(v[key], max, digits);
+  const list = (key: string, n: number, max: number, digits = false): string[] | null => {
+    const arr = v[key];
+    if (!Array.isArray(arr) || arr.length !== n) return null;
+    const out = arr.map(item => blueprintText(item, max, digits));
+    return out.every((item): item is string => !!item) && new Set(out).size === n ? out as string[] : null;
+  };
+  const dims = v.dimensions;
+  if (!Array.isArray(dims) || dims.length !== 5) return null;
+  const codes = ['Q3', 'Q4', 'Q5', 'Q6', 'Q7'] as const;
+  const dimensions = dims.map((d, i) => {
+    if (!d || typeof d !== 'object') return null;
+    const short = blueprintText((d as Record<string, unknown>).short, 14);
+    const question = blueprintText((d as Record<string, unknown>).question, 60);
+    return short && question ? { code: codes[i], short, question } : null;
+  });
+  if (dimensions.some(d => !d) || new Set(dimensions.map(d => d!.short)).size !== 5) return null;
+  const statusCategories = list('statusCategories', 4, 18);
+  const tierChoices = list('tierChoices', 4, 18, true);
+  const keywords = Array.isArray(v.keywords) ? v.keywords.map(k => blueprintText(k, 12)).filter((k): k is string => !!k).slice(0, 6) : [];
+  const fields = {
+    domainLabel: s('domainLabel', 24), shortTitle: s('shortTitle', 14), groupConstruct: s('groupConstruct', 16),
+    groupA: s('groupA', 18, true), groupB: s('groupB', 18, true), statusConstruct: s('statusConstruct', 16), scaleConstruct: s('scaleConstruct', 18),
+    mechanismConstruct: s('mechanismConstruct', 20), mechanismQuestion: s('mechanismQuestion', 60),
+    overallSatConstruct: s('overallSatConstruct', 20), overallSatQuestion: s('overallSatQuestion', 60),
+    conversionConstruct: s('conversionConstruct', 20), conversionQuestion: s('conversionQuestion', 60),
+    tierConstruct: s('tierConstruct', 18), tierQuestion: s('tierQuestion', 60), context: s('context', 120),
+  };
+  if (Object.values(fields).some(f => !f) || !statusCategories || !tierChoices || keywords.length < 3 || fields.groupA === fields.groupB) return null;
+  const base = decomposeTopic(topic);
+  let extension: DemoExtension | undefined;
+  const e = v.extension;
+  if (e && typeof e === 'object' && !Array.isArray(e)) {
+    const ev = e as Record<string, unknown>;
+    const four = (key: string, max: number, digits = false): string[] | null => {
+      const arr = ev[key];
+      if (!Array.isArray(arr) || arr.length !== 4) return null;
+      const out = arr.map(item => blueprintText(item, max, digits));
+      return out.every((item): item is string => !!item) && new Set(out).size === 4 ? out as string[] : null;
+    };
+    const items = Array.isArray(ev.items) && ev.items.length === 4 ? ev.items.map(item => {
+      if (!item || typeof item !== 'object') return null;
+      const r = item as Record<string, unknown>;
+      const construct = blueprintText(r.construct, 16), question = blueprintText(r.question, 70), low = blueprintText(r.low, 8), high = blueprintText(r.high, 8);
+      return construct && question && low && high ? { construct, question, low, high } : null;
+    }) : null;
+    const factorNames = Array.isArray(ev.factorNames) && ev.factorNames.length === 3 ? ev.factorNames.map(f => blueprintText(f, 10)) : null;
+    const ageBrackets = four('ageBrackets', 16, true), usageFreq = four('usageFreq', 16), channels = four('channels', 20), painExtra = blueprintText(ev.painExtra, 14);
+    if (ageBrackets && usageFreq && channels && painExtra && items && items.every(Boolean) && factorNames && factorNames.every(Boolean)) {
+      extension = {
+        ageBrackets: ageBrackets as DemoExtension['ageBrackets'], usageFreq: usageFreq as DemoExtension['usageFreq'], channels: channels as DemoExtension['channels'],
+        painExtra, items: items as DemoExtension['items'], factorNames: factorNames as DemoExtension['factorNames'],
+      };
+    }
+  }
+  return {
+    ...base,
+    ...(fields as Record<keyof typeof fields, string>),
+    statusCategories: statusCategories as DemoBlueprint['statusCategories'],
+    tierChoices: tierChoices as DemoBlueprint['tierChoices'],
+    dimensions: dimensions as DemoBlueprint['dimensions'],
+    keywords,
+    ...(extension ? { extension } : {}),
+  };
+}
+
+/** The drafting-model request for a topic-specific questionnaire blueprint (structure only, no numbers). */
+export function buildDemoBlueprintPrompt(
+  topic: string,
+  competitionName = '“益普索杯”第十七届全国大学生市场调查与分析大赛',
+): string {
+  const comp = (competitionName || '').trim() || '“益普索杯”第十七届全国大学生市场调查与分析大赛';
+  return `你是${comp}的问卷设计专家，按「构念→维度→题项」逐层拆解课题，为一项实证调查设计问卷骨架。\n` +
+    `课题：「${topic}」。\n` +
+    '要求：一、五个测量维度必须紧扣课题的核心构念（例如技术采纳类课题要覆盖感知有用、易用/操作负担、信任与隐私、社会支持等与课题直接相关的维度），彼此互斥、可被五点李克特题测量；' +
+    '二、分组变量选择课题中最有比较价值的两类人群；三、机制题对应课题强调的干预或支持机制；四、结果变量对应课题的核心行为意愿；' +
+    '五、花费档位用课题情境里合理的人民币区间（仅此处可写数字）；六、所有题干用受访者能懂的口语，短句，不诱导；七、除花费档位与分组年龄外不写任何数字，不写占位符。\n' +
+    '只输出一个 JSON 对象，字段：domainLabel, shortTitle(≤12字), groupConstruct, groupA, groupB, statusConstruct, statusCategories(4项), scaleConstruct, ' +
+    'dimensions(5项，每项 {short(≤12字), question}), mechanismConstruct, mechanismQuestion, overallSatConstruct, overallSatQuestion, conversionConstruct, conversionQuestion, ' +
+    'tierConstruct, tierQuestion, tierChoices(4项), keywords(4~6个), context(一句不含事实断言的背景), ' +
+    'extension({ageBrackets(4个契合目标人群的年龄段), usageFreq(4档接触频次), channels(4个目标人群真实会用的信息渠道), painExtra(第四个改进短板选项), ' +
+    'items(4项拓展量表 {construct, question, low, high}，前两项归入第二因子、后两项归入第三因子), factorNames(3个因子名，第一因子对应五个核心维度)})。不要输出任何解释。';
 }
 
 /** Generate answers for the questionnaire shown at the teaching simulation checkpoint. */
@@ -1072,8 +1231,8 @@ export async function computeDemoReport(study: DemoStudy, options: { onLog?: (li
 }
 
 /** The study and its computed report: what loading a teaching demo puts in a project. */
-export async function buildDemoPack(topic = '', existingDesign?: Questionnaire | null, options: { onLog?: (line: string) => void } = {}): Promise<DemoPack> {
-  const study = await buildDemoStudy(topic, existingDesign);
+export async function buildDemoPack(topic = '', existingDesign?: Questionnaire | null, options: { onLog?: (line: string) => void; blueprint?: DemoBlueprint | null } = {}): Promise<DemoPack> {
+  const study = await buildDemoStudy(topic, existingDesign, options.blueprint);
   const { report, dataset } = await computeDemoReport(study, options);
   return { ...study, dataset, report };
 }

@@ -102,6 +102,14 @@ function updatedLabel(value: string) {
   }).format(date);
 }
 
+function cleanShelfText(raw: string | undefined | null): string {
+  if (!raw) return '';
+  return raw
+    .replace(/\u300c([^\u300d]*)\u300d/gu, '“$1”')
+    .replace(/\u300e([^\u300f]*)\u300f/gu, '‘$1’')
+    .replace(/\u3010([^\u3011]*)\u3011/gu, '（$1）');
+}
+
 /** Presentation only: supplied objects and callbacks remain owned by the active workspace. */
 export default function ArtifactShelf({ items, selectedId, preview, busy, error, unavailableReason, onSelect, onClose, onUse, onEdit, onExport, onArchive, onCommand, onImport, onCapture, onExample, onLocate }: ArtifactShelfProps) {
   const headingId = useId();
@@ -111,6 +119,7 @@ export default function ArtifactShelf({ items, selectedId, preview, busy, error,
   const importKindId = useId();
   const blocked = busy || !!unavailableReason;
   const fileInput = useRef<HTMLInputElement>(null);
+  const enlargeBtn = useRef<HTMLButtonElement>(null);
   const imageViewer = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<Kind | 'all'>('all');
@@ -172,12 +181,12 @@ export default function ArtifactShelf({ items, selectedId, preview, busy, error,
       <section className={styles.library} aria-label="素材列表">
         {visibleFamilies.length > 0 ? <ul className={styles.families}>
           {visibleFamilies.map(family => <li className={styles.family} key={family[0].familyId}>
-            {showHistory && family.length > 1 && <div className={styles.familyLabel}><span>{family[0].title}</span><span>{family.length} 个版本</span></div>}
+            {showHistory && family.length > 1 && <div className={styles.familyLabel}><span>{cleanShelfText(family[0].title)}</span><span>{family.length} 个版本</span></div>}
             <ul className={styles.items}>
               {(showHistory ? family : family.slice(0, 1)).map(item => <li key={item.id}>
                 <button type="button" className={styles.item} aria-pressed={selectedId === item.id} onClick={() => onSelect(item.id)}>
                   <ArtifactThumbnail item={item} />
-                  <span className={styles.itemContent}><strong title={item.title}>{item.title}</strong><span className={styles.itemMeta}><span>{KIND_LABELS[item.kind]}</span><span>v{item.version}{!showHistory && latestByFamily.get(item.familyId) !== item.id ? ' · 历史匹配' : !showHistory && family.length > 1 ? ` · 共 ${family.length} 版` : ''}</span></span></span>
+                  <span className={styles.itemContent}><strong title={cleanShelfText(item.title)}>{cleanShelfText(item.title)}</strong><span className={styles.itemMeta}><span>{KIND_LABELS[item.kind]}</span><span>第 {item.version} 版{!showHistory && latestByFamily.get(item.familyId) !== item.id ? ' · 历史匹配' : !showHistory && family.length > 1 ? ` · 共 ${family.length} 版` : ''}</span></span></span>
                   <span className={styles.status} data-status={item.status}>{STATUS_LABELS[item.status]}</span>
                 </button>
               </li>)}
@@ -191,17 +200,17 @@ export default function ArtifactShelf({ items, selectedId, preview, busy, error,
         </div>}
       </section>
 
-      {selected ? <section className={styles.selection} aria-label={`选中素材：${selected.title}`}>
-        <div className={styles.selectionHeader}><h3>{selected.title}</h3><label className={styles.versionPicker} htmlFor={versionId}><span className={styles.srOnly}>选择素材版本</span><select id={versionId} value={selected.id} onChange={event => onSelect(event.target.value)}>{selectedVersions.map(item => <option key={item.id} value={item.id}>v{item.version}{item.id === selectedVersions[0]?.id ? ' · 最新' : ''} · {STATUS_LABELS[item.status]}</option>)}</select></label></div>
+      {selected ? <section className={styles.selection} aria-label={`当前选中素材 ${cleanShelfText(selected.title)}`}>
+        <div className={styles.selectionHeader}><h3>{cleanShelfText(selected.title)}</h3><label className={styles.versionPicker} htmlFor={versionId}><span className={styles.srOnly}>选择素材版本</span><select id={versionId} value={selected.id} onChange={event => onSelect(event.target.value)}>{selectedVersions.map(item => <option key={item.id} value={item.id}>第 {item.version} 版{item.id === selectedVersions[0]?.id ? ' · 最新' : ''} · {STATUS_LABELS[item.status]}</option>)}</select></label></div>
         {!selectedVisible && <p className={styles.filteredSelection} role="status">所选素材不在当前列表中。<button type="button" onClick={() => { setQuery(''); setKind('all'); setShowHistory(true); }}>显示所选版本</button></p>}
         <div className={styles.previewShell}>
-          <div className={styles.preview} aria-label={`${selected.title}预览`} aria-busy={busy}>{preview == null ? <div className={styles.previewEmpty}><KindIcon kind={selected.kind} /><span>此素材暂无可用预览</span></div> : preview}</div>
-          {selectedImage && <button type="button" className={styles.enlarge} onClick={() => { if (!imageViewer.current?.open) imageViewer.current?.showModal(); }}><Icon name="expand" />放大查看</button>}
+          <div className={styles.preview} aria-label={`${cleanShelfText(selected.title)}预览`} aria-busy={busy}>{preview == null ? <div className={styles.previewEmpty}><KindIcon kind={selected.kind} /><span>此素材暂无可用预览</span></div> : preview}</div>
+          {selectedImage && <button ref={enlargeBtn} type="button" className={styles.enlarge} onClick={() => { if (!imageViewer.current?.open) imageViewer.current?.showModal(); }}><Icon name="expand" />放大查看</button>}
         </div>
-        {selectedImage && <dialog ref={imageViewer} className={styles.imageViewer} aria-label={`${selected.title} · v${selected.version}`} onKeyDown={event => { if (event.key === 'Escape') event.stopPropagation(); }}>
-          <header><h3>{selected.title}<small>v{selected.version}</small></h3><button type="button" className={styles.iconButton} aria-label="关闭图片预览" onClick={() => imageViewer.current?.close()}><Icon name="close" /></button></header>
+        {selectedImage && <dialog ref={imageViewer} className={styles.imageViewer} aria-label={`${cleanShelfText(selected.title)} · 第 ${selected.version} 版预览`} onClose={() => enlargeBtn.current?.focus()} onKeyDown={event => { if (event.key === 'Escape') event.stopPropagation(); }}>
+          <header><h3>{cleanShelfText(selected.title)}<small>第 {selected.version} 版</small></h3><button type="button" autoFocus className={styles.iconButton} aria-label="关闭图片预览" onClick={() => imageViewer.current?.close()}><Icon name="close" /></button></header>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={selectedImage} alt={selected.title} />
+          <img src={selectedImage} alt={cleanShelfText(selected.title)} />
         </dialog>}
         <div className={styles.actions} aria-label="选中素材操作" data-download={selected.useAction === 'download' && selected.canUse}>
           <button type="button" className={styles.primaryButton} disabled={blocked || !selected.canUse} onClick={() => onUse(selected.id)}><Icon name={selected.useAction === 'download' ? 'download' : 'check'} />{selected.useLabel??(selected.kind==='frame'?'预览并应用':'用于报告')}</button>
@@ -211,14 +220,14 @@ export default function ArtifactShelf({ items, selectedId, preview, busy, error,
           <button type="button" disabled={blocked || selected.status === 'stored'} onClick={() => onArchive(selected.id)}><Icon name="folder" />{selected.status === 'stored' ? '已收存' : '收存'}</button>
         </div>
         <details className={styles.metadata}><summary>来源与版本</summary><dl className={styles.details}>
-          <div><dt>来源</dt><dd>{selected.origin || '未记录'}</dd></div>
-          <div><dt>内容</dt><dd>{selected.detail || KIND_LABELS[selected.kind]}</dd></div>
+          <div><dt>来源</dt><dd>{cleanShelfText(selected.origin) || '未记录'}</dd></div>
+          <div><dt>内容</dt><dd>{cleanShelfText(selected.detail) || KIND_LABELS[selected.kind]}</dd></div>
           <div><dt>更新</dt><dd><time dateTime={Number.isNaN(Date.parse(selected.updatedAt)) ? undefined : selected.updatedAt} title="北京时间">{updatedLabel(selected.updatedAt)}</time></dd></div>
-          {selected.fingerprint && <div><dt>指纹</dt><dd><code>{selected.fingerprint}</code></dd></div>}
+          {selected.fingerprint && <div><dt>校验码</dt><dd><code>{selected.fingerprint}</code></dd></div>}
         </dl></details>
         <form className={styles.command} onSubmit={sendCommand}>
           <label htmlFor={commandId}>对这项素材说一句</label>
-          <div className={styles.commandInput}><textarea id={commandId} value={command} rows={2} maxLength={2000} placeholder="例如：标题缩短一些，保留当前配色" onChange={event => setCommands(value => ({ ...value, [selected.id]: event.target.value }))} disabled={blocked} /><button type="submit" disabled={blocked || !command.trim()} aria-label={`向“${selected.title}”发送指令`} title="发送指令"><Icon name="up" /></button></div>
+          <div className={styles.commandInput}><textarea id={commandId} value={command} rows={2} maxLength={2000} placeholder="可描述修改方向，如缩短标题并保留当前配色" onChange={event => setCommands(value => ({ ...value, [selected.id]: event.target.value }))} disabled={blocked} /><button type="submit" disabled={blocked || !command.trim()} aria-label={`向“${cleanShelfText(selected.title)}”发送指令`} title="发送指令"><Icon name="up" /></button></div>
         </form>
       </section> : items.length > 0 && <div className={styles.chooseHint}><Icon name="grid" /><p>选择一项素材，在这里预览和继续编辑。</p></div>}
 
@@ -226,7 +235,7 @@ export default function ArtifactShelf({ items, selectedId, preview, busy, error,
         <summary>添加与收录 <Icon name="plus" /></summary>
         <div className={styles.importRow}><label htmlFor={importKindId} className={styles.srOnly}>导入素材类别</label><select id={importKindId} value={importKind} onChange={event => setImportKind(event.target.value as ImportKind)} disabled={blocked}><option value="cover">作为封面</option><option value="diagram">作为示意图</option><option value="file">作为文件</option></select><button type="button" onClick={() => fileInput.current?.click()} disabled={blocked}><Icon name="plus" />导入素材</button></div>
         <input ref={fileInput} type="file" hidden accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg" onChange={event => { const file = event.currentTarget.files?.[0]; if (file && !blocked) onImport(file, importKind); event.currentTarget.value = ''; }} />
-        <p>PNG、JPG、WebP、SVG</p>
+        <p>支持导入高清位图或矢量图形文件</p>
         <button type="button" className={styles.captureButton} onClick={onCapture} disabled={blocked}><Icon name="book" />收录当前报告素材</button>
         {onExample && <button type="button" className={styles.captureButton} onClick={onExample} disabled={blocked}><Icon name="grid" />添加信息图示例</button>}
       </details>

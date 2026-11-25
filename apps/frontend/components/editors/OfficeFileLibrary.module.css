@@ -104,3 +104,60 @@
 .fileList li.motionMarker { position:absolute; top:0; left:0; width:3px; height:0; padding:0; border:0; margin:0; background:var(--wb-gold,#b39757); pointer-events:none; }
 .fileButton { transition:background-color var(--motion-fast) var(--ease-arrive),border-color var(--motion-fast) var(--ease-arrive); }
 @media(prefers-reduced-motion:reduce) { .library * { animation:none!important; transition:none!important; } }
+
+@media (forced-colors: active) {
+  .library,
+  .engineNote,
+  .workspace,
+  .catalog,
+  .uploadPanel,
+  .selection,
+  .recoverySection {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .storage,
+  .engineNote,
+  .error,
+  .notice,
+  .workspace,
+  .format,
+  .versionNumber,
+  .uploadPanel,
+  .selection,
+  .recoverySection,
+  .library button,
+  .fileInput input,
+  .fileInput input::file-selector-button,
+  .labelField input {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .library,
+  .catalog,
+  .paneHeading,
+  .catalogNote,
+  .activeFile,
+  .versionList li,
+  .uploadIntro,
+  .recoverySection li {
+    border-color: CanvasText;
+  }
+  .fileList li.motionMarker {
+    display: none;
+  }
+  .library .primary,
+  .library .fileButton[aria-pressed=true],
+  .storage[data-ready=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .library button:focus-visible,
+  .library input:focus-visible,
+  .library summary:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

@@ -19,23 +19,36 @@ import {
 } from "@/data/control-plane-contract.generated";
 import { RULE_CORPUS_META } from "@/data/rule-corpus.generated";
 import { COMPETITION_UPDATE } from "@/data/competition-update";
-import CaseLibrary from '@/components/cases/ReportCaseLibrary';
 import {normalizeResultRegistration} from '@/lib/result-registration';
-import ProjectPortal from "@/components/workspace/ProjectPortal";
 import EvidenceFlight from "@/components/EvidenceFlight";
 import ChoiceGroup from "@/components/ChoiceGroup";
-import WorkbenchShell, { useWorkbenchNav, useWorkbenchTheme, type WorkbenchPanel } from "@/components/WorkbenchShell";
+import { useWorkbenchNav, type WorkbenchPanel } from "@/components/workbench/nav-context";
+import { useWorkbenchTheme } from "@/components/workbench/shell-kit";
 import type { ReactElement, ReactNode } from "react";
-import { createEditorContent, type EditorContent } from "@/lib/editor-model";
+import { createEditorContent, parseEditorContent, type EditorContent } from "@/lib/editor-model";
+import { parseQuestionnaire, type Questionnaire } from "@/lib/questionnaire";
 import type { ProjectView } from "@/lib/agent/illumination";
 import type { EditingStudioHandle } from '@/components/editors/EditingStudio';
 import type { SectionRevisionProposal, RevisionApplyResult } from '@/lib/agent/section-revision';
 import type { ArtifactRecord } from '@/lib/agent/artifact-library';
 import type { ReportRunScope } from '@/lib/agent/report-work';
-import { buildDemoPack, type DemoPack } from "@/lib/agent/demo-study";
+import type { DemoPack } from "@/lib/agent/demo-study";
 import type { AgentQuestionnaireProposal } from "@/lib/agent-questionnaire-proposal";
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+const WorkbenchShell = dynamic(() => import('@/components/WorkbenchShell'));
+const CaseLibrary = dynamic(() => import('@/components/cases/ReportCaseLibrary'), {
+  ssr: false,
+  loading: () => <p role="status">正在载入案例研究库</p>,
+});
+const ProjectPortal = dynamic(() => import('@/components/workspace/ProjectPortal'), {
+  ssr: false,
+  loading: () => <p role="status">正在载入项目门户</p>,
+});
+const DiagnosisActions = dynamic(() => import('@/components/DiagnosisActions'), {
+  ssr: false,
+  loading: () => <p role="status">正在载入诊断建议面板</p>,
+});
 const EditingStudio = dynamic(() => import('@/components/editors/EditingStudio'));
 const SurveyLab = dynamic(() => import('@/components/analysis/SurveyLab'));
 const QuestionnaireStudio = dynamic(() => import('@/components/design/QuestionnaireStudio'));
@@ -48,13 +61,16 @@ const SiliconLab = dynamic(() => import('@/components/silicon/SiliconLab'));
 const ResearchCanvas = dynamic(() => import('@/components/canvas/ResearchCanvas'), { ssr: false, loading: () => <p className="wb-canvas-loading" role="status">正在载入研究画布…</p> });
 const TopicLab = dynamic(() => import('@/components/topic-lab/TopicLab'), { ssr: false, loading: () => <p className="topic-lab-loading" role="status">正在载入词云与选题…</p> });
 const TopicAdvisor = dynamic(() => import('@/components/topic-advisor/TopicAdvisor'), { ssr: false, loading: () => <p role="status">正在载入选题顾问…</p> });
-import TopicModelProposal from '@/components/topic-advisor/TopicModelProposal';
-import topicCatalog from '@/content/topic-advisor/catalog.json';
-import HostedServices from '@/components/hosted/HostedServices';
+const TopicModelProposalLazy = dynamic(() => import('@/components/topic-advisor/TopicModelProposalLazy'), {
+  ssr: false,
+  loading: () => <p role="status">正在载入研究提案面板</p>,
+});
+const HostedServices = dynamic(() => import('@/components/hosted/HostedServices'), {
+  loading: () => <p role="status">正在载入个人服务面板</p>,
+});
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import { anonymousCanvasIdentity, LOCAL_CANVAS_WORKSPACE, type CanvasIdentity } from '@/lib/canvas/scope';
 import { useHandoffAcknowledgement, useWorkbenchHandoffs } from '@/components/workbench/useWorkbenchHandoffs';
-import DiagnosisActions from "@/components/DiagnosisActions";
 import CompetitionCalendar from '@/components/overview/CompetitionCalendar';
 import ResearchPipeline from '@/components/overview/ResearchPipeline';
 import { parseDiagnosisBriefSource, type DiagnosisBriefInput, type DiagnosisBriefSource } from '@/lib/diagnosis-actions';
@@ -442,14 +458,14 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
         {([["advisor","选题顾问","热点线索 · 地区资源 · 研究切口"],["readiness","项目诊断","检查证据缺口与下一步"],["topics","文献图谱","领域结构 · 研究空白 · 证据画像"]] as const).map(([id,label,hint])=><button key={id} type="button" role="tab" id={`dg-tab-${id}`} aria-selected={mode===id} aria-controls={`dg-panel-${id}`} tabIndex={mode===id?0:-1} onClick={()=>openMode(id)} onKeyDown={event=>{if(!["ArrowRight","ArrowLeft","Home","End"].includes(event.key))return;event.preventDefault();const order=["advisor","readiness","topics"] as const;const index=order.indexOf(id);const next=event.key==="Home"?order[0]:event.key==="End"?order[2]:order[(index+(event.key==="ArrowRight"?1:2))%3];openMode(next);document.getElementById(`dg-tab-${next}`)?.focus();}}><strong>{label}</strong><small>{hint}</small></button>)}
       </div>
       {pendingSource&&<div className="hosted-notice" role="status"><p>有新的研究简介。载入后将替换当前表单。</p><button type="button" className="secondary-button" onClick={()=>{const source=pendingIncoming.current;if(source)loadIncoming(source);}}>载入新研究简介</button></div>}
-      <div role="tabpanel" id="dg-panel-advisor" aria-labelledby="dg-tab-advisor" hidden={mode!=="advisor"}><TopicAdvisor onUseTopic={applyTopic} renderEnhancement={context=><TopicModelProposal {...context} catalogVersion={topicCatalog.contentVersion} onUseTopic={applyTopic}/>}/></div>
+      <div role="tabpanel" id="dg-panel-advisor" aria-labelledby="dg-tab-advisor" hidden={mode!=="advisor"}><TopicAdvisor onUseTopic={applyTopic} renderEnhancement={context=><TopicModelProposalLazy {...context} onUseTopic={applyTopic}/>}/></div>
       <div role="tabpanel" id="dg-panel-topics" aria-labelledby="dg-tab-topics" hidden={mode!=="topics"}>{topicsOpened&&<TopicLab onUseTopic={applyTopic} initialSnapshot={literature} onSnapshot={onLiterature} projectPaletteId={projectPaletteId}/>}</div>
       <div role="tabpanel" id="dg-panel-readiness" aria-labelledby="dg-tab-readiness" hidden={mode!=="readiness"}>
       <div className="diagnose-grid">
         <form className="diagnose-form" onSubmit={submit} onCompositionStart={()=>{manualEdit.current=true;}} aria-busy={submitting}>
           <fieldset disabled={submitting}>
             <div className="form-grid two-cols">
-              <label><span>项目名称</span><input required value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="例如：银发人群智能出行研究" /></label>
+              <label><span>项目名称</span><input required value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="银发人群智能出行与社区适老化研究" /></label>
               <label><span>决策主体</span><input required value={form.decisionOwner} onChange={(event) => update("decisionOwner", event.target.value)} placeholder="明确到组织或职能角色" /></label>
               <label><span>目标人群</span><input required value={form.population} onChange={(event) => update("population", event.target.value)} placeholder="写清纳入、排除边界" /></label>
               <label><span>地理范围</span><input required value={form.geography} onChange={(event) => update("geography", event.target.value)} placeholder="城市、区县或具体场景" /></label>
@@ -486,7 +502,7 @@ export function DiagnosisPanel({onBriefSource,incomingSource,requestedMode,liter
             {result.transitionPlan && <div className="diagnosis-materials">
               <div><span className="result-label">权威工作流材料清单</span><h4>{STAGE_LABELS[result.transitionPlan.currentStage]} → {result.transitionPlan.nextStage ? STAGE_LABELS[result.transitionPlan.nextStage] : "无下一阶段"}</h4></div>
               <dl>
-                <div><dt>需就绪的质量门禁</dt><dd>{result.transitionPlan.requiredGates.length ? result.transitionPlan.requiredGates.map((gate) => GATE_LABELS[gate]).join("、") : "本次转换无前置 Gate"}</dd></div>
+                <div><dt>需就绪的质量门禁</dt><dd>{result.transitionPlan.requiredGates.length ? result.transitionPlan.requiredGates.map((gate) => GATE_LABELS[gate]).join("、") : "本次阶段衔接无前置门禁"}</dd></div>
                 <div><dt>需准备的产物</dt><dd>{result.transitionPlan.requiredArtifacts.length ? result.transitionPlan.requiredArtifacts.join("、") : "无新增产物"}</dd></div>
               </dl>
               <p>{result.transitionPlan.note}</p>
@@ -549,7 +565,7 @@ function RuleWorkbench() {
 
       <aside className="rule-scope-banner" aria-label="新届次官方通知核验">
         <div><strong>{COMPETITION_UPDATE.title}</strong><span>{COMPETITION_UPDATE.documentNumber} · 署期 {COMPETITION_UPDATE.signedDate} · 核验 {COMPETITION_UPDATE.verifiedAt}</span><a href={COMPETITION_UPDATE.source} target="_blank" rel="noreferrer">{COMPETITION_UPDATE.sourceLabel}</a></div>
-        <div><ul>{COMPETITION_UPDATE.highlights.map(item => <li key={item}>{item}</li>)}</ul><p>{COMPETITION_UPDATE.boundary}</p><p>最近核查尝试 {COMPETITION_UPDATE.lastAttempt.date}：{COMPETITION_UPDATE.lastAttempt.result} 本次尝试不等于完整规则重新核验。</p></div>
+        <div><ul>{COMPETITION_UPDATE.highlights.map(item => <li key={item}>{item}</li>)}</ul><p>{COMPETITION_UPDATE.boundary}</p><p>最近核查记录（{COMPETITION_UPDATE.lastAttempt.date}）显示，{COMPETITION_UPDATE.lastAttempt.result} 本次尝试不等于完整规则重新核验。</p></div>
       </aside>
 
       <div className="rule-workbench">
@@ -583,7 +599,7 @@ function RuleWorkbench() {
             </dl>
             {result.rules.length > 0 && <div className="resolved-rules">{result.rules.map((rule) => <article key={rule.id} className={rule.severity === "disqualifying" ? "disqualifying" : "hard"}><div><span>{ruleTypeLabel(rule.ruleType)}</span><strong>{rule.severity === "disqualifying" ? "违规可取消资格" : "硬规则"}</strong></div><p>{rule.rule}</p><small>{rule.sourceTitle} · 发布 {rule.publishedDate} · 核验 {rule.verifiedAt}</small></article>)}</div>}
             {result.unknowns.length > 0 && <div className="rule-unknowns"><h4>仍需核验</h4><ul>{result.unknowns.map((item) => <li key={item}>{item}</li>)}</ul></div>}
-            {result.sources.length > 0 && <div className="rule-source-ledger"><h4>来源证据</h4>{result.sources.map((source) => <article key={source.id}><div><strong>{source.title}</strong><span>{source.authorityName}</span></div><p>来源记录 SHA-256：{source.sha256.slice(0, 16)}…</p><a href={source.url} target="_blank" rel="noreferrer">打开公开原始来源（新窗口） <span aria-hidden="true">↗</span></a></article>)}</div>}
+            {result.sources.length > 0 && <div className="rule-source-ledger"><h4>来源证据</h4>{result.sources.map((source) => <article key={source.id}><div><strong>{source.title}</strong><span>{source.authorityName}</span></div><p>来源校验指纹 {source.sha256.slice(0, 16)}…</p><a href={source.url} target="_blank" rel="noreferrer">打开公开原始来源（新窗口） <span aria-hidden="true">↗</span></a></article>)}</div>}
             <p className="rule-contract-note">规则语料快照 {result.sourceRawSha256.slice(0, 12)}… · 核验日期 {result.snapshotVerifiedAt}</p>
           </>}
         </div>
@@ -600,7 +616,7 @@ function ruleTypeLabel(value: string) {
     anonymity: "匿名要求",
     map: "地图合规",
     integrity: "学术诚信",
-    ai: "AI 使用",
+    ai: "智能工具合规",
     format: "赛段形式",
   } as Record<string, string>)[value] ?? "其他规则";
 }
@@ -628,6 +644,19 @@ function CanvasPanel({ dataset, design, projectId }: { dataset: DatasetValue | n
  * applies it once mounted.
  * The panels are memoised, so a shell re-rendering for its own state (the report being re-scored) leaves modules alone.
  */
+function isBlankDefaultReportTemplate(content: EditorContent | null | undefined): boolean {
+  if (!content) return true;
+  if (content.coverImage || content.frameImage || content.illustrations?.length) return false;
+  if (content.quality?.results?.length || content.quality?.findings?.length) return false;
+  if (content.references?.length) return false;
+  const proseChars = content.report.reduce(
+    (sum, s) => sum + s.body.trim().length + (s.blocks ?? []).reduce((n, b) => n + b.text.trim().length, 0),
+    0,
+  );
+  if (proseChars >= 500) return false;
+  return content.title.trim() === "我的市场调查研究" || !content.title.trim() || proseChars === 0;
+}
+
 export function useWorkbenchModules(observeReport = false, projectId: string|null = null, requestedResearchStage: ResearchStageId | null = null, researchStageVisit = 0) {
   const { session, identityEpoch, loading, isCurrentAccount, isCurrentIdentity } = useHostedSession();
   const draftOwner = observeReport && !loading ? (session?.authenticated && session.user?.id ? session.user.id : 'guest') : null;
@@ -693,12 +722,105 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
   const figureTweakHandled=useCallback(()=>{if(currentScope())setPendingTweak(null);},[currentScope]);
   const [edited,setReport]=useState<{scope:string;content:EditorContent}|null>(null);
   const [benchmarkEpoch,setBenchmarkEpoch]=useState(0);
+  const userEditedScopes=useRef(new Set<string>());
+  const hydratedScopes=useRef(new Set<string>());
   const emptyReport=useMemo(()=>createEditorContent(),[]);
   const report=edited?.scope===workspaceScope?edited.content:(storedDraft??(observeReport?emptyReport:null));
-  const reportChanged=useCallback((content:EditorContent)=>{if(!currentScope())return;setReport({scope:workspaceScope,content});if(draftOwner)saveReportDraft(draftOwner,content,projectId);},[draftOwner,projectId,workspaceScope,currentScope]);
+  const reportRef=useRef(report);
+  useLayoutEffect(()=>{reportRef.current=report;},[report]);
+  const reportChanged=useCallback((content:EditorContent)=>{
+    if(!currentScope())return;
+    if(!isBlankDefaultReportTemplate(content)||hydratedScopes.current.has(workspaceScope)){
+      userEditedScopes.current.add(workspaceScope);
+    }
+    setReport({scope:workspaceScope,content});
+    if(draftOwner)saveReportDraft(draftOwner,content,projectId);
+  },[draftOwner,projectId,workspaceScope,currentScope]);
   const reportSource=useMemo<ReportRunSource>(()=>({design:exchange.design?.design??null,dataset:exchange.dataset,report,inputPending:!!exchange.design?.pending||!!exchange.pending.result||!!exchange.pending.dataset||!!reportInsert||!!figureTweak}),[exchange.design,exchange.dataset,exchange.pending.result,exchange.pending.dataset,report,reportInsert,figureTweak]);
   const sourceRef=useRef(reportSource);
   useLayoutEffect(()=>{sourceRef.current=reportSource;},[reportSource]);
+  useEffect(()=>{
+    if(!observeReport||loading||!session?.authenticated||!session.user?.id||!projectId||typeof fetch!=='function')return;
+    if(hydratedScopes.current.has(workspaceScope)||userEditedScopes.current.has(workspaceScope))return;
+    const needReport=isBlankDefaultReportTemplate(reportRef.current);
+    const needDesign=!handoffs.getSnapshot().design?.design;
+    if(!needReport&&!needDesign){
+      hydratedScopes.current.add(workspaceScope);
+      return;
+    }
+    let aborted=false;
+    const controller=typeof AbortController==='function'?new AbortController():null;
+    const encodedId=encodeURIComponent(projectId);
+    void (async()=>{
+      let shouldRemountStudio=false;
+      await Promise.allSettled([
+        needReport
+          ? (async()=>{
+              const res=await fetch(`/api/projects/${encodedId}/report`,{
+                method:'GET',
+                credentials:'same-origin',
+                cache:'no-store',
+                headers:{Accept:'application/json'},
+                signal:controller?.signal,
+              });
+              if(!res.ok||aborted||!currentScope()||userEditedScopes.current.has(workspaceScope))return;
+              const raw:unknown=await res.json();
+              if(aborted||!currentScope()||userEditedScopes.current.has(workspaceScope))return;
+              const rawContent=isRecord(raw)&&isRecord(raw.report)
+                ? raw.report.content
+                : isRecord(raw)&&'content' in raw
+                  ? raw.content
+                  : null;
+              if(!rawContent)return;
+              const cloudReport=parseEditorContent(rawContent);
+              if(aborted||!currentScope()||userEditedScopes.current.has(workspaceScope))return;
+              if(draftOwner){
+                saveReportDraft(draftOwner,cloudReport,projectId);
+                flushReportDraft();
+              }
+              sourceRef.current={...sourceRef.current,report:cloudReport};
+              setReport({scope:workspaceScope,content:cloudReport});
+              shouldRemountStudio=true;
+            })()
+          : Promise.resolve(),
+        needDesign
+          ? (async()=>{
+              const res=await fetch(`/api/projects/${encodedId}/questionnaire`,{
+                method:'GET',
+                credentials:'same-origin',
+                cache:'no-store',
+                headers:{Accept:'application/json'},
+                signal:controller?.signal,
+              });
+              if(!res.ok||aborted||!currentScope()||handoffs.getSnapshot().design?.design)return;
+              const raw:unknown=await res.json();
+              if(aborted||!currentScope()||handoffs.getSnapshot().design?.design)return;
+              const rawDesign=isRecord(raw)&&isRecord(raw.questionnaire)
+                ? raw.questionnaire.design
+                : isRecord(raw)&&isRecord(raw.design)
+                  ? raw.design
+                  : null;
+              if(!rawDesign)return;
+              const cloudDesign=typeof parseQuestionnaire==='function'
+                ? parseQuestionnaire(JSON.stringify(rawDesign))
+                : (rawDesign as Questionnaire);
+              if(aborted||!currentScope()||handoffs.getSnapshot().design?.design)return;
+              sourceRef.current={...sourceRef.current,design:cloudDesign};
+              handoffs.setDesign({design:cloudDesign,pending:false});
+              shouldRemountStudio=true;
+            })()
+          : Promise.resolve(),
+      ]);
+      if(!aborted&&currentScope()){
+        hydratedScopes.current.add(workspaceScope);
+        if(shouldRemountStudio)setBenchmarkEpoch(e=>e+1);
+      }
+    })().catch(()=>{});
+    return ()=>{
+      aborted=true;
+      controller?.abort();
+    };
+  },[observeReport,loading,session?.authenticated,session?.user?.id,projectId,workspaceScope,draftOwner,currentScope,handoffs]);
   const sourceMatches=useCallback((expected:ReportRunSource)=>{
     if(!currentScope())return false;
     const live=handoffs.getSnapshot();
@@ -710,6 +832,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     if(!draftOwner||!archiveReportDraft(draftOwner,projectId,expected.report??createEditorContent()))return 'storage_failed';
     saveReportDraft(draftOwner,pack.report,projectId);
     if(!flushReportDraft())return 'storage_failed';
+    userEditedScopes.current.add(workspaceScope);
     sourceRef.current={design:pack.design,dataset:pack.dataset,report:pack.report,inputPending:false};
     handoffs.setDesign({design:pack.design,pending:false});handoffs.setDataset(pack.dataset);
     setReport({scope:workspaceScope,content:pack.report});setBenchmarkEpoch(e=>e+1);
@@ -720,13 +843,24 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
     if(!sourceMatches(expected))return 'conflict';
     if(!draftOwner||!archiveReportDraft(draftOwner,projectId,expected.report??createEditorContent()))return 'storage_failed';
     saveReportDraft(draftOwner,content,projectId);if(!flushReportDraft())return 'storage_failed';
+    userEditedScopes.current.add(workspaceScope);
     sourceRef.current={...expected,report:content};setReport({scope:workspaceScope,content});setBenchmarkEpoch(e=>e+1);return 'applied';
   },[sourceMatches,draftOwner,projectId,workspaceScope]);
   const loadBenchmark=useCallback(async(id:string,customPack?:DemoPack)=>{
     const expected=sourceRef.current;
     if(!currentScope()||hasUserResearchSource(expected))return false;
     let pack:DemoPack;
-    try{pack=customPack??await buildDemoPack(id==='current'?undefined:id,expected.design);}catch{return false;}
+    try{
+      if(customPack){
+        pack=customPack;
+      }else if(!expected.design){
+        const {buildRichDemoPack}=await import('@/lib/agent/rich-study');
+        pack=await buildRichDemoPack(id==='current'?undefined:id,null,{classification:'simulated'});
+      }else{
+        const {buildDemoPack}=await import('@/lib/agent/demo-study');
+        pack=await buildDemoPack(id==='current'?undefined:id,expected.design);
+      }
+    }catch{return false;}
     return applyCandidate(pack,expected)==='applied';
   },[currentScope,applyCandidate]);
   const sendSiliconToAnalysis = useCallback(
@@ -751,7 +885,7 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
             <h1 id="hero-title">让每个问题，<br /><em>都循证抵达行动。</em></h1>
             <p>从规则锁定、获奖案例证据、研究设计到报告答辩，证见把问题、数据、洞察和行动收进一条可复核的证据链。</p>
             <div className="hero-actions"><Link className="primary-button gold-button" href="/projects">进入我的项目</Link><a className="ghost-button" href="#cases">查看获奖案例 <span aria-hidden="true">↗</span></a></div>
-            <div className="hero-proof"><span><strong>12</strong> 阶段权威合约</span><span><strong>9</strong> 道质量 Gate</span><span><strong>5D</strong> 规则快照</span></div>
+            <div className="hero-proof"><span><strong>12</strong> 阶段权威合约</span><span><strong>9</strong> 道质量门禁</span><span><strong>5</strong> 维规则快照</span></div>
             <div className="wb-quick-start" aria-label="工作台快捷入口">
               <h2>从这里开始</h2>
               <a href="#cases"><span>01</span><div><strong>读一份真实案例</strong><small>看看好问题如何落到证据与行动</small></div><span aria-hidden="true">↗</span></a>
@@ -767,8 +901,8 @@ export function useWorkbenchModules(observeReport = false, projectId: string|nul
       <ResearchPipeline />
 
       <section className="section qdia-section" aria-labelledby="qdia-title">
-        <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">让问题、数据、洞察与行动对应</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关 Gate 必须在受信任控制面中重新评估。</p></div>
-        <div className="qdia-cards">{QDIA.map((item, index) => <article key={item.code}><span className="step-number">0{index + 1}</span><div className="step-code">{item.code}</div><h3>{item.name} <small>{item.english}</small></h3><p>{item.detail}</p><span className="step-check">{["决策主体 · 目标人群 · 证据缺口", "来源 · 样本 · 清洗 · 台账", "方法适配 · 结果 · 限制", "负责人 · 优先级 · KPI"][index]}</span></article>)}</div>
+        <div className="section-heading"><div><span className="eyebrow">Q–D–I–A 方法链</span><h2 id="qdia-title">让问题、数据、洞察与行动对应</h2></div><p>每一阶段都回答一个可验证问题；上游证据变化时，相关质量门禁必须在控制面中重新核验。</p></div>
+        <div className="qdia-cards">{QDIA.map((item, index) => <article key={item.code}><span className="step-number">0{index + 1}</span><div className="step-code">{item.code}</div><h3>{item.name} <small>{item.english}</small></h3><p>{item.detail}</p><span className="step-check">{["决策主体 · 目标人群 · 证据缺口", "来源 · 样本 · 清洗 · 台账", "方法适配 · 结果 · 限制", "负责人 · 优先级 · 量化指标"][index]}</span></article>)}</div>
       </section>
 
       <section className="closing-cta"><div><span className="eyebrow">从真实状态开始</span><h2>把下一步，变成可验证的行动。</h2><p>梳理当前证据缺口，生成下一步行动清单。</p></div><a className="primary-button gold-button" href="#diagnose">开始项目诊断</a></section>

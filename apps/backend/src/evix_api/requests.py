@@ -3,7 +3,7 @@ from shared.errors import ApiError
 
 async def body(request, required, optional=(), limit=350_000):
     if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
-        raise ApiError(415, "unsupported_media_type", "请求须为JSON。")
+        raise ApiError(415, "unsupported_media_type", "请求数据格式不受支持，请按标准结构化格式提交。")
     advertised = request.headers.get("content-length")
     if advertised and (not advertised.isdecimal() or int(advertised) > limit):
         raise ApiError(413, "payload_too_large", "请求内容超过上限。")

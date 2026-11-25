@@ -22,10 +22,10 @@ MAX_BODY = 120000
 MAX_PDF = 8 * 1024 * 1024
 MAX_LOG = 1024 * 1024
 MAX_FILES = 32 * 1024 * 1024
-ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular array figure tikzpicture axis".split())
+ENVIRONMENTS = frozenset("itemize enumerate description center quote quotation equation equation* align align* aligned gather gather* gathered split cases matrix pmatrix bmatrix Bmatrix vmatrix Vmatrix table tabular longtable array figure tikzpicture axis".split())
 COMMANDS = frozenset((
-    "section subsection subsubsection paragraph subparagraph par newline linebreak textbf textit emph textrm textsf texttt textnormal underline textsuperscript textsubscript "
-    "item caption label ref eqref centering toprule midrule bottomrule multicolumn small noindent hangindent hangafter "
+    "section subsection subsubsection paragraph subparagraph par clearpage newline linebreak textbf textit emph textrm textsf texttt textnormal underline textsuperscript textsubscript "
+    "item caption tag label ref eqref centering toprule midrule bottomrule multicolumn small noindent hangindent hangafter addcontentsline listoftables listoffigures endfirsthead endhead "
     "textbackslash textasciitilde textasciicircum textdegree textendash textemdash textquotedblleft textquotedblright "
     "frac dfrac tfrac sqrt overline widehat widetilde hat bar vec dot ddot tilde acute grave breve check mathrm mathbf mathit mathsf mathtt mathcal mathbb mathop operatorname text "
     "left right middle big Big bigg Bigg bigl bigr Bigl Bigr biggl biggr Biggl Biggr "
@@ -61,7 +61,7 @@ def normalize_body(content):
 
 # Method figures embedded as the product's renderings; byte-identical with the frontend's LATEX_IMAGE_PREAMBLE.
 IMAGE_PREAMBLE = [r"\usepackage{graphicx}", r"\newcommand{\ResearchImage}[1]{\includegraphics[width=\linewidth,height=0.42\textheight,keepaspectratio]{exhibit-#1.png}}"]
-IMAGE_LIMITS = {"count": 24, "bytes": 700_000, "total": 8_000_000}
+IMAGE_LIMITS = {"count": 48, "bytes": 700_000, "total": 12_000_000}
 
 
 def checked_images(images):
@@ -89,6 +89,22 @@ def checked_images(images):
     return out
 
 
+def _cover_titlepage_lines(cover, title, subtitle):
+    clean_title = re.sub(r"[\r\n]", " ", title).strip()
+    if not clean_title or clean_title == "我的市场调查研究" or re.search(r"(?:封面技能|题名字形在图中|图文一体)", cover["note"]):
+        return cover_image_titlepage(cover)
+    clean_sub = re.sub(r"[\r\n]", " ", subtitle).strip()
+    sub_tex = r"\vspace{4mm}{\songti\fontsize{12bp}{17bp}\selectfont " + escape(clean_sub) + r"\par}" if clean_sub else ""
+    return [
+        r"\begin{titlepage}",
+        r"\begin{tikzpicture}[remember picture,overlay]",
+        r"\node[inner sep=0pt] at (current page.center) {\includegraphics[width=\paperwidth,height=\paperheight]{" + cover_image_file(cover) + "}};",
+        r"\node[anchor=north,inner xsep=10mm,inner ysep=8mm,fill=white,fill opacity=0.84,text opacity=1,rounded corners=2mm,text width=146mm,align=center] at ([yshift=-26mm]current page.north) {{\songti\bfseries\fontsize{20bp}{27bp}\selectfont " + escape(clean_title) + r"\par}" + sub_tex + "};",
+        r"\end{tikzpicture}",
+        r"\end{titlepage}",
+    ]
+
+
 def build_source(title, subtitle, content, settings, frame=None, figures=None, visual_style=None, cover_image=None, frame_image=None, images=None):
     """Keep byte-identical with the frontend generator; source is always returned by API."""
     frame = checked_frame(frame, visual_style)
@@ -104,18 +120,20 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
         r"\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}",
         r"\DeclareCaptionFont{reportcaption}{\fontsize{12bp}{15.552bp}\selectfont}",
         r"\captionsetup{font=reportcaption,labelsep=quad,justification=centering,singlelinecheck=false}",
-        r"\ctexset{section={format=\fontsize{15bp}{19.44bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsection={format=\fontsize{14bp}{18.144bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsubsection={format=\fontsize{12bp}{15.552bp}\selectfont\songti,beforeskip=6bp,afterskip=1sp}}",
+        r"\ctexset{section={format=\centering\heiti\zihao{3}\bfseries,beforeskip=6bp,afterskip=1sp},subsection={format=\fontsize{14bp}{18.144bp}\selectfont\heiti,beforeskip=6bp,afterskip=1sp},subsubsection={format=\fontsize{12bp}{15.552bp}\selectfont\songti,beforeskip=6bp,afterskip=1sp}}",
         r"\setcounter{secnumdepth}{-1}",
         "\\pagestyle{" + ("plain" if settings["numberPages"] else "empty") + "}",
         r"\begin{document}",
         r"\fontsize{12bp}{15.552bp}\selectfont",
     ]
+    if r"\begin{longtable}" in content:
+        lines[3:3] = [r"\usepackage{longtable}"]
     if r"\begin{tikzpicture}" in content:
         lines[3:3] = [r"\usepackage{pgfplots}", r"\pgfplotsset{compat=1.18}"]
     if figures:
         lines[3:3] = [r"\usepackage{tikz}"]
         lines[-2:-2] = figure_tex_preamble(figures, visual_style)
-    # A cover image is the whole cover: it fills the page, carries its own title lettering and gets no page frame.
+    # A cover image fills the page; textless Track-2 AI/showcase covers receive an editorial title overlay in the top clear space.
     cover = cover_image if settings["includeCover"] and cover_image else None
     if cover:
         cover_image_bytes(cover)
@@ -133,7 +151,7 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
         if 'cover' in frame['appliesTo'] and not cover:
             lines.append(r"\ReportFrameActivetrue")
     if cover:
-        lines += cover_image_titlepage(cover)
+        lines += _cover_titlepage_lines(cover, title, subtitle)
     elif settings["includeCover"]:
         lines += [r"\begin{titlepage}", r"\centering", r"\vspace*{25mm}", "{\\songti\\bfseries\\fontsize{16bp}{20bp}\\selectfont " + escape(title) + r"\par}", r"\vspace{10mm}", escape(subtitle) + r"\par", r"\end{titlepage}"]
     if frame and frame['layout'] != 'none':
@@ -141,7 +159,12 @@ def build_source(title, subtitle, content, settings, frame=None, figures=None, v
     if frame_image:
         lines.append(r"\ReportFrameImagetrue")
     if settings["includeToc"]:
-        lines += [r"\pagenumbering{Roman}", r"\tableofcontents", r"\clearpage", r"\pagenumbering{arabic}"]
+        lines += [r"\pagenumbering{Roman}", r"\tableofcontents", r"\clearpage"]
+        if r"\addcontentsline{lot}" in content:
+            lines += [r"\listoftables", r"\clearpage"]
+        if r"\addcontentsline{lof}" in content:
+            lines += [r"\listoffigures", r"\clearpage"]
+        lines.append(r"\pagenumbering{arabic}")
     if frame and frame['layout'] != 'none' and ('appendix' if settings['part'] == 'appendix' else 'body') in frame['appliesTo']:
         lines.append(r"\ReportFrameActivetrue")
     lines += ["% BODY START", normalize_body(content), "% BODY END", r"\end{document}", ""]
@@ -176,7 +199,7 @@ def validate_body(content, figure_count=0, image_count=0):
     def fail(message, position):
         raise UnsafeBody(message, content.count("\n", 0, position) + 1)
     if "^^" in content:
-        fail("不支持 TeX 字符重编码。请直接输入正文字符。", content.index("^^"))
+        fail("不支持特殊字符转义编码，请直接输入常规正文字符。", content.index("^^"))
     stack, depth, commands, environments = [], 0, 0, 0
     i = 0
     def next_token(position):
@@ -261,10 +284,10 @@ def validate_body(content, figure_count=0, image_count=0):
             if depth > 32: fail("正文分组最多嵌套 32 层。", i)
         elif c == "}":
             depth -= 1
-            if depth < 0: fail("存在未配对的右花括号。", i)
+            if depth < 0: fail("存在未配对的分组闭合符。", i)
         elif c == "\\":
             start = i
-            if i + 1 >= len(content): fail("反斜杠后缺少命令。", i)
+            if i + 1 >= len(content): fail("排版控制符后缺少有效指令名称。", i)
             match = re.match(r"[A-Za-z]+", content[i + 1:])
             if not match:
                 symbol = content[i + 1]
@@ -273,16 +296,16 @@ def validate_body(content, figure_count=0, image_count=0):
                 if symbol == "\\":
                     if next_token(i) in ("[", "*"): fail("表格换行不接受自定义间距。", start)
                     for entry in stack:
-                        if entry["name"] in ("tabular", "array"):
+                        if entry["name"] in ("tabular", "longtable", "array"):
                             entry["rows"] += 1
                             if entry["rows"] > 500: fail("单张表格最多 500 行。", start)
                 continue
             command = match.group(0); i += 1 + len(command); commands += 1
-            if command not in COMMANDS: fail("不支持命令 \\" + command + "。请使用正文、公式或三线表语法。", start)
-            if commands > 20000: fail("正文命令数量超过上限。", start)
+            if command not in COMMANDS: fail("当前排版规范不支持指令 " + command + "，请使用常规正文、公式或三线表结构。", start)
+            if commands > 20000: fail("正文排版指令数量超过上限。", start)
             if command in ("begin", "end"):
                 name, i = argument(i, r"[A-Za-z*]+", "环境名称须为固定名称。")
-                if name not in ENVIRONMENTS: fail("不支持环境 " + name + "。", start)
+                if name not in ENVIRONMENTS: fail("当前排版规范不支持环境 " + name + "。", start)
                 if command == "begin":
                     environments += 1
                     if len(stack) >= 32 or environments > 2000: fail("正文环境数量或层级超过上限。", start)
@@ -297,15 +320,26 @@ def validate_body(content, figure_count=0, image_count=0):
                         if not stack or stack[-1]["name"] != "tikzpicture": fail("坐标轴须在图表环境内。", start)
                         i, entry["ticks"] = axis_options(i)
                         entry["plots"] = 0
-                    if name in ("tabular", "array"):
+                    if name in ("tabular", "longtable", "array"):
                         # Centred columns, or centred wrapping columns of a fixed width (C{30mm}).
-                        _, i = argument(i, r"(?:c|C\{[1-9][0-9]?mm\}){1,12}", "表格须使用 1 至 12 个居中列，例如 {ccc}。")
+                        _, i = argument(i, r"(?:c|C\{[1-9][0-9]?mm\}){1,12}", "表格须使用 1 至 12 个居中列，例如三列居中格式 ccc。")
                     stack.append(entry)
                 else:
                     if not stack or stack[-1]["name"] != name: fail("环境起止不匹配。", start)
                     entry = stack.pop()
                     if name == "axis" and entry["plots"] != 1: fail("每张图须包含一次内联坐标计算结果。", start)
-                    if name == "tabular" and entry["rules"] != ["toprule", "midrule", "bottomrule"]: fail("三线表须依次包含一次 top、mid、bottomrule。", start)
+                    if name == "tabular" and entry["rules"] != ["toprule", "midrule", "bottomrule"]: fail("三线表须依次包含顶线、中线与底线各一条。", start)
+                    if name == "longtable":
+                        rules = entry["rules"]
+                        if (
+                            "toprule" not in rules
+                            or "midrule" not in rules
+                            or "bottomrule" not in rules
+                            or rules.index("toprule") > rules.index("midrule")
+                            or max(idx for idx, rule in enumerate(rules) if rule == "toprule") > rules.index("bottomrule")
+                            or rules.index("midrule") > rules.index("bottomrule")
+                        ):
+                            fail("跨页三线表须依次包含有效的顶线、中线与底线。", start)
             elif command == "definecolor":
                 if not stack or stack[-1]["name"] != "figure" or stack[-1].get("color"): fail("图表颜色须在图形环境内定义一次。", start)
                 match = re.match(r"\{ResearchAccent\}\{HTML\}\{(?:0F766E|8A3449|234E80)\}", content[i:])
@@ -325,15 +359,28 @@ def validate_body(content, figure_count=0, image_count=0):
                 if not 0 <= int(value) < figure_count:
                     fail("图形引用不在本次图形版本中。", start)
             elif command in ("toprule", "midrule", "bottomrule"):
-                if not stack or stack[-1]["name"] != "tabular": fail("三线表横线须放在 tabular 环境内。", start)
+                if not stack or stack[-1]["name"] not in ("tabular", "longtable"): fail("三线表横线须放在表格环境内。", start)
                 if next_token(i) == "[":
                     fixed = "[0.75bp]" if command == "midrule" else "[1.5bp]"
                     if not content.startswith(fixed, i): fail("三线表线宽须为 1.5、0.75、1.5 磅。", start)
                     i += len(fixed)
                 stack[-1]["rules"].append(command)
+            elif command in ("endfirsthead", "endhead"):
+                if not stack or stack[-1]["name"] != "longtable": fail("跨页表头分隔标记须置于跨页三线表环境内。", start)
+            elif command == "addcontentsline":
+                if not any(entry["name"] in ("table", "longtable", "figure") for entry in stack):
+                    fail("图表目录登记须放在表格或图形环境内。", start)
+                list_kind, i = argument(i, r"lot|lof", "图表目录登记仅支持表目录或图目录索引。")
+                entry_kind, i = argument(i, r"table|figure", "图表目录条目仅支持表格或图形类别。")
+                if (list_kind, entry_kind) not in (("lot", "table"), ("lof", "figure")):
+                    fail("图表目录索引与条目类型不匹配。", start)
+                if not re.match(r"\s*\{", content[i:]):
+                    fail("图表目录条目须包含标题参数。", start)
             elif command == "multicolumn":
                 _, i = argument(i, r"(?:[1-9]|1[0-2])", "合并列数须为 1 至 12。")
                 _, i = argument(i, r"c", "合并列须居中。")
+            elif command == "tag":
+                _, i = argument(i, r"(?:附?[1-9][0-9]{0,2}|[1-9][0-9]{0,2}-[1-9][0-9]{0,2})", "公式编号须为章节或附录序号，例如 3-1。")
             elif command in ("label", "ref", "eqref"):
                 _, i = argument(i, r"[A-Za-z][A-Za-z0-9:_-]{0,63}", "交叉引用须使用英文字母开头的固定标识。")
             elif command == "hangindent":
@@ -346,7 +393,7 @@ def validate_body(content, figure_count=0, image_count=0):
                 i += match.end()
             continue
         i += 1
-    if depth or stack: fail("花括号或环境尚未闭合。", len(content))
+    if depth or stack: fail("排版分组或环境尚未正常闭合。", len(content))
 
 
 def sanitized_environment(directory, executable):
@@ -452,11 +499,11 @@ def compiler_diagnostic(log, source):
     match = re.search(r"(?:document\.tex:|\bl\.)(\d+)", log)
     full_line = int(match.group(1)) if match else None
     line = full_line - start + 1 if full_line is not None and full_line >= start else None
-    if "Missing $ inserted" in log: message = "数学模式未闭合或公式符号放在正文中，请检查 $、\\( 和 \\[。"
-    elif "Undefined control sequence" in log: message = "命令无法编译，请核对命令拼写和公式环境。"
-    elif "File `" in log and "not found" in log: message = "编译环境缺少预装组件，请联系管理员。"
-    elif "Emergency stop" in log or "Runaway argument" in log: message = "正文结构尚未闭合，请检查花括号、公式和环境。"
-    else: message = "LaTeX 编译未完成，请检查该行附近的公式和表格结构。"
+    if "Missing $ inserted" in log: message = "数学公式未正常闭合，或正文中直接出现了公式符号，请核查公式起止标记。"
+    elif "Undefined control sequence" in log: message = "存在无法识别的排版指令，请核对指令拼写与公式环境。"
+    elif "File `" in log and "not found" in log: message = "排版环境缺少必要字体或样式组件，请联系管理员核查。"
+    elif "Emergency stop" in log or "Runaway argument" in log: message = "正文排版结构尚未闭合，请检查分组括号、公式与环境起止。"
+    else: message = "文稿排版生成未完成，请检查该行附近的公式与表格结构。"
     return diagnostic(message, line)
 
 
@@ -475,9 +522,9 @@ class LatexCompiler:
             result["diagnostics"] = [diagnostic(error.message, error.line)]; return result
         executable = self.settings.latex_compiler
         if not executable or not Path(executable).is_file():
-            result.update(status="unavailable", diagnostics=[diagnostic("PDF 编译器尚未配置。可先导出 LaTeX 源码。")]); return result
+            result.update(status="unavailable", diagnostics=[diagnostic("当前环境尚未配置版式生成引擎，可先导出排版源码。")]); return result
         if not self.slots.acquire(blocking=False):
-            raise ApiError(429, "latex_busy", "编译任务已满，请稍后重试。")
+            raise ApiError(429, "latex_busy", "当前排版任务队列已满，请稍后重试。")
         result["engine"] = "xelatex"
         try:
             with tempfile.TemporaryDirectory(prefix="evix-latex-") as directory:
@@ -497,17 +544,17 @@ class LatexCompiler:
                         result["diagnostics"] = [compiler_diagnostic(log, source)]; return result
                 pdf = directory / "document.pdf"
                 if not pdf.is_file() or not 4 < pdf.stat().st_size <= MAX_PDF or not pdf.read_bytes().startswith(b"%PDF-"):
-                    result["diagnostics"] = [diagnostic("编译器未生成有效 PDF，或 PDF 超过 8 MiB。")]; return result
+                    result["diagnostics"] = [diagnostic("未能生成有效的版式文件，或导出体积超过 8 MB 上限。")]; return result
                 result.update(status="compiled", pdfBase64=base64.b64encode(pdf.read_bytes()).decode("ascii"))
                 if "Overfull" in log: result["diagnostics"].append(diagnostic("部分内容超出行宽，请检查长公式或表格。", severity="warning"))
-                if "Missing character" in log: result["diagnostics"].append(diagnostic("当前字体缺少部分字符，请检查 PDF 中的符号。", severity="warning"))
+                if "Missing character" in log: result["diagnostics"].append(diagnostic("当前字体缺少部分生僻字符，请核查导出文稿中的对应符号。", severity="warning"))
                 return result
         except TimeoutError:
-            result["diagnostics"] = [diagnostic("编译超过时间上限，请拆分长公式或表格后重试。")]
+            result["diagnostics"] = [diagnostic("排版生成超过时间上限，请拆分超长公式或表格后重试。")]
         except OverflowError:
-            result["diagnostics"] = [diagnostic("编译产物超过容量上限，请精简后重试。")]
+            result["diagnostics"] = [diagnostic("排版导出体积超过容量上限，请精简内容后重试。")]
         except (OSError, subprocess.SubprocessError):
-            result.update(status="unavailable", diagnostics=[diagnostic("编译器暂时不可用，请联系管理员。")])
+            result.update(status="unavailable", diagnostics=[diagnostic("排版服务暂时不可用，请稍后重试或联系管理员。")])
         finally:
             self.slots.release()
         return result

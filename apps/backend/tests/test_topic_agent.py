@@ -205,18 +205,18 @@ def test_first_week_plan_has_five_exact_proposed_actions_and_preserves_access_or
                  "question": "合成服务在哪个环节需要调整？", "population": "合成测试对象",
                  "decisionOwner": "拟联系的合成服务方", "decision": "优先调整哪个环节"}
     expected = [
-        "确认入口：联系商户、在校大学生，记录可触达范围、同意方式与可执行事项。尚未获得许可时，先做公开资料核验。",
-        "核对依据：逐项查找合成政策原文、合成访谈记录、合成观察记录，保存原始链接、发布时间、适用地区和未核实项。",
-        "准备探索：围绕“合成服务在哪个环节需要调整？”列出经历、原因与反例的追问；按“合成测试对象”确认招募边界和记录表。",
-        "小范围预试：在获得同意后试用提纲或问卷，记录难以理解、无法回答和遗漏的情境；保留修改前后版本。",
-        "作出去留决定：把支持、反例和证据缺口汇总给拟联系的合成服务方，检查能否支持“优先调整哪个环节”；按记录决定保留、缩小范围或换题。",
+        "先确认入口，联系商户、在校大学生，记录可触达范围、同意方式与可执行事项；尚未获得许可时，先做公开资料核验。",
+        "再核对依据，逐项查找合成政策原文、合成访谈记录、合成观察记录，保存原始链接、发布时间、适用地区和未核实项。",
+        "随后准备探索，围绕“合成服务在哪个环节需要调整？”列出经历、原因与反例的追问，并按“合成测试对象”确认招募边界和记录表。",
+        "在获得同意后开展小范围预试，试用提纲或问卷，记录难以理解、无法回答和遗漏的情境，并保留修改前后版本。",
+        "最后作出去留决定，把支持、反例和证据缺口汇总给拟联系的合成服务方，检查能否支持“优先调整哪个环节”，按记录决定保留、缩小范围或换题。",
     ]
     original = copy.deepcopy(synthetic)
     assert agent.first_week_plan(profile(), synthetic) == expected
     assert agent.first_week_plan(profile(access={"merchants": "confirmed"}), synthetic) == expected
     assert synthetic == original
     synthetic["accessNeeds"] = []
-    assert agent.first_week_plan(profile(), synthetic)[0].startswith("确认入口：联系目标人群或合作方，")
+    assert agent.first_week_plan(profile(), synthetic)[0].startswith("先确认入口，联系目标人群或合作方，")
 
 
 def test_first_week_plan_clips_utf16_at_codepoint_boundary_and_keeps_catalog_actions_valid():
@@ -224,7 +224,7 @@ def test_first_week_plan_clips_utf16_at_codepoint_boundary_and_keeps_catalog_act
     for pattern in corpus["catalog"]["patterns"]:
         actions = agent.first_week_plan(profile(), pattern)
         assert len(actions) == 5 and all(0 < len(row.encode("utf-16-le")) // 2 <= 300 for row in actions)
-        assert [row.split("：", 1)[0] for row in actions] == ["确认入口", "核对依据", "准备探索", "小范围预试", "作出去留决定"]
+        assert ["确认入口" in actions[0], "核对依据" in actions[1], "准备探索" in actions[2], "小范围预试" in actions[3], "作出去留决定" in actions[4]] == [True] * 5
         assert "获得同意后" in actions[3] and "反例" in actions[4] and "换题" in actions[4]
     pattern = copy.deepcopy(corpus["catalog"]["patterns"][0])
     pattern.update(question="🦞" * 300, population="🦞" * 300, decision="🦞" * 300, minimumEvidence=["🦞" * 300])

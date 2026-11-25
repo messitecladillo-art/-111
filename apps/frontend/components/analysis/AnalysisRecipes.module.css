@@ -175,3 +175,70 @@
   .taskList > button,.entryModes > button { transition: none; }
   .activityDot { animation: none; }
 }
+
+@media (forced-colors: active) {
+  .board,
+  .fileMenu > div,
+  .board .entryModes > button,
+  .routeChooser,
+  .routeTabs,
+  .importPreview,
+  .methodPicker,
+  .empty,
+  .card,
+  .output,
+  .table,
+  .table th {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .fileMenu > div,
+  .board .entryModes > button,
+  .routeChooser,
+  .importPreview,
+  .methodPicker,
+  .notice,
+  .restore,
+  .empty,
+  .card,
+  .sampleConfig,
+  .badge,
+  .table,
+  .board button,
+  .board input:not([type=checkbox]),
+  .board select,
+  .board textarea {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .routeTabs,
+  .routePreview li,
+  .viewTabs,
+  .cardHead,
+  .config,
+  .scaleItems > div,
+  .table th,
+  .table td,
+  .interpretation,
+  .error,
+  .roadmap {
+    border-color: CanvasText;
+  }
+  .selectionMarker {
+    display: none;
+  }
+  .primary,
+  .board .entryModes > button[aria-pressed=true],
+  .board .routeTabs > button[aria-pressed=true],
+  .board .viewTabs button[aria-pressed=true],
+  .board .taskList > button[aria-pressed=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .board :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

@@ -33,7 +33,7 @@ function harness({stored=artifacts.emptyArtifactLibrary(),read,approve,captureFa
  for(const [name,queue] of [['useLayoutEffect',layouts],['useEffect',effects]])hooks[name]=(effect,deps)=>{const index=cursor++,previous=slots[index];if(!previous||!same(previous.deps,deps))queue.push(()=>{previous?.cleanup?.();slots[index]={deps,cleanup:effect()};});};
  const jsx=(type,values,key)=>({type,key,props:values??{}});
  const modules={
-  react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'@/components/math/Tex':{Formula:'Formula'},
+  react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'@/components/math/Tex':{Formula:'Formula'},'@/components/math/TexLazy':{FormulaLazy:'Formula'},
   '@/lib/editor-model':model,'@/lib/report-figure':{...figures,parseReportFigure:value=>figures.parseReportFigure(structuredClone(value))},
   '@/lib/report-frame':{...frames,parseReportFrame:value=>frames.parseReportFrame(structuredClone(value)),approveReportFrame:approve??frames.approveReportFrame},
   '@/lib/vector-assets':vectors,'@/lib/agent/figure-tweak':tweaks,

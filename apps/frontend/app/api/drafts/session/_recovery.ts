@@ -5,7 +5,7 @@ import { parseRecoveryKey } from "../../../../lib/editor-recovery";
 
 export async function recoveryOwner(request: Request, mutation: boolean): Promise<string> {
   const url = new URL(request.url);
-  if (url.protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) throw new ApiError(403, "recovery_secure_origin_required", "恢复密钥仅能在 HTTPS 或本机回环地址使用。");
+  if (url.protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) throw new ApiError(403, "recovery_secure_origin_required", "恢复密钥仅能在加密连接或本机环境下使用。");
   const origin = request.headers.get("origin");
   const site = request.headers.get("sec-fetch-site");
   if (site === "cross-site" || (origin !== null && origin !== url.origin) || (mutation ? origin !== url.origin : origin !== url.origin && site !== "same-origin")) {

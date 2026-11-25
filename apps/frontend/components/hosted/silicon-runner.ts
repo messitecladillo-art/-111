@@ -36,14 +36,14 @@ export function parseRunView(v: unknown): RunView {
 }
 
 const ERRORS: Record<string, string> = {
-  authentication_failed: '模型服务拒绝了密钥，请在「我的模型服务」中检查配置。',
-  rate_limited: '模型服务限流，部分画像未能作答。',
-  provider_timeout: '模型调用结果待对账，已发送的调用不会自动重发。',
-  provider_failure: '模型调用结果待对账，请查询本次运行记录。',
-  provider_unavailable: '模型调用结果待对账，请查询本次运行记录。',
+  authentication_failed: '服务商拒绝了当前密钥，请在个人服务设置中检查配置。',
+  rate_limited: '服务请求触发限流，部分受访画像未能完成作答。',
+  provider_timeout: '本次调用结果待对账，已发出的请求不会自动重发。',
+  provider_failure: '本次调用结果待对账，请查询本次运行记录。',
+  provider_unavailable: '本次调用结果待对账，请查询本次运行记录。',
   interrupted_run: '运行在服务重启时中断，结果状态未知；已作答的部分保留在运行记录中。',
-  unreconciled_calls: '部分调用超时或服务端出错，供应商可能已处理并计费；这些画像的结果未知，未自动重发。其余画像的回答可用。',
-  cancelled_by_user: '已停止：尚未发出的调用不会再发出。',
+  unreconciled_calls: '部分请求超时或服务端出错，服务商可能已处理并计费；这些画像的结果未知，未自动重发，其余画像的回答可用。',
+  cancelled_by_user: '本次运行已手动停止，尚未发出的请求不会继续发送。',
 };
 const sleep = (ms: number, signal: AbortSignal) => new Promise<void>(resolve => { const t = setTimeout(resolve, ms); signal.addEventListener('abort', () => { clearTimeout(t); resolve(); }, { once: true }); });
 
@@ -61,11 +61,11 @@ export function createSiliconRunner({ projectId, services, localTest, mutate, ma
   return {
     models: usable.map(s => ({ id: s.id, label: names.get(s.id)!, detail: `${s.provider} · 配置 v${s.revision}` })),
     maxCalls,
-    consentLabel: localTest ? '确认使用合成模型验收本次运行，不产生真实模型费用。' : '同意把画像设定与问卷内容发送给所选模型供应商，由模型扮演虚构受访者作答，并使用我的 API 额度。',
+    consentLabel: localTest ? '确认使用本地演示服务验证本次运行，不产生外部调用费用。' : '同意将受访者画像设定与问卷内容发送给所选服务商，生成模拟受访者预测试作答，并使用已绑定的个人服务额度。',
     async run(request: SiliconRunRequest, onProgress, signal) {
       const base = `/api/projects/${projectId}/silicon-runs`;
       const chosen = request.settings.models.map(id => usable.find(s => s.id === id)).filter((s): s is Service => !!s);
-      if (!chosen.length) throw Error('请选择至少一个启用研究能力的模型服务。');
+      if (!chosen.length) throw Error('请选择至少一个启用研究能力的服务配置。');
       let view = parseRunView(await mutate(base, {
         design: request.design, attributes: request.attributes,
         personas: request.personas.map(p => ({ id: p.id, code: p.code, traits: p.traits, background: p.background })),
@@ -89,8 +89,8 @@ export function createSiliconRunner({ projectId, services, localTest, mutate, ma
         questionnaire: { title: request.design.title, fingerprint: designFingerprint(request.design), questions: request.design.questions.length },
         attributes: request.attributes, personas: request.personas, settings: { ...request.settings, scenarios: request.settings.scenarios.length ? request.settings.scenarios : [NO_SCENARIO], models: names }, responses: view.responses ?? [],
         notes: [
-          '语言模型生成的虚构受访者回答，仅用于问卷预测试，不得填补或扩充真实样本。',
-          ...(view.status !== 'ready' ? [ERRORS[view.errorCode ?? ''] || `运行状态：${view.status}`] : []),
+          '本次生成的模拟受访者回答仅用于问卷预测试，不得填补或扩充真实调查样本。',
+          ...(view.status !== 'ready' ? [ERRORS[view.errorCode ?? ''] || `当前运行状态为 ${view.status}`] : []),
         ],
       };
     },

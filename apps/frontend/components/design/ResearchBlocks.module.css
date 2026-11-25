@@ -18,3 +18,9 @@
 .scale summary,.guide summary { cursor:pointer; font-weight:650; font-size:16px; }.scale>p,.scale>label,.scale>button,.fields { margin-top:16px; }.fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; }.guide ol { padding-left:24px; font-size:14px; line-height:1.8; color:var(--wb-muted); }.guide li+li{margin-top:8px;}.error{color:var(--wb-risk)!important;}
 @media(max-width:1100px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:650px){.tiles,.topic,.fields{grid-template-columns:minmax(0,1fr);}.tray>button{width:100%;}.tiles>button{padding:16px;}}
+@media (forced-colors: active) {
+  .builder :is(button, input, select, textarea, summary):focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; box-shadow: none !important; }
+  .builder :is(button, input, select, textarea), .tiles > button { border: 1px solid ButtonText; }
+  .tray, .scale, .guide { background: Canvas; color: CanvasText; border: 1px solid CanvasText; box-shadow: none !important; }
+  .builder .primary, .tiles > button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
+}

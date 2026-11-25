@@ -134,7 +134,7 @@ test('classifyWorkflowGate and workflowStageProgress interpret backend states cl
   assert.deepEqual(approvalGate, {
     kind: 'approve_review',
     role: 'research',
-    label: '「选题研究」阶段已通过审校，请确认放行或退回修改。',
+    label: '“选题研究”阶段已通过审校，请确认放行或退回修改。',
   });
 });
 

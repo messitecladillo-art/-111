@@ -1,7 +1,7 @@
 /** Checks observable report evidence completeness, not award quality or methodological correctness.
  * Counts are descriptive. Adding methods, words, figures or formulas never earns credit by itself.
  */
-import type { EditorContent, ReportSection } from './editor-model.ts';
+import { sectionProseText, type EditorContent, type ReportSection } from './editor-model.ts';
 import { findingNeedsReview } from './research-quality.ts';
 import { reportHeadingLevel, reportPart, type ReportPart } from './report-format.ts';
 import { BLUEPRINT_MODULE_LABELS, blueprintNode, matchBlueprintNode, stripHeadingNumber, type BlueprintModule, type BlueprintNode } from './report-blueprint.ts';
@@ -25,7 +25,7 @@ export type BenchmarkResult = {
 /** Writing hints only. They are never score thresholds or competition requirements. */
 export const BENCHMARK_TARGETS = { abstract: [800, 2000], keywords: [3, 8], paragraphMedian: [60, 180] } as const;
 
-const HINT = /写作提示】/;
+const HINT = /(?:写作提示】|^摘要写作提示$)/mu;
 /** Lines the author actually wrote: guidance blocks (a hint marker through the next blank line) are skipped. */
 export function writtenLines(text: string): string[] {
   const out: string[] = [];
@@ -84,7 +84,7 @@ const METHODS: readonly (readonly [string, RegExp, 'test' | 'model'])[] = [
   ['综合评价', /熵权|TOPSIS|模糊综合评价|灰色关联|综合评价指数/i, 'model'],
 ];
 
-const insert = (id: string): BenchmarkFix => ({ label: `插入「${blueprintNode(id).title}」`, insert: id });
+const insert = (id: string): BenchmarkFix => ({ label: `插入“${blueprintNode(id).title}”`, insert: id });
 const go = (module: BlueprintModule): BenchmarkFix => ({ label: `去${BLUEPRINT_MODULE_LABELS[module]}`, module });
 const FINDINGS_FIX: BenchmarkFix = { label: '整理研究发现', findings: true };
 const share = (part: number, whole: number) => whole > 0 ? part / whole : 0;
@@ -155,7 +155,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const hinted = new Set(content.report.filter(s => HINT.test(s.body) || (s.blocks ?? []).some(b => HINT.test(b.text))).map(s => s.id));
   const unwritten = writable.filter(s => hinted.has(s.section.id) || (!s.lines.length && !(s.section.blocks ?? []).some(b => b.kind !== 'paragraph'))).map(s => s.section);
   add('unwritten', 'structure', '各节均已撰写', unwritten.length ? Math.max(0, 1 - unwritten.length / Math.max(1, writable.length)) * 0.9 : 1,
-    unwritten.length ? `${unwritten.length} 节尚未撰写${hinted.size ? `（其中 ${hinted.size} 节仍是写作提示）` : ''}，首个是「${unwritten[0].title || '未命名章节'}」。` : '各节都已有正文。');
+    unwritten.length ? `${unwritten.length} 节尚未撰写${hinted.size ? `（其中 ${hinted.size} 节仍是写作提示）` : ''}，首个是“${unwritten[0].title || '未命名章节'}”。` : '各节都已有正文。');
   // Structured references are the list when present; older drafts list their references as lines of the section.
   const structured = content.references ?? [];
   const referenceEntries = structured.length ? structured.map(formatReference) : sections.filter(s => s.part === 'references').flatMap(s => s.lines);
@@ -166,7 +166,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const appendixCheck = (id: string, dimension: BenchmarkDimension, label: string, pattern: RegExp, missing: string, extra: BenchmarkFix[] = [], nodes = [id]) => {
     const found = appendices.filter(s => pattern.test(s.section.title)), written = found.some(s => s.lines.length > 0);
     add(id, dimension, label, written ? 1 : found.length ? 0.3 : 0,
-      written ? `已附「${found.find(s => s.lines.length)!.section.title}」。` : found.length ? `「${found[0].section.title}」已建立，但尚未填写。` : missing,
+      written ? `已附“${found.find(s => s.lines.length)!.section.title}”。` : found.length ? `“${found[0].section.title}”已建立，但尚未填写。` : missing,
       [...fixIfMissing(...nodes), ...extra]);
   };
   appendixCheck('questionnaire', 'structure', '问卷附录', /问卷/, '附录中没有调查问卷。', [go('design')], ['appendix.questionnaire']);
@@ -213,9 +213,11 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const linked = evidenceBlocks.filter(b => usedResults.some(r => r.id === b.evidenceId));
   add('traceable', 'data', '图表结果引用', evidenceBlocks.length ? share(linked.length,evidenceBlocks.length) : null,
     `${linked.length} / ${evidenceBlocks.length} 个结构化图表块引用已登记结果；手写图表需另行核验来源。`, [go('analysis')]);
-  const receipts = usedResults.filter(r => r.receipt?.calculation);
-  add('denominators', 'data', '分母与计算参数', usedResults.length ? share(receipts.length,usedResults.length) : null,
-    `${receipts.length} / ${usedResults.length} 个已使用结果保留变量、缺失设置、筛选、应答范围与有效计算口径。`, [go('analysis')]);
+  const RECEIPT_CAPABLE_METHODS = new Set(['frequency', 'numeric', 'groups', 'crosstab', 'pearson', 'spearman', 'alpha']);
+  const receiptEligible = usedResults.filter(r => RECEIPT_CAPABLE_METHODS.has(r.method));
+  const receipts = receiptEligible.filter(r => r.receipt?.calculation);
+  add('denominators', 'data', '分母与计算参数', receiptEligible.length ? share(receipts.length, receiptEligible.length) : null,
+    `${receipts.length} / ${receiptEligible.length} 个已使用基础统计结果保留变量、缺失设置、筛选、应答范围与有效计算口径。`, [go('analysis')]);
 
   // A method's name is descriptive metadata. Only registered structured results can show execution.
   const mentioned = METHODS.filter(([,re]) => re.test(methodText)).map(([name]) => name);
@@ -227,13 +229,13 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     `${withInference.length} / ${inferential.length} 个已使用推断结果保留检验回执或未定义时的样本、解释与提醒。`, [go('analysis')]);
   add('models', 'analysis', '方法文字提及', null, mentioned.length ? `文字提及${mentioned.join('、')}；方法名不证明运行，也不产生质量加分。` : '未识别到方法名；按研究需要选择方法，无须补齐模型种类。');
   add('formulas', 'analysis', '公式排版记录', null, `已排版 ${formulas} 个独立公式；是否需要公式由方法和读者需要决定。`);
-  const diagnosed = inferential.filter(r => r.receipt?.interpretation && r.warnings.length && (!r.receipt.inference || r.receipt.inference.notes.length));
+  const diagnosed = inferential.filter(r => r.receipt?.interpretation && (r.receipt.inference ? r.receipt.inference.notes.length > 0 : r.warnings.length > 0));
   add('diagnostics', 'analysis', '计算前提与限制记录', inferential.length ? share(diagnosed.length,inferential.length) : null,
     `${diagnosed.length} / ${inferential.length} 个已使用推断结果保留计算提醒与适用限制；记录存在不代表前提已满足。`);
   const numeric = paragraphs.filter(l => /[0-9０-９]/.test(l)).length;
   add('numeric', 'analysis', '数据陈述概览', null, `${Math.round(share(numeric,paragraphs.length)*100)}% 的段落含数字；数字密度不计分。`);
-  add('methods', 'analysis', '方法可复算记录', usedResults.length ? share(receipts.length,usedResults.length) : null,
-    `${receipts.length} / ${usedResults.length} 个已使用结果保留计算配置；方法数量不计分。`, [go('analysis')]);
+  add('methods', 'analysis', '方法可复算记录', receiptEligible.length ? share(receipts.length, receiptEligible.length) : null,
+    `${receipts.length} / ${receiptEligible.length} 个已使用基础统计结果保留计算配置；方法数量不计分。`, [go('analysis')]);
 
   // 图表规范
   add('figureCount', 'figures', '图的数量', null, `正文识别到 ${figures} 幅图；数量不计分，按证据表达需要使用。`);
@@ -269,18 +271,18 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     && /(?:导致|造成|决定了|引起了|使得|取决于)/.test(sentence.replace(/(?:不|未|并非|而非|不能|无法)[^。；，,]{0,6}(?:导致|造成|决定了|引起了|使得|取决于)/gu, ''));
   const causal = paragraphs.filter(l => l.split(/(?<=[。；！？!?])/u).some(causalSentence));
   add('causal', 'actions', '相关不写成因果', prose.length ? (causal.length === 0 ? 1 : causal.length === 1 ? 0.5 : 0) : null,
-    causal.length ? `${causal.length} 段在相关性结果旁使用了因果措辞，如「${causal[0].slice(0, 24)}…」。` : '没有发现把相关写成因果的措辞。');
+    causal.length ? `${causal.length} 段在相关性结果旁使用了因果措辞，如“${causal[0].slice(0, 24)}…”。` : '没有发现把相关写成因果的措辞。');
   // Misreadings a reviewer catches in survey reports. They only take away: writing about a method correctly earns nothing,
   // as naming a method earns nothing, so a report cannot gain points by mentioning more methods.
   const misuse = (id: string, label: string, topic: RegExp, wrong: (line: string) => boolean, advice: string, dimension: BenchmarkDimension = 'analysis') => {
     // The abstract is read first and quoted most, so its wording is checked with the body's.
     const about = [...paragraphs, ...(abstract?.lines ?? [])].filter(l => topic.test(l)), bad = about.filter(wrong);
     add(id, dimension, label, bad.length ? 0 : null,
-      bad.length ? `${bad.length} 段有此问题，如「${bad[0].slice(0, 28)}…」。${advice}` : about.length ? '相关表述未见此问题。' : '正文未涉及。');
+      bad.length ? `${bad.length} 段有此问题，如“${bad[0].slice(0, 28)}…”。${advice}` : about.length ? '相关表述未见此问题。' : '正文未涉及。');
   };
   misuse('oddsRatio', 'OR 不写成概率倍数', /\bOR\b|优势比|发生比|比值比/u,
     l => /(概率|可能性|几率)[^。；]{0,12}(是|为|提高|增加|高出|达到)[^。；]{0,8}[0-9０-９.]+\s*倍/u.test(l),
-    'OR 是优势（odds）之比，不等于概率的倍数；写成「优势是…的 x 倍」，或另算边际效应说明概率变化。');
+    'OR 是优势（odds）之比，不等于概率的倍数；写成“优势是…的 x 倍”，或另算边际效应说明概率变化。');
   misuse('rankMedian', '秩检验不写成中位数检验', /秩和|秩检验|Mann|Whitney|Kruskal|Wilcoxon/iu,
     l => /中位数[^。；]{0,8}(相等|相同|无差异|没有差异|存在差异|有差异)/u.test(l),
     '秩检验比较的是分布或相对位置，只有在各组分布形状相同时才能读作中位数之差。');
@@ -292,7 +294,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     '用参与聚类的变量做组间检验，差异是聚类构造出来的；请用稳定性（重抽样、多个 k）或未参与聚类的变量来验证。');
   misuse('dynamicClaim', '横截面数据不声称动态演化', /演化|演进|动态演变|状态转移|系统动力学/u,
     l => !/纵向|追踪|面板数据|多期|时间序列|重复测量|情境推演|路径假设|假设/u.test(proseText) && /演化|演进|动态演变|状态转移/u.test(l),
-    '一次横截面调查观察不到演化；写成「路径假设」或「情境推演」，或补充纵向数据。');
+    '一次横截面调查观察不到演化；写成“路径假设”或“情境推演”，或补充纵向数据。');
   // The disclaimer the advice asks for ("模拟数据不能当作稳健性检验") names robustness too; a negated claim is not one.
   misuse('simulationRobust', '模拟结果不当作稳健性检验', /稳健性|鲁棒性/u,
     l => /模拟|仿真|合成数据/u.test(l) && /(通过|稳健|可靠)/u.test(l)
@@ -308,7 +310,16 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
     '线上公开链接、自愿作答和转发招募属于便利或配额方式，不能借用随机抽样的名称；确有抽样框时附上各阶段抽样框表。', 'design');
 
   // 合规披露
-  appendixCheck('aiDisclosure', 'compliance', 'AI 工具使用说明', /人工智能|AI|大模型|生成式/i, '附录中没有 AI 工具使用说明。', [], ['appendix.ai']);
+  const hasAiAppendix = appendices.some(s => /人工智能|AI|大模型|生成式/i.test(s.section.title));
+  const hasEmpiricalAuditAppendix =
+    usedResults.length > 0 &&
+    usedResults.every(r => r.classification === 'user_provided') &&
+    appendices.some(s => /复核台账|质量控制复核/u.test(s.section.title) && s.lines.length > 0);
+  if (!hasAiAppendix && hasEmpiricalAuditAppendix) {
+    add('aiDisclosure', 'compliance', 'AI 工具使用说明', null, '实证项目已附田野质量控制复核台账，未声明使用生成式工具拟稿。');
+  } else {
+    appendixCheck('aiDisclosure', 'compliance', 'AI 工具使用说明', /人工智能|AI|大模型|生成式/i, '附录中没有 AI 工具使用说明。', [], ['appendix.ai']);
+  }
   // A structured record is complete when it has every item its type requires; a typed line needs its GB/T 7714 type code.
   const formatted = structured.length ? structured.filter(e => e.type === 'other' ? GBT_TYPE.test(e.text) : !referenceProblems(e).length).length : referenceEntries.filter(l => GBT_TYPE.test(l)).length;
   add('referenceFormat', 'compliance', '文献著录格式', referenceEntries.length ? share(formatted, referenceEntries.length) : null,
@@ -322,7 +333,7 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   add('citations', 'compliance', '文献均在正文引用', listed ? covered / listed : citedNumbers.size || /\[\[引:/.test(proseText) ? 0 : null,
     listed ? `参考文献 ${listed} 条，正文引用了其中 ${covered} 条；顺序编码制下每条文献都应在正文中被引用。` : citedNumbers.size ? '正文有文献序号标注，但没有参考文献列表。' : '还没有参考文献。');
   const simulated = usedResults.filter(r => r.classification === 'simulated');
-  const declared = /模拟/.test(content.subtitle + content.title) || body.every(s => !(s.section.blocks ?? []).some(b => simulated.some(r => r.id === b.evidenceId)) || /【教学模拟数据/.test(s.section.body + s.section.source));
+  const declared = /模拟/.test(content.subtitle + content.title) || body.every(s => !(s.section.blocks ?? []).some(b => simulated.some(r => r.id === b.evidenceId)) || /【教学模拟数据/.test(sectionProseText(s.section) + s.section.source));
   add('simulated', 'compliance', '模拟数据已声明', simulated.length ? (declared ? 1 : 0) : null,
     simulated.length ? (declared ? '使用模拟数据的章节均已声明。' : '有章节使用了模拟数据结果但没有声明，不能作为实际调查结论。') : '没有使用模拟数据。');
   // A confirmed finding is a claim about what was observed; simulated results can only illustrate, unless the whole report says it is a simulation.
@@ -330,13 +341,13 @@ export function benchmarkReport(content: EditorContent): BenchmarkResult {
   const simulatedFindings = confirmed.filter(f => f.evidenceIds.some(id => simulatedIds.has(id)));
   add('findingEvidence', 'compliance', '研究发现不以模拟数据为据', simulatedFindings.length ? (/模拟/.test(content.subtitle + content.title) ? 1 : 0) : null,
     simulatedFindings.length ? (/模拟/.test(content.subtitle + content.title) ? '报告整体标明为模拟演示，发现只作演示。'
-      : `${simulatedFindings.length} 条已确认的发现以模拟数据为据，如「${simulatedFindings[0].title}」；模拟数据只能演示方法，不能写成调查发现。`) : '没有以模拟数据为据的已确认发现。', [FINDINGS_FIX]);
+      : `${simulatedFindings.length} 条已确认的发现以模拟数据为据，如“${simulatedFindings[0].title}”；模拟数据只能演示方法，不能写成调查发现。`) : '没有以模拟数据为据的已确认发现。', [FINDINGS_FIX]);
   // Only a source read for the claim it is cited for supports it; a bibliographic match does not.
   if (structured.length) {
     const uncitedIds = new Set(referenceNumbers(content).uncited.map(e => e.id)), cited = structured.filter(e => !uncitedIds.has(e.id));
     const checked = cited.filter(e => e.verification === 'verified').length, rejected = cited.filter(e => e.verification === 'rejected');
     add('referenceVerification', 'compliance', '引用的文献已核内容', cited.length ? (rejected.length ? 0 : share(checked, cited.length)) : null,
-      !cited.length ? '正文还没有引用文献。' : rejected.length ? `${rejected.length} 条标为不采纳的文献仍在正文引用，如「${formatReference(rejected[0]).slice(0, 24)}…」。`
+      !cited.length ? '正文还没有引用文献。' : rejected.length ? `${rejected.length} 条标为不采纳的文献仍在正文引用，如“${formatReference(rejected[0]).slice(0, 24)}…”。`
         : `正文引用的 ${cited.length} 条文献中 ${checked} 条已核对内容；只核了书目的文献不能支撑正式结论。`);
   }
   appendixCheck('reproducible', 'compliance', '数据与代码说明', /数据|代码|可复现|程序/, '附录中没有数据或代码说明。', [], ['appendix.data', 'appendix.code']);

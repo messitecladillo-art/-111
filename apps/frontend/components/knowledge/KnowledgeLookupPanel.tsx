@@ -73,7 +73,7 @@ export default function KnowledgeLookupPanel({ initialQuery = '', purpose = 'kno
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, auth.identityEpoch]);
   async function runLookup(reconcile = false) {
-    if (!accountId) { setNotice('登录后可联网查证。'); return; }
+    if (!accountId) { setNotice('登录后可使用外部查证。'); return; }
     if (busyGuard.current) return;
     let operation: StoredKnowledgeLookup;
     try {
@@ -140,20 +140,20 @@ export default function KnowledgeLookupPanel({ initialQuery = '', purpose = 'kno
   const showLookupWork = !!ownedPending && (busy || outcomeUnknown || lookupStatus === 'queued' || lookupStatus === 'running');
   const lookupHeading = outcomeUnknown || awaitingReconciliation ? '本次调用待核对' : lookupStatus === 'queued' ? '检索已排队' : busy ? (shownReceipt ? '正在核对本次请求' : '正在提交检索') : '正在查证';
   return <details className={styles.recognition}>
-    <summary>{purpose === 'topics' ? '检索最新热点' : '联网查证与补词'}</summary>
+    <summary>{purpose === 'topics' ? '检索最新热点' : '公开资料查证与补词'}</summary>
     <p className={styles.caption}>{purpose === 'topics' ? '编辑地区、领域与时间范围，查找新的公开线索。' : '内置知识没有覆盖时，查阅原始来源。'}</p>
     {purpose==='topics'&&<button type="button" disabled={busy||Boolean(unresolved)} onClick={()=>setQuery(shortSeed(initialQuery))}>使用当前地区与方向</button>}
-    <label className={styles.fileInput}>确认检索词<div className={styles.searchBox}><input aria-label="联网检索词" value={owned ? query : ''} maxLength={120} onChange={event => setQuery(event.target.value)} placeholder="输入简短的概念或问题" disabled={busy || Boolean(unresolved)}/></div></label>
+    <label className={styles.fileInput}>确认检索词<div className={styles.searchBox}><input aria-label="公开检索词" value={owned ? query : ''} maxLength={120} onChange={event => setQuery(event.target.value)} placeholder="输入简短的概念或问题" disabled={busy || Boolean(unresolved)}/></div></label>
     <div className={styles.entryActions}>
       <button type="button" disabled={busy || Boolean(unresolved)} onClick={() => void runLookup()}>{busy ? '提交中…' : '确认检索'}</button>
       {owned && pending && <button type="button" disabled={busy} onClick={() => void runLookup(true)}>{unresolved ? '核对本次请求' : '查看检索回执'}</button>}
     </div>
     {showLookupWork && <ReportWorkstation inline kind="research" heading={lookupHeading}
-      state={{ phase: outcomeUnknown || awaitingReconciliation || lookupStatus === 'queued' ? 'waiting' : busy ? 'preparing' : 'writing', detail: `检索词：${ownedPending!.query}`, completed: 0, total: 0 }} />}
+      state={{ phase: outcomeUnknown || awaitingReconciliation || lookupStatus === 'queued' ? 'waiting' : busy ? 'preparing' : 'writing', detail: `当前检索“${ownedPending!.query}”`, completed: 0, total: 0 }} />}
     {owned && notice && <p role="status" className={styles.notice}>{notice}</p>}
-    {shownReceipt && <section aria-label="联网查证结果">
-      <p className={styles.eyebrow}><span>{statusLabel(shownReceipt.status)}</span><span>{shownReceipt.credits === null ? '用量待核对' : `${shownReceipt.credits} credit`}</span></p>
-      <p className={styles.meta}>检索词：{shownReceipt.query}<br/>{shownReceipt.finishedAt ? `回执时间：${new Date(shownReceipt.finishedAt).toLocaleString('zh-CN')}` : `请求时间：${new Date(shownReceipt.createdAt).toLocaleString('zh-CN')}`}</p>
+    {shownReceipt && <section aria-label="公开查证结果">
+      <p className={styles.eyebrow}><span>{statusLabel(shownReceipt.status)}</span><span>{shownReceipt.credits === null ? '用量待核对' : `计费 ${shownReceipt.credits} 点`}</span></p>
+      <p className={styles.meta}>当前检索“{shownReceipt.query}”<br/>{shownReceipt.finishedAt ? `完成于 ${new Date(shownReceipt.finishedAt).toLocaleString('zh-CN')}` : `提交于 ${new Date(shownReceipt.createdAt).toLocaleString('zh-CN')}`}</p>
       {shownReceipt.errorCode && <p className={styles.notice} role="status">{lookupError(shownReceipt.errorCode)}</p>}
       {shownReceipt.results.map((result, index) => <div className={styles.source} key={`${result.url}-${index}`}><a href={result.url} target="_blank" rel="noopener noreferrer">{result.title || new URL(result.url).hostname} ↗</a><p className={styles.sourceSnippet}>{result.snippet}</p>{result.snippet.length>180&&<details className={styles.sourceExcerpt}><summary>展开来源片段</summary><p>{result.snippet}</p></details>}<small>{new URL(result.url).hostname}</small></div>)}
       {shownReceipt.status === 'ready' && shownReceipt.results.length === 0 && <p className={styles.empty}>本次没有找到匹配来源，可调整检索词。</p>}

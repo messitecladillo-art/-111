@@ -50,7 +50,7 @@ export default function ReferencesPanel({ references, numbers, uncited, legacy, 
   return <section className={styles.panel} aria-label="参考文献">
     <header className={styles.head}>
       <div className={styles.title}><strong>参考文献</strong><span>GB/T 7714—2015 · 顺序编码制</span></div>
-      <p className={styles.summary}>{references.length ? `共 ${references.length} 条，正文已引用 ${references.length - uncited.size} 条。` : '还没有文献条目。'}在其他章节正文中用「插入引用」标注，序号按首次引用的先后自动编排，导出时生成本节列表。</p>
+      <p className={styles.summary}>{references.length ? `共 ${references.length} 条，正文已引用 ${references.length - uncited.size} 条。` : '还没有文献条目。'}在其他章节正文中用“插入引用”标注，序号按首次引用的先后自动编排，导出时生成本节列表。</p>
       <div className={styles.actions}>
         <button type="button" className={styles.primary} disabled={disabled || references.length >= REFERENCE_LIMIT} onClick={add}>＋ 添加文献</button>
         {imports.length > 0 && <button type="button" disabled={disabled} onClick={() => onImport(imports)}>把本节正文的 {imports.length} 条转为文献条目</button>}
@@ -63,7 +63,7 @@ export default function ReferencesPanel({ references, numbers, uncited, legacy, 
         return <li key={entry.id} className={styles.entry} data-editing={editing}>
           <div className={styles.row}>
             <span className={styles.number}>[{numbers.get(entry.id)}]</span>
-            <span className={styles.text}>{text || <em>尚未填写题名，点「编辑」完成著录</em>}</span>
+            <span className={styles.text}>{text || <em>尚未填写题名，点“编辑”完成著录</em>}</span>
             <span className={styles.rowActions}>
               <button type="button" aria-expanded={editing} onClick={() => setOpen(editing ? null : entry.id)}>{editing ? '完成' : '编辑'}</button>
               <button type="button" disabled={disabled} onClick={() => remove(entry)}>删除</button>

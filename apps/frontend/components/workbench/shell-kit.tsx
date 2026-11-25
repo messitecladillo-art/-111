@@ -16,16 +16,16 @@ export const NAV_ITEMS: Array<{ id: Section; title: string; description: string;
   { id: "diagnose", title: "选题与诊断", description: "结合热点、地区与团队资源筛选选题，检查研究准备度。", icon: "spark", group: "研究与证据" },
   { id: "design", title: "问卷设计", description: "将研究问题、题项、变量与计划分析逐一对齐。", icon: "book", group: "研究与证据" },
   { id: "sampling", title: "抽样设计", description: "多阶段方案、样本量、抽取、估计与加权；方法手册含全部公式与计算器。", icon: "target", group: "研究与证据" },
-  { id: "silicon", title: "硅基样本", description: "让 AI 扮演设定人群预答问卷，在真人作答前发现问题。", icon: "persona", group: "研究与证据" },
+  { id: "silicon", title: "硅基样本", description: "按设定人群特征模拟预答问卷，在正式发放前提前排查题项问题。", icon: "persona", group: "研究与证据" },
   { id: "analysis", title: "数据分析", description: "检查数据质量、变量分布与量表内部一致性。", icon: "grid", group: "研究与证据" },
   { id: "canvas", title: "研究画布", description: "把问卷、数据、统计与图表连成一条可运行、可复核的研究流程。", icon: "nodes", group: "研究与证据" },
-  { id: "editor", title: "报告与 PPT", description: "在正大杯工作台中写报告、编排幻灯片，边编辑边预览。", icon: "book", group: "写作与答辩" },
+  { id: "editor", title: "报告与 PPT", description: "在研究工作台中写报告、编排幻灯片，边编辑边预览。", icon: "book", group: "写作与答辩" },
   { id: "defense", title: "路演与答辩", description: "按主题演练追问，定位证据，自由编排讲述时间。", icon: "route", group: "写作与答辩" },
   { id: "workspace", title: "项目控制门户", description: "保存协作登记；真实进度以本地证据控制面为准。", icon: "folder", group: "项目管理" },
   { id: "lifecycle", title: "生命周期作战室", description: "读取本机权威状态，不代替质量门禁判定。", icon: "route", group: "项目管理" },
   { id: "rules", title: "规则与门禁", description: "对齐届次、组别、赛区、赛道与阶段。", icon: "shield", group: "质量保障" },
   { id: "preflight", title: "提交前体检", description: "检查身份与编辑残留，定位文件部件并下载记录。", icon: "shield", group: "质量保障" },
-  { id: "services", title: "我的模型服务", description: "接入自己的 API Key，为研究能力选择服务。", icon: "spark", group: "服务与设置" },
+  { id: "services", title: "我的模型服务", description: "配置个人服务密钥，为各研究环节分配服务。", icon: "spark", group: "服务与设置" },
 ];
 export const NAV_GROUPS = [...new Set(NAV_ITEMS.map(item => item.group))];
 
@@ -96,7 +96,8 @@ export function NavIcon({ kind }: { kind: string }) {
   </svg>;
 }
 
-type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => { ready: Promise<void> } };
+type ViewTransitionResult = { ready: Promise<void>; finished?: Promise<void> };
+type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => ViewTransitionResult };
 
 /** Switch theme with a circular reveal from the toggle where View Transitions are available. */
 export function switchTheme(next: Theme, event: MouseEvent<HTMLButtonElement>) {
@@ -105,13 +106,29 @@ export function switchTheme(next: Theme, event: MouseEvent<HTMLButtonElement>) {
   const rect = event.currentTarget.getBoundingClientRect();
   const x = event.clientX || rect.left + rect.width / 2, y = event.clientY || rect.top + rect.height / 2;
   const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-  const transition = doc.startViewTransition(() => { flushSync(() => saveTheme(next)); });
-  transition.ready.then(() => {
-    document.documentElement.animate(
+  const root = document.documentElement;
+  root.dataset.themeTransition = "true";
+  const cleanup = () => { delete root.dataset.themeTransition; };
+  let transition: ViewTransitionResult;
+  try {
+    transition = doc.startViewTransition(() => { flushSync(() => saveTheme(next)); });
+  } catch {
+    cleanup();
+    saveTheme(next);
+    return;
+  }
+  const reveal = transition.ready.then(() => {
+    const anim = root.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      { duration: 700, easing: "cubic-bezier(.16,.8,.12,1)", pseudoElement: "::view-transition-new(root)" },
+      { duration: 680, easing: "cubic-bezier(0.16, 1, 0.3, 1)", pseudoElement: "::view-transition-new(root)" },
     );
+    return anim.finished;
   }).catch(() => { /* The theme is already applied; only the flourish was skipped. */ });
+  if (transition.finished) {
+    void transition.finished.finally(cleanup);
+  } else {
+    void reveal.finally(cleanup);
+  }
 }
 
 export function ThemeToggle({ theme }: { theme: Theme }) {
@@ -133,15 +150,15 @@ export function WorkbenchSidebar({ active, inWorkspace, open, setOpen, menuRef, 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Escape" && open) { setOpen(false); menuRef?.current?.focus(); }
   };
-  const brand = <><BrandMark size={34} className="wb-brand-mark"/><span><strong>证见 EVI-X</strong><small>正大杯研究工作台</small></span></>;
+  const brand = <><BrandMark size={34} className="wb-brand-mark"/><span><strong>证见 EVI-X</strong><small>实证调查研究工作台</small></span></>;
   return <aside className="workbench-sidebar" data-open={open} data-dialog-background onKeyDown={onKeyDown}>
     {inWorkspace
       ? <a className="wb-brand" href="#overview" title="返回工作台概览" onClick={close}>{brand}</a>
       : <Link className="wb-brand" href="/workspace" title="返回工作台概览" onClick={close}>{brand}</Link>}
     <button className="wb-menu" ref={menuRef} type="button" aria-controls="workbench-navigation" aria-expanded={open} onClick={() => setOpen(value => !value)} aria-label={open ? "关闭导航" : "打开导航"}><NavIcon kind={open ? "close" : "menu"}/></button>
     {onSearch && <button type="button" className="wb-sidebar-search" onPointerDown={event => event.preventDefault()} onClick={onSearch} title="搜索知识、方法、资料与功能"><NavIcon kind="search"/><span>全局搜索</span><kbd>Ctrl K</kbd></button>}
-    <Link className="wb-agent-entry" href="/agent" onClick={close} title="打开会话式研究 Agent">
-      <NavIcon kind="spark"/><span><strong>研究 Agent</strong><small>会话式研究台</small></span><em>NEW</em>
+    <Link className="wb-agent-entry" href="/agent" onClick={close} title="打开对话式研究工作台">
+      <NavIcon kind="spark"/><span><strong>智能研究助手</strong><small>对话式研究台</small></span><em>常用</em>
     </Link>
     <nav className="wb-navigation" id="workbench-navigation" aria-label="主要导航">
       {NAV_GROUPS.map(group => <div className="wb-nav-group" key={group}>

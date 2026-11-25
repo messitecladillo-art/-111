@@ -1,15 +1,26 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
-import { renderTex } from '@/components/math/Tex';
+import { TexSpanLazy } from '@/components/math/TexLazy';
 import { lightBar } from '@/lib/agent/glyphs';
 import type { Line } from '@/lib/agent/router';
+import { normalizeAcademicPunctuation } from '@/lib/typography';
 import styles from './AgentShell.module.css';
 
-/** An illumination bar. It is drawn for sighted readers; callers state the percentage in text beside it. */
-export function LightBar({ score, cells = 4 }: { score: number; cells?: number }) {
-  return <span className={styles.bar4} aria-hidden="true">
-    {[...lightBar(score, cells)].map((cell, i) => <span key={i} data-cell={cell === '·' ? 'dark' : 'lit'}>{cell}</span>)}
+function cleanGlyphText(raw: string): string {
+  return normalizeAcademicPunctuation(raw).replace(/[{}]/gu, '');
+}
+
+/** An illumination bar. It is drawn for sighted readers; callers state the percentage in text beside it, or pass an explicit accessible label. */
+export function LightBar({ score, cells = 4, label }: { score: number; cells?: number; label?: string }) {
+  const cleanLabel = label ? cleanGlyphText(label).trim() : '';
+  return <span
+    className={styles.bar4}
+    role={cleanLabel ? 'img' : undefined}
+    aria-label={cleanLabel || undefined}
+    aria-hidden={cleanLabel ? undefined : 'true'}
+  >
+    {[...lightBar(score, cells)].map((cell, i) => <span key={i} data-cell={cell === '·' ? 'dark' : 'lit'} aria-hidden="true">{cell}</span>)}
   </span>;
 }
 
@@ -20,10 +31,11 @@ const NOISE = '░▒▓#%*+=:01xX∆◊';
  * technology always reads the final number, never the noise.
  */
 export function Develop({ text, at }: { text: string; at: number }) {
+  const safeText = cleanGlyphText(text);
   const [shown, setShown] = useState<string | null>(null);
   useEffect(() => {
     if (Date.now() - at > 1500 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const chars = [...text], step = Math.min(80, 400 / Math.max(1, chars.length)), start = performance.now();
+    const chars = [...safeText], step = Math.min(80, 400 / Math.max(1, chars.length)), start = performance.now();
     let frame = 0;
     const tick = (now: number) => {
       const done = Math.floor((now - start) / step);
@@ -33,16 +45,30 @@ export function Develop({ text, at }: { text: string; at: number }) {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [text, at]);
-  return <><span className={styles.srOnly}>{text}</span><span className={styles['s-gold']} data-developing={shown === null ? undefined : ''} aria-hidden="true">{shown ?? text}</span></>;
+  }, [safeText, at]);
+  if (shown === null) {
+    return <span className={styles['s-gold']}>{safeText}</span>;
+  }
+  return (
+    <>
+      <span className={styles.srOnly}>{safeText}</span>
+      <span className={styles['s-gold']} data-developing="" aria-hidden="true">{shown}</span>
+    </>
+  );
 }
 
 /** One line of marked text from the router. */
 export function Spans({ line, at }: { line: Line; at: number }) {
-  return <>{line.map((span, i) => /^[·░▒▓█]{4}$/u.test(span.text)
-    ? <span key={i} className={styles.bar4} aria-hidden="true">{[...span.text].map((cell, ci) => <span key={ci} data-cell={cell === '·' ? 'dark' : 'lit'}>{cell}</span>)}</span>
-    : span.mark === 'gold' ? <Develop key={i} text={span.text} at={at} />
-    : span.mark === 'tex' || span.mark === 'math' ? <span key={i} className={span.mark === 'math' ? styles.mathBlock : styles.mathInline} dangerouslySetInnerHTML={{ __html: renderTex(span.text, span.mark === 'math') }} />
-    : span.mark ? <span key={i} className={styles[`s-${span.mark}`]}>{span.text}</span>
-    : <Fragment key={i}>{span.text}</Fragment>)}</>;
+  return <>{line.map((span, i) => {
+    if (/^[·░▒▓█]{4}$/u.test(span.text)) {
+      return <span key={i} className={styles.bar4} aria-hidden="true">{[...span.text].map((cell, ci) => <span key={ci} data-cell={cell === '·' ? 'dark' : 'lit'}>{cell}</span>)}</span>;
+    }
+    if (span.mark === 'tex' || span.mark === 'math') {
+      return <TexSpanLazy key={i} tex={span.text} display={span.mark === 'math'} className={span.mark === 'math' ? styles.mathBlock : styles.mathInline} />;
+    }
+    const cleanText = cleanGlyphText(span.text);
+    if (span.mark === 'gold') return <Develop key={i} text={cleanText} at={at} />;
+    if (span.mark) return <span key={i} className={styles[`s-${span.mark}`]}>{cleanText}</span>;
+    return <Fragment key={i}>{cleanText}</Fragment>;
+  })}</>;
 }

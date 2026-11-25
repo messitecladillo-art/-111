@@ -7,7 +7,8 @@ import {createEditorContent,parseEditorContent} from '../lib/editor-model.ts';
 import {makeSlideObject,resultPayload,digestText,confirmFinding,findingSignature} from '../lib/research-quality.ts';
 import {buildDocx,buildPptx} from '../lib/editor-export.ts';
 import {createLatexReport,generateLatexBody,latexReportKey,buildLatexSource} from '../lib/latex-report.ts';
-import {assertTrueVector,chartSVG} from '../lib/quality-export.ts';
+import {assertTrueVector,chartSVG,sanitizeExportAltText} from '../lib/quality-export.ts';
+import {inspectOfficePackage} from '../lib/office-package.ts';
 const renderSvg=async svg=>new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
 const word=c=>buildDocx(c,undefined,renderSvg);
 async function fixture(){
@@ -38,7 +39,7 @@ test('tampered result hash prevents every async output',async()=>{const c=await 
 test('missing references and overflowing objects fail instead of silently dropping content',async()=>{const c=await fixture();c.slides[0].objects[1].evidenceId='missing';await assert.rejects(buildPptx(c),/不存在/);c.slides[0].objects=[makeSlideObject('text',{text:'正文'.repeat(800),width:10,height:5})];await assert.rejects(buildPptx(c),/分拆/);c.report[0].blocks=[{id:'math',kind:'formula',text:'x^2',evidenceId:'',valueColumn:1}];const math=await JSZip.loadAsync(await (await word(c)).arrayBuffer());assert.match(await math.file('word/document.xml').async('string'),/<m:oMathPara>[\s\S]*<m:sSup>/);assert.match(generateLatexBody(c),/x\^2/);c.report[0].blocks[0].text='\\frac{x';await assert.rejects(word(c),/公式无法解析/);});
 test('true SVG rejects disguised bitmap, scripts, external resources and unsafe formula commands',async()=>{for(const svg of ['<svg><image href="x"/></svg>','<svg><script/></svg>','<svg><path href="https://bad"/></svg>','<svg><filter/></svg>'])assert.throws(()=>assertTrueVector(svg));const c=await fixture();assert.match(chartSVG(c.quality.results[0],1),/>3</);c.report[0].blocks=[{id:'bad',kind:'formula',text:'\\input{secret}',evidenceId:'',valueColumn:1}];assert.throws(()=>generateLatexBody(c),/非数学/);});
 
-test('unsupported native transforms and overfull LaTeX tables require explicit adjustment',async()=>{const c=await fixture();c.slides[0].objects[1].rotation=25;await assert.rejects(buildPptx(c),/旋转/);c.report[0].blocks=[c.report[0].blocks[0]];c.quality.results[0].rows=Array.from({length:26},(_,i)=>['类别'+i,i,i]);assert.throws(()=>generateLatexBody(c),/分拆/);c.report[0].blocks=[{id:'f',kind:'formula',text:'\\write18{command}',evidenceId:'',valueColumn:1}];assert.throws(()=>generateLatexBody(c),/非数学/);assert.throws(()=>assertTrueVector('<svg onload="alert(1)"><rect/></svg>'));});
+test('unsupported native transforms and overfull LaTeX tables require explicit adjustment',async()=>{const c=await fixture();c.slides[0].objects[1].rotation=25;await assert.rejects(buildPptx(c),/旋转/);c.report[0].blocks=[c.report[0].blocks[0]];c.quality.results[0].rows=Array.from({length:26},(_,i)=>['类别'+i,i,i]);assert.match(generateLatexBody(c),/\\begin\{longtable\}/);c.quality.results[0].rows=Array.from({length:121},(_,i)=>['类别'+i,i,i]);assert.throws(()=>generateLatexBody(c),/分拆/);c.report[0].blocks=[{id:'f',kind:'formula',text:'\\write18{command}',evidenceId:'',valueColumn:1}];assert.throws(()=>generateLatexBody(c),/非数学/);assert.throws(()=>assertTrueVector('<svg onload="alert(1)"><rect/></svg>'));});
 
 
 test('explicit empty object page stays blank instead of resurrecting legacy content',async()=>{const c=await fixture();c.slides[0]={...c.slides[0],objects:[],title:'已删除标题',body:'已删除正文'};const zip=await JSZip.loadAsync(await (await buildPptx(c)).arrayBuffer());const xml=await zip.file('ppt/slides/slide1.xml').async('string');assert.doesNotMatch(xml,/已删除标题|已删除正文|<a:t>|<c:chart|<a:tbl>/);});
@@ -88,4 +89,57 @@ test('native decorative geometry preserves vector shapes, negative line directio
 test('headless Word chart requires a real renderer and supplied preview contains chart pixels',async()=>{
  const c=await fixture();await assert.rejects(buildDocx(c),/兼容预览需要渲染器/);const zip=await JSZip.loadAsync(await (await word(c)).arrayBuffer()),file=Object.values(zip.files).find(f=>/^word\/media\/.*\.png$/.test(f.name));assert.ok(file);
  const png=await file.async('nodebuffer'),metadata=await sharp(png).metadata(),stats=await sharp(png).stats();const svg=await Object.values(zip.files).find(f=>/^word\/media\/.*\.svg$/.test(f.name)).async('string');assert.equal(metadata.width,960);assert.equal(metadata.height,Number(/<svg[^>]*?\bheight="(\d+)"/.exec(svg)[1]),'the preview keeps the figure’s own height');assert.ok(stats.channels.some(channel=>channel.stdev>10));assert.match(await zip.file('word/document.xml').async('string'),/asvg:svgBlip/);
+});
+
+test('DOCX wp:docPr and PPTX p:cNvPr write non-empty sanitized Chinese descr without hex colors or brackets',async()=>{
+ assert.equal(sanitizeExportAltText('「智」守【分布】{表} (#0F766E / #234E80)'), '“智”守分布表');
+ assert.equal(sanitizeExportAltText('#0F766E', '统计图表'), '统计图表');
+
+ const pngBytes=await sharp({create:{width:840,height:1188,channels:3,background:{r:245,g:248,b:250}}}).png().toBuffer();
+ const b64Png=pngBytes.toString('base64');
+ const c=await fixture();
+ c.version=3;
+ c.title='银发「智」守【研究】{主卷} #0F766E';
+ c.subtitle='『社区』智能终端调查 #234E80';
+ c.coverImage={schema:'CoverImage/v1',mime:'image/png',data:b64Png,widthPx:840,heightPx:1188,note:'题名字形在图中 #0F766E'};
+ c.frameImage={schema:'FrameImage/v1',mime:'image/png',data:b64Png,widthPx:840,heightPx:1188,note:'装饰页框 #8A3449'};
+ const r=c.quality.results[0];
+ r.title='「智」守【分类】结果 #0F766E';
+ r.sourceName='【公开】样本库{v1} #234E80';
+ r.resultHash=await digestText(JSON.stringify(resultPayload(r)));
+ c.report[0].blocks[1].text='「智」守【分类】人数{图} #0F766E';
+ c.slides.push({id:'layout-two',title:'「银发」核心发现 #0F766E',body:'样本分布稳健。',aside:'「侧栏」说明 #234E80',notes:'备注说明',layout:'two-column'});
+
+ const docxBytes=new Uint8Array(await (await word(c)).arrayBuffer());
+ const pptxBytes=new Uint8Array(await (await buildPptx(c,renderSvg)).arrayBuffer());
+ assert.equal(inspectOfficePackage(docxBytes,'docx').kind,'docx');
+ assert.equal(inspectOfficePackage(pptxBytes,'pptx').kind,'pptx');
+
+ const docZip=await JSZip.loadAsync(docxBytes);
+ let docPrCount=0;
+ for(const name of Object.keys(docZip.files).filter(n=>/^word\/(?:document|header\d+|footer\d+)\.xml$/.test(n))){
+  const xml=await docZip.file(name).async('string');
+  for(const m of xml.matchAll(/<wp:docPr\b([^>]*?)\/?>/g)){
+   docPrCount++;
+   const descr=/\bdescr="([^"]*)"/.exec(m[1])?.[1]??'';
+   assert.ok(descr.trim().length>0,`${name} wp:docPr must carry non-empty descr`);
+   assert.match(descr,/[\u4e00-\u9fff]/u,`${name} wp:docPr descr must contain Chinese`);
+   assert.doesNotMatch(descr,/[【】「」『』{}]|#[0-9A-Fa-f]{3,8}\b/u,`${name} wp:docPr descr must be clean: ${descr}`);
+  }
+ }
+ assert.ok(docPrCount>=3,'cover image, header frame image, and SVG chart all carry wp:docPr descr');
+
+ const pptZip=await JSZip.loadAsync(pptxBytes);
+ let cNvPrCount=0;
+ for(const name of Object.keys(pptZip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n))){
+  const xml=await pptZip.file(name).async('string');
+  for(const m of xml.matchAll(/<p:cNvPr\b([^>]*?)\/?>/g)){
+   cNvPrCount++;
+   const descr=/\bdescr="([^"]*)"/.exec(m[1])?.[1]??'';
+   assert.ok(descr.trim().length>0,`${name} p:cNvPr must carry non-empty descr`);
+   assert.match(descr,/[\u4e00-\u9fff]/u,`${name} p:cNvPr descr must contain Chinese`);
+   assert.doesNotMatch(descr,/[【】「」『』{}]|#[0-9A-Fa-f]{3,8}\b/u,`${name} p:cNvPr descr must be clean: ${descr}`);
+  }
+ }
+ assert.ok(cNvPrCount>=10,'all PPTX charts, tables, vector primitives, shapes, and text frames carry p:cNvPr descr');
 });

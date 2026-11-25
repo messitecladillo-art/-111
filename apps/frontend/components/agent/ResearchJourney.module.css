@@ -53,12 +53,38 @@
 .laterSteps > summary { display: flex; align-items: center; gap: 10px; padding: 18px 0; cursor: pointer; color: var(--journey-muted); }
 .laterSteps > summary span { font-family: var(--c-mono, monospace); font-size: 12px; }
 .laterSteps .steps { padding-top: 4px; }
-.step { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 18px; border: 1px solid var(--journey-line); border-radius: 12px; background: var(--c-raise, #fff); }
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--journey-line);
+  border-radius: 12px;
+  background: var(--c-raise, #fff);
+  animation: journeyStepIn var(--evix-dur-ink, 260ms) var(--evix-ease-prism, cubic-bezier(0.16, 1, 0.3, 1)) backwards;
+  animation-delay: calc(var(--stagger-i, 0) * var(--evix-stagger-step, 28ms));
+  transition: transform var(--evix-dur-ray, 180ms) var(--evix-ease-prism, cubic-bezier(0.16, 1, 0.3, 1)), border-color var(--evix-dur-ray, 180ms) var(--evix-ease-ray, cubic-bezier(0.2, 0, 0, 1)), box-shadow var(--evix-dur-ray, 180ms) var(--evix-ease-ray, cubic-bezier(0.2, 0, 0, 1));
+}
+.step:not([data-status="skipped"]):hover {
+  transform: translate3d(0, -2px, 0);
+  border-color: color-mix(in srgb, var(--journey-accent) 36%, var(--journey-line));
+  box-shadow: 0 10px 22px -16px color-mix(in srgb, var(--journey-fg) 24%, transparent);
+}
 .step[aria-current="step"] { border-color: color-mix(in srgb, var(--journey-accent) 45%, var(--journey-line)); }
 .stepContent { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .number { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--journey-line); border-radius: 50%; color: var(--journey-muted); font-family: var(--c-mono, monospace); font-size: 12px; }
 .step[data-status="completed"] .number { color: var(--journey-accent); background: var(--c-accent-soft, #edf6f4); border-color: transparent; }
 .step[aria-current="step"] .number { color: var(--journey-accent); border-color: var(--journey-accent); }
+.step[data-status="running"] .number { animation: journeyRunningRing 1.5s var(--evix-ease-ink, ease-in-out) infinite; }
+@keyframes journeyStepIn {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes journeyRunningRing {
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--journey-accent) 42%, transparent); }
+  50% { transform: scale(1.06); opacity: 0.78; box-shadow: 0 0 0 5px color-mix(in srgb, var(--journey-accent) 0%, transparent); }
+}
 .step[data-status="skipped"] .stepContent { opacity: .55; }
 .stepHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
 .stepHeading h3 { font-size: 16px; font-weight: 600; line-height: 1.8; }
@@ -78,6 +104,7 @@
 .modelSettings > summary strong { display: block; margin-bottom: 2px; color: var(--journey-fg); font-size: 12px; font-weight: 500; }
 .modelSettings > summary[data-missing="true"] { color: var(--c-warn, #c2410c); }
 .modelSettings[open] > summary { margin-bottom: 12px; }
+.modelSettings > summary span:last-child { display: inline-block; transition: transform var(--evix-dur-ray, 180ms) var(--evix-ease-prism, cubic-bezier(0.16, 1, 0.3, 1)); }
 .modelSettings[open] > summary span:last-child { transform: rotate(180deg); }
 .modelSettings .modelRow { grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .modelSettings .effective { grid-column: 1; }
@@ -104,11 +131,57 @@
 @media (max-width: 600px) { .journey { padding: 22px 18px 36px; } }
 
 @container (max-width: 340px) { .researchMark { display: none; } .header h1 { font-size: 25px; } .intakeActions .textButton { margin-left: auto; } }
-@media (prefers-reduced-motion: reduce) { .journey * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .journey * { transition: none !important; animation: none !important; } }
 @media (max-height: 800px) {
   .journey { padding-top: 12px; }
   .eyebrow { margin-bottom: 10px; }
   .header { margin-bottom: 18px; }
   .header p { margin-top: 8px; }
   .journey textarea { height: 86px; min-height: 86px; }
+}
+
+
+@media (forced-colors: active) {
+  .journey,
+  .intake,
+  .planOptions,
+  .step {
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .intake,
+  .journey textarea,
+  .journey select,
+  .primary,
+  .suggestions button,
+  .planOptions,
+  .step,
+  .number,
+  .tags span {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+  }
+
+  .laterSteps,
+  .modelSettings {
+    border-color: CanvasText !important;
+  }
+
+  .primary,
+  .step[aria-current="step"],
+  .step[data-status="completed"] .number {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .journey :is(button, textarea, select, summary, input):focus-visible,
+  .intake:focus-within {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
 }

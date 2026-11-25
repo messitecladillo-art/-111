@@ -28,3 +28,34 @@
 .scroll tr[data-supported] td:last-child { color: var(--wb-accent); font-weight: 650; }
 .notes { margin: 14px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.7; color: var(--wb-muted); }
 @media (max-width: 640px) { .report { flex-direction: column; } .report button { align-self: flex-end; } }
+
+@media (forced-colors: active) {
+  .panel button:focus-visible,
+  .scroll:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .panel,
+  .report code,
+  .report button,
+  .alert,
+  .scroll {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .report button:hover,
+  .scroll tr[data-supported] td:last-child {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+  }
+
+  .reading,
+  .scroll th,
+  .scroll td {
+    border-color: CanvasText !important;
+  }
+}

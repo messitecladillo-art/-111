@@ -5,7 +5,7 @@ import { parseReportFrame, type ReportFrameStyle } from '../report-frame.ts';
 import { appendQualityResult } from '../quality-layouts.ts';
 import { appendBlocks, SIMULATED_MARK } from '../report-placement.ts';
 import { parseReportBlock, parseResultSnapshot, verifyResearchQuality, type ReportBlock, type ResultSnapshot } from '../research-quality.ts';
-import { assertTrueVector } from '../vector-assets.ts';
+import { assertTrueVector } from '../vector-svg.ts';
 import type { SectionRevisionProposal } from './section-revision.ts';
 
 export type ArtifactKind = 'cover'|'frame'|'diagram'|'chart'|'table'|'formula'|'text'|'file';

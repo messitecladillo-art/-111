@@ -32,7 +32,7 @@ export const FLOW_TEMPLATES: readonly FlowTemplate[] = [
   { id: 'describe', title: '描述与分组比较', description: '数据 → 频数、数值描述与分组描述 → 图表 → 汇集 → 结论草稿。', nodes: 9 },
   { id: 'scale', title: '量表信度检查', description: '数据 → 缺失处理 → Cronbach α → 图表 → 人工复核 → 报告章节。', nodes: 6 },
   { id: 'pretest', title: '问卷预测试', description: '研究问题 → 问卷 → 硅基样本预测试 → 方法卡，用说明连线串起。', nodes: 4 },
-  ...PLAN_TEMPLATES.map(t => ({ id: SURVEY[t.id], title: t.title, description: `${t.description}（来自「数据分析」研究路线）`, nodes: t.steps.length + 4 })),
+  ...PLAN_TEMPLATES.map(t => ({ id: SURVEY[t.id], title: t.title, description: `${t.description}（来自“数据分析”研究路线）`, nodes: t.steps.length + 4 })),
 ];
 
 export function buildTemplate(id: string, makeId: (prefix: string) => string, origin: { x: number; y: number }): Built {

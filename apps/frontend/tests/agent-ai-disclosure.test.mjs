@@ -115,10 +115,10 @@ test('buildAiDisclosureLines merges AiUsageLedger records, workflow receipts, an
 
   const text = lines.join('\n');
   assert.match(text, /coverage=partial.*返回 2 条/u);
-  assert.match(text, /\[服务端台账 rec-1\].*deepseek\/deepseek-chat.*输入 1200 \/ 输出 850 tokens.*out-abcdef12/u);
-  assert.match(text, /\[服务端台账 rec-2\].*未返回 Token 统计/u);
-  assert.match(text, /\[工作流回执 call-1\].*数据分析（data:analyze）.*svc-data#v4（自带密钥）.*未返回 Token 统计.*rh-998877665/u);
-  assert.match(text, /\[整稿草稿辅助\].*Research Model（gpt-4\.1）.*涉及章节数：5/u);
+  assert.match(text, /（服务端台账 rec-1）.*deepseek\/deepseek-chat.*输入 1200 \/ 输出 850 词元.*out-abcdef12/u);
+  assert.match(text, /（服务端台账 rec-2）.*未返回词元统计/u);
+  assert.match(text, /（工作流回执 call-1）.*数据分析（data:analyze）.*svc-data#v4（自带密钥）.*未返回词元统计.*rh-998877665/u);
+  assert.match(text, /（整稿草稿辅助）.*Research Model（gpt-4\.1）.*涉及章节数 5/u);
 });
 
 test('formatAiDisclosureMarkdown formats standalone compliance document with metadata', () => {

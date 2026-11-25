@@ -4,6 +4,7 @@
  * OMML elements. Spacing is left to Word, which applies its own math spacing rules.
  */
 import katex from 'katex';
+import { normalizeAcademicPunctuation } from './typography.ts';
 
 type Node = { tag: string; attrs: Record<string, string>; children: (Node | string)[] };
 
@@ -50,7 +51,7 @@ const MATH_FONT = '<w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math
 type Style = 'p' | 'b' | 'i' | 'bi' | undefined;
 const run = (t: string, style?: Style) => `<m:r>${style ? `<m:rPr><m:sty m:val="${style}"/></m:rPr>` : ''}${MATH_FONT}<m:t xml:space="preserve">${escape(t)}</m:t></m:r>`;
 /** Chinese and other words inside \text{} stay ordinary text in the body font. */
-const textRun = (t: string) => `<m:r><m:rPr><m:nor/></m:rPr><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="宋体" w:hint="eastAsia"/></w:rPr><m:t xml:space="preserve">${escape(t)}</m:t></m:r>`;
+const textRun = (t: string) => `<m:r><m:rPr><m:nor/></m:rPr><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="宋体" w:hint="eastAsia"/></w:rPr><m:t xml:space="preserve">${escape(normalizeAcademicPunctuation(t))}</m:t></m:r>`;
 const wrap = (tag: string, n: Node | undefined) => `<m:${tag}>${n ? convert(n) : ''}</m:${tag}>`;
 /** Word handles thin spacing itself; only deliberate gaps of about \; or wider survive. */
 function space(width: number): string {
@@ -193,7 +194,7 @@ function convert(n: Node): string {
 export function texProblem(tex: string): string | null {
   if (!tex.trim()) return '公式为空。';
   try { katex.renderToString(tex, { throwOnError: true, strict: 'ignore', trust: false }); return null; }
-  catch (error) { return `公式无法解析：${(error as Error).message.replace(/^KaTeX parse error:\s*/, '')}`; }
+  catch (error) { return `公式无法解析（${(error as Error).message.replace(/^KaTeX parse error:\s*/, '')}）`; }
 }
 
 /** One TeX formula as an OMML `<m:oMath>` element. Display formulas are wrapped in `<m:oMathPara>` by the caller. */
@@ -203,7 +204,7 @@ export function texToOmml(tex: string, displayMode = true): string {
   try {
     mathml = katex.renderToString(tex, { output: 'mathml', displayMode, throwOnError: true, strict: 'ignore', trust: false });
   } catch (error) {
-    throw Error(`公式无法解析：${(error as Error).message.replace(/^KaTeX parse error:\s*/, '')}`);
+    throw Error(`公式无法解析（${(error as Error).message.replace(/^KaTeX parse error:\s*/, '')}）`);
   }
   return `<m:oMath>${convert(parseXml(mathml))}</m:oMath>`;
 }

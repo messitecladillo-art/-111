@@ -48,12 +48,15 @@ def test_closed_language_rejects_unsafe_or_unbounded_tex_before_process(settings
 def test_safe_subset_and_metadata_escaping():
     latex.validate_body(SAFE)
     latex.validate_body(r"\begin{enumerate}\item 文本 \textbf{加粗}\item \(\sqrt{1+x^2}\)\end{enumerate}")
-    latex.validate_body(r"\[\begin{pmatrix}a&b\\c&d\end{pmatrix}\]")
+    latex.validate_body(r"\[\begin{pmatrix}a&b\\c&d\end{pmatrix} \tag{3-1}\]")
+    latex.validate_body("\\section{摘要}\n摘要。\\par\n\\clearpage\n\\section{一、绪论}\n\\begin{table}[htbp]\n\\centering\n\\caption*{表 1-1\\quad 样本构成}\n\\begin{tabular}{C{28mm}cc}\\toprule 类别 & n & 占比 \\\\ \\midrule 甲 & 10 & 50\\% \\\\ \\bottomrule\\end{tabular}\n\\end{table}")
+    with pytest.raises(latex.UnsafeBody):
+        latex.validate_body(r"\[ x=1 \tag{\input{secret}} \]")
     title = "\\input{secret}% # & $ _ ^ ~"
     source = latex.build_source(title, "line\nnext", SAFE, OPTIONS)
     assert r"\textbackslash{}input\{secret\}\% \# \& \$ \_ \textasciicircum{} \textasciitilde{}" in source
     assert r"\setlength{\heavyrulewidth}{1.5bp}" in source and r"\setlength{\lightrulewidth}{0.75bp}" in source
-    assert r"\fontsize{12bp}{15.552bp}" in source and r"\fontsize{15bp}{19.44bp}" in source and r"\fontsize{16bp}{20bp}" in source and r"\setlength{\parskip}{6bp}" in source
+    assert r"\fontsize{12bp}{15.552bp}" in source and r"\centering\heiti\zihao{3}\bfseries" in source and r"\fontsize{16bp}{20bp}" in source and r"\setlength{\parskip}{6bp}" in source
     assert source.count(r"\begin{document}") == 1 and source.endswith("\\end{document}\n")
     assert "fontset=auto" not in source and "line next" in source
     assert source.splitlines().index("% BODY START") < source.splitlines().index("% BODY END")
@@ -293,3 +296,51 @@ def test_flexible_options_preserve_strict_contract(field, value):
     draft = content()
     draft["reportFormat"]["options"] = selected
     with pytest.raises(ApiError): report_content(draft)
+
+
+def test_longtable_listoftables_listoffigures_and_48_image_limits():
+    assert latex.IMAGE_LIMITS == {"count": 48, "bytes": 700_000, "total": 12_000_000}
+    longtable_body = "\n".join([
+        r"\section{一、长表与目录}",
+        r"\begin{longtable}{ccc}",
+        r"\caption*{表 1-1\quad 跨页指标表}",
+        r"\addcontentsline{lot}{table}{表 1-1\quad 跨页指标表}\\",
+        r"\toprule[1.5bp]",
+        r"指标 & 数值 & 说明 \\",
+        r"\midrule[0.75bp]",
+        r"\endfirsthead",
+        r"\caption*{续表 1-1\quad 跨页指标表}\\",
+        r"\toprule[1.5bp]",
+        r"指标 & 数值 & 说明 \\",
+        r"\midrule[0.75bp]",
+        r"\endhead",
+        r"A & 1 & ok \\",
+        r"\bottomrule[1.5bp]",
+        r"\end{longtable}",
+        r"\begin{figure}[htbp]",
+        r"\centering",
+        r"\ResearchImage{0}",
+        r"\caption*{图 1-1\quad 示例图}",
+        r"\addcontentsline{lof}{figure}{图 1-1\quad 示例图}",
+        r"\end{figure}",
+    ])
+    latex.validate_body(longtable_body, image_count=1)
+    source = latex.build_source("长表测试", "", longtable_body, OPTIONS, images=[{"mime": "image/png", "data": "", "widthPx": 200, "heightPx": 100}])
+    assert r"\usepackage{longtable}" in source
+    assert r"\listoftables" in source and r"\listoffigures" in source
+    assert source.index(r"\listoftables") < source.index(r"\pagenumbering{arabic}")
+
+    # Plain body without longtable or addcontentsline must omit those directives cleanly
+    plain_source = latex.build_source("普通测试", "", SAFE, OPTIONS)
+    assert r"\usepackage{longtable}" not in plain_source
+    assert r"\listoftables" not in plain_source and r"\listoffigures" not in plain_source
+
+    for bad_lt in [
+        r"\begin{longtable}{cc}\toprule[1.5bp]a&b\\\bottomrule[1.5bp]\end{longtable}",
+        r"\begin{longtable}{cc}\bottomrule[1.5bp]a&b\\\toprule[1.5bp]\midrule[0.75bp]\end{longtable}",
+        r"\addcontentsline{lot}{table}{outside}",
+        r"\begin{table}[htbp]\addcontentsline{toc}{section}{bad}\end{table}",
+        r"\begin{table}[htbp]\addcontentsline{lot}{figure}{mismatch}\end{table}",
+    ]:
+        with pytest.raises(latex.UnsafeBody):
+            latex.validate_body(bad_lt)

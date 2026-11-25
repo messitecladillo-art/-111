@@ -91,12 +91,12 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
   const legendItems = colorBy === 'cluster'
     ? [...clusterNames.slice(0, clusterSlots).map((name, i) => ({ color: clusterInk(i), label: `${i + 1} ${name}` })), ...(sharedLabel ? [{ color: neutral, label: sharedLabel }] : [])]
     : bins ? bins.labels.map((l, i) => ({ color: bins.colors[i], label: l })) : [];
-  const exportCloud = () => { if (svgRef.current && placed.length) exportSvgElement(svgRef.current, `关键词词云-${stamp()}.svg`, { title: '关键词词云', legend: legendItems, notes: [`字号随出现篇数增大；颜色 = ${colorBy === 'cluster' ? colorTitle : '平均发表年份'}。共 ${placed.length} 个词${dropped.length ? `，另有 ${dropped.length} 个词未能放入当前版面` : ''}。`, `形状：${shapeName}${activeAuto ? `（Agent 自动识形 · ${recognition.domain}）` : ''}；方向：${effectiveAppearance.shape === 'free' || effectiveAppearance.shape === 'circle' ? '—' : effectiveAppearance.orientation === 'horizontal' ? '横向' : '纵向'}；间距：${({ compact: '紧凑', standard: '标准', relaxed: '舒展' })[effectiveAppearance.spacing]}。`, dataNote] }); };
+  const exportCloud = () => { if (svgRef.current && placed.length) exportSvgElement(svgRef.current, `关键词词云-${stamp()}.svg`, { title: '关键词词云', legend: legendItems, notes: [`字号随出现篇数增大；颜色 = ${colorBy === 'cluster' ? colorTitle : '平均发表年份'}。共 ${placed.length} 个词${dropped.length ? `，另有 ${dropped.length} 个词未能放入当前版面` : ''}。`, `当前轮廓为${shapeName}${activeAuto ? `（主题意象自动造型 · ${recognition.domain}）` : ''}${effectiveAppearance.shape === 'free' || effectiveAppearance.shape === 'circle' ? '' : `，${effectiveAppearance.orientation === 'horizontal' ? '横向' : '纵向'}排列`}，词距设为${({ compact: '紧凑', standard: '标准', relaxed: '舒展' })[effectiveAppearance.spacing]}。`, dataNote] }); };
   const primaryGlowInk = palette[0] ?? clusterInk(0);
 
   return <div ref={frameRef} className={styles.viewBody}>
     <div className={styles.viewTools}>
-      <p className={styles.viewNote}>字号随出现篇数增大，点击词语可加入选题篮；Agent 已自动按研究领域识别词云轮廓。</p>
+      <p className={styles.viewNote}>字号随出现篇数增大，点击词语可加入选题篮；已自动按研究领域匹配主题意象轮廓。</p>
       <div className={styles.toolCluster}>
       {!table && placed.length > 0 && <ExportButton onExport={exportCloud} />}
       <div className={styles.segmented} role="group" aria-label="词云呈现方式">
@@ -124,11 +124,11 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
     />}
     {!table && <div className={styles.cloudFrame} style={{ height: height || 360 }} onPointerLeave={() => setTip(null)}>
       <div className={appearanceStyles.agentHud} aria-hidden="true">
-        <span>✨ {activeAuto ? 'Agent 自动识形' : effectiveAppearance.customMask ? 'AI 语义构形' : '轮廓布局'}</span>
+        <span>✨ {activeAuto ? '主题意象自动造型' : effectiveAppearance.customMask ? '主题语义定制造型' : '轮廓布局'}</span>
         <b>{shapeName}</b>
         {activeAuto && <span>· {recognition.domain} ({recognition.confidence}%)</span>}
       </div>
-      {width > 0 && <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`关键词词云：${shapeName}，显示 ${placed.length} 个词${placed.length ? `，较大的词有 ${placed.slice(0, 5).map(n => n.label).join('、')}` : ''}`}>
+      {width > 0 && <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`关键词词云（${shapeName}），显示 ${placed.length} 个词${placed.length ? `，较大的词有 ${placed.slice(0, 5).map(n => n.label).join('、')}` : ''}`}>
         <defs>
           <radialGradient id={auraId} cx="50%" cy="50%" r="54%">
             <stop offset="0%" stopColor={primaryGlowInk} stopOpacity="0.16" />
@@ -155,7 +155,7 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
         <span>出现于 {fmtInt(tipNode.df)} 篇（{pct(tipNode.df / map.totalDocs)}）</span>
         <span>平均发表年份 {fmtYear(tipNode.meanYear)}</span>
         {tipNode.meanCitations !== null && <span>平均被引 {tipNode.meanCitations.toFixed(1)} 次（导出时）</span>}
-        <span>{tipNode.cluster >= 0 ? `聚类 ${tipNode.cluster + 1}：${clusterNames[tipNode.cluster] ?? ''}` : '未与其他高频词共现'}</span>
+        <span>{tipNode.cluster >= 0 ? `聚类 ${tipNode.cluster + 1} · ${clusterNames[tipNode.cluster] ?? ''}` : '未与其他高频词共现'}</span>
         <span>{trendText(trends.get(tipNode.key))}</span>
         <em>{basket.includes(tipNode.key) ? '点击移出选题篮' : '点击加入选题篮'}</em>
       </>}</Tip>
@@ -165,7 +165,7 @@ export default function WordCloud({ dataNote, map, trends, theme, basket, onTogg
         ? <Legend title={`颜色 = ${colorTitle}`} items={legendItems} />
         : bins && <Legend title="颜色 = 平均发表年份" items={legendItems} />}
     </div>}
-    {!table && (effectiveAppearance.shape !== 'free' || dropped.length > 0) && <div className={appearanceStyles.status}><span>已显示 {placed.length} / {map.nodes.length} 个词{dropped.length > 0 ? ' · 可减少显示词数或改用更宽的轮廓' : ''}</span><button type="button" onClick={() => setTable(true)}>查看全部词频</button></div>}
+    {!table && (effectiveAppearance.shape !== 'free' || dropped.length > 0) && <div className={appearanceStyles.status} role="status"><span>已显示 {placed.length} / {map.nodes.length} 个词{dropped.length > 0 ? ' · 可减少显示词数或改用更宽的轮廓' : ''}</span><button type="button" onClick={() => setTable(true)}>查看全部词频</button></div>}
     {table && <TermTable map={map} trends={trends} basket={basket} onToggle={onToggle} ranked={ranked} clusterNames={clusterNames} theme={theme} clusterInk={clusterInk} />}
   </div>;
 }
@@ -181,7 +181,7 @@ export function TermTable({ map, trends, basket, onToggle, ranked, clusterNames,
           <td>{i + 1}</td><th scope="row">{n.label}</th><td>{fmtInt(n.df)}</td><td>{pct(n.df / map.totalDocs)}</td><td>{fmtYear(n.meanYear)}</td>
           <td>{n.cluster >= 0 ? <><i className={styles.swatch} style={{ background: clusterInk?.(n.cluster) ?? clusterColor(theme, n.cluster) }} />{n.cluster + 1} {clusterNames[n.cluster]}</> : '—'}</td>
           <td title={trendText(t)}>{trendGlyph(t)} {t ? (t.signal === 'insufficient' ? '样本不足' : t.signal === 'rising' ? '显著上升' : t.signal === 'falling' ? '显著下降' : '无显著变化') : '—'}</td>
-          <td><button type="button" className={styles.linkButton} aria-pressed={inBasket} onClick={() => onToggle(n.key)}>{inBasket ? '移出选题篮' : '加入选题篮'}<span className={styles.srOnly}>：{n.label}</span></button></td>
+          <td><button type="button" className={styles.linkButton} aria-pressed={inBasket} onClick={() => onToggle(n.key)}>{inBasket ? '移出选题篮' : '加入选题篮'}<span className={styles.srOnly}> {n.label}</span></button></td>
         </tr>;
       })}</tbody>
     </table>

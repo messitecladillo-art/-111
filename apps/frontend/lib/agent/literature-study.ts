@@ -231,7 +231,7 @@ function propose(rows: EvidenceRow[], scope: string, domain: StudyDomain): Topic
   const core = [method.id, result.id, reference.id, referenceResult.id];
   const title = shortLabel(scope, 64);
   const cite = (row: EvidenceRow, entry: StudyEvidence) => `《${shortLabel(row.paper.title, 52)}》第 ${entry.page} 页`;
-  const excerpt = (entry: StudyEvidence) => `「${shortLabel(entry.quote, 88)}」`;
+  const excerpt = (entry: StudyEvidence) => `“${shortLabel(entry.quote, 88)}”`;
   const aMethod = cite(primary, method), aResult = cite(primary, result);
   const bMethod = cite(comparison, reference), bResult = cite(comparison, referenceResult);
   const controls = DESIGN_CONTROL[domain];
@@ -239,7 +239,7 @@ function propose(rows: EvidenceRow[], scope: string, domain: StudyDomain): Topic
     {
       id: 'replicate',
       title: `${title}的原方法复核`,
-      question: `在「${scope}」的范围内按原文指标重测，估计和不确定性是否与 ${aResult} 的结果 ${excerpt(result)} 相容？`,
+      question: `在“${scope}”的范围内按原文指标重测，估计和不确定性是否与 ${aResult} 的结果 ${excerpt(result)} 相容？`,
       design: `复核 ${aMethod} 的方法摘录 ${excerpt(method)}，用 ${bMethod} 的方法摘录 ${excerpt(reference)} 检查可替代做法。登记复核样本、主要指标和判断标准，固定${controls}，再收集独立数据并报告偏离和估计区间。`,
       evidenceIds: core,
       caveat: '先核对研究对象与当前方向的适用性，再确认原方法可执行细节及原结果的不确定性。若信息不足，可先做可行性试测。',
@@ -247,7 +247,7 @@ function propose(rows: EvidenceRow[], scope: string, domain: StudyDomain): Topic
     {
       id: 'compare',
       title: `${title}的统一口径对照`,
-      question: `在「${scope}」内，${aResult} 的 ${excerpt(result)} 与 ${bResult} 的 ${excerpt(referenceResult)} 能否对齐到同一指标？`,
+      question: `在“${scope}”内，${aResult} 的 ${excerpt(result)} 与 ${bResult} 的 ${excerpt(referenceResult)} 能否对齐到同一指标？`,
       design: `用 ${aMethod} 的 ${excerpt(method)} 与 ${bMethod} 的 ${excerpt(reference)} 建立口径表，逐项核对${controls}并记录可转换的单位及纳排条件。若找到共同指标，在同一数据上执行两种方案并报告估计差值和不确定性。`,
       evidenceIds: core,
       caveat: '先核实两个文件是否对应独立研究，并核对研究对象与当前方向的关系。若没有共同指标，保留并列证据及不可比项。',
@@ -259,7 +259,7 @@ function propose(rows: EvidenceRow[], scope: string, domain: StudyDomain): Topic
     candidates.push({
       id: 'limits',
       title: `${title}的适用边界检验`,
-      question: `在「${scope}」内，改变 ${cite(limited, limitation)} 的局限摘录 ${excerpt(limitation)} 所涉及的一个条件时，同一指标的估计变化有多大？`,
+      question: `在“${scope}”内，改变 ${cite(limited, limitation)} 的局限摘录 ${excerpt(limitation)} 所涉及的一个条件时，同一指标的估计变化有多大？`,
       design: `根据局限摘录定义基准与替代条件。沿用 ${cite(limited, limited.cells.method[0])} 所述方法，固定${controls}中的其余项目，对 ${cite(limited, limited.cells.result[0])} 的结果指标分别记录各条件的样本量、估计和不确定性。`,
       evidenceIds: [...new Set([...core, limited.cells.method[0].id, limited.cells.result[0].id, limitation.id])],
       caveat: '先核对当前方向是否涉及该局限，并确认条件可观察或可控制。观察数据所得差异按关联解释。',

@@ -6,14 +6,15 @@ import { applySectionRevision, type RevisionSnapshot, type SectionRevisionPropos
 import type { ReportRunScope } from '@/lib/agent/report-work';
 import type { ResearchStageId } from '@/lib/agent/research-stages';
 import { useCallback, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState, useSyncExternalStore, type Ref } from "react";
-import { ACCENTS, applyCoverImage, applyFrameImage, applyReportFrame, createEditorContent, draftTextBytes, EDITOR_LIMITS, EDITOR_SIZE_LABEL, PAGE_ART_DRAFT_BYTES, parseEditorContent, parseVersionLabel, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
+import { ACCENTS, applyCoverImage, applyFrameImage, applyReportFrame, createEditorContent, draftTextBytes, EDITOR_LIMITS, EDITOR_SIZE_LABEL, PAGE_ART_DRAFT_BYTES, parseEditorContent, parseVersionLabel, sectionProseText, type Draft, type DraftSummary, type DraftVersion, type DraftVersionSummary, type EditorContent, type ReportSection, type Slide } from "@/lib/editor-model";
 import { blueprintSections, insertBlueprintNode, LEGACY_SECTION_IDS, matchBlueprintNode, type BlueprintModule } from "@/lib/report-blueprint";
 import { writtenLines } from "@/lib/report-benchmark";
 import BenchmarkPanel from "./BenchmarkPanel";
 import BlueprintGuide from "./BlueprintGuide";
 import { useContentReveal, useKeyedListMotion } from '../motion/useWorkspaceMotion';
 import ReportStoryboard, { ReportLinkNotice } from './ReportStoryboard';
-import { LINK_LABELS, reportExportWarnings } from '@/lib/report-storyboard';
+import * as storyboardModule from '@/lib/report-storyboard';
+const { LINK_LABELS, reportExportWarnings } = storyboardModule;
 import styles from "./EditingStudio.module.css";
 import OfficeFileLibrary from "./OfficeFileLibrary";
 import ResearchMaterialLibrary from "../research/ResearchMaterialLibrary";
@@ -38,7 +39,8 @@ import { citationToken, formatReference, referenceNumbers, type ReferenceEntry }
 import ReferencesPanel from './ReferencesPanel';
 import ReportPaper from './ReportPaper';
 
-const sectionWritten = (s: ReportSection) => writtenLines(s.body).length > 0 || !!s.blocks?.some(b => b.kind !== "paragraph" || writtenLines(b.text).length > 0);
+const readSectionProse = (s: Pick<ReportSection, "body" | "blocks">): string => sectionProseText(s);
+const sectionWritten = (s: ReportSection) => writtenLines(readSectionProse(s)).length > 0 || !!s.blocks?.some(b => b.kind !== "paragraph" || writtenLines(b.text).length > 0);
 import AppendixHelper from './AppendixHelper';
 import { appendLines } from '@/lib/report-appendices';
 import type { Questionnaire } from '@/lib/questionnaire';
@@ -50,6 +52,15 @@ export type EditingStudioHandle = { appendSection: (section: ReportSection) => b
   applyArtifact:(record:ArtifactRecord,sectionId:string|null)=>RevisionApplyResult };
 
 export { createReportPermissionGuard } from '@/lib/report-permission';
+
+const SERIALIZED_CONTENT_CACHE = new WeakMap<EditorContent, string>();
+function serializeEditorContentCached(value: EditorContent): string {
+  const hit = SERIALIZED_CONTENT_CACHE.get(value);
+  if (hit !== undefined) return hit;
+  const json = JSON.stringify(value);
+  SERIALIZED_CONTENT_CACHE.set(value, json);
+  return json;
+}
 
 type Phase = "loading" | "ready" | "saving" | "saved" | "error" | "conflict";
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -106,6 +117,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const onSnapshot = projectBinding?.onSnapshot;
   useLayoutEffect(()=>{if(canMutate())onSnapshot?.(content);},[content,onSnapshot,canMutate]);
   const [mode, setMode] = useState<"report" | "slides" | "latex">("report");
+  const [view, setView] = useState<"split" | "write" | "preview">("split");
   const [qualityOpen,setQualityOpen]=useState(false);
   const qualityToggleRef = useRef<HTMLButtonElement>(null);
   const [fileLibraryOpen, setFileLibraryOpen] = useState(false);
@@ -124,6 +136,8 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       setFileLibraryOpen(false);
       setQualityOpen(requestedResearchStage === 'findings');
       setToolsOpen(requestedResearchStage === 'review');
+      if (requestedResearchStage === 'review') setView('write');
+      else if (requestedResearchStage === 'report' || requestedResearchStage === 'export') setView('split');
     }
   }
   useEffect(() => {
@@ -146,7 +160,6 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const [saveTime, setSaveTime] = useState("");
   const [connected, setConnected] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const [view, setView] = useState<"split" | "write" | "preview">("split");
   const [outlineOverride, setOutlineOpen] = useState<boolean | null>(null);
   const narrowScreen = useSyncExternalStore(subscribeNarrowScreen, isNarrowScreen, () => false);
   const outlineOpen = outlineOverride ?? !narrowScreen;
@@ -159,7 +172,8 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const [presentIndex, setPresentIndex] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
-  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(content));
+  const serializedContent = serializeEditorContentCached(content);
+  const [savedSnapshot, setSavedSnapshot] = useState(serializedContent);
   const studioRef = useRef<HTMLElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -171,7 +185,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const current = useRef(content);
   const record = useRef<DraftSummary | null>(null);
   const pendingId = useRef<string | null>(null);
-  const saved = useRef(JSON.stringify(content));
+  const saved = useRef(savedSnapshot);
   const busy = useRef(false);
   const blocked = useRef(false);
   const scope = useRef("");
@@ -179,7 +193,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const alive = useRef(true);
   const section = content.report.find(s => s.id === sectionId) || content.report[0];
   const slide = content.slides.find(s => s.id === slideId) || content.slides[0];
-  const dirty = JSON.stringify(content) !== savedSnapshot;
+  const dirty = serializedContent !== savedSnapshot;
   const { setUnsaved } = hostedSession;
   useEffect(() => { if(localOnly&&!projectBinding) setUnsaved('local-report',dirty); return () => {if(!projectBinding)setUnsaved('local-report',false);}; },[localOnly,dirty,setUnsaved,projectBinding]);
 
@@ -370,11 +384,21 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
     let applied:ReturnType<typeof applyReportInsert>;
     try{applied=applyReportInsert(currentContent,reportInsert,reportInsert.sectionId);}
     catch(error){setMessage(`未能写入${reportInsert.source}：${(error as Error).message}`);onReportInsertHandled?.();return;}
-    current.current=applied.content;
-    setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(applied.content);if(!blocked.current)setPhase('ready');
+    const changed = applied.blocks.length > 0 || (applied.referencesAdded ?? 0) > 0 || (applied.findingsAdded ?? 0) > 0 || applied.created.length > 0;
+    if (changed) { current.current=applied.content; setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(applied.content); }
+    if(!blocked.current)setPhase('ready');
     setMode('report');setSectionId(applied.sectionId);
     const title=applied.content.report.find(s=>s.id===applied.sectionId)?.title??'';
-    setMessage(`已从${reportInsert.source}写入「${title}」${applied.created.length?'（按报告蓝图新建章节）':''}：${insertSummary(applied.blocks)}。可撤销。`);
+    const summaryExtra = applied.referencesAdded !== undefined || applied.findingsAdded !== undefined
+      ? {
+          ...(applied.referencesAdded !== undefined ? { references: applied.referencesAdded } : {}),
+          ...(applied.findingsAdded !== undefined ? { findings: applied.findingsAdded } : {}),
+        }
+      : undefined;
+    const summary = insertSummary(applied.blocks, summaryExtra);
+    setMessage(changed
+      ? `已从${reportInsert.source}写入“${title}”${applied.created.length?'（按报告蓝图新建章节）':''}：${summary}。可撤销。`
+      : `已核对${reportInsert.source}“${title}”：${summary}。`);
     onReportInsertHandled?.();
     },0);
     return ()=>window.clearTimeout(timer);
@@ -390,7 +414,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
     if(applied.content!==currentContent){
       current.current=applied.content;
       setPast(items=>[...items.slice(-59),currentContent]);setFuture([]);setContent(applied.content);if(!blocked.current)setPhase('ready');
-      setMessage(`已按对话改图「${applied.figure.title}」：${applied.changes.join('；')}。可撤销。`);
+      setMessage(`已按对话改图“${applied.figure.title}”：${applied.changes.join('；')}。可撤销。`);
     }
     onFigureTweakHandled?.();
     },0);
@@ -425,6 +449,10 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
     current.current = next; setContent(next); setPast([]); setFuture([]); setPhase("ready"); setMessage(""); setSaveTime("");
   }
   function patchSection(patch: Partial<ReportSection>) { edit({ ...content, report: content.report.map(s => s.id === section.id ? { ...s, ...patch } : s) }); }
+  function patchBlockText(blockId: string, text: string) {
+    if (!section.blocks) return;
+    patchSection({ blocks: section.blocks.map(b => (b.id === blockId ? { ...b, text } : b)) });
+  }
   function startBlankReport() {
     const nextSection: ReportSection = { id: crypto.randomUUID(), title: '正文', body: '', source: '' };
     if (!edit({ ...content, report: [nextSection] })) return;
@@ -438,7 +466,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       if (!inserted.length) { setMessage("报告中已有这一节。"); return; }
       if (!edit(parseEditorContent(next))) return;
       setMode("report"); setSectionId(inserted[inserted.length - 1]); setOutlineQuery("");
-      const titles = next.report.filter(s => inserted.includes(s.id)).map(s => `「${s.title}」`).join("、");
+      const titles = next.report.filter(s => inserted.includes(s.id)).map(s => `“${s.title}”`).join("、");
       setMessage(`已插入${titles}${renumbered ? `，并重排了 ${renumbered} 个章节序号` : ""}。可撤销。`);
     } catch (e) { setMessage(e instanceof Error ? e.message : "未能插入。"); }
   }
@@ -511,7 +539,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       }
       const blob = kind === "docx" || kind === "appendix" ? await buildDocx(data,reportExportOptions(reportFormat,kind==='appendix'?'appendix':'main')) : kind === "pptx" ? await buildPptx(data) : new Blob([JSON.stringify(data)], { type: "application/json" });
       downloadBlob(blob, `${fileName(data.title)}${kind==='docx'?'-报告正文':kind==='appendix'?'-附录':''}.${kind==='appendix'?'docx':kind}`);
-      setMessage(kind==='docx'||kind==='appendix'?`已生成${kind==='appendix'?'独立附录':'报告正文'}。在 Word/WPS 更新目录后可查看实际分页。${reportFormatNotices(data.report).join('')}`:"已生成下载文件。");
+      setMessage(kind==='docx'||kind==='appendix'?`已生成${kind==='appendix'?'独立附录':'报告正文'}。在本地办公软件中更新目录域后即可查看实际分页。${reportFormatNotices(data.report).join('')}`:"已生成下载文件。");
     } catch (e) { setMessage(e instanceof Error ? e.message : "导出失败，请重试。"); }
     finally { setExporting(false); }
   }
@@ -638,6 +666,25 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
   const selectedIndex = items.findIndex(s => s.id === selectedId);
   const statusText = versionBusy ? "正在保存命名版本…" : phase === "loading" ? "正在读取草稿…" : phase === "saving" ? "正在保存…" : phase === "conflict" ? "版本冲突 · 已暂停保存" : phase === "error" ? "未保存 · 请重试" : dirty ? "有修改 · 即将保存" : activeDraftId ? `已保存 ${saveTime}` : "模板 · 编辑后自动保存";
   const locked = readOnly || identityFrozen || phase === "loading" || phase === "saving" || versionBusy;
+  const hasAuthoredReportForSlides = content.title !== "我的市场调查研究" || content.report.length > 6;
+  const hasPlaceholderSlidesOnly = content.slides.length === 3 && content.slides[0]?.title === "我的市场调查研究" && content.slides.every(s => !s.reportLink && !s.objects);
+  function syncSlidesFromReport() {
+    if (locked || typeof storyboardModule.buildTopicSyncedDeck !== "function") return;
+    const synced = storyboardModule.buildTopicSyncedDeck(current.current);
+    if (!synced.length || !edit({ ...current.current, slides: synced })) return;
+    setSlideId(synced[0].id);
+    setMessage("已根据当前报告同步生成答辩幻灯片初稿，可继续编辑或撤销。");
+  }
+  function openSlidesMode() {
+    setMode("slides");
+    if (!locked && hasAuthoredReportForSlides && hasPlaceholderSlidesOnly && typeof storyboardModule.buildTopicSyncedDeck === "function") {
+      const synced = storyboardModule.buildTopicSyncedDeck(current.current);
+      if (synced.length && edit({ ...current.current, slides: synced })) {
+        setSlideId(synced[0].id);
+        setMessage("已根据当前报告自动生成答辩幻灯片初稿，可编辑或撤销。");
+      }
+    }
+  }
   const visibleItems = items.map((item, index) => ({ item, index })).filter(({ item }) => item.title.toLocaleLowerCase().includes(outlineQuery.trim().toLocaleLowerCase()));
   const presentationSlide = content.slides[presentIndex] || content.slides[0];
 
@@ -659,7 +706,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
     <div hidden={fileLibraryOpen}>
     <div className={styles.documentBar}>
       <div className={styles.identity}><label><span className={styles.srOnly}>研究作品</span><input aria-label="作品名称" maxLength={120} value={content.title} readOnly={readOnly} disabled={phase === "loading" || versionBusy} onChange={e => edit({ ...content, title: e.target.value })}/></label></div>
-      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{localOnly&&<><button type="button" disabled={exporting} onClick={()=>void exportFile('json')}>下载备份</button><button type="button" disabled={readOnly} onClick={()=>importInput.current?.click()}>恢复备份</button></>}{!localOnly&&<><button type="button" title="Ctrl / ⌘ S" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
+      <div className={styles.saveGroup}><span role="status" aria-live="polite" className={styles.saveStatus} data-motion-state={localOnly ? (dirty ? "dirty" : "local") : versionBusy ? "saving" : phase === "saving" || phase === "loading" ? "saving" : phase === "error" || phase === "conflict" ? "warning" : dirty ? "dirty" : activeDraftId ? "saved" : "local"} data-warning={phase === "error" || phase === "conflict"}>{projectBinding?.status ?? (localOnly?(dirty?'本页有未备份修改':'本地编辑模式'):statusText)}</span>{localOnly&&<><button type="button" disabled={exporting} onClick={()=>void exportFile('json')}>下载备份</button><button type="button" disabled={readOnly} onClick={()=>importInput.current?.click()}>恢复备份</button></>}{!localOnly&&<><button type="button" title="保存当前草稿（支持保存快捷键）" onClick={() => void save()} disabled={locked || phase === "conflict"}>立即保存</button><button type="button" aria-expanded={libraryOpen} aria-controls="editor-library" onClick={() => setLibraryOpen(!libraryOpen)}>草稿与版本</button></>}</div>
     </div>
     <div className={styles.libraryPanel} id="editor-library" hidden={localOnly||!libraryOpen}>
     <div className={styles.libraryBar}>
@@ -669,17 +716,17 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       <button type="button" onClick={() => { setPhase("loading"); setMessage(""); void connect(); }} disabled={locked}>刷新草稿库</button>
       <button type="button" onClick={() => void exportFile("json")} disabled={exporting}>下载 JSON 备份</button>
       <button type="button" disabled={locked} onClick={() => importInput.current?.click()}>恢复备份</button>
-      <input ref={importInput} type="file" accept="application/json,.json" hidden onChange={e => { void importBackup(e.target.files?.[0]); e.target.value = ""; }}/>
+      <input ref={importInput} aria-label="选择要恢复的报告备份文件" type="file" accept="application/json,.json" hidden onChange={e => { void importBackup(e.target.files?.[0]); e.target.value = ""; }}/>
       <details className={styles.storageNote}><summary>保存与隐私</summary><p>正文与讲稿按账户或私密会话保存。匿名会话可在“身份与恢复”设置恢复密钥；下载 JSON 备份可保存当前作品。</p></details>
     </div>
     <div className={styles.versionManager}>
       <div><strong>命名版本</strong><p>自动保存当前进度；在关键节点保留独立版本。每份作品最多 20 个，不自动删除。</p></div>
       <div className={styles.versionForm}><input aria-label="版本名称" maxLength={80} placeholder="例如：初稿完成、答辩前定稿" value={versionLabel} disabled={locked} onChange={e => setVersionLabel(e.target.value)}/><button type="button" title={phase === "error" ? "请先点立即保存，成功后再保存命名版本" : "保存当前已确认的正文和幻灯片"} onClick={() => void createVersion()} disabled={locked || phase === "conflict" || phase === "error" || !versionLabel.trim()}>保存命名版本</button><button type="button" onClick={() => void loadVersions()} disabled={!activeDraftId || versionLoading || locked}>刷新版本</button></div>
-      <div ref={versionMotion} className={styles.versionList} aria-busy={versionLoading}>{versions.map(v => <article key={v.id} data-motion-id={v.id}><div><strong>{v.label}</strong><span>{new Date(v.createdAt).toLocaleString("zh-CN")} · 修订 {v.sourceRevision}</span></div><button type="button" disabled={locked} onClick={() => void restoreVersion(v)}>打开为新作品</button></article>)}{!versions.length && <p>{versionLoading ? "正在读取版本…" : "尚无命名版本。自动保存不会创建历史快照。"}</p>}</div>
+      <div ref={versionMotion} className={styles.versionList} aria-busy={versionLoading}>{versions.map(v => <article key={v.id} data-motion-id={v.id}><div><strong>{v.label}</strong><span>{new Date(v.createdAt).toLocaleString("zh-CN")} · 修订 {v.sourceRevision}</span></div><button type="button" aria-label={`将版本“${v.label}”打开为新作品`} disabled={locked} onClick={() => void restoreVersion(v)}>打开为新作品</button></article>)}{!versions.length && <p role="status">{versionLoading ? "正在读取版本…" : "尚无命名版本。自动保存不会创建历史快照。"}</p>}</div>
     </div></div>
     {message && <div className={styles.notice} role={phase === "error" || phase === "conflict" ? "alert" : "status"}><span>{message}</span>{phase === "conflict" && <button type="button" disabled={locked} onClick={() => void save(true)}>保留当前内容为副本</button>}<button type="button" aria-label="关闭提示" onClick={() => setMessage("")}>×</button></div>}
     <div className={styles.toolbar}>
-      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={() => setMode("slides")}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX</button></div>
+      <div ref={modeMotion} className={styles.modeGroup} role="group" aria-label="编辑内容类型"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="report" type="button" aria-pressed={mode === "report"} onClick={() => setMode("report")}>报告</button><button data-motion-id="slides" type="button" aria-pressed={mode === "slides"} onClick={openSlidesMode}>PPT 幻灯片</button><button data-motion-id="latex" type="button" aria-pressed={mode === "latex"} onClick={() => setMode("latex")}>LaTeX</button></div>
       <div className={styles.history}><button type="button" onClick={undo} disabled={readOnly || !past.length || phase === "loading" || versionBusy}>↶ 撤销</button><button type="button" onClick={redo} disabled={readOnly || !future.length || phase === "loading" || versionBusy}>↷ 重做</button></div>
       <button type="button" className={styles.toolsToggle} aria-expanded={toolsOpen} aria-controls="editor-tools" onClick={()=>setToolsOpen(value=>!value)}>{mode==='slides'?'创作工具':'报告工具'}<span aria-hidden="true">{toolsOpen?'−':'+'}</span></button>
       <button ref={qualityToggleRef} type="button" aria-pressed={qualityOpen} aria-controls="editor-quality" onClick={()=>setQualityOpen(value=>!value)}>发现与矢量编排</button>
@@ -718,48 +765,72 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
         setMessage('已按确认分镜更新 PPT，报告原文未改变。可在本页撤销；请核对保存状态或下载 JSON 备份。');return true;
       } catch(e){setMessage((e as Error).message);return false;}
     }}/></div>
-    <div className={styles.viewBar}><button type="button" aria-pressed={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)}>{outlineOpen ? "收起目录" : "展开目录"}</button><div ref={viewMotion} role="group" aria-label="工作区视图"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="write" type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>专注写作</button><button data-motion-id="split" type="button" aria-pressed={view === "split"} onClick={() => setView("split")}><span className={styles.wideLabel}>编辑与预览</span><span className={styles.compactLabel}>编辑</span></button><button data-motion-id="preview" type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>仅预览</button></div><span>{mode === "report" ? `${content.report.reduce((n,s) => n+s.body.length,0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span></div>
+    <div className={styles.viewBar}><button type="button" aria-pressed={outlineOpen} onClick={() => setOutlineOpen(!outlineOpen)}>{outlineOpen ? "收起目录" : "展开目录"}</button><div ref={viewMotion} role="group" aria-label="工作区视图"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/><button data-motion-id="write" type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>专注写作</button><button data-motion-id="split" type="button" aria-pressed={view === "split"} onClick={() => setView("split")}><span className={styles.wideLabel}>编辑与预览</span><span className={styles.compactLabel}>编辑</span></button><button data-motion-id="preview" type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}>仅预览</button></div><span>{mode === "report" ? `${content.report.reduce((n,s) => n+readSectionProse(s).length,0).toLocaleString()} 字正文` : `${content.slides.length} 页幻灯片`}</span></div>
     <div className={styles.editorGrid}>
       <aside className={styles.outline} aria-label={mode === "report" ? "报告目录" : "幻灯片列表"}>
         <div className={styles.paneLabel}><strong>{mode === "report" ? "章节目录" : "幻灯片"}</strong><span>{items.length} / {itemLimit}</span></div>
         <input className={styles.outlineSearch} aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={e => setOutlineQuery(e.target.value)}/>
-        <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => { const report = mode === "report", written = report && (sectionWritten(item as ReportSection) || (reportPart(item.title) === "references" && cited.order.length > 0)); return <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} data-kind={report ? outlineKind(item.title) : undefined} data-written={report ? String(written) : undefined} title={report ? item.title || "未命名" : undefined} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => report ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}>{report ? <span className={styles.statusDot} aria-hidden="true"/> : <span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>}<span className={styles.itemTitle}>{item.title || "未命名"}</span>{report && <span className={styles.srOnly}>{written ? "（已撰写）" : "（待撰写）"}</span>}</span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>; })}{!visibleItems.length && <p className={styles.noResults}>没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
+        <div ref={outlineMotion} className={styles.itemList}><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{visibleItems.map(({ item, index }) => { const report = mode === "report", written = report && (sectionWritten(item as ReportSection) || (reportPart(item.title) === "references" && cited.order.length > 0)); return <button type="button" key={item.id} data-motion-id={`${mode}:${item.id}`} data-mode={mode} data-kind={report ? outlineKind(item.title) : undefined} data-written={report ? String(written) : undefined} title={report ? item.title || "未命名" : undefined} aria-current={selectedId === item.id ? "true" : undefined} onClick={() => report ? setSectionId(item.id) : setSlideId(item.id)}><span className={styles.itemLabel}>{report ? <span className={styles.statusDot} aria-hidden="true"/> : <span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>}<span className={styles.itemTitle}>{item.title || "未命名"}</span>{report && <span className={styles.srOnly}>{written ? "（已撰写）" : "（待撰写）"}</span>}</span>{mode === "slides" && <span className={styles.thumbnail} aria-hidden="true" style={{ borderColor: `#${ACCENTS[content.accent]}` }}><strong>{item.title}</strong><span>{item.body.slice(0, 90)}</span></span>}</button>; })}{!visibleItems.length && <p className={styles.noResults} role="status">没有匹配标题。<button type="button" onClick={() => setOutlineQuery("")}>清除搜索</button></p>}</div>
         <button type="button" className={styles.addItem} disabled={readOnly || items.length >= itemLimit || phase === "loading" || versionBusy} onClick={addItem}>＋ {mode === "report" ? "添加章节" : "添加页面"}</button>
       </aside>
       <fieldset className={styles.fields} disabled={readOnly || phase === "loading" || versionBusy}>
         <legend>{mode === "report" ? "章节编辑" : "页面编辑"}</legend>
-        <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label="向上移动">↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label="向下移动">↓</button><button type="button" disabled={items.length >= itemLimit} onClick={duplicateItem}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem}>移除</button></div>
+        <div className={styles.itemActions}><span>第 {selectedIndex + 1} {mode === "report" ? "章" : "页"}</span><button type="button" disabled={selectedIndex === 0} onClick={() => moveItem(-1)} aria-label={mode === "report" ? `向上移动第 ${selectedIndex + 1} 章` : `向上移动第 ${selectedIndex + 1} 页`}>↑</button><button type="button" disabled={selectedIndex === items.length - 1} onClick={() => moveItem(1)} aria-label={mode === "report" ? `向下移动第 ${selectedIndex + 1} 章` : `向下移动第 ${selectedIndex + 1} 页`}>↓</button><button type="button" disabled={items.length >= itemLimit} onClick={duplicateItem} aria-label={mode === "report" ? `复制第 ${selectedIndex + 1} 章` : `复制第 ${selectedIndex + 1} 页`}>复制</button><button type="button" disabled={items.length < 2} onClick={removeItem} aria-label={mode === "report" ? `移除第 ${selectedIndex + 1} 章` : `移除第 ${selectedIndex + 1} 页`}>移除</button></div>
         {mode === "report" ? <>
-          <label>章节标题<input maxLength={150} value={section.title} onChange={e => patchSection({ title: e.target.value })}/></label>
+          <label>章节标题<input aria-label="章节标题" maxLength={150} value={section.title} onChange={e => patchSection({ title: e.target.value })}/></label>
           {/* Paragraph blocks written into the section (method notes, reading paragraphs) count towards its length. */}
-          {guide && <BlueprintGuide node={guide} written={[section.body, ...(section.blocks ?? []).filter(b => b.kind === "paragraph").map(b => b.text)].flatMap(writtenLines).join("").replace(/\s/g, "").length} open={guideOpen} onToggle={setGuideOpen} onNavigate={navigate}/>}
+          {guide && <BlueprintGuide node={guide} written={writtenLines(readSectionProse(section)).join("").replace(/\s/g, "").length} open={guideOpen} onToggle={setGuideOpen} onNavigate={navigate}/>}
           {guide?.kind === 'appendix' && <AppendixHelper node={guide.id} content={content} questionnaire={questionnaire} disabled={locked}
             onWrite={(lines, what) => { try { if (!edit({ ...content, report: content.report.map(s => s.id === section.id ? { ...s, body: appendLines(s.body, lines, s.title) } : s) })) return '未能写入，请稍后重试。'; setMessage(`已写入${what}（${lines.length} 段），可撤销。`); return ''; } catch (e) { return (e as Error).message; } }}/>}
           {reportPart(section.title) === 'references' && <ReferencesPanel references={content.references ?? []} numbers={citations} uncited={uncited} legacy={section.body} disabled={locked}
             onChange={(next: ReferenceEntry[]) => edit({ ...content, references: next })}
             onImport={(entries: ReferenceEntry[]) => { if (edit({ ...content, references: [...(content.references ?? []), ...entries], report: content.report.map(s => s.id === section.id ? { ...s, body: '' } : s) })) setMessage(`已把 ${entries.length} 条手写文献转为文献条目，并清空本节正文，可撤销。`); }}/>}
-          <div className={styles.bodyTools}><select aria-label="插入图表、公式或文献引用" value="" disabled={!referable.length && !cited.order.length} onChange={e => { const value = e.target.value; if (value.startsWith('ref:')) { insertReference(citationToken(value.slice(4))); return; } const target = referable.find(r => r.id === value); if (target) insertReference(referenceToken(target.label.kind, target.id)); }}><option value="">{referable.length || cited.order.length ? "插入引用…" : "暂无可引用的图表、公式或文献"}</option>{referable.length > 0 && <optgroup label="图、表与公式">{referable.map(r => <option key={r.id} value={r.id}>{r.label.reference}{r.title ? `  ${r.title}` : ""}</option>)}</optgroup>}{cited.order.length > 0 && <optgroup label="参考文献">{cited.order.map(entry => <option key={entry.id} value={`ref:${entry.id}`}>[{citations.get(entry.id)}] {formatReference(entry).slice(0, 60)}</option>)}</optgroup>}</select><span>行内公式写作 <code>$…$</code>，例如 <code>$n_0$</code></span></div>
-          <label>正文<textarea ref={bodyRef} className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder={guide ? (guide.kind === "chapter" ? "本章导语（可选）" : "写下本节内容…") : "写下本章内容…"}/></label>
-          <span className={styles.counter}>{section.body.length.toLocaleString()} / 12,000 字</span>
-          <label>来源与说明<textarea rows={3} maxLength={1500} value={section.source} onChange={e => patchSection({ source: e.target.value })} placeholder="文献、报告页码、访谈编号或尚待核实的依据"/></label>
-          <details className={styles.coverSettings}><summary>封面设置</summary><label>报告副标题<input maxLength={240} value={content.subtitle} onChange={e => edit({ ...content, subtitle: e.target.value })}/></label></details>
+          <div className={styles.bodyTools}><select aria-label="插入图表、公式或文献引用" value="" disabled={!referable.length && !cited.order.length} onChange={e => { const value = e.target.value; if (value.startsWith('ref:')) { insertReference(citationToken(value.slice(4))); return; } const target = referable.find(r => r.id === value); if (target) insertReference(referenceToken(target.label.kind, target.id)); }}><option value="">{referable.length || cited.order.length ? "插入引用…" : "暂无可引用的图表、公式或文献"}</option>{referable.length > 0 && <optgroup label="图、表与公式">{referable.map(r => <option key={r.id} value={r.id}>{r.label.reference}{r.title ? `  ${r.title}` : ""}</option>)}</optgroup>}{cited.order.length > 0 && <optgroup label="参考文献">{cited.order.map(entry => <option key={entry.id} value={`ref:${entry.id}`}>文献 {citations.get(entry.id)} · {formatReference(entry).slice(0, 60)}</option>)}</optgroup>}</select><span>行内公式写作 <code>$…$</code>，例如 <code>$n_0$</code></span></div>
+          {(() => {
+            const proseBlockCount = (section.blocks ?? []).filter(b => b.kind === "paragraph" || b.kind === "callout" || b.kind === "citation").length;
+            let proseIndex = 0;
+            return <>
+              <label>{proseBlockCount > 0 ? "正文（首段导语）" : "正文"}<textarea ref={bodyRef} aria-label={proseBlockCount > 0 ? "章节首段导语正文" : "章节正文"} className={styles.bodyInput} maxLength={12000} value={section.body} onChange={e => patchSection({ body: e.target.value })} placeholder={guide ? (guide.kind === "chapter" ? "本章导语（可选）" : "写下本节内容…") : "写下本章内容…"}/></label>
+              <span className={styles.counter}>{section.body.length.toLocaleString()} / 12,000 字{proseBlockCount > 0 ? ` · 含穿插段落共 ${readSectionProse(section).length.toLocaleString()} 字` : ""}</span>
+              {proseBlockCount > 0 && (section.blocks ?? []).map(block => {
+                if (block.kind === "paragraph" || block.kind === "callout" || block.kind === "citation") {
+                  proseIndex += 1;
+                  const kindTag = block.kind === "callout" ? "提示框" : block.kind === "citation" ? "引文块" : `后续段落 ${proseIndex}`;
+                  return (
+                    <label key={block.id}>
+                      {kindTag}
+                      <textarea aria-label={`编辑${kindTag}内容`} rows={4} maxLength={12000} value={block.text} onChange={e => patchBlockText(block.id, e.target.value)} placeholder="编辑穿插段落内容…" />
+                    </label>
+                  );
+                }
+                const exLabel = labels.get(block.id)?.reference ?? (block.kind === "table" ? "表" : block.kind === "chart" ? "图" : "公式");
+                return (
+                  <span key={block.id} className={styles.counter}>
+                    ↳ 穿插展品：{exLabel}{block.kind === "formula" ? ` · $${block.text}$` : block.text ? ` · ${block.text}` : ""}
+                  </span>
+                );
+              })}
+            </>;
+          })()}
+          <label>来源与说明<textarea aria-label="本章来源与说明" rows={3} maxLength={1500} value={section.source} onChange={e => patchSection({ source: e.target.value })} placeholder="文献、报告页码、访谈编号或尚待核实的依据"/></label>
+          <details className={styles.coverSettings}><summary>封面设置</summary><label>报告副标题<input aria-label="报告副标题" maxLength={240} value={content.subtitle} onChange={e => edit({ ...content, subtitle: e.target.value })}/></label></details>
           <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>从报告制作 PPT</button>
         </> : <>
           <ReportLinkNotice content={content} slide={slide}/>
-          <button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>打开报告分镜</button>
+          <div className={styles.toolActions}><button type="button" className={styles.outlineButton} aria-expanded={storyboardOpen} onClick={()=>setStoryboardOpen(!storyboardOpen)}>打开报告分镜</button>{hasAuthoredReportForSlides && typeof storyboardModule.buildTopicSyncedDeck === "function" && <button type="button" className={styles.outlineButton} disabled={locked} onClick={syncSlidesFromReport}>按当前报告同步答辩 PPT</button>}</div>
           <div className={styles.designSettings}><label>版式<select aria-label="页面版式" disabled={!!slide.objects} value={slide.layout} onChange={e => patchSlide({ layout: e.target.value as Slide["layout"] })}>{slide.objects?<option value={slide.layout}>{QUALITY_LAYOUT_LABELS[slide.layout as keyof typeof QUALITY_LAYOUT_LABELS]??"自由对象布局"}</option>:<><option value="cover">封面</option><option value="content">标题与正文</option><option value="two-column">正文与旁注</option></>}</select></label>{slide.objects&&<button type="button" onClick={()=>setQualityOpen(true)}>打开对象编排</button>}
-          <label>强调色<select value={content.accent} onChange={e => edit({ ...content, accent: e.target.value as EditorContent["accent"] })}><option value="teal">深青</option><option value="blue">学术蓝</option><option value="burgundy">酒红</option></select></label></div>
-          <label>页面标题<input maxLength={150} value={slide.title} onChange={e => patchSlide({ title: e.target.value })}/></label>
-          <label>页面正文<textarea rows={8} maxLength={1800} value={slide.body} onChange={e => patchSlide({ body: e.target.value })}/></label>
-          {slide.layout === "two-column" && <label>右侧旁注<textarea rows={4} maxLength={1800} value={slide.aside} onChange={e => patchSlide({ aside: e.target.value })}/></label>}
-          <label>演讲备注（不显示在画面中）<textarea rows={4} maxLength={6000} value={slide.notes} onChange={e => patchSlide({ notes: e.target.value })}/></label>
-          {slide.body.length + (slide.layout === "two-column" ? slide.aside.length : 0) > 420 && <p className={styles.warning}>这一页文字较多，建议拆页。PPTX 导出会尝试缩小字号，实际可读性请在演示软件中复核。</p>}
+          <label>强调色<select aria-label="演示文稿强调色" value={content.accent} onChange={e => edit({ ...content, accent: e.target.value as EditorContent["accent"] })}><option value="teal">深青</option><option value="blue">学术蓝</option><option value="burgundy">酒红</option></select></label></div>
+          <label>页面标题<input aria-label="页面标题" maxLength={150} value={slide.title} onChange={e => patchSlide({ title: e.target.value })}/></label>
+          <label>页面正文<textarea aria-label="页面正文" rows={8} maxLength={1800} value={slide.body} onChange={e => patchSlide({ body: e.target.value })}/></label>
+          {slide.layout === "two-column" && <label>右侧旁注<textarea aria-label="右侧旁注" rows={4} maxLength={1800} value={slide.aside} onChange={e => patchSlide({ aside: e.target.value })}/></label>}
+          <label>演讲备注（不显示在画面中）<textarea aria-label="演讲备注" rows={4} maxLength={6000} value={slide.notes} onChange={e => patchSlide({ notes: e.target.value })}/></label>
+          {slide.body.length + (slide.layout === "two-column" ? slide.aside.length : 0) > 420 && <p className={styles.warning} role="status">这一页文字较多，建议拆页。PPTX 导出会尝试缩小字号，实际可读性请在演示软件中复核。</p>}
         </>}
       </fieldset>
       <div className={styles.previewPane}>
         <div className={styles.previewHeading}><div><strong>实时预览</strong><span>{mode === "report" ? "连续正文 · A4 导出" : "16:9 · 可编辑文字"}</span></div>{mode === "report" && <button type="button" onClick={()=>{const box=previewRef.current;const target=box&&[...box.querySelectorAll<HTMLElement>('[data-report-section]')].find(element=>element.dataset.reportSection===section.id);if(box&&target)box.scrollTo({top:box.scrollTop+target.getBoundingClientRect().top-box.getBoundingClientRect().top-24,behavior:'instant'});}}>定位当前章节</button>}</div>
         <div className={styles.previewScroll} ref={previewRef} tabIndex={0} role="region" aria-label="实时预览（可滚动）">
-          {mode === "report" ? <ReportPaper content={content} activeSectionId={section.id} /> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/>}
+          {view !== "write" && (mode === "report" ? <ReportPaper content={content} activeSectionId={section.id} /> : <SlidePreview slide={slide} accent={content.accent} index={selectedIndex} label="PPT 实时预览" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/>)}
         </div>
         <div className={styles.previewFoot}><span>导出后请复核分页与字体</span></div>
       </div>
@@ -768,7 +839,7 @@ export default function EditingStudio({revisionInputVersion="standalone",localOn
       if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "ArrowRight" || event.key === "PageDown") { event.preventDefault(); setPresentIndex(i => Math.min(content.slides.length-1,i+1)); }
       if (event.key === "ArrowLeft" || event.key === "PageUp") { event.preventDefault(); setPresentIndex(i => Math.max(0,i-1)); }
-    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes}>{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
+    }}><header><span>演示预览 · {presentIndex+1} / {content.slides.length}</span><button type="button" autoFocus onClick={() => setPresenting(false)}>退出演示（Esc）</button></header><div className={styles.presentationStage}><SlidePreview slide={presentationSlide} accent={content.accent} index={presentIndex} label="当前演示页面" quality={content.quality} figures={content.figures} visualStyle={content.visualStyle}/></div><footer><button type="button" disabled={presentIndex === 0} onClick={() => setPresentIndex(i => i-1)}>上一页</button><button type="button" aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}>演讲备注</button><button type="button" disabled={presentIndex >= content.slides.length-1} onClick={() => setPresentIndex(i => i+1)}>下一页</button></footer>{showNotes && <p className={styles.speakerNotes} role="status">{presentationSlide.notes || "此页尚无演讲备注。"}</p>}</dialog>
     </div>
     </div>
   </section>;

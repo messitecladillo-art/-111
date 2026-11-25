@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEditorContent } from '../lib/editor-model.ts';
+import { PAGE_ART_DRAFT_BYTES, createEditorContent } from '../lib/editor-model.ts';
 import { DEFAULT_REPORT_SETTINGS } from '../lib/report-format.ts';
 import { prepareReportSave, validateReportSaveReceipt, reconcileReportHead, parseReportVersion, parseReportHistory, REPORT_READ_OPTIONS } from '../lib/report-persistence.ts';
 
@@ -118,8 +118,9 @@ test('valid report above the old one MB transport cap fits the bounded full rece
   const reply = receipt(request.content);
   const serializedBytes = Buffer.byteLength(JSON.stringify(reply), 'utf8');
   assert.ok(serializedBytes > 1_000_000);
+  assert.equal(PAGE_ART_DRAFT_BYTES, 12_000_000);
   assert.ok(serializedBytes < REPORT_READ_OPTIONS.maxBytes);
-  assert.ok(REPORT_READ_OPTIONS.maxBytes < 2_000_000 + 2_300_000 + 100_000, 'budget remains bounded near the content limit plus the page art allowance');
+  assert.ok(REPORT_READ_OPTIONS.maxBytes < 2_000_000 + PAGE_ART_DRAFT_BYTES + 100_000, 'budget remains bounded near the content limit plus the page art allowance');
   const parsed = validateReportSaveReceipt(request, reply, project);
   assert.equal(parsed.content.report.length, 40);
   assert.equal(reconcileReportHead(parsed, { report: reply }, project).kind, 'current');

@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import type {EditorContent,Slide} from '@/lib/editor-model';
-import {buildReportBlockSlide,reportFigureCoverage,reportLinkState,type FigureCoverage} from '@/lib/report-storyboard';
+import {buildReportBlockSlide,defaultSlideExcerptForSection,reportFigureCoverage,reportLinkState,type FigureCoverage} from '@/lib/report-storyboard';
 import styles from './QualityStudio.module.css';
 type Props={content:EditorContent;disabled:boolean;onApply:(next:EditorContent)=>boolean|void;renderPreview:(slide:Slide)=>ReactNode};
 export default function ReportPptCoverage({content,disabled,onApply,renderPreview}:Props){
@@ -19,13 +19,14 @@ export default function ReportPptCoverage({content,disabled,onApply,renderPrevie
     try{const slide=await buildReportBlockSlide(content,sectionId,blockId,excerpt);if(alive.current)setPending({base,key,excerpt,slide});}
     catch(e){if(alive.current)setError((e as Error).message);}finally{operation.current=false;if(alive.current)setBusy(false);}
   }
-  const current=coverage?.base===base,validPending=pending?.base===base&&(!pending||pending.excerpt===(excerpts[pending.key]??content.report.find(s=>s.id===pending.slide.reportLink?.sectionId)?.body));
+  const pendingSection=pending?content.report.find(s=>s.id===pending.slide.reportLink?.sectionId):undefined;
+  const current=coverage?.base===base,validPending=pending?.base===base&&(!pending||pending.excerpt===(excerpts[pending.key]??(pendingSection?defaultSlideExcerptForSection(pendingSection,content,88):undefined)));
   return <section aria-label="报告与PPT图文对应" className={styles.coverage}>
     <h4>报告 → PPT · 图文对应</h4>
     <p>从报告选择证据与讲述重点，逐页组织。新增页面保留原有 PPT。</p>
     <div className={styles.coverageChapters}>{content.report.map(s=>{const entry=current?coverage.chapters.find(c=>c.id===s.id):null;return <p key={s.id}><strong>{s.title}</strong><span>{entry?.pages.length?'第 '+entry.pages.join('、')+' 页'+(entry.review?' · 待复核':' · 版本一致'):'尚未编排'}</span></p>;})}</div>
     {content.report.flatMap(section=>(section.blocks??[]).filter(b=>['chart','table'].includes(b.kind)).map(block=>{
-      const key=JSON.stringify([section.id,block.id]),entry=current?coverage.figures.find(f=>f.sectionId===section.id&&f.blockId===block.id):null,excerpt=excerpts[key]??section.body;
+      const key=JSON.stringify([section.id,block.id]),entry=current?coverage.figures.find(f=>f.sectionId===section.id&&f.blockId===block.id):null,excerpt=excerpts[key]??defaultSlideExcerptForSection(section,content,88);
       return <article key={key} className={styles.section}>
         <strong>{block.text||section.title}</strong>
         <p>{!entry?'核对中…':entry.state==='unused'?'尚未进入PPT':entry.state==='review'?'第 '+entry.pages.join('、')+' 页 · 待复核':'第 '+entry.pages.join('、')+' 页 · 已编排'}</p>

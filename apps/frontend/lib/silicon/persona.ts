@@ -3,7 +3,9 @@
  * Every persona is fictional and exists only to pretest a questionnaire or rehearse an
  * analysis plan. Quota weights are the researcher's own assumptions, never population statistics.
  */
-export const SILICON_LIMITS = { personas: 120, attributes: 8, levels: 8, scenarios: 4, models: 3, background: 240, label: 24 } as const;
+import { SILICON_LIMITS, type SiliconLimits } from './limits.ts';
+
+export { SILICON_LIMITS, type SiliconLimits };
 
 export type AttributeLevel = { value: string; label: string; weight: number };
 export type PersonaAttribute = { key: string; label: string; levels: AttributeLevel[] };
@@ -93,14 +95,14 @@ export function attributeIssues(attributes: PersonaAttribute[]): string[] {
   attributes.forEach((a, i) => {
     const name = a.label.trim() || `第 ${i + 1} 个属性`;
     if (!a.label.trim()) issues.push(`第 ${i + 1} 个属性缺少名称。`);
-    if (a.label.length > SILICON_LIMITS.label) issues.push(`「${name}」名称过长。`);
-    if (keys.has(a.key)) issues.push(`「${name}」与其他属性重复。`);
+    if (a.label.length > SILICON_LIMITS.label) issues.push(`“${name}”名称过长。`);
+    if (keys.has(a.key)) issues.push(`“${name}”与其他属性重复。`);
     keys.add(a.key);
-    if (a.levels.length < 2) issues.push(`「${name}」至少需要两个取值。`);
-    if (a.levels.length > SILICON_LIMITS.levels) issues.push(`「${name}」最多 ${SILICON_LIMITS.levels} 个取值。`);
-    if (a.levels.some(l => !l.label.trim())) issues.push(`「${name}」有空白取值。`);
-    if (new Set(a.levels.map(l => l.label.trim())).size !== a.levels.length) issues.push(`「${name}」有重复取值。`);
-    if (a.levels.some(l => !Number.isFinite(l.weight) || l.weight < 0) || a.levels.every(l => !(l.weight > 0))) issues.push(`「${name}」的配额比例须为非负数，且不能全为 0。`);
+    if (a.levels.length < 2) issues.push(`“${name}”至少需要两个取值。`);
+    if (a.levels.length > SILICON_LIMITS.levels) issues.push(`“${name}”最多 ${SILICON_LIMITS.levels} 个取值。`);
+    if (a.levels.some(l => !l.label.trim())) issues.push(`“${name}”有空白取值。`);
+    if (new Set(a.levels.map(l => l.label.trim())).size !== a.levels.length) issues.push(`“${name}”有重复取值。`);
+    if (a.levels.some(l => !Number.isFinite(l.weight) || l.weight < 0) || a.levels.every(l => !(l.weight > 0))) issues.push(`“${name}”的配额比例须为非负数，且不能全为 0。`);
   });
   return issues;
 }
@@ -272,7 +274,7 @@ const VOICE_BANK: ReadonlyArray<{
     habitTag: '偶尔触发消费',
     catchphrase: '有些问题其实是重度用户才会想的，我一个月才碰一次实在答不上来。',
     toneRule: '直白坦率、不愿被强迫在“同意/不同意”里硬站队。',
-    focusCue: '最能暴露“缺少『不知道 / 不适用 / 跳过』选项导致硬填中间值”的污染风险。',
+    focusCue: '最能暴露“缺少‘不知道 / 不适用 / 跳过’选项导致硬填中间值”的污染风险。',
   },
 ];
 
@@ -301,7 +303,7 @@ export function synthesizePersonaProfile(
   const tags = Array.from(new Set([...extraTags, voice.habitTag, voice.prefix])).slice(0, 5);
 
   const traitSentence = attributes
-    .map(a => `${a.label}为「${persona.traits[a.key] ?? '未设定'}」`)
+    .map(a => `${a.label}为“${persona.traits[a.key] ?? '未设定'}”`)
     .slice(0, 5)
     .join('，');
   const bgNote = persona.background.trim()
@@ -309,7 +311,7 @@ export function synthesizePersonaProfile(
     : '你的判断主要来自过去三个月真实且琐碎的日常习惯与消费取舍。';
 
   const monologue = [
-    `你要始终以「${alias}」（${persona.code}）的第一视角作答与讨论。当前人口学与分层属性为：${traitSentence}。${bgNote}`,
+    `你要始终以“${alias}”（${persona.code}）的第一视角作答与讨论。当前人口学与分层属性为：${traitSentence}。${bgNote}`,
     `在参与《${topic || '本项调查'}》时，${voice.focusCue}遇到表述模糊、缺乏“不适用”出口或带明显诱导的题项时，请直接用真实受访者的困惑口气指出来，不要用官话或“综上所述”等模板词汇敷衍打高分。`,
   ].join('\n\n');
 

@@ -13,7 +13,7 @@ export type FullReportRequest = {
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const validId=(value:unknown):value is string=>typeof value==='string'&&UUID.test(value)&&value!=='00000000-0000-0000-0000-000000000000';
-const NODES = new Set(['intro.background','intro.significance','intro.literature','intro.roadmap','intro.innovation','design.purpose','design.population','design.content','design.methods','design.sampling','design.schedule','design.qc','data.pilot','data.cleaning','data.testing','sample.profile','sample.descriptive','compare.tests','drivers.model','diagnosis.evaluation','diagnosis.problems','plan.measures','conclusion.findings','conclusion.suggestions','conclusion.limits','abstract']);
+const NODES = new Set(['intro.background','intro.significance','intro.literature','intro.roadmap','intro.innovation','design.purpose','design.population','design.content','design.methods','design.sampling','design.schedule','design.qc','data.pilot','data.cleaning','data.testing','sample.profile','sample.descriptive','compare.tests','drivers.model','segments.cluster','diagnosis.evaluation','diagnosis.problems','plan.measures','plan.feasibility','conclusion.findings','conclusion.suggestions','conclusion.limits','abstract']);
 const fail = (): never => { throw new Error('报告输入字段无效，请重新核对项目资料和模型服务。'); };
 function record(value: unknown, keys: readonly string[], required = keys): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) return fail();
@@ -52,7 +52,7 @@ export function parseFullReportRequest(value: unknown): FullReportRequest {
   if(v.stream!==undefined && typeof v.stream!=='boolean')return fail();
   if(v.concurrency!==undefined && (!Number.isSafeInteger(v.concurrency)||(v.concurrency as number)<1||(v.concurrency as number)>6))return fail();
   let sectionNodes:string[]|undefined;
-  if(v.sectionNodes!==undefined){sectionNodes=strings(v.sectionNodes,26,60);if(!sectionNodes.length||new Set(sectionNodes).size!==sectionNodes.length||sectionNodes.some(n=>!NODES.has(n)))return fail();}
+  if(v.sectionNodes!==undefined){sectionNodes=strings(v.sectionNodes,32,60);if(!sectionNodes.length||new Set(sectionNodes).size!==sectionNodes.length||sectionNodes.some(n=>!NODES.has(n)))return fail();}
   let steeringNotes:string[]|undefined;
   if(v.steeringNotes!==undefined){const list=strings(v.steeringNotes,20,400).map(s=>s.trim()).filter(Boolean);if(list.length)steeringNotes=list;}
   let base:FullReportBase|undefined;

@@ -118,3 +118,19 @@ def test_a_summarising_section_carries_an_outline_and_is_told_to_add_nothing_new
     for bad in ([{"title": "x"}], [{"title": "", "excerpt": "x"}], [{"title": "x", "excerpt": "长" * 401}], [{"title": "x", "excerpt": ""}] * 61, "x"):
         with pytest.raises(ApiError):
             draft.request_input(request(outline=bad))
+
+
+def test_optional_competition_name_and_action_phrasing():
+    data = request(project={**request()["project"], "competitionName": "“益普索杯”第十七届全国大学生市场调查与分析大赛"})
+    assert draft.request_input(data) == data
+    prompt = draft.draft_prompt(data)
+    assert "“益普索杯”第十七届全国大学生市场调查与分析大赛" in prompt
+    assert "具体落地动作" in prompt and "具体抓手" not in prompt
+
+    null_comp = request(project={**request()["project"], "competitionName": None})
+    assert draft.request_input(null_comp) == null_comp
+    assert "全国大学生市场调查与分析大赛" in draft.draft_prompt(null_comp)
+
+    for bad_comp in (123, "x" * 121, "bad\x00name"):
+        with pytest.raises(ApiError):
+            draft.request_input(request(project={**request()["project"], "competitionName": bad_comp}))

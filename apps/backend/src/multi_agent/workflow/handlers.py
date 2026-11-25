@@ -47,9 +47,9 @@ def _handler(role: AgentRole, agent: Specialist):
         try:
             run = agent.run_with_state(task)
         except (ValidationError, ValueError):
-            return AgentResult("Agent 输入无效，未执行。", errors=(f"invalid_agent_input:{role.value}",))
+            return AgentResult("当前阶段输入信息不完整，暂未执行。", errors=(f"invalid_agent_input:{role.value}",))
         if run.output is None:
-            return AgentResult("Agent 未完成，未生成成果。", errors=tuple(run.errors or [f"agent_stopped:{role.value}"]),
+            return AgentResult("当前阶段尚未执行完成，暂未生成阶段成果。", errors=tuple(run.errors or [f"agent_stopped:{role.value}"]),
                                unresolved_questions=tuple(run.unresolved_questions))
         output = run.output
         return AgentResult(

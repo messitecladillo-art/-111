@@ -17,6 +17,10 @@ export type CloudOptions = {
   maxFont?: number;
   padding?: number;
   appearance?: CloudAppearance;
+  /** Optional fallback scale multipliers (e.g. [0.75, 0.58]) retried only when a word cannot fit at 1x. */
+  retryScales?: readonly number[];
+  /** Optional organic elliptical boundary for dense borderless clouds (only when shape === 'free'). */
+  ellipticalBounds?: boolean;
   /** Text box at a given font size; the caller supplies a real font measurement. */
   measure: (text: string, size: number) => { w: number; h: number };
 };
@@ -40,19 +44,39 @@ export function layoutCloud(items: CloudItem[], opts: CloudOptions): { placed: C
   const aspect = width / height;
   const hits = (x: number, y: number, w: number, h: number) => {
     if (x - w / 2 < 0 || x + w / 2 > width || y - h / 2 < 0 || y + h / 2 > height) return true;
+    if (opts.ellipticalBounds) {
+      const rx = width * 0.495, ry = height * 0.495, cx = width / 2, cy = height / 2;
+      for (const dx of [-w * 0.44, w * 0.44]) {
+        for (const dy of [-h * 0.44, h * 0.44]) {
+          if (((x + dx - cx) / rx) ** 2 + ((y + dy - cy) / ry) ** 2 > 1) return true;
+        }
+      }
+    }
     for (const p of placed) if (Math.abs(p.x - x) * 2 < p.w + w + pad * 2 && Math.abs(p.y - y) * 2 < p.h + h + pad * 2) return true;
     return false;
   };
   // Spiral r = a·θ stretched by the canvas aspect ratio; beyond rMax even the corners are passed.
-  const a = 2.2, sx = Math.sqrt(aspect), sy = 1 / sx, rMax = Math.SQRT2 * Math.sqrt(width * height) / 2;
-  for (const item of sorted) {
+  const dense = Boolean(opts.retryScales?.length);
+  const a = dense ? 1.25 : 2.2, sx = Math.sqrt(aspect), sy = 1 / sx, rMax = Math.SQRT2 * Math.sqrt(width * height) / 2;
+  for (let idx = 0; idx < sorted.length; idx++) {
+    const item = sorted[idx];
     if (!Number.isFinite(item.weight) || item.weight < 0) { dropped.push(item); continue; }
-    const size = scale(item.weight), box = measure(item.label, size);
-    if (!fitsCanvas(box, width, height)) { dropped.push(item); continue; }
+    const baseSize = scale(item.weight);
+    const factors = opts.retryScales?.length ? [1, ...opts.retryScales] : [1];
+    const startPhase = dense ? (idx * 2.399963) % (Math.PI * 2) : 0;
     let done = false;
-    for (let theta = 0, r = 0; r <= rMax && !done; theta += Math.min(.5, Math.max(.02, 7 / (r + 1))), r = a * theta) {
-      const x = width / 2 + Math.cos(theta) * r * sx, y = height / 2 + Math.sin(theta) * r * sy;
-      if (!hits(x, y, box.w, box.h)) { placed.push({ ...item, x, y, w: box.w, h: box.h, size }); done = true; }
+    for (const factor of factors) {
+      if (!(factor > 0) || done) continue;
+      const size = factor === 1 ? baseSize : Math.max(11, Math.round(baseSize * factor * 10) / 10);
+      const box = measure(item.label, size);
+      if (!fitsCanvas(box, width, height)) continue;
+      const stepNum = dense ? 4.4 : 7;
+      const minStep = dense ? .014 : .02;
+      for (let theta = 0, r = 0; r <= rMax && !done; theta += Math.min(.42, Math.max(minStep, stepNum / (r + 1))), r = a * theta) {
+        const ang = theta + startPhase;
+        const x = width / 2 + Math.cos(ang) * r * sx, y = height / 2 + Math.sin(ang) * r * sy;
+        if (!hits(x, y, box.w, box.h)) { placed.push({ ...item, x, y, w: box.w, h: box.h, size }); done = true; }
+      }
     }
     if (!done) dropped.push(item);
   }
@@ -65,7 +89,9 @@ function fitsCanvas(box: { w: number; h: number }, width: number, height: number
 
 function layoutInShape(sorted: CloudItem[], opts: CloudOptions, appearance: CloudAppearance, pad: number, scale: (weight: number) => number): { placed: CloudWord[]; dropped: CloudItem[] } {
   const { width, height, measure } = opts, contains = cloudShapeConstraint(appearance, width, height);
-  const step = Math.max(4, Math.sqrt(width * height / 12000), Math.min(8, (opts.minFont ?? 12) / 2));
+  const step = opts.retryScales?.length
+    ? 3.5
+    : Math.max(4, Math.sqrt(width * height / 12000), Math.min(8, (opts.minFont ?? 12) / 2));
   const candidates: { x: number; y: number; distance: number }[] = [];
   for (let y = step / 2; y < height; y += step) for (let x = step / 2; x < width; x += step) {
     if (contains(x, y, 1, 1)) candidates.push({ x, y, distance: ((x - width / 2) / width) ** 2 + ((y - height / 2) / height) ** 2 });
@@ -94,18 +120,25 @@ function layoutInShape(sorted: CloudItem[], opts: CloudOptions, appearance: Clou
     return false;
   };
   const centralCount = Math.max(1, Math.min(5, Math.floor(sorted.length * .12)));
+  const factors = opts.retryScales?.length ? [1, ...opts.retryScales] : [1];
   for (let i = 0; i < sorted.length; i++) {
     const item = sorted[i];
     if (!Number.isFinite(item.weight) || item.weight < 0) { dropped.push(item); continue; }
-    const size = scale(item.weight), box = measure(item.label, size);
-    if (!fitsCanvas(box, width, height)) { dropped.push(item); continue; }
-    const order = i < centralCount ? center : candidates;
-    const offset = i < centralCount || !order.length ? 0 : (Math.imul(i + 1, 0x9e3779b1) >>> 0) % order.length;
+    const baseSize = scale(item.weight);
     let word: CloudWord | undefined;
-    for (let n = 0; n < order.length; n++) {
-      const { x, y } = order[(n + offset) % order.length];
-      if (!contains(x, y, box.w + pad, box.h + pad) || hits(x, y, box.w, box.h)) continue;
-      word = { ...item, x, y, w: box.w, h: box.h, size }; break;
+    for (const factor of factors) {
+      if (!(factor > 0) || word) continue;
+      const size = factor === 1 ? baseSize : Math.max(10, Math.round(baseSize * factor * 10) / 10);
+      const box = measure(item.label, size);
+      if (!fitsCanvas(box, width, height)) continue;
+      const useCenter = i < centralCount || (factor < 1 && i < 6);
+      const order = useCenter ? center : candidates;
+      const offset = useCenter || !order.length ? 0 : (Math.imul(i + 1, 0x9e3779b1) >>> 0) % order.length;
+      for (let n = 0; n < order.length; n++) {
+        const { x, y } = order[(n + offset) % order.length];
+        if (!contains(x, y, box.w + pad, box.h + pad) || hits(x, y, box.w, box.h)) continue;
+        word = { ...item, x, y, w: box.w, h: box.h, size }; break;
+      }
     }
     if (!word) { dropped.push(item); continue; }
     placed.push(word);

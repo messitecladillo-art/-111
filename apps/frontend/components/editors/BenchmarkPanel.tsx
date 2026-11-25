@@ -4,6 +4,7 @@ import { useDeferredValue, useId, useMemo, useState } from 'react';
 import type { EditorContent } from '@/lib/editor-model';
 import { BENCHMARK_DIMENSIONS, benchmarkReport, type BenchmarkDimension, type BenchmarkFix } from '@/lib/report-benchmark';
 import { BLUEPRINT_MODULE_LABELS, blueprintSections, DEFAULT_REPORT_TYPE, LEGACY_SECTION_IDS, REPORT_TYPES, reportType, type BlueprintModule } from '@/lib/report-blueprint';
+import { normalizeAcademicPunctuation } from '@/lib/typography';
 import styles from './BenchmarkPanel.module.css';
 
 type Props = {
@@ -75,12 +76,12 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
           return <li key={check.id} data-status={check.status}>
             <span className={styles.dot} aria-hidden="true"/>
             <div className={styles.text}>
-              <strong>{check.label}{!focus && <span className={styles.dimension}>{BENCHMARK_DIMENSIONS[check.dimension]}</span>}</strong>
-              <p>{check.detail}</p>
+              <strong>{normalizeAcademicPunctuation(check.label)}{!focus && <span className={styles.dimension}>{BENCHMARK_DIMENSIONS[check.dimension]}</span>}</strong>
+              <p>{normalizeAcademicPunctuation(check.detail)}</p>
             </div>
             {(fixes.length > 0 || offline.length > 0) && <div className={styles.actions}>
-              {fixes.map(fix => <button key={fix.label} type="button" disabled={disabled && !fix.module} onClick={() => act(fix)}>{fix.label}</button>)}
-              {offline.map(fix => <span key={fix.label} className={styles.hint}>在「{BLUEPRINT_MODULE_LABELS[fix.module!]}」完成</span>)}
+              {fixes.map(fix => <button key={fix.label} type="button" disabled={disabled && !fix.module} onClick={() => act(fix)}>{normalizeAcademicPunctuation(fix.label)}</button>)}
+              {offline.map(fix => <span key={fix.label} className={styles.hint}>在“{BLUEPRINT_MODULE_LABELS[fix.module!]}”完成</span>)}
             </div>}
           </li>;
         })}
@@ -94,7 +95,7 @@ export default function BenchmarkPanel({ content, disabled, onInsert, onApplyBlu
             <fieldset className={styles.types}><legend>报告类型</legend>{REPORT_TYPES.map(type => <label key={type.id} htmlFor={`${id}-${type.id}`}><input id={`${id}-${type.id}`} type="radio" name={`${id}-type`} checked={typeId === type.id} onChange={() => setTypeId(type.id)}/><span><b>{type.label}</b><small>{type.summary}</small></span></label>)}</fieldset>
             <div className={styles.confirmActions}>
               <button type="button" onClick={() => setConfirming(false)}>取消</button>
-              <button type="button" className={styles.primary} disabled={disabled} onClick={() => { onApplyBlueprint(reportType(typeId).nodes); setConfirming(false); }}>替换为「{reportType(typeId).label}」骨架</button>
+              <button type="button" className={styles.primary} disabled={disabled} onClick={() => { onApplyBlueprint(reportType(typeId).nodes); setConfirming(false); }}>替换为“{reportType(typeId).label}”骨架</button>
             </div>
           </div>
           : <button type="button" className={styles.rebuild} disabled={disabled} onClick={() => setConfirming(true)}>按研究类型重建骨架</button>}

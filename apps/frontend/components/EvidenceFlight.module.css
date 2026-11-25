@@ -167,3 +167,52 @@
   .impact { opacity: 0; }
   .primary:not(:disabled):hover, .handleActive:not(:disabled):hover .handleDot, .handleDragging .handleDot { transform: none; }
 }
+
+@media (forced-colors: active) {
+  .handle:focus-visible,
+  .primary:focus-visible,
+  .secondary:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .panel,
+  .badge,
+  .stageChip,
+  .handleDot,
+  .powerTrack,
+  .primary,
+  .secondary {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .primary,
+  .stageCurrent,
+  .handleActive .handleDot,
+  .powerFill {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .rail,
+  .targetRing {
+    stroke: CanvasText;
+  }
+
+  .railFill,
+  .tether,
+  .aimPath,
+  .trail {
+    stroke: Highlight;
+  }
+
+  .railLabel,
+  .railCode,
+  .railMeta {
+    fill: CanvasText;
+  }
+}

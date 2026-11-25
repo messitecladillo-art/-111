@@ -14,3 +14,9 @@
 .uses legend { margin-bottom: 4px; font-size: 12px; color: var(--wb-muted); }
 .problem { padding: 6px 10px; border-radius: 5px; color: var(--wb-gold-text) !important; background: var(--wb-gold-soft); border: 1px solid var(--wb-gold-line); }
 .helper input:focus-visible, .helper textarea:focus-visible, .helper button:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 1px; }
+@media (forced-colors: active) {
+  .helper :is(button, input, textarea):focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; box-shadow: none !important; }
+  .helper button, .choice button, .form input, .form textarea { border: 1px solid ButtonText; }
+  .helper, .problem { background: Canvas; color: CanvasText !important; border: 1px solid CanvasText; box-shadow: none !important; }
+  .primary, .choice button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
+}

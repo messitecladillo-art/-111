@@ -43,7 +43,7 @@ export default function RunDrawer({ doc, states, events, issues, open, tab, onTa
         <button type="button" onClick={() => onLocate(e.nodeId)}>{title(e.nodeId)}</button>
         <span>{e.type === 'cancelled' ? '已取消' : STATUS_LABELS[e.type as NodeStatus]}{e.message ? `：${e.message}` : ''}</span>
       </li>)}</ol> : <p className={styles.muted}>运行后，这里按时间记录每个节点的状态与原因。</p>)}
-      {tab === 'check' && (issues === null ? <p className={styles.muted}>点击右上角「检查」，在运行前定位缺失输入、未选变量、类型错误与循环。</p> : issues.length ? <ul className={styles.log}>{issues.map((i, k) => <li key={k} data-type={i.level === 'error' ? 'failed' : 'waiting'}>
+      {tab === 'check' && (issues === null ? <p className={styles.muted}>点击右上角“检查”，在运行前定位缺失输入、未选变量、类型错误与循环。</p> : issues.length ? <ul className={styles.log}>{issues.map((i, k) => <li key={k} data-type={i.level === 'error' ? 'failed' : 'waiting'}>
         <span className={styles.levelTag}>{i.level === 'error' ? '错误' : '提示'}</span>
         <button type="button" onClick={() => onLocate(i.nodeId)}>{title(i.nodeId)}</button>
         <span>{i.message}</span>

@@ -2,7 +2,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { prepareTopicQuestionnaire, applyTopicQuestionnaire, type TopicQuestionnaireSource, type TopicQuestionnaireTarget, type TopicQuestionnaireBinding, type TopicQuestionnaireApplication, type TopicQuestionnaireMapping, type TopicQuestionnaireProposal as CoreProposal } from '@/lib/topic-questionnaire';
 import { stableStringify } from '@/lib/topic-advisor/parse';
+import { normalizeAcademicPunctuation } from '@/lib/typography';
 import styles from './TopicQuestionnaireProposal.module.css';
+
+const clean = (value: string) => normalizeAcademicPunctuation(value);
 
 export type TopicQuestionnaireProposalProps = {
   source: TopicQuestionnaireSource | null; target: TopicQuestionnaireTarget; binding: TopicQuestionnaireBinding | null;
@@ -103,7 +106,7 @@ export default function TopicQuestionnaireProposal({ source, target, binding, sc
       if (operation !== operationEpoch.current || !alive.current || closedRef.current || start.scopeKey !== latest.current.scopeKey) return;
       if (!stillCurrent(start)) { markEdit(); setError('当前内容已变化，请在问卷工作区核对结果；旧提案不再可采用。'); setFailed(true); return; }
       markEdit(); setSubmitted(true); setNotice('所选修改已交给问卷工作区。请核对问卷及其保存状态。');
-    } catch (cause) { if (operation === operationEpoch.current && alive.current && start.scopeKey === latest.current.scopeKey && !closedRef.current) { markEdit(); setFailed(true); setError(`尚未确认应用完成：${message(cause)}`); } }
+    } catch (cause) { if (operation === operationEpoch.current && alive.current && start.scopeKey === latest.current.scopeKey && !closedRef.current) { markEdit(); setFailed(true); setError(`尚未确认应用完成，${message(cause)}`); } }
     finally { if (operation === operationEpoch.current) { busyRef.current = false; if (alive.current) setBusy(null); } }
   }
   function close() { if (closedRef.current) return; closedRef.current = true; markEdit(); operationEpoch.current++; busyRef.current = false; setBusy(null); setClosed(true); callbacks.current.onClose(); }
@@ -112,19 +115,19 @@ export default function TopicQuestionnaireProposal({ source, target, binding, sc
   return <section className={styles.root} aria-label="选题到问卷的待确认提案" data-self-styled>
     <div className={styles.heading}><div><span className={styles.eyebrow}>研究简报 → 问卷设计</span><h3>选择要带入问卷的内容</h3></div><button type="button" onClick={close}>关闭提案</button></div>
     <p className={styles.note}>逐项核对简介与题目关联。内容仍为待实施设计，来源文字需要研究团队核验。</p>
-    {source && <p className={styles.meta}>来源：{source.brief.title || '未命名研究简报'} · v{source.version.revision} · {source.version.id}</p>}
+    {source && <p className={styles.meta}>简报来源 {clean(source.brief.title || '未命名研究简报')} · v{source.version.revision} · {source.version.id}</p>}
     {!writable && <p className={styles.warning}>当前为只读模式，可预览简介变化；采用内容需要编辑权限。</p>}
-    {disabledReason&&<p className={styles.warning} role="status">{disabledReason}</p>}
-    {blocked && <p className={styles.warning} role="status">{blocked}</p>}
+    {disabledReason&&<p className={styles.warning} role="status">{clean(disabledReason)}</p>}
+    {blocked && <p className={styles.warning} role="status">{clean(blocked)}</p>}
     <details className={styles.mapping}><summary>关联已有题目 <span>{mappings.length} 题已选择关联</span></summary>
       <p className={styles.note}>先选择研究问题，再按需选择概念。概念关联的研究问题需同时选中；系统会检查这些稳定标识的对应关系。</p>
       <button type="button" disabled={choicesDisabled || !mappings.length} onClick={clearMappings}>清空题目关联选择</button>
       {!target.design.questions.length && <p className={styles.note}>当前问卷没有题目。仍可比较简介字段；本提案不会自动创建调查题目或答案。</p>}
       {source && target.design.questions.map((question, index) => {
         const mapping = mappings.find(m => m.questionId === question.id);
-        return <details key={question.id} className={styles.question}><summary><span>{index + 1}. {question.text || '题干待填写'}</span><small>{question.variable || question.id}</small></summary>
-          <div className={styles.mappingColumns}><fieldset disabled={choicesDisabled}><legend>研究问题</legend>{!source.brief.questions.length && <p>简报尚未列出研究问题。</p>}{source.brief.questions.map(rq => <label key={rq.id} className={styles.option}><input type="checkbox" aria-label={`题目 ${question.id} 关联研究问题 ${rq.id}`} checked={mapping?.researchQuestionIds.includes(rq.id) ?? false} onChange={event => changeMapping(question.id, 'researchQuestionIds', rq.id, event.target.checked)}/><span>{rq.text || '（研究问题文字为空）'}<small>{rq.id}</small></span></label>)}</fieldset>
-          <fieldset disabled={choicesDisabled}><legend>概念</legend>{!source.brief.constructs.length && <p>简报尚未列出概念。</p>}{source.brief.constructs.map(construct => <label key={construct.id} className={styles.option}><input type="checkbox" aria-label={`题目 ${question.id} 关联概念 ${construct.id}`} checked={mapping?.constructIds.includes(construct.id) ?? false} onChange={event => changeMapping(question.id, 'constructIds', construct.id, event.target.checked)}/><span>{construct.name || '（概念名称为空）'}<small>{construct.id} · 对应研究问题：{construct.questionIds.join('、') || '尚未关联'}</small></span></label>)}</fieldset></div>
+        return <details key={question.id} className={styles.question}><summary><span>{index + 1}. {clean(question.text || '题干待填写')}</span><small>{question.variable || question.id}</small></summary>
+          <div className={styles.mappingColumns}><fieldset disabled={choicesDisabled}><legend>研究问题</legend>{!source.brief.questions.length && <p>简报尚未列出研究问题。</p>}{source.brief.questions.map(rq => <label key={rq.id} className={styles.option}><input type="checkbox" aria-label={`题目 ${question.id} 关联研究问题 ${rq.id}`} checked={mapping?.researchQuestionIds.includes(rq.id) ?? false} onChange={event => changeMapping(question.id, 'researchQuestionIds', rq.id, event.target.checked)}/><span>{clean(rq.text || '（研究问题文字为空）')}<small>{rq.id}</small></span></label>)}</fieldset>
+          <fieldset disabled={choicesDisabled}><legend>概念</legend>{!source.brief.constructs.length && <p>简报尚未列出概念。</p>}{source.brief.constructs.map(construct => <label key={construct.id} className={styles.option}><input type="checkbox" aria-label={`题目 ${question.id} 关联概念 ${construct.id}`} checked={mapping?.constructIds.includes(construct.id) ?? false} onChange={event => changeMapping(question.id, 'constructIds', construct.id, event.target.checked)}/><span>{clean(construct.name || '（概念名称为空）')}<small>{construct.id} · 关联研究问题 {construct.questionIds.join('、') || '尚未关联'}</small></span></label>)}</fieldset></div>
         </details>;
       })}
     </details>
@@ -133,13 +136,13 @@ export default function TopicQuestionnaireProposal({ source, target, binding, sc
       <p className={styles.meta}>本提案绑定来源 v{visiblePreview.proposal.source.version.revision} · {visiblePreview.proposal.source.version.id}</p>
       {!current && <p className={styles.warning} role="status">来源、问卷或关联选择已变化。旧提案保留供核对，请重新预览后采用。</p>}
       <div className={styles.fields}>{visiblePreview.proposal.fields.map(field => <article key={field.id} className={styles.field} data-change-id={field.id}>
-        <label className={styles.choose}><input type="checkbox" aria-label={`采用字段 ${field.id}`} checked={selected.includes(field.id)} disabled={!writable || Boolean(disabledReason) || !current || Boolean(busy) || Boolean(field.issues.length) || failed || submitted || closed} onChange={event => selectField(field.id, event.target.checked)}/><strong>{field.label}</strong><span>{field.kind === 'question' && field.before === field.after ? '文字相同 · 可记录关联' : field.before.trim() ? '已有内容，需明确选择' : '当前为空'}</span></label>
-        <div className={styles.diff}><div><small>当前内容</small><p>{field.before || '（空）'}</p></div><div><small>拟写入 · {field.after.length} / {field.max} 字符</small><p>{field.after || '（空）'}</p></div></div>
-        {field.issues.map((issue, index) => <p key={index} className={styles.error}>{issue.message}</p>)}
+        <label className={styles.choose}><input type="checkbox" aria-label={`采用字段 ${field.id}`} checked={selected.includes(field.id)} disabled={!writable || Boolean(disabledReason) || !current || Boolean(busy) || Boolean(field.issues.length) || failed || submitted || closed} onChange={event => selectField(field.id, event.target.checked)}/><strong>{clean(field.label)}</strong><span>{field.kind === 'question' && field.before === field.after ? '文字相同 · 可记录关联' : field.before.trim() ? '已有内容，需明确选择' : '当前为空'}</span></label>
+        <div className={styles.diff}><div><small>当前内容</small><p>{field.before ? clean(field.before) : '（空）'}</p></div><div><small>拟写入 · {field.after.length} / {field.max} 字符</small><p>{field.after ? clean(field.after) : '（空）'}</p></div></div>
+        {field.issues.map((issue, index) => <p key={index} className={styles.error}>{clean(issue.message)}</p>)}
       </article>)}</div>
       <div className={styles.footer}><p>仅提交勾选字段。现有题目及其稳定标识、选项和显示条件由提案保留。</p><button type="button" className={styles.primary} disabled={!writable || Boolean(disabledReason) || !current || Boolean(busy) || Boolean(blocked) || !selected.length || failed || submitted || closed} onClick={() => void adopt()}>{busy === 'apply' ? '正在核对并提交…' : applyLabel || `采用 ${selected.length} 个所选字段`}</button></div>
     </div>}
-    {error && <p role="alert" className={styles.error}>{error}</p>}
-    {notice && <p role="status" className={styles.notice}>{notice}</p>}
+    {error && <p role="alert" className={styles.error}>{clean(error)}</p>}
+    {notice && <p role="status" className={styles.notice}>{clean(notice)}</p>}
   </section>;
 }

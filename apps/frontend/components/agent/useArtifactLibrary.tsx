@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Formula } from '@/components/math/Tex';
+import { FormulaLazy as Formula } from '@/components/math/TexLazy';
 import { createEditorContent, type EditorContent } from '@/lib/editor-model';
 import { parseReportFigure, reportFigureSVG, figureFromResult, defaultProjectVisualStyle } from '@/lib/report-figure';
 import { approveReportFrame, frameSVG, parseReportFrame } from '@/lib/report-frame';
@@ -28,7 +28,7 @@ const svgUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURICom
 const nameOf = (title: string) => (title.replace(/[<>:"/\\|?*\u0000-\u001f]/gu, '_').trim().slice(0, 100) || '素材');
 const plainText = (value: ArtifactValue) => value.type === 'text' ? [value.section.body, ...(value.section.blocks ?? []).filter(b => b.kind === 'paragraph').map(b => b.text)].filter(Boolean).join('\n') : value.type === 'block' ? value.block.text : '';
 const CLASSIFICATION_NAMES = { simulated: '模拟素材', public: '公开材料', user_provided: '用户提供', mixed: '混合材料', unclassified: '待分类' } as const;
-const IMAGE_NAMES: Record<string, string> = { 'image/png': 'PNG', 'image/jpeg': 'JPG', 'image/webp': 'WebP', 'image/svg+xml': 'SVG' };
+const IMAGE_NAMES: Record<string, string> = { 'image/png': '高清位图', 'image/jpeg': '照片位图', 'image/webp': '网页位图', 'image/svg+xml': '矢量图形' };
 function table(headers: string[], rows: (string | number | null)[][]) { return <table><thead><tr>{headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell === null ? '—' : String(cell)}</td>)}</tr>)}</tbody></table>; }
 /* Local data URLs intentionally bypass remote image optimisation. */
 /* eslint-disable @next/next/no-img-element */
@@ -49,12 +49,12 @@ function previewValue(value: ArtifactValue): ReactNode {
 
 /** Inspect actual local bytes; the declared MIME or filename alone never establishes an image. */
 export async function readArtifactImage(file: File): Promise<Extract<ArtifactValue, { type: 'file' }>> {
-  if (!file.size || file.size > ARTIFACT_LIMITS.fileBytes) throw Error('请选择不超过 6 MB 的本地图片。');
+  if (!file.size || file.size > ARTIFACT_LIMITS.fileBytes) throw Error('请选择不超过 6 兆字节的本地图片。');
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (bytes.byteLength !== file.size) throw Error('图片读取不完整，请重新选择。');
   const mime = artifactImageMime(bytes);
   const extensions: Record<string, RegExp> = { 'image/png': /\.png$/iu, 'image/jpeg': /\.jpe?g$/iu, 'image/webp': /\.webp$/iu, 'image/svg+xml': /\.svg$/iu };
-  if (!mime || (file.type && file.type.toLowerCase() !== mime) || !extensions[mime].test(file.name)) throw Error('文件内容、扩展名与图片类型不一致。');
+  if (!mime || (file.type && file.type.toLowerCase() !== mime) || !extensions[mime].test(file.name)) throw Error('图片内容与文件后缀类型不一致，请重新选择。');
   let binary = ''; for (let at = 0; at < bytes.length; at += 8192) binary += String.fromCharCode(...bytes.subarray(at, at + 8192));
   return { type: 'file', name: file.name.slice(0, 180), mime, dataUrl: `data:${mime};base64,${btoa(binary)}` };
 }
@@ -78,7 +78,7 @@ export function artifactFigureCommand(record: ArtifactRecord, text: string): Art
   }
   if (JSON.stringify(value) === JSON.stringify(record.value)) return null;
   value.figure = parseReportFigure({ ...value.figure, id: crypto.randomUUID() });
-  return { familyId: record.familyId, kind: value.figure.kind === 'table' ? 'table' : 'chart', title: value.figure.title, origin: '素材指令编辑', status: 'stored', classification: record.classification, value };
+  return { familyId: record.familyId, kind: value.figure.kind === 'table' ? 'table' : 'chart', title: value.figure.title, origin: '图表样式微调', status: 'stored', classification: record.classification, value };
 }
 
 export function useArtifactLibrary(options: ArtifactLibraryOptions) {
@@ -176,7 +176,7 @@ export function useArtifactLibrary(options: ArtifactLibraryOptions) {
       }
       if (!current() || selected.current !== chosen.id || env.current.readCurrent().blocked) return;
       const live = env.current.readCurrent(); const result = env.current.apply(chosen, live.sectionId);
-      if (!result.ok) throw Error(result.reason || '编辑器尚未接受素材，原稿保留。');
+      if (!result.ok) throw Error(result.reason || '当前报告暂未接收该素材，原稿已妥善保留。');
       return updateArtifactLibrary(target, before => ({ ...before, revision: before.revision + 1, records: before.records.map(item => item.id === chosen.id ? { ...item, status: 'adopted' } : item) }));
     });
   }, [recordFor, onExport, patch, enqueue, current, persist]);
@@ -212,7 +212,7 @@ export function useArtifactLibrary(options: ArtifactLibraryOptions) {
   }, [recordFor, enqueue, persist]);
   const onCommand = useCallback((id: string, raw: string) => {
     const record = recordFor(id), text = raw.trim(); if (!record || !text || text.length > 2000) return;
-    try { const seed = artifactFigureCommand(record, text); if (seed) { void enqueue(async target => { if (recordFor(id)) await persist(seed, target, id); }); return; } env.current.onSay(`对素材「${record.title}」提出修改：${JSON.stringify(text)}。类型 ${record.kind}，精确版本 v${record.version}，标识 ${record.id}，指纹 ${record.hash}。`); }
+    try { const seed = artifactFigureCommand(record, text); if (seed) { void enqueue(async target => { if (recordFor(id)) await persist(seed, target, id); }); return; } env.current.onSay(`请基于素材“${record.title}”（第 ${record.version} 版，编号 ${record.id}，校验码 ${record.hash}）完成“${text}”调整。`); }
     catch (error) { patch(before => ({ ...before, error: message(error) })); }
   }, [recordFor, enqueue, persist, patch]);
   const chosen = shown.library.records.find(record => record.id === shown.selectedId) ?? null;

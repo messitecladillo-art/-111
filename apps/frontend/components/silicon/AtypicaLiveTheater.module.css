@@ -1869,3 +1869,57 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media (forced-colors: active) {
+  .theaterRoot :is(button, input, select, textarea, summary, a):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .theaterRoot,
+  .ghostBtn,
+  .speedGroup,
+  .primaryCta,
+  .mobilePaneBar button,
+  .thoughtBody,
+  .clarifySummaryBtn,
+  .clarifyBlock,
+  .clarifyPill,
+  .planCard,
+  .execCard,
+  .execMetaBtn,
+  .sourceChip,
+  .codeDrawer,
+  .codeBlockPre,
+  .buildBatchCard,
+  .detailPillBtn,
+  .followupBtn {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .primaryCta,
+  .ghostBtn[aria-expanded='true'],
+  .ghostBtn[aria-pressed='true'],
+  .speedGroup button[aria-pressed='true'],
+  .mobilePaneBar button[aria-selected='true'],
+  .clarifyPill[aria-pressed='true'],
+  .execRow[data-focused='true'] .execMetaBtn {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .topBar,
+  .mobilePaneBar,
+  .leftPane,
+  .planConfirmTick,
+  .argsTable td,
+  .miniStepTableWrap,
+  .miniStepTable th,
+  .miniStepTable td {
+    border-color: CanvasText !important;
+  }
+}

@@ -45,6 +45,14 @@ type LiteratureReceipt = Awaited<ReturnType<typeof literatureWorkspaceReceipt>>;
 type LocalCheckpoint = { owner: string | null; projectId: string | null; ready: boolean; conflict: boolean; key: string; value: ResearchWorkspaceDraft };
 const LITERATURE_TOPIC = 'literature-study/v1';
 
+function cleanWorkspaceText(raw: string | undefined | null): string {
+  if (!raw) return '';
+  return raw
+    .replace(/\u300c([^\u300d]*)\u300d/gu, '“$1”')
+    .replace(/\u300e([^\u300f]*)\u300f/gu, '‘$1’')
+    .replace(/\u3010([^\u3011]*)\u3011/gu, '（$1）');
+}
+
 function hasAdoptedEvidence(selection: TopicProjectDocument, study?: LiteratureStudy) {
   return selection.brief.sources.every(source =>
     study?.evidence.some(entry => entry.id === source.id && entry.quote === source.snippet));
@@ -149,23 +157,23 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
         const entry = study.evidence.find(item => item.id === id);
         const paper = entry && study.papers.find(item => item.id === entry.paperId);
         if (!entry || !paper) throw Error('选题引用的原文依据已变化。');
-        return { id, title: paper.title, url: '', locator: `PDF 第 ${entry.page} 页 · ${paper.filename} · SHA-256 ${paper.id}`,
+        return { id, title: paper.title, url: '', locator: `原文第 ${entry.page} 页 · ${paper.filename}`,
           coverage: 'reference' as const, publishedAt: '', retrievedAt: '', snippet: entry.quote };
       });
       const base = emptyTopicProject(draft.profile.referenceDate);
       const title = Array.from(candidate.title).slice(0, 100).join('');
       const scope = Array.from(draft.direction.trim()).slice(0, 180).join('');
       const questions: Record<string, string> = {
-        replicate: `在「${scope}」的实际样本中，按文献给出的指标重测，结果能否复现？`,
-        compare: `在「${scope}」中，能否用统一指标比较两项研究的方法？`,
-        limits: `在「${scope}」中，改变文献所述的一个条件后，结果会如何变化？`,
+        replicate: `在“${scope}”的实际样本中，按文献给出的指标重测，结果能否复现？`,
+        compare: `在“${scope}”中，能否用统一指标比较两项研究的方法？`,
+        limits: `在“${scope}”中，改变文献所述的一个条件后，结果会如何变化？`,
       };
       const region = draft.profile.regionRef ? regionPath(draft.profile.regionRef).map(item => item.name) : [draft.profile.region, draft.profile.city];
       setProposal(parseTopicProjectDocument({ ...base, schemaVersion: draft.profile.schemaVersion === 2 ? 2 : 1, profile: draft.profile,
         selected: { kind: 'custom', id: `literature-${crypto.randomUUID()}`, title },
         brief: { ...base.brief, title, geography: [...new Set(region.filter(Boolean))].join(' · '),
           decision: '判断是否开展这项研究，并确定预试方案。',
-          questions: [{ id: 'literature-question', text: questions[candidate.id] ?? `在「${scope}」中，如何验证文献提出的研究问题？` }], evidencePlan: candidate.design,
+          questions: [{ id: 'literature-question', text: questions[candidate.id] ?? `在“${scope}”中，如何验证文献提出的研究问题？` }], evidencePlan: candidate.design,
           unknowns: [candidate.caveat], sources },
         provenance: { catalogVersion: LITERATURE_TOPIC, modelVersion: 'local-rules/v1', sourceIds: sources.map(item => item.id) },
       }));
@@ -372,8 +380,8 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
     </details>
     {draft.intake && !draft.selected && <div className={styles.candidates} aria-label="选题候选">
       <h3>先选一个值得深入的方向</h3>
-      {!!draft.intake.missing.length && <ul>{draft.intake.missing.map((item, index) => <li key={index}>{item}</li>)}</ul>}
-      {draft.intake.candidates.map(item => <article key={item.patternId}><h4>{item.document.brief.title}</h4><p>{item.document.brief.questions.map(q => q.text).join('；')}</p><p>{item.document.brief.population} · {item.document.brief.geography || '地区待补充'}</p><button type="button" onClick={() => {
+      {!!draft.intake.missing.length && <ul>{draft.intake.missing.map((item, index) => <li key={index}>{cleanWorkspaceText(item)}</li>)}</ul>}
+      {draft.intake.candidates.map(item => <article key={item.patternId}><h4>{cleanWorkspaceText(item.document.brief.title)}</h4><p>{cleanWorkspaceText(item.document.brief.questions.map(q => q.text).join('；'))}</p><p>{cleanWorkspaceText(item.document.brief.population)} · {cleanWorkspaceText(item.document.brief.geography || '地区待补充')}</p><button type="button" onClick={() => {
         if (!draft.intake) return;
         try { setProposal(adoptIntakeCandidate(draft.intake.turn, item.patternId)); setError(''); }
         catch (reason) { setError(reason instanceof Error ? reason.message : '请重新生成当前选题候选。'); }
@@ -387,12 +395,12 @@ export default function ResearchWorkspace(props: ResearchWorkspaceProps) {
     {adoptedLiterature && <details className={styles.result}>
       <summary>已采纳选题的文献依据</summary>
       {!adoptedEvidenceCurrent && <p role="status">所用摘录已撤回。重新核对并采纳后，方可将研究简介送入问卷。</p>}
-      {adoptedLiterature.brief.sources.map(source => <article key={source.id}><h4>{source.title}</h4><p>{source.locator}</p><blockquote>{source.snippet}</blockquote></article>)}
+      {adoptedLiterature.brief.sources.map(source => <article key={source.id}><h4>{cleanWorkspaceText(source.title)}</h4><p>{cleanWorkspaceText(source.locator)}</p><blockquote>{cleanWorkspaceText(source.snippet)}</blockquote></article>)}
       {!!sourceLines.length && props.onLiteratureToReport && <button type="button" onClick={() => {
         if (current()) props.onLiteratureToReport?.(sourceLines);
       }}>将文献定位写入数据附录</button>}
     </details>}
-    {draft.diagnosis && <section className={styles.result} aria-label="选题诊断结果"><h3>{draft.diagnosis.source.input.title}</h3><ul>{draft.diagnosis.result?.nextSteps.map(item => <li key={item.code}>{item.action}</li>)}</ul>
+    {draft.diagnosis && <section className={styles.result} aria-label="选题诊断结果"><h3>{cleanWorkspaceText(draft.diagnosis.source.input.title)}</h3><ul>{draft.diagnosis.result?.nextSteps.map(item => <li key={item.code}>{cleanWorkspaceText(item.action)}</li>)}</ul>
       <button type="button" disabled={!diagnosisEvidenceCurrent} onClick={sendBrief}>将研究简介送入问卷</button>
       {projectId && props.onDraftQuestionnaire && <button type="button" disabled={!diagnosisEvidenceCurrent || !ready || busy || conflict} onClick={() => {
         if (current() && diagnosisEvidenceCurrent && diagnosisSource) props.onDraftQuestionnaire?.(diagnosisSource, projectId);

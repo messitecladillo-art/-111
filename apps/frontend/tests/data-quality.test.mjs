@@ -107,7 +107,7 @@ test('report paragraphs computed on QC-kept rows carry the exclusion lineage', a
   const quality = { kind: 'quality', parentName: '回收.csv', parentHash: 'b'.repeat(64), simulated: false, silicon: false, removed: 10, ledgerHash: 'c'.repeat(64), rules: ['作答过快：用时少于 60 秒'] };
   const section = { id: 's', title: '样本结构', body: '频数…\n核验边界：本地文件', source: '浏览器计算' };
   const out = qualityEvidenceSection(section, quality);
-  assert.match(out.body, /质控来源：自「回收.csv」剔除 10 行；规则：作答过快：用时少于 60 秒；剔除台账 SHA-256 c{64}。/);
+  assert.match(out.body, /质控来源：自“回收\.csv”剔除 10 行；规则：作答过快：用时少于 60 秒；剔除台账 SHA-256 c{64}。/);
   assert.match(out.source, /质控前数据 SHA-256：b{64}/);
   assert.equal(qualityEvidenceSection(out, quality).body.match(/质控来源/g).length, 1);
   const collection = { kind: 'collection', projectId: 'p', releaseId: 'r', versionId: 'v', questionnaireRevision: 3, classification: 'actual', snapshotHash: 'd'.repeat(64), generatedAt: '2026-10-14T00:00:00Z', design: { title: 't', questions: [] } };
@@ -119,7 +119,7 @@ test('the canvas receives a compact QC step that survives its 300-character scop
   const { qualityLineageStep } = await import('../lib/survey-collection.ts');
   const quality = { kind: 'quality', parentName: '回收.csv', parentHash: 'b'.repeat(64), simulated: false, silicon: false, removed: 10, ledgerHash: 'c'.repeat(64), rules: ['作答过快：用时少于中位数（252.5 秒）的 33%，即 83.3 秒', '注意力题未通过：「注意力题请选4」不等于「4」（未作答也计为未通过）'] };
   const step = qualityLineageStep(quality);
-  assert.equal(step, `质控：自「回收.csv」剔除 10 行（作答过快、注意力题未通过），剔除台账 SHA-256 ${'c'.repeat(16)}…`);
+  assert.equal(step, `质控：自“回收.csv”剔除 10 行（作答过快、注意力题未通过），剔除台账 SHA-256 ${'c'.repeat(16)}…`);
   assert.ok(step.length < 120);
 });
 

@@ -116,3 +116,65 @@
 .reading::before { content:''; width:8px; height:8px; display:inline-block; border:1px solid var(--wb-accent); border-right-color:transparent; border-radius:50%; animation:defenseRead .8s linear infinite; }
 @keyframes defenseRead { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .studio *,.studio *::before { animation:none!important; transition:none!important; } }
+
+@media (forced-colors: active) {
+  .studio,
+  .bank,
+  .practice,
+  .timing,
+  .importPreview,
+  .answerHelp,
+  .scaffold,
+  .review,
+  .pitfall,
+  .versionWarning,
+  .cards button,
+  .importList li {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .bank,
+  .practice,
+  .timing,
+  .importPreview,
+  .jumpNav,
+  .answerHelp,
+  .scaffold,
+  .review,
+  .badge,
+  .form i,
+  .studio button,
+  .studio input:not([type=checkbox]),
+  .studio select,
+  .studio textarea {
+    border: 1px solid ButtonText;
+  }
+  .question,
+  .timeline,
+  .timeline > div,
+  .cards,
+  .pitfall,
+  .versionWarning {
+    border-color: CanvasText;
+  }
+  .motionMarker {
+    display: none;
+  }
+  .cards button[aria-pressed=true],
+  .export button,
+  .importActions button,
+  .reading button {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .studio :focus-visible,
+  .workspace:focus-visible,
+  .sectionTarget:focus-visible,
+  .timing:focus-visible,
+  .importPreview:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

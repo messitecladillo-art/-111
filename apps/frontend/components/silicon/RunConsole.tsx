@@ -25,17 +25,17 @@ export default function RunConsole({ config, update, design, personas, settings,
   const engineRef = useKeyedListMotion<HTMLDivElement>({ ids: ['demo', 'model'], activeId: config.engine, markerAxis: 'horizontal' });
   return <div className={styles.designer}>
     <section className={styles.block} aria-labelledby="sx-engine">
-      <div className={styles.blockHead}><h3 id="sx-engine">选择作答引擎</h3><p>两种引擎均生成模拟回答，导出时保留来源标记。</p></div>
-      <div ref={engineRef} className={styles.sourceRow} role="radiogroup" aria-label="作答引擎"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
+      <div className={styles.blockHead}><h3 id="sx-engine">选择作答方式</h3><p>两种方式均生成模拟回答，导出时保留来源标记。</p></div>
+      <div ref={engineRef} className={styles.sourceRow} role="radiogroup" aria-label="作答方式"><span className={styles.motionMarker} data-motion-marker aria-hidden="true"/>
         <button type="button" data-motion-id="demo" role="radio" aria-checked={config.engine === 'demo'} className={styles.sourceCard} disabled={running} onClick={() => update({ engine: 'demo' })}>
-          <span className={styles.sourceKicker}>离线演示引擎 · 无需密钥</span>
+          <span className={styles.sourceKicker}>本地快速推演 · 无需外部连接</span>
           <strong>走查流程与界面</strong>
           <small>生成可复现的随机答案，检查跳转、答案传递与分析流程。</small>
         </button>
         <button type="button" data-motion-id="model" role="radio" aria-checked={config.engine === 'model'} className={styles.sourceCard} disabled={running || !models} onClick={() => update({ engine: 'model' })}>
-          <span className={styles.sourceKicker}>语言模型 · 使用你的 API 额度</span>
+          <span className={styles.sourceKicker}>已配置模型服务 · 按实际调用计费</span>
           <strong>模型预测试</strong>
-          <small>{models ? '由已配置的模型扮演受访者，最多同时比较 3 个模型。' : '在「我的项目」中打开项目，选择已配置的模型。'}</small>
+          <small>{models ? '由已配置的模型扮演受访者，最多同时比较 3 个模型。' : '在“我的项目”中打开项目，选择已配置的模型。'}</small>
         </button>
       </div>
       {config.engine === 'model' && models && <div className={styles.modelPick}>
@@ -49,14 +49,14 @@ export default function RunConsole({ config, update, design, personas, settings,
       <div className={styles.blockHead}><h3 id="sx-launch">运行</h3><p>原问卷保留，模拟回答单独展示；离线结果请导出备份。</p></div>
       <div className={styles.launch}>
         <dl className={styles.facts}>
-          <div><dt>硅基受访者</dt><dd>{personas}</dd></div>
+          <div><dt>模拟受访者</dt><dd>{personas}</dd></div>
           <div><dt>情境</dt><dd>{settings.scenarios.length ? settings.scenarios.length : '无'}</dd></div>
-          <div><dt>引擎</dt><dd>{engines}</dd></div>
+          <div><dt>作答方式</dt><dd>{engines}</dd></div>
           <div><dt>模拟回答</dt><dd>{responses}</dd></div>
           {config.engine === 'model' && <div><dt>预计模型调用</dt><dd>{calls}</dd></div>}
         </dl>
         {blockers.length > 0 && <ul className={styles.issueList} role="status">{blockers.map(b => <li key={b}>{b}</li>)}</ul>}
-        {overLimit && <p className={styles.warnNote} role="status"><b>超过单次上限</b>本次需要 {calls} 次模型调用，单次运行最多 {maxCalls} 次。可以减少人数、情境或模型数量，或改用「连续作答」（每位受访者每个情境只调用一次）。</p>}
+        {overLimit && <p className={styles.warnNote} role="status"><b>超过单次上限</b>本次需要 {calls} 次模型调用，单次运行最多 {maxCalls} 次。可以减少人数、情境或模型数量，或改用“连续作答”（每位受访者每个情境只调用一次）。</p>}
         {error && <p className={styles.errorNote} role="alert">{error}</p>}
         {running && progress && <div className={styles.progress} role="progressbar" aria-label="运行进度" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}><i style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}/><span>{progress.done}/{progress.total}</span></div>}
         <div className={styles.launchActions}>

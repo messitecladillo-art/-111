@@ -15,3 +15,30 @@
 .tablePaper table[data-rules=grid] :is(th,td) { border: 1px solid currentColor; }
 .tablePaper table[data-rules=minimal] th { border-bottom: 1px solid currentColor; }
 .caption { font-size: inherit; line-height: 1.6; }
+
+@media (forced-colors: active) {
+  .tableScroll:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+
+  .paper,
+  .tablePaper,
+  .status {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .tablePaper thead th,
+  .tablePaper :is(th, td) {
+    border-color: CanvasText !important;
+  }
+
+  .tablePaper th {
+    color: HighlightText;
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+}

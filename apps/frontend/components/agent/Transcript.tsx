@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { usageText } from '@/lib/agent/chat';
-import { Formula } from '@/components/math/Tex';
+import { FormulaLazy as Formula } from '@/components/math/TexLazy';
 import type { AgentAction, AgentCard, Line } from '@/lib/agent/router';
 import { ConsentCard, JobCard, ProposalView } from './generation';
 import { Spans } from './Glyphs';
@@ -13,6 +13,8 @@ import type { Message, ModelCall, ToolExecution } from './threads';
 import styles from './AgentShell.module.css';
 
 type Handlers = { onAction: (action: AgentAction) => void; onAnswer: (id: string, answer: 'confirmed' | 'cancelled', action?: AgentAction) => void; writingModelStatus?: WritingModelStatus };
+
+const CleanText = ({ text }: { text: string }) => <Spans line={[{ text }]} at={0} />;
 
 /**
  * One conversation, in a centred column inside the shell's scroll area. It follows new replies unless the reader has
@@ -45,7 +47,7 @@ function MessageView({ message, active, showWork, onAction, onAnswer, writingMod
   if (message.role === 'pending') return <div className={styles.message} data-role="agent" data-live="true"><div className={styles.reply}>
     {showWork ? <ReportWorkstation inline kind="research" heading="正在查询知识镜"
       state={{ phase: 'writing', detail: message.query, completed: 0, total: 0 }} />
-      : <p>正在查知识镜「{message.query}」</p>}
+      : <p>正在查知识镜“<CleanText text={message.query} />”</p>}
   </div></div>;
   const { turn } = message;
   const isLive = active || message.model?.status === 'running';
@@ -57,7 +59,7 @@ function MessageView({ message, active, showWork, onAction, onAnswer, writingMod
           <span>思维链与研判依据</span>
           <small>{message.reasoning.length} 字</small>
         </summary>
-        <div className={styles.reasoningBody}>{message.reasoning}</div>
+        <div className={styles.reasoningBody}><CleanText text={message.reasoning} /></div>
       </details>}
       {!!message.toolCalls?.length && <ToolCallLedger items={message.toolCalls} onAction={onAction} />}
       {showWork && active && message.model?.status === 'running' && !message.toolCalls?.length && <ReportWorkstation inline
@@ -65,8 +67,8 @@ function MessageView({ message, active, showWork, onAction, onAnswer, writingMod
       <ReplyBlocks lines={turn.lines} at={message.at} />
       {turn.cards?.map((card, i) => <Card key={i} card={card} message={message} onAction={onAction} onAnswer={onAnswer} writingModelStatus={writingModelStatus} />)}
       {!!turn.chips?.length && <div className={styles.chips}>
-        {turn.chipsLabel && <span className={styles.chipsLabel}>{turn.chipsLabel}</span>}
-        {turn.chips.map((chip, i) => <button key={i} type="button" className={`${styles.chip} ${chip.primary ? styles.chipPrimary : ''}`} onClick={() => onAction(chip.action)}>{chip.label}</button>)}
+        {turn.chipsLabel && <span className={styles.chipsLabel}><CleanText text={turn.chipsLabel} /></span>}
+        {turn.chips.map((chip, i) => <button key={i} type="button" className={`${styles.chip} ${chip.primary ? styles.chipPrimary : ''}`} onClick={() => onAction(chip.action)}><CleanText text={chip.label} /></button>)}
       </div>}
     </div>
   </div>;
@@ -120,12 +122,12 @@ function ReplyBlocks({ lines, at }: { lines: Line[]; at: number }) {
             <table className={styles.replyTable}>
               {header && (
                 <thead>
-                  <tr>{header.map((cell, ci) => <th key={ci}>{cell}</th>)}</tr>
+                  <tr>{header.map((cell, ci) => <th key={ci}><CleanText text={cell} /></th>)}</tr>
                 </thead>
               )}
               <tbody>
                 {bodyRows.map((row, ri) => (
-                  <tr key={ri}>{row.map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+                  <tr key={ri}>{row.map((cell, ci) => <td key={ci}><CleanText text={cell} /></td>)}</tr>
                 ))}
               </tbody>
             </table>
@@ -180,10 +182,72 @@ function ReplyBlocks({ lines, at }: { lines: Line[]; at: number }) {
   return <>{nodes}</>;
 }
 
+const TOOL_CATEGORY_LABEL: Record<string, string> = {
+  open: '工作台导航',
+  lookup: '知识镜检索',
+  search_mirror: '知识镜检索',
+  trace: '证据溯源',
+  trace_exhibit: '证据溯源',
+  load_benchmark: '样板装入',
+  loadBenchmark: '样板装入',
+  generate_full_report: '整稿编排',
+  generateFullReport: '整稿编排',
+  revise_section: '章节精修',
+  tweak_figure: '图表调优',
+  open_studio: '创作工坊',
+  run_analysis: '统计检验',
+  silicon_theater: '硅基预演',
+};
+
+const TOOL_ROOM_LABEL: Record<string, string> = {
+  topic: '选题立项',
+  questionnaire: '问卷设计',
+  data: '数据质控',
+  analysis: '统计建模',
+  report: '报告工作台',
+  mirror: '知识镜',
+  editor: '文稿编辑器',
+};
+
+const TOOL_ARG_KEY_LABEL: Record<string, string> = {
+  room: '目标模块',
+  query: '检索词',
+  topic: '课题',
+  title: '标题',
+  node: '章节节点',
+  sectionId: '章节',
+  view: '视图',
+  method: '统计方法',
+  studio: '工坊',
+  stage: '研究阶段',
+  target: '对象',
+};
+
+function formatToolTag(tool: string): string {
+  return TOOL_CATEGORY_LABEL[tool] ?? (/^[A-Za-z0-9_.:-]+$/u.test(tool) ? '研究工具' : tool);
+}
+
 function formatToolArgs(args: Record<string, unknown> | undefined): string {
   if (!args) return '';
-  const entries = Object.entries(args).filter(([, value]) => value !== undefined && value !== '');
-  return entries.map(([key, value]) => `${key}=${typeof value === 'string' ? value : JSON.stringify(value)}`).join(' · ');
+  const entries = Object.entries(args).filter(([, value]) => value !== undefined && value !== '' && value !== null);
+  return entries
+    .slice(0, 3)
+    .map(([key, value]) => {
+      const keyLabel = TOOL_ARG_KEY_LABEL[key] ?? (/^[A-Za-z0-9_]+$/u.test(key) ? '' : key);
+      let valText = '';
+      if (typeof value === 'string') {
+        valText = key === 'room' ? (TOOL_ROOM_LABEL[value] ?? value) : value.slice(0, 42);
+      } else if (typeof value === 'number' || typeof value === 'boolean') {
+        valText = typeof value === 'boolean' ? (value ? '是' : '否') : String(value);
+      } else if (Array.isArray(value)) {
+        valText = `${value.length} 项`;
+      } else {
+        valText = '已配置';
+      }
+      return keyLabel ? `${keyLabel} ${valText}` : valText;
+    })
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function ToolCallLedger({ items, onAction }: { items: ToolExecution[]; onAction: (action: AgentAction) => void }) {
@@ -193,7 +257,7 @@ function ToolCallLedger({ items, onAction }: { items: ToolExecution[]; onAction:
   return (
     <div className={styles.toolLedger} role="region" aria-label="工具调度轨迹">
       <div className={styles.toolLedgerHead}>
-        <span className={styles.toolLedgerEyebrow}><i className={styles.toolLedgerGem} aria-hidden="true" />HARNESS · 工具调度台账</span>
+        <span className={styles.toolLedgerEyebrow}><i className={styles.toolLedgerGem} aria-hidden="true" />证见 · 工具协同记录</span>
         <span className={styles.toolLedgerCount}>
           {runningCount > 0 ? `正在调取 ${runningCount} / ${items.length} 项能力` : `已协调 ${items.length} 项证见工具`}
         </span>
@@ -216,10 +280,10 @@ function ToolCallLedger({ items, onAction }: { items: ToolExecution[]; onAction:
                   <span className={styles.toolBadge} aria-hidden="true">
                     {item.status === 'running' ? <i /> : item.status === 'done' ? <Icon name="check" /> : item.status === 'awaiting_confirm' ? '◆' : '!'}
                   </span>
-                  <code className={styles.toolCode}>{item.tool}</code>
-                  <span className={styles.toolName}>{item.label}</span>
-                  {brief && <span className={styles.toolArgs}>{brief}</span>}
-                  {item.summary && <span className={styles.toolSummaryText}>{item.summary}</span>}
+                  <span className={styles.toolCode}>{formatToolTag(item.tool)}</span>
+                  <span className={styles.toolName}><CleanText text={item.label} /></span>
+                  {brief && <span className={styles.toolArgs}><CleanText text={brief} /></span>}
+                  {item.summary && <span className={styles.toolSummaryText}><CleanText text={item.summary} /></span>}
                   <span className={styles.spacer} />
                   <span className={styles.toolMeta}>
                     {TOOL_STATE_LABEL[item.status]}
@@ -235,17 +299,17 @@ function ToolCallLedger({ items, onAction }: { items: ToolExecution[]; onAction:
               </div>
               {open && (
                 <div className={styles.toolDetail}>
-                  {item.args && Object.keys(item.args).length > 0 && (
-                    <div className={styles.toolDetailBlock}>
-                      <span>调用参数</span>
-                      <pre>{JSON.stringify(item.args, null, 2)}</pre>
-                    </div>
-                  )}
                   {item.resultText && (
                     <div className={styles.toolDetailBlock}>
-                      <span>返回摘录</span>
-                      <pre>{item.resultText}</pre>
+                      <span>执行回执</span>
+                      <pre><CleanText text={item.resultText} /></pre>
                     </div>
+                  )}
+                  {item.args && Object.keys(item.args).length > 0 && (
+                    <details className={styles.toolDetailBlock}>
+                      <summary style={{ cursor: 'pointer', fontSize: 11.5 }}>查看执行摘要</summary>
+                      <pre>{JSON.stringify(item.args, null, 2)}</pre>
+                    </details>
                   )}
                 </div>
               )}
@@ -271,7 +335,7 @@ function StepHead({ model, at, active }: { model: ModelCall; at: number; active:
     <span className={styles.stepStatePill}>
       {status === 'running' ? <Elapsed since={at} /> : <span>{STEP_STATE[status]}{model.latencyMs ? ` · ${(model.latencyMs / 1000).toFixed(1)}s` : ''}</span>}
     </span>
-    {model.usage && <span className={styles.stepCost} title="服务商报告的输入 / 输出 token">{usageText(model.usage)}</span>}
+    {model.usage && <span className={styles.stepCost} title="服务商返回的输入与输出词元用量">{usageText(model.usage)}</span>}
   </div>;
 }
 /** Seconds since a call was sent, while it is still running in this visit; a stale one from an earlier visit just says so. */
@@ -296,27 +360,49 @@ function numbers(text: string): Line {
   return line;
 }
 
+function downloadInlineSvg(dataUri: string, label: string): void {
+  const commaIdx = dataUri.indexOf(',');
+  if (commaIdx < 0) return;
+  const rawPayload = dataUri.slice(commaIdx + 1);
+  let svgText = rawPayload;
+  try {
+    svgText = decodeURIComponent(rawPayload);
+  } catch {
+    svgText = rawPayload;
+  }
+  const safeBase = label.replace(/[^\u4e00-\u9fffa-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 36) || 'evix-chart';
+  const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${safeBase}.svg`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function Card({ card, message, onAction, onAnswer, writingModelStatus }: { card: AgentCard; message: Extract<Message, { role: 'agent' }> } & Handlers) {
   if (card.kind === 'entry') return <div className={`${styles.card} ${styles.entry}`}>
-    <div className={styles.cardHead}><span className={styles.cardKindPill}>MIRROR</span><span className={styles.cardTitle}>知识镜 · {card.reviewed ? '已审核词条' : '待审核词条'}</span></div>
-    <div className={styles.entryName}><strong>{card.name}</strong>{card.english && <span>{card.english}</span>}</div>
-    <p>{card.definition}</p>
+    <div className={styles.cardHead}><span className={styles.cardKindPill}>知识镜</span><span className={styles.cardTitle}>知识镜 · {card.reviewed ? '已审核词条' : '待审核词条'}</span></div>
+    <div className={styles.entryName}><strong><CleanText text={card.name} /></strong>{card.english && <span>{card.english}</span>}</div>
+    <p><CleanText text={card.definition} /></p>
     {card.formula && <div className={styles.entryFormula}><Formula tex={card.formula} compact copyable={false} /></div>}
-    {!!card.sources.length && <p className={styles.entrySources}>出处：{card.sources.join('；')}</p>}
+    {!!card.sources.length && <p className={styles.entrySources}>文献出处 · <CleanText text={card.sources.join('；')} /></p>}
     <div className={styles.cardLinks}><button type="button" className={styles.chip} onClick={() => onAction({ type: 'entry', id: card.id })}>展开词条 →</button></div>
   </div>;
   if (card.kind === 'confirm') return <Confirm card={card} message={message} onAction={onAction} onAnswer={onAnswer} />;
   if (card.kind === 'consent') return <ConsentCard messageId={message.id} card={card} at={message.at} />;
   if (card.kind === 'job') return <JobCard messageId={message.id} card={card} />;
   if (card.kind === 'proposal') return <ProposalView card={card} />;
-  if (card.kind === 'chart-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>STUDIO</span><span className={styles.cardTitle}>{card.title}</span></div><ChartStudioView data={card.studio} onAction={onAction} /></div>;
-  if (card.kind === 'code-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>STUDIO</span><span className={styles.cardTitle}>{card.title}</span></div><CodeStudioView data={card.studio} onAction={onAction} /></div>;
-  if (card.kind === 'writing-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>STUDIO</span><span className={styles.cardTitle}>{card.title}</span></div><WritingStudioView data={card.studio} onAction={onAction} modelStatus={writingModelStatus} /></div>;
-  if (card.kind === 'silicon-theater') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>硅基预测试</span><span className={styles.cardTitle}>{card.title}</span></div><SiliconTheaterStudioView data={card.studio} onAction={onAction} /></div>;
+  if (card.kind === 'chart-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>创作工坊</span><span className={styles.cardTitle}><CleanText text={card.title} /></span></div><ChartStudioView data={card.studio} onAction={onAction} /></div>;
+  if (card.kind === 'code-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>创作工坊</span><span className={styles.cardTitle}><CleanText text={card.title} /></span></div><CodeStudioView data={card.studio} onAction={onAction} /></div>;
+  if (card.kind === 'writing-studio') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>创作工坊</span><span className={styles.cardTitle}><CleanText text={card.title} /></span></div><WritingStudioView data={card.studio} onAction={onAction} modelStatus={writingModelStatus} /></div>;
+  if (card.kind === 'silicon-theater') return <div className={styles.card}><div className={styles.cardHead}><span className={styles.cardKindPill}>硅基预测试</span><span className={styles.cardTitle}><CleanText text={card.title} /></span></div><SiliconTheaterStudioView data={card.studio} onAction={onAction} /></div>;
   if (card.kind === 'trace') return <div className={`${styles.card} ${styles.trace}`}>
-    <div className={styles.cardHead}><span className={styles.cardKindPill}>TRACE</span><span className={styles.cardTitle}>回溯 · {card.reference}</span></div>
-    <p className={styles.traceHead}><b>{card.reference}</b>{card.title}</p>
-    <ol className={styles.path} aria-label="光路：从图表回到来处">
+    <div className={styles.cardHead}><span className={styles.cardKindPill}>证据溯源</span><span className={styles.cardTitle}>回溯 · {card.reference}</span></div>
+    <p className={styles.traceHead}><b>{card.reference}</b><CleanText text={card.title} /></p>
+    <ol className={styles.path} aria-label="从图表回溯数据来处的证据链路">
       {card.steps.map((step, i) => <li key={i} data-kind={step.kind}>
         <b aria-hidden="true">◀──</b>
         <div><strong><Spans line={numbers(step.text)} at={message.at} /></strong><small><Spans line={numbers(step.detail)} at={message.at} /></small></div>
@@ -331,12 +417,33 @@ function Card({ card, message, onAction, onAnswer, writingModelStatus }: { card:
       ? 'fit-content(140px) minmax(0, 1fr)'
       : `repeat(${maxCols - 1}, fit-content(24%)) minmax(0, 1fr)`;
   return <div className={styles.card}>
-    <div className={styles.cardHead}><span className={styles.cardKindPill}>PANEL</span><span className={styles.cardTitle}>{card.title}</span></div>
+    <div className={styles.cardHead}><span className={styles.cardKindPill}>研究面板</span><span className={styles.cardTitle}><CleanText text={card.title} /></span></div>
     {card.columns ? <div className={styles.cardGrid} style={{ gridTemplateColumns: gridColumns }}>
       {card.lines.map((line, i) => <p key={i}>{line.map((span, j) => <span key={j}><Spans line={[span]} at={message.at} /></span>)}</p>)}
     </div> : <div className={styles.cardLines}>{card.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}</div>}
+    {card.previewSvgDataUri && card.previewSvgDataUri.startsWith('data:image/svg+xml') && (
+      <div className={styles.cardFigure}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- SVG data URI preview */}
+        <img
+          src={card.previewSvgDataUri}
+          alt={card.previewAlt ?? card.title}
+          className={styles.cardFigureImg}
+          loading="lazy"
+        />
+        <div className={styles.cardFigureBar}>
+          <span>高清矢量配图预览</span>
+          <button
+            type="button"
+            className={styles.cardFigureBtn}
+            onClick={() => downloadInlineSvg(card.previewSvgDataUri!, card.previewAlt ?? card.title)}
+          >
+            下载矢量图
+          </button>
+        </div>
+      </div>
+    )}
     {!!card.links?.length && <div className={styles.cardLinks}>
-      {card.links.map((link, i) => <button key={i} type="button" className={styles.chip} onClick={() => onAction(link.action)}>{link.label} →</button>)}
+      {card.links.map((link, i) => <button key={i} type="button" className={styles.chip} onClick={() => onAction(link.action)}><CleanText text={link.label} /> →</button>)}
     </div>}
   </div>;
 }
@@ -351,12 +458,12 @@ function Confirm({ card, message, onAnswer }: { card: Extract<AgentCard, { kind:
     if (event.key === 'y' || event.key === 'Y') { event.preventDefault(); onAnswer(message.id, 'confirmed', card.confirm.action); }
     if (event.key === 'n' || event.key === 'N' || event.key === 'Escape') { event.preventDefault(); onAnswer(message.id, 'cancelled'); }
   };
-  return <div ref={ref} className={`${styles.card} ${styles.confirm}`} tabIndex={open ? 0 : -1} role="group" aria-label={`需要你确认：${card.title}`} onKeyDown={key}>
-    <div className={styles.cardHead}><span className={styles.cardKindPill}>GATE</span><span className={styles.cardTitle}>需要你确认 · {card.title}</span></div>
+  return <div ref={ref} className={`${styles.card} ${styles.confirm}`} tabIndex={open ? 0 : -1} role="group" aria-label={`请确认操作 ${card.title}`} onKeyDown={key}>
+    <div className={styles.cardHead}><span className={styles.cardKindPill}>操作确认</span><span className={styles.cardTitle}>需要你确认 · <CleanText text={card.title} /></span></div>
     <div className={styles.cardLines}>{card.lines.map((line, i) => <p key={i}><Spans line={line} at={message.at} /></p>)}</div>
     {open ? <div className={styles.cardLinks}>
-      <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} onClick={() => onAnswer(message.id, 'confirmed', card.confirm.action)}>{card.confirm.label}（y）</button>
-      <button type="button" className={styles.chip} onClick={() => onAnswer(message.id, 'cancelled')}>{card.cancel}（n）</button>
-    </div> : <p className={styles.answered}>{message.answered === 'confirmed' ? `已${card.confirm.label}` : `已${card.cancel}`}</p>}
+      <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} onClick={() => onAnswer(message.id, 'confirmed', card.confirm.action)}><CleanText text={card.confirm.label} />（y）</button>
+      <button type="button" className={styles.chip} onClick={() => onAnswer(message.id, 'cancelled')}><CleanText text={card.cancel} />（n）</button>
+    </div> : <p className={styles.answered}>{message.answered === 'confirmed' ? <>已<CleanText text={card.confirm.label} /></> : <>已<CleanText text={card.cancel} /></>}</p>}
   </div>;
 }

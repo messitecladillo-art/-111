@@ -377,3 +377,54 @@
 .exportButton { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--wb-line-strong); border-radius: 999px; background: var(--wb-surface); color: var(--wb-text); font: 700 12.5px/1 var(--wb-sans); white-space: nowrap; cursor: pointer; }
 .exportButton svg { width: 14px; height: 14px; }
 .exportButton:hover { border-color: var(--wb-accent); color: var(--wb-accent); }
+
+@media (forced-colors: active) {
+  .lab :is(button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .primaryButton,
+  .secondaryButton,
+  .linkButton,
+  .closeButton,
+  .exportButton,
+  .segmented button,
+  .viewTabs button,
+  .modeBar button,
+  .field :is(input, select, textarea),
+  .searchField input {
+    border: 1px solid ButtonText;
+  }
+  .intro,
+  .dropZone,
+  .guide,
+  .corpusBar,
+  .settings,
+  .thesaurus,
+  .panel,
+  .emptyView,
+  .metricsBar,
+  .cloudFrame {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .viewTabs,
+  .viewTools {
+    border-color: CanvasText;
+  }
+  .dropActive,
+  .mockOn,
+  .segmented button[aria-pressed="true"],
+  .viewTabs button[aria-selected="true"],
+  .viewTabs button[aria-pressed="true"],
+  .modeBar button[aria-pressed="true"],
+  .primaryButton {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

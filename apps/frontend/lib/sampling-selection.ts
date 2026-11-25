@@ -32,7 +32,7 @@ export function selectSystematic(N: number, n: number, seed: string): Systematic
 
 function validateSizes(units: FrameUnit[]) {
   if (units.length < 2) throw Error('抽样框至少需要 2 个单位。');
-  for (const u of units) if (!(Number.isFinite(u.size) && u.size > 0)) throw Error(`「${u.name}」的规模须为正数。`);
+  for (const u of units) if (!(Number.isFinite(u.size) && u.size > 0)) throw Error(`“${u.name}”的规模须为正数。`);
 }
 export type PpsDraw = { order: number; index: number; name: string; random: number; p: number };
 export type PpsWithReplacement = { draws: PpsDraw[]; total: number; attempts: number; method: 'cumulative' | 'lahiri' };
@@ -149,7 +149,7 @@ const levelNames = ['初级', '二级', '三级', '四级', '五级'];
 /** Small counts in words, as Chinese methods sections write them. */
 export const countWord = (n: number) => ['零', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][n] ?? String(n);
 function stageSentence(stage: PlanStage, index: number, stages: PlanStage[]): string {
-  const meta = STAGE_METHODS[stage.method], frame = stage.frame.trim() || `〔第${index + 1}级抽样框〕`, unit = stage.unit.trim() || '单位';
+  const meta = STAGE_METHODS[stage.method], frame = stage.frame.trim() || `（第${index + 1}级抽样框）`, unit = stage.unit.trim() || '单位';
   const count = stage.take ? ` ${stage.take} 个${unit}` : unit;
   // Later stages are drawn inside every unit selected at the previous stage.
   const within = index > 0 ? `在每个入样${stages[index - 1].unit.trim() || '单位'}内，` : '';
@@ -169,13 +169,13 @@ export function groupStatement(group: PlanGroup): string {
   const probability = groupIsProbability(group), name = group.name.trim() || '该群体';
   const stages = group.stages.map((s, i) => stageSentence(s, i, group.stages)).join('；');
   const scheme = group.stages.length === 1 ? '单阶段抽样' : `${countWord(group.stages.length)}阶段抽样`;
-  const base = `对${name}${group.population.trim() ? `（${group.population.trim()}）` : ''}采用${scheme}：${stages}${group.completes ? `，计划获得有效样本 ${group.completes} 份` : ''}。`;
+  const base = `对${name}${group.population.trim() ? `（${group.population.trim()}）` : ''}采用${scheme}，其中${stages}${group.completes ? `，计划获得有效样本 ${group.completes} 份` : ''}。`;
   if (probability) {
     const p = equalProbabilityInclusion(group);
     return base + (p !== null ? `各阶段均为等概率抽样，每个最终单位的入样概率约为 ${(p * 100).toPrecision(3)}%，样本自加权。` : '各阶段均为概率抽样，分析时按各阶段入样概率之积的倒数加权，并按多阶段设计计算抽样误差。');
   }
   const nonProb = group.stages.filter(s => !STAGE_METHODS[s.method].probability).map(s => STAGE_METHODS[s.method].label.replace('（非概率）', '')).join('、');
-  return base + `由于${nonProb}阶段的入样概率未知，样本整体不是概率样本：前几阶段的随机抽取使样本分布到不同地域与类型的单位，但不能据此计算严格的抽样误差；报告中按样本量公式给出的精度仅作规模参照，并说明样本结构与总体的差异。`;
+  return base + `由于${nonProb}阶段的入样概率未知，样本整体不是概率样本，前几阶段的随机抽取虽使样本分布到不同地域与类型的单位，但不能据此计算严格的抽样误差；报告中按样本量公式给出的精度仅作规模参照，并说明样本结构与总体的差异。`;
 }
 /**
  * Selected units written as an indented outline, one unit per line; two spaces or a tab per level.

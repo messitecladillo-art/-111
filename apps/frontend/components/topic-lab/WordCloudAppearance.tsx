@@ -72,12 +72,12 @@ export default function WordCloudAppearance({
   return <section className={styles.appearance} aria-label="词云形状设置">
     {recognition && <div className={styles.agentBar}>
       <div className={styles.agentMeta}>
-        <span className={styles.agentBadge}>🤖 Agent 自动识形</span>
+        <span className={styles.agentBadge}>✨ 主题意象自动造型</span>
         <span className={styles.agentCopy}>{recognition.reason}</span>
       </div>
       <div className={styles.agentControls}>
         {onToggleAuto && <button type="button" className={styles.autoBtn} aria-pressed={autoRecognize} onClick={() => onToggleAuto(!autoRecognize)}>
-          {autoRecognize ? '✨ 自动识形：已开启' : `应用推荐「${recognition.label}」`}
+          {autoRecognize ? '✨ 已开启主题意象造型' : `应用推荐“${recognition.label}”`}
         </button>}
         <div className={styles.promptRow}>
           <input
@@ -86,11 +86,11 @@ export default function WordCloudAppearance({
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyPromptShape(); } }}
-            placeholder="AI 构形：如 新能源汽车、奶茶杯、奖杯"
+            placeholder="输入器物或场景意象，如新能源汽车、奶茶杯、奖杯"
             aria-label="输入语义主题生成词云轮廓"
             maxLength={40}
           />
-          <button type="button" className={styles.aiBtn} disabled={!prompt.trim() || busy} onClick={applyPromptShape}>AI 构形</button>
+          <button type="button" className={styles.aiBtn} disabled={!prompt.trim() || busy} onClick={applyPromptShape}>生成意象轮廓</button>
         </div>
       </div>
     </div>}
@@ -108,7 +108,7 @@ export default function WordCloudAppearance({
     <div className={styles.controls}>
       <label>方向<select aria-label="词云轮廓方向" value={value.orientation} disabled={value.shape === 'free' || value.shape === 'circle'} onChange={e => { cancel(); onChange({ ...value, orientation: e.target.value as CloudAppearance['orientation'] }); }}><option value="horizontal">横向</option><option value="vertical">纵向</option></select></label>
       <label>间距<select aria-label="词云文字间距" value={value.spacing} onChange={e => onChange({ ...value, spacing: e.target.value as CloudAppearance['spacing'] })}><option value="compact">紧凑</option><option value="standard">标准</option><option value="relaxed">舒展</option></select></label>
-      <label><input type="checkbox" checked={value.outline} disabled={value.shape === 'free'} onChange={e => onChange({ ...value, outline: e.target.checked })} />显示轮廓</label>
+      <label><input type="checkbox" aria-label="显示词云轮廓线" checked={value.outline} disabled={value.shape === 'free'} onChange={e => onChange({ ...value, outline: e.target.checked })} />显示轮廓</label>
     </div>
     {busy && <div className={styles.customRow} role="status"><span>正在读取剪影…</span><button type="button" className={styles.cancel} onClick={cancel}>取消</button></div>}
     {!busy && value.customMask && <div className={styles.customRow}><span>{value.customMask.label}</span><button className={styles.cancel} type="button" onClick={() => { cancel(); const { customMask: _mask, ...rest } = value; void _mask; onChange({ ...rest, shape: value.shape === 'custom' ? 'free' : value.shape }); }}>移除剪影</button></div>}

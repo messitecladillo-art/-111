@@ -87,7 +87,35 @@ function read(id: string): Stored {
   } catch { return { threads: [], active: null, removed: [] }; }
 }
 // Keep the active in-memory stream running. Its equal-version persisted copy records uncertainty, not activity.
-const kept = (thread: Thread):Thread => ({ ...thread, messages: thread.messages.filter(m => m.role !== 'pending').map(m=>m.role==='agent'&&m.model?.reportRunId&&m.model.status==='running'?{...m,model:{...m.model,status:'unknown' as const}}:m) });
+const MAX_KEPT_PREVIEW_MESSAGES = 4;
+const MAX_KEPT_PREVIEW_URI_CHARS = 60_000;
+const kept = (thread: Thread): Thread => {
+  const normalized = thread.messages
+    .filter(m => m.role !== 'pending')
+    .map(m => m.role === 'agent' && m.model?.reportRunId && m.model.status === 'running' ? { ...m, model: { ...m.model, status: 'unknown' as const } } : m);
+  let keptPreviews = 0;
+  const pruned = [...normalized];
+  for (let i = pruned.length - 1; i >= 0; i--) {
+    const msg = pruned[i];
+    if (msg.role !== 'agent' || !msg.turn.cards?.some(c => c.kind === 'tool' && typeof c.previewSvgDataUri === 'string')) continue;
+    const allowMessage = keptPreviews < MAX_KEPT_PREVIEW_MESSAGES;
+    let keptHere = false;
+    const cards = msg.turn.cards.map((card) => {
+      if (card.kind !== 'tool' || !card.previewSvgDataUri) return card;
+      if (allowMessage && card.previewSvgDataUri.length <= MAX_KEPT_PREVIEW_URI_CHARS) {
+        keptHere = true;
+        return card;
+      }
+      const trimmed = { ...card };
+      delete trimmed.previewSvgDataUri;
+      delete trimmed.previewAlt;
+      return trimmed;
+    });
+    if (keptHere) keptPreviews += 1;
+    pruned[i] = { ...msg, turn: { ...msg.turn, cards } };
+  }
+  return { ...thread, messages: pruned };
+};
 function readDraftProject(id: string): string | null {
   try { return window.sessionStorage.getItem(DRAFT_PROJECT_PREFIX + id); } catch { return null; }
 }
@@ -221,18 +249,33 @@ export const threads = {
   draft(projectId: string | null = null) { commit({ ...book, active: null, draftProject: projectId }); },
   select(id: string) { if (book.threads.some(t => t.id === id)) commit({ ...book, active: id }); },
   remove(id: string) {
+    const target = book.threads.find(t => t.id === id);
     removed = [...removed.filter(r => r !== id), id].slice(-REMOVED_LIMIT);
-    commit({ ...book, threads: book.threads.filter(t => t.id !== id), active: book.active === id ? null : book.active });
+    commit({
+      ...book,
+      threads: book.threads.filter(t => t.id !== id),
+      active: book.active === id ? null : book.active,
+      draftProject: book.active === id ? (target?.projectId ?? book.draftProject) : book.draftProject,
+    });
   },
   /** Names a conversation; when two tabs name it, the later name holds. An empty name changes nothing. */
   rename(id: string, title: string) {
     const name = tidyTitle(title);
     if (name && book.threads.some(t => t.id === id && t.title !== name)) commit({ ...book, threads: book.threads.map(t => t.id === id ? { ...t, title: name, titledAt: Date.now() } : t) });
   },
-  /** Files the open conversation (or the draft) under a project. */
+  /** Switches to `projectId` (opening its latest conversation or a project-bound draft); `null` unfiles the open conversation or clears the draft's project. */
   setProject(projectId: string | null) {
     const active = book.threads.find(t => t.id === book.active);
-    commit(active ? { ...book, threads: book.threads.map(t => t.id === active.id ? filing(t, projectId) : t) } : { ...book, draftProject: projectId });
+    if (projectId === null) {
+      commit(active ? { ...book, threads: book.threads.map(t => t.id === active.id ? filing(t, null) : t), draftProject: null } : { ...book, draftProject: null });
+      return;
+    }
+    if (active?.projectId === projectId) {
+      if (book.draftProject !== null) commit({ ...book, draftProject: null });
+      return;
+    }
+    const latest = [...book.threads].filter(t => t.projectId === projectId).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+    commit(latest ? { ...book, active: latest.id, draftProject: null } : { ...book, active: null, draftProject: projectId });
   },
   /** Adds to the open conversation, starting one from a draft with the user's first words as its title. */
   append(messages: Message[]) {

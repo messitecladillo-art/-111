@@ -485,7 +485,7 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 function nonEmptyString(value: unknown, field: string): string {
   if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`桥接响应缺少 ${field}`);
+    throw new Error(`本地服务返回的数据缺少${field}`);
   }
   return value.trim();
 }
@@ -495,50 +495,50 @@ function optionalString(value: unknown): string | undefined {
 }
 
 function booleanValue(value: unknown, field: string): boolean {
-  if (typeof value !== "boolean") throw new Error(`桥接响应中的 ${field} 无效`);
+  if (typeof value !== "boolean") throw new Error(`本地服务返回的${field}无效`);
   return value;
 }
 
 function nonNegativeInteger(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    throw new Error(`桥接响应中的 ${field} 无效`);
+    throw new Error(`本地服务返回的${field}无效`);
   }
   return value;
 }
 
 function stringArray(value: unknown, field: string): string[] {
-  if (!Array.isArray(value)) throw new Error(`桥接响应中的 ${field} 无效`);
-  return value.map((item, index) => nonEmptyString(item, `${field}[${index}]`));
+  if (!Array.isArray(value)) throw new Error(`本地服务返回的${field}无效`);
+  return value.map((item, index) => nonEmptyString(item, `第 ${index + 1} 项${field}`));
 }
 
 function gateNameArray(value: unknown, field: string): GateName[] {
   const items = stringArray(value, field);
   if (new Set(items).size !== items.length
     || items.some((item) => !(GATE_NAMES as readonly string[]).includes(item))) {
-    throw new Error(`桥接响应中的 ${field} 含有未知或重复 Gate`);
+    throw new Error(`本地服务返回的${field}含有未知或重复质量检查项`);
   }
   return items as GateName[];
 }
 
 function parseSeveritySummary(value: unknown, field: string) {
   if (!isRecord(value) || !isRecord(value.bySeverity)) {
-    throw new Error(`桥接响应中的 ${field} 无效`);
+    throw new Error(`本地服务返回的${field}无效`);
   }
   const severityRecord = value.bySeverity;
   if (Object.keys(severityRecord).some(
     (severity) => !Object.prototype.hasOwnProperty.call(SEVERITY_LABELS, severity),
   )) {
-    throw new Error(`桥接响应中的 ${field} 含有未知严重级别`);
+    throw new Error(`本地服务返回的${field}含有未知严重级别`);
   }
   const bySeverity = Object.fromEntries(
     (Object.keys(SEVERITY_LABELS) as Severity[]).map((severity) => [
       severity,
-      nonNegativeInteger(severityRecord[severity] ?? 0, `${field}.${severity}`),
+      nonNegativeInteger(severityRecord[severity] ?? 0, `${field}分级计数`),
     ]),
   ) as Record<Severity, number>;
-  const total = nonNegativeInteger(value.total, `${field}.total`);
+  const total = nonNegativeInteger(value.total, `${field}总数`);
   if (Object.values(bySeverity).reduce((sum, count) => sum + count, 0) !== total) {
-    throw new Error(`桥接响应中的 ${field} 总数与分级数量不一致`);
+    throw new Error(`本地服务返回的${field}总数与分级数量不一致`);
   }
   return { total, bySeverity };
 }
@@ -547,54 +547,54 @@ function parseGates(value: unknown): LifecycleGate[] {
   const gates = new Map<GateName, GateValue>();
   if (Array.isArray(value)) {
     if (value.length !== GATE_NAMES.length) {
-      throw new Error("桥接响应必须恰好包含九个 Gate");
+      throw new Error("本地服务返回的数据必须恰好包含九项质量检查");
     }
     value.forEach((item, index) => {
-      if (!isRecord(item)) throw new Error(`桥接响应中的 gates[${index}] 无效`);
-      const id = nonEmptyString(item.id, `gates[${index}].id`);
-      const status = nonEmptyString(item.status, `gates[${index}].status`);
+      if (!isRecord(item)) throw new Error(`本地服务返回的第 ${index + 1} 项质量检查无效`);
+      const id = nonEmptyString(item.id, "质量检查标识");
+      const status = nonEmptyString(item.status, "质量检查状态");
       if (!(GATE_NAMES as readonly string[]).includes(id)) {
-        throw new Error(`桥接返回了未知 Gate：${id}`);
+        throw new Error(`本地服务返回了未知质量检查项（${id}）`);
       }
       if (!(GATE_VALUES as readonly string[]).includes(status)) {
-        throw new Error(`桥接返回了未知 Gate 状态：${status}`);
+        throw new Error(`本地服务返回了未知质量检查状态（${status}）`);
       }
       if (gates.has(id as GateName)) {
-        throw new Error(`桥接返回了重复 Gate：${id}`);
+        throw new Error(`本地服务返回了重复质量检查项（${id}）`);
       }
       gates.set(id as GateName, status as GateValue);
     });
   } else if (isRecord(value)) {
     if (Object.keys(value).length !== GATE_NAMES.length
       || Object.keys(value).some((id) => !(GATE_NAMES as readonly string[]).includes(id))) {
-      throw new Error("桥接响应中的 Gate 集合不完整或含有额外字段");
+      throw new Error("本地服务返回的质量检查集合不完整或含有额外字段");
     }
     GATE_NAMES.forEach((id) => {
       const raw = isRecord(value[id]) ? value[id].status : value[id];
-      const status = nonEmptyString(raw, `gates.${id}`);
+      const status = nonEmptyString(raw, "质量检查状态");
       if (!(GATE_VALUES as readonly string[]).includes(status)) {
-        throw new Error(`桥接返回了未知 Gate 状态：${status}`);
+        throw new Error(`本地服务返回了未知质量检查状态（${status}）`);
       }
       gates.set(id, status as GateValue);
     });
   } else {
-    throw new Error("桥接响应中的 gates 无效");
+    throw new Error("本地服务返回的质量检查列表无效");
   }
 
   if (!GATE_NAMES.every((id) => gates.has(id))) {
-    throw new Error("桥接响应未包含完整的九个 Gate");
+    throw new Error("本地服务返回的数据未包含完整的九项质量检查");
   }
   return GATE_NAMES.map((id) => ({ id, status: gates.get(id) as GateValue }));
 }
 
 function parseTransition(value: unknown): LifecycleTransition | null {
   if (value === null) return null;
-  if (!isRecord(value)) throw new Error("桥接响应中的 nextTransition 无效");
-  const target = nonEmptyString(value.to, "nextTransition.to");
-  const source = nonEmptyString(value.from, "nextTransition.from");
+  if (!isRecord(value)) throw new Error("本地服务返回的下一转换信息无效");
+  const target = nonEmptyString(value.to, "目标阶段");
+  const source = nonEmptyString(value.from, "起始阶段");
   if (!(PROJECT_STAGES as readonly string[]).includes(target)
     || !(PROJECT_STAGES as readonly string[]).includes(source)) {
-    throw new Error("桥接响应中的 nextTransition 含有未知控制状态");
+    throw new Error("本地服务返回的下一转换含有未知控制阶段");
   }
   return {
     id: optionalString(value.id),
@@ -602,20 +602,20 @@ function parseTransition(value: unknown): LifecycleTransition | null {
     to: target,
     requiredGates: value.requiredGates === undefined
       ? []
-      : gateNameArray(value.requiredGates, "nextTransition.requiredGates"),
+      : gateNameArray(value.requiredGates, "所需质量检查"),
     requiredArtifacts: value.requiredArtifacts === undefined
       ? []
-      : stringArray(value.requiredArtifacts, "nextTransition.requiredArtifacts"),
+      : stringArray(value.requiredArtifacts, "所需材料"),
   };
 }
 
 function parseMaterials(value: unknown): LifecycleMaterial[] {
-  if (!Array.isArray(value)) throw new Error("桥接响应中的 materialsNeeded 无效");
+  if (!Array.isArray(value)) throw new Error("本地服务返回的待补材料列表无效");
   return value.map((item, index) => {
-    if (!isRecord(item)) throw new Error(`桥接响应中的 materialsNeeded[${index}] 无效`);
+    if (!isRecord(item)) throw new Error(`本地服务返回的第 ${index + 1} 项待补材料无效`);
     return {
-      code: nonEmptyString(item.code, `materialsNeeded[${index}].code`),
-      label: nonEmptyString(item.label, `materialsNeeded[${index}].label`),
+      code: nonEmptyString(item.code, "材料编码"),
+      label: nonEmptyString(item.label, "材料名称"),
     };
   });
 }
@@ -628,22 +628,22 @@ function parseSnapshot(payload: unknown): LifecycleSnapshot {
     throw new Error("本地服务返回的检查结果结构不完整");
   }
 
-  const schemaVersion = nonEmptyString(payload.schemaVersion, "schemaVersion");
+  const schemaVersion = nonEmptyString(payload.schemaVersion, "协议版本");
   if (schemaVersion !== LIFECYCLE_BRIDGE_SCHEMA_VERSION) {
     throw new Error(`本地服务版本 ${schemaVersion} 暂不受此页面支持`);
   }
   if (payload.authority !== "agentctl_read_only") {
-    throw new Error("本地服务没有声明只读 agentctl 权威来源");
+    throw new Error("本地服务没有声明只读本地核验权威来源");
   }
   if (payload.readOnly !== true) {
     throw new Error("本地服务没有声明只读执行边界");
   }
 
-  const observedAt = nonEmptyString(payload.observedAt, "observedAt");
+  const observedAt = nonEmptyString(payload.observedAt, "记录时间");
   if (Number.isNaN(Date.parse(observedAt))) {
     throw new Error("本地服务返回的观察时间无效");
   }
-  const projectAlias = nonEmptyString(payload.projectAlias, "projectAlias");
+  const projectAlias = nonEmptyString(payload.projectAlias, "项目别名");
   if (!SAFE_ALIAS_PATTERN.test(projectAlias)) {
     throw new Error("本地服务返回了不安全的项目别名");
   }
@@ -651,34 +651,34 @@ function parseSnapshot(payload: unknown): LifecycleSnapshot {
   const status = payload.status;
   const nextAction = payload.nextAction;
   const doctor = payload.doctor;
-  const controlStatus = nonEmptyString(status.controlStatus, "status.controlStatus");
+  const controlStatus = nonEmptyString(status.controlStatus, "控制阶段");
   if (!(PROJECT_STAGES as readonly string[]).includes(controlStatus)) {
-    throw new Error("桥接响应包含未知控制状态");
+    throw new Error("本地服务返回的数据包含未知控制状态");
   }
-  const action = nonEmptyString(nextAction.action, "nextAction.action");
+  const action = nonEmptyString(nextAction.action, "下一动作");
   if (!["resolve_gate", "advance", "closed"].includes(action)) {
-    throw new Error("桥接响应包含未知下一动作");
+    throw new Error("本地服务返回的数据包含未知下一动作");
   }
   const nextGate = optionalString(nextAction.gate);
   if (nextGate && !(GATE_NAMES as readonly string[]).includes(nextGate)) {
-    throw new Error("桥接响应包含未知下一动作 Gate");
+    throw new Error("本地服务返回的数据包含未知质量检查项");
   }
   const nextTarget = optionalString(nextAction.to);
   if (nextTarget && !(PROJECT_STAGES as readonly string[]).includes(nextTarget)) {
-    throw new Error("桥接响应包含未知下一动作状态");
+    throw new Error("本地服务返回的数据包含未知下一阶段状态");
   }
   if (!Array.isArray(doctor.checks) || doctor.checks.length === 0) {
-    throw new Error("桥接响应中的 doctor.checks 无效");
+    throw new Error("本地服务返回的健康检查列表无效");
   }
   const seenChecks = new Set<string>();
   const checks = doctor.checks.map((item, index) => {
-    if (!isRecord(item)) throw new Error(`桥接响应中的 doctor.checks[${index}] 无效`);
-    const name = nonEmptyString(item.name, `doctor.checks[${index}].name`);
-    if (seenChecks.has(name)) throw new Error("桥接响应中的运行健康检查项重复");
+    if (!isRecord(item)) throw new Error(`本地服务返回的第 ${index + 1} 项健康检查无效`);
+    const name = nonEmptyString(item.name, "健康检查名称");
+    if (seenChecks.has(name)) throw new Error("本地服务返回的运行健康检查项重复");
     seenChecks.add(name);
     return {
       name,
-      passed: booleanValue(item.passed, `doctor.checks[${index}].passed`),
+      passed: booleanValue(item.passed, "健康检查结果"),
     };
   });
   const expectedCheckNames = Object.keys(DOCTOR_LABELS).filter(
@@ -686,25 +686,25 @@ function parseSnapshot(payload: unknown): LifecycleSnapshot {
   );
   if (seenChecks.size !== expectedCheckNames.length
     || expectedCheckNames.some((name) => !seenChecks.has(name))) {
-    throw new Error("桥接响应缺少当前阶段要求的运行健康检查项");
+    throw new Error("本地服务返回的数据缺少当前阶段要求的运行健康检查项");
   }
 
-  const consistent = booleanValue(payload.consistent, "consistent");
+  const consistent = booleanValue(payload.consistent, "一致性标记");
   const gates = parseGates(status.gates);
-  const blockingGates = gateNameArray(status.blockingGates, "status.blockingGates");
+  const blockingGates = gateNameArray(status.blockingGates, "未通过质量检查");
   const nextTransition = parseTransition(status.nextTransition);
-  const doctorHealthy = booleanValue(doctor.healthy, "doctor.healthy");
-  const doctorExitCode = nonNegativeInteger(doctor.exitCode, "doctor.exitCode");
-  if (doctorExitCode > 5) throw new Error("桥接响应中的运行健康退出码无效");
-  const failedChecks = stringArray(doctor.failedChecks, "doctor.failedChecks");
+  const doctorHealthy = booleanValue(doctor.healthy, "健康状态");
+  const doctorExitCode = nonNegativeInteger(doctor.exitCode, "核验状态码");
+  if (doctorExitCode > 5) throw new Error("本地服务返回的运行健康状态码无效");
+  const failedChecks = stringArray(doctor.failedChecks, "未通过检查项");
   const derivedFailedChecks = checks.filter((check) => !check.passed).map((check) => check.name);
   if (new Set(failedChecks).size !== failedChecks.length
     || failedChecks.length !== derivedFailedChecks.length
     || failedChecks.some((name, index) => name !== derivedFailedChecks[index])) {
-    throw new Error("桥接响应中的运行健康检查汇总不一致");
+    throw new Error("本地服务返回的运行健康检查汇总不一致");
   }
   if (doctorHealthy !== (doctorExitCode === 0 && derivedFailedChecks.length === 0)) {
-    throw new Error("桥接响应中的运行健康状态与检查结果不一致");
+    throw new Error("本地服务返回的运行健康状态与检查结果不一致");
   }
 
   if (consistent) {
@@ -717,22 +717,22 @@ function parseSnapshot(payload: unknown): LifecycleSnapshot {
       : [];
     if (blockingGates.length !== expectedBlocking.length
       || blockingGates.some((gate, index) => gate !== expectedBlocking[index])) {
-      throw new Error("桥接响应中的阻断 Gate 与 Gate 结果不一致");
+      throw new Error("本地服务返回的未通过检查项与九项检查结果不一致");
     }
     if (nextTransition && nextTransition.from !== controlStatus) {
-      throw new Error("桥接响应中的下一转换与当前控制状态矛盾");
+      throw new Error("本地服务返回的下一转换与当前控制状态矛盾");
     }
     if (action === "closed") {
       if (controlStatus !== "closed" || nextGate || nextTarget || nextTransition !== null || blockingGates.length > 0) {
-        throw new Error("桥接响应中的封存动作与工作流状态矛盾");
+        throw new Error("本地服务返回的封存动作与工作流状态矛盾");
       }
     } else if (action === "resolve_gate") {
       if (!nextGate || nextTarget || blockingGates[0] !== nextGate) {
-        throw new Error("桥接响应中的 Gate 处理动作与阻断顺序矛盾");
+        throw new Error("本地服务返回的检查处理动作与阻断顺序矛盾");
       }
     } else if (!nextTarget || nextGate || !nextTransition
       || nextTarget !== nextTransition.to || blockingGates.length > 0) {
-      throw new Error("桥接响应中的推进建议与下一转换矛盾");
+      throw new Error("本地服务返回的推进建议与下一转换矛盾");
     }
   }
 
@@ -741,35 +741,35 @@ function parseSnapshot(payload: unknown): LifecycleSnapshot {
     authority: "agentctl_read_only",
     readOnly: true,
     projectAlias,
-    projectId: nonEmptyString(payload.projectId, "projectId"),
+    projectId: nonEmptyString(payload.projectId, "项目标识"),
     observedAt,
     consistent,
     contract: {
-      workflowVersion: nonEmptyString(payload.contract.workflowVersion, "contract.workflowVersion"),
-      workflowSha256: nonEmptyString(payload.contract.workflowSha256, "contract.workflowSha256"),
-      gatesVersion: nonEmptyString(payload.contract.gatesVersion, "contract.gatesVersion"),
-      gatesSha256: nonEmptyString(payload.contract.gatesSha256, "contract.gatesSha256"),
+      workflowVersion: nonEmptyString(payload.contract.workflowVersion, "工作流版本"),
+      workflowSha256: nonEmptyString(payload.contract.workflowSha256, "工作流校验值"),
+      gatesVersion: nonEmptyString(payload.contract.gatesVersion, "质量检查版本"),
+      gatesSha256: nonEmptyString(payload.contract.gatesSha256, "质量检查校验值"),
     },
     status: {
       controlStatus,
-      competitionStage: nonEmptyString(status.competitionStage, "status.competitionStage"),
-      statusRevision: nonNegativeInteger(status.statusRevision, "status.statusRevision"),
+      competitionStage: nonEmptyString(status.competitionStage, "赛事阶段"),
+      statusRevision: nonNegativeInteger(status.statusRevision, "状态版本"),
       gates,
       blockingGates,
       nextTransition,
       materialsNeeded: parseMaterials(status.materialsNeeded),
-      safeParallelWork: stringArray(status.safeParallelWork, "status.safeParallelWork"),
-      blockerSummary: parseSeveritySummary(status.blockerSummary, "status.blockerSummary"),
-      riskSummary: parseSeveritySummary(status.riskSummary, "status.riskSummary"),
+      safeParallelWork: stringArray(status.safeParallelWork, "可并行工作项"),
+      blockerSummary: parseSeveritySummary(status.blockerSummary, "阻塞项汇总"),
+      riskSummary: parseSeveritySummary(status.riskSummary, "风险项汇总"),
       inventorySummary: isRecord(status.inventorySummary)
-        ? { total: nonNegativeInteger(status.inventorySummary.total, "status.inventorySummary.total") }
-        : (() => { throw new Error("桥接响应中的 status.inventorySummary 无效"); })(),
+        ? { total: nonNegativeInteger(status.inventorySummary.total, "待复核材料数") }
+        : (() => { throw new Error("本地服务返回的待复核材料汇总无效"); })(),
     },
     nextAction: {
       action,
       gate: nextGate,
       to: nextTarget,
-      definitionOfDone: nonEmptyString(nextAction.definitionOfDone, "nextAction.definitionOfDone"),
+      definitionOfDone: nonEmptyString(nextAction.definitionOfDone, "完成条件"),
     },
     doctor: {
       healthy: doctorHealthy,
@@ -777,7 +777,7 @@ function parseSnapshot(payload: unknown): LifecycleSnapshot {
       checks,
       failedChecks,
     },
-    redactions: stringArray(payload.redactions, "redactions"),
+    redactions: stringArray(payload.redactions, "安全脱敏项"),
   };
 }
 
@@ -791,11 +791,11 @@ function parseProjectChoices(payload: unknown): LifecycleProjectChoice[] {
   const rawProjects = payload.projects;
 
   const seen = new Set<string>();
-  return rawProjects.map((item, index) => {
+  return rawProjects.map((item) => {
     const record = isRecord(item) ? item : null;
     const alias = typeof item === "string"
       ? item.trim()
-      : nonEmptyString(record?.alias ?? record?.projectAlias, `projects[${index}].alias`);
+      : nonEmptyString(record?.alias ?? record?.projectAlias, "项目别名");
     if (!SAFE_ALIAS_PATTERN.test(alias) || seen.has(alias)) {
       throw new Error("项目清单含有重复或不安全的别名");
     }
@@ -850,7 +850,7 @@ async function fetchBridgeJson(path: string, token: string, timeoutMs: number): 
         throw new Error("本地口令无效或已过期，请使用本次启动服务时显示的口令");
       }
       if (response.status === 403) {
-        throw new Error("当前本机页面地址未获服务授权，请核对桥接配置中的页面地址和端口");
+        throw new Error("当前本机页面地址未获服务授权，请核对本地服务配置中的页面地址和端口");
       }
       if (response.status === 404) throw new Error("本地服务中没有这个项目别名");
       if (response.status === 409) throw new Error("读取期间项目状态已变化，请重新读取");
@@ -861,7 +861,7 @@ async function fetchBridgeJson(path: string, token: string, timeoutMs: number): 
 
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.toLowerCase().includes("application/json")) {
-      throw new Error("本地服务没有返回可核验的 JSON 数据");
+      throw new Error("本地服务没有返回可核验的结构化数据");
     }
     const declaredLength = Number(response.headers.get("content-length"));
     if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_CHARACTERS) {
@@ -908,12 +908,12 @@ function nextActionLabel(action: string, gate?: string, target?: string): string
     const gateLabel = gate && (GATE_NAMES as readonly string[]).includes(gate)
       ? GATE_LABELS[gate as GateName]
       : "当前";
-    return `先补齐“${gateLabel}”质量门禁所需证据`;
+    return `请先补齐“${gateLabel}”质量检查所需证据`;
   }
   if (action === "advance") {
     return target
-      ? `当前只读建议：仅可在本机尝试进入“${stageLabel(target)}”；是否允许推进仍由本机完整校验决定`
-      : "当前只读建议仅供参考；是否允许推进仍由本机完整校验决定";
+      ? `当前本机只读核验显示可尝试进入“${stageLabel(target)}”，是否允许推进仍由本机完整校验决定`
+      : "当前本机只读核验仅供参考，是否允许推进仍由本机完整校验决定";
   }
   return "工作流已封存，请复验最新体检和交接状态";
 }
@@ -925,7 +925,7 @@ function portalGates(project: LifecyclePortalProject | null): LifecycleGate[] {
 
 function GateGrid({ gates, raw = false }: { gates: ReadonlyArray<LifecycleGate>; raw?: boolean }) {
   return (
-    <div style={pageStyles.gateGrid} aria-label="九个质量门禁状态">
+    <div style={pageStyles.gateGrid} aria-label="九项质量检查状态">
       {gates.map((gate) => {
         const color = gate.status === "pass"
           ? "var(--teal-deep)"
@@ -1134,11 +1134,11 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
   return (
     <section id="lifecycle" style={{ ...pageStyles.shell, marginTop: 28 }} aria-labelledby={`${id}-title`}>
       <div style={pageStyles.heading}>
-        <span style={pageStyles.eyebrow}>生命周期作战室 · 本地只读</span>
-        <h2 id={`${id}-title`} style={pageStyles.title}>把登记信息与真实 Agent 进度分开看</h2>
+        <span style={pageStyles.eyebrow}>项目阶段核验室 · 本地只读</span>
+        <h2 id={`${id}-title`} style={pageStyles.title}>把协作登记信息与本机真实核验进度分开看</h2>
         <p style={pageStyles.description}>
-          左侧为协作登记，右侧为本机证据控制程序的只读摘要。
-          质量检查、阶段推进与最终交接均在本机控制程序中执行。
+          左侧为协作登记，右侧为本机证据核验程序的只读摘要。
+          质量检查、阶段推进与最终交接均在本机核验程序中执行。
         </p>
       </div>
 
@@ -1149,7 +1149,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
         </div>
         <div>
           <strong>本地权威态</strong>
-          <p style={pageStyles.helper}>来自本机只读证据控制程序；只有当前契约一致时才解释下一转换。</p>
+          <p style={pageStyles.helper}>来自本机只读证据核验程序，仅在当前契约一致时解释下一转换。</p>
         </div>
       </div>
 
@@ -1209,7 +1209,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
             ))}
           </select>
           <p style={pageStyles.helper}>
-            固定读取地址：<code style={pageStyles.mono}>{LOCAL_AGENTCTL_BRIDGE_ORIGIN}</code>
+            固定读取地址为 <code style={pageStyles.mono}>{LOCAL_AGENTCTL_BRIDGE_ORIGIN}</code>
           </p>
           <div style={pageStyles.buttonRow}>
             <button
@@ -1227,7 +1227,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
         {pageAccess === "checking" ? <p style={pageStyles.notice}>正在确认页面是否由本机打开…</p> : null}
         {pageAccess === "blocked" ? (
           <p role="alert" style={pageStyles.error}>
-            安全阻断：只有从 <strong>localhost</strong> 或 <strong>127.0.0.1</strong> 打开的页面才能访问本机桥接服务。
+            当前页面并非由 <strong>localhost</strong> 或 <strong>127.0.0.1</strong> 打开，已停止访问本机只读服务。
           </p>
         ) : null}
         {error ? <p role="alert" style={pageStyles.error}>{error}</p> : null}
@@ -1239,7 +1239,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
           <div style={pageStyles.cardHead}>
             <div>
               <h3 id={`${id}-portal-title`} style={pageStyles.cardTitle}>门户登记态｜不是进度凭证</h3>
-              <p style={pageStyles.helper}>来自网站登记记录；仅用于协作参考。</p>
+              <p style={pageStyles.helper}>来自网站登记记录，仅用于协作参考。</p>
             </div>
             <span style={pageStyles.badge}>非权威</span>
           </div>
@@ -1248,7 +1248,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
             <>
               <div>
                 <strong>{portalProject.title}</strong>
-                <p style={pageStyles.helper}>项目 ID：<code style={pageStyles.mono}>{portalProject.id}</code></p>
+                <p style={pageStyles.helper}>项目标识 <code style={pageStyles.mono}>{portalProject.id}</code></p>
               </div>
               <dl style={pageStyles.facts}>
                 <div style={pageStyles.fact}>
@@ -1273,9 +1273,9 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                 <GateGrid gates={portalGateList} />
               </div>
               <p style={pageStyles.helper}>
-                最后登记：<time dateTime={portalProject.updatedAt}>{formatTime(portalProject.updatedAt)}</time>
+                最近更新于 <time dateTime={portalProject.updatedAt}>{formatTime(portalProject.updatedAt)}</time>
               </p>
-              <p style={pageStyles.warning}>登记值仅供协作参考；阶段推进与交接以本机完整校验为准。</p>
+              <p style={pageStyles.warning}>登记值仅供协作参考，阶段推进与交接以本机完整校验为准。</p>
             </>
           ) : (
             <p style={pageStyles.warning}>尚未选择门户项目。</p>
@@ -1286,7 +1286,7 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
           <div style={pageStyles.cardHead}>
             <div>
               <h3 id={`${id}-local-title`} style={pageStyles.cardTitle}>本地权威态｜只读</h3>
-              <p style={pageStyles.helper}>本机证据控制程序的只读摘要。</p>
+              <p style={pageStyles.helper}>本机证据核验程序的只读摘要。</p>
             </div>
             {snapshotStale ? <span style={pageStyles.staleBadge}>旧快照 · 已过期</span> : <span style={pageStyles.badge}>只读</span>}
           </div>
@@ -1296,15 +1296,15 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
               <div>
                 <strong>{projects.find((project) => project.alias === snapshot.projectAlias)?.title ?? snapshot.projectAlias}</strong>
                 <p style={pageStyles.helper}>
-                  别名 <code style={pageStyles.mono}>{snapshot.projectAlias}</code> · 项目 ID <code style={pageStyles.mono}>{snapshot.projectId}</code>
+                  别名 <code style={pageStyles.mono}>{snapshot.projectAlias}</code> · 项目标识 <code style={pageStyles.mono}>{snapshot.projectId}</code>
                 </p>
                 <p style={pageStyles.helper}>
-                  观察时间：<time dateTime={snapshot.observedAt}>{formatTime(snapshot.observedAt)}</time>
+                  记录于 <time dateTime={snapshot.observedAt}>{formatTime(snapshot.observedAt)}</time>
                 </p>
               </div>
 
               {!sameProject && portalProject ? (
-                <p style={pageStyles.warning}>项目 ID 不一致，已暂停比较。</p>
+                <p style={pageStyles.warning}>项目标识不一致，已暂停比较。</p>
               ) : null}
               {!snapshot.consistent ? (
                 <p style={pageStyles.error}>本机检查摘要不一致，仅展示原始状态。</p>
@@ -1315,8 +1315,8 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                   <details style={{ marginTop: 6 }}>
                     <summary style={{ cursor: "pointer", fontWeight: 800 }}>查看技术校验值</summary>
                     <div style={{ ...pageStyles.mono, marginTop: 6 }}>
-                      工作流：收到 {snapshot.contract.workflowVersion} / {snapshot.contract.workflowSha256.slice(0, 12)}…，页面期望 {CONTROL_CONTRACT_META.workflowVersion} / {CONTROL_CONTRACT_META.workflowSha256.slice(0, 12)}…<br />
-                      质量门禁：收到 {snapshot.contract.gatesVersion} / {snapshot.contract.gatesSha256.slice(0, 12)}…，页面期望 {CONTROL_CONTRACT_META.gatesVersion} / {CONTROL_CONTRACT_META.gatesSha256.slice(0, 12)}…
+                      工作流版本收到 {snapshot.contract.workflowVersion}（{snapshot.contract.workflowSha256.slice(0, 12)}…），页面期望 {CONTROL_CONTRACT_META.workflowVersion}（{CONTROL_CONTRACT_META.workflowSha256.slice(0, 12)}…）<br />
+                      质量检查版本收到 {snapshot.contract.gatesVersion}（{snapshot.contract.gatesSha256.slice(0, 12)}…），页面期望 {CONTROL_CONTRACT_META.gatesVersion}（{CONTROL_CONTRACT_META.gatesSha256.slice(0, 12)}…）
                     </div>
                   </details>
                 </div>
@@ -1430,9 +1430,9 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                 )}
                 {presentation.showNextAction ? (
                   <p style={pageStyles.helper}>
-                    完成标准：{snapshot.nextAction.definitionOfDone}
-                    {snapshot.nextAction.gate ? ` · 质量门禁 ${GATE_LABELS[snapshot.nextAction.gate as GateName]}` : ""}
-                    {snapshot.nextAction.to ? ` · 目标 ${stageLabel(snapshot.nextAction.to)}` : ""}
+                    完成条件为{snapshot.nextAction.definitionOfDone}
+                    {snapshot.nextAction.gate ? ` · 关联检查项 ${GATE_LABELS[snapshot.nextAction.gate as GateName]}` : ""}
+                    {snapshot.nextAction.to ? ` · 目标阶段 ${stageLabel(snapshot.nextAction.to)}` : ""}
                   </p>
                 ) : null}
               </div>
@@ -1458,17 +1458,17 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
                 {snapshot.doctor.checks.length > 0 ? (
                   <ul style={pageStyles.list}>
                     {snapshot.doctor.checks.map((check) => (
-                      <li key={check.name}>{check.passed ? "通过" : "未通过"}：{DOCTOR_LABELS[check.name] ?? "未知检查项"}</li>
+                      <li key={check.name}>{DOCTOR_LABELS[check.name] ?? "其他检查项"}（{check.passed ? "已通过" : "未通过"}）</li>
                     ))}
                   </ul>
                 ) : null}
                 {snapshot.doctor.failedChecks.length > 0 ? (
-                  <p style={pageStyles.helper}>未通过项目：{snapshot.doctor.failedChecks.map((item) => DOCTOR_LABELS[item] ?? "未知检查项").join("、")}</p>
+                  <p style={pageStyles.helper}>尚未通过的项目包括 {snapshot.doctor.failedChecks.map((item) => DOCTOR_LABELS[item] ?? "其他检查项").join("、")}</p>
                 ) : null}
-                <p style={pageStyles.warning}>本次只读核验已完成；阶段推进与最终交接仍需本机完整校验。</p>
+                <p style={pageStyles.warning}>本次只读核验已完成，阶段推进与最终交接仍需本机完整校验。</p>
                 <details>
-                  <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 800 }}>查看技术状态</summary>
-                  <p style={{ ...pageStyles.mono, marginTop: 6 }}>本机检查退出码：{snapshot.doctor.exitCode}</p>
+                  <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 800 }}>查看核验状态码</summary>
+                  <p style={{ ...pageStyles.mono, marginTop: 6 }}>本机核验状态码为 {snapshot.doctor.exitCode}</p>
                 </details>
               </div>
 
@@ -1483,11 +1483,11 @@ export default function LifecycleWarRoom({ portalProject }: LifecycleWarRoomProp
 
               {presentation.showRawTechnicalDetails ? (
                 <details>
-                  <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 800 }}>查看已暂停解释的原始技术字段</summary>
+                  <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 800 }}>查看已暂停解释的状态记录</summary>
                   <p style={{ ...pageStyles.mono, marginTop: 6 }}>
-                    controlStatus={snapshot.status.controlStatus}<br />
-                    nextTarget={snapshot.status.nextTransition?.to ?? "null"}<br />
-                    nextAction={snapshot.nextAction.action}
+                    记录阶段 {stageLabel(snapshot.status.controlStatus)}<br />
+                    下一阶段 {snapshot.status.nextTransition?.to ? stageLabel(snapshot.status.nextTransition.to) : "无"}<br />
+                    待定动作 {snapshot.nextAction.action === "resolve_gate" ? "补齐质量检查" : snapshot.nextAction.action === "advance" ? "尝试进入下一阶段" : "已封存"}
                   </p>
                 </details>
               ) : null}

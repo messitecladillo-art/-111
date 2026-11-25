@@ -17,7 +17,7 @@ const CORES = {
   pptx: { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml", root: "presentation", path: "ppt/presentation.xml", namespaces: ["http://schemas.openxmlformats.org/presentationml/2006/main", "http://purl.oclc.org/ooxml/presentationml/main"] },
   xlsx: { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml", root: "workbook", path: "xl/workbook.xml", namespaces: ["http://schemas.openxmlformats.org/spreadsheetml/2006/main", "http://purl.oclc.org/ooxml/spreadsheetml/main"] },
 } as const;
-function bad(message: string): never { throw new Error(`Office 文件结构检查未通过：${message}`); }
+function bad(message: string): never { throw new Error(`Office 文件结构检查未通过，${message}`); }
 const crcTable = Uint32Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
 function crc32(bytes: Uint8Array): number { let crc = 0xffffffff; for (const byte of bytes) crc = crcTable[(crc ^ byte) & 255] ^ (crc >>> 8); return (crc ^ 0xffffffff) >>> 0; }
 function utf8(bytes: Uint8Array, label: string): string { try { return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes); } catch { return bad(`${label}不是有效 UTF-8。`); } }

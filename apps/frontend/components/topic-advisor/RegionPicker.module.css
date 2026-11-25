@@ -75,3 +75,43 @@
 @media (max-width: 1000px) { .panel { inset: 24px 24px auto; translate: none; width: auto; max-height: calc(100dvh - 48px); } }
 @media (max-width: 720px) { .panel { inset-inline: 16px; padding: 15px; } .cascade { grid-template-columns: .9fr 1fr 1.1fr; } .root .column h5 { padding: 9px 7px; } .column h5 span { display: none; } .columnList { padding: 3px; height: 230px; } .root .columnList button { padding: 6px 4px; } }
 @media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .panel { opacity: 1; transform: none; } }
+
+@media (forced-colors: active) {
+  .root :is(button, input):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .trigger,
+  .clear,
+  .close,
+  .search input,
+  .columnList button,
+  .results button,
+  .panelFooter button {
+    border: 1px solid ButtonText;
+  }
+  .panel,
+  .column,
+  .legacy,
+  .selection {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .panelHeader,
+  .panelFooter,
+  .column h5 {
+    border-color: CanvasText;
+  }
+  .columnList button[aria-selected="true"],
+  .columnList button[aria-pressed="true"],
+  .results button[aria-selected="true"],
+  .root .panelFooter .confirm {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

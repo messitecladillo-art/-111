@@ -114,7 +114,7 @@ test('statistics on the canvas equal the 数据分析 module exactly, including 
     assert.equal(s.status, 'done', `${nid}: ${s.message}`);
     assert.deepEqual(s.output.value.result, want);
   }
-  assert.equal(states.get(sub.id).output.value.dataset.lineage[0], `筛选「渠道」= 校园：保留 ${branch.rows.length} / ${table.rows.length} 行`);
+  assert.equal(states.get(sub.id).output.value.dataset.lineage[0], `筛选“渠道”= 校园：保留 ${branch.rows.length} / ${table.rows.length} 行`);
 });
 
 test('a failing branch blocks only its dependents; independent branches still finish', async () => {
@@ -123,7 +123,7 @@ test('a failing branch blocks only its dependents; independent branches still fi
   const events = [];
   const states = await runCanvas(d, runScope(d, null), run, { onEvent: e => events.push(e) });
   assert.equal(states.get(bad.id).status, 'failed');
-  assert.match(states.get(bad.id).message, /没有「不存在的列」列/);
+  assert.match(states.get(bad.id).message, /没有“不存在的列”列/);
   assert.equal(states.get(chart.id).status, 'blocked');
   assert.equal(states.get(good.id).status, 'done');
   // Hand-off pulses fire once per edge that actually delivered data.

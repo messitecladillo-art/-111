@@ -21,9 +21,9 @@ function questionSteps(variables: readonly string[], design: Questionnaire | nul
   return variables.map(name => {
     const key = name.trim().toLowerCase();
     const index = design ? design.questions.findIndex(q => q.variable.trim().toLowerCase() === key || (!!q.text.trim() && q.text.trim() === name.trim())) : -1;
-    if (!design || index < 0) return { kind: 'question', text: `变量「${name}」`, detail: design ? '没有对应到问卷设计里的题目' : '问卷设计里还没有问卷，无法对应到题目' };
+    if (!design || index < 0) return { kind: 'question', text: `变量“${name}”`, detail: design ? '没有对应到问卷设计里的题目' : '问卷设计里还没有问卷，无法对应到题目' };
     const q = design.questions[index];
-    return { kind: 'question', text: `第 ${index + 1} 题「${q.text.trim() || '题干待填写'}」`, detail: `变量 ${q.variable}` };
+    return { kind: 'question', text: `第 ${index + 1} 题“${q.text.trim() || '题干待填写'}”`, detail: `变量 ${q.variable}` };
   });
 }
 
@@ -38,12 +38,12 @@ export function traceExhibits(content: EditorContent | null, design: Questionnai
     if (!r) continue;
     const frame = r.method === 'sampling-frame', planned = r.metrics.find(m => m.label === '计划有效样本')?.value;
     const steps: TraceStep[] = [
-      { kind: 'result', text: `结果「${r.title}」`, detail: `${METHOD_LABELS[r.method] ?? r.method}${frame ? (planned ? ` · 计划有效样本 ${planned}` : '') : ` · 有效样本 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}`}` },
+      { kind: 'result', text: `结果“${r.title}”`, detail: `${METHOD_LABELS[r.method] ?? r.method}${frame ? (planned ? ` · 计划有效样本 ${planned}` : '') : ` · 有效样本 ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}`}` },
       ...r.warnings.filter(w => /^原表/u.test(w)).map((w): TraceStep => ({ kind: 'scope', text: '计算范围', detail: sentence(w) })),
       // A frame's recorded caveat (a non-probability stage) bounds what its numbers can claim, so it stays on the path.
       ...(frame ? r.warnings.map((w): TraceStep => ({ kind: 'scope', text: '抽样说明', detail: sentence(w) })) : []),
       ...r.warnings.filter(w => /^质控/u.test(w)).map((w): TraceStep => ({ kind: 'quality', text: '质量控制', detail: sentence(w.replace(/^质控：/u, '')) })),
-      { kind: 'source', text: frame ? '抽样设计' : `数据「${r.sourceName}」`,
+      { kind: 'source', text: frame ? '抽样设计' : `数据“${r.sourceName}”`,
         detail: `${frame ? r.sourceName : SOURCE_KIND[r.classification] ?? r.classification} · 指纹 SHA-256 ${r.sourceHash.slice(0, 12)}…${r.sourceUrl ? ` · ${r.sourceUrl}` : ''}` },
       ...questionSteps(r.variables ?? [], design),
     ];

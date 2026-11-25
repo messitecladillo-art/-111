@@ -55,3 +55,47 @@
 @media(prefers-reduced-motion:reduce) { .library .directory > button,.library .content button { transition: none; } }
 
 .library input[type=checkbox] { width: 14px; height: 14px; min-width: 14px; padding: 0; flex: 0 0 14px; margin: 3px 0 0; }
+
+@media (forced-colors: active) {
+  .library,
+  .filters,
+  .proposal,
+  .quiz {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonBorder;
+  }
+  .filters,
+  .directory,
+  .checks,
+  .sources,
+  .sources > div {
+    border-color: ButtonBorder;
+  }
+  .filters input[type=search],
+  .filters select,
+  .library .content button,
+  .library .directory > button,
+  .library .directory > button span {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonBorder;
+  }
+  .library .content button:disabled {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+  .library .directory > button[aria-pressed=true],
+  .quiz button[aria-pressed=true],
+  .marker {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  .library :is(button, input, select, summary):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

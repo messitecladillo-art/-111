@@ -30,3 +30,21 @@ test('an aborted stream cannot publish a completed candidate',async()=>{
   const abort=new AbortController();abort.abort();const previous=fetch;globalThis.fetch=async()=>response([done()]);
   try{await assert.rejects(requestFullReport(input,{csrfToken:'test',signal:abort.signal,onEvent(){}}),{name:'AbortError'});}finally{globalThis.fetch=previous;}
 });
+test('evidence_gap NDJSON progress events are forwarded cleanly while malformed phases are rejected',async()=>{
+  const previous=globalThis.fetch;
+  const seen=[];
+  globalThis.fetch=async()=>response([
+    {type:'evidence_gap',runId:input.runId,phase:'gap_detected',count:2,gaps:[{id:'g1',nodeId:'drivers.model',kind:'missing_analysis',severity:'high',description:'缺少回归驱动检验'}]},
+    {type:'evidence_gap',runId:input.runId,phase:'gap_supplemented',count:2,autonomousRunId:'auto-run-1'},
+    {type:'evidence_gap',runId:input.runId,phase:'gap_skipped'},
+    done(),
+  ]);
+  try{
+    const result=await requestFullReport(input,{csrfToken:'test',signal:new AbortController().signal,onEvent:ev=>seen.push(ev)});
+    assert.equal(result.quality.deliverable,false);
+    assert.deepEqual(seen.map(e=>`${e.type}:${e.phase}`),['evidence_gap:gap_detected','evidence_gap:gap_supplemented','evidence_gap:gap_skipped']);
+  }finally{
+    globalThis.fetch=previous;
+  }
+  await assert.rejects(run(response([{type:'evidence_gap',runId:input.runId,phase:'bogus_phase'},done()])),/不支持的报告任务回执/);
+});

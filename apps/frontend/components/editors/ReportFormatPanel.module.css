@@ -45,3 +45,11 @@ span.coverThumb { background: repeating-linear-gradient(135deg, transparent 0 6p
 .source dd { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
 .source a { color: var(--wb-accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 1150px) { .scope { grid-template-columns: repeat(3,minmax(100px,1fr)); } .specs { grid-template-columns: repeat(2,minmax(0,1fr)); } .profileRow { grid-template-columns: 1fr 1fr; } }
+@media (forced-colors: active) {
+  .panel :is(button, input, select, a, summary):focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; box-shadow: none !important; }
+  .panel :is(button, input:not([type="checkbox"]), select), .coverButton, .coverRemove, .swatch { border: 1px solid ButtonText; }
+  .source a { color: LinkText; text-decoration: underline; }
+  .panel, .content, .scope, .specs, .coverRow, .notices, .source { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none !important; }
+  .panel { border: 1px solid CanvasText; }
+  .swatch[aria-pressed="true"], .coverButton, .status { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
+}

@@ -4,7 +4,7 @@ import {
   parseQuestionnaireHeadResponse, parseQuestionnaireHistoryVersion,
   reconcileQuestionnaireHead, validateQuestionnaireSaveReceipt, type QuestionnaireSaveRequest,
 } from '@/lib/questionnaire-persistence';
-import { verifyTopicBindingReceipt, type TopicBindingReceipt } from '@/lib/topic-questionnaire-api';
+import type { TopicBindingReceipt } from '@/lib/topic-questionnaire-api';
 import type { TopicQuestionnaireBinding } from '@/lib/topic-questionnaire';
 
 /** One bounded envelope for questionnaires and their paired source-binding sidecars. */
@@ -39,6 +39,8 @@ export function createQuestionnaireRepository(projectId: string, transport: Tran
   async function bindingFor(value: Pick<QuestionnaireHead, 'id' | 'design'>, stillCurrent: Authority = () => true): Promise<TopicBindingReceipt | undefined> {
     if (!stillCurrent()) return undefined;
     const raw = await transport.read(`${path}/versions/${encodeURIComponent(value.id)}/topic-binding`, QUESTIONNAIRE_READ_OPTIONS);
+    if (!stillCurrent()) return undefined;
+    const { verifyTopicBindingReceipt } = await import('@/lib/topic-questionnaire-api');
     if (!stillCurrent()) return undefined;
     const receipt = await verifyTopicBindingReceipt(raw, { versionId: value.id, design: value.design });
     if (!stillCurrent()) return undefined;

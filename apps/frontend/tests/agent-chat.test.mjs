@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { CHAT_ERRORS, chatContext, chatHistory, isDefiniteChatRejection, parseChatReceipt } from '../lib/agent/chat.ts';
 import { illuminate } from '../lib/agent/illumination.ts';
-import { route, toolTurn } from '../lib/agent/router.ts';
+import { resolveHeavyRouted } from '../lib/agent/router-heavy-actions.ts';
+import { parseDirectChatToolIntent, route, toolTurn } from '../lib/agent/router.ts';
 
 const empty = { design: null, dataset: null, report: null, resultPending: false };
 const ctx = (room = null) => ({ room, light: illuminate(empty), traces: [] });
@@ -115,10 +116,10 @@ test('registered results are read with their method, effective sample and statis
 });
 
 test('results are narrowed by title, method or variable; nothing is invented when there are none or the report is unseen', () => {
-  assert.match(text(route('/结果 通勤', withResults()).turn), /与「通勤」有关的已登记的分析结果 1 项/);
+  assert.match(text(route('/结果 通勤', withResults()).turn), /与“通勤”有关的已登记的分析结果 1 项/);
   assert.match(text(toolTurn({ tool: 'results', args: { query: '卡方' } }, withResults()).turn), /有关的已登记的分析结果 1 项。/);
   const none = route('/结果 回归', withResults()).turn;
-  assert.match(text(none), /登记的结果里没有「回归」/);
+  assert.match(text(none), /登记的结果里没有“回归”/);
   assert.deepEqual(none.chips.map(c => c.action.text), ['筛选结果：通勤时间与满意度', '筛选结果：各年级满意度']);
   assert.match(text(route('/结果', withResults({ results: [], findings: [], pending: true, placed: [] })).turn), /正在送往报告/);
   const unseen = route('/结果', withResults(null)).turn;
@@ -177,7 +178,7 @@ test('writing results into the report is offered on a confirmation card that say
   assert.match(text(turn), /把 2 项还没写进报告的登记结果按蓝图写入之前，请确认/);
   assert.equal(card.kind, 'confirm');
   const rows = card.lines.map(line => line.map(s => s.text).join(''));
-  assert.ok(rows.some(row => /^「描述性统计分析」　/.test(row) && row.includes('各年级满意度') && row.includes('通勤时间与满意度')), rows.join('\n'));
+  assert.ok(rows.some(row => /^“描述性统计分析”　/.test(row) && row.includes('各年级满意度') && row.includes('通勤时间与满意度')), rows.join('\n'));
   assert.ok(rows.some(row => /1 项来自教学模拟数据/.test(row)));
   assert.deepEqual(card.confirm.action, { type: 'place', results: ['各年级满意度', '通勤时间与满意度'] });
   assert.deepEqual(route('把结果写进报告', withResults()), route('/写入', withResults()), 'the everyday phrasing');
@@ -254,11 +255,11 @@ test('orchestrator tools parse cleanly and map to stage, studios, section draft,
   assert.equal(simRouted.turn.act.type, 'loadBenchmark');
 });
 
-test('brain tools schema covers all 14 EVI-X tools and strictly validates OpenAI tool-call payloads', async () => {
+test('brain tools schema covers all 19 EVI-X tools and strictly validates OpenAI tool-call payloads', async () => {
   const { AGENT_TOOL_SPECS, toOpenAiToolDefinitions, validateToolAction, formatToolArgsBrief } = await import('../lib/agent/tools-schema.ts');
-  assert.equal(AGENT_TOOL_SPECS.length, 14);
+  assert.equal(AGENT_TOOL_SPECS.length, 19);
   const defs = toOpenAiToolDefinitions();
-  assert.equal(defs.length, 14);
+  assert.equal(defs.length, 19);
   assert.ok(defs.every((d) => d.type === 'function' && d.function.name && d.function.parameters.type === 'object'));
 
   assert.deepEqual(validateToolAction('next', {}), { tool: 'next', args: {} });
@@ -266,13 +267,306 @@ test('brain tools schema covers all 14 EVI-X tools and strictly validates OpenAI
   assert.equal(validateToolAction('light', { room: 'invalid_room' }), null);
   assert.deepEqual(validateToolAction('open', { room: 'sampling' }), { tool: 'open', args: { room: 'sampling' } });
   assert.equal(validateToolAction('open', {}), null);
+  assert.deepEqual(validateToolAction('stage', { view: 'library' }), { tool: 'stage', args: { view: 'library' } });
   assert.deepEqual(validateToolAction('studio', { kind: 'chart' }), { tool: 'studio', args: { kind: 'chart' } });
   assert.equal(validateToolAction('studio', { kind: 'unknown' }), null);
   assert.deepEqual(validateToolAction('lookup', { query: ' 设计效应 ' }), { tool: 'lookup', args: { query: '设计效应' } });
   assert.equal(validateToolAction('lookup', { query: '' }), null);
   assert.deepEqual(validateToolAction('draft_section', { node: '摘要' }), { tool: 'draft_section', args: { node: '摘要' } });
+
+  assert.deepEqual(validateToolAction('run_autonomous_research', {}), { tool: 'run_autonomous_research', args: {} });
+  assert.deepEqual(validateToolAction('run_autonomous_research', { goal: ' 检验异质性 ', datasetMode: 'inline_dataset' }), {
+    tool: 'run_autonomous_research',
+    args: { goal: '检验异质性', datasetMode: 'inline_dataset' },
+  });
+  assert.equal(validateToolAction('run_autonomous_research', { goal: '长'.repeat(201) }), null);
+  assert.equal(validateToolAction('run_autonomous_research', { goal: '   ' }), null);
+  assert.equal(validateToolAction('run_autonomous_research', { datasetMode: 'survey_release' }), null);
+
+  assert.deepEqual(validateToolAction('recommend_resource', {}), { tool: 'recommend_resource', args: {} });
+  assert.deepEqual(validateToolAction('recommend_resource', { query: ' 回归 ' }), { tool: 'recommend_resource', args: { query: '回归' } });
+  assert.equal(validateToolAction('recommend_resource', { query: '长'.repeat(61) }), null);
+  assert.equal(validateToolAction('recommend_resource', { query: '   ' }), null);
+
+  assert.deepEqual(validateToolAction('lookup_county', { query: ' 330782 ' }), { tool: 'lookup_county', args: { query: '330782' } });
+  assert.equal(validateToolAction('lookup_county', {}), null);
+  assert.equal(validateToolAction('lookup_county', { query: '' }), null);
+  assert.equal(validateToolAction('lookup_county', { query: '长'.repeat(61) }), null);
+
+  assert.deepEqual(validateToolAction('verify_citation', {}), { tool: 'verify_citation', args: {} });
+  assert.deepEqual(validateToolAction('verify_citation', { query: ' Callaway ', doi: ' 10.1016/j.jeconom.2020.12.001 ' }), {
+    tool: 'verify_citation',
+    args: { query: 'Callaway', doi: '10.1016/j.jeconom.2020.12.001' },
+  });
+  assert.equal(validateToolAction('verify_citation', { query: '   ' }), null);
+  assert.equal(validateToolAction('verify_citation', { query: '长'.repeat(121) }), null);
+  assert.equal(validateToolAction('verify_citation', { doi: '   ' }), null);
+  assert.equal(validateToolAction('verify_citation', { doi: '1'.repeat(81) }), null);
+
+  assert.deepEqual(validateToolAction('render_sandbox_plot', {}), { tool: 'render_sandbox_plot', args: {} });
+  assert.deepEqual(validateToolAction('render_sandbox_plot', { snapshotId: ' snap_123 ', chartKind: 'forest' }), {
+    tool: 'render_sandbox_plot',
+    args: { snapshotId: 'snap_123', chartKind: 'forest' },
+  });
+  assert.equal(validateToolAction('render_sandbox_plot', { chartKind: 'pie' }), null);
+  assert.equal(validateToolAction('render_sandbox_plot', { snapshotId: '   ' }), null);
+  assert.equal(validateToolAction('render_sandbox_plot', { snapshotId: 's'.repeat(81) }), null);
+
   assert.equal(validateToolAction('unknown_tool', {}), null);
 
   assert.equal(formatToolArgsBrief({ room: 'design', extra: undefined }), 'room=design');
   assert.equal(formatToolArgsBrief(undefined), '');
+});
+
+test('Phase 1 tools parse via chat receipt and route to library recommendations, county gazetteer, and autonomous sandbox', async () => {
+  const { isResultTool } = await import('../lib/agent/chat.ts');
+  const receipt = parseChatReceipt({
+    id: 'phase1-1',
+    status: 'ready',
+    reply: '已检索资料库与县域档案。',
+    actions: [
+      { tool: 'stage', args: { view: 'library' } },
+      { tool: 'recommend_resource', args: { query: '回归' } },
+      { tool: 'lookup_county', args: { query: '330782' } },
+    ],
+  });
+  assert.deepEqual(receipt.actions, [
+    { tool: 'stage', args: { view: 'library' } },
+    { tool: 'recommend_resource', args: { query: '回归' } },
+    { tool: 'lookup_county', args: { query: '330782' } },
+  ]);
+
+  const badReceipt = parseChatReceipt({
+    id: 'phase1-bad',
+    status: 'ready',
+    reply: '拒绝越界参数。',
+    actions: [
+      { tool: 'run_autonomous_research', args: { datasetMode: 'invalid' } },
+      { tool: 'recommend_resource', args: { query: '长'.repeat(61) } },
+      { tool: 'lookup_county', args: { query: '' } },
+    ],
+  });
+  assert.equal(badReceipt.actions.length, 0);
+
+  const autoReceipt = parseChatReceipt({
+    id: 'phase1-auto',
+    status: 'ready',
+    reply: '调度沙盒。',
+    actions: [{ tool: 'run_autonomous_research', args: { goal: '共线性与分层异质性验证', datasetMode: 'planted_trap_benchmark' } }],
+  });
+  assert.deepEqual(autoReceipt.actions, [
+    { tool: 'run_autonomous_research', args: { goal: '共线性与分层异质性验证', datasetMode: 'planted_trap_benchmark' } },
+  ]);
+
+  assert.equal(isResultTool('recommend_resource'), true);
+  assert.equal(isResultTool('lookup_county'), true);
+  assert.equal(isResultTool('run_autonomous_research'), false);
+
+  const libStage = toolTurn({ tool: 'stage', args: { view: 'library' } }, withResults());
+  assert.deepEqual(libStage.turn.act, { type: 'stage', stage: 'library' });
+
+  const recContext = withResults();
+  const recRouted = toolTurn({ tool: 'recommend_resource', args: { query: '回归' } }, recContext);
+  assert.deepEqual(recRouted, { recommendResource: { query: '回归', ctx: recContext } });
+  const recTurn = await resolveHeavyRouted(recRouted);
+  assert.equal(recTurn.cards[0].title, '资源推荐 · 图表/三线表/框图/配色');
+  const recCardText = text({ lines: recTurn.cards[0].lines });
+  assert.match(recCardText, /图表/);
+  assert.match(recCardText, /三线表/);
+  assert.match(recCardText, /框架图/);
+  assert.match(recCardText, /信息图板/);
+  assert.doesNotMatch(recCardText, /Bento|\[[a-z0-9_-]+\]|[【】「」『』]|#[0-9a-f]{6}/i);
+  assert.match(recCardText, /配色板/);
+  assert.deepEqual(recTurn.chips[0], { label: '进入研究资料库浏览全部例图', action: { type: 'stage', stage: 'library' } });
+
+  const countyRouted = toolTurn({ tool: 'lookup_county', args: { query: '330782' } }, ctx());
+  assert.deepEqual(countyRouted, { lookupCounty: '330782' });
+  const countyTurn = await resolveHeavyRouted(countyRouted);
+  assert.equal(countyTurn.cards[0].title, '区县风物检索');
+  const countyText = text({ lines: countyTurn.cards[0].lines });
+  assert.match(countyText, /330782/);
+  assert.match(countyText, /义乌市/);
+  assert.match(countyText, /精选五维档案/);
+  assert.match(countyText, /政 /);
+  assert.match(countyText, /经 /);
+  assert.match(countyText, /文 /);
+  assert.match(countyText, /社 /);
+  assert.match(countyText, /俗 /);
+  assert.doesNotMatch(countyText, /[【】「」『』]|#[0-9a-f]{6}/i);
+  assert.deepEqual(countyTurn.chips[0], { label: '打开中国县域风物志', action: { type: 'stage', stage: 'library' } });
+
+  const missingCountyRouted = toolTurn({ tool: 'lookup_county', args: { query: '不存在的县9999' } }, ctx());
+  assert.deepEqual(missingCountyRouted, { lookupCounty: '不存在的县9999' });
+  const missingCounty = await resolveHeavyRouted(missingCountyRouted);
+  assert.equal(missingCounty.cards[0].title, '区县风物检索');
+  assert.match(text({ lines: missingCounty.cards[0].lines }), /未命中区县/);
+  assert.deepEqual(missingCounty.chips[0], { label: '打开中国县域风物志', action: { type: 'stage', stage: 'library' } });
+
+  const autoTurn = toolTurn({ tool: 'run_autonomous_research', args: { goal: '检验共线性与异质性' } }, ctx()).turn;
+  assert.equal(autoTurn.cards[0].title, '深度数据分析');
+  assert.deepEqual(autoTurn.chips[0], { label: '前往数据分析', action: { type: 'href', href: '#research/analysis' } });
+});
+
+test('Phase 6 tools verify_citation and render_sandbox_plot parse receipts and route cleanly', async () => {
+  const { isResultTool } = await import('../lib/agent/chat.ts');
+  const receipt = parseChatReceipt({
+    id: 'phase6-1',
+    status: 'ready',
+    reply: '已发起文献核验与配图生成。',
+    actions: [
+      { tool: 'verify_citation', args: { doi: ' 10.1016/j.jeconom.2020.12.001 ' } },
+      { tool: 'render_sandbox_plot', args: { snapshotId: '各年级满意度', chartKind: 'dumbbell' } },
+      { tool: 'verify_citation', args: {} },
+    ],
+  });
+  assert.deepEqual(receipt.actions, [
+    { tool: 'verify_citation', args: { doi: '10.1016/j.jeconom.2020.12.001' } },
+    { tool: 'render_sandbox_plot', args: { snapshotId: '各年级满意度', chartKind: 'dumbbell' } },
+    { tool: 'verify_citation', args: {} },
+  ]);
+
+  const badReceipt = parseChatReceipt({
+    id: 'phase6-bad',
+    status: 'ready',
+    reply: '拦截非法参数。',
+    actions: [
+      { tool: 'verify_citation', args: { doi: '1'.repeat(81) } },
+      { tool: 'verify_citation', args: { query: '长'.repeat(121) } },
+      { tool: 'render_sandbox_plot', args: { chartKind: 'radar' } },
+      { tool: 'render_sandbox_plot', args: { snapshotId: 's'.repeat(81) } },
+    ],
+  });
+  assert.equal(badReceipt.actions.length, 0);
+
+  assert.equal(isResultTool('verify_citation'), true);
+  assert.equal(isResultTool('render_sandbox_plot'), true);
+
+  const citeTurn = toolTurn({ tool: 'verify_citation', args: { doi: '10.1016/j.jeconom.2020.12.001' } }, ctx()).turn;
+  assert.equal(citeTurn.cards[0].title, '文献核验');
+  assert.match(text({ lines: citeTurn.cards[0].lines }), /10\.1016\/j\.jeconom\.2020\.12\.001/);
+  assert.deepEqual(citeTurn.chips[0], { label: '打开文献交叉引用工作台', action: { type: 'stage', stage: 'paper' } });
+
+  const plotTurn = toolTurn({ tool: 'render_sandbox_plot', args: { snapshotId: '各年级满意度', chartKind: 'forest' } }, withResults()).turn;
+  assert.equal(plotTurn.cards[0].title, '高清图表生成');
+  const plotText = text({ lines: plotTurn.cards[0].lines });
+  assert.match(plotText, /各年级满意度/);
+  assert.match(plotText, /效应对比图/);
+  assert.doesNotMatch(plotText, /\bforest\b/i);
+  assert.deepEqual(plotTurn.chips[0], { label: '前往图表生成', action: { type: 'href', href: '#research/analysis' } });
+});
+
+test('offline router matches DOI citation verification, plotting, and county gazetteer phrases without internal tech jargon', async () => {
+  const doiRouted = route('核验 DOI 10.1016/j.jeconom.2020.12.001', ctx());
+  assert.equal(doiRouted.turn?.cards?.[0]?.title, '文献核验');
+  assert.match(text({ lines: doiRouted.turn.cards[0].lines }), /10\.1016\/j\.jeconom\.2020\.12\.001/);
+
+  const plotRouted = route('用 Python 沙盒画矢量图', ctx());
+  assert.equal(plotRouted.turn?.cards?.[0]?.title, '高清图表生成');
+
+  const countyRouted = route('查一下义乌市县域风物志', ctx());
+  assert.deepEqual(countyRouted, { lookupCounty: '义乌市' });
+  const countyTurn = await resolveHeavyRouted(countyRouted);
+  assert.equal(countyTurn.cards?.[0]?.title, '区县风物检索');
+  const countyCardText = text({ lines: countyTurn.cards[0].lines });
+  assert.match(countyCardText, /330782 义乌市/);
+  assert.match(countyCardText, /精选五维档案/);
+  assert.match(countyCardText, /政 /);
+  assert.match(countyCardText, /经 /);
+  assert.match(countyCardText, /文 /);
+  assert.match(countyCardText, /社 /);
+  assert.match(countyCardText, /俗 /);
+  assert.deepEqual(countyTurn.chips?.[0], { label: '打开中国县域风物志', action: { type: 'stage', stage: 'library' } });
+
+  const recTurn = await resolveHeavyRouted(toolTurn({ tool: 'recommend_resource', args: { query: '回归' } }, withResults()));
+
+  const turns = [
+    route('/自主探索', ctx()).turn,
+    route('进入自主探索', ctx()).turn,
+    toolTurn({ tool: 'run_autonomous_research', args: { goal: '检验人群差异' } }, ctx()).turn,
+    toolTurn({ tool: 'verify_citation', args: { doi: '10.1016/j.jeconom.2020.12.001' } }, ctx()).turn,
+    toolTurn({ tool: 'render_sandbox_plot', args: { chartKind: 'bar' } }, withResults()).turn,
+    doiRouted.turn,
+    plotRouted.turn,
+    countyTurn,
+    recTurn,
+  ];
+  const forbidden = /(ReAct|EpistemicGraph|Fail-Closed|SHA-256|Python|沙盒|RUNLEASE|后端|算子|BYOK|Bento|[【】「」『』])/i;
+  for (const turn of turns) {
+    assert.ok(turn);
+    const rendered = [
+      text(turn),
+      ...(turn.cards ?? []).flatMap(c => [c.title, text({ lines: c.lines ?? [] }), ...(c.links ?? []).map(l => l.label)]),
+      ...(turn.chips ?? []).map(ch => ch.label),
+    ].join('\n');
+    assert.equal(forbidden.test(rendered), false, `Found leaked internal jargon in: ${rendered}`);
+  }
+});
+
+test('parseDirectChatToolIntent detects direct citation & sandbox plot requests without hijacking normal chat', () => {
+  assert.deepEqual(
+    parseDirectChatToolIntent('核验 DOI 10.1016/j.jeconom.2020.12.001。'),
+    { kind: 'verify_citation', doi: '10.1016/j.jeconom.2020.12.001' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('核验文献 Callaway'),
+    { kind: 'verify_citation', query: 'Callaway' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('生成效应对比图'),
+    { kind: 'render_sandbox_plot', chartKind: 'forest' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('画一张差异对比图'),
+    { kind: 'render_sandbox_plot', chartKind: 'dumbbell' },
+  );
+  const targetedPlot = parseDirectChatToolIntent('把 Bootstrap 结果画成差异对比图');
+  assert.equal(targetedPlot?.kind, 'render_sandbox_plot');
+  assert.equal(targetedPlot?.chartKind, 'dumbbell');
+  assert.ok(targetedPlot?.kind === 'render_sandbox_plot' && targetedPlot.targetHint?.includes('Bootstrap'));
+  assert.deepEqual(
+    parseDirectChatToolIntent('查一下义乌市县域风物志'),
+    { kind: 'lookup_county', query: '义乌市' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('查看项目记忆'),
+    { kind: 'recall_memory' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('运行 Mann-Whitney 秩和检验'),
+    { kind: 'run_stat_preset', presetId: 'mann_whitney_cliff' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('计算 Spearman 秩相关矩阵'),
+    { kind: 'run_stat_preset', presetId: 'spearman_matrix' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('运行 Bootstrap 置信区间检验'),
+    { kind: 'run_stat_preset', presetId: 'bootstrap_ci' },
+  );
+  assert.equal(parseDirectChatToolIntent('帮我设计一份老年人助餐调查问卷'), null);
+  assert.equal(parseDirectChatToolIntent('/自主探索'), null);
+  assert.deepEqual(
+    parseDirectChatToolIntent('自动核查数据质量'),
+    { kind: 'run_autonomous_audit', forceFresh: false },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('重新跑一次自主探索'),
+    { kind: 'run_autonomous_audit', forceFresh: true },
+  );
+  assert.equal(parseDirectChatToolIntent('什么是统计陷阱'), null);
+  assert.deepEqual(
+    parseDirectChatToolIntent('汇总当前结果生成执行摘要'),
+    { kind: 'compose_grounded_abstract' },
+  );
+  assert.equal(parseDirectChatToolIntent('起草「摘要」'), null);
+  assert.deepEqual(
+    parseDirectChatToolIntent('交稿前合规审查'),
+    { kind: 'audit_report_readiness' },
+  );
+  assert.deepEqual(
+    parseDirectChatToolIntent('帮我做个报告体检'),
+    { kind: 'audit_report_readiness' },
+  );
+  assert.equal(parseDirectChatToolIntent('什么是盲审'), null);
+  assert.equal(parseDirectChatToolIntent('查看盲区'), null);
 });

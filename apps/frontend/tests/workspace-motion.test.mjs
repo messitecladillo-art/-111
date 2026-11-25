@@ -173,3 +173,36 @@ test('charts draw in from their value axis or centre, and stay still under reduc
   s.media.matches = false; s.doc.hidden = true;
   assert.equal(drawChartIn(host, 'bar'), null);
 });
+
+test('pill variant markerBounds and createKeyedListMotion preserve full pill box with liquid stretching', () => {
+  const pillA = { x: 4, y: 3, width: 68, height: 28 };
+  const pillB = { x: 80, y: 3, width: 84, height: 28 };
+  assert.deepEqual(markerBounds(pillA, 'horizontal', 'pill'), pillA);
+  assert.deepEqual(markerBounds(pillA, 'vertical', 'pill'), pillA);
+  assert.deepEqual(markerBounds(pillB, 'horizontal', 'pill'), pillB);
+
+  const s = surface();
+  s.marker.dataset.motionVariant = 'pill';
+  const a = s.node('a', 14, 23, 68, 28);
+  const b = s.node('b', 90, 23, 84, 28);
+  s.root.items = [a, b];
+  const motion = createKeyedListMotion(s.root);
+  motion.update(['a', 'b'], 'a', 'horizontal', true);
+  assert.equal(s.marker.hidden, false);
+  assert.equal(s.marker.style.transform, 'translate(4px,3px)');
+  assert.equal(s.marker.style.width, '68px');
+  assert.equal(s.marker.style.height, '28px');
+
+  motion.update(['a', 'b'], 'b', 'horizontal', true);
+  assert.equal(s.marker.calls.length, 1);
+  assert.equal(s.marker.calls[0].frames[0].transform, 'translate(4px,3px)');
+  assert.equal(s.marker.calls[0].frames[0].width, '68px');
+  assert.equal(s.marker.calls[0].frames[0].height, '28px');
+  assert.equal(s.marker.calls[0].frames.at(-1).transform, 'translate(80px,3px)');
+  assert.equal(s.marker.calls[0].frames.at(-1).width, '84px');
+  assert.equal(s.marker.calls[0].frames.at(-1).height, '28px');
+  assert.equal(s.marker.style.transform, 'translate(80px,3px)');
+  assert.equal(s.marker.style.width, '84px');
+  assert.equal(s.marker.style.height, '28px');
+  motion.dispose();
+});

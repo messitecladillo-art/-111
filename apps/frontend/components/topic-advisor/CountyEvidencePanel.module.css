@@ -73,3 +73,44 @@
 .compact .empty h4 { margin: 0; font-size: 13px; }
 .compact .empty > p:last-child { margin-top: 5px; font-size: 12px; line-height: 1.6; }
 .compact .geography { margin-top: 5px; }
+
+@media (forced-colors: active) {
+  .root :is(button, a, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .direction > summary,
+  .root button {
+    border: 1px solid ButtonText;
+  }
+  .root a {
+    color: LinkText;
+    text-decoration: underline;
+  }
+  .root,
+  .compact,
+  .fact,
+  .source,
+  .direction,
+  .empty {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .header,
+  .sectionHeading,
+  .footer {
+    border-color: CanvasText;
+  }
+  .code,
+  .authority,
+  .version,
+  .direction[open] > summary {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

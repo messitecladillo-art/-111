@@ -1,0 +1,11 @@
+{
+  "name": "@evix/desktop-pet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/pet-widget.js",
+    "./contract": "./src/pet-contract.js",
+    "./rig": "./src/vector-rig.js"
+  }
+}

@@ -16,13 +16,13 @@ const likert = (minLabel: string, maxLabel: string) => ({ type: 'likert' as cons
  */
 export function siliconExampleQuestionnaire(): Questionnaire {
   const d = newQuestionnaire();
-  d.title = '校园快递取件体验 · 硅基预测试教学示例';
+  d.title = '校园快递取件体验 · 预测试教学示例';
   d.objective = '为驿站服务改进选择优先事项（教学示例，决策主体待确认）。';
   d.population = '拟调查本校在校学生；具体校区与纳入条件待补充。';
   d.period = '过去 30 天';
-  d.recruitment = '尚未确定招募渠道与抽样方案；硅基样本只用于发放前的预测试。';
-  d.introduction = '【教学示例，发放前请改写】本调查拟了解校园快递驿站的取件体验。参与自愿，可跳过不愿回答的问题或随时退出。请勿填写姓名、学号和联系方式。';
-  d.pilotNotes = '计划：先用硅基样本走查题目与跳转，再请 5–8 位真实同学做认知访谈；均尚未完成。';
+  d.recruitment = '尚未确定招募渠道与抽样方案；模拟样本仅用于正式发放前的问卷预测试。';
+  d.introduction = '（教学示例，正式发放前请按实际课题改写）本调查拟了解校园快递驿站的取件体验。参与自愿，可跳过不愿回答的问题或随时退出。请勿填写姓名、学号和联系方式。';
+  d.pilotNotes = '拟先通过预测试样本走查题目与跳转逻辑，再邀请 5–8 位真实受访同学开展认知访谈，目前均尚未完成。';
   const use = item('sx-use', 'USE', { text: '过去 30 天，您是否在校园快递驿站取过件？', purpose: 'screening', required: true, analysis: 'routing', decisionUse: '只向取过件的同学询问体验。', choices: [{ code: '1', label: '取过' }, { code: '0', label: '没有取过' }] });
   const route = { questionId: use.id, codes: ['1'] };
   d.questions = [

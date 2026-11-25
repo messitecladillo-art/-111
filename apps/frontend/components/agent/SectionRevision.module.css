@@ -92,3 +92,54 @@
 .settings:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) { .primary, .secondary { transition: none; } }
+
+
+@media (forced-colors: active) {
+  .root,
+  .warning,
+  .waiting,
+  .disclosure,
+  .comparison,
+  .tabs {
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .root,
+  .primary,
+  .secondary,
+  .waiting,
+  .disclosure,
+  .comparison,
+  .tabs button,
+  .versionHead span {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+  }
+
+  .disclosure[open] summary,
+  .evidence li,
+  .tabs,
+  .footer,
+  .warning {
+    border-color: CanvasText !important;
+  }
+
+  .primary:not(:disabled),
+  .tabs button[aria-selected="true"],
+  .versionHead span[data-pending="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .root button:focus-visible,
+  .root summary:focus-visible,
+  .comparePanel:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

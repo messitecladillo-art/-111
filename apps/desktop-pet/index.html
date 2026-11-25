@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>证见桌面伴侣 — 矢量骨架与外置皮肤试验台</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --border: #e4e4e7;
+        --ink: #18181b;
+        --muted: #52525b;
+        --accent: #0f766e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        display: grid;
+        grid-template-columns: minmax(340px, 1fr) 360px;
+      }
+      @media (max-width: 900px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+      }
+      .stage-canvas {
+        position: relative;
+        min-height: 540px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        overflow: hidden;
+        transition: background 180ms ease;
+      }
+      .stage-canvas[data-backdrop="desk"] {
+        background:
+          radial-gradient(circle at 20% 20%, rgba(15, 118, 110, 0.08), transparent 45%),
+          radial-gradient(circle at 80% 75%, rgba(24, 24, 27, 0.06), transparent 50%),
+          linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      }
+      .stage-canvas[data-backdrop="checker"] {
+        background-color: #ffffff;
+        background-image:
+          linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
+          linear-gradient(-45deg, #e4e4e7 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #e4e4e7 75%),
+          linear-gradient(-45deg, transparent 75%, #e4e4e7 75%);
+        background-size: 24px 24px;
+        background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+      }
+      .stage-canvas[data-backdrop="dark"] {
+        background:
+          radial-gradient(circle at 50% 35%, rgba(15, 118, 110, 0.18), transparent 55%),
+          #09090b;
+      }
+      .stage-tip {
+        position: absolute;
+        left: 20px;
+        bottom: 16px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.86);
+        border: 1px solid #d4d4d8;
+        font-size: 11.5px;
+        color: #3f3f46;
+      }
+      .sidebar {
+        border-left: 1px solid var(--border);
+        background: var(--panel);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        overflow-y: auto;
+      }
+      .title-block h1 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .title-block p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .section-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .btn-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      button.ctrl-btn,
+      label.file-btn {
+        appearance: none;
+        border: 1px solid #d4d4d8;
+        background: #ffffff;
+        color: var(--ink);
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        transition: border-color 120ms ease, background 120ms ease;
+      }
+      button.ctrl-btn:hover,
+      label.file-btn:hover {
+        border-color: var(--ink);
+        background: #fafafa;
+      }
+      button.ctrl-btn.is-active {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: #ffffff;
+      }
+      button.ctrl-btn.is-accent {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #ffffff;
+      }
+      .row-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .row-actions > * {
+        flex: 1;
+      }
+      input[type="file"].sr-only {
+        display: none;
+      }
+      .log-box {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fafafa;
+        padding: 10px;
+        font-family: ui-monospace, "Cascadia Code", monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        color: #27272a;
+        max-height: 190px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .skin-meta {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #f8fafc;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .skin-meta code {
+        font-family: ui-monospace, "Cascadia Code", monospace;
+        font-size: 11px;
+        background: #e4e4e7;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage-canvas" id="stageCanvas" data-backdrop="desk">
+      <div id="petMount"></div>
+      <div class="stage-tip">
+        点头部抚摸 · 点道具看状态 · 双击或按 <strong>Ctrl+Alt+B</strong> 唤出指令栏 · 支持拖拽与拖入文件
+      </div>
+    </main>
+
+    <aside class="sidebar">
+      <div class="title-block">
+        <h1>证见桌面伴侣试验台</h1>
+        <p>独立矢量动画骨架与外置皮肤热加载器，用于调试研究工作流联动状态与本地扩展皮肤。</p>
+      </div>
+
+      <div class="section">
+        <div class="section-label">当前皮肤</div>
+        <div class="skin-meta" id="skinMeta">加载中…</div>
+        <div class="row-actions">
+          <button type="button" class="ctrl-btn" id="resetSkinBtn">恢复原装 evix-hound</button>
+          <label class="file-btn">
+            导入本地皮肤目录
+            <input type="file" id="skinFolderInput" class="sr-only" webkitdirectory multiple />
+          </label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">状态切换（8 种状态）</div>
+        <div class="btn-grid" id="stateButtons"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">证见研究流程联动演示</div>
+        <div class="row-actions">
+          <button type="button" class="ctrl-btn is-accent" id="simulateFlowBtn">重放审稿联动闭环</button>
+          <button type="button" class="ctrl-btn" id="toggleDesktopBtn">桌面透明模式（关）</button>
+          <button type="button" class="ctrl-btn" id="resetPosBtn">归位</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">画布背景预览</div>
+        <div class="row-actions" id="backdropButtons">
+          <button type="button" class="ctrl-btn is-active" data-bg="desk">桌面</button>
+          <button type="button" class="ctrl-btn" data-bg="checker">透明格</button>
+          <button type="button" class="ctrl-btn" data-bg="dark">深色</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">事件与指令日志</div>
+        <div class="log-box" id="eventLog"></div>
+      </div>
+    </aside>
+
+    <script type="module">
+      import {
+        PET_STATES,
+        resolvePetSkin,
+        validateSkinManifest,
+      } from './src/pet-contract.js';
+      import { createDesktopPetWidget } from './src/pet-widget.js';
+
+      const STATE_CN = {
+        idle: 'idle 待命',
+        thinking: 'thinking 推演',
+        working: 'working 写作',
+        awaiting_approval: 'awaiting_approval 待批',
+        redteam_alert: 'redteam_alert 红队拦截',
+        error: 'error 异常',
+        done: 'done 完成',
+        dragging: 'dragging 拖拽',
+      };
+
+      const INLINE_FALLBACK_MANIFEST = {
+        schema: 'evix-pet-skin/v1',
+        id: 'evix-hound',
+        name: 'EVI-X 墨线猎犬',
+        renderer: 'vector-rig',
+        copyrightNotice: 'original-evix-mascot-asset',
+        canvasSize: { width: 220, height: 240 },
+        palette: {
+          ink: '#18181b',
+          fur: '#f8fafc',
+          furShadow: '#e2e8f0',
+          collar: '#0f766e',
+          accent: '#10b981',
+          alert: '#dc2626',
+        },
+        features: { glasses: true, collar: true, boldComicInk: true },
+      };
+
+      const petMount = document.getElementById('petMount');
+      const skinMetaEl = document.getElementById('skinMeta');
+      const stateButtonsEl = document.getElementById('stateButtons');
+      const eventLogEl = document.getElementById('eventLog');
+      const stageCanvasEl = document.getElementById('stageCanvas');
+      const toggleDesktopBtn = document.getElementById('toggleDesktopBtn');
+      const simulateFlowBtn = document.getElementById('simulateFlowBtn');
+      const resetPosBtn = document.getElementById('resetPosBtn');
+      const resetSkinBtn = document.getElementById('resetSkinBtn');
+      const skinFolderInput = document.getElementById('skinFolderInput');
+      const backdropButtonsEl = document.getElementById('backdropButtons');
+
+      let activeObjectUrls = [];
+      let flowTimers = [];
+      let widget = null;
+      let defaultSkin = null;
+
+      function logLine(msg) {
+        const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        eventLogEl.textContent = `（${ts}） ${msg}\n${eventLogEl.textContent}`;
+      }
+
+      function revokeObjectUrls() {
+        for (const url of activeObjectUrls) {
+          URL.revokeObjectURL(url);
+        }
+        activeObjectUrls = [];
+      }
+
+      function clearFlowTimers() {
+        for (const timer of flowTimers) clearTimeout(timer);
+        flowTimers = [];
+      }
+
+      function updateSkinMeta(skin) {
+        skinMetaEl.innerHTML = `
+          <div><strong>${skin.persona?.displayName || skin.name}</strong> (<code>${skin.id}</code>)</div>
+          <div>渲染方式 <code>${skin.renderer}</code> · 画布 <code>${skin.canvasSize.width}×${skin.canvasSize.height}</code></div>
+          <div>版权标识 <code>${skin.copyrightNotice}</code></div>
+        `;
+      }
+
+      function syncActiveStateButton(currentState) {
+        for (const btn of stateButtonsEl.querySelectorAll('button[data-state]')) {
+          btn.classList.toggle('is-active', btn.dataset.state === currentState);
+        }
+      }
+
+      async function loadBuiltinSkin() {
+        try {
+          const [skinRes, personaRes] = await Promise.all([
+            fetch('./skins/evix-hound/skin.json'),
+            fetch('./skins/evix-hound/persona.json'),
+          ]);
+          const manifest = await skinRes.json();
+          const persona = personaRes.ok ? await personaRes.json() : {};
+          return resolvePetSkin(manifest, persona);
+        } catch (err) {
+          logLine(`使用内置兜底骨架（HTTP读取失败: ${err.message}）`);
+          return resolvePetSkin(INLINE_FALLBACK_MANIFEST, {});
+        }
+      }
+
+      async function mountWorkbench() {
+        defaultSkin = await loadBuiltinSkin();
+        updateSkinMeta(defaultSkin);
+
+        widget = createDesktopPetWidget({
+          container: petMount,
+          skin: defaultSkin,
+          initialState: 'idle',
+          onStateChange({ prevState, nextState, source }) {
+            syncActiveStateButton(nextState);
+            logLine(`状态由 ${prevState} 切换为 ${nextState}（来源 ${source}）`);
+          },
+          onCommand({ command, raw, files }) {
+            logLine(
+              `已下发指令 “${raw || '仅文件'}” · 命令 ${command || '无'} · 附件 ${files.map((f) => f.name).join(', ') || '无'}`,
+            );
+            clearFlowTimers();
+            const t1 = setTimeout(() => {
+              widget.applyAgentEvent({
+                status: 'completed',
+                summary: `指令 ${command || raw} 模拟执行完毕`,
+              });
+            }, 1400);
+            flowTimers.push(t1);
+          },
+          onAction({ action, state }) {
+            logLine(`点击快捷操作 “${action.label}”（${action.command}）· 当前状态 ${state}`);
+          },
+          onFilesDrop(files) {
+            logLine(`已拖入 ${files.length} 份文件（${files.map((f) => f.name).join(', ')}）`);
+          },
+        });
+
+        stateButtonsEl.innerHTML = PET_STATES.map(
+          (st) =>
+            `<button type="button" class="ctrl-btn ${st === 'idle' ? 'is-active' : ''}" data-state="${st}">${STATE_CN[st] || st}</button>`,
+        ).join('');
+
+        stateButtonsEl.addEventListener('click', (event) => {
+          const btn = event.target.closest('button[data-state]');
+          if (!btn) return;
+          clearFlowTimers();
+          widget.setState(btn.dataset.state, { source: 'manual_panel' });
+        });
+
+        logLine('桌面宠物试验台已就绪。');
+      }
+
+      toggleDesktopBtn.addEventListener('click', () => {
+        const next = !widget.getSnapshot().desktopMode;
+        widget.setDesktopMode(next);
+        toggleDesktopBtn.textContent = `桌面透明模式（${next ? '开' : '关'}）`;
+        logLine(`桌面透明模式已切换为${next ? '开启' : '关闭'}`);
+      });
+
+      resetPosBtn.addEventListener('click', () => {
+        widget.resetPosition();
+        logLine('位置已归零');
+      });
+
+      backdropButtonsEl.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-bg]');
+        if (!btn) return;
+        stageCanvasEl.setAttribute('data-backdrop', btn.dataset.bg);
+        for (const item of backdropButtonsEl.querySelectorAll('button')) {
+          item.classList.toggle('is-active', item === btn);
+        }
+      });
+
+      simulateFlowBtn.addEventListener('click', () => {
+        clearFlowTimers();
+        logLine('开始重放证见审稿联动闭环…');
+        const steps = [
+          [0, { status: 'planning', summary: '拆解第 4 章实证结构与样本检验顺序' }],
+          [1600, { status: 'drafting', summary: '生成分层 Logistic 回归与书签三线表' }],
+          [3400, { status: 'redteam_alert', redteamIssues: 2, summary: '检测到 2 处跨期因果越界用词' }],
+          [5400, { status: 'awaiting_approval', awaitingApproval: true, summary: '等待你批示是否切换为关联表述' }],
+          [7600, { status: 'completed', summary: '第 4 章已定稿，红队指标全部通过' }],
+        ];
+        for (const [delay, payload] of steps) {
+          flowTimers.push(setTimeout(() => widget.applyAgentEvent(payload), delay));
+        }
+      });
+
+      resetSkinBtn.addEventListener('click', () => {
+        clearFlowTimers();
+        revokeObjectUrls();
+        updateSkinMeta(defaultSkin);
+        widget.setSkin(defaultSkin, { spriteBaseUrl: '', frameObjectUrls: null });
+        logLine(`恢复内置皮肤: ${defaultSkin.id}`);
+      });
+
+      skinFolderInput.addEventListener('change', async (event) => {
+        const fileList = Array.from(event.target.files || []);
+        if (fileList.length === 0) return;
+
+        revokeObjectUrls();
+
+        const skinFile = fileList.find((f) => f.name === 'skin.json');
+        if (!skinFile) {
+          logLine('所选目录内未找到 skin.json，导入未完成');
+          return;
+        }
+
+        try {
+          const manifest = validateSkinManifest(JSON.parse(await skinFile.text()));
+          const personaFile = fileList.find((f) => f.name === 'persona.json');
+          const persona = personaFile ? JSON.parse(await personaFile.text()) : {};
+
+          const frameObjectUrls = {};
+          let frameFileCount = 0;
+          for (const file of fileList) {
+            if (/\.(png|webp|svg|gif|jpg|jpeg)$/i.test(file.name)) {
+              const relPath = (file.webkitRelativePath || file.name)
+                .replaceAll('\\', '/')
+                .split('/')
+                .slice(1)
+                .join('/');
+              const objectUrl = URL.createObjectURL(file);
+              activeObjectUrls.push(objectUrl);
+              if (relPath) frameObjectUrls[relPath] = objectUrl;
+              frameObjectUrls[file.name] = objectUrl;
+              frameFileCount += 1;
+            }
+          }
+
+          const resolved = resolvePetSkin(manifest, persona);
+          updateSkinMeta(resolved);
+          widget.setSkin(resolved, { spriteBaseUrl: '', frameObjectUrls });
+          logLine(
+            `已加载本地皮肤包: ${resolved.id} (识别到 ${frameFileCount} 张图片帧，缺帧状态自动回落矢量骨架)`,
+          );
+        } catch (err) {
+          logLine(`加载本地皮肤包出错: ${err.message}`);
+        } finally {
+          skinFolderInput.value = '';
+        }
+      });
+
+      mountWorkbench();
+    </script>
+  </body>
+</html>

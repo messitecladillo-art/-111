@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { NODE_DEFS } from '../lib/canvas/catalog.ts';
+import { connectionProblem, emptyDoc } from '../lib/canvas/graph.ts';
 import { BENCHMARK_DIMENSIONS, BENCHMARK_TARGETS, benchmarkReport, isCaption, writtenLines } from '../lib/report-benchmark.ts';
 import { blueprintSections, reportType } from '../lib/report-blueprint.ts';
 import { createEditorContent } from '../lib/editor-model.ts';
 import { newProjectReport } from '../lib/project-report.ts';
+import { stratifiedSampleSize } from '../lib/sampling-planning.ts';
+import { inferAgentCloudShape } from '../lib/topic-lab/cloud-shapes.ts';
 
 const section = (id, title, body = '', extra = {}) => ({ id, title, body, source: '', ...extra });
 const result = (id, extra = {}) => ({ id, title: '结果' + id, sourceName: '课题组问卷', sourceUrl: '', sourceHash: 'a'.repeat(64), resultHash: 'b'.repeat(64),
@@ -247,4 +251,54 @@ test('cluster self-validation, cross-sectional evolution, simulated robustness a
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'na', 'a negated list is one disclaimer');
   content.report = [section('d', '（三）抽样设计', '本次通过线上公开链接自愿作答，采用分层抽样获取样本，并非整群抽样。')];
   assert.equal(check(benchmarkReport(content), 'samplingWording').status, 'fail', 'a stated claim still counts, beside a negated one');
+});
+
+test('benchmarkReport, inferAgentCloudShape, canvas catalog/graph, and stratifiedSampleSize emit zero corner/lenticular brackets or Agent prefix', () => {
+  const bracketRe = /[【】「」『』]/u;
+  const content = createEditorContent();
+  content.version = 2;
+  content.quality = { version: 1, results: [result('r1', { classification: 'simulated' })], findings: [finding('f1', '改善预约机制')] };
+  content.report = [
+    section('a', '摘要', '【写作提示】\n待撰写'),
+    section('s', '一、实证分析', '满意度与信任度显著相关，同时改善服务直接导致复购提升；OR 为 2.3，即概率是 2.3 倍；用户需求沿着三阶段演化。'),
+    section('app', '附录一：调查问卷', ''),
+  ];
+  const rep = benchmarkReport(content);
+  for (const c of rep.checks) {
+    assert.equal(bracketRe.test(`${c.label}\n${c.detail}\n${c.fixes.map(f => f.label).join('\n')}`), false, `${c.id}: ${c.detail}`);
+  }
+
+  for (const r of [
+    inferAgentCloudShape([{ label: '养老护理', weight: 10 }], '智慧养老').reason,
+    inferAgentCloudShape([], '').reason,
+  ]) {
+    assert.equal(bracketRe.test(r), false, r);
+    assert.equal(/\bAgent\b/u.test(r), false, r);
+  }
+
+  for (const def of NODE_DEFS) {
+    const line = `${def.title}\n${def.summary}`;
+    assert.equal(bracketRe.test(line), false, line);
+    assert.equal(/\bAgent\b/u.test(line), false, line);
+  }
+  const baseCanvas = {
+    ...emptyDoc(),
+    nodes: [
+      { id: 'd1', kind: 'dataset', title: '数据集', position: { x: 0, y: 0 }, parent: null, config: {} },
+      { id: 'c1', kind: 'chart', title: '图表', position: { x: 0, y: 0 }, parent: null, config: {} },
+    ],
+    edges: [],
+  };
+  const connErr = connectionProblem(baseCanvas, { source: 'd1', sourcePort: 'data', target: 'c1', targetPort: 'result' });
+  assert.ok(connErr);
+  assert.equal(bracketRe.test(connErr), false, connErr);
+
+  assert.throws(
+    () => stratifiedSampleSize(
+      [{ id: 's1', name: '城区样本层', size: 1, sd: 1 }, { id: 's2', name: '乡镇样本层', size: 100, sd: 1 }],
+      'neyman',
+      { confidence: 0.95, margin: 0.1 },
+    ),
+    err => !bracketRe.test(err.message),
+  );
 });

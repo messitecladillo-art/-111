@@ -63,3 +63,47 @@
 @keyframes reveal { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @media (max-width: 1280px) { .panel { padding: 16px 18px; } .panel > summary { flex-wrap: wrap; gap: 10px; } .panel > summary small { margin-left: 26px; } }
 @media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; transform: none !important; } }
+
+@media (forced-colors: active) {
+  .root,
+  .panel,
+  .root .notice,
+  .root select,
+  .root textarea {
+    background: Canvas;
+    color: CanvasText;
+    border-color: ButtonBorder;
+  }
+  .panel,
+  .root select,
+  .root textarea {
+    border: 1px solid ButtonBorder;
+  }
+  .proposal {
+    border-top-color: ButtonBorder;
+  }
+  .root button {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonBorder;
+  }
+  .root button:disabled {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+  .root button.primary {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  .root a {
+    color: LinkText;
+    text-decoration: underline;
+  }
+  .root :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}

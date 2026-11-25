@@ -15,7 +15,7 @@ export function extractClientKey(
     throw new ApiError(
       400,
       "client_key_location_forbidden",
-      "clientKey 不得放入网址，请仅通过 x-client-key 请求头提供。",
+      "访问凭证不得附在网址参数中，请改由受保护的请求凭据方式提交。",
     );
   }
   const headerValue = request.headers.get("x-client-key")?.trim() || undefined;
@@ -24,7 +24,7 @@ export function extractClientKey(
     throw new ApiError(
       400,
       "client_key_required",
-      "请通过 x-client-key 请求头提供 clientKey。",
+      "当前请求缺少有效的匿名访问凭证，请刷新页面后重试。",
     );
   }
   if (
@@ -34,7 +34,7 @@ export function extractClientKey(
     throw new ApiError(
       400,
       "invalid_client_key",
-      "匿名访问密钥格式无效，请使用页面生成的高强度密钥。",
+      "匿名访问凭证格式无效，请使用页面自动生成的有效凭证。",
     );
   }
   return clientKey;
@@ -59,7 +59,7 @@ export function resolveOwnership(
     throw new ApiError(
       400,
       "client_key_location_forbidden",
-      "clientKey 不得放入网址，请仅通过 x-client-key 请求头提供。",
+      "访问凭证不得附在网址参数中，请改由受保护的请求凭据方式提交。",
     );
   }
   const authenticatedUserId = request.headers.get("oai-authenticated-user-id")?.trim();
@@ -83,7 +83,7 @@ export function resolveOwnership(
       throw new ApiError(
         401,
         "invalid_authenticated_user",
-        "认证用户标识无效。",
+        "登录身份核验未通过，请重新登录。",
       );
     }
     return {
@@ -100,7 +100,7 @@ export function resolveOwnership(
 
 export function validateProjectId(value: string): string {
   if (!PROJECT_ID_PATTERN.test(value)) {
-    throw new ApiError(400, "invalid_project_id", "项目 ID 格式无效。");
+    throw new ApiError(400, "invalid_project_id", "项目编号格式无效。");
   }
   return value;
 }

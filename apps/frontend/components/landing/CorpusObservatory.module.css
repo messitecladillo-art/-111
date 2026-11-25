@@ -567,3 +567,72 @@
 .actionBtn:hover {
   background: rgba(244, 185, 66, 0.24);
 }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .observatory *,
+  .observatory *::before,
+  .observatory *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .observatory,
+  .compact,
+  .segmented,
+  .segBtn,
+  .glassCard,
+  .spectrumRow,
+  .miniPill,
+  .goldPill,
+  .bentoCard,
+  .svgCanvas,
+  .insightStrip,
+  .chipBtn,
+  .tableStage,
+  .formulaCard,
+  .stepNode,
+  .actionBtn {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border: 1px solid ButtonText;
+    box-shadow: none !important;
+  }
+
+  .metricNum {
+    background: none !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    color: CanvasText !important;
+    -webkit-text-fill-color: CanvasText !important;
+  }
+
+  .heroMetrics,
+  .metricCell,
+  .quoteLine,
+  .academicTable,
+  .academicTable th,
+  .academicTable td,
+  .tableHeading {
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+  }
+
+  .segBtnActive,
+  .spectrumRowActive,
+  .bentoCardActive,
+  .chipBtnActive,
+  .spectrumFill {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .observatory :is(button, a, [tabindex="0"]):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

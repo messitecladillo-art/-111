@@ -9,3 +9,53 @@
 .notice,.warning,.error{padding:12px 14px;border-radius:8px;line-height:1.75;overflow-wrap:anywhere}.notice{background:var(--wb-accent-soft);color:var(--wb-accent)}.warning{background:var(--wb-surface-alt,#f5f5f4);border-left:3px solid var(--wb-accent)}.error{color:var(--wb-danger,#a33138);border:1px solid currentColor}.privacy{font-size:13px}.preview{margin-top:24px;border:1px solid var(--wb-accent);padding:18px;border-radius:10px;min-width:0}.preview header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.preview h4{font-size:17px;margin:8px 0}.preview p{line-height:1.8}.comparison{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:var(--wb-surface-alt,#f5f5f4);border-radius:8px;margin:12px 0}.comparison>div{padding:14px;min-width:0;overflow-wrap:anywhere}.comparison>div+div{border-left:1px solid var(--wb-border)}.comparison small,.comparison strong{display:block;margin-bottom:8px}.comparison small{color:var(--wb-muted)}.comparison p{margin:0}.preview details{margin:12px 0}.preview summary{cursor:pointer}.preview pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:280px;overflow:auto;background:var(--wb-surface-alt,#f5f5f4);padding:12px}.hash{font-family:monospace;font-size:12px;overflow-wrap:anywhere}.muted{font-size:13px;margin-bottom:0}.muted a{color:var(--wb-accent)}
 @media(max-width:850px){.grid{grid-template-columns:1fr}.history{border-left:0;border-top:1px solid var(--wb-border);padding:18px 0 0}}
 @media(max-width:520px){.library>summary{align-items:flex-start;padding:14px 12px;flex-wrap:wrap}.library>summary small{width:100%;text-align:left;padding-left:25px}.body{padding:4px 12px 16px}.head{flex-direction:column;gap:8px}.head h3{font-size:19px}.comparison{grid-template-columns:1fr}.comparison>div+div{border-left:0;border-top:1px solid var(--wb-border)}.preview{padding:12px}.preview header{flex-wrap:wrap}.actions{flex-direction:column}.actions button{width:100%}}
+
+@media (forced-colors: active) {
+  .library,
+  .origin,
+  .notice,
+  .warning,
+  .preview,
+  .comparison,
+  .preview pre {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .library,
+  .origin,
+  .notice,
+  .warning,
+  .error,
+  .preview,
+  .comparison,
+  .library button,
+  .library input:not([type=checkbox]),
+  .library select {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .grid,
+  .history,
+  .versions li,
+  .comparison > div + div {
+    border-color: CanvasText;
+  }
+
+  .muted a {
+    color: LinkText;
+  }
+
+  .library .primary {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .library :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

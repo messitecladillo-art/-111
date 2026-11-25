@@ -346,3 +346,55 @@
   font-size: 10.5px;
   font-weight: 600;
 }
+
+@media (forced-colors: active) {
+  .inspect:focus-visible,
+  .stageTab:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .workstation,
+  .prismBadge,
+  .stageShell,
+  .skinTag,
+  .stageMetric,
+  .stageTabs,
+  .stageTab {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .stageShell .workstation {
+    border: 0;
+  }
+
+  .stageTab[aria-selected="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .stageTab[aria-selected="true"] code {
+    color: HighlightText !important;
+  }
+
+  .edge,
+  .detailLine,
+  .ticks,
+  .paperLines {
+    stroke: CanvasText;
+  }
+
+  .paperLinesActive,
+  .dialNeedle,
+  .lamp {
+    stroke: Highlight;
+  }
+
+  .readout {
+    border-color: CanvasText;
+  }
+}

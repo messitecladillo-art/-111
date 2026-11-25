@@ -4,16 +4,51 @@ import type {EditorContent} from './editor-model.ts';
 import {getVectorPrimitives} from './vector-assets.ts';
 import {assertTrueVector} from './vector-svg.ts';
 import {blockLabel, numberedCaption, referenceSegments, resolveReferences, type BlockLabel} from './report-numbering.ts';
-import {columnWeights, isExhibitNote, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
+import {columnWeights, isExhibitNote, isLongProseColumn, isShortNumericColumn, presentResult, sectionNotes, sourceLine, tableSpans} from './report-tables.ts';
 import {splitInlineMath} from './inline-math.ts';
 import {figureFor,reportFigureSVG,assertFormalFigureCapacity,projectPalette,defaultProjectVisualStyle,percentSeries,type ReportFigure} from './report-figure.ts';
+import {reportPart} from './report-format.ts';
+import {sectionIllustrationBytes, sectionIllustrationDataUrl} from './page-art.ts';
+import {normalizeAcademicPunctuation, normalizePaperProse} from './typography.ts';
 import type PptxGenJS from 'pptxgenjs';
 export {assertTrueVector};
-export const evidenceLabel=(r:ResultSnapshot)=>r.method==='ahp'?`来源：${r.sourceName}（${r.n} 项准则）`:r.method==='sampling-frame'?`来源：本研究抽样设计${r.warnings.length?'；'+r.warnings.join('；'):''}`:`来源：${r.sourceName}${r.sourceUrl?' · '+r.sourceUrl:''}；有效样本 n=${r.n} / ${r.total}；${r.classification==='simulated'?'模拟数据':r.classification==='public'?'公开数据':'用户提供数据'}${r.warnings.length?'；'+r.warnings.join('；'):''}`;
+const METHOD_COLON_LEAD_RE=/^(?:（[0-9一二三四五六七八九十]+）\s*)?((?:Cronbach(?:'s)?\s*α\s*)?(?:信度(?:检验|分析)|效度(?:检验|分析)|探索性因子分析|验证性因子分析|结构方程模型|多元线性回归|二元\s*Logistic\s*回归|多分类\s*Logistic\s*回归|有序\s*Logistic\s*回归|Logistic\s*回归|卡方检验|独立样本\s*t\s*检验|单因素方差分析|Kruskal[-–—]Wallis(?:\s*H)?\s*检验|Mann[-–—]Whitney(?:\s*U)?\s*检验|Spearman\s*秩相关(?:分析)?|Pearson\s*相关(?:分析)?|K[-–—]?means\s*聚类(?:分析)?|系统聚类(?:分析)?|潜在剖面分析|IPA\s*(?:四象限|重要性[—－-]绩效)?分析|KANO\s*模型(?:分析)?|熵权\s*TOPSIS\s*(?:分析|评价)|层次分析法))[：:]\s*(?=\S)/iu;
+const HEX_COLOR_TOKEN_RE=/#[0-9A-Fa-f]{3,8}\b/gu;
+export const smoothBodyMethodLead=(line:string)=>line.replace(METHOD_COLON_LEAD_RE,(_whole,method:string)=>`结合${method.trim()}结果，`);
+export function sanitizeExportAltText(raw:string,fallback='统计图表'):string{
+ const cleaned=normalizeAcademicPunctuation(raw).replace(HEX_COLOR_TOKEN_RE,'').replace(/\([\s/／·、,，;；:：|+—–-]*\)|（[\s/／·、,，;；:：|+—–-]*）/gu,'').replace(/\s+/gu,' ').replace(/^[；;，,：:·\s]+|[；;，,：:\s]+$/gu,'').trim();
+ if(cleaned)return cleaned;
+ return normalizeAcademicPunctuation(fallback).replace(HEX_COLOR_TOKEN_RE,'').trim()||'统计图表';
+}
+const unescapeXmlAttr=(v:string)=>v.replace(/&(?:quot|apos|lt|gt|amp);/g,m=>({'&quot;':'"','&apos;':"'",'&lt;':'<','&gt;':'>','&amp;':'&'})[m]!);
+export function ensureXmlDescr(xmlText:string,kind:'docx'|'pptx',altByObjectName?:ReadonlyMap<string,string>):string{
+ if(kind==='docx'){
+  return xmlText.replace(/<wp:docPr\b([^>]*?)(\/?>)/g,(_full,attrs:string,close:string)=>{
+   const existing=/\bdescr="([^"]*)"/.exec(attrs);
+   const titleAttr=/\btitle="([^"]*)"/.exec(attrs);
+   const nameAttr=/\bname="([^"]*)"/.exec(attrs);
+   const fallback=titleAttr?.[1]?unescapeXmlAttr(titleAttr[1]):nameAttr?.[1]==='cover-image'?'调查研究报告封面':nameAttr?.[1]==='frame-image'?'页面四周的装饰页框':'报告统计配图';
+   const clean=xml(sanitizeExportAltText(existing?unescapeXmlAttr(existing[1]):'',fallback));
+   const nextAttrs=existing?attrs.replace(/\bdescr="[^"]*"/,`descr="${clean}"`):`${attrs} descr="${clean}"`;
+   return `<wp:docPr${nextAttrs}${close}`;
+  });
+ }
+ return xmlText.replace(/<p:(nvPicPr|nvGraphicFramePr|nvSpPr|nvGrpSpPr)>(\s*)<p:cNvPr\b([^>]*?)(\/?>)/g,(_full,parentTag:string,ws:string,attrs:string,close:string)=>{
+  const nameMatch=/\bname="([^"]*)"/.exec(attrs);
+  const existing=/\bdescr="([^"]*)"/.exec(attrs);
+  const objName=nameMatch?unescapeXmlAttr(nameMatch[1]):'';
+  const tagFallback=parentTag==='nvPicPr'?'幻灯片统计配图':parentTag==='nvGraphicFramePr'?'幻灯片统计图表与数据表':parentTag==='nvGrpSpPr'?'幻灯片版面画布':'幻灯片版式图形元素';
+  const rawCandidate=altByObjectName?.get(objName)||(existing?unescapeXmlAttr(existing[1]):'');
+  const clean=xml(sanitizeExportAltText(rawCandidate,tagFallback));
+  const nextAttrs=existing?attrs.replace(/\bdescr="[^"]*"/,`descr="${clean}"`):`${attrs} descr="${clean}"`;
+  return `<p:${parentTag}>${ws}<p:cNvPr${nextAttrs}${close}`;
+ });
+}
+export const evidenceLabel=(r:ResultSnapshot)=>normalizeAcademicPunctuation(r.method==='ahp'?`数据源自${r.sourceName}（${r.n} 项准则）`:r.method==='sampling-frame'?`依据本研究抽样设计${r.warnings.length?'；'+r.warnings.join('；'):''}`:`数据源自${r.sourceName}${r.sourceUrl?' · '+r.sourceUrl:''}，有效样本 n=${r.n} / ${r.total}（${r.classification==='simulated'?'模拟数据':r.classification==='public'?'公开数据':'用户提供数据'}）${r.warnings.length?'；'+r.warnings.join('；'):''}`);
 export const valueText=(v:string|number|null)=>v===null?'—':typeof v==='number'?String(Number(v.toFixed(3))):v;
 export const chartNumberFormat=(values:number[])=>values.every(Number.isInteger)?'0':'0.000';
-export function assertTableRows(r:ResultSnapshot){if(!r.rows.length)throw Error(`表格“${r.title}”没有数据行，请调整筛选或共同应答范围后重新计算，或移除该表格。`);}
-export function assertFindingReferences(c:EditorContent){for(const section of c.report)for(const id of section.findingIds??[]){const finding=c.quality?.findings.find(f=>f.id===id);if(!finding)throw Error('章节引用的研究发现不存在：'+id);if(!c.quality||findingNeedsReview(finding,c.quality))throw Error('章节引用的研究发现待复核：'+id);if(section.findingSnapshots?.[id]!==findingSignature(finding))throw Error('发现内容已更新，请核对章节并更新关联。');}}
+export function assertTableRows(r:ResultSnapshot){if(!r.rows.length)throw Error(`表格“${normalizeAcademicPunctuation(r.title)}”没有数据行，请调整筛选或共同应答范围后重新计算，或移除该表格。`);}
+export function assertFindingReferences(c:EditorContent){for(const section of c.report)for(const id of section.findingIds??[]){const finding=c.quality?.findings.find(f=>f.id===id);if(!finding)throw Error(`章节引用的研究发现（${id}）不存在。`);if(!c.quality||findingNeedsReview(finding,c.quality))throw Error(`章节引用的研究发现（${id}）尚待复核。`);if(section.findingSnapshots?.[id]!==findingSignature(finding))throw Error('发现内容已更新，请核对章节并更新关联。');}}
 export async function validateQuality(c:EditorContent){if(c.quality)await verifyResearchQuality(c.quality);for(const figure of c.figures??[])figureFor(c,figure.id);}
 const figureCell=(value:string|number|null,figure?:ReportFigure|null)=>typeof value==='number'&&figure?String(Number(value.toFixed(figure.style.decimals))):valueText(value);
 const xml=(v:string)=>v.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'})[c]!);
@@ -24,7 +59,7 @@ export function chartSVG(r:ResultSnapshot,column:number,color='#255D87'){
  const y=(v:number)=>40+(max-v)/span*510;
  const parts=['<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700"><rect width="1000" height="700" fill="white"/>','<path d="M110 40V550H970" stroke="#334155" fill="none"/>'];
  for(let i=0;i<=4;i++){const v=min+span*i/4;parts.push(`<text x="96" y="${y(v)+7}" font-family="sans-serif" font-size="30" text-anchor="end">${xml(valueText(v))}</text>`);}
- labels.forEach((label,i)=>{const x=110+slot*(i+.5);parts.push(`<rect x="${110+slot*(i+.15)}" y="${Math.min(y(values[i]),y(0))}" width="${slot*.7}" height="${Math.abs(y(values[i])-y(0))}" fill="${color}"/><text x="${x}" y="${y(values[i])-10}" font-family="sans-serif" font-size="30" text-anchor="middle">${xml(valueText(values[i]))}</text><text x="${x}" y="582" font-family="sans-serif" font-size="28" text-anchor="middle" transform="rotate(-35 ${x} 582)">${xml(label)}</text>`);});
+ labels.forEach((label,i)=>{const x=110+slot*(i+.5);parts.push(`<rect x="${110+slot*(i+.15)}" y="${Math.min(y(values[i]),y(0))}" width="${slot*.7}" height="${Math.abs(y(values[i])-y(0))}" fill="${color}"/><text x="${x}" y="${y(values[i])-10}" font-family="sans-serif" font-size="30" text-anchor="middle">${xml(valueText(values[i]))}</text><text x="${x}" y="582" font-family="sans-serif" font-size="28" text-anchor="middle" transform="rotate(-35 ${x} 582)">${xml(normalizeAcademicPunctuation(label))}</text>`);});
  return assertTrueVector(parts.join('')+'</svg>');
 }
 export type SvgPreviewRenderer=(svg:string)=>Promise<Uint8Array>;
@@ -69,7 +104,19 @@ export async function richRuns(text:string,ctx:WordContext,run:Record<string,unk
  const groups:{text:string;cite?:boolean}[]=[];
  for(const segment of referenceSegments(text,ctx.labels,ctx.citations)){const last=groups.at(-1);if(last&&!last.cite&&!segment.cite)last.text+=segment.text;else groups.push({text:segment.text,cite:segment.cite});}
  return groups.flatMap(segment=>segment.cite?[new TextRun({...run,text:segment.text,superScript:true})]:splitInlineMath(segment.text).flatMap(part=>{
-  if(!part.math)return textRuns(TextRun,part.text,run);
+  if(!part.math)return textRuns(TextRun,normalizePaperProse(part.text),run);
+  ctx.math.push({omml:texToOmml(part.text,false),display:false});
+  return new TextRun({...run,text:mathPlaceholder(ctx.math.length-1)});
+ }));
+}
+/** Caption runs: resolves references and typesets valid `$…$` inline equations, stripping unsupported `$` cleanly. */
+async function captionRuns(text:string,ctx:WordContext,run:Record<string,unknown>={}){
+ const {TextRun}=await import('docx');const {texProblem,texToOmml}=await import('./omml.ts');
+ resolveReferences(text,ctx.labels,ctx.where,ctx.citations);
+ const groups:{text:string;cite?:boolean}[]=[];
+ for(const segment of referenceSegments(text,ctx.labels,ctx.citations)){const last=groups.at(-1);if(last&&!last.cite&&!segment.cite)last.text+=segment.text;else groups.push({text:segment.text,cite:segment.cite});}
+ return groups.flatMap(segment=>segment.cite?[new TextRun({...run,text:segment.text,superScript:true})]:splitInlineMath(segment.text).flatMap(part=>{
+  if(!part.math||texProblem(part.text)!==null)return textRuns(TextRun,normalizeAcademicPunctuation(part.text),run);
   ctx.math.push({omml:texToOmml(part.text,false),display:false});
   return new TextRun({...run,text:mathPlaceholder(ctx.math.length-1)});
  }));
@@ -86,7 +133,10 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
  const {figureSVG,svgSize}=await import('./report-figures.ts');
  const {texToOmml}=await import('./omml.ts');
  const ctx:WordContext=context??{labels:(await import('./report-numbering.ts')).reportLabels(c.report),math:[],where:'内容块',section:'',citations:(await import('./references.ts')).referenceNumbers(c).numbers};
- const sectionId=ctx.section||c.report.find(s=>s.blocks===blocks)?.id||'';
+ const ownerSection=c.report.find(s=>s.id===ctx.section)||c.report.find(s=>s.blocks===blocks);
+ const sectionId=ctx.section||ownerSection?.id||'';
+ const isAbstract=ownerSection?reportPart(ownerSection.title)==='abstract':false;
+ const splitBlockLines=(text:string)=>{const raw=text.split(/\r\n|\r|\n/),kept=raw.filter(l=>l.trim().length>0);return kept.length?kept:[raw[0]??''];};
  const out:(InstanceType<typeof Paragraph>|InstanceType<typeof Table>)[]=[];
  const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'},rule=(size:number)=>({style:BorderStyle.SINGLE,size,color:'000000'});
  const used:ResultSnapshot[]=[];
@@ -107,43 +157,81 @@ export async function wordBlocks(blocks:ReportBlock[],c:EditorContent,renderSvg:
   }
   if(isExhibitNote(blocks,index)){
    // The exhibit's note, formulas typeset.
-   out.push(new Paragraph({style:'ReportSource',children:await richRuns(b.text,ctx)}));
+   for(const line of splitBlockLines(b.text)){
+    out.push(new Paragraph({style:'ReportSource',children:await richRuns(line,ctx)}));
+   }
    continue;
   }
-  if(b.kind!=='chart'&&b.kind!=='table'){out.push(new Paragraph({style:b.kind==='citation'?'ReportReference':'Normal',children:await richRuns(b.text,ctx)}));continue;}
+  if(b.kind!=='chart'&&b.kind!=='table'){
+   const style=b.kind==='citation'?'ReportReference':'Normal';
+   const isBodySection=ownerSection?reportPart(ownerSection.title)==='body':true;
+   for(const line of splitBlockLines(b.text)){
+    const kw=b.kind==='paragraph'?(isAbstract||/^关键词[:：]/u.test(line.trimStart()))?/^(关键词[:：])\s*/u.exec(line.trimStart()):null:null;
+    const cleanedLine=b.kind==='paragraph'&&isBodySection&&!kw&&!/写作提示/u.test(line)?smoothBodyMethodLead(line):line;
+    const runs=kw?[new TextRun({text:kw[1],bold:true,font:{ascii:'Times New Roman',hAnsi:'Times New Roman',eastAsia:'黑体',cs:'Times New Roman',hint:'eastAsia'}}),...await richRuns(line.trimStart().slice(kw[0].length),ctx)]:await richRuns(cleanedLine,ctx);
+    out.push(new Paragraph({style,children:runs}));
+   }
+   continue;
+  }
   const r=resultFor(c.quality,b.evidenceId),figure=b.figureId?figureFor(c,b.figureId,b.evidenceId):null;
   if(figure&&((b.kind==='table')!==(figure.kind==='table')))throw Error('图形与内容块类型不一致，请重新选择。');
   if(figure)assertFormalFigureCapacity(figure);
   if(!used.includes(r))used.push(r);
   // No source line under a figure or table: where the data came from is told once, in the text and the appendix.
   const noted=isExhibitNote(blocks,index+1);
-  const caption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),resolveReferences(b.text||r.title,ctx.labels,ctx.where,ctx.citations));
+  const rawCaption=numberedCaption(blockLabel(ctx.labels,sectionId,b.id),b.text||r.title);
+  const plainCaption=normalizeAcademicPunctuation(splitInlineMath(resolveReferences(rawCaption,ctx.labels,ctx.where,ctx.citations)).map(p=>p.text).join(''));
   if(b.kind==='chart'){
-   const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,figureInk(c));
-   // Figures share one width and size their height to the content; Word keeps the same proportions.
-   const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
-   out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:caption,description:sourceLine(r),name:b.id}})]}));
-   out.push(new Paragraph({style:'ReportFigureCaption',keepNext:noted||!!figure?.note,keepLines:true,children:textRuns(TextRun,caption)}));
+   const illustration=!figure?c.illustrations?.find(x=>x.resultId===b.evidenceId):undefined;
+   if(illustration){
+    const bytes=sectionIllustrationBytes(illustration);
+    const height=Math.max(1,Math.round(TEXT_WIDTH.px*illustration.heightPx/illustration.widthPx));
+    const illTitle=sanitizeExportAltText(plainCaption,'专题统计配图');
+    const illDescr=sanitizeExportAltText(`${plainCaption}（${sourceLine(r)}；${illustration.note}）`,'专题统计配图');
+    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:illustration.mime==='image/jpeg'?'jpg':'png',data:bytes,transformation:{width:TEXT_WIDTH.px,height},altText:{title:illTitle,description:illDescr,name:b.id}})]}));
+    out.push(new Paragraph({style:'ReportFigureCaption',keepNext:noted||!!figure?.note,keepLines:true,children:await captionRuns(rawCaption,ctx)}));
+   }else{
+    const svg=figure?reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()):await figureSVG(r,b.valueColumn,figureInk(c));
+    // Figures share one width and size their height to the content; Word keeps the same proportions.
+    const size=svgSize(svg),height=Math.round(TEXT_WIDTH.px*size.height/size.width);
+    const figTitle=sanitizeExportAltText(plainCaption,'统计矢量图表');
+    const figDescr=sanitizeExportAltText(`${plainCaption}（${sourceLine(r)}）`,'统计矢量图表');
+    out.push(new Paragraph({style:'ReportFigure',keepNext:true,keepLines:true,children:[new ImageRun({type:'svg',data:new TextEncoder().encode(svg),fallback:{type:'png',data:await renderSvg(svg)},transformation:{width:TEXT_WIDTH.px,height},altText:{title:figTitle,description:figDescr,name:b.id}})]}));
+    out.push(new Paragraph({style:'ReportFigureCaption',keepNext:noted||!!figure?.note,keepLines:true,children:await captionRuns(rawCaption,ctx)}));
+   }
   }else{
    const table=figure?{headers:figure.table.headers,rows:figure.table.rows.map(row=>row.map(cell=>figureCell(cell,figure))),note:figure.note}:presentResult(r);
    assertTableRows({...r,rows:table.rows});
    if(table.headers.length>10)throw Error('表格超过 10 列，请分拆后导出 Word。');
+   const cols=table.headers.length,wideTable=cols>=7;
+   const numericCol=table.headers.map((_,c)=>isShortNumericColumn(table,c));
+   const proseCol=table.headers.map((_,c)=>isLongProseColumn(table,c));
    const weights=columnWeights(table),total=weights.reduce((a,v)=>a+v,0);
-   const widths=weights.map(w=>Math.round(TEXT_WIDTH.twips*w/total));
-   out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:textRuns(TextRun,caption)}));
+   const widths=weights.map((w,c)=>{
+    const raw=Math.round(TEXT_WIDTH.twips*w/total);
+    return numericCol[c]?Math.max(cols>=9?580:640,raw):raw;
+   });
+   const sumW=widths.reduce((a,v)=>a+v,0);
+   if(sumW!==TEXT_WIDTH.twips){
+    const flexIdx=widths.reduce((best,w,idx)=>(!numericCol[idx]&&w>widths[best]?idx:best),0);
+    widths[flexIdx]=Math.max(480,widths[flexIdx]+(TEXT_WIDTH.twips-sumW));
+   }
+   const cellMargins={top:40,bottom:40,left:48,right:48};
+   const cellRunBase=wideTable?{size:18,sizeComplexScript:18}:{};
+   out.push(new Paragraph({style:'ReportTableCaption',keepNext:true,keepLines:true,children:await captionRuns(rawCaption,ctx)}));
    const all=[table.headers,...table.rows];
    // Short tables stay on one page with their notes; long ones may break, with the header row repeated.
    const small=all.length<=16,follows=noted||!!table.note;
    // A parent unit repeated on its children's rows (a sampling frame) is one vertically merged cell; covered cells stay empty.
    const spans=figure?null:tableSpans(r,table),span=(i:number,col:number)=>i===0||!spans?1:spans[i-1][col];
-   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',alignment:AlignmentType.CENTER,keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,cell,{bold:i===0})})]}))}));
-   out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
-   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:noted,children:textRuns(TextRun,table.note)}));
+   const rows=all.map((row,i)=>new TableRow({tableHeader:i===0,cantSplit:true,children:row.map((cell,col)=>new TableCell({width:{size:widths[col],type:WidthType.DXA},margins:cellMargins,verticalAlign:VerticalAlign.CENTER,...(span(i,col)===0?{verticalMerge:VerticalMergeType.CONTINUE}:span(i,col)>1?{verticalMerge:VerticalMergeType.RESTART}:{}),borders:{top:i===0?rule(12):none,bottom:i===0?rule(6):i===all.length-1?rule(12):none,left:none,right:none},children:[new Paragraph({style:'ReportTableText',alignment:i>0&&proseCol[col]?AlignmentType.LEFT:AlignmentType.CENTER,keepNext:small?i<all.length-1||follows:i===0,keepLines:true,children:span(i,col)===0?[]:textRuns(TextRun,normalizeAcademicPunctuation(String(cell)),{...cellRunBase,bold:i===0})})]}))}));
+   out.push(new Table({width:{size:TEXT_WIDTH.twips,type:WidthType.DXA},columnWidths:widths,margins:cellMargins,rows,borders:{top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none}}));
+   if(table.note)out.push(new Paragraph({style:'ReportSource',keepNext:noted,children:await captionRuns(table.note,ctx)}));
   }
-  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:noted,children:textRuns(TextRun,figure.note)}));
+  if(b.kind==='chart'&&figure?.note)out.push(new Paragraph({style:'ReportSource',keepNext:noted,children:await captionRuns(figure.note,ctx)}));
  }
  const notes=sectionNotes(used);
- if(notes)out.push(new Paragraph({style:'ReportNote',children:textRuns(TextRun,notes)}));
+ if(notes)out.push(new Paragraph({style:'ReportNote',children:await captionRuns(notes,ctx)}));
  return out;
 }
 /** One line of at most the width a box holds, shortened with an ellipsis; CJK characters take a full em, others about half. */
@@ -156,51 +244,61 @@ function textLines(text:string,w:number,fs:number){
  },0);
 }
 function fitText(text:string,w:number,h:number,fs:number){if(textLines(text,w,fs)*fs*1.22>h*72)throw Error('文本超出对象尺寸，请扩大对象或分拆幻灯片。');}
-async function addSvgFigure(slide:PptxGenJS.Slide,svg:string,box:{x:number;y:number;w:number;h:number;objectName:string},renderSvg:SvgPreviewRenderer){
+async function addSvgFigure(slide:PptxGenJS.Slide,svg:string,box:{x:number;y:number;w:number;h:number;objectName:string},renderSvg:SvgPreviewRenderer,altText='统计矢量图表'){
  const png=await renderSvg(svg);if(png.length<8||![137,80,78,71,13,10,26,10].every((v,i)=>png[i]===v))throw Error('SVG 兼容预览不是有效 PNG。');
  // PptxGenJS4's Node path otherwise substitutes IMG_BROKEN. Patch only the
  // newly created preview relation, retaining its authoritative SVG relation.
  const media=(slide as unknown as {_relsMedia?:{isSvgPng?:boolean;type?:string;data?:string}[]})._relsMedia;
  if(!media)throw Error('PPT SVG 兼容层不可用。');const offset=media.length;
- slide.addImage({...box,data:svgURI(svg)});
+ slide.addImage({...box,data:svgURI(svg),altText:sanitizeExportAltText(altText,'统计矢量图表')});
  const fallback=media.slice(offset).find(rel=>rel.isSvgPng&&rel.type==='image/png');
  if(!fallback)throw Error('PPT SVG 兼容层未生成预览关系。');fallback.data=`data:image/png;base64,${b64(png)}`;fallback.isSvgPng=false;
 }
-export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:SlideObject[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview){
+export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,objects:SlideObject[],c:EditorContent,renderSvg:SvgPreviewRenderer=preview,altMap?:Map<string,string>){
  const evidence=new Map<string,ResultSnapshot>();
  const figureNotes=new Set<string>();
  for(const o of objects){const box={x:o.x/100*13.333333,y:o.y/100*7.5,w:o.width/100*13.333333,h:o.height/100*7.5,rotate:o.rotation,objectName:o.id};
-  if(o.kind==='text'){fitText(o.text,box.w,box.h,o.fontSize);slide.addText(o.text,{...box,fontFace:'Microsoft YaHei',lang:'zh-CN',fontSize:o.fontSize,color:o.color.slice(1),align:o.align,bold:o.bold??false,valign:'top',margin:0,transparency:(1-o.opacity)*100});}
-  else if(o.kind==='shape')slide.addShape(pptx.ShapeType[o.shape],{...box,line:{color:o.color.slice(1),transparency:(1-o.opacity)*100,width:1},fill:{color:o.color.slice(1),transparency:(1-o.opacity)*100}});
+  if(o.kind==='text'){const cleanText=normalizePaperProse(o.text);fitText(cleanText,box.w,box.h,o.fontSize);const snippet=oneLine(cleanText.replace(/\s+/gu,' '),3.2,14);altMap?.set(o.id,sanitizeExportAltText(snippet?`幻灯片文本“${snippet}”`:'幻灯片文本内容块','幻灯片文本内容块'));slide.addText(cleanText,{...box,fontFace:'Microsoft YaHei',lang:'zh-CN',fontSize:o.fontSize,color:o.color.slice(1),align:o.align,bold:o.bold??false,valign:'top',margin:0,transparency:(1-o.opacity)*100});}
+  else if(o.kind==='shape'){altMap?.set(o.id,'幻灯片版式分隔与强调图形');slide.addShape(pptx.ShapeType[o.shape],{...box,line:{color:o.color.slice(1),transparency:(1-o.opacity)*100,width:1},fill:{color:o.color.slice(1),transparency:(1-o.opacity)*100}});}
   else if(o.kind==='vector'){
    const scale=Math.min(box.w/320,box.h/240),dx=box.x+(box.w-320*scale)/2,dy=box.y+(box.h-240*scale)/2,angle=o.rotation*Math.PI/180,cx=box.x+box.w/2,cy=box.y+box.h/2;
    getVectorPrimitives(o.assetId,o.color).forEach((p,i)=>{
     const centerX=dx+(p.x+p.width/2)*scale,centerY=dy+(p.y+p.height/2)*scale;
     const x=cx+(centerX-cx)*Math.cos(angle)-(centerY-cy)*Math.sin(angle),y=cy+(centerX-cx)*Math.sin(angle)+(centerY-cy)*Math.cos(angle),w=Math.abs(p.width)*scale,h=Math.abs(p.height)*scale;
     const transparency=(1-o.opacity*(p.opacity??1))*100;
-    slide.addShape(pptx.ShapeType[p.shape],{x:x-w/2,y:y-h/2,w,h,rotate:((o.rotation+(p.rotation??0))%360+360)%360,flipH:p.width<0,flipV:p.height<0,objectName:o.id+'.'+i,...(p.shape==='roundRect'?{rectRadius:7*scale}:{}),fill:p.fill?{color:p.fill.slice(1),transparency}:{color:'FFFFFF',transparency:100},line:p.stroke?{color:p.stroke.slice(1),width:(p.lineWidth??1)*scale*72,transparency}:{color:'FFFFFF',width:0,transparency:100}});
+    const primName=o.id+'.'+i;altMap?.set(primName,'幻灯片版式装饰矢量几何图形');
+    slide.addShape(pptx.ShapeType[p.shape],{x:x-w/2,y:y-h/2,w,h,rotate:((o.rotation+(p.rotation??0))%360+360)%360,flipH:p.width<0,flipV:p.height<0,objectName:primName,...(p.shape==='roundRect'?{rectRadius:7*scale}:{}),fill:p.fill?{color:p.fill.slice(1),transparency}:{color:'FFFFFF',transparency:100},line:p.stroke?{color:p.stroke.slice(1),width:(p.lineWidth??1)*scale*72,transparency}:{color:'FFFFFF',width:0,transparency:100}});
    });
   }
   else{if(o.rotation!==0||o.opacity!==1)throw Error('原生图表和表格暂不支持旋转或透明度，请恢复为 0° 和完全不透明。');const sourceResult=resultFor(c.quality,o.evidenceId),figure=o.figureId?figureFor(c,o.figureId,o.evidenceId):null;const r=figure?.kind==='table'?{...sourceResult,...figure.table}:sourceResult;evidence.set(sourceResult.id,sourceResult);
-   if(figure&&((o.kind==='table')!==(figure.kind==='table')))throw Error('图形与对象类型不一致，请重新选择。');if(figure?.note)figureNotes.add(`${figure.title}：${figure.note}`);
+   if(figure&&((o.kind==='table')!==(figure.kind==='table')))throw Error('图形与对象类型不一致，请重新选择。');if(figure?.note)figureNotes.add(normalizeAcademicPunctuation(`关于“${figure.title}”，${figure.note}`));
    if(figure)assertFormalFigureCapacity(figure);
    if(o.kind==='chart'&&figure){
     if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');
+    const figAlt=sanitizeExportAltText(`统计图表“${figure.title}”，有效样本 n=${figure.n}`,'统计图表');altMap?.set(o.id,figAlt);
     const palette=projectPalette(c.visualStyle??defaultProjectVisualStyle()),native=['bar','horizontal_bar','grouped_bar','percent_stacked'].includes(figure.kind)&&figure.series.every(s=>s.values.every(v=>v!==null));
-    if(native){const series=figure.kind==='percent_stacked'?percentSeries(figure):figure.series;const format=figure.kind==='percent_stacked'?'0'+(figure.style.decimals?'.'+'0'.repeat(figure.style.decimals):'')+'"%"':'0'+(figure.style.decimals?'.'+'0'.repeat(figure.style.decimals):'');
-     slide.addChart(pptx.ChartType.bar,series.map(s=>({name:s.name,labels:figure.labels,values:s.values as number[]})),{...box,h:box.h-.4,barDir:figure.kind==='horizontal_bar'?'bar':'col',barGrouping:figure.kind==='percent_stacked'?'stacked':'clustered',showLegend:series.length>1,showValue:figure.style.showLabels,showTitle:false,chartColors:palette.colors.map(color=>color.slice(1)),catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:16,valAxisLabelFontSize:16,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:'263D4D',legendFontSize:16,dataLabelFormatCode:format,dataLabelPosition:figure.kind==='percent_stacked'?'ctr':'outEnd',catAxisLabelPos:'low',valAxisLabelFormatCode:figure.kind==='percent_stacked'?'0"%"':undefined,valAxisMinVal:figure.kind==='percent_stacked'?0:undefined,valAxisMaxVal:figure.kind==='percent_stacked'?100:undefined,catAxisTitle:figure.xLabel,valAxisTitle:figure.yLabel,catAxisLineShow:figure.style.showBorder,valAxisLineShow:figure.style.showBorder,valGridLine:{style:figure.style.showGrid?'solid':'none',color:'E4E9EC',size:1}});
-    }else await addSvgFigure(slide,reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()),{...box,h:box.h-.4},renderSvg);
+    if(native){const series=figure.kind==='percent_stacked'?percentSeries(figure):figure.series;const format=figure.kind==='percent_stacked'?'0'+(figure.style.decimals?'.'+'0'.repeat(figure.style.decimals):'')+'"%"':'0'+(figure.style.decimals?'.'+'0'.repeat(figure.style.decimals):'');const cleanLabels=figure.labels.map(normalizeAcademicPunctuation);
+     slide.addChart(pptx.ChartType.bar,series.map(s=>({name:normalizeAcademicPunctuation(s.name),labels:cleanLabels,values:s.values as number[]})),{...box,h:box.h-.4,altText:figAlt,barDir:figure.kind==='horizontal_bar'?'bar':'col',barGrouping:figure.kind==='percent_stacked'?'stacked':'clustered',showLegend:series.length>1,showValue:figure.style.showLabels,showTitle:false,chartColors:palette.colors.map(color=>color.slice(1)),catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:16,valAxisLabelFontSize:16,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:'263D4D',legendFontSize:16,dataLabelFormatCode:format,dataLabelPosition:figure.kind==='percent_stacked'?'ctr':'outEnd',catAxisLabelPos:'low',valAxisLabelFormatCode:figure.kind==='percent_stacked'?'0"%"':undefined,valAxisMinVal:figure.kind==='percent_stacked'?0:undefined,valAxisMaxVal:figure.kind==='percent_stacked'?100:undefined,catAxisTitle:figure.xLabel?normalizeAcademicPunctuation(figure.xLabel):figure.xLabel,valAxisTitle:figure.yLabel?normalizeAcademicPunctuation(figure.yLabel):figure.yLabel,catAxisLineShow:figure.style.showBorder,valAxisLineShow:figure.style.showBorder,valGridLine:{style:figure.style.showGrid?'solid':'none',color:'E4E9EC',size:1}});
+    }else await addSvgFigure(slide,reportFigureSVG(figure,c.visualStyle??defaultProjectVisualStyle()),{...box,h:box.h-.4},renderSvg,figAlt);
+   }
+   else if(o.kind==='chart'&&c.illustrations?.some(x=>x.resultId===sourceResult.id)){
+    if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');
+    const ill=c.illustrations.find(x=>x.resultId===sourceResult.id)!;
+    const illAlt=sanitizeExportAltText(`统计配图“${r.title}”，有效样本 n=${r.n}，${ill.note.replace(/[：:]/gu,'，')}`,'统计配图');altMap?.set(o.id,illAlt);
+    slide.addImage({...box,h:box.h-.4,data:sectionIllustrationDataUrl(ill),altText:illAlt});
    }
    else if(o.kind==='chart'&&(await import('./method-figures.ts')).carriesFigure(r)){
     if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');
+    const methodAlt=sanitizeExportAltText(r.method==='sampling-frame'?`抽样设计图“${r.title}”`:r.method==='ahp'?`层次分析权重图“${r.title}”（${r.n} 项准则）`:`统计图表“${r.title}”，数据源自${r.sourceName}，有效样本 n=${r.n}`,'统计矢量图表');altMap?.set(o.id,methodAlt);
     const {figureSVG}=await import('./report-figures.ts');
-    await addSvgFigure(slide,await figureSVG(r,o.valueColumn,c.figurePalette??(/^#[0-9a-fA-F]{6}$/.test(o.color)?o.color:'#2F6B4F')),{...box,h:box.h-.4},renderSvg);
+    await addSvgFigure(slide,await figureSVG(r,o.valueColumn,c.figurePalette??(/^#[0-9a-fA-F]{6}$/.test(o.color)?o.color:'#2F6B4F')),{...box,h:box.h-.4},renderSvg,methodAlt);
    }
-   else if(o.kind==='chart'&&!(await import('./method-figures.ts')).canChart(r))throw Error(`“${r.title}”没有可画的图，请在幻灯片中改用表格。`);
-   else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');const categoryColors=c.figurePalette?(await import('./report-figures.ts')).categoryColors:null;slide.addChart(pptx.ChartType[o.chartType],[{name:r.headers[o.valueColumn],labels,values}],{...box,h:box.h-.4,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:c.figurePalette&&categoryColors?categoryColors(c.figurePalette,5,false).map(h=>h.slice(1)):[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
+   else if(o.kind==='chart'&&!(await import('./method-figures.ts')).canChart(r))throw Error(`“${normalizeAcademicPunctuation(r.title)}”没有可画的图，请在幻灯片中改用表格。`);
+   else if(o.kind==='chart'){const {labels,values}=chartData(r,o.valueColumn);if(o.chartType==='pie'&&(values.some(v=>v<0)||values.reduce((a,b)=>a+b,0)<=0))throw Error('饼图需要非负且总和大于零的数值。');if(box.h<1.5||box.w<3)throw Error('图表对象过小，请扩大图表。');const chartAlt=sanitizeExportAltText(`统计图表“${r.title}”，数据源自${r.sourceName}，有效样本 n=${r.n}（共 ${r.total}）`,'统计图表');altMap?.set(o.id,chartAlt);const categoryColors=c.figurePalette?(await import('./report-figures.ts')).categoryColors:null;slide.addChart(pptx.ChartType[o.chartType],[{name:normalizeAcademicPunctuation(r.headers[o.valueColumn]),labels:labels.map(normalizeAcademicPunctuation),values}],{...box,h:box.h-.4,altText:chartAlt,barDir:'col',showLegend:o.chartType==='pie',showValue:true,showTitle:false,chartColors:c.figurePalette&&categoryColors?categoryColors(c.figurePalette,5,false).map(h=>h.slice(1)):[o.color.slice(1),'4C83A8','78A8B9','B6CED6','E0EBEE'],catAxisLabelFontFace:'Microsoft YaHei',catAxisLabelFontSize:14,valAxisLabelFontSize:14,dataLabelFontFace:'Microsoft YaHei',dataLabelFontSize:16,dataLabelColor:o.chartType==='bar'?'FFFFFF':'243849',legendFontSize:16,dataLabelFormatCode:chartNumberFormat(values),dataLabelPosition:o.chartType==='bar'?'ctr':o.chartType==='line'?'t':'bestFit',catAxisLabelPos:'low'});}
    else {
     assertTableRows(r);
-    const rows=[r.headers,...r.rows].map(row=>row.map(cell=>figureCell(cell,figure)));
+    const tblAlt=sanitizeExportAltText(r.method==='sampling-frame'?`抽样设计三线表“${r.title}”`:`统计三线表“${r.title}”，共 ${r.rows.length} 行数据，有效样本 n=${r.n}`,'统计数据表');altMap?.set(o.id,tblAlt);
+    const rows=[r.headers,...r.rows].map(row=>row.map(cell=>normalizeAcademicPunctuation(figureCell(cell,figure))));
     const fs=Math.max(14,o.fontSize), cellWidth=box.w/r.headers.length-.1;
     const rowH=rows.map(row=>Math.max(fs*1.45,Math.max(...row.map(cell=>textLines(cell,cellWidth,fs)))*fs*1.22+4)/72);
     if(rows.length>15||r.headers.length>8||cellWidth<=0||rowH.reduce((sum,height)=>sum+height,0)>box.h-.35)throw Error('表格容量超出幻灯片，请分拆表格或扩大对象。');
@@ -210,8 +308,9 @@ export async function addQualityObjects(slide:PptxGenJS.Slide,pptx:PptxGenJS,obj
       border:[i===0?rule(1.5):none,none,i===0?rule(.75):i===rows.length-1?rule(1.5):none,none] as [PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps,PptxGenJS.BorderProps]}})));
     slide.addTable(cells,{...box,h:box.h-.35,fontSize:fs,fontFace:'Microsoft YaHei',color:o.color.slice(1),align:'center',valign:'middle',margin:2,autoPage:false,rowH,border:none});
    }
-   const caption=oneLine(r.method==='sampling-frame'?`${r.title} · 本研究抽样设计`:r.method==='ahp'?`${r.title} · ${r.sourceName}`:`n=${r.n} / ${r.total} · ${r.sourceName}`,box.w,13);fitText(caption,box.w,.27,13);
-   slide.addText(caption,{x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
+   const caption=oneLine(r.method==='sampling-frame'?`${normalizeAcademicPunctuation(r.title)} · 本研究抽样设计`:r.method==='ahp'?`${normalizeAcademicPunctuation(r.title)} · ${normalizeAcademicPunctuation(r.sourceName)}`:`n=${r.n} / ${r.total} · ${normalizeAcademicPunctuation(r.sourceName)}`,box.w,13);fitText(caption,box.w,.27,13);
+   const capName=`${o.id}.caption`;altMap?.set(capName,sanitizeExportAltText(`图表题注“${caption}”`,'幻灯片图表题注'));
+   slide.addText(caption,{objectName:capName,x:box.x,y:box.y+box.h-.28,w:box.w,h:.27,fontFace:'Microsoft YaHei',fontSize:13,color:'64748B',margin:0});
   }
  }return [...[...evidence.values()].map(evidenceLabel),...figureNotes].join('\n');
 }

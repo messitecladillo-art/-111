@@ -27,11 +27,22 @@ import styles from './AtypicaLiveTheater.module.css';
 const PersonaStage = dynamic(() => import('./PersonaStage'), {
   ssr: false,
   loading: () => (
-    <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#f1ece0' }}>
-      正在准备 3D 硅基舞台…
+    <div role="status" aria-live="polite" style={{ display: 'grid', placeItems: 'center', height: '100%', color: '#f1ece0' }}>
+      正在准备三维群像舞台…
     </div>
   ),
 });
+
+function cleanTheaterText(value: string): string {
+  return value
+    .replace(/[【「『]/gu, '“')
+    .replace(/[】」』]/gu, '”')
+    .replace(/\[/gu, '（')
+    .replace(/\]/gu, '）')
+    .replace(/\{([^{}]+)\}/gu, '“$1”')
+    .replace(/离线演示引擎/gu, '本地预测试推演')
+    .replace(/Atypica/giu, '实时预测试');
+}
 
 export interface AtypicaLiveTheaterProps {
   design: Questionnaire;
@@ -246,8 +257,8 @@ export default function AtypicaLiveTheater({
     const modTurn: DiscussionTurnItem = {
       id: `mod-live-${followupId}`,
       speakerType: 'moderator',
-      alias: canCallBrain ? '证见 · 焦点主持人（实时追问）' : '证见 · 焦点主持人（离线模拟推演）',
-      roleBadge: canCallBrain ? '实时追问' : '离线演练 · 未绑定正式项目',
+      alias: canCallBrain ? '证见 · 焦点主持人（实时追问）' : '证见 · 焦点主持人（本地预测试推演）',
+      roleBadge: canCallBrain ? '实时追问' : '预测试演练 · 模拟数据隔离',
       content: clean,
     };
 
@@ -255,11 +266,11 @@ export default function AtypicaLiveTheater({
     const liveReplies: DiscussionTurnItem[] = [];
     const distinctRebuttals = [
       (qSnippet: string, cue: string) =>
-        `针对你追问的重点「${qSnippet}」：我填问卷时第一反应会看选项之间有没有明显好坏暗示——要是正面词占了一大半，我顺手就往高分勾。${cue}建议先把“是否经常满意”这类评价词拆成具体的频率区间（如“本周几天出现过”）。`,
+        `针对你追问的“${qSnippet}”，我填问卷时第一反应会看选项之间有没有明显好坏暗示——要是正面词占了一大半，我顺手就往高分勾。${cue}建议先把“是否经常满意”这类评价词拆成具体的频率区间（如“本周几天出现过”）。`,
       (qSnippet: string, cue: string) =>
-        `就你提到的「${qSnippet}」来说，光改语气温和还不够，关键在于题干里别把两件不同的事捆在一句问。${cue}实操上建议拆成两道单维度短题，并在旁边明确“最近 30 天以内”的时间锚点，避免每个人按不同时期对比。`,
+        `就你提到的“${qSnippet}”来说，光改语气温和还不够，关键在于题干里别把两件不同的事捆在一句问。${cue}实操上建议拆成两道单维度短题，并在旁边明确“最近 30 天以内”的时间锚点，避免每个人按不同时期对比。`,
       (qSnippet: string, cue: string) =>
-        `如果从「${qSnippet}」这个角度看，对我这种平时较少接触的人而言，最尴尬的是五个刻度全是程度评价却没有出口。${cue}最好直接补一个独立的「暂未体验 / 不适用」前置分流项，比事后猜是不是敷衍填中间分靠谱得多。`,
+        `如果从“${qSnippet}”这个角度看，对我这种平时较少接触的人而言，最尴尬的是五个刻度全是程度评价却没有出口。${cue}最好直接补一个独立的“暂未体验 / 不适用”前置分流项，比事后猜是不是敷衍填中间分靠谱得多。`,
     ];
     const cleanClause = clean.replace(/[？?。！!]+$/u, '').split(/[：:，,]/u)[0] || clean;
     const questionFocus = cleanClause.length > 18 ? `${cleanClause.slice(0, 18)}等细节` : cleanClause;
@@ -270,12 +281,12 @@ export default function AtypicaLiveTheater({
       let replyText = '';
       if (canCallBrain) {
         try {
-          const prompt = `请你完全以第一人称硅基受访者「${entry.profile.alias}」（${entry.profile.archetype}，人口特征：${entry.profile.tags.join('、')}，口头禅风格：${entry.profile.toneRule}）回答主持人的追问：「${clean}」。要求：70字以内，用生活化口语真实回应，可对问卷设计提具体建议，禁止出现"综上所述"、"值得注意的是"等AI模板词汇。`;
+          const followupInstruction = `请你完全以第一人称受访者“${entry.profile.alias}”（${entry.profile.archetype}，人口特征：${entry.profile.tags.join('、')}，表达习惯：${entry.profile.toneRule}）回答主持人的追问：“${clean}”。要求：70字以内，用生活化口语真实回应，可对问卷设计提具体建议，禁止出现"综上所述"、"值得注意的是"等空泛套话词汇。`;
           const resp = await fetch('/api/agent/brain', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              message: prompt,
+              message: followupInstruction,
               history: [],
               step: 1,
               noTools: true,
@@ -293,7 +304,7 @@ export default function AtypicaLiveTheater({
 
       if (!replyText) {
         const rebuttalFn = distinctRebuttals[i % distinctRebuttals.length];
-        replyText = `站在**${entry.profile.archetype}**的位置回应你：${entry.profile.catchphrase} ${rebuttalFn(questionFocus, '')}`;
+        replyText = `站在**${entry.profile.archetype}**的日常视角回应你，${cleanTheaterText(entry.profile.catchphrase)} ${rebuttalFn(questionFocus, '')}`;
       }
       const deai = detectAiFlavor(replyText);
       liveReplies.push({
@@ -308,7 +319,7 @@ export default function AtypicaLiveTheater({
         nextPersonaId: next?.persona.id,
         nextAlias: next?.profile.alias,
         routingReason: next
-          ? `转由「${next.profile.archetype}」交叉对照这一追问在另一类生活作息人群中是否成立。`
+          ? `转由“${next.profile.archetype}”交叉对照这一追问在另一类生活作息人群中是否成立。`
           : undefined,
       });
     }
@@ -385,8 +396,8 @@ export default function AtypicaLiveTheater({
       return {
         title: `${found.profile.alias} · ${found.persona.code}`,
         meta: attributes.map(a => found.persona.traits[a.key]).filter(Boolean).join(' · '),
-        lines: [`“${found.profile.catchphrase.slice(0, 32)}…”`],
-        flag: found.risk.level === 'elevated' ? `保真度风险：${found.risk.reasons.join('、')}` : undefined,
+        lines: [`“${cleanTheaterText(found.profile.catchphrase).slice(0, 32)}…”`],
+        flag: found.risk.level === 'elevated' ? `涉及${found.risk.reasons.join('、')}特征，需结合真人核对` : undefined,
       };
     };
 
@@ -414,15 +425,15 @@ export default function AtypicaLiveTheater({
             <i className={styles.liveDot} data-active={isLiveGlow ? 'true' : 'false'} aria-hidden="true" />
             <span>硅基预测试演播室</span>
           </span>
-          <span className={styles.studyTitle} title={blueprint.studyTitle}>
-            {blueprint.studyTitle}
+          <span className={styles.studyTitle} title={cleanTheaterText(blueprint.studyTitle)}>
+            {cleanTheaterText(blueprint.studyTitle)}
           </span>
         </div>
 
         <div className={styles.headerActions}>
           {!embeddedMode && (
             <span className={styles.quotaChip}>
-              {blueprint.enrichedPersonas.length} 位 · {Math.max(1, settings.scenarios.length)} 情境 · 硅基模拟
+              {blueprint.enrichedPersonas.length} 位 · {Math.max(1, settings.scenarios.length)} 情境 · 模拟数据与真实调查隔离
             </span>
           )}
 
@@ -464,7 +475,7 @@ export default function AtypicaLiveTheater({
           </button>
 
           {!modalMode && !embeddedMode && onClose && (
-            <button type="button" className={styles.ghostBtn} onClick={onClose}>
+            <button type="button" className={styles.ghostBtn} aria-label="收起预测试演播室" onClick={onClose}>
               收起 ×
             </button>
           )}
@@ -507,8 +518,8 @@ export default function AtypicaLiveTheater({
             </button>
             {thoughtOpen && (
               <div className={styles.thoughtBody}>
-                正在分析《{blueprint.studyTitle}》结构：共 {design.questions.length} 道测量题，设定{' '}
-                {attributes.length} 个分层属性。将先由 {blueprint.enrichedPersonas.length} 位配额硅基受访者分三轮执行 1v1 访谈，再触发 4 席异质视角焦点圆桌，最终合成为带定量核验的预测试报告。
+                正在解析《{cleanTheaterText(blueprint.studyTitle)}》问卷结构，全卷共 {design.questions.length} 道测量题，配置{' '}
+                {attributes.length} 个分层属性。系统将先由 {blueprint.enrichedPersonas.length} 位配额受访者分三轮执行一对一试答访谈，再组织 4 席异质视角焦点圆桌，最终合成为带定量核验的预测试诊断报告（模拟回答与真实样本严格隔离）。
               </div>
             )}
 
@@ -516,15 +527,17 @@ export default function AtypicaLiveTheater({
             {(() => {
               const showClarifyFull = clarifyOpenOverride ?? phaseIndex <= 2;
               if (!showClarifyFull) {
-                const focusChoice = blueprint.clarificationOptions[0]?.choices.find(c => c.id === clarifyAnswers.focus)?.label ?? '题干歧义、选项漏斗与跳题路径排雷';
-                const modeChoice = blueprint.clarificationOptions[1]?.choices.find(c => c.id === clarifyAnswers.mode)?.label ?? '1:1 实时推演';
+                const focusChoice = cleanTheaterText(blueprint.clarificationOptions[0]?.choices.find(c => c.id === clarifyAnswers.focus)?.label ?? '题干歧义、选项漏斗与跳题路径排雷');
+                const modeChoice = cleanTheaterText(blueprint.clarificationOptions[1]?.choices.find(c => c.id === clarifyAnswers.mode)?.label ?? '实时逐步推演');
                 return (
                   <button
                     type="button"
                     className={styles.clarifySummaryBtn}
+                    aria-expanded={false}
+                    aria-label="展开策略偏好设置"
                     onClick={() => setClarifyOpenOverride(true)}
                   >
-                    <span className={styles.clarifyTag}>策略设定</span>
+                    <span className={styles.clarifyTag}>策略偏好</span>
                     <span className={styles.clarifySummaryText}>{focusChoice} · {modeChoice}</span>
                     <span className={styles.clarifySummaryEdit}>调整 ▾</span>
                   </button>
@@ -536,16 +549,17 @@ export default function AtypicaLiveTheater({
                     <button
                       type="button"
                       className={styles.thoughtToggle}
+                      aria-expanded={true}
                       onClick={() => setClarifyOpenOverride(false)}
                     >
-                      收起策略设定 ▴
+                      收起策略偏好 ▴
                     </button>
                   )}
                   {blueprint.clarificationOptions.map(block => (
                     <div key={block.id} className={styles.clarifyBlock}>
                       <div className={styles.clarifyQ}>
-                        <span className={styles.clarifyTag}>策略设定</span>
-                        {block.prompt}
+                        <span className={styles.clarifyTag}>策略偏好</span>
+                        {cleanTheaterText(block.prompt)}
                       </div>
                       <div className={styles.clarifyOptions}>
                         {block.choices.map(c => (
@@ -563,7 +577,7 @@ export default function AtypicaLiveTheater({
                               }
                             }}
                           >
-                            {c.label}
+                            {cleanTheaterText(c.label)}
                           </button>
                         ))}
                       </div>
@@ -579,7 +593,7 @@ export default function AtypicaLiveTheater({
                 <div className={styles.planCardHead}>
                   <div>
                     <small>研究计划</small>
-                    <h4>{blueprint.planCard.title}</h4>
+                    <h4>{cleanTheaterText(blueprint.planCard.title)}</h4>
                   </div>
                   <button
                     type="button"
@@ -589,18 +603,18 @@ export default function AtypicaLiveTheater({
                     查看设计 ↗
                   </button>
                 </div>
-                <p style={{ margin: 0 }}><strong>背景：</strong>{blueprint.planCard.background}</p>
+                <p style={{ margin: 0 }}><strong>研究背景</strong> · {cleanTheaterText(blueprint.planCard.background)}</p>
                 <div>
-                  <strong>研究目标：</strong>
-                  <ul>{blueprint.planCard.goals.map(g => <li key={g}>{g}</li>)}</ul>
+                  <strong>研究目标</strong>
+                  <ul>{blueprint.planCard.goals.map(g => <li key={g}>{cleanTheaterText(g)}</li>)}</ul>
                 </div>
-                <p style={{ margin: 0 }}><strong>目标人群：</strong>{blueprint.planCard.targetPopulation}</p>
+                <p style={{ margin: 0 }}><strong>目标人群</strong> · {cleanTheaterText(blueprint.planCard.targetPopulation)}</p>
                 <div>
-                  <strong>研究方法：</strong>
-                  <ul>{blueprint.planCard.methods.map(m => <li key={m}>{m}</li>)}</ul>
+                  <strong>研究方法</strong>
+                  <ul>{blueprint.planCard.methods.map(m => <li key={m}>{cleanTheaterText(m)}</li>)}</ul>
                 </div>
-                <p style={{ margin: 0 }}><strong>交付物：</strong>{blueprint.planCard.deliverable}</p>
-                <div className={styles.planConfirmTick}>✓ 研究计划已确认，正在调度研究步骤</div>
+                <p style={{ margin: 0 }}><strong>预期产出</strong> · {cleanTheaterText(blueprint.planCard.deliverable)}</p>
+                <div className={styles.planConfirmTick}>✓ 研究计划已确认，正在调度预测试步骤</div>
               </article>
             )}
 
@@ -609,7 +623,7 @@ export default function AtypicaLiveTheater({
               <div className={styles.execRow} data-state={phaseIndex === 2 && playing ? 'running' : 'done'} data-focused={rightView === 'design'}>
                 <div className={styles.execCard}>
                   <div className={styles.execHead}>
-                    <button type="button" className={styles.execTitleBtn} onClick={() => toggleExecExpand('designStudy')}>
+                    <button type="button" className={styles.execTitleBtn} aria-expanded={!!expandedExecs.designStudy} onClick={() => toggleExecExpand('designStudy')}>
                       <span>01 · 问卷结构与测量构念解析</span>
                     </button>
                     <button type="button" className={styles.execMetaBtn} onClick={() => focusRightView('design')}>
@@ -620,7 +634,7 @@ export default function AtypicaLiveTheater({
                     <div className={styles.codeDrawer}>
                       <table className={styles.argsTable}>
                         <tbody>
-                          <tr><td>研究范围</td><td>{blueprint.planCard.background}</td></tr>
+                          <tr><td>研究范围</td><td>{cleanTheaterText(blueprint.planCard.background)}</td></tr>
                           <tr><td>任务状态</td><td>{completedTodos}/{FLOW_CHECKLIST_STEPS.length} 步已就绪</td></tr>
                         </tbody>
                       </table>
@@ -644,10 +658,10 @@ export default function AtypicaLiveTheater({
                   </div>
                   <div className={styles.sourceChipRow}>
                     {blueprint.groundingSources.map(s => (
-                      <span key={s.label} className={styles.sourceChip}>{s.label} · {s.count}</span>
+                      <span key={s.label} className={styles.sourceChip}>{cleanTheaterText(s.label)} · {s.count}</span>
                     ))}
                   </div>
-                  <p className={styles.stepHintText}>{blueprint.groundingSummary}</p>
+                  <p className={styles.stepHintText}>{cleanTheaterText(blueprint.groundingSummary)}</p>
                 </div>
               </div>
             )}
@@ -703,7 +717,16 @@ export default function AtypicaLiveTheater({
                         <li
                           key={entry.persona.id}
                           className={styles.buildAvatarRow}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`查看 ${entry.profile.alias}（${entry.persona.code}）人设档案`}
                           onClick={() => setModalPersona(entry)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setModalPersona(entry);
+                            }
+                          }}
                         >
                           <PersonaAvatar appearance={entry.persona.appearance} size={22} />
                           <span>{entry.profile.alias}</span>
@@ -726,7 +749,16 @@ export default function AtypicaLiveTheater({
                           <li
                             key={entry.persona.id}
                             className={styles.buildAvatarRow}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`查看 ${entry.profile.alias}（${entry.persona.code}）人设档案`}
                             onClick={() => setModalPersona(entry)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setModalPersona(entry);
+                              }
+                            }}
                           >
                             <PersonaAvatar appearance={entry.persona.appearance} size={22} />
                             <span>{entry.profile.alias}</span>
@@ -788,7 +820,7 @@ export default function AtypicaLiveTheater({
                 >
                   <div className={styles.execCard}>
                     <div className={styles.execHead}>
-                      <button type="button" className={styles.execTitleBtn} onClick={() => toggleExecExpand(roundKey)}>
+                      <button type="button" className={styles.execTitleBtn} aria-expanded={isOpen} onClick={() => toggleExecExpand(roundKey)}>
                         <span>0{7 + idx} · 1v1 试答访谈（{round.roundLabel}）</span>
                       </button>
                       <button type="button" className={styles.execMetaBtn} onClick={() => focusRightView(roundKey)}>
@@ -819,6 +851,7 @@ export default function AtypicaLiveTheater({
                     <button
                       type="button"
                       className={styles.thoughtToggle}
+                      aria-expanded={isOpen}
                       onClick={() => toggleExecExpand(roundKey)}
                     >
                       {isOpen ? '▴ 收起矩阵摘要' : '▾ 展开更多'}
@@ -840,14 +873,14 @@ export default function AtypicaLiveTheater({
                       查看实录
                     </button>
                   </div>
-                  <p className={styles.stepHintText}>{blueprint.discussionSummary}</p>
+                  <p className={styles.stepHintText}>{cleanTheaterText(blueprint.discussionSummary)}</p>
                   <details className={styles.techDetails}>
-                    <summary>查看圆桌调度参数与席位</summary>
+                    <summary>查看圆桌调度席位与议题</summary>
                     <div className={styles.codeDrawer}>
                       <table className={styles.argsTable}>
                         <tbody>
                           <tr><td>队列编号</td><td>{blueprint.discussionArgs.panelId}</td></tr>
-                          <tr><td>讨论议题</td><td>{blueprint.discussionArgs.instruction}</td></tr>
+                          <tr><td>讨论议题</td><td>{cleanTheaterText(blueprint.discussionArgs.instruction)}</td></tr>
                           <tr><td>出席席位</td><td>{blueprint.discussionArgs.personaIds.join(', ')}</td></tr>
                         </tbody>
                       </table>
@@ -870,7 +903,7 @@ export default function AtypicaLiveTheater({
                     </button>
                   </div>
                   <p className={styles.stepHintText} style={{ color: 'var(--at-ink)', fontWeight: 600 }}>
-                    《{blueprint.studyTitle}》预测试与硅基样本深度洞察报告
+                    《{cleanTheaterText(blueprint.studyTitle)}》预测试与受访样本深度诊断报告
                   </p>
                   <div className={styles.followupGrid}>
                     {blueprint.report.followupChips.map(chip => (
@@ -880,8 +913,8 @@ export default function AtypicaLiveTheater({
                         className={styles.followupBtn}
                         onClick={() => void submitFollowupQuestion(chip.prompt)}
                       >
-                        <small>{chip.badge}</small>
-                        <strong>{chip.title}</strong>
+                        <small>{cleanTheaterText(chip.badge)}</small>
+                        <strong>{cleanTheaterText(chip.title)}</strong>
                       </button>
                     ))}
                   </div>
@@ -898,7 +931,7 @@ export default function AtypicaLiveTheater({
               <div className={styles.dockPopover} role="dialog" aria-label="研究步骤进度清单">
                 <div className={styles.popoverTitle}>
                   <span>进度 {completedTodos}/{FLOW_CHECKLIST_STEPS.length}</span>
-                  <button type="button" className={styles.detailPillBtn} onClick={() => setDockPopover(null)}>×</button>
+                  <button type="button" className={styles.detailPillBtn} aria-label="关闭研究步骤进度清单" onClick={() => setDockPopover(null)}>×</button>
                 </div>
                 <ul className={styles.todoList}>
                   {FLOW_CHECKLIST_STEPS.map(item => {
@@ -927,7 +960,7 @@ export default function AtypicaLiveTheater({
               <div className={styles.dockPopover} role="dialog" aria-label="研究产出清单">
                 <div className={styles.popoverTitle}>
                   <span>研究产出 ({phaseIndex >= 12 ? 3 : 2})</span>
-                  <button type="button" className={styles.detailPillBtn} onClick={() => setDockPopover(null)}>×</button>
+                  <button type="button" className={styles.detailPillBtn} aria-label="关闭研究产出清单" onClick={() => setDockPopover(null)}>×</button>
                 </div>
                 <div style={{ display: 'grid', gap: 7 }}>
                   <button
@@ -962,7 +995,7 @@ export default function AtypicaLiveTheater({
               <div className={styles.dockPopover} role="dialog" aria-label="受访队列概览">
                 <div className={styles.popoverTitle}>
                   <span>受访队列 {blueprint.enrichedPersonas.length} 位</span>
-                  <button type="button" className={styles.detailPillBtn} onClick={() => setDockPopover(null)}>×</button>
+                  <button type="button" className={styles.detailPillBtn} aria-label="关闭受访队列概览" onClick={() => setDockPopover(null)}>×</button>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--at-ink)', lineHeight: 1.55 }}>
                   <strong>{blueprint.panelName}</strong>
@@ -995,6 +1028,7 @@ export default function AtypicaLiveTheater({
               <button
                 type="button"
                 className={styles.dockPill}
+                aria-haspopup="dialog"
                 aria-expanded={dockPopover === 'progress'}
                 onClick={() => setDockPopover(p => (p === 'progress' ? null : 'progress'))}
               >
@@ -1003,6 +1037,7 @@ export default function AtypicaLiveTheater({
               <button
                 type="button"
                 className={styles.dockPill}
+                aria-haspopup="dialog"
                 aria-expanded={dockPopover === 'outputs'}
                 onClick={() => setDockPopover(p => (p === 'outputs' ? null : 'outputs'))}
               >
@@ -1011,12 +1046,13 @@ export default function AtypicaLiveTheater({
               <button
                 type="button"
                 className={styles.dockPill}
+                aria-haspopup="dialog"
                 aria-expanded={dockPopover === 'panel'}
                 onClick={() => setDockPopover(p => (p === 'panel' ? null : 'panel'))}
               >
                 <span>受访队列 {blueprint.enrichedPersonas.length} ▴</span>
               </button>
-              <span className={styles.liveStatusLine}>
+              <span className={styles.liveStatusLine} role="status" aria-live="polite">
                 <i className={styles.liveDot} data-active={playing || followupBusy ? 'true' : 'false'} aria-hidden="true" />
                 <span className={styles.liveStatusText}>
                   {followupBusy
@@ -1045,6 +1081,7 @@ export default function AtypicaLiveTheater({
               <button
                 type="submit"
                 className={styles.detailPillBtn}
+                aria-label={followupBusy ? '正在发送追问' : '发送追问'}
                 disabled={followupBusy || !followupDraft.trim()}
               >
                 {followupBusy ? '…' : '追问 ↑'}
@@ -1062,6 +1099,7 @@ export default function AtypicaLiveTheater({
                 className={styles.viewTrigger}
                 role="combobox"
                 aria-expanded={viewMenuOpen}
+                aria-controls="sx-live-view-listbox"
                 aria-haspopup="listbox"
                 aria-label="切换右侧演示视图"
                 onClick={() => setViewMenuOpen(v => !v)}
@@ -1071,7 +1109,7 @@ export default function AtypicaLiveTheater({
               </button>
 
               {viewMenuOpen && (
-                <div className={styles.viewMenu} role="listbox" aria-label="所有研究阶段产物视图">
+                <div id="sx-live-view-listbox" className={styles.viewMenu} role="listbox" aria-label="所有研究阶段产物视图">
                   {RIGHT_VIEW_OPTIONS.map(opt => (
                     <button
                       key={opt.id}
@@ -1117,12 +1155,13 @@ export default function AtypicaLiveTheater({
             <div className={styles.rightScroll}>
               <div className={styles.docView}>
                 {blueprint.designMarkdown.split('\n\n').map((block, idx) => {
-                  if (block.startsWith('## ')) {
-                    return <h3 key={idx}>{block.slice(3)}</h3>;
+                  const cleanedBlock = cleanTheaterText(block);
+                  if (cleanedBlock.startsWith('## ')) {
+                    return <h3 key={idx}>{cleanedBlock.slice(3)}</h3>;
                   }
                   return (
                     <div key={idx} className={styles.docBlockText}>
-                      {renderHighlightedText(block)}
+                      {renderHighlightedText(cleanedBlock)}
                     </div>
                   );
                 })}
@@ -1136,17 +1175,17 @@ export default function AtypicaLiveTheater({
               <div className={styles.docView}>
                 <div className={styles.sourceChipRow}>
                   {blueprint.groundingSources.map(s => (
-                    <span key={s.label} className={styles.sourceChip}>{s.label} · {s.count}</span>
+                    <span key={s.label} className={styles.sourceChip}>{cleanTheaterText(s.label)} · {s.count}</span>
                   ))}
                 </div>
-                <p className={styles.docBlockText}>{blueprint.groundingSummary}</p>
+                <p className={styles.docBlockText}>{cleanTheaterText(blueprint.groundingSummary)}</p>
 
                 {blueprint.groundingFindings.map(sec => (
                   <div key={sec.heading} style={{ display: 'grid', gap: 8 }}>
-                    <h3>{sec.heading}</h3>
+                    <h3>{cleanTheaterText(sec.heading)}</h3>
                     {sec.bullets.map((b, bi) => (
                       <p key={bi} className={styles.docBlockText}>
-                        • {b.text}
+                        • {cleanTheaterText(b.text)}
                         {b.citeIds.map(cid => (
                           <button
                             key={cid}
@@ -1155,6 +1194,7 @@ export default function AtypicaLiveTheater({
                             data-active={highlightedEvidenceId === cid}
                             onClick={() => setHighlightedEvidenceId(cid)}
                             title={`定位证据 #${cid}`}
+                            aria-label={`定位第 ${cid} 号参考证据`}
                           >
                             {cid}
                           </button>
@@ -1168,7 +1208,7 @@ export default function AtypicaLiveTheater({
                   <div className={styles.evidenceBar}>
                     <strong>证据 · {blueprint.evidenceCards.length} 条</strong>
                     <label className={styles.evidenceFilterLabel}>
-                      <input type="checkbox" checked={citedOnly} onChange={e => setCitedOnly(e.target.checked)} />
+                      <input type="checkbox" aria-label="只看被引用的证据" checked={citedOnly} onChange={e => setCitedOnly(e.target.checked)} />
                       <span>只看被引用的</span>
                     </label>
                   </div>
@@ -1182,12 +1222,12 @@ export default function AtypicaLiveTheater({
                           data-highlighted={highlightedEvidenceId === card.id}
                         >
                           <div className={styles.evidenceTopMeta}>
-                            <span>[{card.id}] {card.platform}</span>
-                            <span style={{ color: 'var(--at-muted)', fontWeight: 500 }}>{card.metric}</span>
+                            <span>编号 {card.id} · {cleanTheaterText(card.platform)}</span>
+                            <span style={{ color: 'var(--at-muted)', fontWeight: 500 }}>{cleanTheaterText(card.metric)}</span>
                           </div>
-                          <strong>{card.title}</strong>
-                          <small style={{ color: 'var(--at-muted)' }}>{card.source}</small>
-                          <p style={{ margin: 0, color: 'var(--at-ink)', lineHeight: 1.6 }}>{card.excerpt}</p>
+                          <strong>{cleanTheaterText(card.title)}</strong>
+                          <small style={{ color: 'var(--at-muted)' }}>{cleanTheaterText(card.source)}</small>
+                          <p style={{ margin: 0, color: 'var(--at-ink)', lineHeight: 1.6 }}>{cleanTheaterText(card.excerpt)}</p>
                         </article>
                       ))}
                   </div>
@@ -1203,11 +1243,11 @@ export default function AtypicaLiveTheater({
                 {blueprint.deepResearchSections.map(sec => (
                   <article key={sec.title} className={styles.deepSecBlock}>
                     <div className={styles.deepSecHead}>
-                      <h3>{sec.title}</h3>
-                      <span className={`${styles.tagChip} ${styles.tagChipAccent}`}>{sec.badge}</span>
+                      <h3>{cleanTheaterText(sec.title)}</h3>
+                      <span className={`${styles.tagChip} ${styles.tagChipAccent}`}>{cleanTheaterText(sec.badge)}</span>
                     </div>
                     <div className={styles.docBlockText}>
-                      {renderHighlightedText(sec.body)}
+                      {renderHighlightedText(cleanTheaterText(sec.body))}
                     </div>
                   </article>
                 ))}
@@ -1234,7 +1274,7 @@ export default function AtypicaLiveTheater({
                             <small>{entry.persona.code}</small>
                           </div>
                         </div>
-                        <button type="button" className={styles.detailPillBtn} onClick={() => setModalPersona(entry)}>
+                        <button type="button" className={styles.detailPillBtn} aria-label={`查看 ${entry.profile.alias} 详情`} onClick={() => setModalPersona(entry)}>
                           详情
                         </button>
                       </div>
@@ -1268,6 +1308,7 @@ export default function AtypicaLiveTheater({
                       <button
                         type="button"
                         className={styles.detailPillBtn}
+                        aria-label={`查看 ${entry.profile.alias} 人设详情`}
                         onClick={() => setModalPersona(entry)}
                       >
                         详情
@@ -1316,10 +1357,10 @@ export default function AtypicaLiveTheater({
                         <div className={styles.discModeratorCard}>
                           <div className={styles.discModHead}>
                             <i className={styles.liveDot} data-active="true" aria-hidden="true" />
-                            <span>{turn.alias}</span>
+                            <span>{cleanTheaterText(turn.alias)}</span>
                           </div>
                           <div className={styles.discModBody}>
-                            {renderHighlightedText(turn.content)}
+                            {renderHighlightedText(cleanTheaterText(turn.content))}
                           </div>
                         </div>
                       ) : (
@@ -1345,6 +1386,7 @@ export default function AtypicaLiveTheater({
                                 <button
                                   type="button"
                                   className={styles.detailPillBtn}
+                                  aria-label={`查看 ${turn.alias} 人设档案`}
                                   onClick={() => setModalPersona(personaEntry)}
                                 >
                                   档案
@@ -1359,11 +1401,13 @@ export default function AtypicaLiveTheater({
                               overflow: isCollapsed ? 'hidden' : 'visible',
                             }}
                           >
-                            {renderHighlightedText(turn.content)}
+                            {renderHighlightedText(cleanTheaterText(turn.content))}
                           </div>
                           <button
                             type="button"
                             className={styles.thoughtToggle}
+                            aria-expanded={!isCollapsed}
+                            aria-label={`${isCollapsed ? '展开' : '收起'} ${turn.alias} 的发言全文`}
                             onClick={() => setCollapsedReplies(p => ({ ...p, [turn.id]: !p[turn.id] }))}
                           >
                             {isCollapsed ? '▾ 展开全文' : '▴ 收起'}
@@ -1383,7 +1427,7 @@ export default function AtypicaLiveTheater({
                             <span>{reasonOpen ? '收起说明 ▴' : '转接原因 ▾'}</span>
                           </button>
                           {reasonOpen && (
-                            <div className={styles.routingReasonBox}>{turn.routingReason}</div>
+                            <div className={styles.routingReasonBox}>{cleanTheaterText(turn.routingReason)}</div>
                           )}
                         </div>
                       )}
@@ -1400,12 +1444,12 @@ export default function AtypicaLiveTheater({
               <div className={styles.rightScroll}>
                 <article className={styles.reportPaper}>
                   <header>
-                    <span className={styles.reportKicker}>{blueprint.report.kicker}</span>
-                    <h2>{blueprint.report.title}</h2>
-                    <p className={styles.reportSubtitle}>{blueprint.report.subtitle}</p>
+                    <span className={styles.reportKicker}>{cleanTheaterText(blueprint.report.kicker)}</span>
+                    <h2>{cleanTheaterText(blueprint.report.title)}</h2>
+                    <p className={styles.reportSubtitle}>{cleanTheaterText(blueprint.report.subtitle)}</p>
                   </header>
-                  <p className={styles.reportLead}>{blueprint.report.lead}</p>
-                  <p className={styles.reportNote}>{blueprint.report.sourceNote}</p>
+                  <p className={styles.reportLead}>{cleanTheaterText(blueprint.report.lead)}</p>
+                  <p className={styles.reportNote}>{cleanTheaterText(blueprint.report.sourceNote)}</p>
 
                   <div className={styles.reportKpiGrid}>
                     <div className={styles.reportKpiCard}>
@@ -1432,21 +1476,21 @@ export default function AtypicaLiveTheater({
                     <h3>核心预测试发现</h3>
                     {blueprint.report.keyFindings.map(item => (
                       <div key={item.title} className={styles.reportFindingItem}>
-                        <span className={styles.reportFindingTag}>{item.tag}</span>
-                        <div className={styles.reportFindingTitle}>{item.title}</div>
-                        <p className={styles.reportFindingDetail}>{item.detail}</p>
+                        <span className={styles.reportFindingTag}>{cleanTheaterText(item.tag)}</span>
+                        <div className={styles.reportFindingTitle}>{cleanTheaterText(item.title)}</div>
+                        <p className={styles.reportFindingDetail}>{cleanTheaterText(item.detail)}</p>
                       </div>
                     ))}
                   </section>
 
                   <section style={{ display: 'grid', gap: 8 }}>
-                    <h3>代表性硅基画像对照速写</h3>
+                    <h3>代表性受访画像对照速写</h3>
                     <div className={styles.personaSnapGrid}>
                       {blueprint.report.personaSnap.map(snap => (
                         <div key={snap.code} className={styles.personaSnapItem}>
                           <strong>{snap.alias} ({snap.code})</strong>
-                          <div className={styles.personaSnapMeta}>{snap.traitLine}</div>
-                          <p className={styles.personaSnapQuote}>“{snap.quote}”</p>
+                          <div className={styles.personaSnapMeta}>{cleanTheaterText(snap.traitLine)}</div>
+                          <p className={styles.personaSnapQuote}>“{cleanTheaterText(snap.quote)}”</p>
                         </div>
                       ))}
                     </div>
@@ -1455,7 +1499,7 @@ export default function AtypicaLiveTheater({
                   <section style={{ display: 'grid', gap: 6 }}>
                     <h3>正式投放前核对清单</h3>
                     <ol className={styles.reportChecklist}>
-                      {blueprint.report.actionChecklist.map(step => <li key={step}>{step}</li>)}
+                      {blueprint.report.actionChecklist.map(step => <li key={step}>{cleanTheaterText(step)}</li>)}
                     </ol>
                   </section>
                 </article>
@@ -1496,12 +1540,12 @@ export default function AtypicaLiveTheater({
             </>
           )}
 
-          {/* 11. 3D 硅基舞台 */}
+          {/* 11. 三维群像舞台 */}
           {rightView === 'stage_3d' && (
             <div className={styles.stageViewport}>
               <div className={styles.stageBadgeOverlay}>
                 <i className={styles.liveDot} data-active="true" aria-hidden="true" />
-                <span>3D 硅基舞台 · {blueprint.enrichedPersonas.length} 位在场</span>
+                <span>三维群像舞台 · {blueprint.enrichedPersonas.length} 位在场</span>
               </div>
               <PersonaStage
                 figures={stageData.figures}
@@ -1518,7 +1562,7 @@ export default function AtypicaLiveTheater({
                 reducedMotion={reducedMotion}
                 onFallback={() => focusRightView('build_persona')}
                 stacked
-                label={`3D 舞台：展示 ${blueprint.enrichedPersonas.length} 位硅基受访者`}
+                label={`三维群像舞台共展示 ${blueprint.enrichedPersonas.length} 位预测试受访者`}
               />
             </div>
           )}
@@ -1542,12 +1586,13 @@ export default function AtypicaLiveTheater({
                 <PersonaAvatar appearance={modalPersona.persona.appearance} size={46} />
                 <div>
                   <strong style={{ fontSize: 16 }}>{modalPersona.profile.alias}</strong>
-                  <small>{modalPersona.profile.provenance} · 锚点编号 {modalPersona.persona.code}</small>
+                  <small>{cleanTheaterText(modalPersona.profile.provenance)} · 锚点编号 {modalPersona.persona.code}</small>
                 </div>
               </div>
               <button
                 type="button"
                 className={styles.detailPillBtn}
+                autoFocus
                 onClick={() => setModalPersona(null)}
                 aria-label="关闭档案"
               >
@@ -1558,25 +1603,25 @@ export default function AtypicaLiveTheater({
             <div className={styles.modalBody}>
               <div className={styles.tagRow}>
                 {modalPersona.profile.tags.map(tag => (
-                  <span key={tag} className={styles.tagChip}>{tag}</span>
+                  <span key={tag} className={styles.tagChip}>{cleanTheaterText(tag)}</span>
                 ))}
                 {modalPersona.risk.level === 'elevated' && (
                   <span className={`${styles.tagChip} ${styles.tagChipWarn}`}>
-                    保真度警示：{modalPersona.risk.reasons.join('、')}
+                    需结合真人核对 · {modalPersona.risk.reasons.join('、')}
                   </span>
                 )}
               </div>
 
               <blockquote className={styles.modalQuote}>
-                “{modalPersona.profile.catchphrase}”
+                “{cleanTheaterText(modalPersona.profile.catchphrase)}”
               </blockquote>
 
               {modalPersona.profile.monologue.split('\n\n').map((p, idx) => (
-                <p key={idx} style={{ margin: 0 }}>{p}</p>
+                <p key={idx} style={{ margin: 0 }}>{cleanTheaterText(p)}</p>
               ))}
 
               <div className={styles.modalRuleNote}>
-                <strong>语调边界约束：</strong>{modalPersona.profile.toneRule}
+                <strong>日常表达习惯</strong> · {cleanTheaterText(modalPersona.profile.toneRule)}
               </div>
 
               <div className={styles.modalFooterActions}>
@@ -1634,8 +1679,8 @@ function InterviewRoundPane({
     <div className={styles.interviewShell}>
       <div className={styles.interviewContent}>
         <div>
-          <h3 className={styles.interviewTitle}>{round.title}</h3>
-          <p className={styles.interviewSubtitle}>{round.subtitle}</p>
+          <h3 className={styles.interviewTitle}>{cleanTheaterText(round.title)}</h3>
+          <p className={styles.interviewSubtitle}>{cleanTheaterText(round.subtitle)}</p>
         </div>
 
         {/* Three-Line Style Measurement Matrix */}
@@ -1645,6 +1690,8 @@ function InterviewRoundPane({
             <button
               type="button"
               className={styles.detailPillBtn}
+              aria-live="polite"
+              aria-label={`复制${cleanTheaterText(round.roundLabel)}测量矩阵表格`}
               onClick={() => {
                 const md = [
                   `| ${round.matrixHeader.join(' | ')} |`,
@@ -1657,27 +1704,35 @@ function InterviewRoundPane({
                 });
               }}
             >
-              {copiedMatrix ? '已复制 MD ✓' : '复制表格'}
+              {copiedMatrix ? '已复制表格 ✓' : '复制表格'}
             </button>
           </div>
           <div className={styles.matrixScroll}>
             <table className={styles.matrixTable}>
               <thead>
-                <tr>{round.matrixHeader.map(h => <th key={h}>{h}</th>)}</tr>
+                <tr>{round.matrixHeader.map(h => <th key={h}>{cleanTheaterText(h)}</th>)}</tr>
               </thead>
               <tbody>
                 {round.matrixRows.map(row => (
                   <tr
                     key={row.personaId}
                     className={styles.matrixRow}
+                    tabIndex={0}
+                    aria-label={`切换至 ${row.alias.split(' · ').pop()}（${row.code}）访谈记录`}
                     data-selected={row.personaId === activeEntry?.persona.id ? 'true' : undefined}
                     onClick={() => onSelectPersona(row.personaId)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectPersona(row.personaId);
+                      }
+                    }}
                   >
                     <td>
                       <strong>{row.alias.split(' · ').pop()}</strong>{' '}
                       <small style={{ color: 'var(--at-muted)' }}>({row.code})</small>
                     </td>
-                    {row.cells.map((cell, ci) => <td key={ci}>{cell}</td>)}
+                    {row.cells.map((cell, ci) => <td key={ci}>{cleanTheaterText(cell)}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -1696,7 +1751,7 @@ function InterviewRoundPane({
                       <span>证见研究主持</span>
                       <code>{turn.variable}</code>
                     </div>
-                    <div className={styles.modBubble}>{turn.questionText}</div>
+                    <div className={styles.modBubble}>{cleanTheaterText(turn.questionText)}</div>
                   </div>
                 </div>
 
@@ -1712,8 +1767,8 @@ function InterviewRoundPane({
                     </button>
                     <small className={styles.guestCode}>{activeEntry.persona.code}</small>
                   </div>
-                  <div className={styles.guestBody}>{turn.answerText}</div>
-                  {turn.unclear && <div className={styles.guestUnclear}>困惑反馈：{turn.unclear}</div>}
+                  <div className={styles.guestBody}>{cleanTheaterText(turn.answerText)}</div>
+                  {turn.unclear && <div className={styles.guestUnclear} role="status">本题试答存在理解卡顿，{cleanTheaterText(turn.unclear)}</div>}
                 </div>
               </div>
             ))}

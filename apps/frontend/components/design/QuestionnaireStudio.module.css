@@ -223,3 +223,53 @@
  .questionType { flex-wrap:wrap; gap:10px; }
 }
 @media(prefers-reduced-motion:reduce) { .studio button { transition:none; } }
+
+@media (forced-colors: active) {
+  .studio :is(button, input, textarea, select, summary, a):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .studio button,
+  .studio input:not([type=checkbox]),
+  .studio textarea,
+  .studio select,
+  .fileMenu summary,
+  .fileMenu > div,
+  .supportTools > details,
+  .outline,
+  .card,
+  .choices,
+  .branchChoices,
+  .preview,
+  .paper,
+  .tableScroll,
+  .pendingNumbers,
+  .confirmDialog,
+  .error,
+  .notice {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .studio .primary,
+  .studio button[aria-pressed=true],
+  .questionList > button[aria-current=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .workspaceBar,
+  .cardHeading,
+  .mapping,
+  .paper article,
+  .tableScroll th,
+  .tableScroll td,
+  .issueList li,
+  .sources {
+    border-color: CanvasText !important;
+  }
+}

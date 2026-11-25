@@ -3,10 +3,19 @@
  * section and applied in one undoable step. Tables travel as registered results, so the Word export numbers and
  * typesets them like every other table. Builders here turn the sampling tools' output into such inserts.
  */
-import type { EditorContent } from './editor-model.ts';
+import { parseEditorContent, type EditorContent } from './editor-model.ts';
 import { texProblem } from './omml.ts';
 import { appendQualityResult, withQuality } from './quality-layouts.ts';
-import { digestText, snapshotRecipe, type ReportBlock, type ResultSnapshot } from './research-quality.ts';
+import { parseReferences, REFERENCE_LIMIT, type ReferenceEntry } from './references.ts';
+import {
+  confirmFinding,
+  digestText,
+  QUALITY_LIMITS,
+  snapshotRecipe,
+  type ReportBlock,
+  type ResearchFinding,
+  type ResultSnapshot,
+} from './research-quality.ts';
 import { SIMULATED_MARK, appendBlocks, block, placeResult, resultPlaced, targetSection } from './report-placement.ts';
 import { captionText, literalText } from './report-templates.ts';
 import type { SizePlan, SizeResult } from './sampling.ts';
@@ -20,43 +29,148 @@ export type InsertItem =
   /** The figure of a table's result in the same insert: the result carries what the figure plots. */
   | { kind: 'figure'; result: ResultSnapshot; caption: string }
   /** A result the report has registered, written into its own blueprint section as the editor's placement writes it. */
-  | { kind: 'result'; resultId: string };
+  | { kind: 'result'; resultId: string }
+  /** Structured bibliographic record added directly to `content.references[]`, deduplicated by DOI or title. */
+  | { kind: 'reference'; entry: ReferenceEntry }
+  /** Structured empirical finding registered into `content.quality.findings[]`, optionally sealing its evidence snapshot. */
+  | { kind: 'finding'; finding: ResearchFinding; result?: ResultSnapshot };
 /**
  * `source` names the module in the confirmation message; `id` lets the editor apply each insert once. `sectionId`, when
  * given, is the section the user picked, and takes precedence over the blueprint node.
  */
 export type ReportInsert = { id: string; node: string; source: string; items: InsertItem[]; sectionId?: string };
-export type AppliedInsert = { content: EditorContent; sectionId: string; created: string[]; blocks: ReportBlock[] };
+export type AppliedInsert = {
+  content: EditorContent;
+  sectionId: string;
+  created: string[];
+  blocks: ReportBlock[];
+  referencesAdded?: number;
+  findingsAdded?: number;
+};
+
+function isPureWritingHintBody(body: string): boolean {
+  const trimmed = body.trim();
+  if (!/^(?:【[^】]*写作提示】|摘要写作提示(?:\r?\n|$))/u.test(trimmed)) return false;
+  let skipping = false;
+  for (const rawLine of trimmed.split(/\r\n|\r|\n/u)) {
+    const line = rawLine.trim();
+    if (/(?:写作提示】|^摘要写作提示$)/u.test(line)) {
+      skipping = true;
+      continue;
+    }
+    if (skipping) {
+      if (!line) skipping = false;
+      continue;
+    }
+    if (line) return false;
+  }
+  return true;
+}
 
 /** The report with an insert applied: its tables registered as results, its blocks appended to the target section. */
 export function applyReportInsert(content: EditorContent, insert: ReportInsert, sectionId?: string): AppliedInsert {
   if (!insert.items.length) throw Error('没有可写入的内容。');
   if (insert.items.some(item => item.kind === 'result')) return placeResults(content, insert);
   let next = withQuality(content);
+  const referenceItems = insert.items.filter((item): item is Extract<InsertItem, { kind: 'reference' }> => item.kind === 'reference');
+  let referencesAdded: number | undefined;
+  if (referenceItems.length > 0) {
+    const mergedRefs = [...(next.references ?? [])];
+    let added = 0;
+    for (const { entry } of referenceItems) {
+      const doiKey = entry.doi.trim().toLowerCase();
+      const titleKey = entry.title.trim().toLowerCase();
+      const duplicate = mergedRefs.some(existing =>
+        (doiKey && existing.doi.trim().toLowerCase() === doiKey)
+        || (titleKey && existing.title.trim().toLowerCase() === titleKey),
+      );
+      if (duplicate) continue;
+      if (mergedRefs.length >= REFERENCE_LIMIT) throw Error(`参考文献已达上限（${REFERENCE_LIMIT} 条）。`);
+      const id = mergedRefs.some(existing => existing.id === entry.id) ? crypto.randomUUID() : entry.id;
+      mergedRefs.push({ ...entry, id });
+      added += 1;
+    }
+    const parsedRefs = parseReferences(mergedRefs);
+    next = { ...next, references: parsedRefs };
+    referencesAdded = added;
+  }
   for (const item of insert.items) {
     if (item.kind === 'formula' && texProblem(item.tex)) throw Error(`公式无法排版：${texProblem(item.tex)}`);
     // The same design inserted twice reuses its registered table rather than adding a duplicate.
-    if (item.kind === 'table') next = appendQualityResult(next, item.result);
+    if (item.kind === 'table' || (item.kind === 'finding' && item.result)) next = appendQualityResult(next, item.kind === 'table' ? item.result : item.result!);
     // A figure plots a registered result: one the report already holds, or one whose table travels with it.
     if (item.kind === 'figure' && !insert.items.some(other => other.kind === 'table' && other.result.id === item.result.id)
       && !next.quality?.results.some(r => r.id === item.result.id && r.resultHash === item.result.resultHash)) throw Error('图须与其结果表一同写入。');
   }
+  const findingItems = insert.items.filter((item): item is Extract<InsertItem, { kind: 'finding' }> => item.kind === 'finding');
+  let findingsAdded: number | undefined;
+  if (findingItems.length > 0) {
+    const q = next.quality!;
+    const mergedFindings = [...q.findings];
+    let added = 0;
+    for (const { finding } of findingItems) {
+      const titleKey = finding.title.trim().toLowerCase();
+      const duplicate = mergedFindings.some(existing =>
+        existing.id === finding.id || (titleKey && existing.title.trim().toLowerCase() === titleKey),
+      );
+      if (duplicate) continue;
+      if (mergedFindings.length >= QUALITY_LIMITS.findings) throw Error(`研究发现已达上限（${QUALITY_LIMITS.findings} 条）。`);
+      const tempQuality = { ...q, findings: mergedFindings };
+      const usesSimulated = finding.evidenceIds.some(eid => tempQuality.results.find(r => r.id === eid)?.classification === 'simulated');
+      const normalizedFinding: ResearchFinding = finding.status === 'confirmed' && !usesSimulated
+        ? confirmFinding(finding, tempQuality)
+        : { ...finding, status: 'draft', confirmedHashes: {} };
+      mergedFindings.push(normalizedFinding);
+      added += 1;
+    }
+    next = parseEditorContent({ ...next, quality: { ...q, findings: mergedFindings } });
+    findingsAdded = added;
+  }
   const target = targetSection(next, insert.node, sectionId);
-  const blocks = insert.items.flatMap(item => item.kind === 'paragraph' ? [block('paragraph', item.text)]
-    : item.kind === 'formula' ? [block('formula', item.tex)]
-      : item.kind === 'table' ? [block('table', item.caption, item.result.id, 1)]
-        : item.kind === 'figure' ? [block('chart', item.caption, item.result.id, 1)] : []);
+  const blockByItemIndex = new Map<number, ReportBlock>();
+  const blocks: ReportBlock[] = [];
+  insert.items.forEach((item, index) => {
+    const createdBlock = item.kind === 'paragraph' ? block('paragraph', item.text)
+      : item.kind === 'formula' ? block('formula', item.tex)
+        : item.kind === 'table' ? block('table', item.caption, item.result.id, 1)
+          : item.kind === 'figure' ? block('chart', item.caption, item.result.id, 1) : null;
+    if (createdBlock) {
+      blocks.push(createdBlock);
+      blockByItemIndex.set(index, createdBlock);
+    }
+  });
   // A paragraph may cite a table or figure of the same insert as "[[表:@N]]", N its item index; the block made for that
   // item takes its place, so the reading cites the table it travels with.
   for (const b of blocks) if (b.kind === 'paragraph') b.text = b.text.replace(/\[\[(表|图):@(\d+)\]\]/gu, (whole, kind: string, index: string) => {
-    const cited = blocks[Number(index)];
+    const cited = blockByItemIndex.get(Number(index));
     return cited && cited.kind === (kind === '表' ? 'table' : 'chart') ? `[[${kind}:${cited.id}]]` : whole;
   });
+  // If a target section currently holds only a pure 【...写作提示】 guide and receives real prose, clear the guide.
+  const hasParagraph = blocks.some(b => b.kind === 'paragraph');
+  const cleared = hasParagraph
+    ? {
+        ...target.content,
+        report: target.content.report.map(s =>
+          s.id === target.sectionId && isPureWritingHintBody(s.body) ? { ...s, body: '' } : s,
+        ),
+      }
+    : target.content;
   // Numbers from the teaching simulation are declared in the section that shows them, as placing a result does.
-  const simulated = insert.items.some(item => item.kind === 'table' && item.result.classification === 'simulated');
-  const declared = !simulated || target.content.report.some(s => s.id === target.sectionId && /【教学模拟数据/u.test(s.body + s.source));
-  const marked = declared ? target.content : { ...target.content, report: target.content.report.map(s => s.id === target.sectionId ? { ...s, body: s.body.trim() ? `${SIMULATED_MARK}\n${s.body}` : SIMULATED_MARK } : s) };
-  return { content: appendBlocks(marked, target.sectionId, blocks), sectionId: target.sectionId, created: target.created, blocks };
+  const simulated = insert.items.some(
+    item => (item.kind === 'table' && item.result.classification === 'simulated')
+      || (item.kind === 'finding' && item.result?.classification === 'simulated'),
+  );
+  const declared = !simulated || cleared.report.some(s => s.id === target.sectionId && /【教学模拟数据/u.test(s.body + s.source));
+  const marked = declared ? cleared : { ...cleared, report: cleared.report.map(s => s.id === target.sectionId ? { ...s, body: s.body.trim() ? `${SIMULATED_MARK}\n${s.body}` : SIMULATED_MARK } : s) };
+  const updatedContent = blocks.length > 0 ? appendBlocks(marked, target.sectionId, blocks) : parseEditorContent(marked);
+  return {
+    content: updatedContent,
+    sectionId: target.sectionId,
+    created: target.created,
+    blocks,
+    ...(referencesAdded !== undefined ? { referencesAdded } : {}),
+    ...(findingsAdded !== undefined ? { findingsAdded } : {}),
+  };
 }
 
 /**
@@ -83,10 +197,20 @@ function placeResults(content: EditorContent, insert: ReportInsert): AppliedInse
   return { content: next, sectionId: last, created, blocks };
 }
 
-/** One summary line per kind, for the editor's confirmation message: "段落 3 段、表 2 张、公式 1 个". */
-export function insertSummary(blocks: readonly ReportBlock[]): string {
+/** One summary line per kind, for the editor's confirmation message: "段落 3 段、表 2 张、公式 1 个、参考文献 1 条". */
+export function insertSummary(blocks: readonly ReportBlock[], extra?: { references?: number; findings?: number }): string {
   const count = (kind: ReportBlock['kind']) => blocks.filter(b => b.kind === kind).length;
-  return [count('paragraph') && `段落 ${count('paragraph')} 段`, count('table') && `表 ${count('table')} 张`, count('chart') && `图 ${count('chart')} 幅`, count('formula') && `公式 ${count('formula')} 个`].filter(Boolean).join('、');
+  const parts = [
+    count('paragraph') && `段落 ${count('paragraph')} 段`,
+    count('table') && `表 ${count('table')} 张`,
+    count('chart') && `图 ${count('chart')} 幅`,
+    count('formula') && `公式 ${count('formula')} 个`,
+    extra?.references && `参考文献 ${extra.references} 条`,
+    extra?.findings && `研究发现 ${extra.findings} 条`,
+  ].filter(Boolean);
+  if (parts.length) return parts.join('、');
+  if (extra?.findings === 0) return '该发现已在研究发现列表中（未重复写入）';
+  return extra?.references === 0 ? '该文献已在参考文献目录中（未重复写入）' : '';
 }
 
 /**

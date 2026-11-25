@@ -14,11 +14,16 @@ export type ChatAction =
   | { tool: 'open'; args: { room: RoomId } }
   | { tool: 'lookup'; args: { query: string } }
   | { tool: 'draft'; args: { brief: string } }
-  | { tool: 'stage'; args: { view: 'chat' | 'paper' | 'advisors' } }
+  | { tool: 'stage'; args: { view: 'chat' | 'paper' | 'advisors' | 'library' } }
   | { tool: 'studio'; args: { kind: 'chart' | 'code' | 'writing' | 'coach' } }
   | { tool: 'draft_section'; args: { node: string } }
   | { tool: 'generate_report'; args: { topic?: string } }
-  | { tool: 'simulate'; args: { topic?: string } };
+  | { tool: 'simulate'; args: { topic?: string } }
+  | { tool: 'run_autonomous_research'; args: { goal?: string; datasetMode?: 'planted_trap_benchmark' | 'inline_dataset' } }
+  | { tool: 'recommend_resource'; args: { query?: string } }
+  | { tool: 'lookup_county'; args: { query: string } }
+  | { tool: 'verify_citation'; args: { query?: string; doi?: string } }
+  | { tool: 'render_sandbox_plot'; args: { snapshotId?: string; chartKind?: 'auto' | 'bar' | 'line' | 'forest' | 'dumbbell' } };
 export type ChatStatus = 'running' | 'ready' | 'failed' | 'outcome_unknown';
 /** Tokens the provider reported for one call; null when it reported none (or the call never reached it). */
 export type TokenUsage = { inputTokens: number; outputTokens: number };
@@ -32,7 +37,7 @@ export const thousands = (n: number) => (n < 1000 ? String(n) : `${(n / 1000).to
 export const usageText = (u: TokenUsage) => `↑${thousands(u.inputTokens)} ↓${thousands(u.outputTokens)} tokens`;
 export type ChatReceipt = { id: string; status: ChatStatus; step: number; message: string | null; reply: string | null; actions: ChatAction[]; droppedActions: number; errorCode: string | null; usage: TokenUsage | null };
 /** What a read-only tool found, sent back so the model can go on from it. */
-export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup' | 'results'; text: string };
+export type ToolResult = { tool: 'next' | 'light' | 'blind' | 'trace' | 'lookup' | 'results' | 'recommend_resource' | 'lookup_county' | 'verify_citation' | 'render_sandbox_plot'; text: string };
 export type ChatLine = { role: 'user' | 'agent'; text: string };
 export type ChatContext = {
   room: RoomId | null;
@@ -51,7 +56,7 @@ export type ChatRequest = {
 
 /** One sentence is answered in at most this many calls; the backend lets the last ask for no tools. */
 export const MAX_STEPS = 3;
-const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup', 'results']);
+const RESULT_TOOLS = new Set<ChatAction['tool']>(['next', 'light', 'blind', 'trace', 'lookup', 'results', 'recommend_resource', 'lookup_county', 'verify_citation', 'render_sandbox_plot']);
 export const isResultTool = (tool: ChatAction['tool']): tool is ToolResult['tool'] => RESULT_TOOLS.has(tool);
 
 /** A span as the model should read it: a formula keeps its TeX delimiters. */
@@ -94,9 +99,10 @@ export function chatHistory(lines: readonly ChatLine[]): ChatLine[] {
   return lines.filter(l => l.text.trim()).slice(-HISTORY_LIMIT).map(l => ({ role: l.role, text: clip(l.text.trim(), TEXT_LIMIT) }));
 }
 
-const TEXT_ARGS = { trace: ['reference', 20], lookup: ['query', 60], draft: ['brief', 600], draft_section: ['node', 40] } as const;
-const STAGES = ['chat', 'paper', 'advisors'] as const;
+const TEXT_ARGS = { trace: ['reference', 20], lookup: ['query', 60], lookup_county: ['query', 60], draft: ['brief', 600], draft_section: ['node', 40] } as const;
+const STAGES = ['chat', 'paper', 'advisors', 'library'] as const;
 const STUDIOS = ['chart', 'code', 'writing', 'coach'] as const;
+const SANDBOX_CHART_KINDS = ['auto', 'bar', 'line', 'forest', 'dumbbell'] as const;
 function action(value: unknown): ChatAction | null {
   const row = value as { tool?: unknown; args?: Record<string, unknown> } | null;
   if (!row || typeof row !== 'object' || typeof row.tool !== 'string' || !row.args || typeof row.args !== 'object') return null;
@@ -109,7 +115,7 @@ function action(value: unknown): ChatAction | null {
     case 'stage': {
       const view = row.args.view;
       return typeof view === 'string' && (STAGES as readonly string[]).includes(view)
-        ? { tool: 'stage', args: { view: view as 'chat' | 'paper' | 'advisors' } } : null;
+        ? { tool: 'stage', args: { view: view as (typeof STAGES)[number] } } : null;
     }
     case 'studio': {
       const kind = row.args.kind;
@@ -126,7 +132,48 @@ function action(value: unknown): ChatAction | null {
       if (given === undefined) return { tool: row.tool, args: {} };
       return typeof given === 'string' && given.trim() && given.length <= 200 ? { tool: row.tool, args: { topic: given.trim() } } : null;
     }
-    case 'trace': case 'lookup': case 'draft': case 'draft_section': {
+    case 'run_autonomous_research': {
+      const args: { goal?: string; datasetMode?: 'planted_trap_benchmark' | 'inline_dataset' } = {};
+      if (row.args.goal !== undefined) {
+        if (typeof row.args.goal !== 'string' || !row.args.goal.trim() || row.args.goal.length > 200) return null;
+        args.goal = row.args.goal.trim();
+      }
+      if (row.args.datasetMode !== undefined) {
+        if (row.args.datasetMode !== 'planted_trap_benchmark' && row.args.datasetMode !== 'inline_dataset') return null;
+        args.datasetMode = row.args.datasetMode;
+      }
+      return { tool: 'run_autonomous_research', args };
+    }
+    case 'recommend_resource': {
+      const given = row.args.query;
+      if (given === undefined) return { tool: 'recommend_resource', args: {} };
+      return typeof given === 'string' && given.trim() && given.length <= 60 ? { tool: 'recommend_resource', args: { query: given.trim() } } : null;
+    }
+    case 'verify_citation': {
+      const args: { query?: string; doi?: string } = {};
+      if (row.args.query !== undefined) {
+        if (typeof row.args.query !== 'string' || !row.args.query.trim() || row.args.query.trim().length > 120) return null;
+        args.query = row.args.query.trim();
+      }
+      if (row.args.doi !== undefined) {
+        if (typeof row.args.doi !== 'string' || !row.args.doi.trim() || row.args.doi.trim().length > 80) return null;
+        args.doi = row.args.doi.trim();
+      }
+      return { tool: 'verify_citation', args };
+    }
+    case 'render_sandbox_plot': {
+      const args: { snapshotId?: string; chartKind?: (typeof SANDBOX_CHART_KINDS)[number] } = {};
+      if (row.args.snapshotId !== undefined) {
+        if (typeof row.args.snapshotId !== 'string' || !row.args.snapshotId.trim() || row.args.snapshotId.trim().length > 80) return null;
+        args.snapshotId = row.args.snapshotId.trim();
+      }
+      if (row.args.chartKind !== undefined) {
+        if (typeof row.args.chartKind !== 'string' || !(SANDBOX_CHART_KINDS as readonly string[]).includes(row.args.chartKind)) return null;
+        args.chartKind = row.args.chartKind as (typeof SANDBOX_CHART_KINDS)[number];
+      }
+      return { tool: 'render_sandbox_plot', args };
+    }
+    case 'trace': case 'lookup': case 'lookup_county': case 'draft': case 'draft_section': {
       const [name, limit] = TEXT_ARGS[row.tool], given = row.args[name];
       if (typeof given !== 'string' || !given.trim() || given.length > limit) return null;
       return { tool: row.tool, args: { [name]: given.trim() } } as ChatAction;
@@ -146,7 +193,7 @@ export function parseChatReceipt(value: unknown): ChatReceipt {
 
 /** What a refusal or a failure means to the user, in their words. */
 export const CHAT_ERRORS: Record<string, string> = {
-  capability_unavailable: '所选模型服务没有启用「研究」能力；在模型服务里勾选后再试。',
+  capability_unavailable: '所选模型服务没有启用“研究”能力；在模型服务里勾选后再试。',
   revision_conflict: '模型服务刚被修改过，请在模型菜单里重新选择后再发。',
   call_rate_limit: '每小时最多 30 次对话模型调用，请稍后再试。',
   call_active: '上一轮还在生成，请先核对它的回执。',

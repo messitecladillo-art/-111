@@ -14,6 +14,20 @@
   background: color-mix(in srgb, var(--c-raise) 66%, var(--c-gold-soft));
 }
 
+.routeMarker {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  z-index: 2;
+  border-radius: 2px 2px 0 0;
+  background: var(--c-accent);
+  pointer-events: none;
+}
+
+.routeMarker[hidden] {
+  display: none;
+}
+
 .group {
   position: relative;
   min-width: 0;
@@ -60,6 +74,7 @@
   width: 14px;
   height: 14px;
   color: var(--c-dim);
+  transition: transform var(--evix-dur-ray, 180ms) var(--evix-ease-prism, cubic-bezier(0.16, 1, 0.3, 1)), color var(--evix-dur-ray, 180ms) var(--evix-ease-ray, cubic-bezier(0.2, 0, 0, 1));
 }
 
 .overview[aria-current],
@@ -77,6 +92,11 @@
   border-radius: 2px 2px 0 0;
   background: currentColor;
   content: '';
+}
+
+.index:has([data-motion-marker][style]:not([hidden])) .overview[aria-current]::after,
+.index:has([data-motion-marker][style]:not([hidden])) .groupButton[data-active='true']::after {
+  opacity: 0;
 }
 
 .groupButton[data-active='true'] svg,
@@ -128,6 +148,22 @@
   border-radius: 9px;
   background: var(--c-raise);
   box-shadow: var(--c-shadow);
+}
+
+.steps:not([hidden]) {
+  transform-origin: top center;
+  animation: routeMenuIn var(--evix-dur-ink, 260ms) var(--evix-ease-prism, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@keyframes routeMenuIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .group:nth-last-child(-n + 2) .steps {
@@ -208,5 +244,64 @@
 
   .group:nth-child(odd) .steps {
     inset-inline: auto 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview svg,
+  .groupButton svg,
+  .steps:not([hidden]) {
+    animation: none !important;
+    transition: none !important;
+  }
+  .routeMarker {
+    display: none !important;
+  }
+  .index:has([data-motion-marker][style]:not([hidden])) .overview[aria-current]::after,
+  .index:has([data-motion-marker][style]:not([hidden])) .groupButton[data-active='true']::after {
+    opacity: 1;
+  }
+}
+
+
+@media (forced-colors: active) {
+  .route,
+  .index,
+  .steps {
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .index,
+  .steps,
+  .overview,
+  .groupButton,
+  .step {
+    border-color: ButtonText;
+  }
+
+  .group {
+    border-color: CanvasText !important;
+  }
+
+  .routeMarker {
+    display: none !important;
+  }
+
+  .overview[aria-current],
+  .groupButton[data-active='true'],
+  .step[aria-current] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .overview:focus-visible,
+  .groupButton:focus-visible,
+  .step:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
   }
 }

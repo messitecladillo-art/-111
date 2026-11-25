@@ -51,6 +51,15 @@ test('question labels become variable names and captions in report style', () =>
   assert.equal(variableLabel('3、您每周使用几次？'), '您每周使用几次');
   assert.equal(variableLabel('第5题：月收入'), '月收入');
   assert.equal(variableLabel('2023年收入'), '2023年收入', 'a year is not a question number');
+  assert.equal(variableLabel('Q1. 您平时跟子女住在一起吗？（单选）'), '与子女同住情况');
+  assert.equal(variableLabel('Q2. 说到能记录身体状况的智能设备，下面哪种情况最像您？'), '智能设备使用情况');
+  assert.equal(variableLabel('请问您属于以下哪一类受访群体？（家庭代际角色）'), '家庭代际角色');
+  assert.equal(variableLabel('您的周岁年龄处于以下哪个区间？'), '周岁年龄区间');
+  assert.equal(variableLabel('您平时主要通过什么渠道了解社区助餐信息？'), '了解社区助餐信息渠道');
+  assert.equal(
+    resultCaption({ ...r.cross, variables: ['您平时跟子女住在一起吗？', '说到能记录身体状况的智能设备，下面哪种情况最像您？'] }, 'chart'),
+    '不同与子女同住情况受访者的智能设备使用情况分布图',
+  );
   // Figures are named "…图" and tables "…表" (the project's naming; research-chart-production).
   assert.equal(resultCaption(r.gender), '受访者性别分布表');
   assert.equal(resultCaption(r.gender, 'chart'), '受访者性别分布图');

@@ -75,7 +75,7 @@ export default function ActionEvidence() {
     const token=++readToken.current,at=revision.current;
     setPending(null);setRemoveId('');setReading(true);setError('');setNotice('');
     try {
-      if(file.size>MAX_ACTION_IMPORT_BYTES)throw Error('文件超过 384 KiB 上限，请选择本面板导出的成果卡。');
+      if(file.size>MAX_ACTION_IMPORT_BYTES)throw Error('文件超过大小上限，请选择本面板导出的成果卡文件。');
       const entries=parseActionEvidenceImport(new Uint8Array(await file.arrayBuffer()));
       if(token!==readToken.current||at!==revision.current)return;
       mergeActionEvidence(records.current,entries); // Capacity/shape check only. Never apply on read.
@@ -119,7 +119,7 @@ export default function ActionEvidence() {
       <button type="button" onClick={()=>{if(card)exportCards(card);}} disabled={!card}>仅导出当前卡</button>
       {cards.length>=MAX_ACTION_CARDS&&<span>已达上限，不会自动丢弃旧卡。</span>}
     </div>
-    <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择成果卡 JSON 文件" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void readImport(file);}}/>
+    <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择成果卡备份文件" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void readImport(file);}}/>
     <p className={styles.local}>仅在页面内存保存，不上传。刷新或关闭会丢失未导出的卡片；请单独导出并确认保存。不要填写受访者身份或敏感资料。</p>
     {reading&&<div className={styles.importBox}><p role="status">正在本地检查文件，尚未修改卡片…</p><button type="button" onClick={cancelImport}>取消读取成果卡</button></div>}
     {pending&&<section className={styles.importBox} ref={preview} tabIndex={-1} aria-labelledby="action-import-title">
@@ -141,7 +141,7 @@ export default function ActionEvidence() {
           const short=['title','owner','artifactVersion','audience'].includes(id);
           return <label key={id} className={short?styles.short:styles.wide}><span>{field.label}</span>{short?<input ref={id==='title'?titleInput:undefined} maxLength={field.maxLength} value={card[id]} placeholder={field.placeholder} onChange={event=>patch({[id]:event.target.value})}/>:<textarea maxLength={field.maxLength} rows={id==='evidence'?3:2} value={card[id]} placeholder={field.placeholder} onChange={event=>patch({[id]:event.target.value})}/>}</label>;
         })}</div></section>)}
-        <div className={styles.review} aria-label="成果卡结构提醒"><strong>{check?.status==='incomplete'?'还有信息待补充':'结构已填写，证据待复核'}</strong>{!!check?.missing.length&&<p>待补：{check.missing.join('、')}。</p>}<ul>{check?.warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>
+        <div className={styles.review} aria-label="成果卡结构提醒"><strong>{check?.status==='incomplete'?'还有信息待补充':'结构已填写，证据待复核'}</strong>{!!check?.missing.length&&<p>尚待补充 {check.missing.join('、')}。</p>}<ul>{check?.warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>
         <div className={styles.cardFooter}><button type="button" onClick={()=>setRemoveId(card.id)}>移除当前成果卡</button></div>
         {removeId===card.id&&<div className={styles.removeBox}><p>确认移除“{card.title||'未命名成果卡'}”？此操作只删除页面内存中的这一张卡。未导出的内容无法恢复。</p><div className={styles.toolbar}><button type="button" onClick={()=>setRemoveId('')}>保留此卡</button><button type="button" onClick={remove}>确认移除此卡</button></div></div>}
       </article>

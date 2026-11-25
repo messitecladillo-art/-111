@@ -30,9 +30,9 @@ export type StratifiedPlan = { nExact: number; n: number; rows: AllocationRow[];
 export function stratifiedSampleSize(strata: PlanStratum[], method: Exclude<AllocationMethod, 'equal'>, target: PrecisionTarget, fixedCost = 0): StratifiedPlan {
   if (strata.length < 2) throw Error('至少需要 2 层。');
   for (const s of strata) {
-    if (!(Number.isInteger(s.size) && s.size >= 2)) throw Error(`「${s.name}」的层规模须为不小于 2 的整数。`);
-    if (!(s.sd > 0)) throw Error(`「${s.name}」的标准差须大于 0。`);
-    if (method === 'optimal' && !(s.cost && s.cost > 0)) throw Error(`「${s.name}」缺少每个样本的调查费用。`);
+    if (!(Number.isInteger(s.size) && s.size >= 2)) throw Error(`“${s.name}”的层规模须为不小于 2 的整数。`);
+    if (!(s.sd > 0)) throw Error(`“${s.name}”的标准差须大于 0。`);
+    if (method === 'optimal' && !(s.cost && s.cost > 0)) throw Error(`“${s.name}”缺少每个样本的调查费用。`);
   }
   const { V, z, step } = targetVariance(target);
   const N = sum(strata.map(s => s.size)), W = strata.map(s => s.size / N), c = strata.map(s => s.cost ?? 1);
@@ -69,7 +69,7 @@ export function stratifiedSampleSize(strata: PlanStratum[], method: Exclude<Allo
     { label: '取整后实际达到的方差', tex: tex`V(\bar{y}_{st})=\sum_h\frac{W_h^{2}S_h^{2}}{n_h}-\frac{1}{N}\sum_h W_hS_h^{2}=${texNum(achievedV, 5)}` },
   ];
   const warnings = [...allocation.warnings];
-  if (census.size) warnings.push(`${[...census].map(i => `「${literal(strata[i].name)}」`).join('、')}按公式分配超过层规模，已普查该层后对其余各层重新求解。`);
+  if (census.size) warnings.push(`${[...census].map(i => `“${literal(strata[i].name)}”`).join('、')}按公式分配超过层规模，已普查该层后对其余各层重新求解。`);
   if (method === 'proportional' && census.size) warnings.push('比例分配下出现普查层，说明总体很小或精度要求很高。');
   return { nExact, n, rows: allocation.rows, census: [...census].map(i => strata[i].name), V, achievedV, achievedMargin: z === null ? null : z * Math.sqrt(Math.max(0, achievedV)), cost, steps, warnings };
 }

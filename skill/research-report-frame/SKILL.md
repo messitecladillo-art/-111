@@ -25,6 +25,11 @@ The full sequence below applies to a new theme that needs concept comparison and
 
 The default A4 example is 210×297 mm with left/right 31.8 mm and top/bottom 25.4 mm margins: body 146.4×246.2 mm. This is an example configuration, not an official universal rule. Recalculate other paper sizes and margins. The body has a minimum 3 mm outward protection area; register extra header, footer, caption and footnote exclusions.
 
+## Ultra-Fine Perimeter & No Feather-Blur Bite
+
+1. **Lock ornament bounds at generation time (4%–6% outer strip)**: Every frame prompt (`page-art.ts` / `page_art.py`) must explicitly confine double rules and corner motifs (e.g., geometric fretwork, `回字纹`, or botanical lines) strictly inside the outermost **4%–6%** perimeter band (`8.5–12.5 mm` from the A4 edge), keeping the central **>= 88% × 88%** core completely empty/white/transparent from the start so corner ornaments never intrude toward body text.
+2. **Never feather-blur or fog-erase inner ornament edges**: Post-processing must **never** apply a wide inner alpha-feather gradient mask across corner motifs (which bites blurry white fog into geometric corners). Use crisp chroma-preserving white-to-alpha keying plus clear-zone verification or proportional outer-border retraction (`retractFrameRgbaCrisply` / `retract_frame_rgba_crisply`), keeping 100% of strokes and corner geometry razor-sharp and closed.
+
 ## Deterministic helpers
 
 The standard-library Python helpers require no image service or downloaded packages:

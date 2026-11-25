@@ -1,3 +1,5 @@
+import csv
+import io
 import re
 from sqlalchemy import select, func, text as sql_text
 from shared.errors import ApiError
@@ -5,6 +7,39 @@ from shared.contracts import canonical, fingerprint, integer, uuid_string
 from infrastructure.database.models import SurveyRelease, SurveyResponse, Version, now, new_id
 from infrastructure.security import keyed, random_token
 from multi_agent.agents.survey_agent.services import surveys as domain
+
+_SAFE_NEGATIVE_DECIMAL_RE = re.compile(r"^-(?:\d+(?:\.\d+)?|\.\d+)$")
+_FORMULA_LEAD_CHARS = ("=", "+", "@", "|", "\t", "\r", "\n")
+
+
+def sanitize_csv_cell(value: str) -> str:
+    """OWASP CSV formula-injection defense preserving legitimate negative decimals (e.g. -12, -0.55)."""
+    if not value:
+        return value
+    if value[0] in ("\t", "\r", "\n"):
+        return "'" + value
+    stripped = value.lstrip(" ")
+    if not stripped:
+        return value
+    lead = stripped[0]
+    if lead in _FORMULA_LEAD_CHARS:
+        return "'" + value
+    if lead == "-" and not _SAFE_NEGATIVE_DECIMAL_RE.fullmatch(stripped.rstrip(" ")):
+        return "'" + value
+    return value
+
+
+def sanitize_csv_document(raw_csv: str) -> str:
+    """Re-encode downloadable CSV rows with strict OWASP formula neutralization while keeping headers intact."""
+    rows = list(csv.reader(io.StringIO(raw_csv, newline="")))
+    if not rows:
+        return ""
+    stream = io.StringIO(newline="")
+    writer = csv.writer(stream, lineterminator="\r\n")
+    writer.writerow(rows[0])
+    for row in rows[1:]:
+        writer.writerow([sanitize_csv_cell(cell) for cell in row])
+    return stream.getvalue()
 
 class SurveyService:
 
@@ -84,7 +119,11 @@ class SurveyService:
         release = self.project_release(session=session, user=user, project_id=project_id, release_id=release_id)
         version = session.get(Version, release.version_id)
         responses = session.scalars(select(SurveyResponse).where(SurveyResponse.release_id == release_id).order_by(SurveyResponse.created_at, SurveyResponse.id)).all()
-        return domain.dataset_view(release, version.design, responses)
+        result = domain.dataset_view(release, version.design, responses)
+        result['downloadCsv'] = sanitize_csv_document(result['csv'])
+        if len(canonical(result).encode('utf-8')) > domain.MAX_DATASET_BYTES:
+            raise ApiError(413, 'dataset_too_large', '答卷导出超过容量，请联系项目管理员。')
+        return result
 
     def get_public(self, *, token: str, session):
         release = self.public_release(session=session, token=token)

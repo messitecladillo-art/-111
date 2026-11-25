@@ -1,4 +1,5 @@
 import hmac
+from urllib.parse import urlsplit
 from fastapi import Request, Depends
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.orm import Session as DBSession
@@ -18,7 +19,22 @@ def create_dependencies(settings, engine):
             yield session
 
     def origin(request):
-        if request.headers.get("origin") not in settings.allowed_origins or request.headers.get("sec-fetch-site") == "cross-site":
+        req_origin = request.headers.get("origin")
+        referer = request.headers.get("referer")
+        referer_ok = True
+        if referer is not None:
+            parts = urlsplit(referer)
+            ref_origin = (
+                f"{parts.scheme}://{parts.netloc}"
+                if parts.scheme and parts.netloc and not parts.username and not parts.password
+                else ""
+            )
+            referer_ok = ref_origin in settings.allowed_origins
+        if (
+            req_origin not in settings.allowed_origins
+            or not referer_ok
+            or request.headers.get("sec-fetch-site") == "cross-site"
+        ):
             raise ApiError(403, "origin_forbidden", "请从本站发起操作。")
 
     def session_user(request, session, required=True, *, lock=False):

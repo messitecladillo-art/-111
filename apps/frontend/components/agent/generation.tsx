@@ -47,7 +47,7 @@ export type Generation = {
 export const BRIEF_LIMIT = 6000;
 const EMPTY: Lists = { state: 'idle', projects: [], services: [], error: '' };
 const t = (text: string, mark?: Mark): Span => mark ? { text, mark } : { text };
-const reason = (failure: unknown) => failure instanceof Error ? failure.message : '模型调用未完成。';
+const reason = (failure: unknown) => failure instanceof Error ? failure.message : '生成请求未完成。';
 /** Only a rejection the server answered before any model call is definite; anything else may have run. */
 const definite = (failure: unknown) => failure instanceof QuestionnaireProposalError && failure.phase === 'request'
   && failure.cause instanceof HostedApiError && isDefiniteGenerationRejection(failure.cause.status, failure.cause.code);
@@ -123,24 +123,24 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
   },[owner,identityEpoch,load]);
 
   const start = useCallback((brief: string, projectId?: string): AgentTurn => account === 'guest'
-    ? { lines: [[t('起草问卷要调用你自己的模型服务，结果存进你的项目，所以需要先登录。')], [t('登录后再说一次，我会先请你确认要发送的内容。', 'dim')]],
+    ? { lines: [[t('起草问卷需要使用你绑定的生成服务并将草案存入项目，请先登录账号。')], [t('登录后再次发起即可，发送前我会先请你核对研究需求。', 'dim')]],
       chips: [{ label: '邮箱登录 ↗', action: { type: 'href', href: '/login' }, primary: true }] }
-    : { lines: [[t('可以。我会先读取项目当前的问卷版本，再用你选的模型服务起草一份问卷建议。')],
-        [t('发送给服务商的只有下面这段研究需求；费用按你的服务商用量计。结果存为项目里的模型提案，不改动现有问卷。', 'dim')]],
+    : { lines: [[t('可以。我会先读取项目当前的问卷版本，再用你选定的服务起草一份问卷建议。')],
+        [t('发送给服务商的仅有下方这段研究需求，费用按所选服务商实际账单结算。生成结果存为项目内的待审草案，不会直接改动现有问卷。', 'dim')]],
       cards: [{ kind: 'consent', brief: brief.slice(0, BRIEF_LIMIT), state: 'open', ...(projectId ? { projectId } : {}) }] }, [account]);
 
   const finish = useCallback((jobId: string, projectId: string, proposal: Proposal, request: QuestionnaireGenerationRequest, service: { label: string; model: string }) => {
     if (proposal.status === 'ready' && proposal.design) {
       const design = proposal.design, n = design.questions.length;
-      setJob(jobId, 'done', `已起草「${design.title || '未命名问卷'}」· ${n} 题 · 基于问卷 v${proposal.inputRevision}`);
+      setJob(jobId, 'done', `已起草“${design.title || '未命名问卷'}” · 共 ${n} 题 · 基于问卷第 ${proposal.inputRevision} 版`);
       reply(jobId, {
-        lines: [[t(`模型拟了 ${n} 道题。`), t('它还只是建议：带进问卷设计审阅，确认应用后才成为你的设计。', 'dim')]],
+        lines: [[t(`已拟定 ${n} 道题。`), t('当前仍为待审建议，带入问卷设计核对并确认应用后才会写入正式问卷。', 'dim')]],
         cards: [{ kind: 'proposal', projectId, proposalId: proposal.id, serviceId: proposal.serviceId, serviceRevision: proposal.serviceRevision, serviceLabel: service.label, model: service.model, inputRevision: proposal.inputRevision, design }],
       });
     } else if (proposal.status === 'failed') {
-      setJob(jobId, 'failed', `模型没有完成本次起草${proposal.errorCode ? `（${proposal.errorCode}）` : ''}；项目问卷没有变化。`);
+      setJob(jobId, 'failed', `本次未能完成起草${proposal.errorCode ? `（${proposal.errorCode}）` : ''}，项目问卷未发生改动。`);
     } else {
-      setJob(jobId, 'unknown', '模型仍在处理或结果尚未明确。原请求已保留，稍后核对只会重放同一请求，不会产生新的模型费用。', request);
+      setJob(jobId, 'unknown', '服务仍在处理或结果尚未明确。原请求已保留，稍后核对只会重放同一请求，不会产生额外费用。', request);
     }
   }, []);
 
@@ -150,8 +150,8 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
       if (current() && proposal) finish(jobId, projectId, proposal, request, service);
     } catch (failure) {
       if (!current()) return;
-      if (definite(failure)) notStarted(jobId, `本次起草没有启动：${reason(failure)}`);
-      else setJob(jobId, 'unknown', `调用结果尚未明确：${reason(failure)} 原请求已保留；核对只重放同一请求，不会产生新的模型费用。`, request);
+      if (definite(failure)) notStarted(jobId, `本次起草未能启动，${reason(failure)}`);
+      else setJob(jobId, 'unknown', `调用结果尚未明确，${reason(failure)} 原请求已保留，核对只重放同一请求，不会产生额外费用。`, request);
     } finally { release(); }
   }, [transport, finish, release]);
 
@@ -181,15 +181,15 @@ export function useGeneration(onProposal: (proposal: AgentQuestionnaireProposal)
         if (head === undefined || !current()) { release(); return; }
         revision = head?.revision ?? 0;
       } catch (failure) {
-        if (current()) notStarted(job.id, `无法读取项目当前的问卷版本，本次没有调用模型：${reason(failure)}`);
+        if (current()) notStarted(job.id, `无法读取项目当前的问卷版本，本次未发起生成请求（${reason(failure)}）`);
         release();
         return;
       }
-      if(!routeStillConfirmed()) { if(current())notStarted(job.id,'问卷模型或版本已变化，请重新确认后起草。本次没有调用模型。');release();return; }
+      if(!routeStillConfirmed()) { if(current())notStarted(job.id,'起草服务或配置版本已变化，请重新确认后再起草，本次未发起请求。');release();return; }
       let request: QuestionnaireGenerationRequest;
       try { request = prepareQuestionnaireGeneration(service, brief, revision, true); }
       catch (failure) { if (current()) notStarted(job.id, reason(failure)); release(); return; }
-      setJob(job.id, 'running', '正在调用模型起草问卷…', request);
+      setJob(job.id, 'running', '正在生成问卷草案…', request);
       await run(job.id, project.id, request, { label: service.label, model: service.model }, current);
     })();
   }, [lists, owner, identityEpoch, isCurrentAccount, transport, run, release]);
@@ -246,16 +246,16 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
     if (event.key === 'y' || event.key === 'Y') { event.preventDefault(); submit(); }
     if (event.key === 'n' || event.key === 'N' || event.key === 'Escape') { event.preventDefault(); g.cancel(messageId); }
   };
-  return <div ref={ref} className={`${styles.card} ${styles.confirm}`} role="group" aria-label="需要你确认：调用模型起草问卷" tabIndex={open ? 0 : -1} onKeyDown={key}>
-    <span className={styles.cardTitle}>需要你确认 · 调用模型起草问卷</span>
+  return <div ref={ref} className={`${styles.card} ${styles.confirm}`} role="group" aria-label="需要你确认起草问卷请求" tabIndex={open ? 0 : -1} onKeyDown={key}>
+    <span className={styles.cardTitle}>待确认 · 起草研究问卷</span>
     {open ? <div className={styles.consentForm}>
       <label className={styles.field}><span>研究需求</span>
-        <textarea value={brief} maxLength={BRIEF_LIMIT} rows={3} placeholder="例如：了解甲区居民对社区体育设施的使用与满意度，为设施改造排序。" onChange={event => setBrief(event.target.value)} />
+        <textarea value={brief} maxLength={BRIEF_LIMIT} rows={3} placeholder="例如了解某城区居民对社区体育设施的使用频率与满意度，为改造优先级排序。" onChange={event => setBrief(event.target.value)} />
         <small>{brief.length} / {BRIEF_LIMIT}</small>
       </label>
       {g.account !== 'ready' ? <p className={styles.fieldNote}>正在核对登录状态…</p>
-        : g.lists.state === 'error' ? <p className={styles.fieldError}>读取项目与模型服务失败：{g.lists.error} <button type="button" className={styles.chip} onClick={() => g.load(true)}>重试</button></p>
-        : g.lists.state !== 'ready' ? <p className={styles.fieldNote}>正在读取你的项目与模型服务…</p>
+        : g.lists.state === 'error' ? <p className={styles.fieldError}>读取项目与服务配置未成功（{g.lists.error}） <button type="button" className={styles.chip} onClick={() => g.load(true)}>重试</button></p>
+        : g.lists.state !== 'ready' ? <p className={styles.fieldNote}>正在读取你的项目与服务配置…</p>
         : <>
           <label className={styles.field}><span>保存到项目</span>
             {projects.length ? <select value={project} disabled={!!card.projectId} onChange={event => setProjectId(event.target.value)}>
@@ -263,17 +263,17 @@ export function ConsentCard({ messageId, card, at }: { messageId: string; card: 
               {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
               : <span className={styles.fieldNote}>还没有项目。<Link href="/projects">新建项目 ↗</Link></span>}
           </label>
-          <label className={styles.field}><span>模型服务</span>
+          <label className={styles.field}><span>起草服务</span>
             {services.length ? <select value={service} onChange={event => setStageModelPreference(routeOwner, 'survey.questionnaire', event.target.value || null)}><option value="" disabled>请选择问卷起草模型</option>{services.map(s => <option key={s.id} value={s.id}>{s.label} · {s.model} · v{s.revision}</option>)}</select>
-              : <span className={styles.fieldNote}>还没有能起草问卷的模型服务。<Link href="/services">接入模型 ↗</Link></span>}
+              : <span className={styles.fieldNote}>还没有可用于起草问卷的服务配置。<Link href="/services">前往配置 ↗</Link></span>}
           </label>
         </>}
-      <p className={styles.scope}>发送范围：只有上面这段研究需求与你的模型配置。生成结果存为项目里的模型提案，不会改动现有问卷。</p>
+      <p className={styles.scope}>本次仅发送上方这段研究需求，生成结果存为项目内的待审草案，不会改动现有问卷。</p>
       <div className={styles.cardLinks}>
         <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} disabled={!ready} onClick={submit}>起草（y）</button>
         <button type="button" className={styles.chip} onClick={() => g.cancel(messageId)}>取消（n）</button>
       </div>
-    </div> : <p className={styles.answered}>{card.state === 'submitted' ? `已确认：保存到「${card.projectTitle ?? '项目'}」，由 ${card.serviceLabel ?? '所选服务'} 起草。` : '已取消，没有调用模型。'}</p>}
+    </div> : <p className={styles.answered}>{card.state === 'submitted' ? `已确认起草并保存至“${card.projectTitle ?? '当前项目'}”（由 ${card.serviceLabel ?? '所选服务'} 处理）。` : '已取消，未发起生成请求。'}</p>}
   </div>;
 }
 
@@ -282,7 +282,7 @@ const JOB_MARK: Record<Job['status'], string> = { running: '◌', done: '✓', f
 export function JobCard({ messageId, card }: { messageId: string; card: Job }) {
   const g = useContext(GenerationContext);
   return <div className={`${styles.card} ${styles.job}`} data-status={card.status}>
-    <span className={styles.cardTitle}>工具 · 起草问卷 · {card.serviceLabel}</span>
+    <span className={styles.cardTitle}>进度 · 起草问卷 · {card.serviceLabel}</span>
     <p className={styles.jobLine}><b aria-hidden="true">{JOB_MARK[card.status]}</b><span>{card.detail}</span></p>
     {card.status === 'unknown' && card.request && <div className={styles.cardLinks}>
       <button type="button" className={styles.chip} disabled={!g || g.busy} onClick={() => g?.reconcile(messageId)}>核对原请求</button>
@@ -294,16 +294,16 @@ export function JobCard({ messageId, card }: { messageId: string; card: Job }) {
 export function ProposalView({ card }: { card: ProposalCard }) {
   const g = useContext(GenerationContext), d = card.design;
   return <div className={`${styles.card} ${styles.proposal}`}>
-    <span className={styles.cardTitle}>模型提案 · 待审阅</span>
+    <span className={styles.cardTitle}>问卷草案 · 待审阅</span>
     <p className={styles.proposalTitle}>{d.title || '未命名问卷'}</p>
     {!!d.objective.trim() && <p className={styles.proposalMeta}>{d.objective}</p>}
-    {!!d.population.trim() && <p className={styles.proposalMeta}>调查对象：{d.population}</p>}
+    {!!d.population.trim() && <p className={styles.proposalMeta}>面向人群为{d.population}</p>}
     <ol className={styles.proposalItems}>{d.questions.map(q => <li key={q.id}><span>{q.text}</span><small>{QUESTION_TYPES[q.type]}</small></li>)}</ol>
-    <p className={styles.proposalFoot}>AI 拟议 · 尚未预测试 · {card.serviceLabel}（{card.model}）· 基于问卷 v{card.inputRevision}</p>
+    <p className={styles.proposalFoot}>智能起草建议 · 尚未预测试 · {card.serviceLabel}（{card.model}）· 基于问卷第 {card.inputRevision} 版</p>
     <div className={styles.cardLinks}>
       <button type="button" className={`${styles.chip} ${styles.chipPrimary}`} disabled={g?.activeProjectId !== card.projectId} onClick={() => g?.bring(card)}>带入问卷设计审阅 →</button>
       <Link className={styles.chip} href={`/projects/${encodeURIComponent(card.projectId)}`}>在项目中打开 ↗</Link>
-      <button type="button" className={styles.chip} onClick={() => downloadQuestionnaire(d, `${(d.title || '问卷提案').replace(/[\\/:*?"<>|]/g, '-')}.json`)}>下载 JSON</button>
+      <button type="button" className={styles.chip} onClick={() => downloadQuestionnaire(d, `${(d.title || '问卷提案').replace(/[\\/:*?"<>|]/g, '-')}.json`)}>导出问卷结构文件</button>
     </div>
   </div>;
 }

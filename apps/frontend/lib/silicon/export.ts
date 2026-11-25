@@ -1,4 +1,5 @@
 import type { Questionnaire } from '../questionnaire.ts';
+import { normalizeAcademicPunctuation } from '../typography.ts';
 import { estimateMinutes } from './assess.ts';
 import type { SiliconRun } from './run.ts';
 
@@ -24,7 +25,7 @@ export function siliconCsv(design: Questionnaire, run: SiliconRun): string {
 }
 
 export function siliconRunJson(run: SiliconRun): string {
-  return JSON.stringify({ ...run, notice: '模拟数据（硅基样本）：由离线演示引擎或语言模型扮演虚构受访者生成，不是调查数据，不得作为调研结果、填补或扩充真实样本。' }, null, 2);
+  return JSON.stringify({ ...run, notice: '本文件为预测试模拟样本记录，由本地受访角色推演或语言模型模拟生成，不属于真实调查数据，不得作为调研结果，亦不得用于填补或扩充真实样本。' }, null, 2);
 }
 
 /** True when a table carries the silicon origin column; its presence alone marks the data as simulated. */
@@ -35,13 +36,14 @@ export function isSiliconTable(header: readonly string[]): boolean {
 /** A methods-section paragraph describing what was simulated and what it was not used for. */
 export function disclosureText(design: Questionnaire, run: SiliconRun): string {
   const ok = run.responses.filter(r => r.status === 'ok').length;
-  const models = run.engine === 'demo' ? '离线演示引擎（不调用语言模型）' : run.settings.models.join('、');
-  const scenarios = run.settings.scenarios.filter(s => s.id !== 'base').map(s => s.label);
+  const models = run.engine === 'demo' ? '本地受访角色推演（未调用外部模型）' : run.settings.models.map(m => normalizeAcademicPunctuation(m)).join('、');
+  const scenarios = run.settings.scenarios.filter(s => s.id !== 'base').map(s => normalizeAcademicPunctuation(s.label));
   const time = estimateMinutes(design);
+  const title = normalizeAcademicPunctuation(design.title || '未命名问卷');
   return [
-    `【AI 使用说明 · 预测试】在问卷「${design.title || '未命名问卷'}」定稿前，研究团队使用 ${models} 扮演 ${run.personas.length} 位虚构受访者（硅基样本）作答，共得到 ${ok} 份模拟回答${scenarios.length ? `，覆盖 ${scenarios.join('、')} 等情境` : ''}。`,
-    `模拟回答仅用于发现题目表述不清、选项缺失、跳题逻辑与作答时长（估计 ${time.low}–${time.high} 分钟）等问题，并据此修订问卷；所有模拟数据均未进入正式样本，未用于填补或扩充真实数据，也未作为本报告的任何调查结果。`,
-    '画像属性与配额由研究团队设定，不代表真实人口结构；语言模型对较低学历、农村及少数民族语言人群的模拟通常更不可靠。',
-    '【请据实填写：上述修订是否以及如何经过真实受访者预调查复核】',
+    `在问卷“${title}”定稿前，研究团队借助${models}对 ${run.personas.length} 位虚构受访角色开展预测试试答，共得到 ${ok} 份模拟回答${scenarios.length ? `，覆盖${scenarios.join('、')}等情境` : ''}。`,
+    `模拟回答仅用于排查题目表述不清、选项缺失、跳题逻辑与作答时长（估计 ${time.low}–${time.high} 分钟）等问题，并据此修订问卷；所有模拟数据均未进入正式样本，未用于填补或扩充真实数据，也未作为本报告的任何调查结果。`,
+    '受访角色属性与配额由研究团队设定，不代表真实人口结构；模拟作答对较低学历、农村及少数民族语言人群的代表性偏差通常更大。',
+    '请据实填写上述问卷修订是否以及如何经过真实受访者预调查复核。',
   ].join('\n');
 }

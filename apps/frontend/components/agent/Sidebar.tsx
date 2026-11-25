@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { turnText } from '@/lib/agent/chat';
-import { Icon } from './icons';
+import { EvixIcon, Icon, ROOM_EVIX_ICON, STUDIO_HUB_EVIX_ICON } from './icons';
 import { tidyTitle as tidy, type Book, type Thread } from './threads';
 import { thousands } from '@/lib/agent/chat';
 import type { RoomId } from '@/lib/agent/rooms';
@@ -12,6 +12,7 @@ import styles from './AgentShell.module.css';
 
 type Props = {
   book: Book;
+  projectId?: string | null;
   projects: { id: string; label: string }[];
   account: 'loading' | 'guest' | 'ready';
   email: string;
@@ -65,7 +66,21 @@ function excerpt(thread: Thread, wanted: string): string | null {
  * them, then the rest by recency. Search reads titles and what was said. A conversation can be renamed in place;
  * deleting asks once more in place and removes the conversation only, never project work.
  */
-export default function Sidebar({ book, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout, nav, activeStudio = null, onOpenStudio, studioContent, steeringCount = 0, brainStatus }: Props) {
+export default function Sidebar({ book, projectId, projects, account, email, failed, onRetry, notice, onNew, onSelect, onRemove, onRename, onCollapse, stages, openRoom, onRoom, outputs, openOutput, onOutput, todayTokens, onModels, onExport, onLogout, nav, activeStudio = null, onOpenStudio, studioContent, steeringCount = 0, brainStatus }: Props) {
+  const currentProjectId = projectId !== undefined ? projectId : (book.threads.find(t => t.id === book.active)?.projectId ?? book.draftProject);
+  const displayProjects = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of projects) {
+      const key = p.label.trim();
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return projects.map(p => {
+      const key = p.label.trim();
+      if ((counts.get(key) ?? 0) <= 1) return p;
+      const shortId = p.id.replace(/-/g, '').slice(0, 4) || p.id.slice(0, 4);
+      return { ...p, label: `${p.label} #${shortId}` };
+    });
+  }, [projects]);
   const [menu, setMenu] = useState(false);
   const [allOutputs, setAllOutputs] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -76,6 +91,28 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
   // The conversation being renamed and its name when editing began; cleared once saved or abandoned, so the field's
   // blur does not save it again.
   const editing = useRef<{ id: string; from: string } | null>(null);
+  const accountWrapRef = useRef<HTMLDivElement>(null);
+  const accountBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const away = (event: PointerEvent) => {
+      if (!accountWrapRef.current?.contains(event.target as Node)) setMenu(false);
+    };
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenu(false);
+        accountBtnRef.current?.focus();
+      }
+    };
+    window.addEventListener('pointerdown', away);
+    window.addEventListener('keydown', escape);
+    return () => {
+      window.removeEventListener('pointerdown', away);
+      window.removeEventListener('keydown', escape);
+    };
+  }, [menu]);
+
   const wanted = query.trim();
   // What the search found: a conversation whose title matches, or else an excerpt of where its words do.
   const found = useMemo(() => {
@@ -105,7 +142,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
     const words = found?.get(thread.id);
     return <div key={thread.id} className={styles.thread} data-active={thread.id === book.active} data-nested={nested}>
       {renaming === thread.id
-        ? <input className={styles.threadRename} autoFocus defaultValue={thread.title} maxLength={80} aria-label={`重命名对话「${thread.title}」：Enter 保存，Esc 取消`}
+        ? <input className={styles.threadRename} autoFocus defaultValue={thread.title} maxLength={80} aria-label={`重命名对话“${thread.title}”（按回车保存，按退出键取消）`}
             onFocus={event => event.currentTarget.select()} onBlur={event => finishRename(thread.id, event.currentTarget.value)}
             onKeyDown={event => {
               if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); finishRename(thread.id, event.currentTarget.value); }
@@ -116,11 +153,11 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
           </button>}
       {renaming !== thread.id && <span className={styles.threadMenu} data-confirming={confirming === thread.id}>
         {confirming === thread.id ? <>
-          <button type="button" data-danger="true" onClick={() => { onRemove(thread.id); setConfirming(null); }}>确认删除</button>
-          <button type="button" onClick={() => setConfirming(null)}>取消</button>
+          <button type="button" data-danger="true" aria-label={`确认删除对话“${thread.title}”`} onClick={() => { onRemove(thread.id); setConfirming(null); }}>确认删除</button>
+          <button type="button" aria-label={`取消删除对话“${thread.title}”`} onClick={() => setConfirming(null)}>取消</button>
         </> : <>
-          <button type="button" aria-label={`重命名对话「${thread.title}」`} onClick={() => startRename(thread)}>重命名</button>
-          <button type="button" aria-label={`删除对话「${thread.title}」`} onClick={() => setConfirming(thread.id)}>删除</button>
+          <button type="button" aria-label={`重命名对话“${thread.title}”`} onClick={() => startRename(thread)}>重命名</button>
+          <button type="button" aria-label={`删除对话“${thread.title}”`} onClick={() => setConfirming(thread.id)}>删除</button>
         </>}
       </span>}
     </div>;
@@ -128,18 +165,18 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
 
   return <aside className={styles.sidebar} aria-label="对话与项目">
     <div className={styles.sideHead}>
-      <span className={styles.brandName}>证见<small>EVI-X</small></span>
+      <span className={styles.brandName}><EvixIcon name="prism" size={16} />证见<small>EVI-X</small></span>
       <Link href="/workspace" className={styles.sideBackLink} title="返回研究工作台">← 工作台</Link>
       <span className={styles.spacer} />
       <button type="button" className={styles.iconButton} aria-label="搜索对话" aria-pressed={searching} onClick={() => { setSearching(!searching); setQuery(''); }}><Icon name="search" /></button>
       <button type="button" className={styles.iconButton} aria-label="收起侧栏（Ctrl B）" title="收起侧栏（Ctrl B）" onClick={onCollapse}><Icon name="sidebar" /></button>
     </div>
-    {searching && <input className={styles.sideSearch} autoFocus value={query} placeholder="搜索对话标题与内容" aria-label="搜索对话标题与内容" onChange={event => setQuery(event.target.value)} />}
+    {searching && <input className={styles.sideSearch} autoFocus value={query} placeholder="搜索对话标题与内容" aria-label="搜索对话标题与内容" onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setSearching(false); setQuery(''); } }} />}
     <nav className={styles.sideScroll} aria-label={nav ? "报告" : "对话"}>
       {onOpenStudio && !activeStudio && (
         <details className={styles.sideGroup}>
           <summary>创作工坊 <small>{steeringCount > 0 ? `${steeringCount} 条指令` : '按需呼出'}</small><Icon name="down" /></summary>
-          <section className={styles.studioDock} aria-label="Agent 核心创作工坊">
+          <section className={styles.studioDock} aria-label="核心创作工坊">
             <div className={styles.studioPillGrid}>
               {STUDIO_HUBS.map(hub => {
                 const active = activeStudio ? hubForTab(activeStudio).id === hub.id : false;
@@ -149,10 +186,11 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
                     type="button"
                     className={styles.studioPill}
                     aria-pressed={active}
+                    aria-label={hub.label}
                     onClick={() => onOpenStudio(active ? null : hub.defaultTab)}
                     title={hub.label}
                   >
-                    <span>{hub.icon}</span>
+                    <EvixIcon name={STUDIO_HUB_EVIX_ICON[hub.id]} size={15} variant={active ? 'duotone' : 'duotone'} />
                     <span>{hub.short}</span>
                   </button>
                 );
@@ -162,7 +200,7 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
         </details>
       )}
       {activeStudio && studioContent ? studioContent : (nav ?? <>
-      <button type="button" className={styles.sideItem} onClick={() => onNew(null)} aria-current={book.active === null ? 'true' : undefined}><Icon name="edit" />新对话</button>
+      <button type="button" className={styles.sideItem} onClick={() => onNew(currentProjectId)} aria-current={book.active === null ? 'true' : undefined}><EvixIcon name="judge-qa" size={16} />新对话</button>
       {!wanted && <>
         <details className={styles.sideGroup}>
         <summary>研究进度 <Icon name="down" /></summary>
@@ -170,8 +208,8 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
           {stages.map(stage => {
             const state = stage.score === null ? 'unmeasured' : stage.score >= 0.999 ? 'done' : stage.score > 0 ? 'active' : 'empty';
             return <li key={stage.id}><button type="button" data-state={state} aria-current={openRoom === stage.id ? 'true' : undefined} onClick={() => onRoom(stage.id)}
-              title={stage.score === null ? `${stage.name}：打开模块` : `${stage.name}：证据照度 ${Math.round(stage.score * 100)}%`}>
-              <span className={styles.stageMark} aria-hidden="true">{state === 'done' ? <Icon name="check" /> : stage.glyph}</span>
+              title={stage.score === null ? `打开${stage.name}` : `${stage.name}（完成度 ${Math.round(stage.score * 100)}%）`}>
+              <span className={styles.stageMark} aria-hidden="true">{state === 'done' ? <Icon name="check" size={13} /> : <EvixIcon name={ROOM_EVIX_ICON[stage.id]} size={13} variant={state === 'empty' ? 'outline' : 'duotone'} />}</span>
               <span className={styles.stageName}>{stage.name}</span>
               {state === 'active' && <span className={styles.stageBar} aria-hidden="true"><i style={{ width: `${Math.round(stage.score! * 100)}%` }} /></span>}
               <small>{state === 'done' ? '完成' : state === 'active' ? `${Math.round(stage.score! * 100)}%` : state === 'empty' ? '未开始' : ''}</small>
@@ -182,21 +220,21 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
         {outputs.length > 0 && <details className={styles.sideGroup}>
           <summary>分析产出 <small>{outputs.length}</small><Icon name="down" /></summary>
           {(allOutputs ? outputs : outputs.slice(0, 5)).map(output => <button key={output.id} type="button" className={styles.output} aria-current={openOutput === output.id ? 'true' : undefined} onClick={() => onOutput(output.id)} title={output.title}>
-            <Icon name="chart" /><span>{output.title}<small>{output.detail}</small></span>
+            <EvixIcon name="modeling" size={16} /><span>{output.title}<small>{output.detail}</small></span>
           </button>)}
           {outputs.length > 5 && <button type="button" className={styles.sideMore} onClick={() => setAllOutputs(!allOutputs)}>{allOutputs ? '收起' : `全部 ${outputs.length} 项`}</button>}
         </details>}
       </>}
-      {account === 'ready' && projects.length > 0 && <>
+      {account === 'ready' && displayProjects.length > 0 && <>
         <p className={styles.sideLabel}>项目</p>
-        {projects.map(project => {
-          const filed = recent.filter(t => t.projectId === project.id), open = expanded[project.id] ?? filed.length > 0;
+        {displayProjects.map(project => {
+          const filed = recent.filter(t => t.projectId === project.id), open = expanded[project.id] ?? (filed.length > 0 || currentProjectId === project.id);
           return <div key={project.id}>
-            <div className={styles.thread}>
-              <button type="button" aria-expanded={open} onClick={() => setExpanded({ ...expanded, [project.id]: !open })}>
-                <span className={styles.folder}><Icon name="folder" />{project.label}</span>
+            <div className={styles.thread} data-active={currentProjectId === project.id && book.active === null}>
+              <button type="button" aria-expanded={open} aria-label={`${open ? '收起' : '展开'}项目“${project.label}”对话列表`} onClick={() => setExpanded({ ...expanded, [project.id]: !open })}>
+                <span className={styles.folder}><EvixIcon name="cloud-sync" size={16} />{project.label}</span>
               </button>
-              <span className={styles.threadMenu}><button type="button" aria-label={`在「${project.label}」里新建对话`} title="在这个项目里新建对话" onClick={() => onNew(project.id)}>＋</button></span>
+              <span className={styles.threadMenu}><button type="button" aria-label={`在“${project.label}”里新建对话`} title="在这个项目里新建对话" onClick={() => onNew(project.id)}>＋</button></span>
             </div>
             {open && (filed.length ? filed.map(t => row(t, true)) : <p className={styles.sideNote}>还没有对话</p>)}
           </div>;
@@ -204,32 +242,32 @@ export default function Sidebar({ book, projects, account, email, failed, onRetr
       </>}
       {(loose.length > 0 || !recent.length) && <p className={styles.sideLabel}>最近</p>}
       {loose.map(t => row(t))}
-      {!recent.length && <p className={styles.sideEmpty}>{wanted ? '没有匹配的对话。' : '还没有对话。'}</p>}
+      {!recent.length && <p className={styles.sideEmpty} role="status">{wanted ? '没有匹配的对话。' : '还没有对话。'}</p>}
       </>)}
     </nav>
     {notice && <p className={styles.sideNotice} role="alert">{notice}</p>}
     <div className={styles.sideFoot}>
       {failed && account !== 'ready' ? <>
-        <span role="status" title="账号服务未连接，内容安全保存在本地工作区" style={{ color: 'var(--c-dim)' }}>本地工作区（离线）</span>
+        <span role="status" title="当前未登录云端账号，内容已安全保存在本机工作区" style={{ color: 'var(--c-dim)' }}>本机工作区</span>
         <span className={styles.spacer} />
-        <button type="button" onClick={onRetry}>重连</button>
-      </> : account === 'ready' ? <div className={styles.accountWrap}>
+        <button type="button" onClick={onRetry}>重试连接</button>
+      </> : account === 'ready' ? <div ref={accountWrapRef} className={styles.accountWrap}>
         {menu && <div className={styles.accountMenu} role="menu" aria-label="账号">
-          <button type="button" role="menuitem" onClick={() => { setMenu(false); onModels(); }}>模型设置</button>
+          <button type="button" role="menuitem" onClick={() => { setMenu(false); onModels(); }}>服务与连接设置</button>
           <Link role="menuitem" href="/invites" onClick={() => setMenu(false)}>邀请码（管理员）</Link>
           {onExport && <button type="button" role="menuitem" onClick={() => { setMenu(false); onExport(); }}>导出对话记录</button>}
           <button type="button" role="menuitem" onClick={() => { setMenu(false); onRoom('diagnose'); }}>选题与研究资料</button>
           <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenu(false); onLogout(); }}>退出登录</button>
         </div>}
-        <button type="button" className={styles.account} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title={email}>
+        <button ref={accountBtnRef} type="button" className={styles.account} aria-label={`账号菜单（${email}）`} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title={email}>
           <span className={styles.accountAvatar} aria-hidden="true">{(email[0] ?? '?').toUpperCase()}</span>
-          <span className={styles.accountText}><b>{email}</b><small>今日已记录 {thousands(todayTokens)} tokens</small></span>
+          <span className={styles.accountText}><b>{email}</b><small>{todayTokens > 0 ? `今日用量 ${thousands(todayTokens)} 词元` : '云端研究工作区'}</small></span>
           <Icon name="more" />
         </button>
       </div> : <>
-        <span>{account === 'loading' ? '正在核对登录…' : brainStatus?.available ? `${brainStatus.provider} 直连 · 对话存本页` : '未登录 · 对话只留在本标签页'}</span>
+        <span role="status">{account === 'loading' ? '正在核对登录状态…' : brainStatus?.available ? `${brainStatus.provider} 已连接 · 对话保存在本页` : '未登录 · 对话保存在本标签页'}</span>
         <span className={styles.spacer} />
-        {account === 'guest' ? <Link href="/login">登录</Link> : <button type="button" onClick={onRetry}>重试连接</button>}
+        {account === 'guest' && <Link href="/login?next=/agent">邮箱登录</Link>}
       </>}
     </div>
   </aside>;

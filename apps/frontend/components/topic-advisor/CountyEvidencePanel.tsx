@@ -36,7 +36,7 @@ export default function CountyEvidencePanel({ profile, published }: CountyEviden
         <summary><span className={styles.number}>{String(index + 1).padStart(2, '0')}</span><span>{direction.title}</span><small>拟议研究</small></summary>
         <div className={styles.directionBody}><p className={styles.question}>{direction.question}</p>
           <dl className={styles.decision}><div><dt>拟服务的决策方</dt><dd>{direction.decisionOwner}</dd></div><div><dt>拟调查人群</dt><dd>{direction.population}</dd></div><div className={styles.full}><dt>拟支持的决定</dt><dd>{direction.decision}</dd></div></dl>
-          <p className={styles.access}>需先确认的渠道：{direction.requiredAccess.length ? direction.requiredAccess.map(id => ACCESS_OPTIONS.find(option => option.id === id)?.label ?? id).join('、') : '未登记'}</p>
+          <p className={styles.access}>需先确认渠道为 {direction.requiredAccess.length ? direction.requiredAccess.map(id => ACCESS_OPTIONS.find(option => option.id === id)?.label ?? id).join('、') : '未登记'}</p>
           <h6>最低证据要求</h6>{direction.minimumEvidence.length ? <ul>{direction.minimumEvidence.map((item, i) => <li key={i}>{item}</li>)}</ul> : <p className={styles.note}>未登记，开展前需补充。</p>}
           <SourceDetails rows={countySourceEvidence(publication, direction.sourceIds)} />
         </div>
@@ -57,7 +57,7 @@ function SourceDetails({ rows }: { rows: CountyEvidenceSource[] }) {
       {row.authority && <p className={styles.authority}>{row.authority}</p>}
       <dl className={styles.sourceDates}><div><dt>来源发布</dt><dd>{row.publishedAt ? <time dateTime={row.publishedAt}>{row.publishedAt}</time> : '尚未确认'}</dd></div><div><dt>资料检索</dt><dd>{row.retrievedAt ? <time dateTime={row.retrievedAt}>{row.retrievedAt}</time> : '尚未确认'}</dd></div><div className={styles.full}><dt>实际阅读</dt><dd>{row.readAt ? <time dateTime={row.readAt}>{row.readAt.replace('T', ' ').replace('Z', ' UTC')}</time> : '尚未确认'}</dd></div></dl>
       <p className={styles.support}>{row.supportLabel}</p>
-      <p className={styles.locator}>来源定位：{row.sourceLocator || '未登记'}</p><p className={styles.locator}>阅读定位：{row.readLocator || '未登记'}</p>
+      <p className={styles.locator}>来源定位 {row.sourceLocator || '未登记'}</p><p className={styles.locator}>阅读定位 {row.readLocator || '未登记'}</p>
       {row.url && <a href={row.url} target="_blank" rel="noopener noreferrer">查看原始来源 ↗<span className={styles.srOnly}>（新窗口）</span></a>}
     </article>) : <p className={styles.note}>未登记来源或实际阅读，不作为已核查支持。</p>}
   </details>;

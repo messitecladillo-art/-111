@@ -1,36 +1,24 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useKnowledge } from './knowledge/KnowledgeProvider';
 import { AccountStatus } from './hosted/HostedFrame';
 import ViewSwitch from './canvas/ViewSwitch';
 import { NAV_ITEMS, NavIcon, PageHeading, ThemeProvider, ThemeToggle, WorkbenchFooter, WorkbenchSidebar, useThemePreference, type Section } from './workbench/shell-kit';
+import {
+  WorkbenchNavProvider,
+  useWorkbenchNav,
+  type WorkbenchNav,
+  type WorkbenchPanel,
+} from './workbench/nav-context';
 
 export { useWorkbenchTheme } from './workbench/shell-kit';
+export { WorkbenchNavProvider, useWorkbenchNav, type WorkbenchNav, type WorkbenchPanel };
 
-type Panel = Exclude<Section, "lifecycle">;
-export type WorkbenchPanel = Panel;
+type Panel = WorkbenchPanel;
 const ITEMS = NAV_ITEMS;
 
-/**
- * Canvas ↔ editor navigation. A canvas node opens the same mounted editor panel the workbench uses
- * (panels stay mounted once visited), and a pill brings the user back to that node.
- */
 type CanvasReturn = { nodeId: string; title: string };
-export type WorkbenchNav = {
-  section: Section;
-  openFromCanvas: (target: Section, nodeId: string, title: string) => void;
-  showWorkbench: () => void;
-  canvasFocus: { nodeId: string; token: number } | null;
-};
-const NavContext = createContext<WorkbenchNav | null>(null);
-/** Lets another shell (the agent shell) host workbench modules that navigate through this context. */
-export const WorkbenchNavProvider = NavContext.Provider;
-export function useWorkbenchNav(): WorkbenchNav {
-  const value = useContext(NavContext);
-  if (!value) throw Error("useWorkbenchNav must be used inside WorkbenchShell");
-  return value;
-}
 
 function subscribeHash(listener: () => void) {
   window.addEventListener("hashchange", listener);
@@ -90,7 +78,7 @@ export default function WorkbenchShell({ panels }: { panels: Record<Panel, React
     return () => cancelAnimationFrame(frame);
   }, [section]);
 
-  return <ThemeProvider value={theme}><NavContext.Provider value={nav}>
+  return <ThemeProvider value={theme}><WorkbenchNavProvider value={nav}>
     <div className="workbench" data-theme={theme} data-section={section} data-view={canvasView ? "canvas" : "workbench"}>
       <a className="skip-link" href="#top" onClick={event => { event.preventDefault(); (headingRef.current ?? document.getElementById("top"))?.focus(); }}>跳到主要内容</a>
       <WorkbenchSidebar active={section} inWorkspace open={open} setOpen={setOpen} menuRef={menuRef} onSearch={showCommands}/>
@@ -112,5 +100,5 @@ export default function WorkbenchShell({ panels }: { panels: Record<Panel, React
       </div>
 
     </div>
-  </NavContext.Provider></ThemeProvider>;
+  </WorkbenchNavProvider></ThemeProvider>;
 }

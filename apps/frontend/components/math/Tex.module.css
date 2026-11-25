@@ -16,7 +16,7 @@
 .formula[data-print] { gap: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .formula[data-print]:hover { border-color: transparent; }
 .formula[data-print] .body { position: relative; display: block; }
-.formula[data-print] .math { padding: 0; overflow: visible; }
+.formula[data-print] .math { padding: 0; padding-inline: 44px; box-sizing: border-box; overflow: visible; }
 .formula[data-print] .math :global(.katex-display) { text-align: center; }
 .formula[data-print] .math :global(.katex) { color: #000; }
 .formula[data-print] .number { position: absolute; top: 50%; right: 0; transform: translateY(-50%); color: #000; font: inherit; }
@@ -24,3 +24,42 @@
 .formula:hover .copy, .copy:focus-visible, .formula:focus-within .copy { opacity: 1; }
 .copy:hover { color: var(--wb-accent); border-color: var(--wb-accent); }
 @media (hover: none) { .copy { opacity: 1; } }
+
+@media (forced-colors: active) {
+  .formula {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonBorder;
+  }
+  .formula[data-compact],
+  .formula[data-print] {
+    background: transparent;
+    border-color: transparent;
+  }
+  .inline :global(.katex),
+  .math :global(.katex),
+  .formula figcaption,
+  .number,
+  .formula[data-print] .math :global(.katex),
+  .formula[data-print] .number {
+    color: CanvasText;
+  }
+  .copy {
+    opacity: 1;
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonBorder;
+  }
+  .copy:hover,
+  .copy:focus-visible {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  .math:focus-visible,
+  .copy:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

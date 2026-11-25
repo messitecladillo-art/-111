@@ -15,12 +15,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from application.idempotency import reserve_operation
+from application.providers import AuthoredProvider, LiveProvider, _AUTHORED_ENVELOPE
 from application.services.full_report_section import FullReportSectionService
 from evix_api.app import create_app
 from infrastructure.database.models import Operation, RateEvent, Service, now
-from infrastructure.llm import Completion
+from infrastructure.llm import ChatCompletionClient, Completion
 from infrastructure.security import encrypt
 from multi_agent.agents.writing_agent.services import full_report_section as report
+from multi_agent.skill_guidance import active_corpus_skills
 from shared.errors import ApiError, ProviderFailure
 
 
@@ -34,14 +36,442 @@ def request(**changes):
             "wave": 1, "attempt": 1, "purpose": "draft", **changes}
 
 
-def test_exact_context_and_all_twenty_six_slots_are_accepted_without_mutation():
+def test_exact_context_and_all_thirty_four_slots_are_accepted_without_mutation():
     context = preflight()
+    version, _ = active_corpus_skills()
     assert report.preflight_input(context) == context
-    assert len(report.WAVE_1_NODES | report.WAVE_2_NODES) == 26
+    assert report.MAX_OUTPUT_TOKENS == 3600 and report.CALLS_PER_HOUR == 180 and report.PROMPT_BYTES == 96000
+    assert {
+        "segments.cluster", "plan.feasibility", "secondary.source", "secondary.analysis",
+        "secondary.implication", "demand.preference", "demand.willingness", "plan.priority",
+    } <= report.WAVE_1_NODES
+    assert len(report.WAVE_1_NODES | report.WAVE_2_NODES) == 34
     for node in report.WAVE_1_NODES | report.WAVE_2_NODES:
         data = request(**context, nodeId=node, wave=1 if node in report.WAVE_1_NODES else 2)
         assert report.request_input(data) == data
-        assert json.loads(report.section_prompt(data).split("资料 JSON：", 1)[1])["instructions"] == data["prompt"]
+        prompt = report.section_prompt(data)
+        assert json.loads(prompt.split("资料 JSON：", 1)[1])["instructions"] == data["prompt"]
+        assert f'<corpus-skill-guidance package="survey-corpus-7pack@{version[:12]}">' in prompt
+        assert _AUTHORED_ENVELOPE.findall(prompt)[-1] == (node, "draft")
+
+
+def test_storyline_and_blueprint_purposes_are_scoped_and_return_clean_json_envelopes():
+    for mode in ("plan", "demonstration", "empirical"):
+        story = request(
+            mode=mode,
+            projectId=str(uuid4()) if mode == "empirical" else None,
+            nodeId="intro.roadmap",
+            wave=1,
+            attempt=1,
+            purpose="storyline",
+        )
+        assert report.request_input(story) == story
+        prompt = report.section_prompt(story)
+        assert "叙事主线" in prompt and "只返回要求中规定字段的一个 JSON 对象" in prompt and "不编造数字" in prompt
+        assert "paragraphs" not in prompt and "<corpus-skill-guidance" not in prompt
+        assert json.loads(prompt.split("资料 JSON：", 1)[1]) == {
+            "instructions": story["prompt"], "nodeId": "intro.roadmap", "purpose": "storyline",
+        }
+        assert _AUTHORED_ENVELOPE.findall(prompt)[-1] == ("intro.roadmap", "storyline")
+
+    for bad_story in (
+        {"nodeId": "intro.background", "wave": 1, "attempt": 1, "purpose": "storyline"},
+        {"nodeId": "abstract", "wave": 2, "attempt": 1, "purpose": "storyline"},
+        {"nodeId": "intro.roadmap", "wave": 1, "attempt": 2, "purpose": "storyline"},
+    ):
+        with pytest.raises(ApiError) as denied:
+            report.request_input(request(**bad_story))
+        assert denied.value.code == "storyline_scope"
+
+    bp = request(mode="demonstration", nodeId="design.content", wave=1, attempt=1, purpose="blueprint")
+    assert report.request_input(bp) == bp
+    assert _AUTHORED_ENVELOPE.findall(report.section_prompt(bp))[-1] == ("design.content", "blueprint")
+    with pytest.raises(ApiError) as bp_denied:
+        report.request_input(request(mode="plan", nodeId="design.content", wave=1, attempt=1, purpose="blueprint"))
+    assert bp_denied.value.code == "blueprint_scope"
+
+
+def test_draft_and_revision_inject_compact_role_matched_skill_guidance_and_twelve_paragraph_budget():
+    version, _ = active_corpus_skills()
+    tag = f'<corpus-skill-guidance package="survey-corpus-7pack@{version[:12]}">'
+    expectations = (
+        ("abstract", 2, "draft", "五步高密结构"),
+        ("segments.cluster", 1, "draft", "实证织造"),
+        ("plan.feasibility", 1, "revision", "监测阈值"),
+    )
+    for node, wave, purpose, marker in expectations:
+        data = request(nodeId=node, wave=wave, purpose=purpose)
+        assert report.request_input(data) == data
+        prompt = report.section_prompt(data)
+        assert tag in prompt and "</corpus-skill-guidance>" in prompt and marker in prompt
+        assert "最多十二段" in prompt and "12 段" in prompt
+        assert "可直接引用已提供的登记证据表数值或占位符" in prompt
+        assert _AUTHORED_ENVELOPE.findall(prompt)[-1] == (node, purpose)
+
+    max_ascii = request(nodeId="segments.cluster", prompt="x" * 64000)
+    assert report.request_input(max_ascii) == max_ascii
+    wide_cjk = request(nodeId="plan.feasibility", prompt="中" * 21000)
+    assert report.request_input(wide_cjk) == wide_cjk
+
+
+def test_demonstration_disclosure_boundary_vs_analytical_node_prompt_guidance():
+    directive = "（全篇已在摘要与方法章集中声明教学模拟性质，本节请直接切入实证与机制分析，勿在段首或段末机械重复‘本轮仅作教学模拟，不报告真实调查发现’式免责声明套话，但仍须以样本内数据口径客观表述。）"
+    honesty = "不得将模拟样本、计算或结论写成真实调查发现"
+    assert report.DEMONSTRATION_DISCLOSURE_NODES == frozenset((
+        "abstract", "design.population", "design.sampling", "data.cleaning", "conclusion.limits",
+    ))
+    for node in report.DEMONSTRATION_DISCLOSURE_NODES:
+        data = request(mode="demonstration", nodeId=node, wave=1 if node in report.WAVE_1_NODES else 2, purpose="draft")
+        prompt = report.section_prompt(data)
+        assert honesty in prompt and directive not in prompt
+        assert "……不等于……" in prompt and "纯文本行内复写已有独立公式块" in prompt
+
+    for node in ("intro.background", "segments.cluster", "drivers.model", "plan.feasibility", "conclusion.findings"):
+        data = request(mode="demonstration", nodeId=node, wave=1 if node in report.WAVE_1_NODES else 2, purpose="draft")
+        prompt = report.section_prompt(data)
+        assert honesty in prompt and directive in prompt
+        assert "……不等于……" in prompt and "纯文本行内复写已有独立公式块" in prompt
+
+    assert directive not in report.section_prompt(request(mode="plan", nodeId="drivers.model", wave=1, purpose="draft"))
+    assert directive not in report.section_prompt(request(mode="demonstration", nodeId="drivers.model", wave=1, purpose="revision"))
+
+
+def test_wave6_abstract_local_policy_vosviewer_and_wordcloud_guidance():
+    abstract_prompt = report.section_prompt(request(nodeId="abstract", wave=2, purpose="draft"))
+    assert "920–1,030" in abstract_prompt and "四段式五步高密结构" in abstract_prompt and "关键词：" in abstract_prompt
+
+    for node, wave in (("plan.measures", 1), ("plan.feasibility", 1), ("conclusion.suggestions", 2)):
+        prompt = report.section_prompt(request(nodeId=node, wave=wave, purpose="draft"))
+        assert "加强顶层设计、加大宣传力度、完善监管机制、形成多方合力" in prompt
+        assert "基层微观实情" in prompt and "属地制度/政策工具" in prompt and "监测阈值" in prompt
+        assert "长者数字驿站" not in prompt and "县域商业建设行动" not in prompt
+        assert "严禁跨领域" in prompt and "核验口径" in prompt
+
+    clinical_prompt = report.section_prompt(request(
+        nodeId="plan.feasibility",
+        wave=1,
+        purpose="draft",
+        prompt='资料 JSON：{"project":{"title":"医院临床随机对照干预试点效果调查"}}',
+    ))
+    assert "试点止损触发阈值" in clinical_prompt
+
+    lit_prompt = report.section_prompt(request(
+        nodeId="intro.literature",
+        wave=1,
+        purpose="draft",
+        prompt='资料 JSON：{"project":{"title":"智慧城市交通治理调查"},"exhibits":[{"text":"文献关键词共现聚类网络图"}]}',
+    ))
+    assert "文献关键词共现聚类网络图" in lit_prompt and "VOSviewer" not in lit_prompt
+
+    desc_prompt = report.section_prompt(request(
+        nodeId="sample.descriptive",
+        wave=1,
+        purpose="draft",
+        prompt='资料 JSON：{"project":{"title":"社区服务调查"},"exhibits":[{"text":"开放题Q32主动建言高频词云图"}]}',
+    ))
+    assert "开放题Q32主动建言高频词云图" in desc_prompt and "互证关系" in desc_prompt
+
+
+def test_wave7_empirical_zero_simulation_ban_and_chapter1_xulun_alignment():
+    project_id = str(uuid4())
+    emp_prompt = report.section_prompt(request(mode="empirical", projectId=project_id, nodeId="intro.background", wave=1, purpose="draft"))
+    assert "一、绪论" in emp_prompt
+    assert "真实田野调研实证口吻" in emp_prompt
+    for forbidden in ("模拟数据", "脚本生成", "随机种子", "合成记录", "教学模拟", "AI生成", "大语言模型", "机器生成", "演练语料"):
+        assert forbidden in emp_prompt
+    assert "绝对禁止" in emp_prompt
+
+    # Demonstration mode preserves its own simulation disclosure rules without breaking legacy tests.
+    demo_prompt = report.section_prompt(request(mode="demonstration", nodeId="abstract", wave=2, purpose="draft"))
+    assert "必须保留模拟性质" in demo_prompt
+
+
+def test_wave7_dense_wordcloud_renderer_and_http_endpoint(settings):
+    import base64
+    from multi_agent.agents.writing_agent.services.page_art import section_illustration_bytes
+    from multi_agent.agents.writing_agent.services.word_cloud_render import render_dense_wordcloud
+
+    rendered = render_dense_wordcloud({
+        "topic": "城市老年人智能健康监测设备采纳意愿",
+        "resultId": "rich-wordcloud-silver",
+        "frequencies": {"字体放大": 168, "语音播报": 152, "一键求助": 146, "血压趋势": 135, "子女远程": 128, "续航持久": 118, "社区驿站": 108},
+        "palette": {"primary": "#0F766E", "secondary": "#C99A3E", "opposite": "#A65A3A"},
+    })
+    assert rendered["ok"] is True and rendered["schema"] == "SectionIllustration/v1"
+    assert rendered["shape"] == "elder_portrait" and rendered["widthPx"] == 1280 and rendered["heightPx"] == 720
+    assert rendered["byteLength"] <= 500_000 and rendered["wordCount"] >= 40
+    assert isinstance(rendered["associatedSilhouettes"], list) and len(rendered["associatedSilhouettes"]) == 2
+    raw_png = section_illustration_bytes(rendered["illustration"])
+    assert raw_png == base64.b64decode(rendered["data"]) and raw_png.startswith(b"\x89PNG\r\n\x1a\n")
+
+    with TestClient(create_app(settings)) as client:
+        res = client.post("/api/reports/wordcloud", json={
+            "shape": "shield",
+            "accent": "blue",
+            "resultId": "rich-wordcloud-retail",
+            "text": "即时配送 闪电仓 骑手接驳 包装完好 准时送达 临期隔离 阳光溯源 冷链保鲜 错峰并单 价格透明 " * 8,
+        })
+        assert res.status_code == 200, res.text
+        payload = res.json()
+        assert payload["ok"] is True and payload["shape"] == "shield" and payload["byteLength"] <= 500_000
+        assert section_illustration_bytes(payload["illustration"]).startswith(b"\x89PNG")
+
+        cross_site = client.post("/api/reports/wordcloud", json={"frequencies": {"测试": 10}}, headers={"sec-fetch-site": "cross-site"})
+        assert cross_site.status_code == 403
+
+
+def test_wave7_4_dual_axis_elder_portrait_and_smart_watch_silhouettes(settings):
+    import io
+    from PIL import Image
+    from multi_agent.agents.writing_agent.services.page_art import section_illustration_bytes
+    from multi_agent.agents.writing_agent.services.word_cloud_render import associate_topic_silhouettes
+
+    topic = "银发「智」守：城市老年人智能健康监测设备采纳意愿与代际数字反哺机制"
+    assoc = associate_topic_silhouettes(topic)
+    assert [(item["axis"], item["shape"], item["hasAsset"]) for item in assoc] == [
+        ("persona", "elder_portrait", True),
+        ("artifact", "smart_watch", True),
+    ]
+
+    with TestClient(create_app(settings)) as client:
+        persona_res = client.post("/api/reports/wordcloud", json={
+            "topic": topic,
+            "axis": "persona",
+            "resultId": "rich-wordcloud-persona-silver",
+            "note": "银发群体代际数字反哺与社区照护诉求词云图",
+            "frequencies": {
+                "子女代设": 185, "健康焦虑": 172, "老伴互助": 160, "慢病管理": 154,
+                "社区指导": 148, "独居安全": 136, "医养驿站": 130, "数字鸿沟": 126,
+                "陪伴": 70, "血压": 66, "心率": 62, "适老": 54,
+            },
+        })
+        assert persona_res.status_code == 200, persona_res.text
+        persona_body = persona_res.json()
+        assert persona_body["axis"] == "persona" and persona_body["shape"] == "elder_portrait"
+        assert persona_body["widthPx"] == 1280 and persona_body["heightPx"] == 720
+        assert persona_body["byteLength"] <= 500_000 and persona_body["wordCount"] >= 40
+        assert [x["shape"] for x in persona_body["associatedSilhouettes"]] == ["elder_portrait", "smart_watch"]
+        persona_png = section_illustration_bytes(persona_body["illustration"])
+        assert Image.open(io.BytesIO(persona_png)).size == (1280, 720)
+
+        artifact_res = client.post("/api/reports/wordcloud", json={
+            "topic": topic,
+            "axis": "artifact",
+            "resultId": "rich-wordcloud-silver",
+            "note": "智能健康监测设备交互体验与功能改进建言词云图",
+            "frequencies": {
+                "字体放大": 190, "语音播报": 176, "一键求助": 168, "超长续航": 158,
+                "血压校准": 150, "心率预警": 144, "磁吸充电": 138, "跌倒报警": 132,
+                "续航": 62, "表盘": 54, "蓝牙": 50, "心电": 42,
+            },
+        })
+        assert artifact_res.status_code == 200, artifact_res.text
+        artifact_body = artifact_res.json()
+        assert artifact_body["axis"] == "artifact" and artifact_body["shape"] == "smart_watch"
+        assert artifact_body["widthPx"] == 1280 and artifact_body["heightPx"] == 720
+        assert artifact_body["byteLength"] <= 500_000 and artifact_body["wordCount"] >= 40
+        artifact_png = section_illustration_bytes(artifact_body["illustration"])
+        assert Image.open(io.BytesIO(artifact_png)).size == (1280, 720)
+
+
+def test_wave9_domain_agnostic_paired_bar_wordcloud_exhibit(settings):
+    import io
+    import re
+    from PIL import Image
+    from multi_agent.agents.writing_agent.services.page_art import section_illustration_bytes
+    from multi_agent.agents.writing_agent.services.word_cloud_render import render_word_cloud_png
+
+    # Direct helper `render_word_cloud_png(..., pairedBar=True)` works on any arbitrary cross-industry topic
+    raw_bytes = render_word_cloud_png(
+        {
+            "topic": "高校大学生数字化自主学习与课程体验调查",
+            "shape": "capsule",
+            "accent": "blue",
+            "frequencies": {
+                "文献检索": 210, "知识图谱": 195, "学术规范": 182, "课堂互动": 170,
+                "错题归纳": 158, "实验复现": 146, "小组研讨": 135, "跨学科融合": 124,
+                "时间管理": 116, "批判思维": 108, "课程反馈": 96, "科研训练": 88,
+                "思维导图": 79, "自主探究": 72,
+            },
+        },
+        pairedBar=True,
+    )
+    assert len(raw_bytes) <= 500_000
+    with Image.open(io.BytesIO(raw_bytes)) as im:
+        assert im.size == (1400, 680)
+        assert im.getpixel((4, 4)) == (255, 255, 255)
+        assert im.getpixel((1395, 675)) == (255, 255, 255)
+
+    with TestClient(create_app(settings)) as client:
+        res = client.post("/api/reports/wordcloud", json={
+            "topic": "县域即时零售闪电仓履约体验与消费意愿调查",
+            "shape": "shield",
+            "accent": "teal",
+            "pairedBar": True,
+            "resultId": "rich-wordcloud-paired",
+            "frequencies": {
+                "准时送达": 215, "包装完好": 198, "价格透明": 184, "冷链保鲜": 172,
+                "品类齐全": 164, "夜间应急": 150, "骑手礼貌": 141, "临期隔离": 132,
+                "售后极速": 124, "阳光溯源": 115, "满减清晰": 106, "缺货替补": 96,
+                "定位准确": 88, "APP": 75,
+            },
+        })
+        assert res.status_code == 200, res.text
+        body = res.json()
+        assert body["ok"] is True and body["pairedBar"] is True
+        assert body["widthPx"] == 1400 and body["heightPx"] == 680
+        assert body["byteLength"] <= 500_000
+        assert len(body["topTerms"]) == 12
+        assert body["topTerms"][0] == {"term": "准时送达", "count": 215}
+        assert all(re.fullmatch(r"[\u4e00-\u9fa5]+", item["term"]) for item in body["topTerms"])
+        validated_png = section_illustration_bytes(body["illustration"])
+        assert Image.open(io.BytesIO(validated_png)).size == (1400, 680)
+
+
+@pytest.mark.asyncio
+async def test_live_and_authored_providers_support_expanded_budget_and_storyline_envelope(monkeypatch, tmp_path):
+    observed = []
+
+    async def fake_complete(self, config, key, message, limit, timeout=30):
+        observed.append((limit, timeout, message))
+        return Completion('{"claims":[]}')
+
+    monkeypatch.setattr(ChatCompletionClient, "complete", fake_complete)
+    story_prompt = report.section_prompt(request(nodeId="intro.roadmap", purpose="storyline"))
+    res = await LiveProvider().section_draft({"provider": "deepseek"}, "synthetic-key", story_prompt)
+    assert res == '{"claims":[]}' and observed == [(131072, 85, story_prompt)]
+
+    async def instant_sleep(_s):
+        return None
+
+    (tmp_path / "storyline").mkdir(parents=True)
+    (tmp_path / "storyline" / "intro.roadmap.json").write_text('{"motherInsight":"合成测试主线"}', encoding="utf-8")
+    monkeypatch.setattr("application.providers.asyncio.sleep", instant_sleep)
+    authored = await AuthoredProvider(tmp_path).section_draft({"provider": "openai"}, "synthetic-key", story_prompt)
+    assert json.loads(authored) == {"motherInsight": "合成测试主线"}
+    assert (tmp_path / "prompts" / "storyline" / "intro.roadmap.txt").is_file()
+
+
+@pytest.mark.asyncio
+async def test_authored_provider_supports_full_workflow_stages(tmp_path, monkeypatch):
+    monkeypatch.setenv("EVIXLOCAL_AUTHORED_SLEEP", "0")
+    (tmp_path / "agent_chat").mkdir()
+    (tmp_path / "agent_chat" / "routes.json").write_text(
+        json.dumps(
+            {
+                "rules": [{"pattern": "资料库|三线表", "response": {"reply": "打开资料库", "actions": [{"tool": "stage", "args": {"view": "library"}}]}}],
+                "default": {"reply": "按研究主线继续。", "actions": [{"tool": "next", "args": {}}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "proposals").mkdir()
+    (tmp_path / "proposals" / "default.json").write_text(
+        json.dumps({"title": "合成问卷", "objective": "目标", "population": "人群", "items": []}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (tmp_path / "interview_pretest").mkdir()
+    (tmp_path / "interview_pretest" / "pack.json").write_text(
+        json.dumps(
+            {
+                "personas": [
+                    {"id": "p1", "label": "甲", "background": "背景一", "rationale": "理由一"},
+                    {"id": "p2", "label": "乙", "background": "背景二", "rationale": "理由二"},
+                    {"id": "p3", "label": "丙", "background": "背景三", "rationale": "理由三"},
+                ],
+                "focusKeywords": ["满意"],
+                "unclearKeywords": ["满意"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    provider = AuthoredProvider(tmp_path)
+    chat_out = json.loads(await provider.agent_chat({}, "k", '前缀资料JSON：{"message":"打开资料库"}'))
+    assert chat_out["actions"][0]["args"]["view"] == "library"
+    prop_out = json.loads(await provider({}, "k", {"topic": "测试"}))
+    assert prop_out["title"] == "合成问卷"
+    roster_out = json.loads(
+        await provider.answer(
+            {},
+            "k",
+            "{}",
+            {"mode": "interview_pretest", "stage": "roster", "input": {"maxFocusQuestions": 1, "questions": [{"id": "q1", "text": "整体满意吗？", "type": "likert"}]}},
+        )
+    )
+    assert roster_out["questionIds"] == ["q1"]
+    iv_out = json.loads(
+        await provider.answer(
+            {},
+            "k",
+            "{}",
+            {"mode": "interview_pretest", "stage": "interview", "input": {"persona": {"id": "p1"}, "questions": [{"id": "q1", "text": "整体满意吗？", "type": "likert", "min": 1, "max": 5}]}},
+        )
+    )
+    assert iv_out["answers"][0]["questionId"] == "q1" and iv_out["answers"][0]["unclear"]
+
+    (tmp_path / "topic").mkdir()
+    (tmp_path / "topic" / "default.json").write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "patternId": "p1",
+                        "title": "方案一",
+                        "researchQuestion": "问题一",
+                        "decisionOwner": "方一",
+                        "decision": "决定一",
+                        "whyHere": "理由一",
+                        "firstWeekPlan": ["行动一"],
+                        "unknowns": ["待核实一"],
+                        "sourceIds": ["s1"],
+                    },
+                    {
+                        "patternId": "p2",
+                        "title": "方案二",
+                        "researchQuestion": "问题二",
+                        "decisionOwner": "方二",
+                        "decision": "决定二",
+                        "whyHere": "理由二",
+                        "firstWeekPlan": ["行动二"],
+                        "unknowns": ["待核实二"],
+                        "sourceIds": ["s2"],
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "topic_agent").mkdir()
+    (tmp_path / "topic_agent" / "default.json").write_text(
+        json.dumps(
+            {"text": "建议继续聚焦。", "questions": ["哪个区县？"], "items": json.loads((tmp_path / "topic" / "default.json").read_text(encoding="utf-8"))["items"]},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    one_sel = [{"id": "p01-campus-food", "sourceIds": ["src-a", "src-b"]}]
+    three_sel = [
+        {"id": "p01-campus-food", "sourceIds": ["src-a"]},
+        {"id": "p02-elder-care", "sourceIds": ["src-b"]},
+        {"id": "p03-ai-study", "sourceIds": ["src-c"]},
+    ]
+    t1 = json.loads(await provider.topic({}, "k", "主题消息", one_sel))
+    t3 = json.loads(await provider.topic({}, "k", "主题消息", three_sel))
+    ta1 = json.loads(await provider.topic_agent({}, "k", "主题消息", one_sel))
+    ta3 = json.loads(await provider.topic_agent({}, "k", "主题消息", three_sel))
+    assert [r["patternId"] for r in t1["items"]] == ["p01-campus-food"] and t1["items"][0]["sourceIds"] == ["src-a", "src-b"]
+    assert [r["patternId"] for r in t3["items"]] == ["p01-campus-food", "p02-elder-care", "p03-ai-study"]
+    assert [r["patternId"] for r in ta1["items"]] == ["p01-campus-food"]
+    assert [r["patternId"] for r in ta3["items"]] == ["p01-campus-food", "p02-elder-care", "p03-ai-study"]
+
+    (tmp_path / "draft").mkdir()
+    (tmp_path / "draft" / "intro.background.json").write_text('{"paragraphs":[{"text":"回退稿"}]}', encoding="utf-8")
+    rev_prompt = report.section_prompt(request(nodeId="intro.background", purpose="revision"))
+    rev_out = json.loads(await provider.section_draft({"provider": "openai"}, "k", rev_prompt))
+    assert rev_out["paragraphs"][0]["text"] == "回退稿"
 
 
 @pytest.mark.parametrize("changes", [
@@ -59,7 +489,7 @@ def test_bad_preflight_context_is_refused(changes):
     {"idempotencyKey": "invalid"}, {"nodeId": "invented"}, {"nodeId": []}, {"wave": True}, {"wave": 3},
     {"wave": 2}, {"nodeId": "abstract", "wave": 1}, {"attempt": True}, {"attempt": 0}, {"attempt": 3},
     {"purpose": "automatic-retry"}, {"purpose": []}, {"prompt": ""}, {"prompt": " "},
-    {"prompt": "bad\x7f"}, {"prompt": "\ud800"}, {"prompt": "x" * 40001}, {"extra": 1},
+    {"prompt": "bad\x7f"}, {"prompt": "\ud800"}, {"prompt": "x" * 64001}, {"extra": 1},
 ])
 def test_invalid_slot_payload_is_refused(changes):
     with pytest.raises(ApiError):
@@ -72,7 +502,7 @@ def test_missing_fields_and_escaped_transport_budget_are_refused():
     with pytest.raises(ApiError):
         report.preflight_input(data)
     with pytest.raises(ApiError) as failure:
-        report.request_input(request(prompt="中" * 21000))
+        report.request_input(request(prompt="中" * 33000))
     assert failure.value.code == "input_too_large"
     with pytest.raises(ApiError) as escaped:
         report.request_input(request(prompt='"' * 35000))
@@ -138,7 +568,7 @@ def test_usage_is_unknown_unless_both_actual_counts_are_valid(usage):
 def test_run_authorization_is_bounded_and_metadata_never_contains_the_body():
     data = request()
     run = report.run_receipt(data, SimpleNamespace(provider="deepseek", model="synthetic-model", max_output_tokens=8000), "fixture")
-    assert run["maxConcurrency"] == 6 and run["maxOutputTokens"] == 2400 and run["providerMode"] == "fixture"
+    assert run["maxConcurrency"] == 6 and run["maxOutputTokens"] == 3600 and run["providerMode"] == "fixture"
     assert report.timestamp(run["authorizationExpiresAt"]) - report.timestamp(run["createdAt"]) == timedelta(hours=2)
     assert report.authorization_expired(run) is False
     receipt = report.section_receipt(data, run)
@@ -208,7 +638,7 @@ def application_harness(settings, monkeypatch):
         state.calls += 1
         assert session.commits[-1][(user.id, report.SCOPE, data["idempotencyKey"])]["status"] == "running"
         assert len(session.events) == state.calls
-        assert config["maxOutputTokens"] == 2400 and key == credential
+        assert config["maxOutputTokens"] == 3600 and key == credential
         assert "研究计划" in prompt and credential not in prompt
         assert credential not in json.dumps(list(session.commits[-1].values()), ensure_ascii=False)
         state.after_dispatch()

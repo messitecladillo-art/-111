@@ -35,7 +35,7 @@ export default function KnowledgeRecognition({ recognize, onChoose, embedded = f
     sourceRef.current?.image?.close(); sourceRef.current = null;
     setSource(null); setText(''); setHits([]); setError('');
     try {
-      if (!file.size || file.size > LIMITS.bytes) throw Error('请选择不超过 20 MiB 的 PDF 或图片。');
+      if (!file.size || file.size > LIMITS.bytes) throw Error('请选择不超过大小上限的文档或图片。');
       setBusy(true); setStatus('正在读取文件…');
       timer.current = setTimeout(() => { if (token === epoch.current) { stop(); setError('文件读取超过 60 秒，请重新选择。'); } }, LIMITS.timeout);
       if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
@@ -53,7 +53,7 @@ export default function KnowledgeRecognition({ recognize, onChoose, embedded = f
         const image = await createImageBitmap(file); if (token !== epoch.current) { image.close(); return; }
         if (image.width * image.height > LIMITS.pixels) { image.close(); throw Error('图片超过 800 万像素，请先裁剪要识别的区域。'); }
         const next = { name: file.name, image }; sourceRef.current = next; setSource(next); setPage(1); setStatus('图片已就绪，点击识别。');
-      } else throw Error('请选择 PDF、PNG、JPEG、WebP 或 BMP 文件。');
+      } else throw Error('请选择受支持的文档或图片格式。');
     } catch (cause) { if (token === epoch.current) setError(cause instanceof Error ? cause.message : '文件读取失败。'); }
     finally { if (token === epoch.current) { if (timer.current) clearTimeout(timer.current); timer.current = null; setBusy(false); } }
   }
@@ -85,8 +85,18 @@ export default function KnowledgeRecognition({ recognize, onChoose, embedded = f
           target.width = source.image.width; target.height = source.image.height; target.getContext('2d')?.drawImage(source.image, 0, 0);
         }
         if (!valid()) return;
-        setStatus('正在加载中文与英文识别器…');
-        created = createKnowledgeOcr({ onProgress: event => { if (valid()) setStatus(event.status === 'recognizing text' ? `正在识别本页 · ${Math.round(event.progress * 100)}%` : '正在准备本地识别器…'); } });
+        setStatus('正在准备中英文图文识别组件');
+        created = createKnowledgeOcr({
+          onProgress: event => {
+            if (valid()) {
+              setStatus(
+                event.status === 'recognizing text'
+                  ? `正在识别本页 · ${Math.round(event.progress * 100)}%`
+                  : '正在准备中英文图文识别组件',
+              );
+            }
+          },
+        });
         worker.current = created;
         await created.ready; if (!valid()) return;
         content = await created.recognize(target); if (!valid()) return;
@@ -106,13 +116,114 @@ export default function KnowledgeRecognition({ recognize, onChoose, embedded = f
     void recognize(text).then(result => { if (alive.current && token === candidateEpoch.current) setHits(result); }).catch(() => { if (alive.current && token === candidateEpoch.current) setError('概念检索未完成，请重试。'); });
   }
   const content = <>
-    <label className={styles.fileInput}>选择文件<input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp" onChange={event => { void loadFile(event.target.files?.[0]); event.target.value = ''; }}/></label>
-    {busy && !source && <button onClick={() => { stop(); void loading.current?.destroy().catch(() => undefined); setStatus('已取消读取。'); }}>取消读取</button>}
-    {source && <><p>{source.name}</p>{source.pdf && <div className={styles.pageControls}><button disabled={page <= 1} onClick={() => { stop(); setPage(value => value - 1); setText(''); setHits([]); }}>←</button><span>第 {page} / {source.pdf.numPages} 页</span><button disabled={page >= source.pdf.numPages} onClick={() => { stop(); setPage(value => value + 1); setText(''); setHits([]); }}>→</button></div>}<div className={styles.entryActions}><button disabled={busy} onClick={() => void identify()}>识别这一页</button>{source.pdf && <button disabled={busy} onClick={() => void identify(true)}>按扫描页识别</button>}{busy && <button onClick={() => { stop(); setStatus('已取消识别。'); }}>取消</button>}</div></>}
-    <canvas ref={canvas} hidden/>
-    {status && <p role="status">{status}</p>}{error && <p role="alert">{error}</p>}
-    {text && <><label>校正识别文字<textarea aria-label="校正识别文字" value={text} onChange={event => { candidateEpoch.current++; setText(event.target.value); }} maxLength={12000}/></label><button disabled={busy} onClick={() => recheck()}>重新提取概念</button></>}
-    {hits.map(hit => <button className={styles.result} key={hit.entry.id} onClick={() => onChoose(hit.entry.id)}>{hit.entry.name} · {hit.entry.englishName}</button>)}
+    <label className={styles.fileInput}>
+      选择文件
+      <input
+        type="file"
+        aria-label="选择要识别的文档或图片文件"
+        accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp"
+        onChange={event => {
+          void loadFile(event.target.files?.[0]);
+          event.target.value = '';
+        }}
+      />
+    </label>
+    {busy && !source && (
+      <button
+        type="button"
+        onClick={() => {
+          stop();
+          void loading.current?.destroy().catch(() => undefined);
+          setStatus('已取消读取。');
+        }}
+      >
+        取消读取
+      </button>
+    )}
+    {source && (
+      <>
+        <p>{source.name}</p>
+        {source.pdf && (
+          <div className={styles.pageControls}>
+            <button
+              type="button"
+              aria-label="上一页"
+              disabled={page <= 1}
+              onClick={() => {
+                stop();
+                setPage(value => value - 1);
+                setText('');
+                setHits([]);
+              }}
+            >
+              ←
+            </button>
+            <span>第 {page} 页 · 共 {source.pdf.numPages} 页</span>
+            <button
+              type="button"
+              aria-label="下一页"
+              disabled={page >= source.pdf.numPages}
+              onClick={() => {
+                stop();
+                setPage(value => value + 1);
+                setText('');
+                setHits([]);
+              }}
+            >
+              →
+            </button>
+          </div>
+        )}
+        <div className={styles.entryActions}>
+          <button type="button" disabled={busy} onClick={() => void identify()}>
+            识别这一页
+          </button>
+          {source.pdf && (
+            <button type="button" disabled={busy} onClick={() => void identify(true)}>
+              按扫描页识别
+            </button>
+          )}
+          {busy && (
+            <button
+              type="button"
+              onClick={() => {
+                stop();
+                setStatus('已取消识别。');
+              }}
+            >
+              取消
+            </button>
+          )}
+        </div>
+      </>
+    )}
+    <canvas ref={canvas} hidden aria-hidden="true" tabIndex={-1} />
+    {status && <p role="status" aria-live="polite">{status}</p>}
+    {error && <p role="alert">{error}</p>}
+    {text && (
+      <>
+        <label>
+          校正识别文字
+          <textarea
+            aria-label="校正识别文字"
+            value={text}
+            onChange={event => {
+              candidateEpoch.current++;
+              setText(event.target.value);
+            }}
+            maxLength={12000}
+          />
+        </label>
+        <button type="button" disabled={busy} onClick={() => recheck()}>
+          重新提取概念
+        </button>
+      </>
+    )}
+    {hits.map(hit => (
+      <button type="button" className={styles.result} key={hit.entry.id} onClick={() => onChoose(hit.entry.id)}>
+        {hit.entry.name} · {hit.entry.englishName}
+      </button>
+    ))}
   </>;
-  return embedded ? <section aria-label="本地文件识别">{content}</section> : <details className={styles.recognition} onToggle={event => { if (!event.currentTarget.open) { stop(); setStatus('已取消识别。'); } }}><summary>识别本地 PDF 或图片</summary>{content}</details>;
+  return embedded ? <section aria-label="本地文件识别">{content}</section> : <details className={styles.recognition} onToggle={event => { if (!event.currentTarget.open) { stop(); setStatus('已取消识别。'); } }}><summary>识别本地文档或图片</summary>{content}</details>;
 }

@@ -6,7 +6,7 @@
 import { isMissing, type SurveyTable } from './survey-analysis.ts';
 
 export type QualityRules = {
-  /** Response identifier used in the exclusion ledger (e.g. 问卷星「序号」). */
+  /** Response identifier used in the exclusion ledger (e.g. 问卷星“序号”). */
   idColumn: number | null;
   duration: { column: number; mode: 'median-fraction' | 'seconds'; value: number } | null;
   straightlining: { columns: number[] } | null;
@@ -100,7 +100,7 @@ export function evaluateQuality(table: SurveyTable, rules: QualityRules, missing
     const { column, expected } = rules.attention, want = expected.trim();
     let flagged = 0;
     table.rows.forEach((r, i) => { if (r[column].trim() !== want) { reasons[i].add('attention'); flagged++; } });
-    summaries.push({ id: 'attention', label: '注意力题未通过', criterion: `「${table.headers[column]}」不等于「${want}」（未作答也计为未通过）`, flagged });
+    summaries.push({ id: 'attention', label: '注意力题未通过', criterion: `“${table.headers[column]}”不等于“${want}”（未作答也计为未通过）`, flagged });
   }
   if (rules.duplicateIp) {
     const { column } = rules.duplicateIp, seen = new Set<string>();

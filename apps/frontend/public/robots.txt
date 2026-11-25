@@ -1,7 +1,16 @@
 User-agent: *
+Allow: /
+Allow: /explore
+Allow: /knowledge
+Allow: /chronicle
+Allow: /examples
 Disallow: /api/
 Disallow: /agent/
 Disallow: /workspace/
 Disallow: /projects/
+Disallow: /services/
+Disallow: /preflight/
+Disallow: /invites/
+Disallow: /s/
+Disallow: /login/
 Disallow: /_next/
-Allow: /$

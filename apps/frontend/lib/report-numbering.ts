@@ -62,6 +62,14 @@ export function numberedCaption(label: BlockLabel | undefined, title: string): s
 
 export const referenceToken = (kind: LabelKind, blockId: string) => `[[${NAMES[kind]}:${blockId}]]`;
 const TOKEN = /\[\[(图|表|式):([^\]\n]{1,80})\]\]/g;
+/**
+ * Plain-text exhibit/equation/citation cross-references inside running prose.
+ * Lookbehind rules out Chinese compounds ending in 表/图/式 (e.g. 代表、发表、方式、模式),
+ * 1-3 digit cap + unit lookahead rule out 4-digit years (2026 年) and counts,
+ * and 式 requires parentheses like 式（4-1）.
+ */
+export const INLINE_XREF_RE =
+  /(?:(?<=^|[\s，。；：、（）()「」“”"《》如见由据从在按和与及即照详合较比中对将把])(?:附?[图表]\s*[0-9]{1,3}(?:[-－—.][0-9]{1,3})?(?![-－—.0-9])(?!\s*[年月日天岁元万亿%％人份个条次])|式\s*[（(][0-9]{1,3}(?:[-－—.][0-9]{1,3})?[)）])|\[\s*\d+(?:\s*[,，、\-–—]\s*\d+)*\s*\])/gu;
 /** `cite` marks a citation mark such as "[1,3]", which Word sets as a superscript. */
 export type ReferenceSegment = { text: string; missing?: boolean; cite?: boolean };
 const NO_CITATIONS: ReadonlyMap<string, number> = new Map();
@@ -86,8 +94,8 @@ export function referenceSegments(text: string, labels: Map<string, BlockLabel>,
 /** Export-time resolution: a dangling reference stops the export rather than printing a wrong number. */
 export function resolveReferences(text: string, labels: Map<string, BlockLabel>, where: string, citations: ReadonlyMap<string, number> = NO_CITATIONS): string {
   const segments = referenceSegments(text, labels, citations);
-  if (segments.some(s => s.missing && s.cite)) throw Error(`「${where}」中有文献引用已失效（对应的参考文献已删除），请重新插入引用后再导出。`);
-  if (segments.some(s => s.missing)) throw Error(`「${where}」中有图表引用已失效（对应的图、表或公式已删除、类型不符或被复制成两处），请重新插入引用后再导出。`);
+  if (segments.some(s => s.missing && s.cite)) throw Error(`“${where}”中有文献引用已失效（对应的参考文献已删除），请重新插入引用后再导出。`);
+  if (segments.some(s => s.missing)) throw Error(`“${where}”中有图表引用已失效（对应的图、表或公式已删除、类型不符或被复制成两处），请重新插入引用后再导出。`);
   return segments.map(s => s.text).join('');
 }
 

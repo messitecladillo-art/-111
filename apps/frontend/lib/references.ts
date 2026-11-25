@@ -87,7 +87,7 @@ const end = (s: string) => /[.。]$/.test(s) ? s : `${s}.`;
 export function formatReference(e: ReferenceEntry): string {
   if (e.type === 'other') return e.text.trim();
   // Items left blank are left out with their punctuation, so an unfinished record never prints stray marks.
-  const t = (s: string) => s.trim(), who = authorList(e), head = who ? `${who}. ` : '';
+  const t = (s: string) => s.trim(), who = authorList(e), head = who ? `${end(who)} ` : '';
   // Pages follow the year or volume with a colon ("2015: 12-20", "43(5): 12-20"); after a publisher alone, a comma.
   const publication = (place: string, publisher: string, year: string, pages = '') => {
     const issuer = [t(place), t(publisher)].filter(Boolean).join(': '), dated = t(year) ? `${t(year)}${t(pages) ? `: ${t(pages)}` : ''}` : t(pages);
@@ -185,7 +185,7 @@ export function citationSegments(text: string, numbers: ReadonlyMap<string, numb
 /** Export-time resolution to plain text ("…研究[1,3]。"), stopping on a citation whose entry was deleted. */
 export function resolveCitations(text: string, numbers: ReadonlyMap<string, number>, where: string): string {
   const segments = citationSegments(text, numbers);
-  if (segments.some(s => s.missing)) throw Error(`「${where}」中有文献引用已失效（对应的参考文献已删除），请重新插入引用后再导出。`);
+  if (segments.some(s => s.missing)) throw Error(`“${where}”中有文献引用已失效（对应的参考文献已删除），请重新插入引用后再导出。`);
   return segments.map(s => s.text).join('');
 }
 

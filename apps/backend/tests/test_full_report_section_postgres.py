@@ -59,7 +59,7 @@ def test_preflight_dispatch_replay_metadata_privacy_and_owner_rls(harness, pg_en
     owner, identity = login()
     other, other_identity = login("b@example.test")
     _, data, run = setup(owner)
-    assert run["providerMode"] == "fixture" and run["maxConcurrency"] == 6 and run["maxOutputTokens"] == 2400
+    assert run["providerMode"] == "fixture" and run["maxConcurrency"] == 6 and run["maxOutputTokens"] == 3600
     assert provider.calls == 0
     made = owner.post(PATH, json=data)
     assert made.status_code == 201, made.text
@@ -157,7 +157,7 @@ def test_hourly_rate_limit_counts_dispatches_and_does_not_block_exact_replay(har
     uid = identity["user"]["id"]
     scope = keyed(settings, "agent-full-report-call-rate/v1", uid)
     as_user(pg_engine, uid, lambda c: c.execute(RateEvent.__table__.insert(), [
-        {"id": str(uuid4()), "scope": scope, "created_at": now()} for _ in range(119)]))
+        {"id": str(uuid4()), "scope": scope, "created_at": now()} for _ in range(report.CALLS_PER_HOUR - 1)]))
     assert owner.post(PATH, json=data).json() == ready
     another = {**data, "idempotencyKey": str(uuid4()), "nodeId": "intro.significance"}
     refusal = owner.post(PATH, json=another)

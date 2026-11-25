@@ -64,7 +64,7 @@ function reviewSnapshot(d: Questionnaire): WjxExportReview {
     field: '问卷设计', message: issue.message,
   }));
   const settings: WjxManualSetting[] = [
-    { code: 'title', questionId: null, questionNumber: null, message: `设置问卷名称：${d.title || '请填写名称'}。` },
+    { code: 'title', questionId: null, questionNumber: null, message: d.title ? `请在平台顶部填入问卷名称“${d.title}”。` : '请在平台顶部补充问卷名称。' },
     { code: 'introduction', questionId: null, questionNumber: null, message: '导入文本只包含题目；请将调查说明设置到问卷说明区，并核对告知内容。' },
   ];
   const questions: WjxQuestionPreview[] = d.questions.map((q, index) => {
@@ -74,7 +74,7 @@ function reviewSnapshot(d: Questionnaire): WjxExportReview {
       inspectText(choice.label, q, index, field, blockers);
       if (NUMERIC_OPTION_PREFIX.test(choice.label.trim())) blockers.push({
         code: 'numeric-option-prefix', questionId: q.id, questionNumber: index + 1, field,
-        message: `${field}以数值开头，可能被平台拆成题目；请在数值前添加说明文字（例如「次数：0」），再生成导入文本。`,
+        message: `${field}以数值开头，可能被平台拆成独立题目；请在数值前补充文字说明（例如满 0 次或共 0 次），再生成导入文本。`,
       });
     });
     if (q.type === 'likert') {
@@ -132,7 +132,7 @@ export async function exportWjxBundle(design: Questionnaire, options: { sourceRe
   const revision = options.sourceRevision ?? null;
   if (revision !== null && (!Number.isSafeInteger(revision) || revision < 0)) throw Error('问卷修订号必须为空或非负安全整数。');
   const review = reviewSnapshot(source);
-  if (review.blockers.length) throw Error(`未生成问卷星导入文件：${review.blockers.map(issue => `${issue.questionNumber === null ? '' : `第 ${issue.questionNumber} 题：`}${issue.message}`).join(' ')}`);
+  if (review.blockers.length) throw Error(`未生成问卷星导入文件，${review.blockers.map(issue => `${issue.questionNumber === null ? '' : `第 ${issue.questionNumber} 题`}${issue.message}`).join(' ')}`);
   const text = review.questions.map(q => [`${q.platformNumber}. ${q.stem}${q.platformType === 'multi' ? '[多选题]' : ''}`, ...q.options.map(option => option.importLabel)].join('\n')).join('\n\n') + '\n';
   const sourceCanonical = canonical(source);
   const [questionnaireHash, textHash] = await Promise.all([sha256(sourceCanonical), sha256(text)]);

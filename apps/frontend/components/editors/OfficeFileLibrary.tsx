@@ -68,7 +68,7 @@ async function ensureSession(signal: AbortSignal) {
   else await establish();
 }
 function isScopeError(error: unknown) { return error instanceof FileServiceError && ([401, 403].includes(error.status) || /scope_changed|scope_mismatch/.test(error.code)); }
-function sizeLabel(size: number) { return size < 1024 * 1024 ? `${(size / 1024).toFixed(1)} KB` : `${(size / 1024 / 1024).toFixed(2)} MiB`; }
+function sizeLabel(size: number) { return size < 1024 * 1024 ? `${(size / 1024).toFixed(1)} KB` : `${(size / 1024 / 1024).toFixed(2)} MB`; }
 function timeLabel(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "时间待核验" : date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); }
 function recoveryDeadline(value: string | null, now: number) {
   if (!value) return { text: "当前不自动清理", urgent: false, expired: false };
@@ -130,7 +130,7 @@ export default function OfficeFileLibrary() {
     if (scope.current && library.scope !== scope.current) { freezeScope(); throw new FileServiceError("文件库归属已改变。", 409, "editor_scope_changed"); }
     if (scopeBlocked.current) throw new FileServiceError("请先明确重新连接当前身份。", 409, "editor_scope_changed");
     if (!scope.current) scope.current = library.scope;
-    if (!library.available) throw new FileServiceError("对象存储尚未就绪。已选本地文件仍保留，请稍后刷新。", 503);
+    if (!library.available) throw new FileServiceError("文件存储服务尚未就绪。已选本地文件仍保留，请稍后刷新。", 503);
     const bounded = { bytes: Math.min(MAX_BYTES, library.limits.bytes), files: Math.min(20, library.limits.files), versions: Math.min(20, library.limits.versions) };
     available.current = true; limitsRef.current = bounded; setLimits(bounded); setFiles(library.files); setStorage(library.storage); setConnection("ready");
   }, [freezeScope]);
@@ -233,7 +233,7 @@ export default function OfficeFileLibrary() {
   function chooseFile(file: File | undefined) {
     if (!file || operation.current || scopeBlocked.current || conflict.current === "refresh") return;
     try { parseOfficeFilename(file.name); } catch (failure) { setError(failure instanceof Error ? failure.message : "文件名或格式无效，原有选择未改变。"); return; }
-    if (file.size <= 0 || file.size > limitsRef.current.bytes) { setError(`请选择非空 DOCX / PPTX 文件，单个不超过 ${sizeLabel(limitsRef.current.bytes)}。原有选择未改变。`); return; }
+    if (file.size <= 0 || file.size > limitsRef.current.bytes) { setError(`请选择非空报告或演示文稿文件，单个不超过 ${sizeLabel(limitsRef.current.bytes)}。原有选择未改变。`); return; }
     if (modeRef.current === "version" && activeRef.current && !file.name.toLowerCase().endsWith(`.${activeRef.current.kind}`)) { setError("新版本必须与所选文件保持同一格式；DOCX 和 PPTX 请分别建立文件。"); return; }
     pickedRef.current = file; setPicked(file); setError(""); setNotice("已选择本地文件，尚未上传。请核对目标与版本备注。");
     if (conflict.current === "reselect") { conflict.current = "none"; setConflictStep("none"); }
@@ -287,7 +287,7 @@ export default function OfficeFileLibrary() {
       activeRef.current = saved.file; setActive(saved.file); setFiles(list => [saved.file, ...list.filter(f => f.id !== saved.file.id)]);
       setVersions(list => [saved.version, ...list.filter(v => v.fileId === saved.file.id && v.id !== saved.version.id)]);
       pickedRef.current = null; setPicked(null); pending.current = null; setLabel("");
-      setNotice(`服务器已确认保存：${saved.version.filename} · v${saved.version.revision}。已校验上传文件字节。`);
+      setNotice(`服务器已确认保存：${saved.version.filename} · 第 ${saved.version.revision} 版。已校验上传文件字节。`);
     } catch (failure) {
       if (current(task)) {
         if (failure instanceof FileServiceError && failure.status === 409 && !isScopeError(failure)) { conflict.current = "refresh"; setConflictStep("refresh"); pending.current = null; setError("版本或重试状态发生冲突，未覆盖已有版本。请先刷新，再重新选择本地文件并核对目标版本。"); }
@@ -308,7 +308,7 @@ export default function OfficeFileLibrary() {
       const url = URL.createObjectURL(blob); blobUrls.current.add(url);
       const link = document.createElement("a"); link.href = url; link.download = version.filename; link.click();
       setTimeout(() => { URL.revokeObjectURL(url); blobUrls.current.delete(url); }, 60_000);
-      setNotice(`v${version.revision} 文件校验通过，已交给浏览器下载。请在下载列表确认；未转换文件格式。`);
+      setNotice(`第 ${version.revision} 版文件校验通过，已交给浏览器下载。请在下载列表确认；未转换文件格式。`);
     } catch (failure) { if (current(task)) showFailure(failure, "下载失败，没有生成文件。"); }
     finally { finish(task); }
   }
@@ -348,40 +348,40 @@ export default function OfficeFileLibrary() {
   const fileMotion=useKeyedListMotion<HTMLUListElement>({ids:files.map(file=>file.id),activeId:active?.id??null});
   const versionMotion=useKeyedListMotion<HTMLOListElement>({ids:[...versions].sort((a,b)=>b.revision-a.revision).map(version=>version.id)});
   return <section className={styles.library} aria-label="Office 原文件库">
-    <header className={styles.heading}><div><span className={styles.kicker}>ORIGINAL FILES · VERSIONED</span><h2>原文件，按版本保留。</h2><p>独立保存完整 DOCX 与 PPTX，与文本草稿分开管理。</p></div><span className={styles.storage} data-ready={connection === "ready"}>{connection === "loading" ? "正在连接存储" : connection === "ready" ? storage === "local-r2" ? "本地开发存储" : "对象存储已连接" : "存储连接待恢复"}</span></header>
-    <div className={styles.engineNote} data-configured={nativeConfigured}><strong>{nativeStatus === "ready" ? "ONLYOFFICE 接口已配置" : "浏览器全文编辑引擎尚未连接"}</strong><p>{nativeStatus === "ready" ? "选择 DOCX 或 PPTX 开始编辑。文档服务需运行；关闭编辑器后，服务器确认保存回调才会生成新版本。" : nativeStatus === "checking" ? "正在检查 ONLYOFFICE 接入状态；原文件上传和下载不受影响。" : "可先上传、下载和保存版本。浏览器内编辑需部署并配置 ONLYOFFICE。"}</p></div>
-    {storage === "local-r2" && <p className={styles.localNote}>当前为本地开发存储。请提前在上方“身份与恢复”保存恢复密钥，才能在 Cookie 丢失后恢复同一草稿与文件库。密钥不是文件备份；请同时保留本地原件和下载备份。未提前设置密钥且会话丢失时，无法凭文件名找回身份。</p>}
+    <header className={styles.heading}><div><span className={styles.kicker}>原始文稿 · 版本留存</span><h2>原文件，按版本保留。</h2><p>独立保存完整报告或演示文稿文件，与文本草稿分开管理。</p></div><span className={styles.storage} role="status" aria-live="polite" data-ready={connection === "ready"}>{connection === "loading" ? "正在连接存储" : connection === "ready" ? storage === "local-r2" ? "本机文档存储" : "云端文件库已连接" : "存储连接待恢复"}</span></header>
+    <div className={styles.engineNote} data-configured={nativeConfigured}><strong>{nativeStatus === "ready" ? "在线协同编辑服务已就绪" : "浏览器在线协同编辑尚未连接"}</strong><p>{nativeStatus === "ready" ? "选择报告或演示文稿文件即可开始编辑。文档服务需保持运行；关闭编辑器后，服务器同步确认保存结果才会生成新版本。" : nativeStatus === "checking" ? "正在检查在线协同编辑接入状态；原文件上传和下载不受影响。" : "可先上传、下载和保存版本。浏览器内协同编辑需部署并连接在线文档服务。"}</p></div>
+    {storage === "local-r2" && <p className={styles.localNote}>当前使用本机文档存储。请提前在上方“身份与恢复”保存恢复密钥，才能在 Cookie 丢失后恢复同一草稿与文件库。密钥不是文件备份；请同时保留本地原件和下载备份。未提前设置密钥且会话丢失时，无法凭文件名找回身份。</p>}
     {error && <div className={styles.error} role="alert"><p>{error}</p>{blocked && !identityFrozen && <button type="button" disabled={!!busy} onClick={reconnectIdentity}>清空选择并连接当前身份</button>}</div>}
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
+    {notice && <p className={styles.notice} role="status" aria-live="polite">{notice}</p>}
     <div className={styles.workspace}>
       <div className={styles.catalog} aria-busy={busy === "refresh" || busy === "open"}>
         <div className={styles.paneHeading}><div><h3>文件</h3><span>{files.length} / {limits.files} 个</span></div><button type="button" disabled={!!busy || blocked} onClick={() => void loadLibrary()}>{busy === "refresh" ? "刷新中…" : "刷新列表"}</button></div>
-        {files.length ? <ul ref={fileMotion} className={styles.fileList}><li role="presentation" className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{files.map(file => <li key={file.id} data-motion-id={file.id}><button type="button" className={styles.fileButton} aria-pressed={active?.id === file.id} disabled={!!busy || blocked} onClick={() => void openFile(file.id)}><span className={styles.format}>{file.kind.toUpperCase()}</span><span className={styles.fileInfo}><strong>{file.filename}</strong><small>v{file.revision} · {sizeLabel(file.size)} · {timeLabel(file.updatedAt)}</small></span><span aria-hidden="true" className={styles.arrow}>↗</span></button></li>)}</ul> : <div className={styles.empty}><span>01 / FILES</span><h4>{unavailable ? "文件库尚未就绪" : "还没有原生文件"}</h4><p>{unavailable ? "可先选择本地文件；待存储恢复后再主动上传。连接失败不会清空选择。" : "上传一份 DOCX 或 PPTX，保留完整排版、图表与文件内容。"}</p></div>}
+        {files.length ? <ul ref={fileMotion} className={styles.fileList}><li role="presentation" className={styles.motionMarker} data-motion-marker aria-hidden="true"/>{files.map(file => <li key={file.id} data-motion-id={file.id}><button type="button" className={styles.fileButton} aria-label={`查看文件 ${file.filename}（第 ${file.revision} 版）`} aria-pressed={active?.id === file.id} disabled={!!busy || blocked} onClick={() => void openFile(file.id)}><span className={styles.format}>{file.kind === "docx" ? "报告文稿" : "演示文稿"}</span><span className={styles.fileInfo}><strong>{file.filename}</strong><small>第 {file.revision} 版 · {sizeLabel(file.size)} · {timeLabel(file.updatedAt)}</small></span><span aria-hidden="true" className={styles.arrow}>↗</span></button></li>)}</ul> : <div className={styles.empty}><span>01 · 原文件列表</span><h4>{unavailable ? "文件库尚未就绪" : "还没有原文件"}</h4><p>{unavailable ? "可先选择本地文件；待存储恢复后再主动上传。连接失败不会清空选择。" : "上传一份报告或演示文稿文件，保留完整排版、图表与文件内容。"}</p></div>}
         <p className={styles.catalogNote}>列表按当前身份隔离。此处不提供删除、覆盖或自动导入。</p>
       </div>
       <div className={styles.versionPane} aria-busy={busy === "open" || busy === "download"}>
-        <div className={styles.paneHeading}><div><h3>不可变版本</h3><span>{active ? `${versions.length} / ${limits.versions} 个` : "选择左侧文件查看"}</span></div>{active && <span className={styles.format}>{active.kind.toUpperCase()}</span>}</div>
-        {active ? <><div className={styles.activeFile}><strong>{active.filename}</strong><span>当前记录 v{active.revision} · {sizeLabel(active.size)}</span><div className={styles.nativeAction}><button type="button" className={styles.primary} disabled={!!busy || blocked || !nativeConfigured || identityFrozen} onClick={() => setNativeEditing({ file: active, scope: scope.current })}>{nativeConfigured ? `使用 ONLYOFFICE 编辑 ${active.kind.toUpperCase()}` : "ONLYOFFICE 尚未连接"}</button><small>仅当前版本可编辑；完成后服务器新增版本，不覆盖旧稿。</small></div><details><summary>查看当前 SHA-256</summary><code>{active.sha256}</code></details></div><ol ref={versionMotion} className={styles.versionList}>{[...versions].sort((a,b) => b.revision - a.revision).map(version => <li key={version.id} data-motion-id={version.id}><span className={styles.versionNumber}>v{version.revision}</span><div><strong>{version.label || "未填写版本备注"}</strong><span>{version.filename}</span><small>{timeLabel(version.createdAt)} · {sizeLabel(version.size)}</small><details><summary>SHA-256</summary><code>{version.sha256}</code></details></div><button type="button" disabled={!!busy || blocked} onClick={() => void download(version)} aria-label={`下载版本 ${version.revision}：${version.filename}`}>{busy === "download" ? "处理中…" : "下载原文件"}</button></li>)}</ol>{!versions.length && <p className={styles.muted}>点击刷新列表，载入历史版本。</p>}</> : <div className={styles.empty}><span>02 / VERSIONS</span><h4>每次提交，都保留一个版本</h4><p>下载原始文件字节，并校验版本 SHA-256。新版本需要你主动选择文件和确认上传。</p></div>}
+        <div className={styles.paneHeading}><div><h3>不可变版本</h3><span>{active ? `${versions.length} / ${limits.versions} 个` : "选择左侧文件查看"}</span></div>{active && <span className={styles.format}>{active.kind === "docx" ? "报告文稿" : "演示文稿"}</span>}</div>
+        {active ? <><div className={styles.activeFile}><strong>{active.filename}</strong><span>当前记录 第 {active.revision} 版 · {sizeLabel(active.size)}</span><div className={styles.nativeAction}><button type="button" className={styles.primary} disabled={!!busy || blocked || !nativeConfigured || identityFrozen} onClick={() => setNativeEditing({ file: active, scope: scope.current })}>{nativeConfigured ? `在线协同编辑 ${active.filename}` : "在线协同编辑尚未连接"}</button><small>仅当前版本可编辑；完成后服务器新增版本，不覆盖旧稿。</small></div><details><summary>查看当前 SHA-256</summary><code>{active.sha256}</code></details></div><ol ref={versionMotion} className={styles.versionList}>{[...versions].sort((a,b) => b.revision - a.revision).map(version => <li key={version.id} data-motion-id={version.id}><span className={styles.versionNumber}>第 {version.revision} 版</span><div><strong>{version.label || "未填写版本备注"}</strong><span>{version.filename}</span><small>{timeLabel(version.createdAt)} · {sizeLabel(version.size)}</small><details><summary>SHA-256</summary><code>{version.sha256}</code></details></div><button type="button" disabled={!!busy || blocked} onClick={() => void download(version)} aria-label={`下载版本 ${version.revision}：${version.filename}`}>{busy === "download" ? "处理中…" : "下载原文件"}</button></li>)}</ol>{!versions.length && <p className={styles.muted}>点击刷新列表，载入历史版本。</p>}</> : <div className={styles.empty}><span>02 · 版本记录</span><h4>每次提交，都保留一个版本</h4><p>下载原始文件字节，并校验版本 SHA-256。新版本需要你主动选择文件和确认上传。</p></div>}
       </div>
     </div>
     <div className={styles.uploadPanel}>
-      <div className={styles.uploadIntro}><span className={styles.kicker}>ADD A VERSION</span><h3>选择文件，再确认提交</h3><p>支持 DOCX / PPTX，单个上限 {sizeLabel(limits.bytes)}。</p></div>
+      <div className={styles.uploadIntro}><span className={styles.kicker}>新增版本提交</span><h3>选择文件，再确认提交</h3><p>支持报告或演示文稿文件，单个上限 {sizeLabel(limits.bytes)}。</p></div>
       <div className={styles.uploadControls}>
-        <fieldset className={styles.mode}><legend>上传目标</legend><label><input type="radio" name={`${inputId}-mode`} checked={mode === "new"} disabled={!!busy || blocked} onChange={() => switchMode("new")}/>建立独立文件</label><label><input type="radio" name={`${inputId}-mode`} checked={mode === "version"} disabled={!!busy || blocked || !active} onChange={() => switchMode("version")}/>所选文件的新版本</label></fieldset>
-        <p className={styles.target}>{mode === "new" ? "将创建一个独立文件及首个版本。" : active ? `目标：${active.filename} · 基于 v${active.revision}，已有版本不会覆盖。` : "请先在文件列表选择版本目标。"}</p>
-        <label className={styles.fileInput} htmlFor={inputId}>选择 DOCX / PPTX<input ref={input} id={inputId} type="file" accept=".docx,.pptx" disabled={!!busy || blocked || conflictStep === "refresh"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; chooseFile(file); }}/></label>
-        {picked && <div className={styles.selection}><div><strong>{picked.name}</strong><span>{sizeLabel(picked.size)} · 仅已选择，尚未确认保存</span></div><button type="button" disabled={!!busy} onClick={() => { pickedRef.current = null; setPicked(null); setNotice("已取消本页选择，本地原件未改变。"); }}>取消选择</button></div>}
-        <label className={styles.labelField}>版本备注<span>必填，1–80 字</span><input value={label} required maxLength={80} disabled={!!busy || blocked} onChange={event => setLabel(event.target.value)} placeholder="例如：补充样本说明，提交前复核版"/></label>
-        {conflictStep !== "none" && <p className={styles.conflict}>{conflictStep === "refresh" ? "先点击“刷新列表”，再重新选择文件。不会自动把本次提交套用到其他版本。" : "服务器版本已刷新。请重新选择文件，以确认使用当前目标版本。"}</p>}
+        <fieldset className={styles.mode}><legend>上传目标</legend><label><input type="radio" aria-label="建立独立文件" name={`${inputId}-mode`} checked={mode === "new"} disabled={!!busy || blocked} onChange={() => switchMode("new")}/>建立独立文件</label><label><input type="radio" aria-label="作为所选文件的新版本上传" name={`${inputId}-mode`} checked={mode === "version"} disabled={!!busy || blocked || !active} onChange={() => switchMode("version")}/>所选文件的新版本</label></fieldset>
+        <p className={styles.target}>{mode === "new" ? "将创建一个独立文件及首个版本。" : active ? `目标：${active.filename} · 基于第 ${active.revision} 版，已有版本不会覆盖。` : "请先在文件列表选择版本目标。"}</p>
+        <label className={styles.fileInput} htmlFor={inputId}>选择报告或演示文稿文件<input ref={input} id={inputId} aria-label="选择要上传的文档或演示文稿原文件" type="file" accept=".docx,.pptx" disabled={!!busy || blocked || conflictStep === "refresh"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; chooseFile(file); }}/></label>
+        {picked && <div className={styles.selection}><div><strong>{picked.name}</strong><span>{sizeLabel(picked.size)} · 仅已选择，尚未确认保存</span></div><button type="button" aria-label={`取消选择本地文件 ${picked.name}`} disabled={!!busy} onClick={() => { pickedRef.current = null; setPicked(null); setNotice("已取消本页选择，本地原件未改变。"); }}>取消选择</button></div>}
+        <label className={styles.labelField}>版本备注<span>必填，1–80 字</span><input aria-label="版本备注" value={label} required maxLength={80} disabled={!!busy || blocked} onChange={event => setLabel(event.target.value)} placeholder="例如：补充样本说明，提交前复核版"/></label>
+        {conflictStep !== "none" && <p className={styles.conflict} role="alert">{conflictStep === "refresh" ? "先点击“刷新列表”，再重新选择文件。不会自动把本次提交套用到其他版本。" : "服务器版本已刷新。请重新选择文件，以确认使用当前目标版本。"}</p>}
         <div className={styles.submitRow}><button type="button" className={styles.primary} disabled={!canUpload} onClick={() => void upload()}>{busy === "upload" ? "正在校验并上传…" : mode === "new" ? "确认上传为新文件" : "确认上传新版本"}</button><span>{unavailable ? "存储未就绪，已选文件仍保留。" : "只有服务器返回保存确认，才会显示已保存。"}</span></div>
       </div>
     </div>
     <section className={styles.recoverySection} aria-label="原生编辑冲突副本">
       <div className={styles.paneHeading}><div><h3>冲突编辑副本</h3><span>未合并入正式文件；请及时下载核对</span></div><button type="button" disabled={blocked || recoveryStatus === "loading"} onClick={() => { setRecoveryStatus("loading"); void loadRecoveries(); }}>刷新副本</button></div>
-      {recoveryStatus === "loading" && <p>正在核对当前身份的冲突副本…</p>}
+      {recoveryStatus === "loading" && <p role="status">正在核对当前身份的冲突副本…</p>}
       {recoveryStatus === "error" && <p role="alert">暂时无法核对冲突副本列表。已有文件版本仍可下载；请稍后重试，勿将未确认的编辑当作已保存。</p>}
-      {recoveryStatus === "ready" && !recoveries.length && <p>当前身份没有仍在有效期内的冲突编辑副本。</p>}
-      {recoveryStatus === "ready" && recoveries.length > 0 && <ul>{recoveries.map(item => { const deadline = recoveryDeadline(item.expiresAt, recoveryClock); return <li key={item.key} data-urgent={deadline.urgent}><div><strong>{item.filename}</strong><small>{item.kind.toUpperCase()} · {sizeLabel(item.size)} · {deadline.text}</small></div><button type="button" disabled={blocked || recoveryBusy !== null || deadline.expired} onClick={() => void downloadRecoveryItem(item)}>{recoveryBusy === item.key ? "校验中…" : "下载冲突副本"}</button></li>; })}</ul>}
+      {recoveryStatus === "ready" && !recoveries.length && <p role="status">当前身份没有仍在有效期内的冲突编辑副本。</p>}
+      {recoveryStatus === "ready" && recoveries.length > 0 && <ul>{recoveries.map(item => { const deadline = recoveryDeadline(item.expiresAt, recoveryClock); return <li key={item.key} data-urgent={deadline.urgent}><div><strong>{item.filename}</strong><small>{item.kind.toUpperCase()} · {sizeLabel(item.size)} · {deadline.text}</small></div><button type="button" aria-label={`下载 ${item.filename} 的冲突编辑副本`} disabled={blocked || recoveryBusy !== null || deadline.expired} onClick={() => void downloadRecoveryItem(item)}>{recoveryBusy === item.key ? "校验中…" : "下载冲突副本"}</button></li>; })}</ul>}
     </section>
     {nativeEditing && <OnlyOfficeEditor file={nativeEditing.file} scope={nativeEditing.scope} frozen={identityFrozen || blocked} onClose={() => { setNativeEditing(null); void loadRecoveries(); }} onSaved={() => { void loadLibrary(); }}/>} 
   </section>;

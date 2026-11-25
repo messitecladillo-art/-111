@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import * as shared from '../../../packages/evi-x-shared/src/index.ts';
 import * as proposal from '../lib/topic-proposal.ts';
 import {parseTopicProfile, stableStringify} from '../lib/topic-advisor/parse.ts';
+import {normalizeAcademicPunctuation} from '../lib/typography.ts';
 
 // Execute production handlers/effects without browser access. These are lifecycle
 // tests, not evidence of layout, focus, IME, hydration or a live provider call.
@@ -46,7 +47,7 @@ function make({owner=account,storage=new Map(),drafts=new Map(),services=[servic
   const jsx=(type,props,key)=>({type,props,key});
   const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'next/link':{default:'a'},'@evix/shared':shared,
     '@/components/hosted/HostedSession':{useHostedSession:()=>auth},'@/lib/topic-proposal':{...proposal,verifyTopicReceipt(...args){const actual=proposal.verifyTopicReceipt(...args);const verified=holdVerification?actual.then(()=>new Promise(resolve=>{releaseVerification=resolve;})):actual;verifications.push(verified);return verified;}},
-    '@/components/knowledge/KnowledgeLookupPanel':{default:'KnowledgeLookupPanel'},'./TopicModelProposal.module.css':{default:{}},
+    '@/components/knowledge/KnowledgeLookupPanel':{default:'KnowledgeLookupPanel'},'@/lib/typography':{normalizeAcademicPunctuation},'./TopicModelProposal.module.css':{default:{}},
     '@/components/hosted/api-client':{HostedApiError,errorMessage:e=>e.message,hostedRequest:async path=>{reads.push(path);if(path==='/api/services')return{services};if(path==='/api/topic-advisor/proposals')return{receipts:calls.filter(c=>c.saved).map(c=>({id:c.body.idempotencyKey,status:c.saved.status,createdAt:stamp}))};const c=calls.find(c=>path.endsWith(c.body.idempotencyKey));if(c?.saved)return c.saved;throw Error('not_found');}}};
   const box={exports:{},require:name=>{assert.ok(name in imports,`Unexpected module: ${name}`);return imports[name];},JSON,console,crypto,structuredClone,Blob,TextEncoder,Date,
     sessionStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},

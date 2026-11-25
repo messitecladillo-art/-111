@@ -58,3 +58,61 @@ input[type="file"].fileInput{position:absolute;width:1px;height:1px;min-width:0;
 @media(max-width:1100px){.workspace{grid-template-columns:180px minmax(0,1fr)}.stages>div{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.panel{padding:18px}.workspace{grid-template-columns:minmax(0,1fr)}.cards{grid-template-columns:repeat(2,minmax(0,1fr));max-height:300px}.editor{padding:16px}.fields{grid-template-columns:minmax(0,1fr)}.toolbar>strong{flex-basis:100%}.toolbar>button{flex:1 1 130px}.cardFooter button{width:100%}}
 @media(prefers-reduced-motion:reduce){.panel *{scroll-behavior:auto;animation:none!important;transition:none!important}}
+
+@media (forced-colors: active) {
+  .panel,
+  .badge,
+  .boundary,
+  .empty,
+  .editor,
+  .stageNote,
+  .review,
+  .importBox,
+  .removeBox,
+  .cards button {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .panel,
+  .badge,
+  .empty,
+  .editor,
+  .review,
+  .importBox,
+  .removeBox,
+  .stages label,
+  .panel button,
+  .fields input,
+  .fields textarea {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .boundary,
+  .group,
+  .error {
+    border-color: CanvasText;
+  }
+
+  .cards .motionMarker {
+    display: none;
+  }
+
+  .panel button.primary,
+  .cards button[aria-pressed="true"],
+  .stages label[data-selected="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .panel button:focus-visible,
+  .panel input:focus-visible,
+  .panel textarea:focus-visible,
+  .panel summary:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

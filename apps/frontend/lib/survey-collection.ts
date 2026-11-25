@@ -109,13 +109,13 @@ export function collectionEvidenceSource(source: string, origin: CollectionOrigi
 /** Compact QC step for downstream tools whose scope text is length-limited (the research canvas). */
 export function qualityLineageStep(quality: QualityOrigin): string {
   const labels = quality.rules.map(rule => rule.split('：')[0]).join('、');
-  return `质控：自「${quality.parentName}」剔除 ${quality.removed} 行（${labels}），剔除台账 SHA-256 ${quality.ledgerHash.slice(0, 16)}…`;
+  return `质控：自“${quality.parentName}”剔除 ${quality.removed} 行（${labels}），剔除台账 SHA-256 ${quality.ledgerHash.slice(0, 16)}…`;
 }
 
 /** Quality-control lineage for any paragraph computed on QC-kept rows, hosted or local. */
 export function qualityEvidenceSection(section: ReportSection, quality: QualityOrigin): ReportSection {
   const lines = section.body.split('\n').filter(line => !line.startsWith('质控来源：'));
-  lines.push(`质控来源：自「${quality.parentName}」剔除 ${quality.removed} 行；规则：${quality.rules.join('；')}；剔除台账 SHA-256 ${quality.ledgerHash}。`);
+  lines.push(`质控来源：自“${quality.parentName}”剔除 ${quality.removed} 行；规则：${quality.rules.join('；')}；剔除台账 SHA-256 ${quality.ledgerHash}。`);
   return { ...section, body: lines.join('\n'), source: `${section.source}\n质控前数据 SHA-256：${quality.parentHash}\n剔除台账 SHA-256：${quality.ledgerHash}` };
 }
 
