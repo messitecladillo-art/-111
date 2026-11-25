@@ -81,7 +81,7 @@ export function sampleSize(plan: SizePlan): SizeResult {
   if (plan.subgroups > 1) steps.push({ label: '各子群分别达到精度', formula: tex`n=${perGroup}\times ${plan.subgroups}=${tn(completes, 0)}`, value: completes });
   const contacts = Math.ceil(completes / plan.validRate - 1e-9);
   steps.push({ label: '按有效回收率换算发放量', formula: tex`n_{\text{发放}}=\left\lceil\frac{n}{r}\right\rceil=\left\lceil\frac{${tn(completes, 0)}}{${tn(plan.validRate * 100, 1)}\%}\right\rceil=${tn(contacts, 0)}`, value: contacts });
-  if (plan.target === 'proportion' && plan.proportion !== 0.5) warnings.push('预估比例不是 50%：若真实比例更接近 50%，实际误差会大于设定值。');
+  if (plan.target === 'proportion' && plan.proportion !== 0.5) warnings.push('当前预估比例未取 50%，若真实比例更接近 50%，实际误差会大于设定值。');
   if (plan.designEffect === 1) warnings.push('设计效应取 1 即假定简单随机抽样；分层可能小于 1 的情形此处不计，整群或多阶段抽样通常大于 1。');
   return { steps, perGroup, completes, contacts, warnings };
 }
@@ -132,7 +132,7 @@ export function allocate(strata: Stratum[], total: number, method: AllocationMet
     const weight = free.reduce((s, i) => s + score[i], 0);
     const exact = free.map(i => remaining * score[i] / weight);
     const high = free.filter((i, k) => exact[k] > caps[i]);
-    if (high.length) { high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`「${literal(strata[i].name)}」按公式分配超过该层规模，已全部纳入（普查该层）。`); }); continue; }
+    if (high.length) { high.forEach(i => { fixed.set(i, caps[i]); warnings.push(`“${literal(strata[i].name)}”按公式分配超过该层规模，已全部纳入（普查该层）。`); }); continue; }
     const low = free.filter((i, k) => exact[k] < floors[i]);
     if (low.length) { low.forEach(i => { fixed.set(i, floors[i]); lifted.add(i); }); continue; }
     const rounded = roundToTotal(exact, remaining, free.map(i => caps[i]));
@@ -172,7 +172,7 @@ export function methodsStatement({ kind, population, frame, plan, result }: { ki
   const meta = SAMPLING_KINDS[kind], conf = `${Number(plan.confidence) * 100}%`;
   const precision = plan.target === 'proportion' ? `±${round(plan.margin * 100, 1)} 个百分点的允许误差、预估比例 ${pctText(plan.proportion)}` : `±${plan.margin} 的允许误差、标准差 ${plan.sd}`;
   const adjustments = [plan.population !== null ? `有限总体规模 ${plan.population.toLocaleString('zh-CN')}` : '', plan.designEffect !== 1 ? `设计效应 ${plan.designEffect}` : '', plan.subgroups > 1 ? `${plan.subgroups} 个子群分别达到该精度` : ''].filter(Boolean).join('、');
-  const base = `本研究的目标总体为${population || '〔请填写目标总体〕'}，抽样框为${frame || '〔请填写抽样框及其覆盖情况〕'}，采用${meta.label}。按 ${conf} 置信水平、${precision}计算${adjustments ? `，并考虑${adjustments}` : ''}，所需有效样本为 ${result.completes} 份；按预计有效回收率 ${pctText(plan.validRate)}，计划发放 ${result.contacts} 份。`;
+  const base = `本研究的目标总体为${population || '（请填写目标总体）'}，抽样框为${frame || '（请填写抽样框及其覆盖情况）'}，采用${meta.label}。按 ${conf} 置信水平、${precision}计算${adjustments ? `，并考虑${adjustments}` : ''}，所需有效样本为 ${result.completes} 份；按预计有效回收率 ${pctText(plan.validRate)}，计划发放 ${result.contacts} 份。`;
   return meta.probability
     ? `${base}在上述抽样设计得到执行的前提下，${plan.target === 'proportion' ? '比例' : '均值'}估计的抽样误差不超过设定的允许误差；实际回收后按实际有效样本量重新计算精度，并报告无应答情况。`
     : `${base}由于${meta.label.replace('（非概率）', '')}不满足随机抽样前提，样本量仅作为规模参照，报告中不计算抽样误差，结论限于样本内的分布与差异；对目标总体的推广需结合配额变量与总体结构的对照论证。`;

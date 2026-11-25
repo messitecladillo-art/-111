@@ -198,7 +198,7 @@ test('the full-report pipeline writes up the computed simulation, and its AI app
   assert.equal(res.summary.finalScore, benchmarkReport(res.report).score, 'the score is the text\'s own');
   assert.deepEqual(res.report.quality.results.map(r => r.resultHash), res.pack.report.quality.results.map(r => r.resultHash));
   const ai = res.report.report.find(s => /^附录二/u.test(s.title));
-  assert.ok(ai.body.includes('大语言模型（deepseek-chat）') && !ai.body.includes(UNDRAFTED_NOTE), 'the appendix now names the model');
+  assert.ok(ai.body.includes('报告辅助服务（deepseek-chat）') && !ai.body.includes(UNDRAFTED_NOTE), 'the appendix now names the model');
 
   const rFull = route('/全报告 社区助餐服务调研', { room: null, light: illuminate({ design: null, dataset: null, report: null, resultPending: false }) });
   assert.ok('turn' in rFull && rFull.turn.chips?.some(c => c.action.type === 'generateFullReport'));

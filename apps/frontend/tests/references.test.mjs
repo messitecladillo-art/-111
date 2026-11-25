@@ -107,7 +107,7 @@ test('exports stop on a hand-typed list beside structured entries, a missing sec
   const typed = cited(); typed.report[1].body = '[1] 手写的文献。';
   await assert.rejects(buildDocx(typed), /仍有手写条目/);
   const noSection = cited(); noSection.report = noSection.report.slice(0, 1);
-  await assert.rejects(buildDocx(noSection), /没有「参考文献」一节/);
+  await assert.rejects(buildDocx(noSection), /没有“参考文献”一节/);
   const dangling = cited(); dangling.references = dangling.references.filter(e => e.id !== 'j');
   await assert.rejects(buildDocx(dangling), /文献引用已失效/);
   const untitled = cited(); untitled.references = [...untitled.references, emptyReference('J')];
@@ -167,4 +167,21 @@ test('the report check counts only cited sources read for their claim, and a rej
   assert.equal(check().status, 'fail'); assert.match(check().detail, /不采纳/);
   content.report[0].body = '还没有引用。';
   assert.equal(check().status, 'na');
+});
+
+test('author names ending in an abbreviated initial period never print a doubled period before the title', () => {
+  const csdid = entry('J', {
+    id: 'csdid',
+    authors: ['Callaway, B.', "Sant'Anna, P. H. C."],
+    title: 'Difference-in-Differences with multiple time periods',
+    source: 'Journal of Econometrics',
+    year: '2021',
+    doi: '10.1016/j.jeconom.2020.12.001',
+  });
+  const formatted = formatReference(csdid);
+  assert.doesNotMatch(formatted, /\.\./);
+  assert.equal(
+    formatted,
+    "Callaway, B., Sant'Anna, P. H. C. Difference-in-Differences with multiple time periods[J]. Journal of Econometrics, 2021. DOI: 10.1016/j.jeconom.2020.12.001.",
+  );
 });

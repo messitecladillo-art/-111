@@ -186,3 +186,49 @@
   .header { align-items: flex-start; }
   .draftActions { margin-left: 0; }
 }
+
+@media (forced-colors: active) {
+  .root :is(button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .root :is(button, input:not([type="checkbox"]), select, textarea),
+  .tabs button,
+  .lenses button,
+  .primary,
+  .secondary,
+  .textButton {
+    border: 1px solid ButtonText;
+  }
+  .profile,
+  .recommendation,
+  .candidateResult,
+  .empty,
+  .notice,
+  .stale,
+  .warnings {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .header,
+  .workspaceTop,
+  .resultHeading,
+  .detail,
+  .dimensions,
+  .verification {
+    border-color: CanvasText;
+  }
+  .tabs button[aria-selected="true"],
+  .tabs button[aria-pressed="true"],
+  .lenses button[aria-pressed="true"],
+  .recommendation[data-selected="true"],
+  .primary {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

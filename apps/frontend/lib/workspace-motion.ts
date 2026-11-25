@@ -2,12 +2,16 @@
 export const WORKSPACE_MOTION = { selection: 180, liquid: 260, reorder: 240, reveal: 220, draw: 560, easing: 'cubic-bezier(.16,1,.3,1)' } as const;
 export type MotionPoint = { x: number; y: number; width: number; height: number };
 export type MarkerAxis = 'vertical' | 'horizontal';
+export type MarkerVariant = 'bar' | 'pill';
 type OwnedMove = { animation: Animation; x: number; y: number };
 
 export function layoutDelta(previous: MotionPoint, current: MotionPoint, offset = { x: 0, y: 0 }) {
   return { x: previous.x + offset.x - current.x, y: previous.y + offset.y - current.y };
 }
-export function markerBounds(item: MotionPoint, axis: MarkerAxis): MotionPoint {
+export function markerBounds(item: MotionPoint, axis: MarkerAxis, variant: MarkerVariant = 'bar'): MotionPoint {
+  if (variant === 'pill') {
+    return { x: item.x, y: item.y, width: item.width, height: item.height };
+  }
   return axis === 'horizontal'
     ? { x: item.x, y: item.y + item.height - 2, width: item.width, height: 2 }
     : { x: item.x, y: item.y, width: 3, height: item.height };
@@ -118,11 +122,15 @@ export function createKeyedListMotion(root: HTMLElement) {
       animation.onfinish = () => { if (markerMove?.animation === animation) markerMove = null; };
     }
   };
+  const markerVariant = (): MarkerVariant => {
+    const markerEl = root.querySelector<HTMLElement>('[data-motion-marker]');
+    return markerEl?.dataset?.motionVariant === 'pill' ? 'pill' : 'bar';
+  };
   const capture = () => {
     const parent = root.getBoundingClientRect(), items = elements();
     positions = new Map(Array.from(items, ([id, node]) => [id, point(node, parent)]));
     for (const node of [root, ...items.values()]) sizes.set(node, size(node));
-    setMarker(activeId && positions.has(activeId) ? markerBounds(positions.get(activeId)!, axis) : null, false);
+    setMarker(activeId && positions.has(activeId) ? markerBounds(positions.get(activeId)!, axis, markerVariant()) : null, false);
   };
   const refresh = () => { if (!disposed) { cancelMoves(); cancelMarker(); capture(); } };
   const scope = watchScope(root, refresh);
@@ -166,7 +174,7 @@ export function createKeyedListMotion(root: HTMLElement) {
         knownIds.add(id);
       }
       positions = next; initialized = true;
-      setMarker(selected && next.has(selected) ? markerBounds(next.get(selected)!, axis) : null, animate);
+      setMarker(selected && next.has(selected) ? markerBounds(next.get(selected)!, axis, markerVariant()) : null, animate);
       for (const node of [root, ...items.values()]) sizes.set(node, size(node));
       const itemKey = JSON.stringify(Array.from(items.keys()));
       if (observed !== itemKey) {

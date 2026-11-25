@@ -1000,3 +1000,77 @@
 .matrixTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .matrixTable th, .matrixTable td { padding: 8px 10px; border-bottom: 1px solid var(--wb-line); text-align: left; white-space: nowrap; }
 .matrixTable th { background: var(--wb-well); font-family: var(--wb-mono); font-size: 11.5px; color: var(--wb-muted); }
+
+@media (forced-colors: active) {
+  .lab :is(button, input, select, textarea, summary, a):focus-visible,
+  .stageCanvas:focus-visible,
+  .inspectorBody:focus-visible,
+  .swatches input:focus-visible + i {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .motionMarker {
+    display: none;
+  }
+
+  .theatre,
+  .inspector,
+  .stageGroupLabel,
+  .stageTip,
+  .stageControls button,
+  .simChip,
+  .stageSelect select,
+  .viewToggle,
+  .runToast,
+  .flatStage button,
+  .tiers li,
+  .stepper,
+  .stepper button,
+  .block,
+  .templateCard,
+  .sourceCard,
+  .attrCard,
+  .roster button,
+  .statRow article,
+  .tabs,
+  .findings > li,
+  .criteria article,
+  .chart,
+  .chartTip,
+  .boundaryCard,
+  .respondentPill,
+  .moderatorCard,
+  .roundtableSpeaker,
+  .matrixScroll {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .lab .primary,
+  .lab .gold,
+  .atypicaToggle[aria-pressed="true"],
+  .stageControls button[aria-pressed="true"],
+  .flatStage button[aria-pressed="true"],
+  .roster button[aria-pressed="true"],
+  .stepper button[aria-current="step"],
+  .templateCard[aria-checked="true"],
+  .sourceCard[aria-checked="true"],
+  .tabs button[aria-selected="true"],
+  .respondentPill[aria-selected="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .inspector > header,
+  .questionList,
+  .dataTable th,
+  .dataTable td,
+  .matrixTable th,
+  .matrixTable td {
+    border-color: CanvasText !important;
+  }
+}

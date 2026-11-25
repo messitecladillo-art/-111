@@ -381,3 +381,76 @@
   .steleBack{padding:22px;border-top:0}
   .steleBack p{font-size:14px;line-height:1.9}
 }
+
+
+@media (forced-colors: active) {
+  .landing,
+  .header,
+  .landing[data-scrolled=true] .header,
+  .footer,
+  .bridge,
+  .vitrine,
+  .steleFront,
+  .steleBack,
+  .chain li,
+  .faPart,
+  .slipRow > span,
+  .gates li > span,
+  .ghost,
+  .header nav > .login,
+  .pause,
+  .skip {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: ButtonText !important;
+    box-shadow: none !important;
+  }
+
+  .sky,
+  .halo,
+  .lamp,
+  .vignette,
+  .cursor {
+    display: none !important;
+  }
+
+  .heroTitle > span,
+  .faWhole,
+  .chainKey,
+  .finaleTitle,
+  .marquee span,
+  .glyph,
+  .bigYear {
+    background: none !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    color: CanvasText !important;
+    -webkit-text-fill-color: CanvasText !important;
+    -webkit-text-stroke: 0 transparent !important;
+    filter: none !important;
+    text-shadow: none !important;
+  }
+
+  .plate,
+  .quote,
+  .quoteCentered,
+  .oracleParts li,
+  .marquee,
+  .footer {
+    border-color: CanvasText !important;
+  }
+
+  .primary,
+  .rail button[aria-current=step] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border: 1px solid Highlight !important;
+    box-shadow: none !important;
+  }
+
+  .landing :is(a, button, [tabindex="0"]):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

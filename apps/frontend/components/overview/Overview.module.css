@@ -102,3 +102,42 @@
 @media (prefers-reduced-motion: reduce) {
   .steps a, .agenda li, .phase i { transition: none; }
 }
+
+@media (forced-colors: active) {
+  :is(.calendar, .pipeline) :is(button, a):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .groupSwitch button,
+  .linkButton,
+  .steps a {
+    border: 1px solid ButtonText;
+  }
+  .calendar,
+  .pipeline,
+  .countdown,
+  .agenda li,
+  .steps li {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .calendarHead,
+  .calendarFoot,
+  .pipelineHead,
+  .rail {
+    border-color: CanvasText;
+  }
+  .groupSwitch button[aria-pressed="true"],
+  .groupSwitch button[aria-selected="true"],
+  .today,
+  .state[data-current="true"],
+  .stepNo {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

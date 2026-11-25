@@ -115,7 +115,7 @@ export function buildTermIndex(records: LitRecord[], opts: TermOptions): TermInd
     const withAbstract = opts.source === 'title+abstract' && records.length <= ABSTRACT_LIMIT;
     if (opts.source === 'title+abstract' && !withAbstract) notes.push(`记录超过 ${ABSTRACT_LIMIT} 条，摘要抽词改为只用题名。`);
     raw = extractTerms(records.map(r => withAbstract ? `${r.title}. ${r.abstract}` : r.title), Math.max(2, Math.ceil(records.length * .004)));
-    notes.push('抽词按出现频次切分短语，未使用词典；请在「合并与排除」中清理不成词的片段。');
+    notes.push('抽词按出现频次切分短语，未使用词典；请在“合并与排除”中清理不成词的片段。');
   }
   const labels = new Map<string, Map<string, number>>();
   const docs = raw.map(list => {

@@ -63,3 +63,40 @@
   .assignment select { width:100%; }
   .panel button { min-height:44px; }
 }
+
+@media (forced-colors: active) {
+  .panel :is(button, a, input, select, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .panel,
+  .state,
+  .panel button,
+  .tools a,
+  .panel input,
+  .panel select,
+  .panel .error,
+  .panel .notice {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .panel .incoming button,
+  .panel .confirm button,
+  .state[data-ready=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .header,
+  .tools,
+  .mappingTools,
+  .row,
+  .panel .warning {
+    border-color: CanvasText !important;
+  }
+}

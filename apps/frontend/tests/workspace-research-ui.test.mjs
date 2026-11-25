@@ -151,7 +151,7 @@ test('format tabs preserve mounted import panels and CSV input while busy work s
   assert.equal(nodes(screen.tree).find(n => n.props?.['aria-label'] === 'CSV 文本').props.value, 'Q1,Q2\n1,2');
   const sheet = nodes(screen.tree).find(n => n.type === 'SpreadsheetImportPanel');
   sheet.props.onBusy(true, 'workbook.xlsx'); await screen.settle();
-  assert.equal(button(screen, 'CSV / TSV').props.disabled, true);
+  assert.equal(button(screen, '分隔符数据表（逗号或制表符分隔）').props.disabled, true);
   assert.equal(button(screen, 'SPSS · SAV').props.disabled, true);
   assert.equal(byId('analysis-import-xlsx').props.hidden, false);
   assert.equal(nodes(screen.tree).filter(n => ['SpreadsheetImportPanel', 'SavImportPanel'].includes(n.type)).length, 2);

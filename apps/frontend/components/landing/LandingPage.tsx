@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from 'react';
 import BrandMark from '@/components/brand/BrandMark';
@@ -7,16 +8,19 @@ import { useHostedSession } from '@/components/hosted/HostedSession';
 import { REPORT_CASES, REPORT_LIBRARY_STATS } from '@/lib/report-case-catalog';
 import { LANDING_CASE_STUDY } from '@/data/landing-case-study';
 import { calendarFor, CALENDAR_GROUPS, EDITION17_CALENDAR, type CalendarGroup } from '@/data/edition17-calendar';
-import { ANALYSIS_BLOCKS } from '@/lib/analysis-recipes';
+import { ANALYSIS_BLOCKS } from '@/lib/analysis-blocks-meta';
 import { legacyLandingDestination } from '@/lib/landing-navigation';
-import { SILICON_LIMITS } from '@/lib/silicon/persona';
+import { SILICON_LIMITS } from '@/lib/silicon/limits';
 import { CATEGORICAL_DARK } from '@/lib/silicon/palette';
 import styles from './LandingPage.module.css';
 import HeroAtmosphere from './HeroAtmosphere';
 import TourAtmosphere from './TourAtmosphere';
 import CaseEvidence, { type EvidencePage } from './CaseEvidence';
 import HeroShowcase from './HeroShowcase';
-import CorpusObservatory from './CorpusObservatory';
+
+const CorpusObservatory = dynamic(() => import('./CorpusObservatory'), {
+  loading: () => <p role="status">正在载入语料图谱</p>,
+});
 
 const HEADLINE = ['让每个问题，', '都循证抵达行动'] as const;
 
@@ -31,11 +35,11 @@ const METHODS = [['问卷设计', '跳转与答案传递', '变量字典', '硅�
 
 /** Scroll tour: each image is a screenshot of the workbench running on teaching or simulated data. */
 const TOUR = [
-  { id: 'design', no: '01', label: '问卷设计', title: '把研究问题，落到每一道题', text: '研究问题、题项、变量与计划分析逐一对齐。改动即时预览，结构问题实时提示。', facts: ['题干、变量编码与问卷预览同屏', '路由预演：按回答把跳转走一遍', '导出问卷草稿与变量字典'], href: '/workspace#design', caption: '教学示例问卷「校园服务体验」', alt: '证见问卷设计界面：左侧题目目录，中间编辑题干、变量编码与题型，右侧实时预览问卷。' },
-  { id: 'analysis', no: '02', label: '数据分析', title: '先查数据，再下结论', text: '读取 CSV 后先做体检：记录数、变量、缺失代码与完全重复行逐项列出，再进入分析。', facts: ANALYSIS_BLOCKS.map(block => block.title), chips: true, href: '/workspace#analysis', caption: '12 行模拟数据的读取检查', alt: '证见数据分析界面：模拟数据的读取检查，显示已读取记录、变量列、缺失比例与重复行。' },
-  { id: 'editor', no: '03', label: '报告与 PPT', title: '边写边看，分镜直接成稿', text: '章节目录、正文编辑与 A4 实时预览在一屏；从报告分镜挑选证据，编排成幻灯片。', facts: ['章节编辑与 A4 实时预览', '报告分镜：选择证据并制作 PPT', '导出 Word 报告正文与 PPTX'], href: '/workspace#editor', caption: '默认报告模板', alt: '证见报告编辑界面：章节目录、章节编辑区和 A4 实时预览。' },
-  { id: 'defense', no: '04', label: '路演答辩', title: '把追问，练到有据可答', text: '按主题演练评委可能的追问：先答问题，再定位证据，最后计时彩排。', facts: ['13 个追问主题', '练习笔记与成果卡可导入导出', '按段落设置时间检查点'], href: '/workspace#defense', caption: '追问主题与回答要点', alt: '证见路演与答辩界面：左侧追问主题列表，右侧当前主题的回答要点。' },
-  { id: 'cases', no: '05', label: '案例与规则', title: '规则先锁定，案例可回查', text: '按届次、组别、赛区、赛道与阶段匹配规则；完整案例提供原报告、研究方法与逐页阅读线索。', facts: ['每条规则附来源与核验日期', `${REPORT_LIBRARY_STATS.total} 份完整原报告`, '从研究设计直接读到分析与建议'], href: '/workspace#cases', caption: '报告案例库', alt: '证见报告案例库界面：完整报告、研究主题与阅读入口。' },
+  { id: 'design', no: '01', label: '问卷设计', title: '把研究问题，落到每一道题', text: '研究问题、题项、变量与计划分析逐一对齐。改动即时预览，结构问题实时提示。', facts: ['题干、变量编码与问卷预览同屏', '按回答预演整条跳转路径', '导出问卷草稿与变量字典'], href: '/workspace#design', caption: '教学示例问卷“校园服务体验”', alt: '证见问卷设计界面，左侧为题目目录，中间编辑题干、变量编码与题型，右侧实时预览问卷。' },
+  { id: 'analysis', no: '02', label: '数据分析', title: '先查数据，再下结论', text: '读取 CSV 后先完成数据体检，逐项列出记录数、变量、缺失代码与完全重复行，再进入分析。', facts: ANALYSIS_BLOCKS.map(block => block.title), chips: true, href: '/workspace#analysis', caption: '12 行模拟数据的读取检查', alt: '证见数据分析界面，展示模拟数据的已读取记录、变量列、缺失比例与重复行。' },
+  { id: 'editor', no: '03', label: '报告与 PPT', title: '边写边看，分镜直接成稿', text: '章节目录、正文编辑与 A4 实时预览在一屏；从报告分镜挑选证据，编排成幻灯片。', facts: ['章节编辑与 A4 实时预览', '从报告分镜挑选证据并制作 PPT', '导出 Word 报告正文与 PPTX'], href: '/workspace#editor', caption: '默认报告模板', alt: '证见报告编辑界面，同屏展示章节目录、章节编辑区与 A4 实时预览。' },
+  { id: 'defense', no: '04', label: '路演答辩', title: '把追问，练到有据可答', text: '按主题演练评委常见追问，先正面作答，再定位证据，最后完成计时彩排。', facts: ['13 个追问主题', '练习笔记与成果卡可导入导出', '按段落设置时间检查点'], href: '/workspace#defense', caption: '追问主题与回答要点', alt: '证见路演与答辩界面，左侧为追问主题列表，右侧为当前主题的回答要点。' },
+  { id: 'cases', no: '05', label: '案例与规则', title: '规则先锁定，案例可回查', text: '按届次、组别、赛区、赛道与阶段匹配规则；完整案例提供原报告、研究方法与逐页阅读线索。', facts: ['每条规则附来源与核验日期', `${REPORT_LIBRARY_STATS.total} 份完整原报告`, '从研究设计直接读到分析与建议'], href: '/workspace#cases', caption: '报告案例库', alt: '证见报告案例库界面，展示完整报告、研究主题与阅读入口。' },
 ] as const;
 
 const QDIA = [
@@ -58,9 +62,9 @@ const CASE_REPORT = LANDING_CASE_STUDY.title;
 const CASE_PAGES = LANDING_CASE_STUDY.pages;
 
 const ORIGINS = [
-  { era: '商 · 甲骨', glyph: '卜', title: '先问，后验。', text: '卜辞的最后一部分「验辞」记下事情是否应验：问题与结果刻在同一片甲骨上。', now: '先写清决策问题和待验证的判断，结论出来后回到原问题逐条核对。' },
+  { era: '商 · 甲骨', glyph: '卜', title: '先问，后验。', text: '卜辞末尾的“验辞”专门记下事情是否应验，把问题与结果刻在同一片甲骨上。', now: '先写清决策问题和待验证的判断，结论出来后回到原问题逐条核对。' },
   { era: '春秋 ·《论语》', glyph: '徵', title: '文献不足，不下断语。', text: '孔子能讲夏、殷之礼，却因杞、宋的典籍与贤人不足为证而不下定论。', now: '把待补资料列入项目清单，补齐依据后再推进结论。' },
-  { era: '东汉 ·《说文》', glyph: '灋', title: '平之如水，触不直者去之。', text: '古文「法」从水、从廌、从去：传说獬豸能辨曲直，以角触理亏的一方。', now: '质量检查贯穿研究流程，让问题、数据与结论彼此对应。' },
+  { era: '东汉 ·《说文》', glyph: '灋', title: '平之如水，触不直者去之。', text: '古文“法”从水、从廌、从去，传说獬豸能辨曲直，以角触理亏的一方。', now: '质量检查贯穿研究流程，让问题、数据与结论彼此对应。' },
   { era: '清 · 考据学', glyph: '證', title: '凡立一义，必凭证据。', text: '乾嘉学者一字一义都要找到出处；梁启超把这种学风归纳为几条研究规范。', now: '每条结论登记进证据台账，规则附官方来源，案例可读原报告，可逐条回查。' },
 ] as const;
 
@@ -242,7 +246,7 @@ function SeasonStrip({ entries, today }: { entries: ReturnType<typeof calendarFo
       {todayX !== null && todayX >= 0 && todayX <= 100 && <span className={styles.seasonToday} style={{ left: `${todayX}%` }}><b>今天</b></span>}
       {placed.map(({ entry, left, width, lane }) => <button key={entry.id} type="button" className={styles.seasonMark} data-kind={entry.kind === 'window' || (entry.kind === 'event' && entry.start) ? 'window' : entry.kind} data-state={today ? entry.state : 'upcoming'}
         style={{ left: `${left}%`, width: width ? `${width}%` : undefined, '--lane': lane } as CSSProperties}
-        aria-label={`${entry.label}：${formatRange(entry.start, entry.end)}`}
+        aria-label={`${entry.label}（${formatRange(entry.start, entry.end)}）`}
         onPointerEnter={() => setHover(entry.id)} onFocus={() => setHover(entry.id)} onBlur={() => setHover(null)}/>)}
       {tip && <span className={styles.seasonTip} style={{ left: `${Math.min(84, Math.max(8, tip.left))}%`, '--lane': tip.lane } as CSSProperties} role="status">
         <b>{tip.entry.label}</b>{formatRange(tip.entry.start, tip.entry.end)}
@@ -285,7 +289,7 @@ function Calendar() {
         })}
       </ol>
     </div>
-    <p className={styles.sourceLine}>来源：{EDITION17_CALENDAR.source.documentNumber}，第 3–6 页，核验于 {formatYearDate(EDITION17_CALENDAR.source.verifiedAt)}。{EDITION17_CALENDAR.boundary}</p>
+    <p className={styles.sourceLine}>依据 {EDITION17_CALENDAR.source.documentNumber} 第 3–6 页整理，核验于 {formatYearDate(EDITION17_CALENDAR.source.verifiedAt)}。{EDITION17_CALENDAR.boundary}</p>
   </div>;
 }
 
@@ -311,7 +315,7 @@ function CaseStudy({ motion }: { motion: boolean }) {
   }, [open]);
   return <>
     <CaseEvidence pages={CASE_PAGES} onOpen={setOpen} motion={motion}/>
-    <dialog ref={dialogRef} className={styles.caseDialog} aria-label={open ? `结构导览：${open.name}；原文定位第 ${open.page} 页` : '报告结构导览'} onClick={event => { if (event.target === event.currentTarget) dialogRef.current?.close(); }}>
+    <dialog ref={dialogRef} className={styles.caseDialog} aria-label={open ? `${open.name}结构导览（原文第 ${open.page} 页）` : '报告结构导览'} onClick={event => { if (event.target === event.currentTarget) dialogRef.current?.close(); }}>
       {open && <figure>
         {/* eslint-disable-next-line @next/next/no-img-element -- original, pre-sized schematic SVG */}
         <img src={`${open.imageBase}.svg`} width={560} height={792} alt={open.alt}/>
@@ -561,7 +565,7 @@ export default function LandingPage() {
             </ol>
           </div>
           <div className={styles.gates}>
-            <p><strong>九道质量门禁</strong>任何一道未通过或已过期，都不会给出最终交付的「Go」。</p>
+            <p><strong>九道质量门禁</strong>任何一道未通过或已过期，都不会给出最终交付的“Go”。</p>
             <ol aria-label="九道质量门禁">{GATES.map(([seal, name], index) => <li key={name} style={{ '--i': index } as CSSProperties}><span aria-hidden="true">{seal}</span>{name}</li>)}</ol>
           </div>
         </div>
@@ -583,8 +587,8 @@ export default function LandingPage() {
           <SiliconOrbit/>
           <figure className={styles.miniShot}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized interface crop */}
-            <img src="/landing/crop-fidelity.webp" alt="硅基样本结果页：模拟回答数、阻断问题、建议修改与估计作答时长，以及保真度检验列表。" width={1200} height={410} loading="lazy" decoding="async"/>
-            <figcaption>真实界面：运行后的预测试发现与保真度检验</figcaption>
+            <img src="/landing/crop-fidelity.webp" alt="硅基样本结果页，展示模拟回答数、阻断问题、建议修改与估计作答时长，以及保真度检验列表。" width={1200} height={410} loading="lazy" decoding="async"/>
+            <figcaption>真实界面 · 运行后的预测试发现与保真度检验</figcaption>
           </figure>
         </div>
       </section>
@@ -623,7 +627,7 @@ export default function LandingPage() {
         <div className={styles.sectionHead} data-reveal>
           <p className={styles.kicker}>案例深读</p>
           <h2 id="deep-read-title">一份报告，<br/><span className={styles.foil}>怎样把证据链走完</span></h2>
-          <p>《{CASE_REPORT}》：沿五处阅读定位，看问题、方法与行动怎样连接。画面为原创结构导览，原文可在案例库本地阅读。</p>
+          <p>沿《{CASE_REPORT}》五处阅读定位，看问题、方法与行动怎样连接。画面为原创结构导览，原文可在案例库本地阅读。</p>
           <p className={styles.sectionFoot}>{LANDING_CASE_STUDY.label}</p>
         </div>
         <CaseStudy motion={motion}/>
@@ -641,8 +645,8 @@ export default function LandingPage() {
             </div>
             <figure className={styles.mascot} data-reveal>
               {/* eslint-disable-next-line @next/next/no-img-element -- static, pre-sized derivative of the approved brand anchor */}
-              <img src="/brand/evi-x-character-anchor-v2-960.webp" width={960} height={640} loading="lazy" decoding="async" alt="獬见：深蓝色幼年獬豸，头顶一根带四个发光节点的金色独角，胸前有青金棱镜。"/>
-              <figcaption>守证灵兽「獬见」：独角上的四个节点，依次代表问题、数据、洞察、行动。<small>AI 辅助生成、经人工验收的原创概念角色</small></figcaption>
+              <img src="/brand/evi-x-character-anchor-v2-960.webp" width={960} height={640} loading="lazy" decoding="async" alt="守证灵兽獬见，深蓝色幼年獬豸，头顶一根带四个发光节点的金色独角，胸前有青金棱镜。"/>
+              <figcaption>守证灵兽“獬见”独角上的四个节点，依次代表问题、数据、洞察、行动。<small>AI 辅助生成、经人工验收的原创概念角色</small></figcaption>
             </figure>
           </div>
           <ol className={styles.eras}>
@@ -686,7 +690,7 @@ export default function LandingPage() {
           <Link href="/explore#questions">常见问题</Link>
         </nav>
       </div>
-      <p>引文出处：《礼记·中庸》；《论语·八佾》；许慎《说文解字》；梁启超《清代学术概论》。案例报告版权归原作者。</p>
+      <p>本页引文出自《礼记·中庸》、《论语·八佾》、许慎《说文解字》与梁启超《清代学术概论》。案例报告版权归原作者。</p>
       <span className={styles.wordmark} aria-hidden="true">EVI-X</span>
     </footer>
 

@@ -197,3 +197,74 @@
   .tabs > button,.steps > button,.barTrack i { transition: none; }
   .activityDot { animation: none; }
 }
+
+@media (forced-colors: active) {
+  .lab,
+  .importPanel,
+  .textImport,
+  .datasetBar,
+  .missingSetting,
+  .metrics,
+  .card,
+  .tableScroll thead th,
+  .datasetMenu > div,
+  .reading,
+  .cautions {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .importPanel,
+  .textImport,
+  .datasetBar,
+  .badge,
+  .missingSetting,
+  .metrics,
+  .card,
+  .tableScroll,
+  .datasetMenu > div,
+  .reading,
+  .error,
+  .warning,
+  .notice,
+  .barTrack,
+  .lab button,
+  .lab input:not([type=checkbox]),
+  .lab select,
+  .lab textarea {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .metrics article,
+  .tableScroll th,
+  .tableScroll td,
+  .statsGrid,
+  .statsGrid div,
+  .itemList,
+  .itemRow,
+  .alphaHeading,
+  .statisticNotes,
+  .methodNotes,
+  .steps,
+  .evidenceDrawer,
+  .readOptions {
+    border-color: CanvasText;
+  }
+  .selectionMarker {
+    display: none;
+  }
+  .lab .primary,
+  .importFormats button[aria-pressed=true],
+  .tabs > button[aria-pressed=true],
+  .lab .steps button[aria-pressed=true],
+  .tableScroll tr[data-selected=true],
+  .barTrack i {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .lab :is(button, input, select, textarea, summary, a):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

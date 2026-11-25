@@ -23,15 +23,16 @@
 }
 .grid {
   position: absolute;
-  inset: -30% -20% -45%;
+  inset: -40% -30% -55%;
   background-image:
     linear-gradient(rgba(244, 185, 66, 0.075) 1px, transparent 1px),
     linear-gradient(90deg, rgba(244, 185, 66, 0.075) 1px, transparent 1px);
   background-size: 30px 30px;
-  transform: perspective(620px) rotateX(64deg) scale(1.9);
+  transform: perspective(620px) rotateX(64deg) scale(1.9) translate3d(0, 0, 0);
   transform-origin: 50% 100%;
   mask-image: linear-gradient(transparent 6%, #000 46%, transparent 88%);
   animation: gridDrift 18s linear infinite;
+  will-change: transform;
 }
 .frame {
   position: absolute;
@@ -41,7 +42,18 @@
   border: 1px solid rgba(244, 185, 66, 0.55);
   box-shadow: 0 0 26px -12px rgba(244, 185, 66, 0.55), inset 0 0 26px -18px rgba(79, 209, 193, 0.7);
   animation: roomBreath 9s ease-in-out infinite;
-  will-change: filter;
+  will-change: transform;
+}
+.frame::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(244, 185, 66, 0.78);
+  box-shadow: 0 0 28px -8px rgba(244, 185, 66, 0.72), inset 0 0 26px -14px rgba(79, 209, 193, 0.75);
+  animation: roomBreathGlow 9s ease-in-out infinite;
+  animation-delay: inherit;
+  will-change: opacity;
+  pointer-events: none;
 }
 .core { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; padding: 18px; }
 .ascii {
@@ -61,13 +73,16 @@
 .room[data-compact] .ascii { font-size: 8.5px; padding: 8px 10px; }
 .scan {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 58%;
   z-index: 3;
-  background: linear-gradient(180deg, transparent 0%, rgba(79, 209, 193, 0.16) 47%, rgba(244, 185, 66, 0.12) 50%, transparent 54%);
-  background-size: 100% 240%;
+  background: linear-gradient(180deg, transparent 0%, rgba(79, 209, 193, 0.16) 46%, rgba(244, 185, 66, 0.12) 52%, transparent 100%);
   animation: roomScan 7s linear infinite;
   mix-blend-mode: screen;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 .axis, .label {
   position: absolute;
@@ -96,23 +111,66 @@
 .cornerD { right: 7px; bottom: 3px; }
 
 @keyframes roomBreath {
-  0%, 100% { filter: brightness(0.78) saturate(0.95); }
-  48% { filter: brightness(1.35) saturate(1.1); }
-  52% { filter: brightness(1.15) saturate(1.05); }
+  0%, 100% { scale: 0.985; }
+  48% { scale: 1.02; }
+  52% { scale: 1.008; }
+}
+@keyframes roomBreathGlow {
+  0%, 100% { opacity: 0.22; }
+  48% { opacity: 0.95; }
+  52% { opacity: 0.65; }
 }
 @keyframes roomScan {
-  0% { background-position: 0 -120%; }
-  100% { background-position: 0 220%; }
+  0% { transform: translate3d(0, -100%, 0); opacity: 0.35; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translate3d(0, 260%, 0); opacity: 0.35; }
 }
 @keyframes gridDrift {
-  0% { background-position: 0 0, 0 0; }
-  100% { background-position: 0 60px, 60px 0; }
+  0% { transform: perspective(620px) rotateX(64deg) scale(1.9) translate3d(0, 0, 0); }
+  100% { transform: perspective(620px) rotateX(64deg) scale(1.9) translate3d(60px, 60px, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .grid, .frame, .scan { animation: none !important; }
+  .grid, .frame, .frame::after, .scan { animation: none !important; }
 }
 @media (max-width: 720px) {
   .room { min-height: 196px; }
   .room[data-compact] { min-height: 142px; }
   .ascii { font-size: 6.2px; }
+}
+
+
+@media (forced-colors: active) {
+  .room,
+  .ascii {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border: 1px solid ButtonText;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .room::before,
+  .grid,
+  .scan,
+  .frame::after {
+    display: none !important;
+  }
+
+  .frame {
+    border: 1px solid Highlight !important;
+    background: HighlightText;
+    opacity: 0.2;
+    box-shadow: none !important;
+  }
+
+  .axis,
+  .label,
+  .cornerA,
+  .cornerB,
+  .cornerC,
+  .cornerD {
+    color: CanvasText !important;
+    text-shadow: none !important;
+  }
 }

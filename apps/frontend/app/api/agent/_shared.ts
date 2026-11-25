@@ -11,7 +11,7 @@ type AgentEnv = { EVI_X_AGENT_MASTER_KEY?: string; EVI_X_AGENT_KEY_ID?: string; 
 export function agentDemo(request:Request):boolean {
   return (env as unknown as AgentEnv).EVI_X_AGENT_DEMO==='1'&&['localhost','127.0.0.1','[::1]'].includes(new URL(request.url).hostname);
 }
-export function agentInvitedEmails():string[]{
+function agentInvitedEmails():string[]{
   const config=env as unknown as AgentEnv;
   let invited:unknown;
   try{invited=JSON.parse(config.EVI_X_AGENT_INVITED_EMAILS||'null');}catch{throw new ApiError(503,'agent_email_unavailable','邮箱登录配置暂不可用。');}

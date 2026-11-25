@@ -32,7 +32,7 @@ export function pretestFindings(design: Questionnaire, run: SiliconRun): Finding
   for (const q of design.questions) {
     const answers = responses.map(r => answerOf(r, q.id)).filter((a): a is NonNullable<typeof a> => !!a);
     const shown = answers.filter(a => a.shown);
-    if (!shown.length) { findings.push({ questionId: q.id, level: 'warning', kind: 'unreachable', message: '没有任何模拟受访者看到此题：跳题条件在本轮从未满足，请核对条件或画像。', examples: [] }); continue; }
+    if (!shown.length) { findings.push({ questionId: q.id, level: 'warning', kind: 'unreachable', message: '没有任何模拟受访者看到此题，跳题条件在本轮从未满足，请核对条件或受访画像。', examples: [] }); continue; }
     const unclear = shown.filter(a => a.unclear.trim());
     if (unclear.length / shown.length >= 0.2) findings.push({ questionId: q.id, level: 'warning', kind: 'unclear', message: `${pct(unclear.length / shown.length)} 的模拟受访者表示难以理解或无法按选项作答。`, examples: [...new Set(unclear.map(a => a.unclear.trim()))].slice(0, 3) });
     const refused = shown.filter(a => a.refused);
@@ -43,10 +43,10 @@ export function pretestFindings(design: Questionnaire, run: SiliconRun): Finding
       const counts = new Map(q.choices.map(c => [c.code, 0]));
       for (const v of values) for (const code of Array.isArray(v) ? v : [String(v)]) counts.set(code, (counts.get(code) ?? 0) + 1);
       const unused = q.choices.filter(c => !counts.get(c.code));
-      if (unused.length) findings.push({ questionId: q.id, level: 'info', kind: 'unused_choice', message: `选项「${unused.map(c => c.label || c.code).join('」「')}」没有被任何模拟受访者选择，请确认它是否必要或表述是否清楚。`, examples: [] });
+      if (unused.length) findings.push({ questionId: q.id, level: 'info', kind: 'unused_choice', message: `选项“${unused.map(c => c.label || c.code).join('”“')}”没有被任何模拟受访者选择，请确认它是否必要或表述是否清楚。`, examples: [] });
       if (q.type === 'single') {
         const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-        if (top && top[1] / values.length >= 0.85) findings.push({ questionId: q.id, level: 'warning', kind: 'concentrated', message: `${pct(top[1] / values.length)} 的回答集中在「${q.choices.find(c => c.code === top[0])?.label || top[0]}」，题目可能有诱导或缺乏区分度。`, examples: [] });
+        if (top && top[1] / values.length >= 0.85) findings.push({ questionId: q.id, level: 'warning', kind: 'concentrated', message: `${pct(top[1] / values.length)} 的回答集中在“${q.choices.find(c => c.code === top[0])?.label || top[0]}”，题目可能有诱导或缺乏区分度。`, examples: [] });
       }
     }
     if (q.type === 'likert') {
@@ -198,7 +198,7 @@ export function fidelityReport(design: Questionnaire, run: SiliconRun, expectati
 
   const risks = run.personas.map(fidelityRisk);
   return {
-    turing: { verdict: 'manual', note: '需人工盲评：将模拟开放回答与少量真实预调查回答混排，由未参与设计者判断来源。' },
+    turing: { verdict: 'manual', note: '需开展人工盲评，将模拟开放回答与少量真实预调查回答混排，由未参与设计者判断来源。' },
     backward: { verdict: backwardVerdict, attributes },
     forward: { verdict: forwardVerdict, straightlining: straight, reversePairs: reverse, routingViolations: violations, notes },
     pattern: { verdict: patternVerdict, checks },

@@ -25,9 +25,79 @@ const LEGACY_WAITS = ['正在根据工具结果接着回答…', '正在核对�
 /** The service of a model call stored before calls were recorded on their messages, when nothing names it. */
 export const UNRECORDED_SERVICE = '未记录的服务';
 
+const MATH_SEGMENT_RE = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/gu;
+const DANGEROUS_MATH_PAYLOAD_RE =
+  /<(?:\/?\s*(?:script|iframe|object|embed|svg|img|style|link|meta|base|form|foreignObject))\b|\bon[a-z]+\s*=|(?:javascript|vbscript)\s*:|data\s*:\s*text\/html/iu;
+
+const STAT_SYMBOL_SPACING_RULES: readonly [RegExp, string][] = [
+  [/(?<![A-Za-z])Mann[-–—]Whitney\s*U(?![A-Za-z])/giu, 'Mann-Whitney U'],
+  [/(?<![A-Za-z])Cliff['’]s\s*(?:δ(?![A-Za-z\u0370-\u03ff])|Delta(?![A-Za-z]))/giu, "Cliff's δ"],
+  [/(?<![A-Za-z])Kruskal[-–—]Wallis\s*H(?![A-Za-z])/giu, 'Kruskal-Wallis H'],
+  [/(?<![A-Za-z])Wilcoxon\s*W(?![A-Za-z])/giu, 'Wilcoxon W'],
+  [/(?<![A-Za-z])Student['’]s\s*t(?![A-Za-z])/giu, "Student's t"],
+  [/(?<![A-Za-z])Welch['’]s\s*t(?![A-Za-z])/giu, "Welch's t"],
+  [/(?<![A-Za-z])Cohen['’]s\s*d(?![A-Za-z])/giu, "Cohen's d"],
+  [/(?<![A-Za-z\u00c0-\u024f])Cram[eé]r['’]s\s*V(?![A-Za-z])/giu, "Cramér's V"],
+  [/(?<![A-Za-z\u00c0-\u024f])Cram[eé]rV(?![A-Za-z])/giu, 'Cramér V'],
+  [/(?<![A-Za-z])Cronbach['’]s\s*α(?![A-Za-z\u0370-\u03ff])/giu, "Cronbach's α"],
+  [/(?<![A-Za-z])Cronbachα(?![A-Za-z\u0370-\u03ff])/giu, 'Cronbach α'],
+  [/(?<![A-Za-z])Spearman['’]s\s*ρ(?![A-Za-z\u0370-\u03ff])/giu, "Spearman's ρ"],
+  [/(?<![A-Za-z])Spearman\s*ρ(?![A-Za-z\u0370-\u03ff])/giu, 'Spearman ρ'],
+];
+
+function sanitizePlainTranscriptSegment(segment: string): string {
+  let out = segment
+    // Neutralize Markdown links pointing to executable/HTML schemes
+    .replace(/\[([^\]]*)\]\(\s*(?:javascript|vbscript|data\s*:\s*text\/html)[^)]*\)/giu, '[$1](#)')
+    // Neutralize inline event handler attributes before escaping HTML angle brackets
+    .replace(/\bon([a-z0-9_]+)\s*=/giu, 'data-blocked-$1=')
+    // Escape complete HTML/SVG tags while keeping mathematical "<" (e.g. "p < 0.0001") untouched
+    .replace(/<(\/?[A-Za-z!][^>]*)>/gu, '&lt;$1&gt;')
+    // Catch unclosed dangerous HTML tag openings
+    .replace(/<(\/?\s*(?:script|iframe|object|embed|svg|img|style|link|meta|base|form|foreignObject))\b/giu, '&lt;$1')
+    // Neutralize bare executable URI schemes
+    .replace(/(?:javascript|vbscript)\s*:/giu, 'blocked-scheme:')
+    .replace(/data\s*:\s*text\/html/giu, 'blocked-data-html')
+    // Clean forbidden informal brackets into standard academic Chinese punctuation
+    .replace(/\u3010/gu, '（')
+    .replace(/\u3011/gu, '）')
+    .replace(/\u300c/gu, '“')
+    .replace(/\u300d/gu, '”')
+    .replace(/\u300e/gu, '‘')
+    .replace(/\u300f/gu, '’')
+    // Heal p=0.000 rounding artifacts and rho= notation
+    .replace(/\brho\s*=/giu, 'ρ=')
+    .replace(/\bp\s*=\s*0(?:\.0+)?(?![0-9.])/giu, 'p < 0.0001')
+    // De-technicalize internal architecture tokens if present in raw messages
+    .replace(/\bEpistemicGraph\b/gu, '证据图谱')
+    .replace(/\bReAct\b/gu, '多步推演')
+    .replace(/\bBYOK\b/giu, '自带密钥')
+    .replace(/\bDAG\b/gu, '依赖流程')
+    .replace(/\bTrack\s*([12])\b/giu, '路径 $1');
+
+  for (const [pattern, replacement] of STAT_SYMBOL_SPACING_RULES) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
+/** Sanitizes exported transcript text while keeping valid `$...$` / `$$...$$` TeX math and `{}` intact. */
+export function sanitizeTranscriptText(text: string): string {
+  if (!text) return '';
+  return text
+    .split(MATH_SEGMENT_RE)
+    .map(part =>
+      part.startsWith('$') && part.endsWith('$') && !DANGEROUS_MATH_PAYLOAD_RE.test(part)
+        ? part
+        : sanitizePlainTranscriptSegment(part),
+    )
+    .join('');
+}
+
 /** The file name for a conversation's record, safe on every system. */
 export function recordName(thread: Pick<RecordThread, 'title'>, now: number): string {
-  const d = new Date(now), safe = thread.title.replace(/[\\/:*?"<>|\s]+/gu, '-').replace(/^-+|-+$/gu, '').slice(0, 30) || '对话';
+  const cleanTitle = sanitizeTranscriptText(thread.title);
+  const d = new Date(now), safe = cleanTitle.replace(/[\\/:*?"<>|\u3010\u3011\u300c\u300d\u300e\u300f\s]+/gu, '-').replace(/^-+|-+$/gu, '').slice(0, 30) || '对话';
   return `证见对话-${safe}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.md`;
 }
 
@@ -55,7 +125,7 @@ function callOf(m: Said): (Call & { kind: 'chat' | 'draft' | 'proposal' }) | nul
   const [first, named] = m.turn.lines[0] ?? [];
   const ended = first && (first.mark === 'error' ? LEGACY_ENDS.get(first.text) : first.text === '正在请' ? 'running' : LEGACY_WAITS.includes(first.text) ? 'unknown' : undefined);
   if (!ended) return null;
-  return { service: first.text === '正在请' && named ? named.text.replace(/^「|」$/gu, '') : UNRECORDED_SERVICE, step: 1, status: ended, kind: 'chat' };
+  return { service: first.text === '正在请' && named ? named.text.replace(/^[\u300c“]|[\u300d”]$/gu, '') : UNRECORDED_SERVICE, step: 1, status: ended, kind: 'chat' };
 }
 
 const heading = (m: Said, call: ReturnType<typeof callOf>) => {
@@ -97,13 +167,14 @@ function cardsText(m: Extract<Said, { role: 'agent' }>): string[] {
 export function conversationMarkdown(thread: RecordThread, now: number): string {
   const said = thread.messages.filter((m): m is Said => m.role !== 'pending');
   const calls = said.map(callOf).filter((c): c is NonNullable<ReturnType<typeof callOf>> => !!c && c.status !== 'refused' && !(c.kind === 'draft' && c.status === 'ready'));
-  const services = [...new Set(calls.map(c => c.service))], unclear = calls.filter(c => c.status === 'running' || c.status === 'unknown').length;
+  const services = [...new Set(calls.map(c => sanitizeTranscriptText(c.service)))], unclear = calls.filter(c => c.status === 'running' || c.status === 'unknown').length;
+  const cleanTitle = sanitizeTranscriptText(thread.title);
   const lines = [
-    `# 证见 Agent 对话记录：${thread.title}`, '',
+    `# 证见研究对话记录 · ${cleanTitle}`, '',
     `- 开始于 ${stamp(thread.createdAt)}，导出于 ${stamp(now)}`,
     calls.length
       ? `- 本段对话调用生成式模型 ${calls.length} 次${unclear ? `（其中 ${unclear} 次结果尚不明确）` : ''}，服务：${services.join('、')}。标为“模型”的内容由模型生成，未经核实；其余回答由平台按规则给出，未调用模型。`
-      : '- 本段对话未调用生成式模型：全部回答由平台按规则给出（指令模式）。',
+      : '- 本段对话未调用生成式模型，全部回答均由平台按规则给出（指令模式）。',
     '- 本记录只覆盖这段对话在本浏览器里保存的内容，不是完整的 AI 使用台账。',
     '',
   ];
@@ -111,8 +182,9 @@ export function conversationMarkdown(thread: RecordThread, now: number): string 
     const call = callOf(m);
     // A model's answer carries a closing note that it is unverified; the heading says so already.
     const shown = m.role === 'agent' && call?.kind === 'chat' ? m.turn.lines.filter(line => !(line[0]?.mark === 'cyan' && line[0].text.trim() === '◆')) : m.role === 'agent' ? m.turn.lines : [];
-    const body = m.role === 'user' ? m.text : [turnText({ ...m.turn, lines: shown.map(bold) }, Infinity), ...cardsText(m)].filter(Boolean).join('\n');
-    if (body.trim()) lines.push(`## ${heading(m, call)} · ${stamp(m.at)}`, '', body.trim(), '');
+    const rawBody = m.role === 'user' ? m.text : [turnText({ ...m.turn, lines: shown.map(bold) }, Infinity), ...cardsText(m)].filter(Boolean).join('\n');
+    const body = sanitizeTranscriptText(rawBody).trim();
+    if (body) lines.push(`## ${sanitizeTranscriptText(heading(m, call))} · ${stamp(m.at)}`, '', body, '');
   }
   return lines.join('\n');
 }

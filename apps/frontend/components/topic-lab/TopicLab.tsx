@@ -139,10 +139,10 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
   const corpusLabel = !corpus || !merged ? '' : corpus.kind === 'library'
     ? `内置获奖案例索引 ${records.length} 项题名（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`
     : isLocalArchive
-      ? `2015–2025 历届正大杯全量题录 ${fmtInt(records.length)} 篇（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`
+      ? `2015–2025 历届全国市调大赛国奖题录 ${fmtInt(records.length)} 篇（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`
       : `导入的 ${[...new Set(corpus.files.filter(f => f.records).map(f => f.format === 'unknown' ? '未知格式' : FORMAT_LABELS[f.format]))].join(' + ')} 共 ${fmtInt(records.length)} 条记录（${cy?.min ?? '—'}–${cy?.max ?? '—'}）`;
 
-  const dataNote = `数据：${corpusLabel}；词来源：${SOURCE_LABELS[activeSource]}，出现 ≥ ${minDf} 篇，显示前 ${maxTerms} 个词。`;
+  const dataNote = `语料范围为${corpusLabel}，采用${SOURCE_LABELS[activeSource]}（出现 ≥ ${minDf} 篇，显示前 ${maxTerms} 个词）。`;
 
   async function addFiles(list: FileList | File[]) {
     const files = [...list];
@@ -204,7 +204,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
         <button type="button" className={styles.linkButton} onClick={loadLibrary}>试用内置题名索引（{awardCases.length} 项）</button>
         <small>{restoreBusy ? '正在核对项目文献快照…' : onSnapshot ? '仅在本浏览器解析，文献快照由当前项目保存。' : '仅在本浏览器解析；当前宿主未配置快照保存。'}</small>
         {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
-        {corpus && !records.length && <p className={styles.errorLine} role="alert">没有读到有效记录：{corpus.files.map(f => `${f.name}（${f.warnings[0] ?? '0 条'}）`).join('；')}</p>}
+        {corpus && !records.length && <p className={styles.errorLine} role="alert">未能读到有效记录（{corpus.files.map(f => `${f.name} · ${f.warnings[0] ?? '0 条'}`).join('；')}）</p>}
       </div>
       <div className={styles.introText}>
         <h4>从文献到候选题目</h4>
@@ -220,10 +220,10 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
     {importError && <p className={styles.errorLine} role="alert">{importError}</p>}
     <div className={styles.corpusBar}>
       <div className={styles.corpusMain}>
-        <span className={styles.eyebrowSmall}>{corpus.kind === 'library' ? '示例语料 · 内置获奖案例索引' : isLocalArchive ? '本地全量语料 · 2015–2025 历届正大杯国奖题录' : '文献语料'}</span>
+        <span className={styles.eyebrowSmall}>{corpus.kind === 'library' ? '示例语料 · 内置获奖案例索引' : isLocalArchive ? '本地全量语料 · 2015–2025 历届全国市调大赛国奖题录' : '文献语料'}</span>
         <strong>{fmtInt(records.length)} 条记录{cy?.min ? ` · ${cy.min}–${cy.max}` : ''}</strong>
-        {corpus.kind === 'import' && isLocalArchive && <span>源自用户本地 2014–2025 历届正大杯 PDF 合集（含 {ZHENGDA_ARCHIVE_META.cpPropositions} 篇正大企业命题），属描述性参照语料，非官方认证或排名依据。</span>}
-        {corpus.kind === 'import' && !isLocalArchive && <span>{corpus.files.map(f => `${f.name}：${f.format === 'unknown' ? '无法识别' : `${FORMAT_LABELS[f.format]} ${f.records} 条`}`).join('；')}{merged!.duplicates ? `；合并去重 ${merged!.duplicates} 条` : ''}</span>}
+        {corpus.kind === 'import' && isLocalArchive && <span>整理自 2014–2025 历届全国市调大赛获奖作品合集（含 {ZHENGDA_ARCHIVE_META.cpPropositions} 篇企业命题专项），属描述性参照语料，非官方认证或排名依据。</span>}
+        {corpus.kind === 'import' && !isLocalArchive && <span>{corpus.files.map(f => `${f.name}（${f.format === 'unknown' ? '无法识别' : `${FORMAT_LABELS[f.format]} ${f.records} 条`}）`).join('；')}{merged!.duplicates ? `；合并去重 ${merged!.duplicates} 条` : ''}</span>}
         {corpus.kind === 'library' && <span>{awardCases.filter(c => c.verification === 'official_verified').length} 项官方来源核验 + {awardCases.filter(c => c.verification !== 'official_verified').length} 项用户陈述；非历届全量，只能描述这些题名本身。</span>}
       </div>
       {quality && <dl className={styles.quality}>
@@ -239,7 +239,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
         {corpus.kind === 'library' && <button type="button" className={styles.primaryButton} onClick={() => { clear(); }}>导入自己的文献</button>}
         <button type="button" className={styles.linkButton} onClick={clear}>清除</button>
       </div>
-      {corpus.files.some(f => f.warnings.length) && <ul className={styles.warnList}>{corpus.files.flatMap(f => f.warnings.map(w => <li key={f.name + w}>{f.name}：{w}</li>))}</ul>}
+      {corpus.files.some(f => f.warnings.length) && <ul className={styles.warnList}>{corpus.files.flatMap(f => f.warnings.map(w => <li key={f.name + w}>{f.name} · {w}</li>))}</ul>}
     </div>
 
     <div className={styles.settings}>
@@ -256,7 +256,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
       <details className={styles.thesaurus}>
         <summary>合并与排除{thesaurus.trim() ? `（${thes.synonyms.size} 组合并、${thes.exclude.size} 个排除）` : ''}</summary>
         <p className={styles.muted}>每行一条。“原词 =&gt; 统一词”合并同义词，单独一个词表示排除。修改后点“应用”。</p>
-        <textarea rows={4} value={thesaurusDraft} onChange={e => setThesaurusDraft(e.target.value)} placeholder={'新能源汽车 => 电动汽车\nEVs => electric vehicle\n研究'} />
+        <textarea aria-label="同义词合并与排除规则" rows={4} value={thesaurusDraft} onChange={e => setThesaurusDraft(e.target.value)} placeholder={'新能源汽车 => 电动汽车\nEVs => electric vehicle\n研究'} />
         <button type="button" className={styles.secondaryButton} onClick={() => setThesaurus(thesaurusDraft)} disabled={thesaurusDraft === thesaurus}>应用</button>
       </details>
     </div>
@@ -281,7 +281,7 @@ export default function TopicLab({ onUseTopic, initialSnapshot = null, onSnapsho
       </>}
     </div>
     {basket.length > 0 && view !== 'studio' && <div className={styles.basketDock} role="status">
-      <span>选题篮：{basketLabels.join('、')}</span>
+      <span>已选入选题篮 · {basketLabels.join('、')}</span>
       <button type="button" className={styles.primaryButton} onClick={() => setView('studio')}>去选题工作台</button>
     </div>}
     <MethodNotes />
@@ -304,7 +304,7 @@ function ExportGuide() {
       </article>
       <article>
         <h5>Scopus、Google Scholar 与文献管理软件</h5>
-        <ol><li>导出为 <b>RIS</b> 或 <b>BibTeX</b></li><li>Zotero / EndNote：选中条目 → 导出 → RIS</li></ol>
+        <ol><li>导出为 <b>RIS</b> 或 <b>BibTeX</b></li><li>在 Zotero 或 EndNote 中选中条目并导出为 RIS</li></ol>
         <p className={styles.muted}>检索式决定了你看到的“领域”。建议在方法部分写明数据库、检索式、时间范围与导出日期。</p>
       </article>
     </div>
@@ -321,7 +321,7 @@ function MethodNotes() {
       <section><h5>突现与趋势</h5><p>突现用 Kleinberg（2002）二状态模型（s = 2，γ 可调）。趋势用双比例 z 检验比较最近 3 年与此前的占比，两段各需 ≥ 20 条记录、该词 ≥ 8 篇，|z| ≥ 1.96 才判为显著。</p></section>
       <section><h5>研究空白</h5><p>对高频词两两做单侧 Fisher 精确检验（实际共现是否显著少于独立预期），用 Benjamini–Hochberg 方法控制错误发现率。这只说明“很少被一起研究”，是否值得研究取决于真实的决策问题。</p></section>
       <section><h5>文献关系</h5><p>施引文献之间用书目耦合（Kessler，1963，余弦归一化）；被引文献之间用共被引（Small，1973）。参考文献按引用字符串或 DOI 识别，写法不一致会被拆分。被引次数是导出时的累计值，早年文献天然更高。</p></section>
-      <section><h5>获奖题目参照</h5><p>只用内置索引中的题名做描述性对照：题目要素的出现比例、题面相似度与公告来源。索引不是全量榜单，也没有未获奖作品作对照，<strong>本工具不估计、也不暗示获奖概率</strong>。</p></section>
+      <section><h5>获奖题目参照</h5><p>只用内置索引中的题名做描述性对照，呈现题目要素的出现比例、题面相似度与公告来源。索引不是全量榜单，也没有未获奖作品作对照，<strong>本工具不估计、也不暗示获奖概率</strong>。</p></section>
       <section><h5>数据与隐私</h5><p>所有解析与计算都在你的浏览器中完成，文件不上传。图表只呈现导入文件中的真实记录，不补全、不生成任何文献。</p></section>
     </div>
   </details>;

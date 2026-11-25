@@ -18,7 +18,7 @@ const localRequire=id=>{
   if(id==='react'||id==='react/jsx-runtime')return require(id);
   if(id.endsWith('.module.css'))return {default:style};
   if(id.endsWith('/chat'))return {usageText:()=> 'usage'};
-  if(id.endsWith('/Tex'))return {Formula:stub};
+  if(id.endsWith('/Tex')||id.endsWith('/TexLazy'))return {Formula:stub,FormulaLazy:stub};
   if(id==='./generation')return {ConsentCard:stub,JobCard:stub,ProposalView:stub};
   if(id==='./Glyphs')return {Spans:({line})=>React.createElement('span',null,line.map(s=>s.text).join(''))};
   if(id==='./icons')return {Icon:({name})=>React.createElement('span',{'data-icon':name})};

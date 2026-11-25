@@ -24,3 +24,35 @@
 @media(max-width:760px) { .body { grid-template-columns:minmax(0,1fr); }.activity { border-left:0; border-top:1px solid var(--journey-line); } }
 @media(max-width:460px) { .stations { grid-template-columns:repeat(2,minmax(0,1fr)); }.journey .station { padding:9px 7px; } }
 @media(prefers-reduced-motion:reduce) { .journey * { animation:none !important; transition:none !important; } }
+
+@media (forced-colors: active) {
+  .journey button:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .journey,
+  .journey .controls button,
+  .journey .station {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .journey .station[data-active=true],
+  .moduleTrack li[data-current=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .journey .header,
+  .readingWork,
+  .sceneFooter,
+  .activity,
+  .resultsCount,
+  .moduleTrack {
+    border-color: CanvasText !important;
+  }
+}

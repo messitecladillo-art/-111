@@ -60,3 +60,51 @@
 .composedPreview { grid-column:1/-1; }.composedPreview>details { padding-top:14px; }.composedPreview>details summary { cursor:pointer; color:var(--wb-muted); font-size:12px; }
 @media(max-width:1280px){.selectionHeading{align-items:flex-start;flex-direction:column;gap:5px}.chapterChoices{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce) { .board *,.board *::before { animation:none!important; transition:none!important; } }
+
+@media (forced-colors: active) {
+  .board,
+  .board header,
+  .topbar,
+  .grid nav,
+  .previews article,
+  .previews blockquote,
+  .sourceModes,
+  .chapterChoices label,
+  .linkNotice {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .board,
+  .previews article,
+  .sourceModes,
+  .sourceModes button,
+  .chapterChoices label,
+  .blockChoices label,
+  .board button {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .notice,
+  .source,
+  .board footer,
+  .linkNotice,
+  .sourcePicker,
+  .selectedSources details {
+    border-color: CanvasText;
+  }
+  .motionMarker {
+    display: none;
+  }
+  .grid nav button[aria-current],
+  .sourceModes button[aria-pressed=true],
+  .blockChoices label[data-selected=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .board :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

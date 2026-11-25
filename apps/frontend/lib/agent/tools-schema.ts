@@ -78,11 +78,11 @@ export const AGENT_TOOL_SPECS: readonly AgentToolSpec[] = [
   },
   {
     id: 'trace',
-    zhLabel: '光路溯源图表',
+    zhLabel: '图表数据溯源',
     category: 'inspect',
     categoryLabel: '循证检索',
     mutates: false,
-    summary: '从报告里的图/表沿光路逆向追溯至清洗台账、原始数据指纹与对应题项。',
+    summary: '从报告里的图表逆向核查清洗台账、原始数据校验值与对应调查题项。',
     argsHint: 'reference',
     parameters: {
       type: 'object',
@@ -94,11 +94,11 @@ export const AGENT_TOOL_SPECS: readonly AgentToolSpec[] = [
   },
   {
     id: 'lookup',
-    zhLabel: '检索知识镜词条',
+    zhLabel: '检索方法词条',
     category: 'inspect',
     categoryLabel: '循证检索',
     mutates: false,
-    summary: '从已审核统计学与市调知识库中查出精确定义、LaTeX 公式与参考文献出处。',
+    summary: '从已审核统计学与市场调查方法库中查出准确定义、数学公式与文献出处。',
     argsHint: 'query',
     parameters: {
       type: 'object',
@@ -110,43 +110,43 @@ export const AGENT_TOOL_SPECS: readonly AgentToolSpec[] = [
   },
   {
     id: 'open',
-    zhLabel: '呼出右侧功能模块',
+    zhLabel: '展开右侧功能模块',
     category: 'navigate',
     categoryLabel: '舞台调度',
     mutates: false,
-    summary: '按需求在右侧滑出对应的研究工作台模块（问卷设计、抽样、分析、画布、成文、答辩等）。',
+    summary: '按需求在右侧展开对应的研究工作台模块（问卷设计、抽样、分析、画布、成文、答辩等）。',
     argsHint: 'room',
     parameters: {
       type: 'object',
       properties: {
-        room: { type: 'string', enum: ROOM_ENUM, description: '要展开的模块 ID。' },
+        room: { type: 'string', enum: ROOM_ENUM, description: '要展开的模块标识。' },
       },
       required: ['room'],
     },
   },
   {
     id: 'stage',
-    zhLabel: '切换核心主舞台',
+    zhLabel: '切换核心主视图',
     category: 'navigate',
     categoryLabel: '舞台调度',
     mutates: false,
-    summary: '切换中央视口形态：对话大脑(chat)、A4 成文镜台(paper) 或 专家圆桌(advisors)。',
+    summary: '切换中央主视图，支持研究对话（chat）、A4 报告纸面（paper）、专家顾问（advisors）或研究资料库（library）。',
     argsHint: 'view',
     parameters: {
       type: 'object',
       properties: {
-        view: { type: 'string', enum: ['chat', 'paper', 'advisors'], description: '目标舞台。' },
+        view: { type: 'string', enum: ['chat', 'paper', 'advisors', 'library'], description: '目标主视图。' },
       },
       required: ['view'],
     },
   },
   {
     id: 'studio',
-    zhLabel: '召唤交互工坊卡',
+    zhLabel: '展开交互工坊卡',
     category: 'studio',
     categoryLabel: '交互工坊',
     mutates: false,
-    summary: '在对话流中直接呼出统计绘图(chart)、Python/R/LaTeX 编程(code)、润色撰稿(writing)或备赛教练(coach)交互工坊。',
+    summary: '在对话流中直接展开统计绘图（chart）、统计脚本编写（code）、润色撰稿（writing）或备赛指导（coach）交互工坊。',
     argsHint: 'kind',
     parameters: {
       type: 'object',
@@ -158,7 +158,7 @@ export const AGENT_TOOL_SPECS: readonly AgentToolSpec[] = [
   },
   {
     id: 'simulate',
-    zhLabel: '铸造教学模拟研究',
+    zhLabel: '生成教学模拟研究',
     category: 'navigate',
     categoryLabel: '舞台调度',
     mutates: false,
@@ -186,7 +186,7 @@ export const AGENT_TOOL_SPECS: readonly AgentToolSpec[] = [
     category: 'write',
     categoryLabel: '确认写入',
     mutates: true,
-    summary: '基于研究需求构建结构化调查问卷草案（需用户确认后调用模型）。',
+    summary: '基于研究需求构建结构化调查问卷草案，经用户确认后发起生成。',
     argsHint: 'brief',
     parameters: {
       type: 'object',
@@ -218,12 +218,99 @@ export const AGENT_TOOL_SPECS: readonly AgentToolSpec[] = [
     category: 'write',
     categoryLabel: '确认写入',
     mutates: true,
-    summary: '以研究大脑调度全篇 26 节合规报告候选稿流式编排（弹出确认门控后运行）。',
+    summary: '按已登记实证材料流式编排全篇合规报告候选稿，经用户确认后运行。',
     argsHint: 'topic?',
     parameters: {
       type: 'object',
       properties: {
         topic: { type: 'string', description: '可选，研究课题名称。' },
+      },
+    },
+  },
+  {
+    id: 'run_autonomous_research',
+    zhLabel: '多步自主统计探索',
+    category: 'inspect',
+    categoryLabel: '循证检索',
+    mutates: false,
+    summary: '在主对话中对当前数据开展多步统计检验、论证脉络梳理与稳健性反证核查，自动排查多重共线性、完全分离与分层混杂偏误并登记可复核结果快照。',
+    argsHint: 'goal?, datasetMode?',
+    parameters: {
+      type: 'object',
+      properties: {
+        goal: { type: 'string', description: '可选，本次自主探索核心问题或验证目标（不超过 200 字）。' },
+        datasetMode: {
+          type: 'string',
+          enum: ['planted_trap_benchmark', 'inline_dataset'],
+          description: '可选，inline_dataset（当前工作区脱敏数据，需不少于 10 行）或 planted_trap_benchmark（统计偏误基准验证集）。',
+        },
+      },
+    },
+  },
+  {
+    id: 'recommend_resource',
+    zhLabel: '智能匹配研究资源',
+    category: 'inspect',
+    categoryLabel: '循证检索',
+    mutates: false,
+    summary: '跨百余种统计图表、学术三线表、研究框架图、版式组合图板与期刊配色方案进行方法与语义智能匹配。',
+    argsHint: 'query?',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '可选，方法、主题或视觉检索词，如“回归”“路径机理”“配色”（不超过 60 字）。' },
+      },
+    },
+  },
+  {
+    id: 'lookup_county',
+    zhLabel: '检索县域风物志',
+    category: 'inspect',
+    categoryLabel: '循证检索',
+    mutates: false,
+    summary: '检索覆盖全国 2,845 个县区的中国县域风物志数据库，返回地标、标签与政经文社俗五维质性脉络。',
+    argsHint: 'query',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '县区名、关键词或 6 位行政区划代码，如“义乌”或“330782”。' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    id: 'verify_citation',
+    zhLabel: '文献 DOI 循证核验',
+    category: 'inspect',
+    categoryLabel: '循证检索',
+    mutates: false,
+    summary: '结合离线方法学文献库与学术索引对 DOI 或论文题名关键词做核验，未命中文献严格拦截，绝不编造引用。',
+    argsHint: 'query?, doi?',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '可选，文献题名、作者或方法关键词（不超过 120 字）。' },
+        doi: { type: 'string', description: '可选，标准 DOI 编号，如 10.1016/j.jeconom.2020.12.001（不超过 80 字）。' },
+      },
+    },
+  },
+  {
+    id: 'render_sandbox_plot',
+    zhLabel: '科研统计图表绘制',
+    category: 'studio',
+    categoryLabel: '交互工坊',
+    mutates: false,
+    summary: '基于已登记的统计结果快照绘制经过版面自检的高清矢量统计图，并自动收入成果架。',
+    argsHint: 'snapshotId?, chartKind?',
+    parameters: {
+      type: 'object',
+      properties: {
+        snapshotId: { type: 'string', description: '可选，目标统计快照标识；留空时自动选择最新统计结果（不超过 80 字）。' },
+        chartKind: {
+          type: 'string',
+          enum: ['auto', 'bar', 'line', 'forest', 'dumbbell'],
+          description: '可选，支持 auto（自动适配）、bar（柱状图）、line（折线图）、forest（森林图）或 dumbbell（哑铃图）。',
+        },
       },
     },
   },
@@ -238,7 +325,7 @@ export function toOpenAiToolDefinitions() {
     type: 'function' as const,
     function: {
       name: spec.id,
-      description: `${spec.zhLabel}：${spec.summary}`,
+      description: `${spec.zhLabel}，${spec.summary}`,
       parameters: spec.parameters,
     },
   }));
@@ -261,8 +348,8 @@ export function validateToolAction(name: string, rawArgs: unknown): ChatAction |
     case 'open':
       return validRoom(args.room) ? { tool: 'open', args: { room: args.room as (typeof ROOMS)[number]['id'] } } : null;
     case 'stage':
-      return typeof args.view === 'string' && ['chat', 'paper', 'advisors'].includes(args.view)
-        ? { tool: 'stage', args: { view: args.view as 'chat' | 'paper' | 'advisors' } }
+      return typeof args.view === 'string' && ['chat', 'paper', 'advisors', 'library'].includes(args.view)
+        ? { tool: 'stage', args: { view: args.view as 'chat' | 'paper' | 'advisors' | 'library' } }
         : null;
     case 'studio':
       return typeof args.kind === 'string' && ['chart', 'code', 'writing', 'coach'].includes(args.kind)
@@ -297,6 +384,52 @@ export function validateToolAction(name: string, rawArgs: unknown): ChatAction |
       return typeof args.node === 'string' && args.node.trim() && args.node.trim().length <= 40
         ? { tool: 'draft_section', args: { node: args.node.trim() } }
         : null;
+    case 'run_autonomous_research': {
+      const out: { goal?: string; datasetMode?: 'planted_trap_benchmark' | 'inline_dataset' } = {};
+      if (args.goal !== undefined && args.goal !== '') {
+        if (typeof args.goal !== 'string' || !args.goal.trim() || args.goal.trim().length > 200) return null;
+        out.goal = args.goal.trim();
+      }
+      if (args.datasetMode !== undefined && args.datasetMode !== '') {
+        if (args.datasetMode !== 'planted_trap_benchmark' && args.datasetMode !== 'inline_dataset') return null;
+        out.datasetMode = args.datasetMode;
+      }
+      return { tool: 'run_autonomous_research', args: out };
+    }
+    case 'recommend_resource': {
+      if (args.query === undefined || args.query === '') return { tool: 'recommend_resource', args: {} };
+      return typeof args.query === 'string' && args.query.trim() && args.query.trim().length <= 60
+        ? { tool: 'recommend_resource', args: { query: args.query.trim() } }
+        : null;
+    }
+    case 'lookup_county':
+      return typeof args.query === 'string' && args.query.trim() && args.query.trim().length <= 60
+        ? { tool: 'lookup_county', args: { query: args.query.trim() } }
+        : null;
+    case 'verify_citation': {
+      const out: { query?: string; doi?: string } = {};
+      if (args.query !== undefined && args.query !== '') {
+        if (typeof args.query !== 'string' || !args.query.trim() || args.query.trim().length > 120) return null;
+        out.query = args.query.trim();
+      }
+      if (args.doi !== undefined && args.doi !== '') {
+        if (typeof args.doi !== 'string' || !args.doi.trim() || args.doi.trim().length > 80) return null;
+        out.doi = args.doi.trim();
+      }
+      return { tool: 'verify_citation', args: out };
+    }
+    case 'render_sandbox_plot': {
+      const out: { snapshotId?: string; chartKind?: 'auto' | 'bar' | 'line' | 'forest' | 'dumbbell' } = {};
+      if (args.snapshotId !== undefined && args.snapshotId !== '') {
+        if (typeof args.snapshotId !== 'string' || !args.snapshotId.trim() || args.snapshotId.trim().length > 80) return null;
+        out.snapshotId = args.snapshotId.trim();
+      }
+      if (args.chartKind !== undefined && args.chartKind !== '') {
+        if (typeof args.chartKind !== 'string' || !['auto', 'bar', 'line', 'forest', 'dumbbell'].includes(args.chartKind)) return null;
+        out.chartKind = args.chartKind as 'auto' | 'bar' | 'line' | 'forest' | 'dumbbell';
+      }
+      return { tool: 'render_sandbox_plot', args: out };
+    }
     default:
       return null;
   }

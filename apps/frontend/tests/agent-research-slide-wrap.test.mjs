@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { buildDemoPack } from '../lib/agent/demo-study.ts';
 import { buildPptx } from '../lib/editor-export.ts';
 import { buildReportBlockSlide, reportLinkState } from '../lib/report-storyboard.ts';
+import { normalizeAcademicPunctuation } from '../lib/typography.ts';
 
 const fromXml = text => text
   .replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"')
@@ -33,7 +34,7 @@ test('the Agent demonstration screening table wraps native cells within the slid
     assert.match(cell[0], /<a:pPr[^>]*algn="ctr"/);
     return [...cell[0].matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map(text => fromXml(text[1])).join('\n');
   }));
-  assert.deepEqual(cells, [result.headers, ...result.rows].map(row => row.map(String)));
+  assert.deepEqual(cells, [result.headers, ...result.rows].map(row => row.map(cell => normalizeAcademicPunctuation(String(cell)))));
   assert.equal(widths.length, result.headers.length);
   assert.ok(widths.every(width => width > 0));
   assert.ok(widths.reduce((sum, width) => sum + width, 0) <= Math.ceil(object.width / 100 * 12192000) + widths.length);

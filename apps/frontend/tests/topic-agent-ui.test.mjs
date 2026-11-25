@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { parseKnowledgeLookup } from '../lib/knowledge/api-contracts.ts';
 import { knownTopicAgentRejection } from '../lib/topic-agent/index.ts';
 import { resolveStageModelRoute } from '../lib/agent/model-routing.ts';
+import { normalizeAcademicPunctuation } from '../lib/typography.ts';
 
 // Exercise the real component handlers/effects with bounded API promises; no live provider.
 const ts = createRequire(import.meta.url)('typescript');
@@ -63,6 +64,7 @@ function mount(options = {}) {
     '@/lib/topic-advisor/parse': { stableStringify: value => JSON.stringify(canonical(value)) },
     '@/lib/topic-advisor/client-bundle': { TOPIC_BUNDLE: { catalog: { patterns: [{ id: 'topic-1' }] } } },
     '@/lib/topic-proposal': { TOPIC_SOURCE_VERSIONS: versions, topicGeographyLabel: profile => profile.city },
+    '@/lib/typography': { normalizeAcademicPunctuation },
     '@/lib/agent/model-routing': { getStageModelPreferences: () => options.modelPreferences ?? {schemaVersion:2,tasks:{},steps:{}}, getServerStageModelPreferences: () => ({schemaVersion:2,tasks:{},steps:{}}), subscribeModelPreferences: () => () => {}, resolveStageModelRoute, setStageModelPreference: (_owner, call, id) => { options.modelPreferences = {...(options.modelPreferences ?? {schemaVersion:2,tasks:{},steps:{}}), steps:{...options.modelPreferences?.steps,[call]:id}}; } },
     '@/lib/topic-agent': {
       TOPIC_AGENT_SOURCE_VERSIONS: versions,

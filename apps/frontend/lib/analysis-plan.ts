@@ -52,7 +52,7 @@ export function createTemplateNodes(templateId: PlanTemplateId, makeId: () => st
   const template = PLAN_TEMPLATES.find(item => item.id === templateId);
   if (!template) throw Error('分析路线版本不支持。');
   const nodes = template.steps.map(step => ({ ...createPlanNode(step.method, makeId()), question: step.question, branch: step.branch, filter: step.filtered ? { column: null, values: [] } : null }));
-  if (new Set(nodes.map(node => node.id)).size !== nodes.length) throw Error('分析节点 ID 重复。');
+  if (new Set(nodes.map(node => node.id)).size !== nodes.length) throw Error('分析节点编号重复。');
   return nodes;
 }
 
@@ -66,7 +66,7 @@ function text(value: unknown, max: number, label: string, nonempty = false): str
 }
 function isMethod(value: unknown): value is PlanMethod { return value === 'alpha' || ANALYSIS_BLOCKS.some(block => block.id === value); }
 function validId(value: unknown): asserts value is string {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(value)) throw Error('分析节点 ID 无效。');
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(value)) throw Error('分析节点编号无效。');
 }
 function column(value: unknown, size: number, nullable = true): number | null {
   if (value === null && nullable) return null;
@@ -141,7 +141,7 @@ function parsePlan(value: unknown): AnalysisPlan {
   }
   if (!Array.isArray(plan.nodes) || plan.nodes.length > PLAN_LIMITS.nodes) throw Error('一份分析计划最多包含 12 个模块。');
   const nodes = plan.nodes.map(value => parseNode(value, source.headers.length));
-  if (new Set(nodes.map(node => node.id)).size !== nodes.length) throw Error('分析节点 ID 重复。');
+  if (new Set(nodes.map(node => node.id)).size !== nodes.length) throw Error('分析节点编号重复。');
   if (nodes.some(node => node.filter?.values.some(value => isMissing(value, missingCodes)))) throw Error('缺失值不能作为分支纳入类别，请核对计划的筛选值与缺失代码。');
   return { schema: ANALYSIS_PLAN_VERSION, title: text(plan.title, 160, '计划名称'), template, nodes, source, missingCodes };
 }
@@ -154,7 +154,7 @@ export function serializePlan(plan: AnalysisPlan): string {
 export function restorePlan(raw: string, source: PlanSource, missingCodes: string[]): AnalysisPlan {
   if (new TextEncoder().encode(raw).length > PLAN_LIMITS.bytes) throw Error('分析计划超过 100 KB，未读取。');
   let value: unknown;
-  try { value = JSON.parse(raw.replace(/^\uFEFF/, '')); } catch { throw Error('分析计划 JSON 无法解析，请选择完整的计划文件。'); }
+  try { value = JSON.parse(raw.replace(/^\uFEFF/, '')); } catch { throw Error('分析计划文件格式无法解析，请选择完整的计划文件。'); }
   rejectDuplicateMembers(raw);
   const plan = parsePlan(value);
   const currentSource = parseSource(source);

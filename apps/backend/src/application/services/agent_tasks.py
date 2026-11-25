@@ -13,6 +13,25 @@ from infrastructure.database.models import Operation, User
 
 CREATE_SCOPE = 'workflow-task-create/v1'
 
+_WORKFLOW_ERROR_ZH_PREFIXES: tuple[tuple[str, str], ...] = (
+    ('Unsupported task_type', '不支持的协作任务类型。'),
+    ('Workflow is not waiting for user input', '当前任务不处于待人工确认状态，无法重复或越序确认。'),
+    ('Feedback is required to answer an agent question', '回答待澄清问题时必须填写反馈说明。'),
+    ('Use provide_input to attach real data artifact references', '当前步骤需通过数据资料补交入口关联真实答卷文件。'),
+    ('Feedback is required when requesting changes', '退回修订时必须填写具体修改意见。'),
+    ('Cannot route feedback', '当前步骤不支持回退至前置专席修订。'),
+    ('Workflow is not waiting for a data upload', '当前任务不处于待补交调查数据状态。'),
+    ('At least one uploaded artifact reference is required', '请至少提供一项有效的数据资料引用。'),
+)
+
+
+def _workflow_error_zh(exc: WorkflowError, *, fallback: str = '当前任务状态不支持该流转操作。') -> str:
+    raw = str(exc or '').strip()
+    for prefix, zh_msg in _WORKFLOW_ERROR_ZH_PREFIXES:
+        if raw.startswith(prefix):
+            return zh_msg
+    return fallback
+
 def _view(row: AgentTask) -> dict:
     validate_frozen_model_bindings(row.state.get('model_bindings'), owner_id=row.created_by, task_type=row.task_type)
     return {'id': row.id, 'projectId': row.project_id, 'taskType': row.task_type, 'status': row.status, 'revision': row.revision, 'state': row.state, 'createdAt': row.created_at.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z'), 'updatedAt': row.updated_at.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')}
@@ -97,7 +116,7 @@ class AgentTaskService:
         try:
             state = create_workflow(project_id=project_id, task_type=text(data['taskType'], 32, 1), requirements=data['requirements'], context=context, input_artifact_refs=refs, constraints=constraints)
         except WorkflowError as exc:
-            raise ApiError(422, 'invalid_task', str(exc)) from None
+            raise ApiError(422, 'invalid_task', _workflow_error_zh(exc, fallback='任务参数或类型无效，请检查后重试。')) from None
         if 'modelPlan' in data:
             if data['modelPlan'] is None:
                 raise ApiError(422, 'invalid_model_plan', '请提供完整的模型分工配置。')
@@ -195,7 +214,7 @@ class AgentTaskService:
         try:
             engine.approve(state, approved=data['approved'], feedback=feedback)
         except WorkflowError as exc:
-            raise ApiError(409, 'invalid_transition', str(exc)) from None
+            raise ApiError(409, 'invalid_transition', _workflow_error_zh(exc)) from None
         _save(row, state)
         session.commit()
         return _view(row)
@@ -211,7 +230,7 @@ class AgentTaskService:
         try:
             engine.provide_input(state, data['artifactRefs'])
         except WorkflowError as exc:
-            raise ApiError(409, 'invalid_transition', str(exc)) from None
+            raise ApiError(409, 'invalid_transition', _workflow_error_zh(exc)) from None
         _save(row, state)
         session.commit()
         return _view(row)

@@ -170,7 +170,7 @@ export default function Dandelion({ dataNote, records, index, map, theme, basket
     }, { ink: ink.text, muted: ink.muted });
   };
 
-  if (!dated.length) return <div className={styles.emptyView}><strong>没有年份信息</strong><p>导出文件中的记录都缺少出版年份，无法绘制时间脉络。</p></div>;
+  if (!dated.length) return <div className={styles.emptyView} role="status"><strong>没有年份信息</strong><p>导出文件中的记录都缺少出版年份，无法绘制时间脉络。</p></div>;
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const b = e.currentTarget.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
     let best = -1, bd = 64;
@@ -182,7 +182,7 @@ export default function Dandelion({ dataNote, records, index, map, theme, basket
     <div className={styles.viewTools}>
       <p className={styles.viewNote}>{hasCitations ? '每一根“蒲公英种子”是一篇文献。被引次数是导出时的累计值，早年发表的文献天然积累更多，不能直接比较不同年份的影响力。' : '每个点是一篇文献。导出文件未含被引次数，因此按年份堆叠，只呈现数量与聚类构成。'}</p>
       <div className={styles.toolCluster}>
-        {basket.length > 0 && <label className={styles.checkLine}><input type="checkbox" checked={emphasis} onChange={e => setEmphasis(e.target.checked)} />突出含选题篮词（{basketLabels.join('、')}）的文献</label>}
+        {basket.length > 0 && <label className={styles.checkLine}><input type="checkbox" aria-label="突出显示含选题篮词的文献" checked={emphasis} onChange={e => setEmphasis(e.target.checked)} />突出含选题篮词（{basketLabels.join('、')}）的文献</label>}
         {!table && <ExportButton onExport={exportDandelion} />}
         <div className={styles.segmented} role="group" aria-label="时间脉络呈现方式">
           <button type="button" aria-pressed={!table} onClick={() => setTable(false)}>图</button>
@@ -192,12 +192,12 @@ export default function Dandelion({ dataNote, records, index, map, theme, basket
     </div>
     {!table && <div className={styles.dandelionLayout}>
       <div className={styles.dandelionFrame} style={{ width: size, height: size }}>
-        <canvas ref={canvas} style={{ width: size, height: size }} onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img" aria-label={`时间脉络：${minY}–${maxY} 年 ${fmtInt(dated.length)} 篇文献，角度表示发表年份，${hasCitations ? '离中心距离表示被引次数' : '向外堆叠表示当年篇数'}`} />
+        <canvas ref={canvas} style={{ width: size, height: size }} onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img" aria-label={`时间脉络（${minY}–${maxY} 年 ${fmtInt(dated.length)} 篇文献，角度表示发表年份，${hasCitations ? '离中心距离表示被引次数' : '向外堆叠表示当年篇数'}）`} />
         <Tip at={hover}>{hr && <>
           <strong>{hr.title}</strong>
           <span>{hr.year} · {hr.source || '来源未注明'}</span>
           <span>{hr.citations === null ? '导出文件未含被引次数' : `被引 ${fmtInt(hr.citations)} 次（导出时）`}</span>
-          <span>{clusterOf[hover!.i] >= 0 ? `主要属于聚类 ${clusterOf[hover!.i] + 1}：${clusterNames[clusterOf[hover!.i]] ?? ''}` : '未含高频词'}</span>
+          <span>{clusterOf[hover!.i] >= 0 ? `主要属于聚类 ${clusterOf[hover!.i] + 1} · ${clusterNames[clusterOf[hover!.i]] ?? ''}` : '未含高频词'}</span>
         </>}</Tip>
       </div>
       <aside className={styles.howTo} aria-label="怎么读这张图">
@@ -206,7 +206,7 @@ export default function Dandelion({ dataNote, records, index, map, theme, basket
         <div className={styles.howItem}><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="5" fill="none" stroke="currentColor" strokeWidth="1.5" /><line x1="22" y1="22" x2="40" y2="8" stroke="currentColor" strokeWidth="1.2" opacity=".5" /><circle cx="31" cy="15" r="2.5" fill="currentColor" /><circle cx="40" cy="8" r="2.5" fill="currentColor" /></svg><div><strong>{hasCitations ? '离中心越远 = 被引越多' : '向外堆叠 = 当年篇数'}</strong><span>{hasCitations ? '对数刻度，虚线圈标出 1、10、100… 次' : '导出文件未含被引次数（知网导出常见），每年的文献按聚类向外堆叠'}</span></div></div>
         <div className={styles.howItem}><svg viewBox="0 0 44 44" aria-hidden="true">{[0, 1, 2].map(i => <circle key={i} cx={12 + i * 10} cy="22" r="4" fill={clusterColor(theme, i)} />)}</svg><div><strong>颜色 = 关键词聚类</strong><span>按文献中出现最多的聚类词着色</span></div></div>
         <div className={styles.howItem}><svg viewBox="0 0 44 44" aria-hidden="true">{[6, 12, 9, 15].map((h, i) => <rect key={i} x={8 + i * 8} y={34 - h} width="5" height={h} fill="currentColor" opacity=".45" />)}</svg><div><strong>内圈短柱 = 每年篇数</strong><span>看这一领域何时开始升温</span></div></div>
-        {hasCitations && records.some(r => r.citations === null) && <p className={styles.muted}>空心点：该记录没有被引次数。</p>}
+        {hasCitations && records.some(r => r.citations === null) && <p className={styles.muted}>空心点表示该条文献记录未包含被引次数。</p>}
       </aside>
     </div>}
     {!table && <div className={styles.legendRow}><Legend title="颜色 = 聚类" items={clusterItems} /></div>}

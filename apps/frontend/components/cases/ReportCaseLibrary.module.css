@@ -77,3 +77,56 @@
 @media(max-width:1100px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .intro { align-items:flex-start; flex-direction:column; gap:14px; } .readingLayout { grid-template-columns:240px minmax(0,1fr); } }
 @media(max-width:700px) { .filters { grid-template-columns:1fr; } .readingLayout { grid-template-columns:1fr; } .guide { display:none; } .overlay { padding:8px; } .dialog { height:calc(100dvh - 16px); } .grid { grid-template-columns:1fr; } }
 @media(prefers-reduced-motion:reduce) { .card,.coverButton img,.guide nav button,.methods button { transition:none; } .dialog { animation:none; } }
+
+
+@media (forced-colors: active) {
+  .library,
+  .searchTools,
+  .overlay,
+  .dialog,
+  .reader {
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  .filters select,
+  .filters input,
+  .results .filterChip,
+  .card,
+  .coverButton,
+  .pageBadge,
+  .methods span,
+  .methods button,
+  .empty,
+  .dialog,
+  .dialogHeader > button,
+  .guide nav button {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .readButton,
+  .dialogHeader,
+  .guide,
+  .guideSummary,
+  .source {
+    border-color: CanvasText !important;
+  }
+
+  .methods button[aria-pressed=true],
+  .guide nav button.activeGuide,
+  .empty button {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border: 1px solid Highlight !important;
+  }
+
+  .library :is(button, input, select):focus-visible,
+  .overlay :is(button, a, input, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

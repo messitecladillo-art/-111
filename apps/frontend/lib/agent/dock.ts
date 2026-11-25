@@ -27,7 +27,7 @@ export function parseHandoffPayload(raw: string | null, now = Date.now()): strin
 }
 
 export function needsAgentShellHandoff(routed: Routed): boolean {
-  if ('generate' in routed || 'draft' in routed) return true;
+  if ('generate' in routed || 'draft' in routed || 'lookupCounty' in routed || 'recommendResource' in routed) return true;
   if ('lookup' in routed) return false;
   const act = routed.turn.act;
   if (

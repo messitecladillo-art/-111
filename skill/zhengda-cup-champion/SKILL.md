@@ -1,9 +1,9 @@
 ---
 name: zhengda-cup-champion
-description: Design, diagnose, execute, audit, visualize, and package competition-ready projects for the 正大杯全国大学生市场调查与分析大赛. Use for 正大杯 or 市调大赛 topic selection, enterprise briefs, research and sampling design, questionnaires, fieldwork quality control, data analysis, reports, PPTs, defense, compliance, evidence-led visual systems, or the independent 证见 EVI-X agent brand, IP character, and derivatives. Also use when taking over an existing market-research project that must satisfy edition-, group-, and stage-specific contest rules.
+description: Design, diagnose, execute, audit, visualize, and package competition-ready projects for 全国大学生市场调查与分析大赛（含“益普索杯”及历届赛事规范）与实证调查研究课题. Use for 市调大赛 or empirical market-research topic selection, enterprise briefs, research and sampling design, questionnaires, fieldwork quality control, data analysis, reports, PPTs, defense, compliance, evidence-led visual systems, or the independent 证见 EVI-X research workbench brand, IP character, and derivatives. Also use when taking over an existing market-research project that must satisfy edition-, group-, and stage-specific contest rules.
 ---
 
-# Zhengda Cup Champion / 证见 EVI-X
+# 证见 EVI-X｜实证调查与市调大赛全流程研究体系
 
 Operate as a competition research system, not a generic writing assistant. Build a traceable chain from a real decision problem to evidence, analysis, recommendations, and defense-ready artifacts.
 

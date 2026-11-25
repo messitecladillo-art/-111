@@ -99,3 +99,40 @@
     animation: none !important;
   }
 }
+
+@media (forced-colors: active) {
+  .atmosphere {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+  }
+  .atmosphere * {
+    animation: none !important;
+  }
+  .bloom,
+  .prism,
+  .glints {
+    opacity: 0;
+    display: none;
+  }
+  .goldWeave path,
+  .tealWeave path,
+  .blueWeave path {
+    stroke: ButtonBorder;
+    opacity: 0.25;
+  }
+  .orbitalField circle,
+  .orbitalField ellipse,
+  .orbitalTrace {
+    stroke: ButtonText;
+    opacity: 0.2;
+  }
+  .threadTrace,
+  .threadTraceReverse {
+    forced-color-adjust: none;
+    stroke: Highlight;
+    fill: HighlightText;
+    fill-opacity: 0;
+    opacity: 0.35;
+  }
+}

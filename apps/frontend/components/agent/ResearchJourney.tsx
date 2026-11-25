@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type FormEvent, type ReactNode } from 'react';
+import { useId, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import type { Service } from '@evix/shared';
 import { MODEL_CALLS, RESEARCH_STAGES, type ModelCallId, type ResearchStageId } from '@/lib/agent/research-stages';
 import styles from './ResearchJourney.module.css';
@@ -66,8 +66,15 @@ const CHECKPOINTS = new Set<ResearchStageId>(['topic', 'questionnaire', 'collect
 const DIRECTIONS = [
   ['地方特产', '想研究家乡特产的消费人群、购买顾虑和品牌选择。'],
   ['青年就业', '想研究年轻人的就业选择，以及他们需要什么支持。'],
-  ['AI 与学习', '想研究大学生使用 AI 后的学习习惯与实际体验。'],
+  ['数字学习', '想研究大学生使用智能辅助学习工具后的学习习惯与实际体验。'],
 ] as const;
+
+function cleanJourneyText(raw: string): string {
+  return raw
+    .replace(/\u300c([^\u300d]*)\u300d/gu, '“$1”')
+    .replace(/\u300e([^\u300f]*)\u300f/gu, '‘$1’')
+    .replace(/\u3010([^\u3011]*)\u3011/gu, '（$1）');
+}
 
 /** Controlled view: project state, model routing, execution and persistence belong to the Agent host. */
 export default function ResearchJourney({ direction, onDirectionChange, onStart, steps, services, modelRoutes, defaultServiceId,
@@ -91,11 +98,11 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
     if (!stage) return null;
     const active = ['running', 'ready', 'needs_input', 'awaiting_confirmation'].includes(step.status);
     const confirmation = step.confirmation ?? CHECKPOINTS.has(step.id);
-    return <li key={step.id} className={styles.step} data-status={step.status} data-stage={step.id} aria-current={active ? 'step' : undefined}>
+    return <li key={step.id} className={styles.step} style={{ '--stagger-i': Math.min(index, 10) } as CSSProperties} data-status={step.status} data-stage={step.id} aria-current={active ? 'step' : undefined}>
       <span className={styles.number} aria-hidden="true">{step.status === 'completed' ? '✓' : String(index + 1).padStart(2, '0')}</span>
       <div className={styles.stepContent}>
         <div className={styles.stepHeading}><h3>{stage.label}</h3><span className={styles.status}>{STATUS[step.status]}</span></div>
-        <p className={styles.description}>{step.detail || DESCRIPTION[step.id]}</p>
+        <p className={styles.description}>{cleanJourneyText(step.detail || DESCRIPTION[step.id])}</p>
         <div className={styles.tags}>
           {confirmation && <span>由你确认</span>}{step.optional && <span>可选</span>}
           {stage.availability === 'planned' ? <span data-pending="true">待接入</span> : stage.availability === 'partial' ? <span>可辅助完成</span> : null}
@@ -134,7 +141,7 @@ export default function ResearchJourney({ direction, onDirectionChange, onStart,
     <form className={styles.intake} onSubmit={submit}>
       <label id={`${id}-direction-label`} htmlFor={`${id}-direction`}>你想研究什么？</label>
       <textarea id={`${id}-direction`} value={direction} maxLength={2000} rows={3}
-        placeholder="例如：想研究大学生使用 AI 后的学习习惯，还没有具体题目。"
+        placeholder="直接描述感兴趣的研究方向，如大学生使用智能辅助学习工具后的学习习惯，尚无具体题目也可直接开始。"
         disabled={disabled || busy} onChange={event => onDirectionChange(event.target.value)}
         onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); if (!busy && !disabled && direction.trim()) onStart(direction.trim()); } }} />
       <div className={styles.intakeActions}>

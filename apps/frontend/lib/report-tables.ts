@@ -10,7 +10,6 @@ export type PresentedTable = { headers: string[]; rows: string[][]; note: string
 
 // Only an explicit percent sign marks a percentage; a bare 比例 or 占比 may hold proportions between 0 and 1.
 const isPercent = (header: string) => /%|％|百分/.test(header);
-const isCount = (header: string) => /^n$|样本量|频数|人数|计数|个数|有效数|份数/.test(header.trim());
 const isP = (header: string) => /^p$|p\s*值|显著性|sig/i.test(header.trim());
 
 /** One cell, rounded according to what its column measures. */
@@ -20,7 +19,7 @@ export function formatCell(value: string | number | null, header: string): strin
   if (!Number.isFinite(value)) return '—';
   if (isP(header)) return value < 0.001 ? '<0.001' : value.toFixed(3);
   if (isPercent(header)) return value.toFixed(1);
-  if (Number.isInteger(value) && (isCount(header) || Math.abs(value) >= 1)) return String(value);
+  if (Number.isInteger(value)) return String(value);
   return Math.abs(value) < 1 ? value.toFixed(3) : value.toFixed(2);
 }
 
@@ -122,7 +121,8 @@ function crosstab(r: ResultSnapshot): PresentedTable | null {
   });
   const colTotals = colLabels.map(colLabel => rowLabels.reduce((sum, rowLabel) => sum + (numeric(cell.get(`${rowLabel}\u0000${colLabel}`)![2]) ?? 0), 0));
   rows.push(['合计', ...colTotals.map(String), String(colTotals.reduce((a, b) => a + b, 0))]);
-  return { headers: ['', ...colLabels, '合计'], rows, note: '单元格为频数（行内占比）。' };
+  const corner = (r.headers[0] && r.headers[0] !== '行类别' ? r.headers[0].trim() : r.variables?.[0]?.trim()) || r.headers[0]?.trim() || '分组类别';
+  return { headers: [corner, ...colLabels, '合计'], rows, note: '单元格为频数（行内占比）。' };
 }
 
 /** Group rows in reading order: ordered groups (age bands, rating levels) sort naturally; others keep their order, "其他" last. */
@@ -155,13 +155,48 @@ export function presentResult(r: ResultSnapshot): PresentedTable {
   return special ?? { headers: [...r.headers], rows: r.rows.map(row => row.map((value, i) => formatCell(value, r.headers[i] ?? ''))), note: '' };
 }
 
+const SHORT_NUMERIC_CELL_RE =
+  /^(?:[−+-]?\d+(?:\.\d+)?(?:\*{1,3}|%)?|<0\.\d+\*{0,3}|\[[−+-]?\d+(?:\.\d+)?,\s*[−+-]?\d+(?:\.\d+)?\]|—|1)$/u;
+
+export const textVisualWidth = (s: string): number =>
+  [...s].reduce((w, c) => w + (/[\u2e80-\ufffd]/u.test(c) ? 2 : 1), 0);
+
+export function isShortNumericColumn(table: PresentedTable, col: number): boolean {
+  if (col === 0 || !table.rows.length) return false;
+  const nonEmpty = table.rows.map(row => (row[col] ?? '').trim()).filter(Boolean);
+  return nonEmpty.length > 0 && nonEmpty.every(v => v.length <= 16 && SHORT_NUMERIC_CELL_RE.test(v));
+}
+
+export function isLongProseColumn(table: PresentedTable, col: number): boolean {
+  return table.rows.some(row => textVisualWidth((row[col] ?? '').trim()) > 36);
+}
+
 /**
- * Relative column widths from content: CJK characters count double. A header may take two lines, so it asks for half
- * its width; a cell asks for all of its own, so "第 1 类" or a percentage never breaks one character per line.
+ * Relative column widths from content: CJK characters count double. Numeric columns receive a padding-aware floor so
+ * values like "193", "38.3%", "−0.94", and "<0.001" never wrap mid-number, while long-prose columns scale up to 56.
  */
 export function columnWeights(table: PresentedTable): number[] {
-  const width = (s: string) => [...s].reduce((w, c) => w + (/[⺀-￿]/.test(c) ? 2 : 1), 0);
-  return table.headers.map((header, c) => Math.min(28, Math.max(6, Math.ceil(width(header) / 2) + 2, ...table.rows.map(row => width(row[c] ?? '') + 2))));
+  const cols = table.headers.length;
+  const cap = cols >= 8 ? 24 : cols === 7 ? 30 : 56;
+  return table.headers.map((header, c) => {
+    const maxCell = Math.max(0, ...table.rows.map(row => textVisualWidth(row[c] ?? '')));
+    const headerW = textVisualWidth(header);
+    if (isShortNumericColumn(table, c)) {
+      const longestLatinWord = Math.max(
+        0,
+        ...header
+          .split(/\s+/u)
+          .map(tok => (/[A-Za-z0-9]/u.test(tok) ? textVisualWidth(tok) : 0)),
+      );
+      const headerFloor = headerW <= 4
+        ? headerW + 4
+        : Math.max(Math.ceil(headerW / (cols >= 7 ? 2.4 : 2)) + 3, longestLatinWord + 4);
+      const compactHeaderFloor = cols <= 5 && headerW <= 12 ? headerW + 3 : 0;
+      return Math.min(cap, Math.max(8, headerFloor, compactHeaderFloor, maxCell + 3));
+    }
+    const headerShare = Math.ceil(headerW / (cols >= 6 && headerW > 16 ? 3 : 2)) + 2;
+    return Math.min(cap, Math.max(6, headerShare, maxCell + 2));
+  });
 }
 
 /** A one-line source note under a figure or table; method caveats are gathered once per section instead. */
@@ -174,12 +209,18 @@ export function sourceLine(r: ResultSnapshot): string {
   return `资料来源：${r.sourceName}${r.sourceUrl ? `（${r.sourceUrl}）` : ''}；有效样本 n = ${r.n}${r.total !== r.n ? `（共 ${r.total}）` : ''}${kind}。`;
 }
 
-/** Method caveats of several results, de-duplicated and joined without doubled punctuation. */
+const INTERNAL_NOTE_GUARDRAIL_RE =
+  /(?:不证明.*获奖水平|不要只为提高.*删除题项|多选题须先按选项拆列|严禁将.*饼图|超出计分范围\s*0\s*行|当前产物为草稿)/u;
+
+/** Method caveats of several results, de-duplicated and joined without doubled "注：" or internal coaching guardrails. */
 export function sectionNotes(results: readonly ResultSnapshot[]): string {
-  // Results of one survey repeat the same caveats; de-duplicate sentence by sentence.
-  const sentences = results.flatMap(r => r.warnings).flatMap(w => w.split('。'))
-    .map(s => s.trim().replace(/^[；;，,\s]+|[；;，,\s]+$/gu, '')).filter(Boolean);
-  const notes = firstSeen(sentences);
+  const clauses = results
+    .flatMap(r => r.warnings)
+    .flatMap(w => w.split('。'))
+    .flatMap(s => s.split('；'))
+    .map(s => s.trim().replace(/^[；;，,\s]+|[；;，,\s]+$/gu, '').replace(/^注[：:]\s*/u, '').trim())
+    .filter(s => Boolean(s) && !INTERNAL_NOTE_GUARDRAIL_RE.test(s));
+  const notes = firstSeen(clauses);
   return notes.length ? `注：${notes.join('；')}。` : '';
 }
 

@@ -44,3 +44,49 @@
 .lines li[data-kind="risk"] { border-left-color: #e0a100; background: #fff7e0; }
 .lines li[data-kind="risk"] small { color: #7a4e00; }
 .tweaks button[data-quiet="true"] { border-style: dashed; color: var(--c-dim); }
+
+
+@media (forced-colors: active) {
+  .output,
+  .figure,
+  .table,
+  .gap,
+  .lines,
+  .lines li[data-kind="style"],
+  .lines li[data-kind="risk"] {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .iconButton,
+  .figure,
+  .table,
+  .tweaks button,
+  .codeHead button,
+  .legend span,
+  .gap,
+  .lines {
+    border: 1px solid ButtonText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .tabs,
+  .lines li[data-kind="style"],
+  .lines li[data-kind="risk"] {
+    border-color: CanvasText !important;
+  }
+
+  .tabs button[aria-selected="true"],
+  .codeHead button[data-primary="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .output :is(button, a, [tabindex="0"]):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

@@ -28,3 +28,10 @@
 .form input:focus-visible, .form select:focus-visible, .panel button:focus-visible { outline: 2px solid var(--wb-accent); outline-offset: 1px; }
 @media (max-width: 600px) { .row { grid-template-columns: auto minmax(0, 1fr); } .rowActions { grid-column: 1 / -1; justify-content: flex-end; } .flags { margin-left: 0; } }
 .problem { margin: 0; padding: 6px 10px; border-radius: 5px; font-size: 12px; line-height: 1.6; color: var(--wb-gold-text); background: var(--wb-gold-soft); border: 1px solid var(--wb-gold-line); }
+@media (forced-colors: active) {
+  .panel :is(button, input, select):focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; box-shadow: none !important; }
+  .panel button, .form input, .form select { border: 1px solid ButtonText; }
+  .panel, .entry, .problem { background: Canvas; color: CanvasText; border: 1px solid CanvasText; box-shadow: none !important; }
+  .head, .form { border-color: CanvasText; }
+  .primary, .flag { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
+}

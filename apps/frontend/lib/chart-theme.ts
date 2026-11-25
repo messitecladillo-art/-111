@@ -73,7 +73,7 @@ function boundedNumber(value: unknown, min: number, max: number, integer = false
   return value;
 }
 function color(value: unknown): string {
-  if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) throw Error('颜色须为六位 HEX 色值。');
+  if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) throw Error('颜色须为六位十六进制色值。');
   return value;
 }
 export function validateChartStyle(value: unknown): ChartStyle {
@@ -105,7 +105,7 @@ export function restoreChartSettings(raw: string, modules: ChartModule[]): Chart
   if (new TextEncoder().encode(raw).length > 100_000) throw Error('图表格式文件超过 100 KB。');
   rejectDuplicateMembers(raw);
   let value: unknown;
-  try { value = JSON.parse(raw.replace(/^\uFEFF/, '')); } catch { throw Error('图表格式 JSON 无法解析。'); }
+  try { value = JSON.parse(raw.replace(/^\uFEFF/, '')); } catch { throw Error('图表格式文件无法解析。'); }
   const doc = exact(value, ['schema', 'theme', 'figures'], '图表格式文件');
   if (doc.schema !== 'chart-format/v1') throw Error('图表格式版本不支持。');
   if (!Array.isArray(doc.figures) || doc.figures.length > 12) throw Error('一份格式文件最多包含 12 个模块。');

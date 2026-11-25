@@ -10,3 +10,37 @@
 .lifecycle > summary small { color: var(--wb-muted); font-size: 12.5px; }
 .lifecycle[open] > summary { border-bottom: 1px solid var(--wb-line); }
 .lifecycle > :not(summary) { margin: 0; padding: 18px 20px 22px; }
+
+@media (forced-colors: active) {
+  .card,
+  .lifecycle {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .card > span,
+  .card h3,
+  .card p,
+  .lifecycle > summary b,
+  .lifecycle > summary small {
+    color: CanvasText;
+  }
+  .lifecycle[open] > summary {
+    border-bottom: 1px solid CanvasText;
+  }
+  .card a {
+    border: 1px solid ButtonText;
+  }
+  .card a:global(.primary-button) {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .card :focus-visible,
+  .lifecycle > summary:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

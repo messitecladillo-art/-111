@@ -43,7 +43,7 @@ function ExamBankLoader({accountId,active}:{accountId:string;active:boolean}){
   return()=>{current=false;};
  },[attempt]);
  if(state.status==='loading')return <p className="hosted-empty" role="status">正在读取题库…</p>;
- if(state.status==='unavailable')return <div className="hosted-empty"><h2>此服务器尚未配置网赛题库</h2><p>历史题库的公开传播授权尚未确认，不随公开源码分发；管理员按「网赛刷题」说明在服务器上放置本地生成的题库后即可使用。</p></div>;
+ if(state.status==='unavailable')return <div className="hosted-empty"><h2>此服务器尚未配置网赛题库</h2><p>历史题库的公开传播授权尚未确认，不随公开源码分发；管理员按“网赛刷题”说明在服务器上放置本地生成的题库后即可使用。</p></div>;
  if(state.status==='failed')return <div className="hosted-empty" role="alert"><h2>题库没有读到</h2><p>{state.message}</p><button type="button" className="primary-button" onClick={()=>{setState({status:'loading'});setAttempt(n=>n+1);}}>重新读取</button></div>;
  return <ExamAccount key={state.bank.version} accountId={accountId} active={active} bank={state.bank}/>;
 }

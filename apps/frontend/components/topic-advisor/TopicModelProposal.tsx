@@ -8,7 +8,10 @@ import KnowledgeLookupPanel from '@/components/knowledge/KnowledgeLookupPanel';
 import type { KnowledgeLookupWire } from '@/lib/knowledge/api-contracts';
 import type { TopicProfile, TopicRecommendation } from '@/lib/topic-advisor/types';
 import { freezeTopicProposal, knownTopicRejection, parsePendingTopic, parseTopicReceipt, verifyTopicReceipt, topicSnapshot, topicGeographyLabel, type PendingTopicProposal, type TopicProposalReceipt } from '@/lib/topic-proposal';
+import { normalizeAcademicPunctuation } from '@/lib/typography';
 import styles from './TopicModelProposal.module.css';
+
+const clean = (value: string) => normalizeAcademicPunctuation(value);
 
 export type RefinedTopicHandoff = { title:string;decisionOwner:string;population?:string;geography?:string;problem?:string };
 type Props={profile:TopicProfile;recommendation:TopicRecommendation|null;stale:boolean;catalogVersion:string;onUseTopic?:(topic:RefinedTopicHandoff)=>void};
@@ -72,24 +75,24 @@ export default function TopicModelProposal({profile,recommendation,stale,catalog
     <details className={styles.panel}>
       <summary><span>让选题顾问继续深挖</span><small>形成可修改的研究提案</small></summary>
       {!accountId?<p className={styles.note}><Link href="/login">登录</Link>后可使用个人研究模型。</p>:<>
-        <p className={styles.note}>{recommendation?`当前方向：${recommendation.title}`:'先从推荐中选择一个方向，再细化调查问题与验证步骤。'}</p>
+        <p className={styles.note}>{recommendation?`当前已选方向为“${clean(recommendation.title)}”`:'先从推荐中选择一个方向，再细化调查问题与验证步骤。'}</p>
         <div className={styles.fields}>
           <label>研究模型<select aria-label="选题研究模型" value={serviceId} disabled={busy||unresolved} onChange={e=>{setServiceId(e.target.value);setConsent(false);}}>{!services.length&&<option value="">尚未配置研究模型</option>}{services.map(s=><option key={s.id} value={s.id}>{s.label} · {s.provider} · v{s.revision}</option>)}</select></label>
           <Link href="/services">管理模型服务 ↗</Link>
         </div>
-        <label className={styles.goal}>希望重点挖掘什么？<textarea aria-label="选题细化要求" rows={3} maxLength={800} value={goal} disabled={busy||unresolved} placeholder="例如：从政策落地后的服务缺口切入，比较已使用者与未使用者。" onChange={e=>{setGoal(e.target.value);setConsent(false);}}/></label>
-        {lookup&&<label className={styles.check}><input type="checkbox" checked={includeLookup} disabled={busy||unresolved} onChange={e=>{setIncludeLookup(e.target.checked);setConsent(false);}}/>加入刚刚检索的 {lookup.results.length} 条公开线索（{lookup.query}）</label>}
-        <details className={styles.scope}><summary>查看本次发送范围</summary><p>地区：{geography||'未选择地区'}；学校：{profile.school||'未填写'}；专业：{profile.discipline||'未填写'}。还包含上方填写的团队资源、调查渠道、时间预算、当前方向及所勾选的公开线索。</p></details>
-        <label className={styles.check}><input type="checkbox" aria-label="确认选题模型调用" checked={consented} disabled={busy||unresolved||invalid} onChange={e=>{setConsent(e.target.checked);setConsentStamp(consentKey);}}/>{auth.session?.mode==='local_test'?'使用合成模型验收这次提案':'确认将上述选题材料发送至所选模型，使用我的 API 额度'}</label>
-        {invalid&&<p className={styles.notice}>{validationMessage||'请检查研究背景后重新确认。'}</p>}
+        <label className={styles.goal}>希望重点挖掘什么？<textarea aria-label="选题细化要求" rows={3} maxLength={800} value={goal} disabled={busy||unresolved} placeholder="例如从政策落地后的服务缺口切入，比较已使用者与未使用者。" onChange={e=>{setGoal(e.target.value);setConsent(false);}}/></label>
+        {lookup&&<label className={styles.check}><input type="checkbox" checked={includeLookup} disabled={busy||unresolved} onChange={e=>{setIncludeLookup(e.target.checked);setConsent(false);}}/>加入刚刚检索的 {lookup.results.length} 条公开线索（{clean(lookup.query)}）</label>}
+        <details className={styles.scope}><summary>查看本次发送范围</summary><p>地区：{geography||'未选择地区'} · 学校 {clean(profile.school||'未填写')} · 专业 {clean(profile.discipline||'未填写')}。还包含上方填写的团队资源、调查渠道、时间预算、当前方向及所勾选的公开线索。</p></details>
+        <label className={styles.check}><input type="checkbox" aria-label="确认选题模型调用" checked={consented} disabled={busy||unresolved||invalid} onChange={e=>{setConsent(e.target.checked);setConsentStamp(consentKey);}}/>{auth.session?.mode==='local_test'?'使用合成模型验收这次提案':'确认将上述选题材料发送至所选研究服务，按个人服务配额计费'}</label>
+        {invalid&&<p className={styles.notice}>{clean(validationMessage||'请检查研究背景后重新确认。')}</p>}
         <div className={styles.actions}><button type="button" className={styles.primary} disabled={busy||unresolved||stale||!chosen||!consented||!recommendation} onClick={()=>void generate()}>{busy?'等待模型回执…':'生成细化提案'}</button>{pending&&<button type="button" disabled={busy} onClick={()=>void generate(true)}>核对原请求</button>}</div>
         <div className={styles.actions}><button type="button" onClick={()=>void loadHistory()}>查找之前的调用</button></div>
         {history.length>0&&<ul>{history.map(row=><li key={row.id}>{new Date(row.createdAt).toLocaleString('zh-CN')} · {{ready:'已返回',running:'生成中',failed:'未完成',outcome_unknown:'待核对'}[row.status]} <button type="button" onClick={()=>void exportReceipt(row.id)}>下载回执</button></li>)}</ul>}
-        {notice&&<p role="status" className={styles.notice}>{notice}</p>}
+        {notice&&<p role="status" className={styles.notice}>{clean(notice)}</p>}
         {receipt&&<div className={styles.receipt} aria-live="polite">
           <p className={styles.meta}>{receipt.status==='ready'?'细化提案已返回':receipt.status==='outcome_unknown'?'调用结果待核对':receipt.status==='failed'?'本次生成未完成':'请求已接收'} · {receipt.providerMode==='fixture'?'合成模型验收':'个人研究模型'}{receipt.finishedAt&&` · ${new Date(receipt.finishedAt).toLocaleString('zh-CN')}`}</p>
           {receiptStale&&<p className={styles.notice}>研究背景或当前方向已变化，这份提案保留供对照。</p>}
-          {receipt.proposal?.items.map(item=><article className={styles.proposal} key={item.patternId}><h4>{item.title}</h4><p className={styles.question}>{item.researchQuestion}</p><dl><dt>地区与团队契合点</dt><dd>{item.whyHere}</dd><dt>拟支持的决策</dt><dd>{item.decisionOwner}：{item.decision}</dd></dl><h5>先做这几步</h5><ol>{item.firstWeekPlan.map((step,index)=><li key={index}>{step}</li>)}</ol>{item.unknowns.length>0&&<details><summary>待核实条件 · {item.unknowns.length}</summary><ul>{item.unknowns.map((x,i)=><li key={i}>{x}</li>)}</ul></details>}<div className={styles.sources}>{item.sourceIds.map(id=>{const source=receipt.sources.find(s=>s.id===id);return source?.url?<a href={source.url} key={id} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>:<span key={id}>{source?.title}</span>;})}</div><button type="button" disabled={receiptStale||!onUseTopic} onClick={()=>{if(!receiptStale)onUseTopic?.({title:item.title,decisionOwner:item.decisionOwner,population:recommendation?.population,geography,problem:item.researchQuestion});}}>采用此提案，继续项目诊断</button></article>)}
+          {receipt.proposal?.items.map(item=><article className={styles.proposal} key={item.patternId}><h4>{clean(item.title)}</h4><p className={styles.question}>{clean(item.researchQuestion)}</p><dl><dt>地区与团队契合点</dt><dd>{clean(item.whyHere)}</dd><dt>拟支持的决策</dt><dd>{clean(item.decisionOwner)}（{clean(item.decision)}）</dd></dl><h5>先做这几步</h5><ol>{item.firstWeekPlan.map((step,index)=><li key={index}>{clean(step)}</li>)}</ol>{item.unknowns.length>0&&<details><summary>待核实条件 · {item.unknowns.length}</summary><ul>{item.unknowns.map((x,i)=><li key={i}>{clean(x)}</li>)}</ul></details>}<div className={styles.sources}>{item.sourceIds.map(id=>{const source=receipt.sources.find(s=>s.id===id);return source?.url?<a href={source.url} key={id} target="_blank" rel="noopener noreferrer">{clean(source.title)} ↗</a>:<span key={id}>{source?clean(source.title):''}</span>;})}</div><button type="button" disabled={receiptStale||!onUseTopic} onClick={()=>{if(!receiptStale)onUseTopic?.({title:item.title,decisionOwner:item.decisionOwner,population:recommendation?.population,geography,problem:item.researchQuestion});}}>采用此提案，继续项目诊断</button></article>)}
         </div>}
       </>}
     </details>

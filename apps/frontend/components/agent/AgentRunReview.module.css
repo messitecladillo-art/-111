@@ -23,3 +23,41 @@
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 16px; margin-top: 10px; border-top: 1px solid var(--c-line); }.actions p { flex: 1; min-width: 180px; margin: 0; color: var(--c-dim); font-size: 11px; }.actions button { min-height: 36px; padding: 7px 12px; border: 1px solid var(--c-line-strong); border-radius: 8px; background: var(--c-raise); color: var(--c-fg); font: inherit; font-size: 12px; cursor: pointer; }.actions .primary { background: #0f766e; border-color: #0f766e; color: white; }.actions button:disabled { opacity: .45; cursor: not-allowed; }.review button:focus-visible,.panel:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
 @media (max-width: 600px) { .review { padding: 14px; border-radius: 12px; }.heading h2 { font-size: 18px; }.metrics { grid-template-columns: 1fr 1fr; gap: 10px 0; }.metrics div:nth-child(2) { border-right: 0; }.metrics div:last-child { grid-column: 1 / -1; padding-left: 0; }.metrics dd { font-size: 18px; }.tabs button { padding: 7px 8px; }.diff { grid-template-columns: 1fr; }.changeHead label { width: 100%; margin-left: 0; }.actions p { flex-basis: 100%; }.actions button { flex: 1; }.panel { max-height: 380px; } }
 @media (max-width: 360px) { .tabs button { white-space: nowrap; padding-inline: 7px; font-size: 11px; }.tabs small { display: none; } }
+
+
+@media (forced-colors: active) {
+  .review,
+  .mode,
+  .alert,
+  .blockers,
+  .change,
+  .diff > div,
+  .actions button {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .metrics,
+  .metrics div,
+  .tabs,
+  .revisions > li,
+  .actions {
+    border-color: CanvasText !important;
+  }
+
+  .tabs button[aria-selected=true],
+  .actions .primary {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .review button:focus-visible,
+  .panel:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

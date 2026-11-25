@@ -20,7 +20,7 @@ def register_routes(app, *, settings, engine, sav_imports, preflights, session_u
             def bound_statement(_connection, cursor, _statement, _parameters, _context, _many):
                 remaining_ms = int((deadline - time.monotonic()) * 1000)
                 if remaining_ms <= 0:
-                    raise ApiError(503, "sav_auth_timeout", "SAV 转换授权等待超时，请稍后重试。")
+                    raise ApiError(503, "sav_auth_timeout", "统计数据文件导入校验等待超时，请稍后重试。")
                 # Values are locally derived integers, never request text. Set
                 # each statement against one absolute transaction deadline.
                 cursor.execute(f"SET LOCAL statement_timeout = {remaining_ms}")
@@ -47,7 +47,7 @@ def register_routes(app, *, settings, engine, sav_imports, preflights, session_u
                 total = session.scalar(select(func.count()).select_from(RateEvent).where(
                     RateEvent.scope == "sav-import-global", RateEvent.created_at > cutoff))
                 if personal >= settings.sav_hourly_imports or total >= settings.sav_global_hourly_imports:
-                    raise ApiError(429, "sav_rate_limit", "SAV 转换次数较多，请稍后重试。")
+                    raise ApiError(429, "sav_rate_limit", "当前统计数据文件导入较为频繁，请稍后重试。")
                 session.add_all([RateEvent(scope=scope), RateEvent(scope="sav-import-global")])
                 session.commit()
             return user_id
@@ -69,7 +69,7 @@ def register_routes(app, *, settings, engine, sav_imports, preflights, session_u
             def bounded(_connection, cursor, _statement, _parameters, _context, _many):
                 remaining = int((deadline - time.monotonic()) * 1000)
                 if remaining <= 0:
-                    raise ApiError(503, "preflight_auth_timeout", "文件检查授权等待超时，请稍后重试。")
+                    raise ApiError(503, "preflight_auth_timeout", "文稿预检校验等待超时，请稍后重试。")
                 cursor.execute(f"SET LOCAL statement_timeout = {remaining}")
                 cursor.execute(f"SET LOCAL lock_timeout = {min(1000, remaining)}")
             event.listen(connection, "before_cursor_execute", bounded)
@@ -92,7 +92,7 @@ def register_routes(app, *, settings, engine, sav_imports, preflights, session_u
                 total = session.scalar(select(func.count()).select_from(RateEvent).where(
                     RateEvent.scope == "submission-preflight-global", RateEvent.created_at > cutoff))
                 if personal >= settings.preflight_hourly_imports or total >= settings.preflight_global_hourly_imports:
-                    raise ApiError(429, "preflight_rate_limit", "文件检查次数较多，请稍后重试。")
+                    raise ApiError(429, "preflight_rate_limit", "当前文稿预检请求较为频繁，请稍后重试。")
                 session.add_all([RateEvent(scope=scope), RateEvent(scope="submission-preflight-global")])
                 session.commit()
             return user_id

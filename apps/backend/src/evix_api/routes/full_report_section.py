@@ -22,7 +22,7 @@ def register_full_report_sections(app, *, settings, db, session_user, lock_user,
 
     @app.post("/api/agent/report-sections", status_code=201)
     async def create_section(request: Request, user=Depends(auth), session=Depends(db)):
-        data = await body(request, domain.REQUEST_FIELDS, limit=90000)
+        data = await body(request, domain.REQUEST_FIELDS, limit=115000)
         return await service.create_section(user=user, session=session, raw_data=data,
             check_session=lambda session, **kwargs: session_user(request, session, **kwargs))
 

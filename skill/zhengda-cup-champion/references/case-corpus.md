@@ -62,7 +62,19 @@ These ranges are case observations, not a mandatory template. The transferable r
 - Start from a real management choice: whether and how to retain a city–university dual-track event design.
 - Separate student and resident audiences, then map publicity, venue, schedule, and experience actions to different operators.
 - Use a short closing sequence of findings followed by owner-oriented actions.
-- Package questionnaire, interview material, data views, code, and AI disclosure instead of delivering prose alone.
+- Package questionnaire, interview material, data views, code, and AI disclosure instead of delivering prose alone (offloading heavy raw tables & scripts via appendix QR codes to keep the main body compact at ~58 pages).
+
+### Transferable visual & integration craft (added from full DOCX/media dissection)
+
+- **Zero SaaS chrome, organic theme integration**: Conceptual diagrams (`图 1 调查思路图`, `图 8 问卷结构图`, `图 9 调查工作流程图`) sit on a pure white borderless canvas with NO dark dashboard header bar, NO rounded UI card frame, and NO generic boilerplate labels; every node names actual report entities, corpora, groups, and models under one unified soft thematic color family.
+- **High-density paired multi-panel exhibits**: Nearly every analytical step pairs two complementary lenses side-by-side (`图 2/3` sentiment pie + score histogram; `图 4/5` shaped silhouette word cloud + Top-20 bar; `图 23-25` forest plot + RRR heatmap; `图 30/31` PCA cluster scatter + cluster centers; `图 32/33/36/37` single-track vs dual-track IPA; `图 41/42` dual-perspective 3D cost-IPA; `图 45` 3-question linked decision flow `Q22 → Q23 → Q24`; `图 46` diverging group-preference mirror bars), slashing bottom-of-page whitespace.
+- **Clean thematic silhouette word clouds (`image6.png`, `image8.png`)**: Pure white background, zero border/header/note clutter, high-density multi-angle Chinese typography tightly shaped inside a subject-matched silhouette, paired across two complementary semantic corpora (e.g., creator notes vs audience comments).
+- **Zero-noise empirical prose**: Main body stays in pure academic voice (`宋体` + `黑体` + `Times New Roman`, only 3 footnotes across ~63.5k chars), with zero redundant self-identifying cover labels or meta-disclaimers; AI tool disclosure is isolated strictly to its dedicated appendix.
+
+### Visual imperfections to surpass (do not copy blindly)
+
+- Raw English column identifiers (`watch_count`, `exercise_freq`, `Cam_Switcher`, `ShortVideo`, `Team_Subsidy`) leak into matplotlib legends/axes (`图 23`, `图 41–43`); EVI-X MUST map 100% of axis ticks and legend labels to clean Chinese.
+- Default matplotlib primary clashes (pure red/blue/green/orange) and dated Word SmartArt drop-shadows on `图 1` / `图 8`; EVI-X should keep the same borderless topic-woven clarity while upgrading to editorial-grade restrained palette & crisp vector typography.
 
 ### Do not learn these shortcuts
 

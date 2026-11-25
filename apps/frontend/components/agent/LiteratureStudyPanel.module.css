@@ -180,3 +180,55 @@
   .quoteTools > .field { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .workbench *, .workbench *::before, .workbench *::after { transition: none !important; animation: none !important; } }
+
+
+@media (forced-colors: active) {
+  .workbench,
+  .handoff,
+  .busy,
+  .import,
+  .zeroState,
+  .empty,
+  .highlight,
+  .evidenceList article,
+  .topic,
+  .tableWrap,
+  .issues,
+  .review {
+    background: Canvas;
+    color: CanvasText;
+    border-color: ButtonText;
+    box-shadow: none;
+  }
+
+  :where(.workbench) button,
+  :where(.workbench) :is(select, textarea, input[type=number]),
+  .zeroState li span {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+  }
+
+  .toolbar,
+  .collaboration,
+  .topicDisclosure,
+  .tableWrap :is(th, td),
+  .highlight,
+  .review {
+    border-color: CanvasText !important;
+  }
+
+  .workbench .primary,
+  .team .member[aria-pressed=true],
+  .workbench .tabs button[aria-selected=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .workbench :is(button, select, input, textarea, summary, a):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

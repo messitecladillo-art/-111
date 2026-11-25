@@ -7,11 +7,51 @@
  * 5. IP Strategy & 6-member Team Liaison roster constants (`TeamLiaisonStudio`)
  */
 import MiniSearch from 'minisearch';
-import { Document, HeadingLevel, Packer, Paragraph, TextRun } from 'docx';
-import type { EditorContent, ReportSection } from '../editor-model.ts';
+import { parseEditorContent, sectionProseText, type EditorContent, type ReportSection } from '../editor-model.ts';
 import { newQuestion, newQuestionnaire, parseQuestionnaire, type DesignQuestion, type Questionnaire } from '../questionnaire.ts';
-import { emptyReference, type ReferenceEntry } from '../references.ts';
-import { parseEditorContent } from '../editor-model.ts';
+import { emptyReference, referenceNumbers, type ReferenceEntry } from '../references.ts';
+import { referenceSegments, reportLabels } from '../report-numbering.ts';
+import { formatSlideInlineMath } from '../report-storyboard.ts';
+
+type EditableProseSlot =
+  | { kind: 'body'; lineIndex: number; text: string }
+  | { kind: 'block'; blockId: string; lineIndex: number; text: string };
+
+function listSectionProseSlots(sec: ReportSection): EditableProseSlot[] {
+  const slots: EditableProseSlot[] = [];
+  sec.body.split('\n').forEach((line, lineIndex) => {
+    const trimmed = line.trim();
+    if (!trimmed || /^【教学模拟数据/u.test(trimmed) || /^注[：:]/u.test(trimmed)) return;
+    slots.push({ kind: 'body', lineIndex, text: trimmed });
+  });
+  for (const block of sec.blocks ?? []) {
+    if (!['paragraph', 'callout', 'citation'].includes(block.kind)) continue;
+    block.text.split('\n').forEach((line, lineIndex) => {
+      const trimmed = line.trim();
+      if (!trimmed || /^【教学模拟数据/u.test(trimmed) || /^注[：:]/u.test(trimmed)) return;
+      slots.push({ kind: 'block', blockId: block.id, lineIndex, text: trimmed });
+    });
+  }
+  return slots;
+}
+
+function cleanHumanProse(raw: string, content?: EditorContent): string {
+  let text = raw;
+  if (content) {
+    const labels = reportLabels(content.report);
+    const citations = referenceNumbers(content).numbers;
+    text = referenceSegments(text, labels, citations)
+      .map(seg => (seg.missing ? '' : seg.text))
+      .join('');
+  } else {
+    text = text
+      .replace(/\[\[表:[^\]]+\]\]/gu, '对应统计表')
+      .replace(/\[\[图:[^\]]+\]\]/gu, '对应统计图')
+      .replace(/\[\[式:[^\]]+\]\]/gu, '对应公式')
+      .replace(/\[\[引:[^\]]+\]\]/gu, '');
+  }
+  return formatSlideInlineMath(text).replace(/\s+/gu, ' ').trim();
+}
 
 export const MAX_TEAM_MEMBERS = 6;
 
@@ -70,8 +110,10 @@ export function matchCrossReferences(
   const matches: CrossRefMatch[] = [];
   for (const sec of report) {
     if (/^(?:封面|目录|参考文献|附录)/u.test(sec.title.trim())) continue;
-    const paras = sec.body.split(/\n+/).map(s => s.trim()).filter(s => s.length >= 12);
-    paras.forEach((para, idx) => {
+    const slots = listSectionProseSlots(sec);
+    slots.forEach((slot, idx) => {
+      const para = slot.text;
+      if (para.length < 12) return;
       const pTokens = new Set(tokenizeChineseAndLatin(para));
       const overlap = [...queryTokens].filter(t => pTokens.has(t));
       const longestBoost = overlap.filter(t => t.length >= 3).length * 0.8;
@@ -79,11 +121,12 @@ export function matchCrossReferences(
       const rawScore = overlap.length + longestBoost + introBoost;
       if (overlap.length >= 1 && rawScore > 0.8) {
         const score = Math.min(0.99, Number((rawScore / Math.max(4, queryTokens.size * 0.45)).toFixed(2)));
+        const cleanSnippet = cleanHumanProse(para);
         matches.push({
           sectionId: sec.id,
           sectionTitle: sec.title,
           paragraphIndex: idx,
-          snippet: para.length > 96 ? `${para.slice(0, 96)}…` : para,
+          snippet: cleanSnippet.length > 96 ? `${cleanSnippet.slice(0, 96)}…` : cleanSnippet,
           score,
           matchedTerms: [...new Set(overlap)].sort((a, b) => b.length - a.length).slice(0, 5),
         });
@@ -95,11 +138,12 @@ export function matchCrossReferences(
   if (!matches.length) {
     const preferred = report.find(s => /文献|背景|绪论/u.test(s.title)) ?? report.find(s => !/^(?:封面|目录|参考文献|附录)/u.test(s.title));
     if (preferred) {
+      const fallbackText = cleanHumanProse(sectionProseText(preferred));
       matches.push({
         sectionId: preferred.id,
         sectionTitle: preferred.title,
         paragraphIndex: 0,
-        snippet: preferred.body.slice(0, 90) || '建议插入文献综述与理论支撑开篇处。',
+        snippet: fallbackText.slice(0, 90) || '建议插入文献综述与理论支撑开篇处。',
         score: 0.42,
         matchedTerms: (candidate.keywords ?? []).slice(0, 3),
       });
@@ -142,19 +186,33 @@ export function applyCrossReferenceToContent(
 
   const citeNumber = refIndex + 1;
   const citeTag = `[[引:${refId}]]`;
+  const appendCite = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) return `${candidate.claim || candidate.title}${citeTag}。`;
+    const replaced = line.replace(/([。！？；.]\s*)$/u, `${citeTag}$1`);
+    return replaced === line ? `${trimmed}${citeTag}。` : replaced;
+  };
   const nextReport = content.report.map(sec => {
     if (sec.id !== target.sectionId) return sec;
-    const paras = sec.body.split('\n');
-    const safeIdx = Math.max(0, Math.min(paras.length - 1, target.paragraphIndex));
-    const current = paras[safeIdx] ?? '';
-    if (current.includes(citeTag)) return sec;
-    const updatedPara = current.trim()
-      ? current.replace(/([。！？；.])$/, `${citeTag}$1`) === current
-        ? `${current.trim()}${citeTag}。`
-        : current.replace(/([。！？；.])$/, `${citeTag}$1`)
-      : `${candidate.claim || candidate.title}${citeTag}。`;
-    paras[safeIdx] = updatedPara;
-    return { ...sec, body: paras.join('\n') };
+    if (sectionProseText(sec).includes(citeTag)) return sec;
+    const slots = listSectionProseSlots(sec);
+    if (!slots.length) {
+      const fallbackLine = appendCite(sec.body);
+      return { ...sec, body: fallbackLine };
+    }
+    const chosen = slots[Math.max(0, Math.min(slots.length - 1, target.paragraphIndex))];
+    if (chosen.kind === 'body') {
+      const bodyLines = sec.body.split('\n');
+      bodyLines[chosen.lineIndex] = appendCite(bodyLines[chosen.lineIndex] ?? '');
+      return { ...sec, body: bodyLines.join('\n') };
+    }
+    const nextBlocks = (sec.blocks ?? []).map(b => {
+      if (b.id !== chosen.blockId) return b;
+      const bLines = b.text.split('\n');
+      bLines[chosen.lineIndex] = appendCite(bLines[chosen.lineIndex] ?? '');
+      return { ...b, text: bLines.join('\n') };
+    });
+    return { ...sec, blocks: nextBlocks };
   });
 
   const parsed = parseEditorContent({
@@ -210,8 +268,10 @@ export function searchReportForQa(content: EditorContent, question: string, limi
   const docs: IndexedChunk[] = [];
   for (const sec of content.report) {
     if (/^(?:封面|目录)/u.test(sec.title.trim())) continue;
-    const parts = sec.body.split(/\n+/).map(s => s.trim()).filter(Boolean);
-    parts.forEach((text, idx) => {
+    const slots = listSectionProseSlots(sec);
+    slots.forEach((slot, idx) => {
+      const text = cleanHumanProse(slot.text, content);
+      if (!text) return;
       docs.push({
         id: `${sec.id}::${idx}`,
         sectionId: sec.id,
@@ -280,16 +340,16 @@ export function buildDefenseScriptMarkdown(
     lines.push(`## Q${index + 1}. ${item.question}`);
     lines.push(`- **依据来源**：${item.sourceMode === 'report_hit' ? `已定位当前报告原文（${item.hits.map(h => h.sectionTitle).slice(0, 3).join('、')}）` : '报告未直接覆盖 · 已结合外部学术知识框架补充回应'}`);
     if (item.hits.length) {
-      lines.push(`- **报告原文高亮摘录**：`);
+      lines.push(`- **报告原文高亮摘录**`);
       item.hits.slice(0, 2).forEach(h => {
-        lines.push(`  - [${h.sectionTitle}] “${h.text.slice(0, 140)}${h.text.length > 140 ? '…' : ''}”`);
+        lines.push(`  - （${h.sectionTitle}）“${h.text.slice(0, 140)}${h.text.length > 140 ? '…' : ''}”`);
       });
     }
     lines.push('');
-    lines.push(`**【推荐现场回答口径】**`);
+    lines.push('**推荐现场回答口径**');
     lines.push(item.answerDraft);
     lines.push('');
-    lines.push(`**【评委二次追问预判与防线】**`);
+    lines.push('**评委二次追问预判与防线**');
     lines.push(item.followUpTip);
     lines.push('');
   });
@@ -300,7 +360,8 @@ export async function buildDefenseScriptDocx(
   reportTitle: string,
   items: readonly QaDefenseItem[],
 ): Promise<Blob> {
-  const children: Paragraph[] = [
+  const { Document, HeadingLevel, Packer, Paragraph, TextRun } = await import('docx');
+  const children: InstanceType<typeof Paragraph>[] = [
     new Paragraph({
       text: `${reportTitle || '调研报告'} · 竞赛答辩问答（Q/A）问辩稿`,
       heading: HeadingLevel.TITLE,
@@ -331,7 +392,7 @@ export async function buildDefenseScriptDocx(
         children.push(
           new Paragraph({
             children: [
-              new TextRun({ text: `【原文定位 · ${hit.sectionTitle}】`, bold: true, color: 'B91C1C' }),
+              new TextRun({ text: `原文定位（${hit.sectionTitle}）：`, bold: true, color: 'B91C1C' }),
               new TextRun({ text: hit.text }),
             ],
           }),
@@ -372,7 +433,7 @@ export function buildQuickQuestionnaire(params: {
     text: params.groupQuestion.trim() || '您目前所属的主要群体类别是？',
     type: 'single',
     required: true,
-    source: 'Agent 极简问卷坊生成',
+    source: '极简问卷工坊生成',
     choices: (params.groupChoices.length >= 2 ? params.groupChoices : ['高频体验者', '低频/潜在体验者']).map((label, idx) => ({
       code: String(idx + 1),
       label: label.trim() || `选项${idx + 1}`,
@@ -391,10 +452,10 @@ export function buildQuickQuestionnaire(params: {
     const cleanDim = dim.trim() || `核心维度 ${i + 1}`;
     questions.push({
       ...newQuestion(`quick-q${i + 2}`, `Q${i + 2}`),
-      text: `请评价您对「${cleanDim}」的实际体验满意度（1=非常不满意，5=非常满意）：`,
+      text: `请评价您对“${cleanDim}”的实际体验满意度（1=非常不满意，5=非常满意）：`,
       type: 'likert',
       required: true,
-      source: 'Agent 极简问卷坊生成',
+      source: '极简问卷工坊生成',
       choices: [],
       min: 1,
       max: 5,
@@ -411,10 +472,10 @@ export function buildQuickQuestionnaire(params: {
   if (params.includeAttentionCheck !== false) {
     questions.push({
       ...newQuestion('quick-attn', `Q${questions.length + 1}`),
-      text: '【质量甄别题】为确认认真作答，本题请固定选择一般中立选项（3 分）。',
+      text: '为确认认真作答，本题请固定选择一般中立选项（3 分）。',
       type: 'likert',
       required: true,
-      source: 'Agent 极简问卷坊生成',
+      source: '极简问卷工坊生成',
       choices: [],
       min: 1,
       max: 5,
@@ -434,7 +495,7 @@ export function buildQuickQuestionnaire(params: {
     text: '总体而言，您对本次调研对象的整体满意度评价如何？',
     type: 'likert',
     required: true,
-    source: 'Agent 极简问卷坊生成',
+    source: '极简问卷工坊生成',
     choices: [],
     min: 1,
     max: 5,
@@ -476,39 +537,39 @@ export interface ImagePricingPlan {
 export const IMAGE_PRICING_PLANS: readonly ImagePricingPlan[] = [
   {
     id: 'free-sandbox',
-    name: '科研体验版（当前本地矢量引擎）',
-    billing: '免费 / 零外部 API 扣费',
-    quota: '无限次矢量封面、框饰、徽章与 Q 版头像合成',
-    features: ['纯本地 SVG 无损渲染', '一键套用 Word / LaTeX / 报告主题色', '零 API Key 泄露风险'],
+    name: '科研体验版（当前本地矢量渲染）',
+    billing: '免费 / 零外部接口扣费',
+    quota: '无限次矢量封面、框饰、徽章与成员头像合成',
+    features: ['纯本地矢量无损渲染', '一键套用 Word / LaTeX / 报告主题色', '零密钥外传风险'],
   },
   {
     id: 'pay-per-gen',
     name: '按次生图点数包（商业化接入规划）',
-    billing: '¥0.20 / 次（4K 科研封面/写实配图）',
-    quota: '按实际后端回执 Usage 扣减，超时未落账不扣费',
-    features: ['接入多模态生图 API 网关', '支持提示词增强与参考图重绘', '自动留存高清 PNG 与水印版'],
+    billing: '¥0.20 / 次（高清科研封面/写实配图）',
+    quota: '按实际后端回执用量扣减，超时未落账不扣费',
+    features: ['接入多模态生图服务通道', '支持画面描述润色与参考图重绘', '自动留存高清 PNG 与水印版'],
   },
   {
     id: 'pro-subscription',
     name: '竞赛团队订阅版（后期会员体系）',
     billing: '¥39 / 月 或 ¥128 / 赛季（6 人团队共享）',
     quota: '每月 200 次高清生图 + 全套国奖排版特权 + 问辩库',
-    features: ['6 人协作席位与实时在线房间', '团队共享素材资产库与自定义 IP 徽章', '优先高速渲染通道'],
+    features: ['6 人协作席位与实时在线房间', '团队共享素材资产库与自定义团队徽章', '优先高速渲染通道'],
   },
 ];
 
 export const IP_STRATEGY_BLUEPRINT = {
   brandName: '证见 · EVI-X（Evidence + X）',
-  coreArchetype: '双视觉图腾体系：「棱镜罗盘」×「獬豸九门方印」',
-  mascotPersona: '「见见（X-Scout）」与「守印官（Xiejian）」：前者化身赛博学术领航员，对应文献探索与词云挖掘；后者守卫数据真实性红线与计算指纹（杜绝编造数字）。',
+  coreArchetype: '双视觉图腾体系，“棱镜罗盘”×“獬豸九门方印”',
+  mascotPersona: '“见见（X-Scout）”与“守印官（Xiejian）”，前者化身学术探索领航员，对应文献探索与词云挖掘；后者守卫数据真实性红线与计算溯源（杜绝编造数字）。',
   stagesToIpMapping: [
-    '问题破局期：触发「棱镜罗盘」矢量微标，寓意从繁杂舆论中折射真问题；',
-    '打字机拟稿期：Anatomy 机械工作站模拟老式铅字打字机实时击键，赋予调研人“主编监制”的仪式感；',
-    '核验/答辩期：獬豸守印官盖下 SHA-256 证据防伪印鉴，形成比赛评委最信任的“零造假、全可溯源”差异化心智。',
+    '在问题破局期触发“棱镜罗盘”矢量微标，寓意从繁杂舆论中折射真问题；',
+    '在拟稿审校期由机械打字工作站呈现铅字实时击键，赋予调研人“主编监制”的仪式感；',
+    '在核验与答辩期由獬豸守印官盖下证据防伪印鉴，形成评审最信任的“零造假、全可溯源”差异化心智。',
   ],
   monetizationHooks: [
-    '数字周边：队员专属 6 款可交互「证见勋章」动态头像框、答辩 PPT 专属水印角标；',
-    '线下转化：决赛答辩定制手卡/海报视觉套件一键打包输出。',
+    '提供队员专属 6 款可交互“证见勋章”动态头像框与答辩幻灯片专属水印角标；',
+    '提供决赛答辩定制手卡与海报视觉套件一键打包输出。',
   ],
 } as const;
 

@@ -4,3 +4,48 @@
 .review p{margin:8px 0}.review button{font:inherit;font-weight:600;border:1px solid var(--wb-line);border-radius:7px;padding:9px 12px;background:var(--wb-surface);color:var(--wb-ink);cursor:pointer}.review button.primary{background:var(--wb-accent);color:var(--wb-accent-text);border-color:var(--wb-accent)}.review button:disabled{opacity:.5;cursor:not-allowed}.review button:focus-visible,.review input:focus-visible,.review summary:focus-visible{outline:3px solid var(--wb-accent);outline-offset:3px}.actions{display:flex;gap:8px;margin:12px 0}.consent{display:flex;align-items:flex-start;gap:8px;margin:12px 0}.consent input{width:17px;height:17px;flex-shrink:0;accent-color:var(--wb-accent);margin-top:4px}
 .counts{display:flex;gap:20px;flex-wrap:wrap;background:var(--wb-well);padding:12px;border-radius:8px}.counts strong{font-size:21px;font-variant-numeric:tabular-nums}.result{border-top:1px solid var(--wb-line);margin-top:16px;padding-top:8px}.review details{margin-top:12px;padding:10px 12px;background:var(--wb-well);border-radius:8px}.review summary{cursor:pointer;font-weight:600}.review ul,.review ol{padding-left:22px;margin:8px 0}.review li{margin-bottom:10px}.findings{max-height:380px;overflow:auto}.findings p{margin:2px 0}.risk,.error{color:var(--wb-risk)}.error,.warning{padding:10px 12px;background:var(--wb-well);border-left:3px solid var(--wb-risk);border-radius:5px}.review dl{display:grid;grid-template-columns:105px minmax(0,1fr);gap:8px}.review dd{margin:0;overflow-wrap:anywhere}.review dt{color:var(--wb-muted)}
 @media(max-width:700px){.review{padding:14px}.review header{display:block}.badge{display:inline-block;margin-bottom:8px}.review dl{display:block}.review dd{margin-bottom:10px}.counts{gap:12px}.review button{max-width:100%;white-space:normal;text-align:left}}
+
+@media (forced-colors: active) {
+  .review,
+  .origin,
+  .difference,
+  .badge,
+  .counts,
+  .review details,
+  .error,
+  .warning {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .review,
+  .origin,
+  .difference,
+  .badge,
+  .counts,
+  .review details,
+  .review button {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .result,
+  .error,
+  .warning {
+    border-color: CanvasText;
+  }
+
+  .review button.primary {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .review button:focus-visible,
+  .review input:focus-visible,
+  .review summary:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

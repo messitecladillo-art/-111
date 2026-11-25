@@ -32,7 +32,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
   const editAttr = (index: number, patch: Partial<PersonaAttribute>) => setAttributes(config.attributes.map((a, i) => i === index ? { ...a, ...patch } : a));
   const applyTemplate = (key: string) => {
     if (key === config.template) return;
-    if (!window.confirm(`换成「${PANEL_TEMPLATES[key].label}」模板？当前的属性与配额会被替换（个人外观设置保留）。`)) return;
+    if (!window.confirm(`换成“${PANEL_TEMPLATES[key].label}”模板？当前的属性与配额会被替换（个人外观设置保留）。`)) return;
     update({ template: key, attributes: JSON.parse(JSON.stringify(PANEL_TEMPLATES[key].attributes)) });
   };
 
@@ -49,17 +49,17 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
     <section className={styles.block} aria-labelledby="sx-size">
       <div className={styles.blockHead}><h3 id="sx-size">规模与分配</h3></div>
       <div className={styles.sizeRow}>
-        <label className={styles.sizeField}><span>硅基受访者人数</span>
-          <span className={styles.sizeControl}><input type="range" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Number(e.target.value) })} aria-describedby="sx-size-hint"/><input type="number" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Math.max(1, Math.min(SILICON_LIMITS.personas, Number(e.target.value) || 1)) })} aria-label="人数"/></span>
+        <label className={styles.sizeField}><span>预测试受访者人数</span>
+          <span className={styles.sizeControl}><input type="range" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Number(e.target.value) })} aria-label="预测试受访者人数滑块" aria-describedby="sx-size-hint"/><input type="number" min={1} max={SILICON_LIMITS.personas} value={config.size} onChange={e => update({ size: Math.max(1, Math.min(SILICON_LIMITS.personas, Number(e.target.value) || 1)) })} aria-label="预测试受访者人数数值"/></span>
           <small id="sx-size-hint">上限 {SILICON_LIMITS.personas} 位。</small>
         </label>
         <fieldset className={styles.segmented}><legend>分配方式</legend>
-          <label><input type="radio" name="sx-allocation" checked={config.allocation === 'quota'} onChange={() => update({ allocation: 'quota' })}/><span>精确配额<small>每个属性的边际比例严格对齐</small></span></label>
-          <label><input type="radio" name="sx-allocation" checked={config.allocation === 'random'} onChange={() => update({ allocation: 'random' })}/><span>独立抽取<small>按比例随机，会有波动</small></span></label>
+          <label><input type="radio" name="sx-allocation" aria-label="精确配额分配" checked={config.allocation === 'quota'} onChange={() => update({ allocation: 'quota' })}/><span>精确配额<small>每个属性的边际比例严格对齐</small></span></label>
+          <label><input type="radio" name="sx-allocation" aria-label="独立随机抽取" checked={config.allocation === 'random'} onChange={() => update({ allocation: 'random' })}/><span>独立抽取<small>按比例随机，会有波动</small></span></label>
         </fieldset>
-        <div className={styles.seedBox}><span>随机种子 <code>{config.seed}</code></span><button type="button" onClick={() => update({ seed: Math.floor(Math.random() * 2 ** 31) })}>换一批画像</button></div>
+        <div className={styles.seedBox}><span>抽样批次号 <code>{config.seed}</code></span><button type="button" onClick={() => update({ seed: Math.floor(Math.random() * 2 ** 31) })}>换一批画像</button></div>
       </div>
-      <label className={styles.wideField}><span>共同背景（可选）</span><textarea rows={2} maxLength={SILICON_LIMITS.background} value={config.background} onChange={e => update({ background: e.target.value })} placeholder="例如：就读于华东某综合性大学，住在校内宿舍。会写进每位硅基受访者的设定。"/></label>
+      <label className={styles.wideField}><span>共同背景（可选）</span><textarea aria-label="受访群体共同背景（可选）" rows={2} maxLength={SILICON_LIMITS.background} value={config.background} onChange={e => update({ background: e.target.value })} placeholder="可补充受访群体共同所处的生活或调研情境，如就读于华东某高校并居住在校内宿舍。"/></label>
     </section>
 
     <section className={styles.block} aria-labelledby="sx-attrs">
@@ -71,14 +71,14 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
           return <article key={a.key} className={styles.attrCard}>
             <div className={styles.attrHead}>
               <input value={a.label} maxLength={SILICON_LIMITS.label} aria-label={`属性 ${ai + 1} 名称`} onChange={e => editAttr(ai, { label: e.target.value })}/>
-              <button type="button" className={styles.iconButton} aria-label={`删除属性「${a.label || ai + 1}」`} disabled={config.attributes.length <= 1} onClick={() => setAttributes(config.attributes.filter((_, i) => i !== ai))}>×</button>
+              <button type="button" className={styles.iconButton} aria-label={`删除属性“${a.label || ai + 1}”`} disabled={config.attributes.length <= 1} onClick={() => setAttributes(config.attributes.filter((_, i) => i !== ai))}>×</button>
             </div>
             <ul className={styles.levelList}>
               {a.levels.map((l, li) => <li key={li}>
-                <input value={l.label} maxLength={40} aria-label={`${a.label} 取值 ${li + 1}`} onChange={e => editAttr(ai, { levels: a.levels.map((x, i) => i === li ? { ...x, label: e.target.value, value: e.target.value } : x) })}/>
-                <input type="number" min={0} step={1} value={l.weight} aria-label={`${l.label || '该取值'} 的比例权重`} onChange={e => editAttr(ai, { levels: a.levels.map((x, i) => i === li ? { ...x, weight: Math.max(0, Number(e.target.value) || 0) } : x) })}/>
+                <input value={l.label} maxLength={40} aria-label={`${a.label || `属性 ${ai + 1}`} 取值 ${li + 1}`} onChange={e => editAttr(ai, { levels: a.levels.map((x, i) => i === li ? { ...x, label: e.target.value, value: e.target.value } : x) })}/>
+                <input type="number" min={0} step={1} value={l.weight} aria-label={`${l.label || `取值 ${li + 1}`} 的比例权重`} onChange={e => editAttr(ai, { levels: a.levels.map((x, i) => i === li ? { ...x, weight: Math.max(0, Number(e.target.value) || 0) } : x) })}/>
                 <span className={styles.levelCount} title={config.allocation === 'quota' ? '配额人数' : '本批实际人数'}>{config.allocation === 'quota' ? counts[li] : actual[li]?.count ?? 0}</span>
-                <button type="button" className={styles.iconButton} aria-label={`删除取值「${l.label || li + 1}」`} disabled={a.levels.length <= 2} onClick={() => editAttr(ai, { levels: a.levels.filter((_, i) => i !== li) })}>×</button>
+                <button type="button" className={styles.iconButton} aria-label={`删除取值“${l.label || li + 1}”`} disabled={a.levels.length <= 2} onClick={() => editAttr(ai, { levels: a.levels.filter((_, i) => i !== li) })}>×</button>
               </li>)}
             </ul>
             <button type="button" className={styles.linkButton} disabled={a.levels.length >= SILICON_LIMITS.levels} onClick={() => editAttr(ai, { levels: [...a.levels, { value: '', label: '', weight: 1 }] })}>＋ 添加取值</button>
@@ -86,12 +86,12 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
         })}
         <button type="button" className={styles.addCard} disabled={config.attributes.length >= SILICON_LIMITS.attributes} onClick={() => setAttributes([...config.attributes, { key: newKey(config.attributes), label: '', levels: [{ value: '', label: '', weight: 1 }, { value: '', label: '', weight: 1 }] }])}><span aria-hidden="true">＋</span>添加属性</button>
       </div>
-      {issues.length > 0 && <ul className={styles.issueList} role="status">{issues.map(i => <li key={i}>{i}</li>)}</ul>}
+      {issues.length > 0 && <ul className={styles.issueList} role="alert">{issues.map(i => <li key={i}>{i}</li>)}</ul>}
     </section>
 
     <section className={styles.block} aria-labelledby="sx-roster">
-      <div className={styles.blockHead}><h3 id="sx-roster">硅基受访者名册</h3><p>点选人物可调整外观与背景；外观只供辨认，不进入模型设定。</p></div>
-      {elevated > 0 && <p className={styles.riskNote}><b>画像核验</b>{elevated} 位画像涉及{reasons.join('、')}，需结合真人预调查核对。</p>}
+      <div className={styles.blockHead}><h3 id="sx-roster">预测试受访者名册</h3><p>点选人物可调整外观与个人背景；外观仅用于舞台区分，不影响作答逻辑。</p></div>
+      {elevated > 0 && <p className={styles.riskNote} role="status"><b>画像核验</b>{elevated} 位画像涉及{reasons.join('、')}，需结合真人预调查核对。</p>}
       <ul ref={rosterRef} className={styles.roster}>
         {visiblePersonas.map((p, i) => {
           const profile = synthesizePersonaProfile(p, config.attributes);
@@ -102,7 +102,7 @@ export default function PanelDesigner({ config, update, personas, selectedId, on
                 <strong>
                   <span className={styles.aliasName}>{profile.alias}</span>
                   <code className={styles.codePill}>{p.code}</code>
-                  {risks[i].level === 'elevated' && <i className={styles.riskDot} title={`保真度风险：${risks[i].reasons.join('、')}`} aria-label="保真度风险较高"/>}
+                  {risks[i].level === 'elevated' && <i className={styles.riskDot} title={`涉及${risks[i].reasons.join('、')}特征，建议结合真人预调查核对`} aria-label="需结合真人核对"/>}
                 </strong>
                 <small>{config.attributes.map(a => p.traits[a.key]).filter(Boolean).join(' · ')}</small>
               </span>

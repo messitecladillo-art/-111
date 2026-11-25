@@ -31,12 +31,12 @@ export function parseFigureRequest(raw: string): FigureRequest | null {
   const change: FigureChange = {}, unsupported: string[] = [];
   const kind = KINDS.find(([pattern]) => pattern.test(text));
   if (kind) change.kind = kind[1];
-  else if (/直方图|箱线图|箱型图/u.test(text)) unsupported.push('直方图和箱线图要用登记时的原始分布，不能从汇总表重画；请到「数据分析」的图表工作室重新登记。');
+  else if (/直方图|箱线图|箱型图/u.test(text)) unsupported.push('直方图和箱线图要用登记时的原始分布，不能从汇总表重画；请到“数据分析”的图表工作室重新登记。');
   else if (/三线表|表格/u.test(text)) unsupported.push('要把图换成三线表，请在报告里把这张图删掉、插入它的表；这里只改图的样式。');
   const named = CHART_THEMES.find(t => text.includes(t.title));
   const colour = named ? named.id : COLOURS.find(([pattern]) => pattern.test(text))?.[1];
   if (colour) change.paletteId = colour;
-  else if (/配色|颜色|色系|红|橙|黄|粉/u.test(text)) unsupported.push(`现有的配色方案是：${PALETTES_SAID()}，以及「晴雾五色」等研究配色；说出其中一个就能换。`);
+  else if (/配色|颜色|色系|红|橙|黄|粉/u.test(text)) unsupported.push(`现有的配色方案包括${PALETTES_SAID()}，以及“晴雾五色”等研究配色，说出其中一个就能切换。`);
   const toggle = (subject: RegExp): boolean | undefined => {
     const at = text.search(subject);
     if (at < 0) return undefined;
@@ -50,7 +50,7 @@ export function parseFigureRequest(raw: string): FigureRequest | null {
   const digits = /(\d)\s*位小数/u.exec(text);
   if (digits) change.decimals = Math.min(4, Number(digits[1]));
   else if (/保留整数|不要小数|取整/u.test(text)) change.decimals = 0;
-  if (/字号|字体|字.{0,2}大|字.{0,2}小/u.test(text)) unsupported.push('图里的字号由导出时的报告排版统一设定（正文五号、图注小五），这里不单独改；打开代码视图可以在本地改 FONT_SIZE 重画。');
+  if (/字号|字体|字.{0,2}大|字.{0,2}小/u.test(text)) unsupported.push('图里的字号由导出时的报告排版统一设定（正文五号、图注小五），这里不单独改；如需自定义字号可在代码视图中按需调整重绘。');
   return Object.keys(change).length || unsupported.length ? { change, unsupported } : null;
 }
 
@@ -90,7 +90,7 @@ export function applyFigureChange(content: EditorContent, resultId: string, chan
   figure = parseReportFigure({ ...figure, style });
   let visualStyle: ProjectVisualStyle | undefined = content.visualStyle;
   if (change.paletteId && change.paletteId !== (visualStyle?.paletteId ?? 'blue')) {
-    if (content.reportFrame?.status === 'approved') throw Error('报告的页框配色已经定稿，整份报告的配色要在「报告与 PPT」的页框设置里改。');
+    if (content.reportFrame?.status === 'approved') throw Error('报告的页框配色已经定稿，整份报告的配色请在报告与演示文稿的页框设置中修改。');
     changes.push(`配色 ${paletteTitle(visualStyle?.paletteId ?? 'blue')} → ${paletteTitle(change.paletteId)}（整份报告的图一起换）`);
     visualStyle = { schema: 'ProjectVisualStyle/v1', paletteId: change.paletteId as ProjectVisualStyle['paletteId'], version: visualStyle?.version ?? 1 };
   }

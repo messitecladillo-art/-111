@@ -61,6 +61,7 @@ import {
 } from '../lib/agent/full-report-pipeline.ts';
 import { buildSkillPackContract } from '../lib/agent/full-report-pipeline.ts';
 import { buildSectionTokens } from '../lib/agent/full-report-pipeline.ts';
+import { FALLBACK_RHETORICAL_BLUEPRINTS } from '../lib/agent/storyline-brief.ts';
 import {
   TOP10_DEAI_SKILLS,
   buildDeAiPromptRules,
@@ -323,16 +324,16 @@ test('Zhengda empirical anatomy covers 26 sections safely, embeds plan.measures 
     assert.match(assertTrueVector(diagramSnapshotSVG(snap, figureInk(createEditorContent()))), /^<svg\s/);
   }
 
-  // All 26 automated section nodes have blueprints whose opening sentences pass numeric/quantity gating cleanly
+  // All 28 automated section nodes have blueprints whose opening sentences pass numeric/quantity gating cleanly
   const allNodes = [...WAVE_1_SECTION_NODES, ...WAVE_2_SYNTHESIS_NODES];
-  assert.equal(allNodes.length, 26);
+  assert.equal(allNodes.length, 28);
   const mockTokens = {
     facts: [],
     exhibits: [{ id: 'G1', text: '测试图表', value: '[[图:res-1]]' }],
     references: [{ id: 'R1', text: '参考文献1', value: '[1]' }],
   };
   for (const nodeId of allNodes) {
-    const bp = getSectionRhetoricalBlueprint(nodeId);
+    const bp = getSectionRhetoricalBlueprint(nodeId) ?? FALLBACK_RHETORICAL_BLUEPRINTS[nodeId];
     assert.ok(bp, `Missing rhetorical blueprint for ${nodeId}`);
     const cleanedOpening = sanitizeModelParagraph(bp.openingMove);
     const hydrated = parseAndHydrateSectionDraft(

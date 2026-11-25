@@ -1,11 +1,21 @@
 /** Browser-owned literature state. No upload, global store or source verification. */
-import { stableStringify } from '../topic-advisor/parse.ts';
 import { mergeRecords, MAX_RECORDS, type LitRecord, type LitFormat } from './parse.ts';
 import { buildTermIndex, defaultSource, parseThesaurus, type TermSource } from './terms.ts';
 import { buildTermMap } from './network.ts';
 import { paperGraph } from './papers.ts';
 import { keywordBursts } from './burst.ts';
-import { parseCloudAppearance, type CloudAppearance } from './cloud-shapes.ts';
+import { parseCloudAppearance, type CloudAppearance } from './cloud-appearance-schema.ts';
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map(k => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 
 export const MAX_LITERATURE_WORKSPACE_BYTES = 80 * 1024 * 1024;
 export type LiteratureFileReport = { name: string; format: LitFormat | 'unknown'; records: number; skipped: number; warnings: string[] };

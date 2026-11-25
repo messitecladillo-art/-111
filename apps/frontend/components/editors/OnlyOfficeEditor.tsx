@@ -45,13 +45,13 @@ function parseLaunch(value: unknown, file: OfficeFile): NativeLaunch {
   const config = result.config;
   if (!session || session.fileId !== file.id || session.revision !== file.revision || !SESSION_KEY.test(session.key) || !config || typeof config !== "object") throw new Error("编辑会话与所选文件或版本不一致，已停止打开。");
   const documentConfig = (config as { document?: unknown }).document;
-  if (!documentConfig || typeof documentConfig !== "object" || (documentConfig as { key?: unknown }).key !== session.key || (documentConfig as { fileType?: unknown }).fileType !== file.kind || typeof (config as { token?: unknown }).token !== "string") throw new Error("ONLYOFFICE 签名配置不完整，已停止打开。");
-  if (typeof result.scriptUrl !== "string" || typeof result.shellUrl !== "string") throw new Error("文档引擎或隔离页面地址未配置。");
+  if (!documentConfig || typeof documentConfig !== "object" || (documentConfig as { key?: unknown }).key !== session.key || (documentConfig as { fileType?: unknown }).fileType !== file.kind || typeof (config as { token?: unknown }).token !== "string") throw new Error("在线协同编辑签名配置不完整，已停止打开。");
+  if (typeof result.scriptUrl !== "string" || typeof result.shellUrl !== "string") throw new Error("在线协同编辑服务或隔离页面地址未配置。");
   const script = new URL(result.scriptUrl);
   const shell = new URL(result.shellUrl);
-  if (!["http:", "https:"].includes(script.protocol) || script.username || script.password || script.search || script.hash || script.pathname !== "/web-apps/apps/api/documents/api.js") throw new Error("文档引擎地址不符合预期，已停止加载。");
+  if (!["http:", "https:"].includes(script.protocol) || script.username || script.password || script.search || script.hash || script.pathname !== "/web-apps/apps/api/documents/api.js") throw new Error("在线协同编辑服务地址不符合预期，已停止加载。");
   if (!["http:", "https:"].includes(shell.protocol) || shell.username || shell.password || shell.search || shell.hash || shell.pathname !== "/" ||
-      new Set([shell.hostname, script.hostname, window.location.hostname]).size !== 3) throw new Error("ONLYOFFICE 的应用、隔离编辑页和文档服务必须使用三个不同主机名，不能只换端口。");
+      new Set([shell.hostname, script.hostname, window.location.hostname]).size !== 3) throw new Error("在线协同编辑的应用、隔离编辑页和文档服务必须使用三个不同主机名，不能只换端口。");
   return { shellUrl: shell.href, scriptUrl: script.href, config, session };
 }
 
@@ -161,11 +161,11 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
     const timer = window.setTimeout(() => {
       if (!alive.current || phaseRef.current !== "loading") return;
       if (dirtyRef.current) {
-        setError("ONLYOFFICE 未报告文档就绪，但已有改动信号。当前界面将保留；请核对并谨慎关闭，不能视为已保存。");
+        setError("在线协同编辑服务未报告文档就绪，但已有改动信号。当前界面将保留；请核对并谨慎关闭，不能视为已保存。");
         view("unconfirmed");
         return;
       }
-      setError("ONLYOFFICE 在 90 秒内未报告文档就绪。可能是编辑页、文档服务或浏览器安全策略未连通；未生成新版本。");
+      setError("在线协同编辑服务在 90 秒内未报告文档就绪。可能是编辑页、文档服务或浏览器安全策略未连通；未生成新版本。");
       setIframeVisible(false);
       view("error");
     }, 90_000);
@@ -206,7 +206,7 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
           setError("版本发生冲突，编辑内容没有写入原文件当前版本。请先下载服务器保留的冲突副本，再决定如何合并。");
           view("conflict");
         }
-        else if (value.state === "error") { setError("ONLYOFFICE 的保存回调未能提交新版本。原有版本未覆盖；请保留本地备份并核查文件库。"); view("error"); }
+        else if (value.state === "error") { setError("在线协同编辑服务的保存同步未能提交新版本。原有版本未覆盖；请保留本地备份并核查文件库。"); view("error"); }
         else if (pollAttempt >= 19) view("unconfirmed");
         else setPollAttempt(n => n + 1);
       }).catch(failure => {
@@ -231,7 +231,7 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
       if (phaseRef.current === "conflict" && recovery && !recoveryDownloaded && !window.confirm("尚未下载本次编辑的冲突副本。离开后可能难以找回，请先下载并核对文件。仍要离开吗？")) return;
       if (phaseRef.current === "saved") onSaved(); onClose(); return;
     }
-    if (dirtyRef.current && !window.confirm("ONLYOFFICE 中可能还有未提交的改动。关闭后将等待文档服务回调；只有出现新版本确认才算保存。仍要关闭编辑器吗？")) return;
+    if (dirtyRef.current && !window.confirm("在线编辑器中可能还有未提交的改动。关闭后将等待文档服务同步保存结果；只有出现新版本确认才算保存。仍要关闭编辑器吗？")) return;
     if (launch) iframe.current?.contentWindow?.postMessage({ channel: CHANNEL, nonce: nonce.current, type: "destroy" }, new URL(launch.shellUrl).origin);
     if (!launch) openController.current?.abort();
     setIframeVisible(false); setPollAttempt(0); view(launch ? "waiting" : "closed");
@@ -282,25 +282,25 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
   const recoveryRemaining = recovery?.expiresAt ? Date.parse(recovery.expiresAt) - recoveryClock : null;
   const busy = ["opening", "loading", "waiting"].includes(effectivePhase);
   const statusReveal = useContentReveal<HTMLElement>({ token: `${effectivePhase}:${savedRevision ?? ''}` });
-  const statusText = effectivePhase === "opening" ? "正在建立受限编辑会话" : effectivePhase === "loading" ? "正在载入 ONLYOFFICE 文档引擎" : effectivePhase === "editing" ? "正在编辑 · 尚未提交新版本" : effectivePhase === "waiting" ? "正在等待关闭后的保存回调" : effectivePhase === "saved" ? `服务器已确认新版本${savedRevision ? ` v${savedRevision}` : ""}` : effectivePhase === "closed" ? "已关闭 · 文档无修改" : effectivePhase === "frozen" ? "身份正在恢复 · 编辑请求已暂停" : effectivePhase === "unconfirmed" ? "保存仍未确认" : "编辑或保存遇到问题";
+  const statusText = effectivePhase === "opening" ? "正在建立受限编辑会话" : effectivePhase === "loading" ? "正在载入在线协同编辑界面" : effectivePhase === "editing" ? "正在编辑 · 尚未提交新版本" : effectivePhase === "waiting" ? "正在同步并确认保存结果" : effectivePhase === "saved" ? `服务器已确认新版本${savedRevision ? ` 第 ${savedRevision} 版` : ""}` : effectivePhase === "closed" ? "已关闭 · 文档无修改" : effectivePhase === "frozen" ? "身份正在恢复 · 编辑请求已暂停" : effectivePhase === "unconfirmed" ? "保存仍未确认" : "编辑或保存遇到问题";
 
   if (typeof document === "undefined") return null;
   return createPortal(<div ref={backdrop} className={styles.backdrop} role="presentation">
     <section ref={dialog} className={styles.dialog} role="dialog" aria-modal="true" aria-label={`编辑 ${file.filename}`} onKeyDown={keepFocus}>
       <header className={styles.header}>
-        <div className={styles.title}><span className={styles.eyebrow}>ONLYOFFICE · {file.kind.toUpperCase()} · v{file.revision}</span><h2>{file.filename}</h2><p>{statusText}</p></div>
+        <div className={styles.title}><span className={styles.eyebrow}>在线协同编辑 · {file.kind === "docx" ? "报告文稿" : "演示文稿"} · 第 {file.revision} 版</span><h2>{file.filename}</h2><p>{statusText}</p></div>
         <button ref={closeButton} className={styles.close} type="button" disabled={effectivePhase === "waiting"} onClick={requestClose} aria-label="关闭编辑器并检查保存状态">关闭编辑器</button>
       </header>
-      <div className={styles.notice} role="status" data-phase={effectivePhase}><span className={busy ? styles.pulse : styles.dot} aria-hidden="true"/><strong ref={statusReveal}>{statusText}</strong><span>服务器确认保存回调并生成新版本后，文件库才显示“已保存”。</span></div>
+      <div className={styles.notice} role="status" data-phase={effectivePhase}><span className={busy ? styles.pulse : styles.dot} aria-hidden="true"/><strong ref={statusReveal}>{statusText}</strong><span>服务器同步确认保存结果并生成新版本后，文件库才显示“已保存”。</span></div>
       {frozen && launch && <p className={styles.liveError} role="alert">当前身份正在切换。已打开的旧会话会继续保留，保存目标仍是原身份，绝不会自动转入新身份。请确认保存状态后再关闭；如状态无法查询，请下载旧版并联系管理员核对。</p>}
       {error && iframeVisible && <p className={styles.liveError} role="alert">{error} 当前编辑界面仍保留；请先检查文档状态，不要直接关闭或刷新。</p>}
-      {iframeVisible && launch && <iframe ref={iframe} className={styles.frame} title={`ONLYOFFICE 编辑 ${file.filename}`} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads" referrerPolicy="no-referrer" src={launch.shellUrl} onLoad={initFrame}/>}
+      {iframeVisible && launch && <iframe ref={iframe} className={styles.frame} title={`在线协同编辑 ${file.filename}`} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads" referrerPolicy="no-referrer" src={launch.shellUrl} onLoad={initFrame}/>}
       {(!iframeVisible || !launch) && <div className={styles.statePanel}>
         <span className={styles.stateMark}>{effectivePhase === "saved" ? "✓" : effectivePhase === "closed" ? "—" : effectivePhase === "frozen" ? "!" : "···"}</span>
         <h3>{statusText}</h3>
         {error && <p className={styles.error} role="alert">{error}</p>}
         {effectivePhase === "opening" && <p>正在验证当前身份、原文件版本与编辑服务配置。</p>}
-        {effectivePhase === "waiting" && <p>ONLYOFFICE 通常会在最后一个编辑窗口关闭后异步回调。请稍等；当前列表尚不能代表已保存。</p>}
+        {effectivePhase === "waiting" && <p>在线文档服务通常会在最后一个编辑窗口关闭后完成保存同步。请稍等；当前列表尚不能代表已保存。</p>}
         {effectivePhase === "unconfirmed" && <p>没有得到新版本确认。不要把这次编辑视为已保存；请保留原件并稍后在文件库刷新核对。</p>}
         {effectivePhase === "conflict" && recovery && <><p>服务器已保留一个独立的编辑副本，{recovery.expiresAt ? `可下载至 ${new Date(recovery.expiresAt).toLocaleString("zh-CN")}` : "当前不自动清理"}。{recoveryRemaining !== null && recoveryRemaining <= 0 ? "已到期，不能再下载。" : recoveryRemaining !== null && recoveryRemaining <= 48 * 60 * 60 * 1000 ? "已接近到期，请立即下载。" : "请及时下载核对。"}它不是当前正式版本。</p><button type="button" className={styles.primary} disabled={recoveryBusy || (recoveryRemaining !== null && recoveryRemaining <= 0)} onClick={() => void downloadRecovery()}>{recoveryBusy ? "校验并下载中…" : recoveryDownloaded ? "重新下载冲突副本" : "下载冲突编辑副本"}</button></>}
         {effectivePhase === "closed" && <p>文档服务报告本次没有变更，原有版本保持不变。</p>}
@@ -309,7 +309,7 @@ export default function OnlyOfficeEditor({ file, scope, frozen, onClose, onSaved
         {effectivePhase === "unconfirmed" && <button type="button" onClick={() => { setError(""); setPollAttempt(0); view("waiting"); }}>重新检查保存状态</button>}
         {!busy && <button type="button" className={styles.primary} onClick={requestClose}>{effectivePhase === "saved" ? "刷新文件库并返回" : "返回文件库"}</button>}
       </div>}
-      <footer className={styles.footer}><span>当前支持单人编辑，关闭后确认保存；赛事材料需另行提交。</span><span>文件将发送至本部署的 ONLYOFFICE 服务，请核对部署位置与权限。旧版本保留。</span></footer>
+      <footer className={styles.footer}><span>当前支持单人编辑，关闭后确认保存；赛事材料需另行提交。</span><span>文件将发送至本部署的在线协同文档服务，请核对部署位置与权限。旧版本保留。</span></footer>
     </section>
   </div>, document.body);
 }

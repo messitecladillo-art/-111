@@ -204,9 +204,55 @@
   .scenarios button:first-child, .scenarios button:last-child { border: 1px solid #cbd7cd; border-radius: 4px; }
 }
 @media (prefers-reduced-motion:reduce) { .demo *, .demo *::before, .demo *::after { transition: none!important; animation: none!important; scroll-behavior: auto!important; } }
-@media (forced-colors:active) {
-  .demo button[aria-pressed=true] { border: 2px solid Highlight; }
-  .noonBar { background: CanvasText; }
-  .eveningBar { background: Highlight; }
-  .barTrack { border: 1px solid CanvasText; }
+@media (forced-colors: active) {
+  .demo :is(button, a, input, textarea, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .demo,
+  .navigation button,
+  .questionTitle,
+  .option > span,
+  .scenarios button,
+  .barTrack {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .navigation button[aria-pressed=true],
+  .questionIndex button[aria-pressed=true],
+  .scenarios button[aria-pressed=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .noonBar {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .eveningBar {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .chrome,
+  .toolbar,
+  .questionIndex,
+  .option,
+  .reason,
+  .scenarios,
+  .sampleNumbers,
+  .sampleReading,
+  .reportMeta,
+  .reportBody,
+  .reportSection,
+  .evidence blockquote,
+  .statusLine {
+    border-color: CanvasText;
+  }
 }

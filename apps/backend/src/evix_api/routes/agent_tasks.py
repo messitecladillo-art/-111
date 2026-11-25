@@ -39,21 +39,21 @@ def register_routes(app, *, db, auth, owned_project, session_user, owned_service
     async def create_grant(project_id: str, task_id: str, request: Request, user=Depends(auth), session=Depends(db)):
         data = await body(request, ('expectedRevision', 'consent', 'phaseHash', 'maxCalls', 'idempotencyKey'))
         if service.grants is None:
-            raise ApiError(409, 'model_runtime_unavailable', '此部署尚未配置模型步骤执行器。')
+            raise ApiError(409, 'model_runtime_unavailable', '当前服务环境尚未启用分步执行支持。')
         return service.grants.create(project_id=project_id, task_id=task_id, user=user, session=session,
             data=data, check_session=lambda current: session_user(request, current, lock=True))
 
     @app.get('/api/projects/{project_id}/agent-tasks/{task_id}/model-grants')
     def grants(project_id: str, task_id: str, user=Depends(auth), session=Depends(db)):
         if service.grants is None:
-            raise ApiError(409, 'model_runtime_unavailable', '此部署尚未配置模型步骤执行器。')
+            raise ApiError(409, 'model_runtime_unavailable', '当前服务环境尚未启用分步执行支持。')
         return service.grants.list(project_id=project_id, task_id=task_id, user=user, session=session)
 
     @app.post('/api/projects/{project_id}/agent-tasks/{task_id}/model-grants/{grant_id}/revoke')
     async def revoke_grant(project_id: str, task_id: str, grant_id: str, request: Request, user=Depends(auth), session=Depends(db)):
         await body(request, (), limit=1000)
         if service.grants is None:
-            raise ApiError(409, 'model_runtime_unavailable', '此部署尚未配置模型步骤执行器。')
+            raise ApiError(409, 'model_runtime_unavailable', '当前服务环境尚未启用分步执行支持。')
         return service.grants.revoke(project_id=project_id, task_id=task_id, grant_id=grant_id,
             user=user, session=session, check_session=lambda current: session_user(request, current, lock=True))
 

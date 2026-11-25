@@ -7,8 +7,10 @@ import { createEditorContent, type EditorContent } from '../editor-model.ts';
 import { questionIsMapped, questionnaireIssues, type Questionnaire } from '../questionnaire.ts';
 import { findingNeedsReview } from '../research-quality.ts';
 import { benchmarkReport, type BenchmarkResult } from '../report-benchmark.ts';
-import { frameGroup } from '../report-insert.ts';
 import type { RoomId } from './rooms.ts';
+
+/** Stable group digest prefix of a registered sampling-frame result ID. */
+const frameGroup = (resultId: string): string | null => /^sampling-frame-([0-9a-f]{8})-[0-9a-f]{16}$/.exec(resultId)?.[1] ?? null;
 
 /** What the shell can see of the project: the shared questionnaire and dataset, and the report once its room has opened. */
 export type ProjectView = {
@@ -82,7 +84,7 @@ function samplingLight(view: ProjectView): RoomLight {
     : effective !== null
     ? check('reach', stated && effective >= total, effective >= total ? `有效 ${effective} 份，达到计划的 ${total} 份` : `有效 ${effective} 份，未达计划的 ${total} 份`,
       effective < total ? '补充回收，或在报告中说明样本不足对估计精度的影响。' : data?.screened ? '有效份数取自已经质量控制的数据。' : '有效份数取自为这份数据登记的质量控制结果。')
-    : view.dataset ? check('reach', false, `回收 ${view.dataset.rows} 行，有效份数待质量控制`, '原始行数不等于有效答卷：在数据分析里筛除无效答卷并登记质量控制结果后再核对计划。', 'analysis')
+    : view.dataset ? check('reach', false, `回收 ${view.dataset.rows} 行，有效份数待质量控制`, '原始行数不等于有效答卷，请在数据分析里筛除无效答卷并登记质量控制结果后再核对计划。', 'analysis')
     : check('reach', false, '还没有回收数据可对照计划', '在数据分析里载入回收数据并完成质量控制后，按有效份数核对计划样本量。', 'analysis');
   const checks = [
     check('frame', true, `报告写入了 ${frames.length} 个抽样框`, frames.map(r => r.title).join('、')),
@@ -101,8 +103,8 @@ function analysisLight(view: ProjectView): RoomLight {
   const registered = results.length + (view.resultPending ? 1 : 0);
   const data = view.dataset;
   const checks: LightCheck[] = [
-    { id: 'analysis.data', room: 'analysis', go: 'analysis', passed: !!data, label: data ? `已载入「${data.name}」` : '还没有载入数据',
-      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}${data.screened ? ' · 已质量控制' : ''}` : '在数据分析里导入回收的问卷数据；没有数据时可用硅基样本生成教学模拟数据。' },
+    { id: 'analysis.data', room: 'analysis', go: 'analysis', passed: !!data, label: data ? `已载入“${data.name}”` : '还没有载入数据',
+      detail: data ? `${data.rows} 行 · ${data.simulated ? '教学模拟数据' : '用户提供数据'}${data.screened ? ' · 已质量控制' : ''}` : '在数据分析里导入回收的问卷数据；没有数据时可前往预测试生成教学模拟数据。' },
     { id: 'analysis.results', room: 'analysis', go: 'analysis', passed: registered > 0, label: registered ? `已登记 ${registered} 项分析结果` : '还没有登记分析结果',
       detail: registered ? '登记的结果带着来源与计算过程进入报告。' : '在数据分析里完成一项描述、检验或图表，发送到报告即登记。' },
     { id: 'analysis.findings', room: 'analysis', go: 'editor', passed: confirmed > 0, label: confirmed ? `已确认 ${confirmed} 条研究发现` : '还没有确认研究发现',

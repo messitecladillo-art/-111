@@ -48,7 +48,7 @@ export default function DefenseStudio(){
     const token=++readToken.current,revision=contentRevision.current;
     setPending(null);setReading(true);setImportError('');setFeedback('');
     try{
-      if(file.size>MAX_DEFENSE_IMPORT_BYTES)throw new Error('文件超过 384 KiB 上限，请选择本系统导出的练习笔记。');
+      if(file.size>MAX_DEFENSE_IMPORT_BYTES)throw new Error('文件超过大小上限，请选择本系统导出的练习笔记文件。');
       const data=parseDefenseImport(new Uint8Array(await file.arrayBuffer()),corpus.cards,corpus.version);
       if(token!==readToken.current||revision!==contentRevision.current)return;
       setIncludeTiming(true);setVersionAcknowledged(false);setPending({name:file.name,revision,data});
@@ -90,15 +90,15 @@ export default function DefenseStudio(){
       <span className={styles.localNotice}>本页草稿 · 下载后保留</span>
     </div>
     <ResearchMaterialLibrary context="defense"/>
-    <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择答辩练习 JSON 文件" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readImport(file);}}/>
+    <input ref={fileInput} className={styles.fileInput} type="file" accept=".json,application/json" aria-label="选择答辩练习备份文件" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readImport(file);}}/>
     {reading&&<div className={styles.reading}><p role="status">正在本地检查文件，尚未更改任何笔记…</p><button type="button" onClick={cancelImport}>取消读取</button></div>}
     {importError&&<p className={styles.error} role="alert">{importError} 当前笔记与时间设置未变。</p>}
     {pending&&<section ref={preview} tabIndex={-1} className={styles.importPreview} aria-labelledby="defense-import-title">
       <div className={styles.previewHeading}><div><span className={styles.eyebrow}>本地恢复 · 确认后生效</span><h3 id="defense-import-title">检查这次导入</h3></div><span className={styles.badge}>证据未核验</span></div>
       <p className={styles.filename}>{pending.name}</p>
-      <p>导入 {pending.data.cardIds.length} 题：新增 {pending.data.cardIds.length-replaced.length} 题，替换 {replaced.length} 题。未列出的现有笔记保留；替换会覆盖该题的全部回答字段，建议先导出备份。</p>
+      <p>本次共导入 {pending.data.cardIds.length} 题，其中新增 {pending.data.cardIds.length-replaced.length} 题、替换 {replaced.length} 题。未列出的现有笔记保留；替换会覆盖该题的全部回答字段，建议先导出备份。</p>
       <ul ref={importReveal} className={styles.importList}>{pending.data.cardIds.map(id=><li key={id}><span>{corpus.cards.find(c=>c.id===id)!.title}</span><strong>{replaced.includes(id)?'替换现有笔记':'新增笔记'}</strong></li>)}</ul>
-      <label className={styles.checkbox}><input type="checkbox" checked={includeTiming} onChange={e=>setIncludeTiming(e.target.checked)}/><span>同时恢复文件的时间编排：总时长 {formatDuration(pending.data.total)}，预留 {formatDuration(pending.data.reserve)}（当前总时长 {planError?'设置待修正':formatDuration(Number(total))}）</span></label>
+      <label className={styles.checkbox}><input type="checkbox" checked={includeTiming} onChange={e=>setIncludeTiming(e.target.checked)}/><span>同时恢复文件的时间编排（总时长 {formatDuration(pending.data.total)}，预留 {formatDuration(pending.data.reserve)}；当前总时长 {planError?'设置待修正':formatDuration(Number(total))}）</span></label>
       {pending.data.corpusMismatch&&<div className={styles.versionWarning}><p>文件题库版本 {pending.data.corpusVersion} 与当前版本 {corpus.version} 不同。问题编号可识别，但请按当前题意重新检查回答。</p><label className={styles.checkbox}><input type="checkbox" checked={versionAcknowledged} onChange={e=>setVersionAcknowledged(e.target.checked)}/><span>我会复核版本差异，按当前题库继续练习</span></label></div>}
       <div className={styles.importActions}><button type="button" className={styles.secondary} onClick={cancelImport}>取消，保留当前内容</button><button type="button" onClick={confirmImport} disabled={pending.data.corpusMismatch&&!versionAcknowledged}>{replaced.length?`确认导入并替换 ${replaced.length} 题`:`确认导入 ${pending.data.cardIds.length} 题`}</button></div>
     </section>}
@@ -121,7 +121,7 @@ export default function DefenseStudio(){
           <div ref={scaffoldReveal} className={styles.scaffold} aria-label="按依据状态组织回答"><strong>{scaffold.title}</strong><ol>{scaffold.steps.map(step=><li key={step}>{step}</li>)}</ol><p>切换状态只调整提示，笔记保留；证据需人工核验。</p></div>
           <div className={styles.pitfall}><strong>常见误区</strong><p>{card.pitfall}</p></div>
         </details>
-        <div ref={reviewReveal} className={styles.review} aria-label="回答结构检查"><strong>{check.status==='incomplete'?'还有信息需要补齐':'结构已填写，证据待复核'}</strong>{check.missing.length>0&&<p>待补：{check.missing.join('、')}。</p>}{check.warnings.length>0&&<ul>{check.warnings.map(w=><li key={w}>{w}</li>)}</ul>}</div>
+        <div ref={reviewReveal} className={styles.review} aria-label="回答结构检查"><strong>{check.status==='incomplete'?'还有信息需要补齐':'结构已填写，证据待复核'}</strong>{check.missing.length>0&&<p>尚待补齐 {check.missing.join('、')}。</p>}{check.warnings.length>0&&<ul>{check.warnings.map(w=><li key={w}>{w}</li>)}</ul>}</div>
         <details className={styles.sources}><summary>参考资料</summary>{card.sourceRefs.map(ref=>{const source=corpus.sources.find(s=>s.id===ref.id)!;return <p key={ref.id}>{source.label} · 第 {ref.pages.join('、')} 页</p>;})}</details>
       </article>
     </div>

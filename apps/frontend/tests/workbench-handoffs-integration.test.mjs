@@ -60,6 +60,14 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
   hooks.useLayoutEffect = hooks.useEffect;
   hooks.useSyncExternalStore = externalStoreHook(hooks, () => { if (alive) dirty = true; });
   const jsx = (type, values, key) => ({ type, props: values ?? {}, key });
+  const navContextMod = {
+    WorkbenchNavProvider: 'ContextProvider',
+    useWorkbenchNav: () => {
+      const value = hooks.useContext(null);
+      if (!value) throw Error('useWorkbenchNav must be used inside WorkbenchShell');
+      return value;
+    },
+  };
   const imports = {
     '@/lib/result-registration': resultRegistration,
     '@/lib/agent/report-run':reportRun,
@@ -73,6 +81,8 @@ function mount(relative, { mocks = {}, props = {}, internal, globals = {}, fallb
       return path.split('/').at(-1);
     } },
     '@/components/workbench/useWorkbenchHandoffs': workbenchHookModule(hooks),
+    './workbench/nav-context': navContextMod,
+    '@/components/workbench/nav-context': navContextMod,
     ...mocks,
   };
   if (relative.endsWith('/HostedProject.tsx')) { imports['./questionnaire-repository'] = questionnaireRepositoryModule({ contract: imports['@/lib/topic-questionnaire-api'] }); imports['@/lib/questionnaire-persistence'] = questionnairePersistence; imports['./questionnaire-proposal-repository'] = questionnaireProposalRepositoryModule(); imports['@/lib/questionnaire-proposals'] = questionnaireProposalContract; }

@@ -96,13 +96,13 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
       // One result is written once: a second click would register a second result and repeat its table and figure.
       onReportInsert(insert); setComputed(c => (c ? { ...c, written: true, notice: '已交给报告与 PPT，写入对应的蓝图章节；可在编辑器里撤销。' } : c));
     }
-    catch (error) { setNotice(`未能写入：${(error as Error).message}`); }
+    catch (error) { setNotice(`未能写入报告，${(error as Error).message}`); }
   };
   const columnChecks = (label: string, exclude: number | null = null) => <fieldset className={styles.columns}><legend>{label}</legend>
-    {numeric.filter(c => c.index !== exclude).map(c => <label key={c.index}><input type="checkbox" checked={picked.includes(c.index)} onChange={() => toggle(c.index)} />{name(c.index)}</label>)}
+    {numeric.filter(c => c.index !== exclude).map(c => <label key={c.index}><input type="checkbox" aria-label={`${label.replace(/（.*$/u, '')} ${name(c.index)}`} checked={picked.includes(c.index)} onChange={() => toggle(c.index)} />{name(c.index)}</label>)}
   </fieldset>;
   const columnSelect = (label: string, value: number | null, set: (v: number | null) => void, among = numeric) => <label className={styles.field}>{label}
-    <select value={value ?? ''} onChange={e => set(e.target.value === '' ? null : Number(e.target.value))}><option value="">请选择</option>{among.map(c => <option key={c.index} value={c.index}>{name(c.index)}</option>)}</select>
+    <select aria-label={label} value={value ?? ''} onChange={e => set(e.target.value === '' ? null : Number(e.target.value))}><option value="">请选择</option>{among.map(c => <option key={c.index} value={c.index}>{name(c.index)}</option>)}</select>
   </label>;
 
   return <section className={styles.panel} aria-label="高级方法">
@@ -115,21 +115,21 @@ export default function AdvancedMethods({ table, profile, missingCodes, simulate
       <div className={styles.setup}>
         {method === 'validity' && columnChecks('量表题项（至少 3 个）')}
         {(method === 'regression' || method === 'logistic') && <>{columnSelect(method === 'logistic' ? '因变量（0 / 1 编码，1 = 事件发生）' : '因变量', outcome, setOutcome)}{columnChecks('自变量', outcome)}</>}
-        {method === 'cluster' && <>{columnChecks('聚类变量（2–7 个，自动标准化）')}<label className={styles.field}>类别数 k<input type="number" min={2} max={8} value={k} onChange={e => setK(Math.max(2, Math.min(8, Number(e.target.value) || 2)))} /></label></>}
+        {method === 'cluster' && <>{columnChecks('聚类变量（2–7 个，自动标准化）')}<label className={styles.field}>类别数 k<input type="number" aria-label="聚类类别数 k" min={2} max={8} value={k} onChange={e => setK(Math.max(2, Math.min(8, Number(e.target.value) || 2)))} /></label></>}
         {method === 'ipa' && <>{columnChecks('各属性的表现评分')}
           <fieldset className={styles.inline}><legend>重要性来自</legend>
-            <label><input type="radio" checked={importanceMode === 'derived'} onChange={() => setImportanceMode('derived')} />总体满意度推导（隐性）</label>
-            <label><input type="radio" checked={importanceMode === 'stated'} onChange={() => setImportanceMode('stated')} />受访者评定</label>
+            <label><input type="radio" name="ipa-importance-mode" aria-label="总体满意度推导（隐性）" checked={importanceMode === 'derived'} onChange={() => setImportanceMode('derived')} />总体满意度推导（隐性）</label>
+            <label><input type="radio" name="ipa-importance-mode" aria-label="受访者评定" checked={importanceMode === 'stated'} onChange={() => setImportanceMode('stated')} />受访者评定</label>
           </fieldset>
           {importanceMode === 'derived' ? columnSelect('总体满意度', overall, setOverall)
-            : picked.map(c => <label key={c} className={styles.field}>{name(c)} 的重要性<select value={importance[c] ?? ''} onChange={e => setImportance({ ...importance, [c]: Number(e.target.value) })}><option value="">请选择</option>{numeric.map(o => <option key={o.index} value={o.index}>{name(o.index)}</option>)}</select></label>)}</>}
+            : picked.map(c => <label key={c} className={styles.field}>{name(c)} 的重要性<select aria-label={`${name(c)} 的重要性`} value={importance[c] ?? ''} onChange={e => setImportance({ ...importance, [c]: Number(e.target.value) })}><option value="">请选择</option>{numeric.map(o => <option key={o.index} value={o.index}>{name(o.index)}</option>)}</select></label>)}</>}
         {method === 'profile' && <>{columnSelect('分组变量（2–6 组）', outcome, setOutcome, categories)}{columnChecks('评价维度（2–8 个）', outcome)}</>}
         {method === 'likert' && columnChecks('同一量表的评分题（至少 2 个）')}
         {method === 'correlation' && columnChecks('变量（3–9 个）')}
         {method === 'ahp' && <>
-          <label className={styles.field}>准则（每行一个）<textarea rows={4} value={criteria} onChange={e => setCriteria(e.target.value)} /></label>
-          <fieldset className={styles.matrix}><legend>两两比较（1～9：行准则比列准则重要的程度；小于 1 填分数如 0.333）</legend>
-            {names.flatMap((a, i) => names.slice(i + 1).map((b, d) => { const key = `${i}-${i + d + 1}`; return <label key={key}>{a} 对 {b}<input type="number" min={0.111} max={9} step="any" value={judgements[key] ?? 1} onChange={e => setJudgements({ ...judgements, [key]: Number(e.target.value) || 1 })} /></label>; }))}
+          <label className={styles.field}>准则（每行一个）<textarea aria-label="层次分析准则（每行一个）" rows={4} value={criteria} onChange={e => setCriteria(e.target.value)} /></label>
+          <fieldset className={styles.matrix}><legend>两两比较（按 1～9 标度填写行准则相对列准则的重要程度，小于 1 可填小数如 0.333）</legend>
+            {names.flatMap((a, i) => names.slice(i + 1).map((b, d) => { const key = `${i}-${i + d + 1}`; return <label key={key}>{a} 对 {b}<input type="number" aria-label={`${a} 相对 ${b} 的重要程度标度`} min={0.111} max={9} step="any" value={judgements[key] ?? 1} onChange={e => setJudgements({ ...judgements, [key]: Number(e.target.value) || 1 })} /></label>; }))}
           </fieldset></>}
         <button type="button" className={styles.primary} onClick={() => void compute()}>计算</button>
         <p className={styles.note}>只纳入所选变量都有有效数值的案例，缺失代码不计入，也不插补。{simulated ? '当前是教学模拟数据，写进报告时会标注。' : ''}</p>

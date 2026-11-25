@@ -100,12 +100,12 @@ export function connectionProblem(doc: CanvasDoc, c: Connection, ignoreEdge?: st
     return null;
   }
   const out = nodeDef(source.kind).outputs.find(p => p.id === c.sourcePort), inp = nodeDef(target.kind).inputs.find(p => p.id === c.targetPort);
-  if (!out) return `「${source.title}」没有这个输出端口。`;
-  if (!inp) return `「${target.title}」没有这个输入端口。`;
+  if (!out) return `“${source.title}”没有这个输出端口。`;
+  if (!inp) return `“${target.title}”没有这个输入端口。`;
   const type = outputType({ ...doc, edges }, source.id, out.id);
-  if (type && !inp.accepts.includes(type)) return `类型不匹配：「${source.title}」输出${TYPE_LABELS[type]}，「${target.title}」的「${inp.label}」需要${inp.accepts.map(t => TYPE_LABELS[t]).join('或')}。`;
+  if (type && !inp.accepts.includes(type)) return `类型不匹配：“${source.title}”输出${TYPE_LABELS[type]}，“${target.title}”的“${inp.label}”需要${inp.accepts.map(t => TYPE_LABELS[t]).join('或')}。`;
   if (edges.some(e => e.kind === 'data' && e.source === c.source && e.sourcePort === c.sourcePort && e.target === c.target && e.targetPort === c.targetPort)) return '这条连线已存在。';
-  if (!inp.multiple && edges.some(e => e.kind === 'data' && e.target === c.target && e.targetPort === c.targetPort)) return `「${target.title}」的「${inp.label}」已有输入，请先断开原连线。`;
+  if (!inp.multiple && edges.some(e => e.kind === 'data' && e.target === c.target && e.targetPort === c.targetPort)) return `“${target.title}”的“${inp.label}”已有输入，请先断开原连线。`;
   if (upstreamOf({ ...doc, edges }, [c.source]).has(c.target) || c.target === c.source) return '这条连线会形成循环，执行图必须是有向无环的。';
   return null;
 }

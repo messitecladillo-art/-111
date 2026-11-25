@@ -28,7 +28,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 }
 function ColumnSelect({ label, value, headers, onChange }: { label: string; value: string; headers: string[]; onChange: (v: string) => void }) {
   const known = !value || headers.includes(value);
-  return <Field label={label} hint={!known ? `当前数据中没有「${value}」，运行时会报错。` : undefined}>
+  return <Field label={label} hint={!known ? `当前数据中没有“${value}”，运行时会报错。` : undefined}>
     <select value={value} onChange={e => onChange(e.target.value)}>
       <option value="">请选择</option>
       {!known && <option value={value}>{value}（未找到）</option>}
@@ -54,11 +54,11 @@ function ConfigPanel({ palette, node, state, issues, dataset, approvable, onChan
   const ctx = useCanvasContext();
   const def = nodeDef(node.kind), c = node.config, status = state?.status ?? 'idle';
   const headers = dataset?.table.headers ?? [];
-  const set = (patch: Record<string, unknown>, label = `修改「${node.title}」`) => onChange({ config: { ...c, ...patch } }, label);
+  const set = (patch: Record<string, unknown>, label = `修改“${node.title}”`) => onChange({ config: { ...c, ...patch } }, label);
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => { close.current?.focus({ preventScroll: true }); }, [node.id]);
 
-  return <aside className={styles.config} aria-label={`配置：${node.title}`} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
+  return <aside className={styles.config} aria-label={`配置“${node.title}”`} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
     <header className={styles.panelHead}>
       <div className={styles.configTitle}>
         <span className={styles.kindLabel}>{def.title}{def.capability === 'reference' ? ' · 引用' : def.capability === 'note' ? ' · 注释' : ''}</span>
@@ -75,7 +75,7 @@ function ConfigPanel({ palette, node, state, issues, dataset, approvable, onChan
       <NodeForm node={node} set={set} headers={headers} dataset={dataset} onPickFile={onPickFile} />
 
       {node.kind === 'review' && <div className={styles.reviewBox}>
-        <p>{text(c.approvedHash) ? `已确认：${text(c.approvedAt).replace('T', ' ').slice(0, 16)}。上游结果变化后需重新确认。` : '确认上游结果无误后，下游节点才会运行。'}</p>
+        <p>{text(c.approvedHash) ? `已于 ${text(c.approvedAt).replace('T', ' ').slice(0, 16)} 确认。上游结果变化后需重新确认。` : '确认上游结果无误后，下游节点才会运行。'}</p>
         <div className={styles.rowButtons}>
           <button type="button" className={styles.primary} disabled={!approvable || approvable === text(c.approvedHash)} onClick={() => onApprove(approvable)}>{approvable ? '确认通过' : '先运行上游'}</button>
           {text(c.approvedHash) && <button type="button" className={styles.secondary} onClick={() => onApprove(null)}>撤销确认</button>}
@@ -107,10 +107,10 @@ function NodeForm({ node, set, headers, dataset, onPickFile }: { node: CanvasNod
   if (kind === 'material') return <><Field label="出处"><input value={text(c.source)} onChange={e => set({ source: e.target.value })} placeholder="作者、年份、标题或网址" /></Field><Field label="要点"><textarea rows={5} value={text(c.text)} onChange={e => set({ text: e.target.value })} /></Field></>;
   if (kind === 'dataset') return <>
     <fieldset className={styles.radioRow}><legend>数据来源</legend>
-      <label><input type="radio" name={`src-${node.id}`} checked={c.source === 'workspace'} onChange={() => set({ source: 'workspace' }, '切换数据来源')} />「数据分析」中的数据</label>
+      <label><input type="radio" name={`src-${node.id}`} checked={c.source === 'workspace'} onChange={() => set({ source: 'workspace' }, '切换数据来源')} />“数据分析”中的数据</label>
       <label><input type="radio" name={`src-${node.id}`} checked={c.source === 'file'} onChange={() => set({ source: 'file' }, '切换数据来源')} />本地 CSV 文件</label>
     </fieldset>
-    {c.source === 'workspace' && <p className={styles.muted}>{ctx.workspaceDataset ? `当前：${columnSummary(ctx.workspaceDataset)}。在「数据分析」中更换数据后，重新运行即可。` : '「数据分析」中还没有数据。'}</p>}
+    {c.source === 'workspace' && <p className={styles.muted}>{ctx.workspaceDataset ? `当前载入 ${columnSummary(ctx.workspaceDataset)}。在“数据分析”中更换数据后，重新运行即可。` : '“数据分析”中还没有数据。'}</p>}
     {c.source === 'file' && <>
       <Field label="分隔符"><select value={delimiter} onChange={e => setDelimiter(e.target.value as Delimiter)}><option value=",">逗号</option><option value={'\t'}>制表符</option><option value=";">分号</option></select></Field>
       <Field label="CSV 文件" hint="文件只在本机解析；画布只记录文件名和 SHA-256 指纹，不保存答卷。">
@@ -122,9 +122,9 @@ function NodeForm({ node, set, headers, dataset, onPickFile }: { node: CanvasNod
           try { await onPickFile(f, delimiter); } catch (err) { setReadError(err instanceof Error ? err.message : '读取失败。'); } finally { setReading(''); }
         }} />
       </Field>
-      {reading && <p className={styles.reading} role="status">正在读取「{reading}」…</p>}
+      {reading && <p className={styles.reading} role="status">正在读取“{reading}”…</p>}
       {readError && <p className={styles.errorText} role="alert">{readError}</p>}
-      {text(c.fileName) && !reading && <p className={styles.muted}>{ctx.files.get(node.id) ? `已载入：${columnSummary(ctx.files.get(node.id)!)}` : `上次使用「${text(c.fileName)}」（指纹 ${text(c.fileHash).slice(0, 12)}…）；需重新选择同一文件。`}</p>}
+      {text(c.fileName) && !reading && <p className={styles.muted}>{ctx.files.get(node.id) ? `已载入 ${columnSummary(ctx.files.get(node.id)!)}` : `上次使用“${text(c.fileName)}”（指纹 ${text(c.fileHash).slice(0, 12)}…）；需重新选择同一文件。`}</p>}
     </>}
     <Field label="额外缺失代码" hint="用逗号分隔，例如 99, -1；空白单元格始终视为缺失。"><input value={text(c.missingCodes)} onChange={e => set({ missingCodes: e.target.value })} /></Field>
   </>;
@@ -143,7 +143,7 @@ function NodeForm({ node, set, headers, dataset, onPickFile }: { node: CanvasNod
       <Field label="计分下限"><input type="number" value={Number(c.min)} onChange={e => set({ min: Number(e.target.value) })} /></Field>
       <Field label="计分上限"><input type="number" value={Number(c.max)} onChange={e => set({ max: Number(e.target.value) })} /></Field>
     </div>
-    <Field label="共同测量的构念"><input value={text(c.construct)} onChange={e => set({ construct: e.target.value })} placeholder="例如：使用体验" /></Field>
+    <Field label="共同测量的构念"><input value={text(c.construct)} onChange={e => set({ construct: e.target.value })} placeholder="例如使用体验" /></Field>
     <Field label="研究问题（不影响计算）"><textarea rows={2} value={text(c.question)} onChange={e => set({ question: e.target.value })} /></Field>
   </>;
   if (isStat(kind)) {
@@ -203,8 +203,8 @@ function Result({ output, node, palette, set }: { output: Output; node: CanvasNo
     return <section className={styles.result} aria-label="运行结果">
       <h4>证据段落</h4>
       {sections.map(s => <details key={s.id} className={styles.section}><summary>{s.title}</summary><pre>{s.body}</pre></details>)}
-      {skipped.length > 0 && <p className={styles.muted}>以下结果暂不支持自动生成段落，请在报告编辑器中撰写：{skipped.join('、')}。</p>}
-      {sections.length > 0 && <button type="button" className={styles.secondary} onClick={download}>下载证据段落（JSON）</button>}
+      {skipped.length > 0 && <p className={styles.muted}>暂不支持自动生成{skipped.join('、')}的段落，请在报告编辑器中撰写。</p>}
+      {sections.length > 0 && <button type="button" className={styles.secondary} onClick={download}>下载证据段落</button>}
     </section>;
   }
   return null;

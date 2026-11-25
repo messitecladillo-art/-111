@@ -88,7 +88,7 @@ export default function SamplingDesigner({ embedded = false, onReportInsert }: {
           </div>
           <ol className={styles.steps}>{result.steps.map(s => <li key={s.label}><span>{s.label}</span><Formula tex={s.formula} compact /><b>{fmt(s.value)}</b></li>)}</ol>
           {!!result.warnings.length && <ul className={styles.notes}>{result.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
-          <div className={styles.statement}><div><span>方法部分草稿</span>{onReportInsert && <button type="button" title="把方法段落和逐步计算公式写入报告的「抽样设计」一节" onClick={() => onReportInsert(sampleSizeInsert(plan, result, statement))}>写入报告</button>}<button type="button" onClick={() => void copy()}>{copied ? '已复制' : '复制'}</button></div><p>{statement}</p><small>只依据上方输入生成；括号内的空项请补全，实际回收后按真实样本更新。</small></div>
+          <div className={styles.statement}><div><span>方法部分草稿</span>{onReportInsert && <button type="button" title="把方法段落和逐步计算公式写入报告的“抽样设计”一节" onClick={() => onReportInsert(sampleSizeInsert(plan, result, statement))}>写入报告</button>}<button type="button" onClick={() => void copy()}>{copied ? '已复制' : '复制'}</button></div><p>{statement}</p><small>只依据上方输入生成；括号内的空项请补全，实际回收后按真实样本更新。</small></div>
         </>}
       </div>
     </div>

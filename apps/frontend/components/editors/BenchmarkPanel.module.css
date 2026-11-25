@@ -73,3 +73,47 @@
 .types b { font-size: 13px; font-weight: 600; color: var(--wb-text); }
 .types small { font-size: 12px; line-height: 1.55; color: var(--wb-muted); }
 .tile[data-level=na] .tileScore, .tile[data-level=na] .tileMeta { color: var(--wb-muted); }
+
+@media (forced-colors: active) {
+  .panel,
+  .tile,
+  .score,
+  .dimension,
+  .confirm,
+  .types label {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .panel,
+  .score,
+  .tile,
+  .track,
+  .dimension,
+  .confirm,
+  .types label,
+  .actions button,
+  .rebuild,
+  .confirmActions button {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .gaps li,
+  .footer {
+    border-color: CanvasText;
+  }
+  .tile[aria-pressed=true],
+  .confirmActions .primary,
+  .types label:has(input:checked),
+  .track > span {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .panel button:focus-visible,
+  .panel summary:focus-visible,
+  .panel input:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

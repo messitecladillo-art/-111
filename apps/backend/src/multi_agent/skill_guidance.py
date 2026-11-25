@@ -87,8 +87,9 @@ def role_corpus_guidance(role: AgentRole | str) -> str:
     blocks = [resources[key] for key in skill_keys]
     return (
         f"<corpus-skill-guidance package=\"survey-corpus-7pack@{version[:12]}\">\n"
-        "以下为全量 205 篇正大杯国奖语料与第 17 届竞赛规程蒸馏规范（仅作写作、设计与质检准则；"
-        "绝不据此编造未提供的样本、统计数字、分析结果、文献或调研过程）：\n\n"
+        "以下为全量 205 篇全国大学生市场调查与分析大赛获奖语料与第 17 届赛事规程蒸馏规范（仅作写作、设计与质检准则，"
+        "绝不据此编造未提供的样本、统计数字、分析结果、文献或调研过程；输出正文与结论须采用连贯学术句式，"
+        "严禁输出方头括号、直角引号、非数学花括号、词典冒号起句或底层工程术语）。\n\n"
         + "\n\n---\n\n".join(blocks)
         + "\n</corpus-skill-guidance>"
     )

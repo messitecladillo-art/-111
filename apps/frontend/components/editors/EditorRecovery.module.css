@@ -45,3 +45,9 @@
 .protection p { color: var(--wb-muted); }
 @media (max-width: 900px) { .grid { grid-template-columns: minmax(0,1fr); } .card { padding: 20px; } }
 @media (max-width: 600px) { .panel .disclosure { padding: 16px; gap: 10px; flex-wrap: wrap; } .symbol { display: none; } .heading { flex-basis: calc(100% - 30px); } .badge { margin-top: 4px; } .body { padding: 16px; } .statusBar { flex-wrap: wrap; gap: 8px; } .card { padding: 16px; } .actions { display: grid; grid-template-columns: 1fr; } .panel .primary,.secondary { width: 100%; } .field { gap: 4px; } }
+@media (forced-colors: active) {
+  .panel :is(button, input, select, textarea, summary):focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; box-shadow: none !important; }
+  .panel :is(button, input, select, textarea), .primary, .secondary { border: 1px solid ButtonText; }
+  .panel, .card, .statusBar, .notice, .error, .protection, .warning { background: Canvas; color: CanvasText; border: 1px solid CanvasText; box-shadow: none !important; }
+  .panel .primary, .badge { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
+}

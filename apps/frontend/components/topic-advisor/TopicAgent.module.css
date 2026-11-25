@@ -193,3 +193,50 @@
 @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 1350px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 15px; }.sidebar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }.history { grid-column: 1 / -1; }.sources { grid-column: 1 / -1; }.sources details { max-width: 760px; }.context { padding: 13px 15px; }.context > p { margin-top: 10px; }.modelSettings { border-top: 0; align-self: start; padding-top: 0; }.composerActions { padding-right: 88px; } }
 @media (prefers-reduced-motion: reduce) { .agent *, .agent *::before, .agent *::after { animation: none !important; transition: none !important; } }
+
+@media (forced-colors: active) {
+  .agent :is(button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .agent :is(button, input, select, textarea),
+  .mode button,
+  .intents button,
+  .modeChoices button,
+  .primary,
+  .send {
+    border: 1px solid ButtonText;
+  }
+  .chat,
+  .welcome,
+  .userMessage,
+  .answer,
+  .profileProposal,
+  .proposal,
+  .comparison,
+  .composer,
+  .context,
+  .modelSettings {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .comparisonTable,
+  .comparisonTable th,
+  .comparisonTable td,
+  .heading {
+    border-color: CanvasText !important;
+  }
+  .mode button[aria-pressed="true"],
+  .modeChoices button[aria-pressed="true"],
+  .intents button[aria-pressed="true"],
+  .primary,
+  .send {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

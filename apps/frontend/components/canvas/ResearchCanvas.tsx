@@ -8,7 +8,7 @@ import {
 } from '@xyflow/react';
 import { isKind, nodeDef, type EditorSection, type NodeKind } from '@/lib/canvas/catalog';
 import {
-  CANVAS_LIMITS, CANVAS_SCHEMA, NODE_SIZE, REL_IN, REL_OUT, connectionProblem, defaultConfig, newId, parseDoc, partitionScope, preflight, runScope, serializeDoc,
+  CANVAS_LIMITS, NODE_SIZE, REL_IN, REL_OUT, connectionProblem, defaultConfig, newId, parseDoc, partitionScope, preflight, runScope, serializeDoc,
   type CanvasDoc, type CanvasEdge, type CanvasNode, type Issue,
 } from '@/lib/canvas/graph';
 import { reviewKey, runCanvas, type Cache, type DatasetValue, type NodeState, type NodeStatus, type RunEvent } from '@/lib/canvas/execute';
@@ -237,7 +237,7 @@ function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: d
     if (docRef.current.nodes.length >= CANVAS_LIMITS.nodes) { notify(`单张画布最多 ${CANVAS_LIMITS.nodes} 个节点。`, { tone: 'error' }); return; }
     const def = nodeDef(kind), id = newId('n');
     const node: CanvasNode = { id, kind, title: def.title, position: freeSpot(at ?? viewportCentre()), parent: null, config: defaultConfig(kind) };
-    commit({ ...docRef.current, nodes: [...docRef.current.nodes, node] }, `添加「${def.title}」`);
+    commit({ ...docRef.current, nodes: [...docRef.current.nodes, node] }, `添加“${def.title}”`);
     flash([id], 'add');
     setSelected([id]); setSelectedEdges([]); setConfigClosed(null);
     return id;
@@ -311,7 +311,7 @@ function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: d
     flash(restored, 'restore', restoredEdges);
     setSelected(s => s.filter(id => next.nodes.some(n => n.id === id)));
     setSelectedEdges(s => s.filter(id => next.edges.some(e => e.id === id)));
-    notify(`${verb}：${label}`);
+    notify(`${verb}${label}`);
   }, [flash, notify]);
   const doUndo = useCallback(() => {
     stopLayout(); finishKeyMove();
@@ -458,7 +458,7 @@ function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: d
     const ac = new AbortController(); controller.current = ac;
     setRunning({ done: 0, total: run.length }); setDrawerOpen(true); setDrawerTab('log');
     const at = Date.now(), held: [string, NodeState][] = [
-      ...[...skipped].map(([id, message]): [string, NodeState] => [id, { status: 'failed', message: `未通过检查：${message}`, hash: '', cached: false, output: null, at }]),
+      ...[...skipped].map(([id, message]): [string, NodeState] => [id, { status: 'failed', message: `未通过检查，${message}`, hash: '', cached: false, output: null, at }]),
       ...[...blocked].map(([id, message]): [string, NodeState] => [id, { status: 'blocked', message, hash: '', cached: false, output: null, at }]),
     ];
     setStates(s => { const n = new Map(s); ids.forEach(id => n.delete(id)); held.forEach(([id, st]) => n.set(id, st)); return n; });
@@ -643,7 +643,7 @@ function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: d
       ? { source: connection.fromId, sourcePort: connection.fromPort, target: connection.toId, targetPort: connection.toPort }
       : { source: connection.toId, sourcePort: connection.toPort, target: connection.fromId, targetPort: connection.fromPort })
     : null;
-  const saveText = save.state === 'saving' ? '保存中…' : save.state === 'error' ? '保存失败：本机存储不可用' : save.state === 'saved' ? `已保存到本机 ${new Date(save.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '自动保存到本机';
+  const saveText = save.state === 'saving' ? '保存中…' : save.state === 'error' ? '本机存储不可用，暂未保存' : save.state === 'saved' ? `已保存到本机 ${new Date(save.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '自动保存到本机';
 
   const exportDoc = () => {
     if (!isCurrent()) return;
@@ -751,8 +751,8 @@ function CanvasInner({ storageScope, isCurrentScope, workspaceDataset, design: d
         <button type="button" className={styles.barButton} disabled={!selected.length} onClick={() => selected[0] && locate(selected[0])} aria-label="定位选中节点" title="定位选中节点"><Icon d="M12 3v4M12 17v4M3 12h4M17 12h4M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" /></button>
         <button type="button" className={styles.barButton} aria-pressed={minimap} onClick={() => setMinimap(v => !v)} aria-label="小地图" title="小地图"><Icon d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6ZM9 4v14M15 6v14" /></button>
         <span className={styles.zoomDivider} aria-hidden="true" />
-        <button type="button" className={styles.barButton} disabled={!history.past.length} onClick={doUndo} aria-label="撤销" title={history.past.length ? `撤销：${history.past[history.past.length - 1].label}（Ctrl / ⌘ Z）` : '撤销（Ctrl / ⌘ Z）'}><Icon d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></button>
-        <button type="button" className={styles.barButton} disabled={!history.future.length} onClick={doRedo} aria-label="恢复" title={history.future.length ? `恢复：${history.future[0].label}（Ctrl / ⌘ Shift Z）` : '恢复（Ctrl / ⌘ Shift Z）'}><Icon d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></button>
+        <button type="button" className={styles.barButton} disabled={!history.past.length} onClick={doUndo} aria-label="撤销" title={history.past.length ? `撤销${history.past[history.past.length - 1].label}（Ctrl / ⌘ Z）` : '撤销（Ctrl / ⌘ Z）'}><Icon d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></button>
+        <button type="button" className={styles.barButton} disabled={!history.future.length} onClick={doRedo} aria-label="恢复" title={history.future.length ? `恢复${history.future[0].label}（Ctrl / ⌘ Shift Z）` : '恢复（Ctrl / ⌘ Shift Z）'}><Icon d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></button>
         {selected.length > 1 && <><span className={styles.zoomDivider} aria-hidden="true" /><button type="button" className={styles.barButton} onClick={groupSelection} title="编组（Ctrl / ⌘ G）">编组</button></>}
       </div>
 
@@ -800,7 +800,7 @@ function ConnectionEditor({ doc, source, onConnect, onClose }: { doc: CanvasDoc;
     e.preventDefault(); if (problem) return;
     onConnect({ source: source.id, sourceHandle: sourcePort, target: targetId, targetHandle: targetPort }); onClose();
   }}>
-    <header><strong>从「{source.title}」连接</strong><button type="button" className={styles.iconButton} aria-label="关闭连接设置" onClick={onClose}>×</button></header>
+    <header><strong>从“{source.title}”连接</strong><button type="button" className={styles.iconButton} aria-label="关闭连接设置" onClick={onClose}>×</button></header>
     <label className={styles.field}>输出端口<select ref={first} value={sourcePort} onChange={e => setSourcePort(e.target.value)}>
       {output.map(p => <option key={p.id} value={p.id}>{p.label} · {p.type}</option>)}<option value={REL_OUT}>研究说明（点线）</option>
     </select></label>
@@ -823,10 +823,10 @@ function MoreMenu({ doc, motion, glass, onMotion, onGlass, onPalette, onExport, 
   useEffect(() => { first.current?.focus(); }, []);
   return <div className={`${styles.popover} ${styles.moreMenu}`} role="dialog" aria-label="更多操作" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
     <button ref={first} type="button" onClick={onLayout}>自动排布<small>按数据连线从左到右排列，可撤销</small></button>
-    <button type="button" disabled={!history.past.length} onClick={onUndo}>撤销{history.past.length ? `：${history.past[history.past.length - 1].label}` : ''}</button>
-    <button type="button" disabled={!history.future.length} onClick={onRedo}>恢复{history.future.length ? `：${history.future[0].label}` : ''}</button>
+    <button type="button" disabled={!history.past.length} onClick={onUndo}>撤销{history.past.length ? ` · ${history.past[history.past.length - 1].label}` : ''}</button>
+    <button type="button" disabled={!history.future.length} onClick={onRedo}>恢复{history.future.length ? ` · ${history.future[0].label}` : ''}</button>
     <hr />
-    <button type="button" onClick={onExport}>导出画布结构（JSON）<small>只含节点、连线与设置，不含答卷</small></button>
+    <button type="button" onClick={onExport}>导出画布结构<small>只含节点、连线与设置，不含答卷</small></button>
     <button type="button" onClick={() => file.current?.click()}>导入画布结构</button>
     <input ref={file} type="file" accept=".json,application/json" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onImport(f); }} />
     <hr />
@@ -838,14 +838,14 @@ function MoreMenu({ doc, motion, glass, onMotion, onGlass, onPalette, onExport, 
     <label className={styles.menuField}>工具栏不透明度<input type="range" min={0.6} max={1} step={0.02} value={glass} onChange={e => onGlass(Number(e.target.value))} /></label>
     <hr />
     <button type="button" className={styles.dangerItem} disabled={!doc.nodes.length} onClick={onClear}>清空画布<small>可撤销；原成果文件不受影响</small></button>
-    <p className={styles.menuNote}>画布结构保存在本机浏览器（{CANVAS_SCHEMA}）。答卷数据从不写入画布。</p>
+    <p className={styles.menuNote}>画布结构保存在本机浏览器中，答卷数据从不写入画布。</p>
   </div>;
 }
 
 function EmptyState({ design, dataset, onAdd, onTemplate, onAdopt }: { design: DesignSummary; dataset: DatasetValue | null; onAdd: () => void; onTemplate: () => void; onAdopt: (kinds: NodeKind[]) => void }) {
   const found: { kind: NodeKind; label: string }[] = [
-    ...(design ? [{ kind: 'questionnaire' as NodeKind, label: `问卷草稿「${design.title || '未命名'}」· ${design.questions} 题` }] : []),
-    ...(dataset ? [{ kind: 'dataset' as NodeKind, label: `数据「${dataset.name}」· ${dataset.table.rows.length} 行` }] : []),
+    ...(design ? [{ kind: 'questionnaire' as NodeKind, label: `问卷草稿“${design.title || '未命名'}”· ${design.questions} 题` }] : []),
+    ...(dataset ? [{ kind: 'dataset' as NodeKind, label: `数据“${dataset.name}”· ${dataset.table.rows.length} 行` }] : []),
   ];
   const [chosen, setChosen] = useState<NodeKind[]>(() => found.map(f => f.kind));
   return <div className={styles.empty}>

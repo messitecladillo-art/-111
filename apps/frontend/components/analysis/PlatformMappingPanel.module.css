@@ -4,3 +4,35 @@
 .question input { width: 18px; height: 18px; margin-top: 4px; flex: none; accent-color: var(--wb-accent); }
 .question b,.question small,.results th,.results td { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .panel button:active { transform: none; } }
+
+@media (forced-colors: active) {
+  .panel :is(button, input, select, textarea):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .panel,
+  .panel button,
+  .rows article,
+  .config input,
+  .config select,
+  .config textarea,
+  .scope select {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .panel button:hover:not(:disabled) {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .results,
+  .results table,
+  .results thead {
+    border-color: CanvasText !important;
+  }
+}

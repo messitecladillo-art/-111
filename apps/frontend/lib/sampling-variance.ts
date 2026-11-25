@@ -37,7 +37,7 @@ function layout(rows: DesignRow[], statistic: Statistic): Layout {
   }
   if (statistic === 'mean' && !(B > 0)) throw Error('所选子总体中没有记录。');
   const lonely = [...strata].filter(([, psus]) => psus.size < 2).map(([name]) => name);
-  if (lonely.length) throw Error(`层「${lonely.slice(0, 3).join('」「')}」只有 1 个初级单元，无法估计层内方差；请与相邻层合并后再计算。`);
+  if (lonely.length) throw Error(`层“${lonely.slice(0, 3).join('”、“')}”只有 1 个初级单元，无法估计层内方差；请与相邻层合并后再计算。`);
   const weights = rows.map(r => r.w), sw = sum(weights), sw2 = sum(weights.map(w => w * w));
   const psus = sum([...strata.values()].map(m => m.size));
   const summary = { n: rows.length, domainN, strata: strata.size, psus, df: psus - strata.size, sumWeights: sw, nKish: sw * sw / sw2, kishDeff: rows.length * sw2 / (sw * sw) };
@@ -64,7 +64,7 @@ export function designEstimate(rows: DesignRow[], options: DesignOptions & { met
   const finite = (h: string, nh: number) => {
     if (!fpc || !(h in fpc)) return 1;
     const Nh = fpc[h];
-    if (!(Number.isInteger(Nh) && Nh >= nh)) throw Error(`层「${h}」的总体初级单元数须为不小于样本初级单元数的整数。`);
+    if (!(Number.isInteger(Nh) && Nh >= nh)) throw Error(`层“${h}”的总体初级单元数须为不小于样本初级单元数的整数。`);
     return 1 - nh / Nh;
   };
   let variance = 0, replicates = 0;

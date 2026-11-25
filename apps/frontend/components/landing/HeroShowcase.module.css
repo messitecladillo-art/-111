@@ -77,3 +77,43 @@
 @media (prefers-reduced-motion: reduce) {
   .showcase *, .showcase *::after { transition: none !important; scroll-behavior: auto !important; }
 }
+
+
+@media (forced-colors: active) {
+  .showcase,
+  .browserBar,
+  .screen,
+  .scene,
+  .sceneRail,
+  .caption {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+    box-shadow: none !important;
+  }
+
+  .showcase,
+  .sceneRail button,
+  .exampleTag,
+  .scrollHint,
+  .browserDots i {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .sceneRail button[data-active=true],
+  .sceneRail button[data-active=true] .sceneNumber {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .scroller:focus-visible,
+  .sceneRail button:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+  }
+}

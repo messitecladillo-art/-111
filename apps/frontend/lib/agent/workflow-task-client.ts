@@ -350,9 +350,9 @@ export function classifyWorkflowGate(task: Pick<WorkflowTaskRecord, 'status' | '
   if (gate.startsWith('approve_')) {
     const role = gate.slice('approve_'.length);
     const label = ROLE_META[role as WorkflowRole]?.label ?? role;
-    return { kind: 'approve_review', role, label: `「${label}」阶段已通过审校，请确认放行或退回修改。` };
+    return { kind: 'approve_review', role, label: `“${label}”阶段已通过审校，请确认放行或退回修改。` };
   }
-  return { kind: 'agent_input', label: `任务正在等待人工确认 (${gate})。` };
+  return { kind: 'agent_input', label: `任务正在等待人工确认（${gate}）。` };
 }
 
 /** Extract clean stage progress for UI pipeline visualization. */

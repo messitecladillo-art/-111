@@ -71,6 +71,7 @@ test('a section is named by its title or the words that recognise it; references
   assert.equal(draftableNode('研究背景')?.id, 'intro.background');
   assert.equal(draftableNode('样本特征分析')?.id, 'sample.profile');
   assert.equal(draftableNode('研究项目简介'), null, 'a chapter heading is not drafted; its sections are');
+  assert.equal(draftableNode('绪论'), null);
   assert.equal(draftableNode('参考文献'), null);
   assert.equal(draftableNode('随便什么'), null);
   const section = draftSection('intro.background');
@@ -98,7 +99,7 @@ test('/写报告 shows the plan and the next step; /起草 and everyday phrasing
   const plan = reportPlan(content, null, held.results.map(() => 'sample.profile'));
   const ctx = { room: null, light: illuminate({ design: null, dataset: null, report: null, resultPending: false }), traces: [], results: held, plan };
   const turn = route('/写报告', ctx).turn, rows = turn.cards[0].lines.map(line => line.map(s => s.text).join(''));
-  assert.ok(rows.includes('研究项目简介'), 'chapters are headings');
+  assert.ok(rows.includes('绪论'), 'chapters are headings');
   assert.ok(rows.some(r => /^　○ 研究背景　已写 0 字/.test(r)));
   assert.equal(turn.chips[0].action.text, '把结果写进报告', 'registered results go in first');
   assert.deepEqual(route('写报告', ctx), route('/写报告', ctx));
@@ -106,7 +107,7 @@ test('/写报告 shows the plan and the next step; /起草 and everyday phrasing
   assert.deepEqual(route('帮我写研究背景', ctx), { draft: 'intro.background' });
   assert.deepEqual(route('起草「研究意义」', ctx), { draft: 'intro.significance' });
   assert.ok('generate' in route('帮我出一份社区体育设施满意度的问卷', ctx), 'a questionnaire is still drafted as one');
-  assert.match(route('/起草 不存在的章节', ctx).turn.lines.flat().map(s => s.text).join(''), /报告蓝图里没有「不存在的章节」/);
+  assert.match(route('/起草 不存在的章节', ctx).turn.lines.flat().map(s => s.text).join(''), /报告蓝图里没有“不存在的章节”/);
   assert.ok(route('/起草', ctx).turn.chips.length > 0, 'without a section, the sections to choose from');
   assert.match(route('/写报告', { ...ctx, plan: null }).turn.lines.flat().map(s => s.text).join(''), /还没有打开报告与 PPT/);
 });

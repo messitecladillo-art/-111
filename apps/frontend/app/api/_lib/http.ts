@@ -33,7 +33,7 @@ export async function readJsonObject(
     throw new ApiError(
       415,
       "unsupported_media_type",
-      "请求内容类型必须为 application/json。",
+      "请求内容格式不受支持，请使用结构化数据格式提交。",
     );
   }
   const advertised = Number(request.headers.get("content-length"));
@@ -74,10 +74,10 @@ export async function readJsonObject(
     raw = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     parsed = JSON.parse(raw);
   } catch {
-    throw new ApiError(400, "invalid_json", "请求必须是有效的 JSON 对象。");
+    throw new ApiError(400, "invalid_json", "提交的请求内容格式无效，请检查后重试。");
   }
   if (!isRecord(parsed)) {
-    throw new ApiError(400, "invalid_body", "请求必须是 JSON 对象。");
+    throw new ApiError(400, "invalid_body", "提交的请求数据结构无效。");
   }
   // Trusted synchronous validation only, after the same bounded read completes.
   // Consumers needing exact JSON keys must not pre-pipe/tee the request body:
@@ -96,7 +96,7 @@ export function assertOnlyKeys(
     throw new ApiError(
       400,
       "unexpected_fields",
-      `包含不支持的字段：${unexpected.slice(0, 5).join("、")}。`,
+      `请求中包含未定义的参数项（${unexpected.slice(0, 5).join("、")}）。`,
     );
   }
 }
@@ -150,7 +150,7 @@ export function enumValue<T extends string>(
     throw new ApiError(
       400,
       "invalid_enum",
-      `${label} 必须是：${allowed.join("、")} 之一。`,
+      `${label} 仅支持填写 ${allowed.join("、")} 之一。`,
     );
   }
   return value as T;

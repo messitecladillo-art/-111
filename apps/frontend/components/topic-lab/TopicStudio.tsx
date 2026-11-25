@@ -83,9 +83,9 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
     const svg = treeRef.current; if (!svg) return;
     const cs = getComputedStyle(svg), v = (name: string) => cs.getPropertyValue(name).trim();
     exportSvgElement(svg, `证据画像-${today()}.svg`, {
-      title: `选题证据画像：${ev.title}`,
+      title: `选题证据画像 · ${ev.title}`,
       legend: [{ color: v('--tl-ok'), label: STATUS_LABELS.ok }, { color: v('--tl-neutral'), label: STATUS_LABELS.neutral }, { color: v('--tl-warn'), label: STATUS_LABELS.attention }, { color: v('--tl-unknown'), label: STATUS_LABELS.unknown }],
-      notes: ['六个维度并列呈现证据状态，不合成总分，不估计获奖概率；可行性为自评。', `文献依据：${corpusLabel}；获奖题目参照：${awardCaseLibraryNotice.title}（${awardCases.length} 项，截至 ${awardCaseLibraryNotice.capturedAt}）。`],
+      notes: ['六个维度并列呈现证据状态，不合成总分，不估计获奖概率；可行性为自评。', `文献依据为${corpusLabel}，获奖题目参照采用${awardCaseLibraryNotice.title}（${awardCases.length} 项，截至 ${awardCaseLibraryNotice.capturedAt}）。`],
     });
   };
   const exportGaps = () => {
@@ -104,13 +104,13 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
         `<text x="${W}" y="${y}" font-size="12" fill="${ink}" text-anchor="end" dominant-baseline="central">${fmtP(g.q)}</text>`);
     });
     exportSvgString(out.join(''), W, top + rows.length * ROW + 22, `研究空白候选-${today()}.svg`, {
-      title: `研究空白候选：实际共现显著低于独立预期的词对（前 ${rows.length} 组）`,
+      title: `研究空白候选词对（实际共现显著低于独立预期，前 ${rows.length} 组）`,
       legend: [{ color: muted, label: '独立预期篇数', ring: true }, { color: red, label: '实际共现篇数' }],
-      notes: [`对 ${fmtInt(gaps.tested)} 对高频词做单侧 Fisher 精确检验（每对独立预期 ≥ ${gaps.minExpected} 篇），Benjamini–Hochberg 校正，FDR ${gaps.fdr * 100}%，保留实际不到预期一半的组合。少见不等于值得研究。`, `数据：${corpusLabel}。`],
+      notes: [`对 ${fmtInt(gaps.tested)} 对高频词做单侧 Fisher 精确检验（每对独立预期 ≥ ${gaps.minExpected} 篇），Benjamini–Hochberg 校正，FDR ${gaps.fdr * 100}%，保留实际不到预期一半的组合。少见不等于值得研究。`, `语料来源为${corpusLabel}。`],
     }, { ink, muted });
   };
   const copy = async (ev: TopicEvaluation) => {
-    try { await navigator.clipboard.writeText(evaluationMarkdown(ev, corpusLabel)); setCopied('已复制证据画像（Markdown）'); } catch { setCopied('浏览器未允许写入剪贴板'); }
+    try { await navigator.clipboard.writeText(evaluationMarkdown(ev, corpusLabel)); setCopied('已复制证据画像文本'); } catch { setCopied('浏览器未允许写入剪贴板'); }
   };
 
   return <div className={styles.studioWrap}><div className={styles.studio}>
@@ -124,18 +124,19 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
 
       <article className={styles.inspireBlock}>
         <header>
-          <h4>2027 正大杯 50 大高潜选题池</h4>
+          <h4>2027 全国市调大赛 50 大高潜选题池</h4>
           <span className={styles.badge}>五大前沿赛道 · {filtered2027Topics.length}/{TOPICS_2027_POOL.length}</span>
         </header>
         <p className={styles.muted}>按五大年度主题筛选高潜实证题目与推荐统计模型，一键代入右侧候选评估区。</p>
         <div className={styles.rowActions} style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-          <button type="button" className={theme2027Filter === 'all' ? styles.secondaryButton : styles.linkButton} onClick={() => setTheme2027Filter('all')}>
+          <button type="button" aria-pressed={theme2027Filter === 'all'} className={theme2027Filter === 'all' ? styles.secondaryButton : styles.linkButton} onClick={() => setTheme2027Filter('all')}>
             全部 ({TOPICS_2027_POOL.length})
           </button>
           {TOPIC_THEMES_2027.map(th => (
             <button
               key={th}
               type="button"
+              aria-pressed={theme2027Filter === th}
               className={theme2027Filter === th ? styles.secondaryButton : styles.linkButton}
               onClick={() => setTheme2027Filter(th)}
             >
@@ -150,9 +151,9 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
                 <span className={styles.gapTerms}><b>#{item.id}</b> {item.title}</span>
                 <span className={styles.badge}>{item.categoryTag}</span>
               </div>
-              <p className={styles.gapStats}>方法建议：{item.methodDesign} · 目标样本：{item.sampleTarget}</p>
+              <p className={styles.gapStats}>推荐方法为 {item.methodDesign} · 目标样本面向 {item.sampleTarget}</p>
               <div className={styles.rowActions}>
-                <button type="button" className={styles.linkButton} onClick={() => apply2027Topic(item)}>代入此选题评估</button>
+                <button type="button" className={styles.linkButton} aria-label={`代入选题 ${item.id} 评估`} onClick={() => apply2027Topic(item)}>代入此选题评估</button>
               </div>
             </li>
           ))}
@@ -161,8 +162,8 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
 
       <article className={styles.inspireBlock}>
         <header><h4>研究空白候选</h4><span className={styles.rowActions}><span className={styles.badge}>Fisher 精确检验 · BH 校正</span>{gaps.candidates.length > 0 && <ExportButton onExport={exportGaps} />}</span></header>
-        <p className={styles.muted}>两个词各自常见，却很少出现在同一篇文献中。检验了 {fmtInt(gaps.tested)} 对高频词（每对独立预期 ≥ {gaps.minExpected} 篇），在 FDR {gaps.fdr * 100}% 下保留实际共现不到预期一半的组合。<strong>少见不等于值得做</strong>：也可能是两者本就无关，需要你用一个真实的决策问题把它们连起来。</p>
-        {gaps.candidates.length === 0 ? <p className={styles.emptyLine}>当前语料中没有显著的低共现组合。记录越多、关键词越规范，这一检验越有效。</p> : <ol className={styles.gapList}>
+        <p className={styles.muted}>两个词各自常见，却很少出现在同一篇文献中。检验了 {fmtInt(gaps.tested)} 对高频词（每对独立预期 ≥ {gaps.minExpected} 篇），在 FDR {gaps.fdr * 100}% 下保留实际共现不到预期一半的组合。<strong>少见不等于值得做</strong>，也可能是两者本就无关，需要你用一个真实的决策问题把它们连起来。</p>
+        {gaps.candidates.length === 0 ? <p className={styles.emptyLine} role="status">当前语料中没有显著的低共现组合。记录越多、关键词越规范，这一检验越有效。</p> : <ol className={styles.gapList}>
           {gaps.candidates.slice(0, showGaps).map((g, i) => {
             const max = Math.max(g.expected, g.observed) * 1.15 || 1, open = openGap === i;
             return <li key={`${g.a.key}|${g.b.key}`}>
@@ -190,10 +191,10 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
 
       <article className={styles.inspireBlock}>
         <header><h4>前沿信号</h4><span className={styles.badge}>突现检测 · z 检验</span></header>
-        {!cy.usable && !liveBursts.length ? <p className={styles.emptyLine}>近 3 年与此前各需至少 20 条记录才能检验（当前 {cy.recentTotal} / {cy.earlyTotal}）。</p> : <>
+        {!cy.usable && !liveBursts.length ? <p className={styles.emptyLine} role="status">近 3 年与此前各需至少 20 条记录才能检验（当前 {cy.recentTotal} / {cy.earlyTotal}）。</p> : <>
           {liveBursts.length > 0 && <><h5>突现延续至 {lastYear} 年</h5><ul className={styles.signalList}>{liveBursts.map(({ key, b }) => <li key={key}><button type="button" className={styles.termButton} aria-pressed={basket.includes(key)} onClick={() => toggleBasket([key])}>{label(key)}</button><span>{b.begin} 年起 · 强度 {b.strength.toFixed(1)}</span></li>)}</ul></>}
           {rising.length > 0 && <><h5>近 3 年占比显著上升</h5><ul className={styles.signalList}>{rising.map(r => <li key={r.key}><button type="button" className={styles.termButton} aria-pressed={basket.includes(r.key)} onClick={() => toggleBasket([r.key])}>{r.label}</button><span>{pct(r.trend.earlyShare)} → {pct(r.trend.recentShare)} · z = {r.trend.z?.toFixed(1)}</span></li>)}</ul></>}
-          {!liveBursts.length && !rising.length && <p className={styles.emptyLine}>没有词在近期显著升温。</p>}
+          {!liveBursts.length && !rising.length && <p className={styles.emptyLine} role="status">没有词在近期显著升温。</p>}
         </>}
       </article>
 
@@ -207,7 +208,7 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
     <section className={styles.studioCol} aria-labelledby="tl-candidate">
       <h3 id="tl-candidate">评估候选题目</h3>
       <form className={styles.candidateForm} onSubmit={e => { e.preventDefault(); run(); }}>
-        <label className={styles.field}><span>候选题目</span><textarea rows={2} value={title} onChange={e => setTitle(e.target.value)} onBlur={() => { if (title.trim() && !terms.length) detect(); }} placeholder="例如：“声”入人心——北京市独居老人智能语音助手使用意愿与服务付费意愿研究" required /></label>
+        <label className={styles.field}><span>候选题目</span><textarea aria-label="候选题目" rows={2} value={title} onChange={e => setTitle(e.target.value)} onBlur={() => { if (title.trim() && !terms.length) detect(); }} placeholder="例如“声”入人心——北京市独居老人智能语音助手使用意愿与服务付费意愿研究" required /></label>
         <div className={styles.field}>
           <span>核心词 <small>（用于检索导入文献；可增删）</small></span>
           <div className={styles.termEditor}>
@@ -219,7 +220,7 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
         </div>
         <fieldset className={styles.feasibility}>
           <legend>可行性自评 <small>（只记录你的判断，不作核验）</small></legend>
-          <label className={styles.field}><span>谁会依据这项研究做决定？</span><input value={feas.decisionOwner} onChange={e => setFeas({ ...feas, decisionOwner: e.target.value })} placeholder="例如：某区民政局养老服务科" /></label>
+          <label className={styles.field}><span>谁会依据这项研究做决定？</span><input aria-label="决策对象" value={feas.decisionOwner} onChange={e => setFeas({ ...feas, decisionOwner: e.target.value })} placeholder="例如某区民政局养老服务科" /></label>
           <ChoiceGroup legend="能在调查期内触达目标人群吗？" name="tl-access" value={feas.access} onChange={v => setFeas({ ...feas, access: v as Feasibility['access'] })} tone={theme} options={[{ value: 'yes', label: '能' }, { value: 'unsure', label: '不确定' }, { value: 'no', label: '不能' }]} />
           <ChoiceGroup legend="能取得一手数据（问卷、访谈、观察）吗？" name="tl-primary" value={feas.primaryData} onChange={v => setFeas({ ...feas, primaryData: v as Feasibility['primaryData'] })} tone={theme} options={[{ value: 'yes', label: '能' }, { value: 'unsure', label: '不确定' }, { value: 'no', label: '不能' }]} />
           <ChoiceGroup legend="涉及未成年人、病患或敏感信息吗？" name="tl-sensitive" value={feas.sensitive} onChange={v => setFeas({ ...feas, sensitive: v as Feasibility['sensitive'] })} tone={theme} options={[{ value: 'no', label: '不涉及' }, { value: 'unsure', label: '不确定' }, { value: 'yes', label: '涉及' }]} />
@@ -230,11 +231,11 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
   </div>
 
       {result && <div className={styles.profile} aria-live="polite">
-        {stale && <p className={styles.caution}>题目或核心词已修改，下方画像仍是上一次的结果。<button type="button" className={styles.linkButton} onClick={run}>重新生成</button></p>}
+        {stale && <p className={styles.caution} role="status">题目或核心词已修改，下方画像仍是上一次的结果。<button type="button" className={styles.linkButton} onClick={run}>重新生成</button></p>}
         <div className={styles.profileHead}>
           <span className={styles.eyebrowSmall}>证据画像 · 不是获奖概率</span>
           <h4>{result.ev.title}</h4>
-          <p className={styles.provenance}>依据：{corpusLabel}；{awardCaseLibraryNotice.title}（{awardCases.length} 项，截至 {awardCaseLibraryNotice.capturedAt}）；可行性为自评。</p>
+          <p className={styles.provenance}>文献依据来自{corpusLabel}，参照{awardCaseLibraryNotice.title}（{awardCases.length} 项，截至 {awardCaseLibraryNotice.capturedAt}），可行性为自评。</p>
         </div>
         <EvidenceTree ev={result.ev} svgRef={treeRef} />
         <Legendary />
@@ -242,8 +243,8 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
         <DimensionCards ev={result.ev} index={index} trends={trends} />
         <div className={styles.rowActions}>
           <button type="button" className={styles.secondaryButton} disabled={saved.length >= MAX_COMPARE || saved.some(s => s.ev.title === result.ev.title && JSON.stringify(s.ev.terms) === JSON.stringify(result.ev.terms))} onClick={() => setSaved([...saved, { id: Date.now(), ev: result.ev }])}>{saved.length >= MAX_COMPARE ? `最多对比 ${MAX_COMPARE} 个` : '加入对比'}</button>
-          <button type="button" className={styles.secondaryButton} onClick={() => copy(result.ev)}>复制为 Markdown</button>
-          <ExportButton onExport={() => exportTree(result.ev)} label="导出画像 SVG" />
+          <button type="button" className={styles.secondaryButton} onClick={() => copy(result.ev)}>复制画像文本</button>
+          <ExportButton onExport={() => exportTree(result.ev)} label="导出矢量画像" />
           {onUseTopic && <button type="button" className={styles.secondaryButton} disabled={!evidence || stale} onClick={() => { if (evidence && !stale) onUseTopic({ title: result.ev.title, decisionOwner: feas.decisionOwner, evidence }); }}>带入准备度诊断</button>}
           {copied && <span className={styles.muted} role="status">{copied}</span>}
         </div>
@@ -254,11 +255,11 @@ export default function TopicStudio({ index, map, cy, trends, bursts, lastYear, 
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <caption className={styles.srOnly}>候选题目在六个证据维度上的状态</caption>
-            <thead><tr><th scope="col">维度</th>{saved.map((s, i) => <th scope="col" key={s.id}><span className={styles.compareTitle}>{i + 1}. {s.ev.title}</span><button type="button" className={styles.linkButton} onClick={() => setSaved(saved.filter(x => x.id !== s.id))}>移除<span className={styles.srOnly}>：{s.ev.title}</span></button></th>)}</tr></thead>
+            <thead><tr><th scope="col">维度</th>{saved.map((s, i) => <th scope="col" key={s.id}><span className={styles.compareTitle}>{i + 1}. {s.ev.title}</span><button type="button" className={styles.linkButton} onClick={() => setSaved(saved.filter(x => x.id !== s.id))}>移除<span className={styles.srOnly}> {s.ev.title}</span></button></th>)}</tr></thead>
             <tbody>{COMPARE_ROWS.map(row => <tr key={row.label}><th scope="row">{row.label}</th>{saved.map(s => { const [st, text] = row.get(s.ev); return <td key={s.id}><StatusChip status={st} /><small>{text}</small></td>; })}</tr>)}</tbody>
           </table>
         </div>
-        <p className={styles.muted}>对比只并列证据状态，不合成总分：维度之间的重要性取决于你的研究目标与赛事阶段。</p>
+        <p className={styles.muted}>对比只并列呈现证据状态，不合成总分，各维度权重取决于你的研究目标与推进阶段。</p>
       </div>}
   </div>;
 }
@@ -280,14 +281,14 @@ const COMPARE_ROWS: Array<{ label: string; get: (ev: TopicEvaluation) => [Status
 function NeedsList({ ev }: { ev: TopicEvaluation }) {
   const todo: string[] = [];
   if (ev.base.status === 'unknown') todo.push('补充核心词，或导入与题目相关的文献');
-  if (ev.base.weak.length) todo.push(`${ev.base.weak.join('、')} 在导入文献中少于 3 篇：扩大检索式，或确认这些词的规范说法`);
-  if (ev.novelty.kind === 'crowded') todo.push(`已有 ${ev.novelty.joint} 篇文献同时涉及全部要素：在对象、地域、方法或决策场景上写清差异`);
-  if (ev.novelty.kind === 'none') todo.push('导入文献中尚无同时涉及全部要素的研究：先用一个真实决策问题论证这一组合的必要性');
-  if (ev.trend.status === 'attention') todo.push(`${ev.trend.falling.join('、')} 近期占比下降：说明为什么现在仍值得研究`);
-  if (ev.award.nearDuplicate) todo.push(`与已获奖题目“${ev.award.nearDuplicate.title}”高度相近：避免重复，突出新的对象或问题`);
-  for (const f of ev.structure.features) if (!f.match) todo.push(`题目未体现${f.label}：${f.hint}`);
+  if (ev.base.weak.length) todo.push(`${ev.base.weak.join('、')} 在导入文献中少于 3 篇，建议扩大检索式或核对规范术语`);
+  if (ev.novelty.kind === 'crowded') todo.push(`已有 ${ev.novelty.joint} 篇文献同时涉及全部要素，建议在对象、地域、方法或决策场景上写清差异`);
+  if (ev.novelty.kind === 'none') todo.push('导入文献中尚无同时涉及全部要素的研究，建议先围绕真实决策问题论证这一组合的必要性');
+  if (ev.trend.status === 'attention') todo.push(`${ev.trend.falling.join('、')} 近期占比有所回落，建议阐明当前阶段继续研究的现实依据`);
+  if (ev.award.nearDuplicate) todo.push(`与已获奖题目“${ev.award.nearDuplicate.title}”高度相近，需避免同质化并突出新对象或新问题`);
+  for (const f of ev.structure.features) if (!f.match) todo.push(`题目尚未体现${f.label}，${f.hint}`);
   for (const i of ev.feasibility.issues) todo.push(i);
-  if (ev.feasibility.status === 'unknown') todo.push('填写可行性自评：决策者、人群触达、一手数据与敏感信息');
+  if (ev.feasibility.status === 'unknown') todo.push('补充填写决策对象、人群触达、一手数据与敏感信息等可行性自评项');
   if (!todo.length) return null;
   return <div className={styles.needs}><h5>下一步可以补强</h5><ol>{todo.slice(0, 8).map(t => <li key={t}>{t}</li>)}</ol></div>;
 }
@@ -304,7 +305,7 @@ function DimensionCards({ ev, index, trends }: { ev: TopicEvaluation; index: Ter
       <header><h5>新颖度</h5><StatusChip status={ev.novelty.status} /></header>
       {ev.novelty.kind === 'unknown' ? <p className={styles.muted}>至少需要两个在导入文献中出现过的核心词。</p> : <>
         <p className={styles.bigLine}><b>{ev.novelty.joint}</b> 篇同时涉及全部核心词{ev.novelty.expected !== null && <small>（各词独立时预期 {ev.novelty.expected < .1 ? ev.novelty.expected.toExponential(1) : ev.novelty.expected.toFixed(1)} 篇；≥ {ev.novelty.crowdedAt} 篇视为已较充分）</small>}</p>
-        <ul className={styles.factRows}>{ev.novelty.pairs.map(p => <li key={`${p.a}|${p.b}`}><span>{p.a} × {p.b}</span><b>{p.observed} / {p.expected.toFixed(1)}</b><small title="单侧 Fisher 精确检验：实际共现少于独立预期的概率">p = {fmtP(p.pLow)}</small></li>)}</ul>
+        <ul className={styles.factRows}>{ev.novelty.pairs.map(p => <li key={`${p.a}|${p.b}`}><span>{p.a} × {p.b}</span><b>{p.observed} / {p.expected.toFixed(1)}</b><small title="单侧 Fisher 精确检验中实际共现少于独立预期的概率">p = {fmtP(p.pLow)}</small></li>)}</ul>
         {ev.novelty.papers.length > 0 && <><button type="button" className={styles.linkButton} aria-expanded={showPapers} onClick={() => setShowPapers(!showPapers)}>{showPapers ? '收起' : `查看最接近的 ${ev.novelty.papers.length} 篇已有研究`}</button>
           {showPapers && <ul className={styles.paperMini}>{ev.novelty.papers.map(p => <li key={p}>{index.records[p].title}<small>{index.records[p].year ?? '—'} · 被引 {index.records[p].citations ?? '—'}</small></li>)}</ul>}</>}
       </>}
@@ -316,7 +317,7 @@ function DimensionCards({ ev, index, trends }: { ev: TopicEvaluation; index: Ter
     </article>
     <article className={styles.dimCard}>
       <header><h5>获奖题目参照</h5><StatusChip status={ev.award.status} /></header>
-      {ev.award.similar.length ? <ul className={styles.caseRows}>{ev.award.similar.map(c => <li key={c.id}><span>{c.title}</span><small>{c.edition} · {c.award} · {c.verification === 'official_verified' ? '官方来源已核验' : '用户陈述奖项'} · 相似度 {(c.similarity * 100).toFixed(0)}{c.sharedTags.length ? ` · 共同标签：${c.sharedTags.join('、')}` : ''}</small>{c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noreferrer">公告来源<span className={styles.srOnly}>（新窗口）</span></a>}</li>)}</ul> : <p className={styles.muted}>索引中没有题面相近的获奖题目。</p>}
+      {ev.award.similar.length ? <ul className={styles.caseRows}>{ev.award.similar.map(c => <li key={c.id}><span>{c.title}</span><small>{c.edition} · {c.award} · {c.verification === 'official_verified' ? '官方来源已核验' : '用户陈述奖项'} · 相似度 {(c.similarity * 100).toFixed(0)}{c.sharedTags.length ? ` · 共同标签含 ${c.sharedTags.join('、')}` : ''}</small>{c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noreferrer">公告来源<span className={styles.srOnly}>（新窗口）</span></a>}</li>)}</ul> : <p className={styles.muted}>索引中没有题面相近的获奖题目。</p>}
       <p className={styles.note}>相似度 = 0.6 × 题名字符二元组 Jaccard + 0.4 × 案例标签命中比例。索引仅收录 {awardCases.length} 项、不是全量榜单，且没有未获奖作品作对照，因此只能用来定位与避免重复，不能推断获奖可能性。</p>
     </article>
     <article className={styles.dimCard}>
@@ -333,12 +334,12 @@ function DimensionCards({ ev, index, trends }: { ev: TopicEvaluation; index: Ter
 
 /** Plain-text export that keeps provenance and the boundary statement with the numbers. */
 export function evaluationMarkdown(ev: TopicEvaluation, corpusLabel: string): string {
-  const lines = [`# 选题证据画像：${ev.title}`, '', `- 文献依据：${corpusLabel}`, `- 获奖题目参照：${awardCaseLibraryNotice.title}（${awardCases.length} 项，截至 ${awardCaseLibraryNotice.capturedAt}）`, '- 说明：本画像并列证据状态，不估计获奖概率。', ''];
-  lines.push('## 文献基础', ...ev.terms.map(t => `- ${t.label}：${t.df} 篇（${pct(t.share)}）`), '');
-  lines.push('## 新颖度', ev.novelty.kind === 'unknown' ? '- 核心词不足，无法判断' : `- 同时涉及全部核心词：${ev.novelty.joint} 篇`, ...ev.novelty.pairs.map(p => `- ${p.a} × ${p.b}：实际 ${p.observed} / 预期 ${p.expected.toFixed(1)}（单侧 Fisher p = ${fmtP(p.pLow)}）`), '');
-  lines.push('## 时效', ...ev.trend.bursts.map(b => `- ${b.label} 突现 ${b.begin}–${b.end}${b.live ? '（延续至最新年份）' : ''}`), ...ev.trend.rising.map(r => `- ${r}：近 3 年占比显著上升`), ...ev.trend.falling.map(r => `- ${r}：近 3 年占比显著下降`), '');
+  const lines = [`# 选题证据画像 · ${ev.title}`, '', `- 文献依据为${corpusLabel}`, `- 获奖题目参照采用${awardCaseLibraryNotice.title}（${awardCases.length} 项，截至 ${awardCaseLibraryNotice.capturedAt}）`, '- 本画像仅并列证据状态，不估计获奖概率。', ''];
+  lines.push('## 文献基础', ...ev.terms.map(t => `- ${t.label} 共 ${t.df} 篇（${pct(t.share)}）`), '');
+  lines.push('## 新颖度', ev.novelty.kind === 'unknown' ? '- 核心词不足，无法判断' : `- 同时涉及全部核心词共 ${ev.novelty.joint} 篇`, ...ev.novelty.pairs.map(p => `- ${p.a} × ${p.b} 实际 ${p.observed} 篇 / 预期 ${p.expected.toFixed(1)} 篇（单侧 Fisher p = ${fmtP(p.pLow)}）`), '');
+  lines.push('## 时效', ...ev.trend.bursts.map(b => `- ${b.label} 突现 ${b.begin}–${b.end}${b.live ? '（延续至最新年份）' : ''}`), ...ev.trend.rising.map(r => `- ${r} 近 3 年占比显著上升`), ...ev.trend.falling.map(r => `- ${r} 近 3 年占比显著下降`), '');
   lines.push('## 获奖题目参照（描述性）', ...ev.award.similar.map(c => `- ${c.title}（${c.edition}，${c.award}，${c.verification === 'official_verified' ? '官方来源已核验' : '用户陈述'}，相似度 ${(c.similarity * 100).toFixed(0)}）`), '');
-  lines.push('## 题目要素', ...ev.structure.features.map(f => `- ${f.label}：${f.match ?? '未体现'}（${f.total} 个官方核验获奖题目中 ${f.withFeature} 个含此要素）`), '');
+  lines.push('## 题目要素', ...ev.structure.features.map(f => `- ${f.label}（${f.match ?? '未体现'}，${f.total} 个官方核验获奖题目中 ${f.withFeature} 个含此要素）`), '');
   lines.push('## 可行性（自评，未核验）', ...(ev.feasibility.issues.length ? ev.feasibility.issues.map(i => `- ${i}`) : [ev.feasibility.status === 'unknown' ? '- 未填写' : '- 无明显障碍']));
   return lines.join('\n');
 }

@@ -68,8 +68,8 @@ const text = (v: unknown) => typeof v === 'string' ? v.trim() : '';
 const list = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 function column(table: SurveyTable, name: string, role: string): number {
   const hits = table.headers.map((h, i) => [h.trim(), i] as const).filter(([h]) => h === name.trim());
-  if (!hits.length) throw Error(`当前数据中没有「${name}」列（${role}）。`);
-  if (hits.length > 1) throw Error(`有 ${hits.length} 列都叫「${name}」，无法唯一定位，请先在数据中改名。`);
+  if (!hits.length) throw Error(`当前数据中没有“${name}”列（${role}）。`);
+  if (hits.length > 1) throw Error(`有 ${hits.length} 列都叫“${name}”，无法唯一定位，请先在数据中改名。`);
   return hits[0][1];
 }
 export function columnSummary(value: DatasetValue): string {
@@ -94,7 +94,7 @@ function facts(items: Array<{ name: string; value: ResultValue | ChartValue; typ
   return items.map(({ name, value, type }) => {
     const r = type === 'chart' ? (value as ChartValue).source : value as ResultValue, res = r.result;
     const metrics = res.metrics.filter(m => m.value !== null).map(m => `${m.label} ${Number.isInteger(m.value) ? m.value : (m.value as number).toFixed(3)}`);
-    const top = res.method === 'frequency' && res.rows.length ? (() => { const best = [...res.rows].sort((a, b) => Number(b[1]) - Number(a[1]))[0]; return `最多的类别「${best[0]}」${best[1]} 人（${Number(best[2]).toFixed(1)}%）`; })() : '';
+    const top = res.method === 'frequency' && res.rows.length ? (() => { const best = [...res.rows].sort((a, b) => Number(b[1]) - Number(a[1]))[0]; return `最多的类别“${best[0]}”${best[1]} 人（${Number(best[2]).toFixed(1)}%）`; })() : '';
     return { label: name, simulated: r.dataset.kind === 'simulated', text: [`${nodeDef(r.plan.method as StatMethod).title}：有效 ${res.n} / ${res.total} 行`, top, ...metrics].filter(Boolean).join('；') + '。' };
   });
 }
@@ -112,7 +112,7 @@ function execute(node: CanvasNode, doc: CanvasDoc, inputs: Gathered[], run: RunI
   switch (node.kind) {
     case 'dataset': {
       const base = c.source === 'file' ? run.files.get(node.id) : run.workspace;
-      if (!base) throw Error(c.source === 'file' ? (text(c.fileHash) ? `请重新选择文件「${text(c.fileName)}」；画布不保存原始数据。` : '请选择一个 CSV 文件。') : '「数据分析」中还没有载入数据，请先在那里读取或使用示例数据。');
+      if (!base) throw Error(c.source === 'file' ? (text(c.fileHash) ? `请重新选择文件“${text(c.fileName)}”；画布不保存原始数据。` : '请选择一个 CSV 文件。') : '“数据分析”中还没有载入数据，请先在那里读取或使用示例数据。');
       if (c.source === 'file' && text(c.fileHash) && base.sourceHash !== text(c.fileHash)) throw Error('所选文件内容与上次登记的不同（指纹不符），请确认后重新选择。');
       const extra = parseMissingCodes(text(c.missingCodes));
       return { type: 'dataset', value: { ...base, missingCodes: [...new Set([...base.missingCodes, ...extra])], lineage: [...base.lineage] } };
@@ -120,7 +120,7 @@ function execute(node: CanvasNode, doc: CanvasDoc, inputs: Gathered[], run: RunI
     case 'filter': {
       const d = one('dataset').value as DatasetValue, col = column(d.table, text(c.column), '筛选变量');
       const { table, evidence } = filterPlanSample(d.table, { column: col, values: list(c.values) }, d.missingCodes);
-      return { type: 'dataset', value: { ...d, table, lineage: [...d.lineage, `筛选「${text(c.column)}」= ${list(c.values).join('、')}：保留 ${evidence.branchRows} / ${evidence.totalRows} 行`] } };
+      return { type: 'dataset', value: { ...d, table, lineage: [...d.lineage, `筛选“${text(c.column)}”= ${list(c.values).join('、')}：保留 ${evidence.branchRows} / ${evidence.totalRows} 行`] } };
     }
     case 'missing': {
       const d = one('dataset').value as DatasetValue, codes = [...new Set([...d.missingCodes, ...parseMissingCodes(text(c.codes))])];
@@ -138,7 +138,7 @@ function execute(node: CanvasNode, doc: CanvasDoc, inputs: Gathered[], run: RunI
       if (wanted && wanted !== 'auto') {
         const choices = chartChoices(snapshot), choice = choices.find(x => x.id === wanted);
         if (!choice) throw Error(`该图形不能画这种统计结果，可选：${choices.map(x => x.title).join('、')}。`);
-        if (!choice.available) throw Error(`当前结果不能画成「${choice.title}」：${choice.reason}`);
+        if (!choice.available) throw Error(`当前结果不能画成“${choice.title}”：${choice.reason}`);
         kind = choice.id;
       }
       return { type: 'chart', value: { nodeId: node.id, title: text(c.title) || r.title, snapshot, kind, palette: text(c.palette) || doc.palette, source: r } };
@@ -202,7 +202,7 @@ export async function runCanvas(doc: CanvasDoc, scope: string[], run: RunInputs,
     const blockers = incoming.map(e => states.get(e.source)).filter(s => s && s.status !== 'done');
     if (blockers.length || incoming.some(e => !inScope.has(e.source))) {
       const missing = incoming.find(e => !inScope.has(e.source));
-      set(id, { status: 'blocked', message: missing ? `上游「${byId.get(missing.source)?.title ?? missing.source}」不在本次运行范围内。` : '上游节点未完成，本节点没有运行。', hash: '', cached: false, output: null });
+      set(id, { status: 'blocked', message: missing ? `上游“${byId.get(missing.source)?.title ?? missing.source}”不在本次运行范围内。` : '上游节点未完成，本节点没有运行。', hash: '', cached: false, output: null });
       continue;
     }
     const gathered: Gathered[] = incoming.map(e => ({ port: e.targetPort, edgeId: e.id, sourceId: e.source, sourceTitle: byId.get(e.source)!.title, output: states.get(e.source)!.output! }));

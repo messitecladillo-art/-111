@@ -62,20 +62,20 @@ function stepRoleLabel(step: string): string {
 }
 
 function formatRecordTokens(usage: AiUsageRecord['usage']): string {
-  if (usage.inputTokens == null && usage.outputTokens == null) return '未返回 Token 统计';
+  if (usage.inputTokens == null && usage.outputTokens == null) return '未返回词元统计';
   const parts: string[] = [];
   if (usage.inputTokens != null) parts.push(`输入 ${usage.inputTokens}`);
   if (usage.outputTokens != null) parts.push(`输出 ${usage.outputTokens}`);
-  return `${parts.join(' / ')} tokens`;
+  return `${parts.join(' / ')} 词元`;
 }
 
 function formatReceiptTokens(usage: WorkflowModelCallReceipt['usage']): string {
-  if (!usage) return '未返回 Token 统计';
+  if (!usage) return '未返回词元统计';
   const parts: string[] = [];
   if (usage.inputTokens != null) parts.push(`输入 ${usage.inputTokens}`);
   if (usage.outputTokens != null) parts.push(`输出 ${usage.outputTokens}`);
   if (usage.totalTokens != null) parts.push(`合计 ${usage.totalTokens}`);
-  return parts.length ? `${parts.join(' / ')} tokens` : '未返回 Token 统计';
+  return parts.length ? `${parts.join(' / ')} 词元` : '未返回词元统计';
 }
 
 function collectToolLabels(input: AiDisclosureInput): string[] {
@@ -139,11 +139,11 @@ export function buildAiDisclosureLines(input: AiDisclosureInput): string[] {
     );
     if (!ledger || ledger.coverage === 'unavailable') {
       lines.push(
-        '核验范围说明：当前处于本地会话或尚未获取服务端项目 AI 审计台账，平台暂无已记录的生成式人工智能调用回执；若作者曾在平台外使用生成式 AI 工具辅助检索、润色或编程，须在提交前手动补录对应工具名称、版本、用途与人工复核过程。',
+        '结合核验范围说明可知，当前处于本地会话或尚未获取服务端项目人工智能审计台账，平台暂无已记录的生成式人工智能调用回执；若作者曾在平台外使用相关辅助工具开展检索、润色或编程，须在提交前手动补录对应工具名称、版本、用途与人工复核过程。',
       );
     } else {
       lines.push(
-        `账本核验说明：已连接项目服务端 AI 记录（覆盖范围：${ledger.scope ?? 'own-questionnaire-proposals/latest-200'}），当前暂无问卷提案类模型调用记录；除系统可核验范围外，如涉及平台外生成式 AI 辅助工作仍须由作者如实补录。`,
+        `结合账本核验范围说明可知，当前已连接项目服务端人工智能调用记录（覆盖范围为 ${ledger.scope ?? 'own-questionnaire-proposals/latest-200'}），暂无问卷提案类模型调用记录；除系统可核验范围外，如涉及平台外生成式人工智能辅助工作仍须由作者如实补录。`,
       );
     }
     lines.push(platformStatement);
@@ -151,11 +151,11 @@ export function buildAiDisclosureLines(input: AiDisclosureInput): string[] {
 
   if (!ledger || ledger.coverage === 'unavailable') {
     lines.push(
-      '台账覆盖声明：当前未获得服务端 AiUsageLedger/v1 审计记录（coverage=unavailable），仅能覆盖本次会话可观测的调用信息。',
+      '按照台账覆盖声明口径，当前尚未获得服务端 AiUsageLedger/v1 审计记录（coverage=unavailable），本节仅覆盖本次会话内可观测的调用信息。',
     );
   } else {
     lines.push(
-      `台账覆盖声明：服务端 AiUsageLedger/v1 处于部分覆盖模式（coverage=partial，scope=${ledger.scope ?? 'own-questionnaire-proposals/latest-200'}），返回 ${ledgerRecords.length} 条模型调用记录；不代表全项目完整审计覆盖。`,
+      `按照台账覆盖声明口径，服务端 AiUsageLedger/v1 当前处于部分覆盖模式（coverage=partial，scope=${ledger.scope ?? 'own-questionnaire-proposals/latest-200'}），共返回 ${ledgerRecords.length} 条模型调用记录，尚不代表全项目完整审计覆盖。`,
     );
   }
 
@@ -168,7 +168,7 @@ export function buildAiDisclosureLines(input: AiDisclosureInput): string[] {
     const tokens = formatRecordTokens(record.usage);
     const hash = record.outputHash ? `，输出摘要 ${record.outputHash.slice(0, 12)}` : '';
     lines.push(
-      `- [服务端台账 ${record.id}] ${purpose} · ${provider}/${model} · 状态：${status} · ${tokens} · 时间：${when}${hash}`,
+      `- （服务端台账 ${record.id}）${purpose} · ${provider}/${model} · 执行状态为${status} · ${tokens} · 记录时间 ${when}${hash}`,
     );
   }
 
@@ -180,7 +180,7 @@ export function buildAiDisclosureLines(input: AiDisclosureInput): string[] {
     const hash = call.resultHash ? `，结果摘要 ${call.resultHash.slice(0, 12)}` : '';
     const err = call.errorCode ? `，错误码 ${call.errorCode}` : '';
     lines.push(
-      `- [工作流回执 ${call.id}] ${stepRoleLabel(call.step)} · ${call.serviceId}#v${call.serviceRevision}（${mode}） · 状态：${status} · ${tokens} · 时间：${when}${hash}${err}`,
+      `- （工作流回执 ${call.id}）${stepRoleLabel(call.step)} · ${call.serviceId}#v${call.serviceRevision}（${mode}） · 执行状态为${status} · ${tokens} · 记录时间 ${when}${hash}${err}`,
     );
   }
 
@@ -188,7 +188,7 @@ export function buildAiDisclosureLines(input: AiDisclosureInput): string[] {
     const modelText = input.fullReportSummary.modelLabel ?? '研究会话已选模型';
     const noteText = input.fullReportSummary.note ? `；${input.fullReportSummary.note}` : '';
     lines.push(
-      `- [整稿草稿辅助] 模型：${modelText} · 涉及章节数：${input.fullReportSummary.sectionCount ?? input.content.report.length}${noteText}`,
+      `- （整稿草稿辅助）模型 ${modelText} · 涉及章节数 ${input.fullReportSummary.sectionCount ?? input.content.report.length}${noteText}`,
     );
   }
 

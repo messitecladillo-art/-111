@@ -84,7 +84,7 @@ export default function AnatomyStageCard({
           phase,
           completed: litCount,
           total: totalRooms,
-          detail: `${current.summary} — 点击右上角「展开结构」可拆解等轴测压印机架。`,
+          detail: `${current.summary} — 点击右上角“展开结构”可拆解等轴测压印机架。`,
         }}
       />
     </div>

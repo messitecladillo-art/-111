@@ -50,3 +50,49 @@
 .planProgress>span { display:block; height:100%; background:var(--wb-accent); transition:width 200ms linear; }
 .planProgress[data-over-plan=true]>span { background:var(--wb-amber); }
 @media(prefers-reduced-motion:reduce) { .panel *,.panel *::before { animation:none!important; transition:none!important; } }
+
+@media (forced-colors: active) {
+  .panel,
+  .boundary,
+  .clockArea,
+  .blocks li,
+  .review,
+  .warning,
+  .error {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .panel,
+  .boundary,
+  .clockArea,
+  .blocks li,
+  .review,
+  .tag,
+  .planProgress,
+  .panel button {
+    border: 1px solid ButtonText;
+  }
+  .sessionHead,
+  .warning,
+  .error {
+    border-color: CanvasText;
+  }
+  .blocks li.motionMarker {
+    display: none;
+  }
+  .blocks li.current,
+  .setup button,
+  .panel button.primary,
+  .planProgress > span {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .panel :focus-visible,
+  .panel button:focus-visible,
+  .panel summary:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

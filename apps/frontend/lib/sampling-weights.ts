@@ -24,9 +24,9 @@ export function classAdjust(classes: string[], responded: boolean[], base: numbe
   const info = names.map(name => {
     const idx = classes.map((c, i) => c === name ? i : -1).filter(i => i >= 0);
     const all = sum(idx.map(i => base[i])), resp = sum(idx.filter(i => responded[i]).map(i => base[i]));
-    if (resp === 0) throw Error(`调整类「${name}」中没有回答者，请与相邻类合并。`);
+    if (resp === 0) throw Error(`调整类“${name}”中没有回答者，请与相邻类合并。`);
     const respondents = idx.filter(i => responded[i]).length;
-    if (respondents < 20) warnings.push(`调整类「${literal(name)}」只有 ${respondents} 个回答者，调整因子不稳定。`);
+    if (respondents < 20) warnings.push(`调整类“${literal(name)}”只有 ${respondents} 个回答者，调整因子不稳定。`);
     return { name, eligible: idx.length, respondents, rate: resp / all, factor: all / resp };
   });
   const factor = new Map(info.map(c => [c.name, c.factor]));
@@ -38,11 +38,11 @@ export type MarginFit = { category: string; before: number; target: number; afte
 export function postStratify(cells: string[], base: number[], targets: Record<string, number>): { weights: number[]; fits: MarginFit[] } {
   if (cells.length !== base.length) throw Error('输入长度不一致。');
   const missing = [...new Set(cells)].filter(c => !(c in targets));
-  if (missing.length) throw Error(`缺少类别「${missing.slice(0, 3).join('」「')}」的总体数。`);
+  if (missing.length) throw Error(`缺少类别“${missing.slice(0, 3).join('”“')}”的总体数。`);
   const fits = Object.entries(targets).map(([category, target]) => {
-    if (!(target > 0)) throw Error(`类别「${category}」的总体数须为正数。`);
+    if (!(target > 0)) throw Error(`类别“${category}”的总体数须为正数。`);
     const before = sum(cells.map((c, i) => c === category ? base[i] : 0));
-    if (before === 0) throw Error(`样本中没有类别「${category}」，无法事后分层；请合并类别。`);
+    if (before === 0) throw Error(`样本中没有类别“${category}”，无法事后分层；请合并类别。`);
     return { category, before, target, after: target };
   });
   const factor = new Map(fits.map(f => [f.category, f.target / f.before]));
@@ -61,14 +61,14 @@ export function rake(margins: RakeMargin[], base: number[], { maxIterations = 10
   if (base.some(w => !(w > 0))) throw Error('初始权数须为正数。');
   const warnings: string[] = [], grand = sum(Object.values(margins[0].targets));
   const scaled = margins.map(m => {
-    if (m.values.length !== base.length) throw Error(`「${m.name}」的取值个数与记录数不一致。`);
+    if (m.values.length !== base.length) throw Error(`“${m.name}”的取值个数与记录数不一致。`);
     const total = sum(Object.values(m.targets));
-    if (!(total > 0)) throw Error(`「${m.name}」的目标总数须大于 0。`);
+    if (!(total > 0)) throw Error(`“${m.name}”的目标总数须大于 0。`);
     const absent = Object.keys(m.targets).filter(c => !m.values.includes(c));
-    if (absent.length) throw Error(`样本中没有「${m.name}」的类别「${absent.slice(0, 3).join('」「')}」，无法校准；请合并类别。`);
+    if (absent.length) throw Error(`样本中没有“${m.name}”的类别“${absent.slice(0, 3).join('”“')}”，无法校准；请合并类别。`);
     const unknown = [...new Set(m.values)].filter(c => !(c in m.targets));
-    if (unknown.length) throw Error(`「${m.name}」的类别「${unknown.slice(0, 3).join('」「')}」缺少目标比例。`);
-    if (Math.abs(total - grand) > 1e-9 * grand) warnings.push(`「${literal(m.name)}」的目标合计与第一个控制变量不同，已按比例调整到相同总数。`);
+    if (unknown.length) throw Error(`“${m.name}”的类别“${unknown.slice(0, 3).join('”“')}”缺少目标比例。`);
+    if (Math.abs(total - grand) > 1e-9 * grand) warnings.push(`“${literal(m.name)}”的目标合计与第一个控制变量不同，已按比例调整到相同总数。`);
     return { ...m, targets: Object.fromEntries(Object.entries(m.targets).map(([c, t]) => [c, t * grand / total])) };
   });
   if (bounds && !(bounds.lower > 0 && bounds.lower < 1 && bounds.upper > 1)) throw Error('调整因子的上下限须满足 0 < 下限 < 1 < 上限。');

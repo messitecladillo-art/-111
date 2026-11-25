@@ -33,11 +33,11 @@ export interface TeamMilestone {
 }
 
 const INITIAL_MILESTONES: TeamMilestone[] = [
-  { id: 'M1', stage: 'Day 1', title: '选题与文献词云定稿', owner: '队长 / 主编', dueLabel: '已完成', status: 'done' },
-  { id: 'M2', stage: 'Day 3', title: '问卷设计与抽样派发', owner: '苏晴（田野组长）', dueLabel: '已完成', status: 'done' },
-  { id: 'M3', stage: 'Day 7', title: '三线表与假设检验建模', owner: '林深（建模官）', dueLabel: '进行中', status: 'active' },
-  { id: 'M4', stage: 'Day 10', title: '国奖级正文与框架图统稿', owner: '全队协同', dueLabel: '待启动', status: 'todo' },
-  { id: 'M5', stage: 'Day 14', title: '问辩稿演练与答辩彩排', owner: '队长 + 汇报手', dueLabel: '待启动', status: 'todo' },
+  { id: 'M1', stage: '第 1 天', title: '选题与文献词云定稿', owner: '队长 / 主编', dueLabel: '已完成', status: 'done' },
+  { id: 'M2', stage: '第 3 天', title: '问卷设计与抽样派发', owner: '苏晴（田野组长）', dueLabel: '已完成', status: 'done' },
+  { id: 'M3', stage: '第 7 天', title: '三线表与假设检验建模', owner: '林深（建模官）', dueLabel: '进行中', status: 'active' },
+  { id: 'M4', stage: '第 10 天', title: '国奖级正文与框架图统稿', owner: '全队协同', dueLabel: '待启动', status: 'todo' },
+  { id: 'M5', stage: '第 14 天', title: '问辩稿演练与答辩彩排', owner: '队长与汇报人', dueLabel: '待启动', status: 'todo' },
 ];
 
 const MILESTONE_STATUS_LABELS: Record<TeamMilestone['status'], string> = {
@@ -52,6 +52,15 @@ const ROLE_LABELS: Record<TeamMate['role'], string> = {
   reviewer: '数据审校',
   viewer: '答辩观摩',
 };
+
+function cleanTeamText(raw: string): string {
+  return raw
+    .replace(/[\u300c\u300e]/gu, '“')
+    .replace(/[\u300d\u300f]/gu, '”')
+    .replace(/\u3010([^\u3011]+)\u3011/gu, '（$1）')
+    .replace(/[{}]/gu, '')
+    .trim();
+}
 
 const buildAvatar = (name: string, accentHex: string) =>
   assertTrueVector(generateProceduralStudioSvg({ preset: 'avatar', prompt: name, accentHex }));
@@ -89,13 +98,13 @@ export default function TeamLiaisonStudio({
       email: 'linshen@evix-team.local',
       role: 'editor',
       status: 'writing',
-      specialty: '回归/IPA 实证分析',
+      specialty: '回归与重要度矩阵分析',
       avatarSvg: buildAvatar('林深', '#1D4ED8'),
       lastSeenLabel: '正在撰写第3章',
     },
     {
-      id: 'mate-3',
       name: '苏晴（田野组长）',
+      id: 'mate-3',
       email: 'suqing@evix-team.local',
       role: 'reviewer',
       status: 'online',
@@ -107,8 +116,8 @@ export default function TeamLiaisonStudio({
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'editor' | 'reviewer' | 'viewer'>('editor');
-  const [inviteSpecialty, setInviteSpecialty] = useState('访谈整理 / PPT 美化');
-  const [pingNote, setPingNote] = useState('请核对绪论词云与第2节技术路线图！');
+  const [inviteSpecialty, setInviteSpecialty] = useState('访谈整理与演示文稿排版');
+  const [pingNote, setPingNote] = useState('请核对绪论词云与第 2 节技术路线图！');
   const [autoTeamId, setAutoTeamId] = useState<string | null>(null);
   const [milestones, setMilestones] = useState<TeamMilestone[]>(INITIAL_MILESTONES);
   const [status, setStatus] = useState(`队伍席位 ${3}/${MAX_TEAM_MEMBERS} 人在线协同。`);
@@ -120,7 +129,7 @@ export default function TeamLiaisonStudio({
       prev.map(ms => {
         if (ms.id !== milestoneId) return ms;
         const nextStatus = order[(order.indexOf(ms.status) + 1) % order.length];
-        setStatus(`里程碑 ${ms.id}「${ms.title}」已更新为：${MILESTONE_STATUS_LABELS[nextStatus]}。`);
+        setStatus(`阶段任务“${ms.title}”状态已更新为 ${MILESTONE_STATUS_LABELS[nextStatus]}。`);
         return {
           ...ms,
           status: nextStatus,
@@ -168,7 +177,7 @@ export default function TeamLiaisonStudio({
             status: m.status,
             specialty: m.note || ROLE_LABELS[m.role],
             avatarSvg: buildAvatar(m.email.split('@')[0] || `成员${i + 1}`, accentHex),
-            lastSeenLabel: m.status === 'online' ? '云端心跳在线' : m.status === 'writing' ? '正在编修' : '暂离',
+            lastSeenLabel: m.status === 'online' ? '当前在线' : m.status === 'writing' ? '正在编修' : '暂离',
           })),
         );
       } catch {
@@ -201,7 +210,7 @@ export default function TeamLiaisonStudio({
         });
         if (!res.ok) {
           const err = (await res.json().catch(() => ({}))) as { detail?: string; error?: { message?: string } };
-          setStatus(err.error?.message || err.detail || `邀请失败（HTTP ${res.status}）`);
+          setStatus(cleanTeamText(err.error?.message || err.detail || '成员邀请暂未成功，请核对邮箱与权限后重试。'));
           return;
         }
       } catch {
@@ -213,19 +222,19 @@ export default function TeamLiaisonStudio({
     const avatarSvg = buildAvatar(cleanName, accentHex);
     const next: TeamMate = {
       id: `mate-${Date.now().toString(36)}`,
-      name: cleanName,
+      name: cleanTeamText(cleanName),
       email: cleanEmail,
       role: inviteRole,
       status: 'online',
-      specialty: inviteSpecialty.trim() || ROLE_LABELS[inviteRole],
+      specialty: cleanTeamText(inviteSpecialty.trim() || ROLE_LABELS[inviteRole]),
       avatarSvg,
       lastSeenLabel: '刚刚入队在线',
     };
     setMates(prev => [...prev, next]);
-    onSaveArtifact?.(`队员头像-${cleanName}`, avatarSvg);
+    onSaveArtifact?.(`队员头像-${cleanTeamText(cleanName)}`, avatarSvg);
     setInviteName('');
     setInviteEmail('');
-    setStatus(`成员「${cleanName}」已加入联络室（${mates.length + 1}/${MAX_TEAM_MEMBERS}）。`);
+    setStatus(`成员“${cleanTeamText(cleanName)}”已加入联络室（${mates.length + 1}/${MAX_TEAM_MEMBERS}）。`);
   };
 
   const cycleStatus = async (id: string) => {
@@ -263,7 +272,7 @@ export default function TeamLiaisonStudio({
         return { ...m, avatarSvg };
       }),
     );
-    setStatus('已调用生图工坊生成全新队伍专属矢量头像并同步资产库！');
+    setStatus('已生成全新队伍专属矢量头像并同步至素材架。');
   };
 
   const removeMember = async (id: string) => {
@@ -276,7 +285,7 @@ export default function TeamLiaisonStudio({
         });
         if (!res.ok) {
           const err = (await res.json().catch(() => ({}))) as { detail?: string; error?: { message?: string } };
-          setStatus(err.error?.message || err.detail || `移除成员失败（HTTP ${res.status}）`);
+          setStatus(cleanTeamText(err.error?.message || err.detail || '移除成员暂未成功，请核对团队权限后重试。'));
           return;
         }
       } catch {
@@ -300,6 +309,7 @@ export default function TeamLiaisonStudio({
           <input
             className={styles.input}
             style={{ flex: 1 }}
+            aria-label="团队协作看板公告内容"
             value={pingNote}
             onChange={e => setPingNote(e.target.value)}
             placeholder="发送团队实时看板公告…"
@@ -307,7 +317,7 @@ export default function TeamLiaisonStudio({
           <button
             type="button"
             className={styles.btn}
-            onClick={() => setStatus(`已向全队 ${mates.filter(m => m.status !== 'offline').length} 名在线成员广播：「${pingNote}」`)}
+            onClick={() => setStatus(`已向全队 ${mates.filter(m => m.status !== 'offline').length} 名在线成员发送看板通知“${cleanTeamText(pingNote)}”。`)}
           >
             📣 全队广播
           </button>
@@ -319,28 +329,46 @@ export default function TeamLiaisonStudio({
               <div className={styles.row} style={{ flexWrap: 'nowrap' }}>
                 <span className={styles.avatarBox}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={svgToDataUrl(m.avatarSvg)} alt={m.name} width={38} height={38} />
+                  <img src={svgToDataUrl(m.avatarSvg)} alt={`${m.name} 头像`} width={38} height={38} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className={styles.heroHead}>
                     <strong style={{ fontSize: 12 }}>
-                      <span className={m.status === 'online' ? styles.dotOnline : m.status === 'writing' ? styles.dotWriting : styles.dotOffline} />{' '}
-                      {m.name}
+                      <span
+                        aria-hidden="true"
+                        className={m.status === 'online' ? styles.dotOnline : m.status === 'writing' ? styles.dotWriting : styles.dotOffline}
+                      />{' '}
+                      {cleanTeamText(m.name)}
                     </strong>
                     <span className={styles.badge}>{ROLE_LABELS[m.role]}</span>
                   </div>
-                  <p className={styles.muted}>{m.specialty} · {m.lastSeenLabel}</p>
+                  <p className={styles.muted}>{cleanTeamText(m.specialty)} · {m.lastSeenLabel}</p>
                 </div>
               </div>
               <div className={styles.row}>
-                <button type="button" className={styles.btn} onClick={() => void cycleStatus(m.id)}>
+                <button
+                  type="button"
+                  className={styles.btn}
+                  aria-label={`切换 ${cleanTeamText(m.name)} 的在线状态`}
+                  onClick={() => void cycleStatus(m.id)}
+                >
                   切换状态
                 </button>
-                <button type="button" className={styles.btn} onClick={() => regenerateAvatar(m.id)}>
-                  🎨 换 IP 头像
+                <button
+                  type="button"
+                  className={styles.btn}
+                  aria-label={`为 ${cleanTeamText(m.name)} 更换专属头像`}
+                  onClick={() => regenerateAvatar(m.id)}
+                >
+                  🎨 更换专属头像
                 </button>
                 {m.role !== 'owner' && (
-                  <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={() => void removeMember(m.id)}>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnDanger}`}
+                    aria-label={`将 ${cleanTeamText(m.name)} 移出联络室`}
+                    onClick={() => void removeMember(m.id)}
+                  >
                     移出
                   </button>
                 )}
@@ -352,7 +380,7 @@ export default function TeamLiaisonStudio({
 
       <div className={styles.panel}>
         <div className={styles.heroHead}>
-          <strong style={{ fontSize: 12 }}>赛事五阶里程碑排期看板</strong>
+          <strong style={{ fontSize: 12 }}>五阶段协作排期看板</strong>
           <span className={styles.badge}>
             {milestones.filter(ms => ms.status === 'done').length}/{milestones.length} 完成
           </span>
@@ -367,13 +395,14 @@ export default function TeamLiaisonStudio({
                 <button
                   type="button"
                   className={`${styles.btn} ${ms.status === 'active' ? styles.btnPrimary : ''}`}
+                  aria-label={`切换阶段任务“${ms.title}”的完成状态`}
                   onClick={() => cycleMilestone(ms.id)}
                 >
                   {MILESTONE_STATUS_LABELS[ms.status]}
                 </button>
               </div>
               <p className={styles.muted}>
-                {ms.stage} · 责任人：{ms.owner} · 当前：{ms.dueLabel}
+                {ms.stage} · 由 {ms.owner} 负责 · {ms.dueLabel}
               </p>
             </li>
           ))}
@@ -385,16 +414,43 @@ export default function TeamLiaisonStudio({
           <strong style={{ fontSize: 12 }}>招募新队友（剩余 {Math.max(0, MAX_TEAM_MEMBERS - mates.length)} 席）</strong>
         </div>
         <div className={styles.row}>
-          <input className={styles.input} style={{ flex: 1 }} value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="队友昵称（如：阿哲）" />
-          <select className={styles.select} style={{ width: 108 }} value={inviteRole} onChange={e => setInviteRole(e.target.value as 'editor' | 'reviewer' | 'viewer')}>
+          <input
+            className={styles.input}
+            style={{ flex: 1 }}
+            aria-label="新队友昵称"
+            value={inviteName}
+            onChange={e => setInviteName(e.target.value)}
+            placeholder="队友昵称（例如阿哲）"
+          />
+          <select
+            className={styles.select}
+            style={{ width: 108 }}
+            aria-label="新队友协作角色"
+            value={inviteRole}
+            onChange={e => setInviteRole(e.target.value as 'editor' | 'reviewer' | 'viewer')}
+          >
             <option value="editor">建模/撰稿</option>
             <option value="reviewer">数据审校</option>
             <option value="viewer">答辩观摩</option>
           </select>
         </div>
         <div className={styles.row}>
-          <input className={styles.input} style={{ flex: 1 }} value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="队员账号邮箱（登录后联动云端校验）" />
-          <input className={styles.input} style={{ flex: 1 }} value={inviteSpecialty} onChange={e => setInviteSpecialty(e.target.value)} placeholder="分工职责" />
+          <input
+            className={styles.input}
+            style={{ flex: 1 }}
+            aria-label="新队友账号邮箱"
+            value={inviteEmail}
+            onChange={e => setInviteEmail(e.target.value)}
+            placeholder="队员账号邮箱（登录后联动云端校验）"
+          />
+          <input
+            className={styles.input}
+            style={{ flex: 1 }}
+            aria-label="新队友分工职责"
+            value={inviteSpecialty}
+            onChange={e => setInviteSpecialty(e.target.value)}
+            placeholder="分工职责"
+          />
         </div>
         <button
           type="button"
@@ -406,7 +462,7 @@ export default function TeamLiaisonStudio({
         </button>
       </div>
 
-      <div className={styles.statusBar}>{status}</div>
+      <div className={styles.statusBar} role="status" aria-live="polite">{status}</div>
     </div>
   );
 }

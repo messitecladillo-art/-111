@@ -250,3 +250,15 @@ test('ring chart reading col 2 percentage falls back to integer count without 15
   assert.match(svg, /46\.8%/);
   assert.doesNotMatch(svg, />[^<]*\.\d{3,}[^<]*</, 'must not leak raw IEEE-754 float precision in ring legend text');
 });
+
+test('columnWeights allocates sufficient single-line width to Latin statistical headers like Spearman ρ', () => {
+  const spearmanTable = {
+    headers: ['变量 A', '变量 B', 'Spearman ρ', '显著性 p 值'],
+    rows: [['智慧终端界面清晰度与呼救反馈', '繁琐绑定流程令我感到抗拒', '−0.919', '<0.001']],
+    note: '',
+  };
+  const weights = columnWeights(spearmanTable);
+  assert.equal(weights.length, 4);
+  assert.ok(weights[2] >= 12, `expected Spearman ρ column weight >= 12, got ${weights[2]}`);
+  assert.ok(weights[3] >= 12, `expected 显著性 p 值 column weight >= 12, got ${weights[3]}`);
+});

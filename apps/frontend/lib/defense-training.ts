@@ -6,21 +6,21 @@ export const DEFENSE_FIELDS = [
   {id:'evidence',label:'证据定位',placeholder:'填写真实文件、页码、表号或记录编号；没有证据就明确写“尚无”。'},
   {id:'boundary',label:'适用边界与影响',placeholder:'结论适用于谁？这个限制会影响哪项判断？'},
   {id:'nextStep',label:'下一步核验或修复',placeholder:'写明待做动作；不要把未来计划写成已完成。'},
-  {id:'owner',label:'主答与备份角色',placeholder:'如：设计负责人主答、数据负责人补充（无需真实姓名）。'},
+  {id:'owner',label:'主答与备份角色',placeholder:'例如由设计负责人主答、数据负责人补充（无需真实姓名）。'},
 ] as const;
 // Scaffolds are prompts, not generated answers or evidence verification.
 export const DEFENSE_SCAFFOLDS:Record<EvidenceState,{title:string;steps:readonly string[]}>={
-  missing:{title:'证据暂缺：先说明能回答到哪里',steps:[
+  missing:{title:'证据暂缺时先说明能回答到哪里',steps:[
     '直接指出哪一项判断暂时无法确认，不补写数据、访谈或效果。',
     '把现有结论缩小到证据实际支持的范围，说明缺口影响。',
     '提出尚待执行的核验动作、负责角色和完成标准。',
   ]},
-  documented:{title:'已有记录：先定位，再解释',steps:[
+  documented:{title:'已有记录时先定位再解释',steps:[
     '先回答具体问题，再指出可打开的文件版本、页码或表号。',
     '说明统计口径、实际完成的步骤和仍存在的限制。',
     '请另一位成员复核记录与回答是否一致；有记录不等于已验证。',
   ]},
-  proposed:{title:'尚未执行：用未来式讲清计划',steps:[
+  proposed:{title:'尚未执行时用未来式讲清计划',steps:[
     '明确这是准备实施的方案，不称为已调查、已采纳或已见效。',
     '说明拟解决的问题、计划方法、负责角色和资源条件。',
     '说明将收集什么证据、如何判断继续或调整；未知效果保持未知。',
@@ -33,8 +33,8 @@ export function reviewDefenseDraft(draft:DefenseDraft){
   const matches=(pattern:RegExp)=>DEFENSE_FIELDS.filter(field=>field.id!=='owner'&&pattern.test(draft[field.id])).map(field=>field.label);
   const statistical=matches(/R[²2]|R\^2|信度|效度|稳健/);
   const sampling=matches(/代表性|加权|异常值/);
-  if(statistical.length)warnings.push(`【${statistical.join('、')}】出现拟合或信效度相关表述：请人工核查是否误把单个指标当作整体有效或稳健的证明。提示也可能命中否定句。`);
-  if(sampling.length)warnings.push(`【${sampling.join('、')}】出现代表性或修正相关表述：核对实际入样机制、修正依据和未解决的偏差。提示也可能命中否定句。`);
+  if(statistical.length)warnings.push(`“${statistical.join('、')}”出现拟合或信效度相关表述，请人工核查是否误把单个指标当作整体有效或稳健的证明。提示也可能命中否定句。`);
+  if(sampling.length)warnings.push(`“${sampling.join('、')}”出现代表性或修正相关表述，请核对实际入样机制、修正依据和未解决的偏差。提示也可能命中否定句。`);
   return {missing,warnings,status:missing.length?'incomplete' as const:'needs_human_review' as const,verified:false as const};
 }
 export const PITCH_BLOCKS=[

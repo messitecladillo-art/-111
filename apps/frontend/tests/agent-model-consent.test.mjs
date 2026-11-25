@@ -74,6 +74,7 @@ function harness() {
     stamp: () => ({id: `message-${++count}`, at: Date.now()}), focusInput() {}, go: room => navigation.push(room), sendToReport() {},
     HostedApiError: class extends Error {}, errorMessage: error => error.message, UNRECORDED_SERVICE: 'unrecorded',
     route: text => text === '/report-draft' ? { draft: 'intro.background' } : {turn: {lines: [[{text:'local answer'}]]}},
+    parseDirectChatToolIntent: () => null,
     toolTurn: action => { tools.push(action); return action.tool === 'lookup' ? {lookup: action.args.query, explicit: true} : {turn: {lines: [[{text: 'synthetic tool result'}]]}}; },
     lookupTurn: () => ({lines: [[{text:'lookup synthetic result'}]]}),
     blueprintNode: node => ({id: node, title:'研究背景'}), draftFacts: () => [], standingFindings: () => [], sectionText: () => '',

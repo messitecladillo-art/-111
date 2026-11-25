@@ -7,6 +7,7 @@ import * as topic from '../lib/topic-advisor/index.ts';
 import {parseTopicBundle} from '../lib/topic-advisor/parse.ts';
 import {readTopicBackup,topicDraftFor,MAX_TOPIC_BACKUP_BYTES} from '../components/topic-advisor/draft.ts';
 import {parseTopicAgentTurn,runLocalTopicAgent} from '../lib/topic-agent/index.ts';
+import {normalizeAcademicPunctuation} from '../lib/typography.ts';
 
 const ts=createRequire(import.meta.url)('typescript');
 const compiled=ts.transpileModule(fs.readFileSync(new URL('../components/topic-advisor/TopicAdvisor.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
@@ -31,6 +32,7 @@ function make({pinnedComparisonId='',shortlistIds=[],managed=true,initialProfile
   imports['./PublishedCountyEvidence']={default:'PublishedCountyEvidence'};
   imports['./TopicAgent']={default:'TopicAgent'};
   imports['@/lib/topic-agent']={parseTopicAgentTurn:(value)=>parseTopicAgentTurn(plain(value))};
+  imports['@/lib/typography']={normalizeAcademicPunctuation};
   // Stable auth callbacks mirror the real context and prevent false rerender loops.
   const auth=imports['@/components/hosted/HostedSession'].useHostedSession();imports['@/components/hosted/HostedSession'].useHostedSession=()=>auth;
   const box={exports:{},require:name=>{assert.ok(name in imports,name);return imports[name];},JSON,Date,Intl,console,crypto,structuredClone,queueMicrotask,document:{getElementById:()=>null}};vm.runInNewContext(compiled,box);
@@ -117,5 +119,27 @@ test('adopting an Agent item forwards only the exact receipt sources, preserving
   assert.deepEqual(adopted[0][1].sourceIds,[external.id]);
   choose({...item,sourceIds:['missing']},profile,turn);await s.settle();assert.equal(adopted.length,1);
   choose(item,profile,{...turn,projectId:'another-project'});await s.settle();assert.equal(adopted.length,1);
+  s.unmount();
+});
+
+test('JSX render outlets strip corner quotes from frozen core outputs while preserving raw callback payloads',async()=>{
+  const chosenRecs=[],chosenCands=[];
+  const accessProfile={...structuredClone(profile),access:{campus_students:'confirmed',community_residents:'unavailable'}};
+  const s=make({initialProfile:accessProfile});
+  s.update({onChooseRecommendation:(item,p)=>chosenRecs.push(plain([item,p])),onChooseCandidate:(c,ev)=>chosenCands.push(plain([c,ev]))});
+  await s.settle();await s.recommend();
+  const rawRec=topic.recommendTopics(accessProfile,bundle,6).items[0];
+  assert.ok(rawRec.unknowns.some(u=>u.includes('「'))||rawRec.matchReasons.some(m=>m.includes('「'))||rawRec.firstWeekPlan.some(p=>p.includes('「')));
+  s.checkbox(rawRec.patternId).props.onChange();await s.settle();
+  const candidateTitle=nodes(s.tree).find(v=>v.type==='textarea');
+  candidateTitle.props.onChange({target:{value:'社区服务触达评估'}});await s.settle();
+  nodes(s.tree).find(v=>v.type==='form').props.onSubmit({preventDefault(){}});await s.settle();
+  const rendered=label(s.tree);
+  assert.equal(/[\u3010\u3011\u300c\u300d\u300e\u300f]/u.test(rendered),false);
+  assert.ok(rendered.includes('“'));
+  nodes(s.tree).find(v=>v.type==='button'&&label(v).startsWith('选定方向，编辑研究简报')).props.onClick();
+  assert.deepEqual(chosenRecs[0],[plain(rawRec),plain(accessProfile)]);
+  nodes(s.tree).find(v=>v.type==='button'&&label(v).startsWith('采用这个题目，编辑研究简报')).props.onClick();
+  assert.equal(chosenCands.length,1);assert.ok(chosenCands[0][1].unknowns.some(u=>u.includes('「'))||chosenCands[0][1].unknowns.length>0);
   s.unmount();
 });

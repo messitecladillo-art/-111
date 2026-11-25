@@ -30,7 +30,7 @@ export function workflowArtifacts(task: WorkflowTask): ArtifactSeed[] {
     // Chunk without dropping content, respecting the existing editable-text artifact bound.
     for (let offset = 0; offset < body.length; offset += 11000) pieces.push(body.slice(offset, offset + 11000));
     return pieces.map((text, index) => ({ familyId: `workflow:${task.id}:${role}:${index}`, kind: 'text' as const,
-      title: `${NAMES[role]}${pieces.length > 1 ? ` · ${index + 1}` : ''}`, origin: 'Agent 阶段成果', status: 'candidate' as const,
+      title: `${NAMES[role]}${pieces.length > 1 ? ` · ${index + 1}` : ''}`, origin: '研究阶段成果', status: 'candidate' as const,
       classification: 'unclassified' as const, value: { type: 'text' as const, section: { id: `workflow-${role}-${index}`,
         title: NAMES[role], body: text, source: `任务 ${task.id} · ${role}；模型提案，待用户审阅。` } } }));
   });

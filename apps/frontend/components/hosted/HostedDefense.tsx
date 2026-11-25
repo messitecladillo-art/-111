@@ -22,7 +22,7 @@ function ProjectDefense({ projectId, onOpenReport }: { projectId: string; onOpen
       const report = parseReportHead(await hostedRequest(`/api/projects/${projectId}/report`), projectId);
       const next = report ? await projectDefenseSource(report, projectId) : null;
       if (!mounted.current || readEpoch.current !== epoch) return;
-      setSource(next); setLoaded(true); setError(''); setNotice(next ? `参考资料已读取：报告 v${next.revision}。` : '先保存项目报告，再带入章节、来源和讲稿。');
+      setSource(next); setLoaded(true); setError(''); setNotice(next ? `已读取已保存的报告第 ${next.revision} 版作为答辩参考资料。` : '先保存项目报告，再带入章节、来源和讲稿。');
     } catch (e) { if (mounted.current && readEpoch.current === epoch) setError(errorMessage(e)); }
     finally { if (mounted.current && readEpoch.current === epoch) setLoading(false); }
   }, [projectId]);
@@ -38,7 +38,7 @@ function ProjectDefense({ projectId, onOpenReport }: { projectId: string; onOpen
   }
   return <div data-self-styled className={styles.host}>
     <section className={styles.reference} aria-labelledby="defense-reference-title" aria-busy={loading}>
-      <header className={styles.header}><div><span className={styles.kicker}>REPORT → DEFENSE</span><h2 id="defense-reference-title">带着证据进入答辩</h2><p>{source ? `${source.title} · 已保存报告 v${source.revision}` : loading ? '正在读取项目报告…' : '项目报告与 PPT 讲稿'}</p></div><div className={styles.headerActions}><span>练习笔记：下载保存</span><button type="button" disabled={loading} onClick={() => { setLoading(true); setError(''); void reload(); }}>{loading ? '正在读取…' : '读取最新保存版本'}</button>{onOpenReport && <button type="button" onClick={onOpenReport}>打开报告 →</button>}</div></header>
+      <header className={styles.header}><div><span className={styles.kicker}>报告与答辩衔接</span><h2 id="defense-reference-title">带着证据进入答辩</h2><p>{source ? `${source.title} · 已保存报告 v${source.revision}` : loading ? '正在读取项目报告…' : '项目报告与 PPT 讲稿'}</p></div><div className={styles.headerActions}><span>练习笔记支持下载保存</span><button type="button" disabled={loading} onClick={() => { setLoading(true); setError(''); void reload(); }}>{loading ? '正在读取…' : '读取最新保存版本'}</button>{onOpenReport && <button type="button" onClick={onOpenReport}>打开报告 →</button>}</div></header>
       {error && <p className={styles.error} role="alert">{error}{source ? ' 当前参考版本仍保留。' : ''}</p>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       {!source && loaded ? <div className={styles.empty}><strong>保存一版报告，即可在这里查阅研究原文。</strong><p>下方题库可直接开始练习。</p></div> : source && <>

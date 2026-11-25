@@ -32,3 +32,53 @@
 .cardFooter { display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--wb-line,#dce3df); }
 @keyframes panelEnter { from { opacity:0; translate:0 6px; } to { opacity:1; translate:0 0; } }
 @media (prefers-reduced-motion:reduce) { .toolbar *,.addButton,.library,.library *,.root .referenceCard { animation:none!important; transition:none!important; } .toolbar button:active,.addButton:active,.root .library button:active,.referenceCard:active { scale:1; } }
+
+@media (forced-colors: active) {
+  .root,
+  .toolbar,
+  .canvas,
+  .library,
+  .root .referenceCard {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
+    background-image: none;
+  }
+  .segmented,
+  .referenceIcon,
+  .root .segmented button,
+  .root .returnButton,
+  .root .addButton,
+  .root .library button {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
+  }
+  .root .library button:disabled {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+  .selection {
+    display: none;
+  }
+  .root .segmented button[aria-pressed=true] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  .cardFooter {
+    border-top-color: ButtonBorder;
+    color: CanvasText;
+  }
+  .toolbar button:focus-visible,
+  .addButton:focus-visible,
+  .root .library button:focus-visible,
+  .referenceCard:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}

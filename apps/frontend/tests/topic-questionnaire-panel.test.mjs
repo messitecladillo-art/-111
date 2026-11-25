@@ -7,6 +7,7 @@ import * as core from '../lib/topic-questionnaire.ts';
 import {emptyTopicBrief} from '../lib/topic-project.ts';
 import {exampleQuestionnaire} from '../lib/questionnaire.ts';
 import {stableStringify} from '../lib/topic-advisor/parse.ts';
+import {normalizeAcademicPunctuation} from '../lib/typography.ts';
 
 // Production handlers/effects with real deterministic core. This does not certify browser layout/focus.
 const ts=createRequire(import.meta.url)('typescript');
@@ -26,7 +27,7 @@ function make({props:initialProps={},holdPreview=false,holdApply=false,parentApp
   hooks.useLayoutEffect=hooks.useEffect;
   const jsx=(type,props,key)=>({type,props,key});
   const wrap=(name,phase,hold)=>(...args)=>{coreCalls.push({name,args:plain(args)});const actual=core[name](...args.map(plain));return hold?actual.then(value=>new Promise((resolve,reject)=>pending[phase].push({resolve:()=>resolve(value),reject}))):actual;};
-  const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/topic-questionnaire':{...core,prepareTopicQuestionnaire:wrap('prepareTopicQuestionnaire','preview',holdPreview),applyTopicQuestionnaire:wrap('applyTopicQuestionnaire','apply',holdApply)},'@/lib/topic-advisor/parse':{stableStringify},'./TopicQuestionnaireProposal.module.css':{default:{}}};
+  const imports={react:hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/topic-questionnaire':{...core,prepareTopicQuestionnaire:wrap('prepareTopicQuestionnaire','preview',holdPreview),applyTopicQuestionnaire:wrap('applyTopicQuestionnaire','apply',holdApply)},'@/lib/topic-advisor/parse':{stableStringify},'@/lib/typography':{normalizeAcademicPunctuation},'./TopicQuestionnaireProposal.module.css':{default:{}}};
   const box={exports:{},require:name=>{assert.ok(name in imports,name);return imports[name];},JSON,console,crypto,structuredClone};vm.runInNewContext(compiled,box);
   props={...fixture(),onApply:async application=>{applications.push(application);if(parentApply)await parentApply(application);},onClose:()=>closeCount++,...initialProps};
   const s={get tree(){return tree;},get props(){return props;},applications,coreCalls,get closeCount(){return closeCount;},get writesAfterUnmount(){return writesAfterUnmount;},get pendingPreview(){return pending.preview.length;},get pendingApply(){return pending.apply.length;},

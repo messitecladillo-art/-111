@@ -213,6 +213,7 @@ def test_orchestrator_tools_validate_stage_studio_draft_section_report_and_simul
             {
                 "reply": "一键生成完整报告并启动模拟研究。",
                 "actions": [
+                    {"tool": "stage", "args": {"view": "library"}},
                     {"tool": "generate_report", "args": {"topic": "社区助餐服务"}},
                     {"tool": "simulate", "args": {}},
                 ],
@@ -222,9 +223,13 @@ def test_orchestrator_tools_validate_stage_studio_draft_section_report_and_simul
     )
     assert second["droppedActions"] == 0
     assert second["actions"] == [
+        {"tool": "stage", "args": {"view": "library"}},
         {"tool": "generate_report", "args": {"topic": "社区助餐服务"}},
         {"tool": "simulate", "args": {}},
     ]
+    prompt = chat.agent_prompt(request())
+    assert "全国大学生市场调查与分析大赛" in prompt and "正大杯" not in prompt
+    assert "chat/paper/advisors/library" in prompt
 
     bad = json.dumps(
         {

@@ -4,7 +4,7 @@ import { ACCESS_OPTIONS, DOMAIN_OPTIONS, type TopicPattern, type TopicProfile, t
 const SUBJECTS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['policy', ['政策', '政务', '公共服务', '便民', '办事', 'policy']],
   ['economy', ['经济', '市场', '消费券', '消费', '商圈', '商业', '零售', '餐饮', '农产品', '电商', '快递', '物流', 'market', 'retail', 'consumption']],
-  ['technology', ['科技', '人工智能', '大模型', '智能', '数字化', '数字服务', '算法', '校园办事小程序', '办事小程序', '小程序', '应用程序', 'ai', 'technology', 'digital']],
+  ['technology', ['科技', '人工智能', '语言模型', '生成式', '智能', '数字化', '数字服务', '算法', '校园办事小程序', '办事小程序', '小程序', '应用程序', 'ai', 'technology', 'digital']],
   ['finance', ['财经', '金融', '融资', '信贷', '理财', 'finance', 'financial']],
   ['biology', ['生物', '健康', '医疗', '中试', '成果转化', 'biology', 'biotech', 'health']],
   ['society', ['社会', '民生', '社区', '养老', '助餐', '维修', '二手', '闲置', 'community']],
@@ -138,15 +138,29 @@ export function selectTopicResearchCandidates({profile,message,items,explicitIds
   return{ids,omittedByRequest:[],focus,coverage:partialSubject?'general':focus.included.length||concrete?'matched':'general',explanation:partialSubject?`先列出${focus.included.map(label).join('、')}领域内可用的起步方向；你提到的具体情境仍需补充资料核实。`:focus.included.length?`按这轮关注的${focus.included.map(label).join('、')}筛选，再比较调查入口与证据条件。`:concrete?'按具体对象与情境匹配资料，未用城市名称替代主题相关性。':'按当前地区、资源、时间与经费筛选方向。',questions};
 }
 
+export function sanitizeTopicDisplayText(value: string): string {
+  return value
+    .replace(/\u300c/gu, '“')
+    .replace(/\u300d/gu, '”')
+    .replace(/\u300e/gu, '‘')
+    .replace(/\u300f/gu, '’')
+    .replace(/[\u3010\u3011{}]/gu, '')
+    .trim();
+}
+
 /** Proposed, inspectable work, never evidence that interviews or fieldwork happened. */
 export function buildTopicFirstWeekPlan(_profile:TopicProfile,pattern:TopicPattern):string[]{
-  const access=pattern.accessNeeds.map(id=>ACCESS_OPTIONS.find(option=>option.id===id)?.label??id).join('、')||'目标人群或合作方';
-  const evidence=pattern.minimumEvidence.slice(0,3).join('、');
+  const access=sanitizeTopicDisplayText(pattern.accessNeeds.map(id=>ACCESS_OPTIONS.find(option=>option.id===id)?.label??id).join('、')||'目标人群或合作方');
+  const evidence=sanitizeTopicDisplayText(pattern.minimumEvidence.slice(0,3).join('、'));
+  const question=sanitizeTopicDisplayText(pattern.question);
+  const population=sanitizeTopicDisplayText(pattern.population);
+  const owner=sanitizeTopicDisplayText(pattern.decisionOwner);
+  const decision=sanitizeTopicDisplayText(pattern.decision);
   return[
-    `确认入口：联系${access}，记录可触达范围、同意方式与可执行事项。尚未获得许可时，先做公开资料核验。`,
-    `核对依据：逐项查找${evidence}，保存原始链接、发布时间、适用地区和未核实项。`,
-    `准备探索：围绕“${pattern.question}”列出经历、原因与反例的追问；按“${pattern.population}”确认招募边界和记录表。`,
-    '小范围预试：在获得同意后试用提纲或问卷，记录难以理解、无法回答和遗漏的情境；保留修改前后版本。',
-    `作出去留决定：把支持、反例和证据缺口汇总给${pattern.decisionOwner}，检查能否支持“${pattern.decision}”；按记录决定保留、缩小范围或换题。`,
+    `先确认入口，联系${access}，记录可触达范围、同意方式与可执行事项；尚未获得许可时，先做公开资料核验。`,
+    `再核对依据，逐项查找${evidence}，保存原始链接、发布时间、适用地区和未核实项。`,
+    `随后准备探索，围绕“${question}”列出经历、原因与反例的追问，并按“${population}”确认招募边界和记录表。`,
+    '在获得同意后开展小范围预试，试用提纲或问卷，记录难以理解、无法回答和遗漏的情境，并保留修改前后版本。',
+    `最后作出去留决定，把支持、反例和证据缺口汇总给${owner}，检查能否支持“${decision}”，按记录决定保留、缩小范围或换题。`,
   ].map(step=>clipResearchText(step,300));
 }

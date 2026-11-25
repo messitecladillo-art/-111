@@ -16,7 +16,7 @@ export type SiliconRun = {
   questionnaire: { title: string; fingerprint: string; questions: number };
   attributes: PersonaAttribute[]; personas: Persona[]; settings: RunSettings; responses: SiliconResponse[]; notes: string[];
 };
-export const DEMO_MODEL = '离线演示引擎';
+export const DEMO_MODEL = '本地预测试推演';
 export const NO_SCENARIO: Scenario = { id: 'base', label: '基准', text: '' };
 
 const PIPE = /\{([A-Za-z][A-Za-z0-9_]{0,31})\}/g;
@@ -28,14 +28,14 @@ export function placeholderIssues(design: Questionnaire, scenarios: Scenario[]):
   design.questions.forEach((q, i) => {
     for (const match of q.text.matchAll(PIPE)) {
       const at = order.get(match[1].toLowerCase());
-      if (at === undefined) issues.push(`第 ${i + 1} 题引用了不存在的变量 {${match[1]}}。`);
-      else if (at >= i) issues.push(`第 ${i + 1} 题引用的 {${match[1]}} 不在它之前，无法传递前序答案。`);
+      if (at === undefined) issues.push(`第 ${i + 1} 题引用了不存在的变量“${match[1]}”。`);
+      else if (at >= i) issues.push(`第 ${i + 1} 题引用的变量“${match[1]}”不在它之前，无法传递前序答案。`);
     }
   });
   const usesScenario = design.questions.some(q => q.text.includes(SCENARIO_TOKEN));
   const real = scenarios.filter(s => s.id !== NO_SCENARIO.id);
-  if (real.length && !usesScenario) issues.push(`设置了情境，但没有题干包含 ${SCENARIO_TOKEN}，各情境的问题将完全相同。`);
-  if (usesScenario && !real.length) issues.push(`题干包含 ${SCENARIO_TOKEN}，但尚未设置情境；运行时将以空白替换。`);
+  if (real.length && !usesScenario) issues.push('设置了情境，但没有题干包含情境占位词，各情境的问题将完全相同。');
+  if (usesScenario && !real.length) issues.push('题干包含情境占位词，但尚未设置情境；运行时将以空白替换。');
   if (real.length > SILICON_LIMITS.scenarios) issues.push(`情境最多 ${SILICON_LIMITS.scenarios} 个。`);
   if (real.some(s => !s.label.trim() || !s.text.trim())) issues.push('每个情境都需要名称和替换文字。');
   return issues;
@@ -97,7 +97,7 @@ export function demoRun(design: Questionnaire, attributes: PersonaAttribute[], p
       if (settings.memory === 'carry') stance = stance * 0.75 + carried * 0.25;
       stance = Math.max(-1, Math.min(1, stance + (rng() - 0.5) * 0.5));
       const flagged = staticIssues.some(i => i.questionId === question.id && i.level === 'blocker');
-      const unclear = flagged && rng() < 0.45 ? '演示引擎：此题存在结构阻断项，模拟受访者无法确定如何作答。' : '';
+      const unclear = flagged && rng() < 0.45 ? '此题存在结构阻断项，模拟受访者无法确定如何作答。' : '';
       const refused = !question.required && rng() < 0.03;
       const traitMatched = !refused ? matchTraitChoice(question, persona) : null;
       const value = refused ? null : (traitMatched ?? demoValue(question, stance, rng));
@@ -110,7 +110,7 @@ export function demoRun(design: Questionnaire, attributes: PersonaAttribute[], p
     schema: 'silicon-run/v1', classification: 'simulated', id: `demo-${hash32(designFingerprint(design) + personas.length + now.toISOString()).toString(16)}`,
     createdAt: now.toISOString(), engine: 'demo', questionnaire: { title: design.title, fingerprint: designFingerprint(design), questions: design.questions.length },
     attributes, personas, settings: { ...settings, scenarios, models: [DEMO_MODEL] }, responses,
-    notes: ['离线演示引擎生成的随机可复现答案，只用于走查问卷逻辑、界面与分析流程；不代表任何人群，不能作为预测试结论或调查数据。'],
+    notes: ['本地预测试推演生成的随机可复现答案，仅用于走查问卷逻辑、界面与分析流程；不代表任何真实人群，不能作为预测试结论或正式调查数据。'],
   };
 }
 
@@ -184,7 +184,7 @@ function demoValue(question: DesignQuestion, stance: number, rng: () => number):
     return Math.round(min + (unit * 0.6 + rng() * 0.4) * (max - min));
   }
   const tone = stance > 0.25 ? '总体顺利' : stance < -0.25 ? '遇到了一些阻碍' : '感受一般';
-  return `【演示文本】这位模拟受访者${tone}。`;
+  return `预测试模拟反馈显示，这位受访者${tone}。`;
 }
 
 /** Normalize answers returned by a model against the questionnaire; anything outside the item's options is dropped. */

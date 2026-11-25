@@ -49,6 +49,27 @@ const STATUS_LABELS: Record<string, string> = {
   failed: '未完成', outcome_unknown: '结果待核对', cancelled: '已停止', discarded: '结果未写入',
   active: '已授权', stopped: '授权已停止', expired: '授权已到期', exhausted: '本阶段额度已用完',
 };
+const CALL_ERROR_LABELS: Record<string, string> = {
+  timeout: '请求等待超时',
+  provider_timeout: '请求等待超时',
+  rate_limit: '请求较为频繁',
+  rate_limited: '请求较为频繁',
+  invalid_key: '服务密钥校验未通过',
+  invalid_configuration: '服务配置有误',
+  invalid_request: '请求参数有误',
+  invalid_response: '返回内容格式不符',
+  input_too_large: '输入材料超出长度上限',
+  response_too_large: '返回内容超出长度上限',
+  network_failed: '网络连接异常',
+  provider_failed: '服务响应异常',
+  provider_unknown: '返回状态待核对',
+  outcome_unknown: '返回状态待核对',
+  cancelled: '已停止',
+};
+function callErrorLabel(code: string | null | undefined): string {
+  if (!code) return '';
+  return CALL_ERROR_LABELS[code.trim().toLowerCase()] ?? '服务响应异常';
+}
 const STEP_LABELS: Record<string, string> = {
   review_materials: '整理研究材料', design_research: '拟定研究设计', assess_feasibility: '评估可行性',
   design_variables: '确定测量变量', design_questionnaire: '拟定问卷', design_sampling: '设计抽样方案',
@@ -103,7 +124,7 @@ function content(value: unknown, depth = 0): ReactNode {
 }
 function stepLabel(step: string): string {
   const [role, name] = step.split('.');
-  return STEP_LABELS[name] ?? ROLE_LABELS[role as WorkflowRole] ?? '模型处理';
+  return STEP_LABELS[name] ?? ROLE_LABELS[role as WorkflowRole] ?? '阶段处理';
 }
 function frozenModels(steps: Record<string, Service>, roles: readonly WorkflowRole[]) {
   return roles.map(role => {
@@ -157,7 +178,7 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
     : humanReview ? '本阶段成果，等你确认' : needsAnswer ? '补充说明后再继续'
       : needsData ? '下一步需要真实数据' : unknown ? '先核对本次执行结果'
         : running ? `${ROLE_LABELS[task?.execution?.role ?? task?.state.current_role ?? nextRole ?? 'research']}正在处理`
-          : task ? nextRole ? `接下来，${ROLE_LABELS[nextRole]}` : '本次任务正在完成核对' : '确定本次研究的模型分工';
+          : task ? nextRole ? `接下来，${ROLE_LABELS[nextRole]}` : '本次任务正在完成核对' : '确定本次研究的服务分工';
 
   return <section className={styles.panel} aria-labelledby={`${id}-title`} aria-busy={busy || loading}>
     <header className={styles.heading}>
@@ -170,16 +191,16 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
 
     {loading && <p className={styles.notice} role="status">正在读取任务与执行回执…</p>}
     {!canManage && <p className={styles.notice}>当前为只读状态，可以查看已有成果与回执。推进研究需要登录并拥有项目编辑权限。</p>}
-    {restored && task && <p className={styles.notice}>已恢复上次任务。查看记录不会重新调用模型。</p>}
+    {restored && task && <p className={styles.notice}>已恢复上次任务。查看记录不会重新发起请求。</p>}
     {sourceChanged && <div className={styles.attention} role="status"><p>研究材料已变化。以下保留原任务记录，请按当前材料新建任务后再推进。</p>
       {onNewTask && <button type="button" className={styles.secondary} disabled={!canManage || busy || loading || reconciling || unknown || running}
         onClick={() => { if (canManage && !busy && !loading && !reconciling && !unknown && !running) onNewTask(); }}>按当前材料新建任务</button>}</div>}
     {error && <p className={styles.error} role="alert">{error}</p>}
 
     <details className={styles.settings}>
-      <summary><span>{task ? '新任务的模型分工' : '模型分工'}<small>{roles.length} 个角色</small></span><span aria-hidden="true">⌄</span></summary>
+      <summary><span>{task ? '新任务的服务分工' : '服务分工'}<small>{roles.length} 个角色</small></span><span aria-hidden="true">⌄</span></summary>
       <div className={styles.settingsBody}>
-        <p className={styles.muted}>{task ? '本任务使用创建时固定的配置。这里的选择用于新任务。' : '为各角色选择已保存的模型。开始前还会列出本阶段材料与调用上限，由你授权。'}</p>
+        <p className={styles.muted}>{task ? '本任务使用创建时固定的配置，此处选择仅用于新任务。' : '为各角色选择已保存的服务配置，开始前会列出本阶段材料与调用上限供你授权。'}</p>
         <div className={styles.modelGrid}>{roles.map(role => {
           const eligible = services.filter(service => service.capabilities.includes(WORKFLOW_ROLE_CAPABILITIES[role]));
           const selected = roleSelections[role] ?? '';
@@ -187,11 +208,11 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
           return <label key={role} htmlFor={`${id}-${role}`}><span>{ROLE_LABELS[role]}</span>
             <select id={`${id}-${role}`} value={selected} disabled={!canManage || busy || loading || reconciling}
               aria-invalid={missing || undefined} onChange={event => { if (canManage && !busy && !loading && !reconciling) onRoleSelectionChange(role, event.target.value || null); }}>
-              <option value="">选择模型</option>{missing && <option value={selected} disabled>原模型已不可用，请重新选择</option>}
+              <option value="">选择服务</option>{missing && <option value={selected} disabled>原配置已不可用，请重新选择</option>}
               {eligible.map(service => <option key={service.id} value={service.id}>{service.label} · {service.model}</option>)}
             </select></label>;
         })}</div>
-        <button type="button" className={styles.textButton} onClick={onOpenSettings}>管理已保存的模型</button>
+        <button type="button" className={styles.textButton} onClick={onOpenSettings}>管理已保存的服务</button>
       </div>
     </details>
 
@@ -219,10 +240,10 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
         <p className={styles.phaseName}>{phaseRoles}</p>
         <ul className={styles.frozenModels}>{frozenModels(frozen.steps, frozen.roles).map(({ role, models }) => <li key={role}>
           <span>{ROLE_LABELS[role]}</span><div>{models.length ? models.map(service => <p key={`${service.id}-${service.revision}-${service.model}`}>
-            <strong>{service.label} · {service.model}</strong><small>配置 v{service.revision}</small></p>) : <p>尚无可用的固定模型</p>}</div>
+            <strong>{service.label} · {service.model}</strong><small>配置 第 {service.revision} 版</small></p>) : <p>尚无可用的固定服务</p>}</div>
         </li>)}</ul>
-        <p className={styles.limits}>最多 <strong>{frozen.maxCalls}</strong> 次模型调用<span aria-hidden="true"> · </span>本阶段输出上限 <strong>{frozen.maxOutputTokens.toLocaleString('en-US')}</strong> token
-          {shownGrant && <span className={styles.used}>已使用 {shownGrant.usedCalls} / {shownGrant.maxCalls} 次</span>}</p>
+        <p className={styles.limits}>最多 <strong>{frozen.maxCalls}</strong> 次调用<span aria-hidden="true"> · </span>本阶段输出上限 <strong>{frozen.maxOutputTokens.toLocaleString('en-US')}</strong> 词元额度
+          {shownGrant && <span className={styles.used}>已使用 {shownGrant.usedCalls} 次（上限 {shownGrant.maxCalls} 次）</span>}</p>
         {frozen.datasets && <div className={styles.materials}><p>数据仅发送聚合统计，不发送逐行答卷或开放题原文。</p>
           <ul>{frozen.datasets.map(item => <li key={item.ref}>{item.title} · {item.rowCount} 份 · {item.classification === 'synthetic' ? '合成数据' : '回收数据'}<small> · 快照 {item.sha256.slice(0, 12)}</small></li>)}</ul></div>}
         {preview && !shownGrant && <>
@@ -230,11 +251,11 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
             <p className={styles.muted}>本阶段后续步骤还会使用前序步骤生成的有界结果。人工确认、返修、取消或结果未知时，本阶段授权停止。</p>
             <pre className={styles.json} tabIndex={0} aria-label="本阶段完整外发材料">{JSON.stringify(preview.materials, null, 2)}</pre>
           </details>
-          {!preview.available && <div><p className={styles.error}>本阶段所需工具尚未接入，暂不能调用模型。{preview.missingTools.length > 0 ? '请先补齐实际材料读取与处理能力。' : ''}</p>
+          {!preview.available && <div><p className={styles.error}>本阶段所需能力尚未就绪，暂不能发起请求。{preview.missingTools.length > 0 ? '请先补齐实际材料读取与处理能力。' : ''}</p>
             {preview.roles.includes('data') && <button type="button" className={styles.textButton} onClick={onOpenAnalysis}>查看现有数据与分析</button>}</div>}
           <label className={styles.consent}><input type="checkbox" checked={accepted} disabled={!canAuthorize}
             onChange={event => setAcceptedPhase(event.target.checked && phaseKey ? phaseKey : null)} />
-            <span>我已核对材料、模型和上限，同意本阶段调用。</span></label>
+            <span>我已核对材料、服务配置和上限，同意本阶段调用。</span></label>
           <button type="button" className={styles.primary} disabled={!canAuthorize || !accepted}
             onClick={() => { if (canAuthorize && accepted) { setAcceptedPhase(null); onAuthorize(); } }}>授权并推进本阶段</button>
         </>}
@@ -243,7 +264,7 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
       </section>}
 
       {!preview && activeGrant?.status !== 'active' && task.status === 'ready' && nextRole && !sourceChanged && onPrepare && <div className={styles.prepare}>
-        <p>先查看本阶段的实际模型、材料与调用上限。</p><button type="button" className={styles.secondary}
+        <p>先查看本阶段的实际服务配置、材料与调用上限。</p><button type="button" className={styles.secondary}
           disabled={!mutationAllowed} onClick={() => { if (mutationAllowed) onPrepare(); }}>核对本阶段材料</button></div>}
 
       {outputs.length > 0 && <section className={styles.outputs} aria-labelledby={`${id}-outputs`}><h3 id={`${id}-outputs`}>已有阶段成果</h3>
@@ -262,9 +283,9 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
             {role === 'survey' && (
               <div className={styles.actions}>
                 {onOpenSilicon ? (
-                  <button type="button" className={styles.textButton} onClick={onOpenSilicon}>用硅基样本预测试这套问卷</button>
+                  <button type="button" className={styles.textButton} onClick={onOpenSilicon}>用模拟样本预测试这套问卷</button>
                 ) : (
-                  <a className={styles.textButton} href="/workspace#silicon">前往「硅基样本」预测试 ↗</a>
+                  <a className={styles.textButton} href="/workspace#silicon">前往模拟样本预测试 ↗</a>
                 )}
               </div>
             )}
@@ -274,7 +295,7 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
 
       {(humanReview || needsAnswer) && <section className={styles.review} aria-labelledby={`${id}-review`}>
         <h3 id={`${id}-review`}>{humanReview ? '确认本阶段成果' : '补充研究说明'}</h3>
-        <p>{humanReview ? '请结合实际资源核对以上成果。确认后才会进入下一阶段；如需修改，可以直接写下意见。' : '请回答以下问题。补充说明后，下一次模型调用仍需重新授权。'}</p>
+        <p>{humanReview ? '请结合实际资源核对以上成果。确认后才会进入下一阶段；如需修改，可以直接写下意见。' : '请回答以下问题。补充说明后，下一次请求仍需重新授权。'}</p>
         {task.state.unresolved_questions.length > 0 && <ul>{task.state.unresolved_questions.map((question, index) => <li key={index}>{question}</li>)}</ul>}
         <label htmlFor={`${id}-feedback`}>{humanReview ? '修改意见' : '补充说明'}</label>
         <textarea id={`${id}-feedback`} value={feedback} rows={3} maxLength={8000} disabled={!mutationAllowed}
@@ -286,7 +307,7 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
             onClick={() => { if (mutationAllowed && feedback.trim()) onRevise(feedback.trim()); }}>{humanReview ? '提交修改意见' : '提交补充说明'}</button></div>
       </section>}
 
-      {needsData && <div className={styles.attention}><p>研究已到真实数据环节。请先导入并核查数据，才能继续分析；如需在回收前检查问卷跳题与表述，可先运行硅基预测试。</p>
+      {needsData && <div className={styles.attention}><p>研究已到真实数据环节。请先导入并核查数据才能继续分析；如需在正式发放前检查问卷跳题与表述，可先运行问卷预测试。</p>
         {!!surveys.length && onBindDataset && <label>选择已回收的调查<select aria-label="选择已回收的调查" disabled={!mutationAllowed}
           value={surveySelection.taskId === task.id ? surveySelection.id : ''} onChange={event => setSurveySelection({ taskId: task.id, id: event.target.value })}>
           <option value="">请选择调查</option>{surveys.map(item => <option key={item.id} value={item.id} disabled={!item.responseCount}>{item.title} · {item.responseCount} 份{item.classification === 'synthetic' ? ' · 合成数据' : ''}</option>)}</select>
@@ -295,31 +316,31 @@ export default function WorkflowExecutionPanel({ task, taskKind = 'full_research
         <div className={styles.actions}>
           <button type="button" className={styles.secondary} onClick={onOpenAnalysis}>前往数据分析</button>
           {onOpenSilicon ? (
-            <button type="button" className={styles.textButton} onClick={onOpenSilicon}>唤起硅基预测试流程</button>
+            <button type="button" className={styles.textButton} onClick={onOpenSilicon}>唤起问卷预测试流程</button>
           ) : (
-            <a className={styles.textButton} href="/workspace#silicon">前往「硅基样本」预测试 ↗</a>
+            <a className={styles.textButton} href="/workspace#silicon">前往模拟样本预测试 ↗</a>
           )}
         </div></div>}
       {task.status === 'blocked' && !unknown && !cancelled && <p className={styles.notice}>流程暂时停止。请核对已有成果、待补材料与执行记录，再决定下一步。</p>}
       {task.state.errors.length > 0 && <details className={styles.raw}><summary>查看处理说明</summary>{content(task.state.errors)}</details>}
 
       <footer className={styles.footer}>
-        <p className={styles.muted}>{taskCalls.length > 0 ? `已登记 ${taskCalls.length} 次模型调用` : '尚无模型调用回执'}</p>
+        <p className={styles.muted}>{taskCalls.length > 0 ? `已登记 ${taskCalls.length} 次调用回执` : '尚无模型调用回执'}</p>
         <div className={styles.actions}><button type="button" className={styles.secondary} disabled={loading}
           onClick={() => { if (!loading) onRefresh(); }}>{reconciling ? '核对服务器回执' : '刷新任务与回执'}</button>
           {canCancel && <button type="button" className={styles.textButton} onClick={() => { if (canCancel) onCancel(); }}>停止本阶段</button>}</div>
       </footer>
       {(taskCalls.length > 0 || task.execution) && <details className={styles.receipts}><summary>查看执行与调用记录</summary>
-        {task.execution && <p className={styles.receiptSummary}>最近执行：{ROLE_LABELS[task.execution.role]} · {STATUS_LABELS[task.execution.status] ?? task.execution.status}</p>}
+        {task.execution && <p className={styles.receiptSummary}>最近一次执行为{ROLE_LABELS[task.execution.role]} · {STATUS_LABELS[task.execution.status] ?? task.execution.status}</p>}
         {taskCalls.length > 0 && <ul>{taskCalls.map(call => {
           const config = activeGrant?.steps[call.step];
           const exactConfig = config?.id === call.serviceId && config.revision === call.serviceRevision ? config : null;
           return <li key={call.id}><div><strong>{stepLabel(call.step)}</strong><span>{STATUS_LABELS[call.status] ?? call.status}</span></div>
-            <p>{exactConfig ? `${exactConfig.label} · ${exactConfig.model}` : `个人模型配置 v${call.serviceRevision}`}</p>
-            {call.usage && <p>实际用量：输入 {call.usage.inputTokens} / 输出 {call.usage.outputTokens} token</p>}
-            <small>{call.startedAt}{call.errorCode ? ` · ${call.errorCode}` : ''}</small></li>;
+            <p>{exactConfig ? `${exactConfig.label} · ${exactConfig.model}` : `个人服务配置 第 ${call.serviceRevision} 版`}</p>
+            {call.usage && <p>本次记录输入 {call.usage.inputTokens} 词元 · 输出 {call.usage.outputTokens} 词元</p>}
+            <small>{call.startedAt}{call.errorCode ? ` · ${callErrorLabel(call.errorCode)}` : ''}</small></li>;
         })}</ul>}
-        <p className={styles.muted}>回执记录执行状态；模型返回不代表真实调研、统计或提交检查已经完成。</p>
+        <p className={styles.muted}>回执仅记录执行状态，服务返回结果不代表真实调研、统计检验或提交核查已经完成。</p>
       </details>}
     </>}
   </section>;

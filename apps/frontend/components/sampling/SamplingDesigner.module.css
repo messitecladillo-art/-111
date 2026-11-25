@@ -89,3 +89,52 @@
 
 .sources summary { cursor: pointer; color: var(--wb-accent); font-weight: 600; }
 .sources p { margin: 8px 0 0; }
+
+@media (forced-colors: active) {
+  .designer :is(button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .kinds button,
+  .tabs button,
+  .segment button,
+  .allocTools button,
+  .add,
+  .remove,
+  .reuse button,
+  .form :is(input, select, textarea) {
+    border: 1px solid ButtonText;
+  }
+  .designer,
+  .result,
+  .statement,
+  .issues,
+  .nonProb,
+  .sources {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .tableWrap table,
+  .tableWrap th,
+  .tableWrap td,
+  .tabs,
+  .headline {
+    border-color: CanvasText !important;
+  }
+  .marker {
+    display: none !important;
+  }
+  .kinds button[aria-pressed="true"],
+  .tabs button[aria-selected="true"],
+  .tabs button[aria-pressed="true"],
+  .segment button[aria-pressed="true"],
+  .add {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

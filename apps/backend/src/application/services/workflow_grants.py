@@ -100,14 +100,14 @@ class WorkflowGrants:
         if (integer(data['expectedRevision'], 0) != row.revision or data['consent'] is not True
                 or data['phaseHash'] != preview['phaseHash'] or type(data['maxCalls']) is not int
                 or data['maxCalls'] != preview['maxCalls']):
-            raise ApiError(409, 'model_phase_changed', '研究材料或模型分工已变化，请重新核对本轮授权。')
+            raise ApiError(409, 'model_phase_changed', '研究材料或阶段配置已更新，请重新确认本轮执行授权。')
         if not preview['available']:
             raise ApiError(409, 'workflow_tools_unavailable', '数据读取和统计执行工具尚未接入此流程。')
         previous = session.execute(select(Operation).where(Operation.user_id == user.id, Operation.scope == SCOPE,
             Operation.key != operation.key, Operation.response['taskId'].as_string() == task_id)).scalars().all()
         parent = latest_execution(session, row.id) if row.status == 'running' else None
         if any(effective_status(item.response, row, parent)[0] == 'active' for item in previous):
-            raise ApiError(409, 'model_grant_active', '本轮已有授权，请先读取原授权回执。')
+            raise ApiError(409, 'model_grant_active', '当前阶段已有生效中的执行授权，请先查看现有授权记录。')
         state = WorkflowState.from_dict(row.state)
         record = {**{key: preview[key] for key in ('taskId', 'projectId', 'baseRevision', 'position', 'roles',
             'phaseHash', 'maxCalls', 'maxOutputTokens', 'steps', 'instructionHashes')},
@@ -127,11 +127,11 @@ class WorkflowGrants:
             query = query.with_for_update()
         op = session.execute(query.execution_options(populate_existing=True)).scalar_one_or_none()
         if op is None or not op.response or op.response['taskId'] != row.id or op.response['projectId'] != row.project_id:
-            raise ApiError(409, 'model_grant_unavailable', '未找到当前任务的模型授权。')
+            raise ApiError(409, 'model_grant_unavailable', '未找到当前任务的有效执行授权。')
         record = op.response
         status, _ = effective_status(record, row, latest_execution(session, row.id) if row.status == 'running' else None)
         if status != 'active' and not (allow_exhausted and status == 'exhausted'):
-            raise ApiError(409, 'model_grant_stopped', '本轮授权已停止，请核对实际回执。')
+            raise ApiError(409, 'model_grant_stopped', '当前阶段授权已终止，请核对最新执行记录。')
         return op
 
     def prepare_role(self, *, row, user, session, grant_id):
@@ -139,21 +139,21 @@ class WorkflowGrants:
         record = op.response
         single = self.models.preview(row=row, user=user, session=session)
         if single['role'] == 'data' and any(single.get(key) != record.get(key) for key in DATA_FIELDS):
-            raise ApiError(409, 'model_dataset_changed', '答卷快照已变化，请重新核对数据后授权。')
+            raise ApiError(409, 'model_dataset_changed', '答卷数据范围已更新，请重新核对数据后再确认授权。')
         for step, config in single['steps'].items():
             if config != record['steps'].get(step) or single['instructionHashes'][step] != record['instructionHashes'].get(step):
-                raise ApiError(409, 'model_phase_changed', '模型或提示词版本已变化，请重新核对。')
+                raise ApiError(409, 'model_phase_changed', '分析服务或任务规则版本已更新，请重新核对后再试。')
         if row.state['revision'] > record['position']:
             producer = session.execute(select(AgentTaskExecution).where(AgentTaskExecution.task_id == row.id,
                 AgentTaskExecution.base_revision == record['baseRevision']).with_for_update()).scalar_one_or_none()
             if producer is None or producer.status != 'completed' or producer.result_hash != fingerprint(row.state):
-                raise ApiError(409, 'model_producer_unverified', '前一角色的结果尚未核对。')
+                raise ApiError(409, 'model_producer_unverified', '上一阶段的分析结果尚未完成核对。')
             calls = session.execute(select(Operation).where(Operation.user_id == user.id, Operation.scope == CALL_SCOPE,
                 Operation.response['executionId'].as_string() == producer.id)).scalars().all()
             expected = {f"{record['roles'][0]}.{step}" for step in ROLE_STEPS[record['roles'][0]]}
             if ({call.response['step'] for call in calls} != expected or any(call.response.get('grantId') != grant_id
                     or call.response['status'] != 'completed' for call in calls)):
-                raise ApiError(409, 'model_producer_unverified', '前一角色的调用回执尚未核对。')
+                raise ApiError(409, 'model_producer_unverified', '上一阶段的执行记录尚未完成核对。')
             op.response = {**record, 'producerResultHash': producer.result_hash}
         return single
 
@@ -169,7 +169,7 @@ class WorkflowGrants:
     def list(self, *, project_id, task_id, user, session):
         row = self.load(session=session, user=user, project_id=project_id, task_id=task_id)
         if row.created_by != user.id:
-            raise ApiError(403, 'model_bindings_owner_mismatch', '个人模型授权仅对使用者开放。')
+            raise ApiError(403, 'model_bindings_owner_mismatch', '个人专属服务授权仅限创建者本人查看与操作。')
         rows = session.execute(select(Operation).where(Operation.user_id == user.id, Operation.scope == SCOPE,
             Operation.response['taskId'].as_string() == task_id).order_by(Operation.response['createdAt'].as_string().desc()).limit(30)).scalars().all()
         parent = latest_execution(session, row.id) if row.status == 'running' else None
@@ -184,7 +184,7 @@ class WorkflowGrants:
             Operation.scope == SCOPE, Operation.key == uuid_string(grant_id)).with_for_update()
             .execution_options(populate_existing=True)).scalar_one_or_none()
         if operation is None or operation.response.get('taskId') != task_id or operation.response.get('projectId') != project_id:
-            raise ApiError(404, 'model_grant_unavailable', '未找到当前任务的模型授权。')
+            raise ApiError(404, 'model_grant_unavailable', '未找到当前任务的有效执行授权。')
         if not operation.response.get('revokedAt'):
             operation.response = {**operation.response, 'revokedAt': iso(now())}
         result = view(operation.response, row)

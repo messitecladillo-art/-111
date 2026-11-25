@@ -320,13 +320,13 @@ export function localReply(intent: Exclude<AgentIntent, 'questionnaire'>, projec
   const projectHref = projectId ? `/projects/${projectId}` : '/projects';
   if (intent === 'topic') {
     return {
-      text: '选题这一步目前由项目工作台里的「选题与研究简报」承担：它结合地区、时间、预算和渠道，用资料库或个人模型给出可核实的候选方向，并保存真实回执。第一版 Agent 对话还没有代你操作这个页面。',
+      text: '选题这一步目前由项目工作台里的“选题与研究简报”承担：它结合地区、时间、预算和渠道，用资料库或个人模型给出可核实的候选方向，并保存真实回执。第一版 Agent 对话还没有代你操作这个页面。',
       actions: [{ label: '打开项目工作台', href: projectHref }, { label: '我的项目', href: '/projects' }],
     };
   }
   if (intent === 'analysis') {
     return {
-      text: '数据分析在项目工作台的「数据分析」里：数据质量检查、量表信度、变量分布和图表工作室都在那里。当前对话不会替你上传数据，也不会编造分析结果。',
+      text: '数据分析在项目工作台的“数据分析”里：数据质量检查、量表信度、变量分布和图表工作室都在那里。当前对话不会替你上传数据，也不会编造分析结果。',
       actions: [{ label: '打开数据分析', href: projectHref }, { label: '研究工具', href: '/workspace#analysis' }],
     };
   }
@@ -338,12 +338,12 @@ export function localReply(intent: Exclude<AgentIntent, 'questionnaire'>, projec
   }
   if (intent === 'defense') {
     return {
-      text: '答辩训练在项目工作台的「路演与答辩」中，包含问题库、依据状态声明和可调节计时。提交前体检在「研究工具」里，检查身份与编辑残留。',
+      text: '答辩训练在项目工作台的“路演与答辩”中，包含问题库、依据状态声明和可调节计时。提交前体检在“研究工具”里，检查身份与编辑残留。',
       actions: [{ label: '打开答辩工作台', href: projectHref }, { label: '提交前体检', href: '/workspace#preflight' }],
     };
   }
   return {
-    text: '这一版真正接通的链路是「问卷生成」：绑定项目、选择你的模型服务并明确确认后，我会调用模型，把可编辑的问卷提案放进右侧产物面板。选题、分析、报告和答辩目前是入口指引，不会伪装成已完成。',
+    text: '这一版真正接通的链路是“问卷生成”：绑定项目、选择你的模型服务并明确确认后，我会调用模型，把可编辑的问卷提案放进右侧产物面板。选题、分析、报告和答辩目前是入口指引，不会伪装成已完成。',
     actions: [{ label: '配置模型服务', href: '/services' }, { label: '查看我的项目', href: '/projects' }],
   };
 }

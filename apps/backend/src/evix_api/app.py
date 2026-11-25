@@ -1,18 +1,18 @@
 """Application composition root. HTTP and business logic live in their modules."""
 from fastapi import FastAPI
-from evix_api.runtime import create_runtime
+from evix_api.runtime import create_runtime, install_boundary_guard
 from evix_api.dependencies import create_dependencies
 from evix_api.errors import install_handlers
 from evix_api.security import install_security_middleware
 from multi_agent.workflow import WorkflowEngine
 from multi_agent.workflow.langgraph_runner import LangGraphRunner
-from evix_api.routes import system, auth, teams, projects, model_services, questionnaires, proposals, survey_runs, uploads, knowledge, topics, topic_agent, topic_projects, surveys, reports, latex, agent_tasks, agent_chat, full_report_section
+from evix_api.routes import system, auth, teams, projects, model_services, questionnaires, proposals, survey_runs, uploads, knowledge, topics, topic_agent, topic_projects, surveys, reports, latex, agent_tasks, agent_chat, full_report_section, autonomous_agent
 
 def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_config=None, workflow_handlers=None):
     runtime = create_runtime(settings, mail=mail, provider=provider, engine=engine)
     settings = runtime.settings
     deps = create_dependencies(settings, runtime.engine)
-    app = FastAPI(title="EVI-X API", lifespan=runtime.lifespan, docs_url=None if settings.mode == "production" else "/docs", redoc_url=None, openapi_url=None if settings.mode == "production" else "/openapi.json")
+    app = FastAPI(title="EVI-X API", debug=False, lifespan=runtime.lifespan, docs_url=None if settings.mode == "production" else "/docs", redoc_url=None, openapi_url=None if settings.mode == "production" else "/openapi.json")
     app.state.settings, app.state.engine, app.state.provider = settings, runtime.engine, runtime.generator
     app.state.silicon_tasks = set()
     app.state.sav_imports, app.state.preflights = runtime.sav_imports, runtime.preflights
@@ -39,5 +39,9 @@ def create_app(settings=None, mail=None, provider=None, engine=None, knowledge_c
     agent_tasks.register_routes(app, db=deps.db, auth=deps.auth, owned_project=deps.owned_project,
         session_user=deps.session_user, owned_service=deps.owned_service,
         model_runtime={'settings': settings, 'provider': runtime.generator} if workflow_handlers is None else None)
+    autonomous_agent.register_autonomous_agent(app, settings=settings, db=deps.db, auth=deps.auth,
+        session_user=deps.session_user, lock_user=deps.lock_user, operation=deps.operation,
+        owned_project=deps.owned_project, owned_service=deps.owned_service, generator=runtime.generator)
     install_security_middleware(app, settings)
+    install_boundary_guard(app)
     return app

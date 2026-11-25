@@ -30,3 +30,40 @@
 .sources span { display: block; }
 .sources a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 @media(prefers-reduced-motion:reduce) { .directory > button { transition: none; } }
+
+@media (forced-colors: active) {
+  .guide > summary:focus-visible,
+  .directory > button:focus-visible,
+  .sources > summary:focus-visible,
+  .sources a:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .marker {
+    display: none;
+  }
+
+  .guide,
+  .directory > button,
+  .scope {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .directory > button[aria-pressed=true],
+  .scope[data-available=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .workspace,
+  .directory,
+  .implementation,
+  .limits {
+    border-color: CanvasText !important;
+  }
+}

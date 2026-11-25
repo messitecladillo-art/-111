@@ -7,11 +7,11 @@ const key = (variable: string, label: string) => JSON.stringify([variable, label
 const wrap = (text: string, columns: number) => text.split('\n').flatMap(line => { const chars = Array.from(line); return chars.length ? Array.from({ length: Math.ceil(chars.length / columns) }, (_, i) => chars.slice(i * columns, (i + 1) * columns).join('')) : ['']; }).join('\n');
 export const chartCaption = (snapshot: ChartSnapshot, kind: ChartKind) => {
   const notes = [`n = ${snapshot.n}`];
-  if (kind === 'mean_sd') notes.push('误差线：均值 ± 1 个样本标准差（SD）');
+  if (kind === 'mean_sd') notes.push('误差线表示均值 ± 1 个样本标准差（SD）');
   if (kind === 'waffle') notes.push('每格 = 1 条有效记录');
-  if (kind.includes('boxplot') || kind.includes('raincloud')) notes.push('四分位数：Type 7；须：Tukey 1.5 IQR');
-  if (['density', 'violin', 'raincloud', 'group_density', 'group_violin', 'group_raincloud'].includes(kind)) notes.push('Gaussian KDE · Silverman robust 带宽' + (kind.includes('violin') || kind.includes('raincloud') ? ' · 各组峰宽独立归一' : ''));
-  if (kind === 'histogram') notes.push('Sturges 等宽箱 · 末箱右闭');
+  if (kind.includes('boxplot') || kind.includes('raincloud')) notes.push('四分位数采用 Type 7 口径 · 箱须取 Tukey 1.5 IQR');
+  if (['density', 'violin', 'raincloud', 'group_density', 'group_violin', 'group_raincloud'].includes(kind)) notes.push('Gaussian 核密度 · 稳健 Silverman 带宽' + (kind.includes('violin') || kind.includes('raincloud') ? ' · 各组峰宽独立归一' : ''));
+  if (kind === 'histogram') notes.push('Sturges 等宽分箱 · 末箱右闭');
   if (kind === 'rank_scatter') notes.push('当前有效配对的平均秩');
   return notes.join('  ·  ');
 };
@@ -104,7 +104,7 @@ export function buildChartOption(snapshot: ChartSnapshot, kind: ChartKind, style
         left += width;
       });
       // Batch by column identity: at most20 render series, with all400 cells retained.
-      cross.columns.forEach(column => series.push({ type: 'custom', name: column, data: geometry.get(column)!, encode: { x: [0, 2], y: [1, 3] }, tooltip: { formatter: p => { const value = (Array.isArray(p) ? p[0] : p).value as number[]; return `${cross.rows[value[5]]} · ${column}\n频数：${fmt(value[4])}`; } }, renderItem: (_, api) => {
+      cross.columns.forEach(column => series.push({ type: 'custom', name: column, data: geometry.get(column)!, encode: { x: [0, 2], y: [1, 3] }, tooltip: { formatter: p => { const value = (Array.isArray(p) ? p[0] : p).value as number[]; return `${cross.rows[value[5]]} · ${column}\n频数 ${fmt(value[4])}`; } }, renderItem: (_, api) => {
         const a = api.coord([Number(api.value(0)), Number(api.value(1))]), b = api.coord([Number(api.value(2)), Number(api.value(3))]);
         const width = b[0] - a[0], height = a[1] - b[1], count = Number(api.value(4));
         if (width <= 0 || height <= 0 || count === 0) return null;

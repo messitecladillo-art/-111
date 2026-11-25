@@ -31,7 +31,7 @@ export default function RoutingAudit({mapping,table,missingCodes,current,invalid
         <label data-selected={policy==='exclude'}><input type="radio" name="routing-policy" checked={policy==='exclude'} onChange={()=>onPolicy('exclude')}/><span><strong>仅分析资格明确者</strong><small>不符合条件或共同资格未明的记录不进入计算；保留排除计数，原数据不改动。</small></span></label>
       </fieldset>
       <div className={styles.confirm}><p>仅描述满足所选题目显示条件者的已观察应答。多变量使用共同范围，再处理缺失；任一题确定不符合时，该行不属于共同范围。全体比例需另定义派生变量，不自动补零。修改问卷、对应、数据或缺失设置后须重新确认。</p><button type="button" disabled={!current||invalidMissing||confirmed} onClick={onConfirm}>{confirmed?'已确认本版处理方式':'确认本版跳题处理方式'}</button></div>
-      <details className={styles.sources}><summary>跳题、缺失与分母如何区分？</summary><p>显示条件决定题目适用于谁；目标总体与指标决定最终分母。整份问卷的有效性和纠错需另行核查。</p><a href="https://wwwn.cdc.gov/nchs/nhanes/tutorials/datasets.aspx" target="_blank" rel="noopener noreferrer">CDC/NCHS：跳题、目标人群与分母 ↗</a><a href="https://aapor.org/standards-and-ethics/transparency-initiative/" target="_blank" rel="noopener noreferrer">AAPOR：质量检查与剔除规则披露 ↗</a></details>
+      <details className={styles.sources}><summary>跳题、缺失与分母如何区分？</summary><p>显示条件决定题目适用于谁；目标总体与指标决定最终分母。整份问卷的有效性和纠错需另行核查。</p><a href="https://wwwn.cdc.gov/nchs/nhanes/tutorials/datasets.aspx" target="_blank" rel="noopener noreferrer">CDC/NCHS · 跳题、目标人群与分母 ↗</a><a href="https://aapor.org/standards-and-ethics/transparency-initiative/" target="_blank" rel="noopener noreferrer">AAPOR · 质量检查与剔除规则披露 ↗</a></details>
     </div>
   </section>;
 }

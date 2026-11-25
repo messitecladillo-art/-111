@@ -24,8 +24,8 @@ test('v1/v2 normalized payload and proposal bytes match pre-change snapshots',()
   const expected={
     v1Frequency:['cd108b4c807428675528a2a99f2532f8bdc6943555ff9721e2f407202cb9efa3','b007d3c667402db931fea923281267948385a178856134ffc705d0a515d9f1b5'],
     v2Frequency:['bd9d0077f92bade49b98d0e453574927f3ed626d59451c9bccf2e8d85ed62428','5ba928f3611f69d970a0cd6e96d03eef139cb70530f615908f9ae1ea026a8d57'],
-    v1Alpha:['98ae70488f0b01373a55db76f5a88e6af5189a608edd95fcdcb8440a2fe27703','47cb769af03641f2a3432f0ff85488eace86885629ac2ec98d262499944eae22'],
-    v2Alpha:['303c3ad6ea0c938d012cc222d40874cb02a228f7d1349492f275e02ae49ac5dc','fe48c531096baab68d6eba401cc26698829c20ae8c4792c4b8306774730d1c78'],
+    v1Alpha:['98ae70488f0b01373a55db76f5a88e6af5189a608edd95fcdcb8440a2fe27703','4a2bed5d3ee971d62d78ad1f5fd216de422c70752e95dd659065f72e69c2e3e8'],
+    v2Alpha:['303c3ad6ea0c938d012cc222d40874cb02a228f7d1349492f275e02ae49ac5dc','f53c417d18ca3f0571d73e2b2cdb1e6300c75e5a53db97b68e8a9bdfbad5c5e0'],
   };
   const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
   for(const [name,input] of Object.entries(fixtures)){

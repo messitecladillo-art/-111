@@ -21,6 +21,6 @@ export default function MirrorRoom({ compact = false }: { compact?: boolean }) {
     <span className={styles.cornerC}>+</span><span className={styles.cornerD}>+</span>
     <div className={styles.core}><pre className={styles.ascii}>{ASCII}</pre></div>
     <span className={styles.scan}/>
-    <span className={styles.label}>PENROSE MIRROR ROOM / 00</span>
+    <span className={styles.label}>证见镜室 · 00</span>
   </div>;
 }

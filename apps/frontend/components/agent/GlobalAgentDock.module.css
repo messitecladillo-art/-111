@@ -5,6 +5,8 @@
   z-index: 60;
   transform: translateX(-50%);
   width: min(680px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -25,7 +27,9 @@
 .replyCard {
   display: flex;
   flex-direction: column;
+  max-width: 100%;
   max-height: min(360px, 46vh);
+  box-sizing: border-box;
   border: 1px solid rgba(15, 23, 20, 0.12);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
@@ -51,12 +55,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   padding: 9px 12px 9px 14px;
   border-bottom: 1px solid rgba(15, 23, 20, 0.08);
   font-size: 12.5px;
 }
 
 .replyHead strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
@@ -164,8 +173,11 @@
 }
 
 .commandPalette {
+  max-width: 100%;
   max-height: 220px;
+  box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px;
   border: 1px solid rgba(7, 26, 43, 0.14);
   border-radius: 14px;
@@ -180,6 +192,8 @@
   gap: 10px;
   align-items: baseline;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 0;
   border-radius: 8px;
@@ -201,6 +215,7 @@
 }
 
 .commandOption span {
+  min-width: 0;
   color: rgba(7, 26, 43, 0.68);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -211,6 +226,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 8px 6px 12px;
   border: 1px solid rgba(247, 244, 237, 0.16);
   border-radius: 999px;
@@ -303,7 +321,8 @@
 
 @media (max-width: 600px) {
   .dockContainer {
-    width: calc(100vw - 16px);
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
     bottom: 10px;
   }
   .dockInput {
@@ -314,8 +333,89 @@
   }
 }
 
+@media (max-width: 480px) {
+  .dockContainer {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    bottom: 10px;
+  }
+  .replyCard,
+  .commandPalette,
+  .capsule {
+    max-width: calc(100vw - 24px);
+  }
+  .replyHead {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .commandOption {
+    grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .dockContainer,
+  .capsule,
+  .chipButton,
+  .headLink,
+  .closeBtn,
+  .sendBtn {
+    transition: none;
+  }
   .replyCard {
     animation: none;
+  }
+}
+
+@media print {
+  .dockContainer,
+  .replyCard,
+  .commandPalette,
+  .capsule {
+    display: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .capsule:focus-within,
+  .chipButton:focus-visible,
+  .headLink:focus-visible,
+  .closeBtn:focus-visible,
+  .brandToggle:focus-visible,
+  .agentLink:focus-visible,
+  .sendBtn:focus-visible,
+  .commandOption:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .replyCard,
+  .inlineCard,
+  .commandPalette,
+  .capsule,
+  .chipButton,
+  .headLink,
+  .closeBtn,
+  .brandToggle,
+  .agentLink,
+  .sendBtn,
+  .userEcho {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .commandOption[data-selected='true'],
+  .sendBtn:not(:disabled) {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .replyHead {
+    border-bottom-color: CanvasText;
   }
 }

@@ -22,7 +22,8 @@ test('blueprint nodes are unique, stay inside their chapters and are numbered fr
   }
   assert.deepEqual([1, 2, 9, 10, 11, 19, 20, 21, 99].map(chineseNumeral), ['一', '二', '九', '十', '十一', '十九', '二十', '二十一', '九十九']);
   const core = blueprintOutline({ includeOptional: false }).map(x => x.title);
-  for (const title of ['摘要', '一、研究项目简介', '二、调查方案设计与实施', '（五）抽样设计', '参考文献', '附录1 调查问卷']) assert.ok(core.includes(title), title);
+  for (const title of ['摘要', '一、绪论', '二、调查方案设计与实施', '（五）抽样设计', '参考文献', '附录1 调查问卷']) assert.ok(core.includes(title), title);
+  assert.equal(matchBlueprintNode('一、研究项目简介')?.id, 'intro', 'legacy intro heading remains recognised');
   const full = blueprintOutline({ includeOptional: true }).map(x => x.title);
   assert.ok(full.includes('二、网络文本与二手资料分析') && full.includes('三、调查方案设计与实施'), 'optional chapters shift later numbers');
   assert.equal(full.length, BLUEPRINT.length);
@@ -135,4 +136,14 @@ test('new body sections go before the back matter, and renumbering leaves free-f
   ]);
   assert.deepEqual(renumbered.map(s => s.title), ['一、背景', '（一）细节', '我的小结', '二、方法', '（一）抽样', '附录一：问卷', '附录 2 代码']);
   assert.equal(changed, 5);
+});
+
+test('starter report chapter "一、研究背景与问题" maps to intro so intro.background nests underneath cleanly', () => {
+  assert.equal(matchBlueprintNode('一、研究背景与问题')?.id, 'intro');
+  const inserted = insertBlueprintNode(createEditorContent(), 'intro.background');
+  assert.deepEqual(inserted.inserted, ['bp-intro.background']);
+  assert.deepEqual(
+    inserted.content.report.slice(0, 4).map(s => s.title),
+    ['摘要', '一、研究背景与问题', '（一）研究背景', '二、调查方案与问卷'],
+  );
 });

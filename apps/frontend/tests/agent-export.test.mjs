@@ -7,7 +7,7 @@ const thread = {
   title: '整群抽样/要注意什么?', createdAt: at,
   messages: [
     { role: 'user', at, text: '整群抽样要注意什么' },
-    { role: 'agent', at, answered: 'confirmed', turn: { lines: [[{ text: '发给模型之前请确认：' }]], cards: [{ kind: 'confirm', title: '用「服务甲」回答', lines: [[{ text: '发送：' }, { text: '这句话、最近 12 条对话', mark: 'strong' }], [{ text: '不发送：问卷、数据与报告的原文。', mark: 'dim' }], []], confirm: { label: '发送', action: { type: 'clear' } }, cancel: '不发送' }] } },
+    { role: 'agent', at, answered: 'confirmed', turn: { lines: [[{ text: '发给模型之前请确认：' }]], cards: [{ kind: 'confirm', title: '用“服务甲”回答', lines: [[{ text: '发送：' }, { text: '这句话、最近 12 条对话', mark: 'strong' }], [{ text: '不发送：问卷、数据与报告的原文。', mark: 'dim' }], []], confirm: { label: '发送', action: { type: 'clear' } }, cancel: '不发送' }] } },
     { role: 'agent', at, model: { service: '服务甲', step: 1 }, turn: { lines: [[{ text: '用设计效应 ' }, { text: String.raw`\text{DEFF}=1+(m-1)\rho`, mark: 'tex' }, { text: ' 衡量。' }], [{ text: '◆ ', mark: 'cyan' }, { text: '服务甲 的回答，未经核实。', mark: 'dim' }]] } },
     { role: 'agent', at, turn: { lines: [[{ text: '整体照度 ' }, { text: '25%', mark: 'gold' }, { text: '。' }]], cards: [{ kind: 'tool', title: '读取 · 项目照度', lines: [[{ text: '问卷设计' }, { text: '50%' }]] }] } },
     { role: 'agent', at, model: { service: '服务甲', step: 2 }, turn: { lines: [[{ text: '问卷设计最弱。' }]] } },
@@ -17,13 +17,13 @@ const thread = {
 
 test('the record says how many model calls were made and through which service, then gives the conversation in order', () => {
   const md = conversationMarkdown(thread, at);
-  assert.match(md, /^# 证见 Agent 对话记录：整群抽样\/要注意什么\?/);
+  assert.match(md, /^# 证见研究对话记录 · 整群抽样\/要注意什么\?/);
   assert.match(md, /本段对话调用生成式模型 2 次，服务：服务甲。/);
   assert.match(md, /## 你 · /);
   assert.match(md, /## 证见 · 模型回答（服务甲，未经核实）/);
   assert.match(md, /## 证见 · 模型回答（服务甲，第 2 步，未经核实）/);
   assert.match(md, /## 证见 · 指令模式/);
-  assert.match(md, /## 证见 · 确认 · [^\n]+\n\n发给模型之前请确认：\n需要确认：用「服务甲」回答 —— 已确认\n发送：\*\*这句话、最近 12 条对话\*\*\n不发送：问卷、数据与报告的原文。\n\n/, 'what the user agreed to is in the record, word for word');
+  assert.match(md, /## 证见 · 确认 · [^\n]+\n\n发给模型之前请确认：\n需要确认：用“服务甲”回答 —— 已确认\n发送：\*\*这句话、最近 12 条对话\*\*\n不发送：问卷、数据与报告的原文。\n\n/, 'what the user agreed to is in the record, word for word');
   assert.ok(md.includes(String.raw`$\text{DEFF}=1+(m-1)\rho$`), 'formulas keep their TeX');
   assert.ok(md.includes('读取 · 项目照度\n问卷设计50%'), 'a tool card’s rows are part of it');
   assert.ok(!md.includes('◆'), 'the unverified note lives in the heading, not repeated in the body');
@@ -39,7 +39,7 @@ test('a conversation without a model call says so, and the file name is safe eve
 
 const agent = (extra, lines = [[{ text: '……' }]]) => ({ role: 'agent', at, turn: { lines }, ...extra });
 const said = (lines, cards) => ({ role: 'agent', at, turn: { lines, cards } });
-const job = (status, more = {}) => ({ kind: 'job', status, detail: '已起草「通勤调查」· 2 题 · 基于问卷 v0', projectId: 'p', serviceLabel: '服务乙', model: 'deepseek-chat', ...more });
+const job = (status, more = {}) => ({ kind: 'job', status, detail: '已起草“通勤调查”· 2 题 · 基于问卷 v0', projectId: 'p', serviceLabel: '服务乙', model: 'deepseek-chat', ...more });
 const draft = (...cards) => said([[{ text: '开始起草。' }]], cards);
 
 test('every call is shown as it ended; calls never sent are shown but not counted', () => {
@@ -67,7 +67,7 @@ test('a reply stored before calls were recorded is still credited to its service
 
 test('older calls that ended without a reply are still counted as model calls, or shown as never sent', () => {
   const md = conversationMarkdown({ title: '旧失败', createdAt: at, messages: [
-    agent({}, [[{ text: '正在请' }, { text: '「服务甲」', mark: 'strong' }, { text: '回答…', mark: 'dim' }]]),
+    agent({}, [[{ text: '正在请' }, { text: '“服务甲”', mark: 'strong' }, { text: '回答…', mark: 'dim' }]]),
     agent({}, [[{ text: '这一轮没有完成：', mark: 'error' }, { text: '模型服务出错了。' }]]),
     agent({}, [[{ text: '结果尚未明确：', mark: 'error' }, { text: '这一轮已记下；核对只读取回执，不会再次调用模型。' }]]),
     agent({}, [[{ text: '正在根据工具结果接着回答…', mark: 'dim' }]]),
@@ -98,7 +98,7 @@ test('questionnaire drafting: consent, the call and the proposed questions are p
   ] }, at);
   assert.match(md, /调用生成式模型 1 次，服务：服务乙（deepseek-chat）。/);
   assert.match(md, /## 证见 · 确认[^\n]*\n\n可以。\n需要确认：调用模型起草问卷（研究需求：大学生通勤方式；服务：服务乙；项目：通勤）—— 已确认/);
-  assert.match(md, /## 证见 · 模型起草问卷（服务乙（deepseek-chat），已完成）[^\n]*\n\n开始起草。\n已起草「通勤调查」/);
+  assert.match(md, /## 证见 · 模型起草问卷（服务乙（deepseek-chat），已完成）[^\n]*\n\n开始起草。\n已起草“通勤调查”/);
   assert.match(md, /## 证见 · 模型拟议的问卷（服务乙（deepseek-chat），未经核实）[^\n]*\n\n模型拟了 2 道题。\n模型拟议的问卷（未经核实[^\n]*：通勤调查\n1\. 你每天通勤多久？（single）\n2\. 你用什么交通方式？（multiple）/);
   // The oldest messages are dropped first, so a long conversation can keep the proposal without the job that made it.
   const kept = conversationMarkdown({ title: '起草', createdAt: at, messages: [said([[{ text: '模型拟了 2 道题。' }]], [{ kind: 'proposal', projectId: 'p', proposalId: 'x', serviceId: 's', serviceRevision: 1, serviceLabel: '服务乙', model: 'deepseek-chat', inputRevision: 0, design: { title: '', questions: [] } }])] }, at);

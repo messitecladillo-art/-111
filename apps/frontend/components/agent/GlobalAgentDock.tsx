@@ -1,31 +1,40 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import BrandMark from '@/components/brand/BrandMark';
 import { useKnowledge } from '@/components/knowledge/KnowledgeProvider';
+import { matchCommands } from '@/lib/agent/commands';
 import { AGENT_HANDOFF_KEY, buildHandoffPayload, needsAgentShellHandoff, shouldShowGlobalDock } from '@/lib/agent/dock';
-import { illuminate } from '@/lib/agent/illumination';
-import { lookupTurn, matchCommands, route, type AgentAction, type AgentTurn, type Span } from '@/lib/agent/router';
+import type { AgentAction, AgentTurn, Span } from '@/lib/agent/router';
 import { Icon } from './icons';
 import styles from './GlobalAgentDock.module.css';
 
-const EMPTY_LIGHT = illuminate({ design: null, dataset: null, report: null, resultPending: false });
+function cleanDockText(raw: string): string {
+  return raw
+    .replace(/[\u300c\u300e]/gu, '“')
+    .replace(/[\u300d\u300f]/gu, '”')
+    .replace(/\u3010([^\u3011]+)\u3011/gu, '（$1）')
+    .replace(/[{}]/gu, '');
+}
 
 function renderSpan(span: Span, key: number) {
-  if (span.mark === 'gold') return <span key={key} className={styles.markGold}>{span.text}</span>;
-  if (span.mark === 'teal' || span.mark === 'cyan') return <span key={key} className={styles.markTeal}>{span.text}</span>;
-  if (span.mark === 'dim') return <span key={key} className={styles.markDim}>{span.text}</span>;
-  if (span.mark === 'error') return <span key={key} className={styles.markError}>{span.text}</span>;
-  if (span.mark === 'strong') return <strong key={key}>{span.text}</strong>;
-  return <span key={key}>{span.text}</span>;
+  const text = cleanDockText(span.text);
+  if (span.mark === 'gold') return <span key={key} className={styles.markGold}>{text}</span>;
+  if (span.mark === 'teal' || span.mark === 'cyan') return <span key={key} className={styles.markTeal}>{text}</span>;
+  if (span.mark === 'dim') return <span key={key} className={styles.markDim}>{text}</span>;
+  if (span.mark === 'error') return <span key={key} className={styles.markError}>{text}</span>;
+  if (span.mark === 'strong') return <strong key={key}>{text}</strong>;
+  return <span key={key}>{text}</span>;
 }
 
 export default function GlobalAgentDock() {
   const pathname = usePathname();
   const router = useRouter();
   const knowledge = useKnowledge();
+  const dockRef = useRef<HTMLDivElement>(null);
+  const brandBtnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const [value, setValue] = useState('');
@@ -47,6 +56,33 @@ export default function GlobalAgentDock() {
     [commandWord, dismissed, value],
   );
   const selectedIndex = commands.length ? Math.min(activeIndex, commands.length - 1) : -1;
+
+  useEffect(() => {
+    if (!openDrawer && !commands.length) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!dockRef.current?.contains(event.target as Node)) {
+        setOpenDrawer(false);
+        if (commands.length) setDismissed(value);
+      }
+    };
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (commands.length) {
+        setDismissed(value);
+        return;
+      }
+      if (openDrawer) {
+        setOpenDrawer(false);
+        brandBtnRef.current?.focus();
+      }
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openDrawer, commands.length, value]);
 
   const handoff = useCallback(
     (text: string) => {
@@ -101,7 +137,17 @@ export default function GlobalAgentDock() {
       }
 
       const isSlash = /^[/／]/u.test(trimmed);
-      const routed = route(trimmed, { room: null, light: EMPTY_LIGHT });
+      const [{ lookupTurn, route }, { illuminate }] = await Promise.all([
+        import('@/lib/agent/router'),
+        import('@/lib/agent/illumination'),
+      ]);
+      const emptyLight = illuminate({ design: null, dataset: null, report: null, resultPending: false });
+      const routed = route(trimmed, { room: null, light: emptyLight });
+
+      if ('lookupCounty' in routed || 'recommendResource' in routed) {
+        handoff(trimmed);
+        return;
+      }
 
       if (isSlash) {
         if (needsAgentShellHandoff(routed)) {
@@ -152,22 +198,22 @@ export default function GlobalAgentDock() {
   if (!shouldShowGlobalDock(pathname)) return null;
 
   return (
-    <div className={styles.dockContainer} role="complementary" aria-label="证见全局 Agent 悬浮窗">
+    <div ref={dockRef} className={styles.dockContainer} role="complementary" aria-label="证见快捷研究助手">
       {openDrawer && inlineTurn && (
-        <section className={styles.replyCard} aria-label="全局 Agent 回复">
+        <section className={styles.replyCard} aria-label="研究助手回复">
           <header className={styles.replyHead}>
             <BrandMark size={15} />
-            <strong>证见 · 全局大脑</strong>
+            <strong>证见 · 研究助手</strong>
             <span className={styles.replyHeadSpacer} />
             <button type="button" className={styles.headLink} onClick={() => handoff(inlinePrompt || '下一步做什么')}>
-              进入 Agent 主工作台 ↗
+              进入研究主工作台 ↗
             </button>
             <button type="button" className={styles.closeBtn} aria-label="收起悬浮回复" onClick={() => setOpenDrawer(false)}>
               <Icon name="close" />
             </button>
           </header>
-          <div className={styles.replyBody}>
-            {inlinePrompt && <div className={styles.userEcho}>{inlinePrompt}</div>}
+          <div className={styles.replyBody} role="status" aria-live="polite">
+            {inlinePrompt && <div className={styles.userEcho}>{cleanDockText(inlinePrompt)}</div>}
             <div className={styles.turnLines}>
               {inlineTurn.lines.map((line, i) => (
                 <p key={i}>{line.map((span, j) => renderSpan(span, j))}</p>
@@ -175,11 +221,11 @@ export default function GlobalAgentDock() {
             </div>
             {inlineTurn.cards?.map((card, idx) => (
               <div key={idx} className={styles.inlineCard}>
-                {'title' in card && card.title && <div className={styles.inlineCardTitle}>{card.title}</div>}
+                {'title' in card && card.title && <div className={styles.inlineCardTitle}>{cleanDockText(card.title)}</div>}
                 {card.kind === 'entry' && (
                   <>
-                    <div className={styles.inlineCardTitle}>{card.name}{card.english ? ` · ${card.english}` : ''}</div>
-                    <div>{card.definition}</div>
+                    <div className={styles.inlineCardTitle}>{cleanDockText(card.name)}{card.english ? ` · ${card.english}` : ''}</div>
+                    <div>{cleanDockText(card.definition)}</div>
                   </>
                 )}
                 {'lines' in card &&
@@ -192,7 +238,7 @@ export default function GlobalAgentDock() {
               <div className={styles.chipRow}>
                 {inlineTurn.chips.slice(0, 4).map((chip, idx) => (
                   <button key={idx} type="button" className={styles.chipButton} onClick={() => runAction(chip.action)}>
-                    {chip.label}
+                    {cleanDockText(chip.label)}
                   </button>
                 ))}
               </div>
@@ -202,10 +248,11 @@ export default function GlobalAgentDock() {
       )}
 
       {!!commands.length && (
-        <div className={styles.commandPalette} role="listbox" aria-label="快捷命令">
+        <div id="global-dock-commands" className={styles.commandPalette} role="listbox" aria-label="快捷命令">
           {commands.map((cmd, idx) => (
             <button
               key={cmd.name}
+              id={`global-dock-cmd-${idx}`}
               type="button"
               role="option"
               aria-selected={idx === selectedIndex}
@@ -219,7 +266,7 @@ export default function GlobalAgentDock() {
               }}
             >
               <code>/{cmd.name}</code>
-              <span>{cmd.line}</span>
+              <span>{cleanDockText(cmd.line)}</span>
             </button>
           ))}
         </div>
@@ -233,10 +280,12 @@ export default function GlobalAgentDock() {
         }}
       >
         <button
+          ref={brandBtnRef}
           type="button"
           className={styles.brandToggle}
-          title={inlineTurn ? '展开/收起上次回复' : '打开证见 Agent 主大脑'}
-          aria-label="证见全局 Agent"
+          title={inlineTurn ? '展开或收起上次回复' : '打开证见研究主工作台'}
+          aria-label="证见研究助手"
+          aria-expanded={inlineTurn ? openDrawer : undefined}
           onClick={() => (inlineTurn ? setOpenDrawer((open) => !open) : router.push('/agent'))}
         >
           <BrandMark size={16} />
@@ -247,8 +296,11 @@ export default function GlobalAgentDock() {
           rows={1}
           className={styles.dockInput}
           value={value}
-          aria-label="全局 Agent 输入框"
-          placeholder="随时对证见大脑下达研究指令、调出报告/问卷，按 / 唤出快捷命令…"
+          aria-label="快捷研究指令输入框"
+          aria-autocomplete="list"
+          aria-controls={commands.length ? 'global-dock-commands' : undefined}
+          aria-activedescendant={selectedIndex >= 0 ? `global-dock-cmd-${selectedIndex}` : undefined}
+          placeholder="随时输入研究问题、调出报告或问卷，键入 / 查看快捷指令…"
           onChange={(event) => {
             setValue(event.target.value);
             setDismissed(null);
@@ -279,6 +331,10 @@ export default function GlobalAgentDock() {
                   return;
                 }
               }
+            } else if (event.key === 'Escape' && openDrawer) {
+              event.preventDefault();
+              setOpenDrawer(false);
+              return;
             }
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
@@ -288,10 +344,10 @@ export default function GlobalAgentDock() {
         />
 
         <Link href="/agent" className={styles.agentLink}>
-          Agent 大脑
+          研究工作台
         </Link>
 
-        <button type="submit" className={styles.sendBtn} disabled={!value.trim()} aria-label="发送到 Agent">
+        <button type="submit" className={styles.sendBtn} disabled={!value.trim()} aria-label="发送研究指令">
           <Icon name="up" />
         </button>
       </form>

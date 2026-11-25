@@ -1,20 +1,27 @@
 import sax, { type QualifiedAttribute, type QualifiedTag } from "sax";
 import { Inflate } from "pako";
+import {
+  PREFLIGHT_LIMITS,
+  normalizeIdentityTerms,
+  normalizePreflightText as normalized,
+  rejectDuplicateJsonMembers,
+  type PreflightCoverage,
+  type PreflightFinding,
+  type PreflightReport,
+  type PreflightWorkerRequest,
+  type PreflightWorkerResponse,
+} from "./submission-preflight-schema.ts";
 
-export const PREFLIGHT_LIMITS = Object.freeze({ input: 20 * 1024 * 1024, entries: 2000, total: 64 * 1024 * 1024, entry: 8 * 1024 * 1024, findings: 500, xmlNodes: 300_000, xmlDepth: 128, terms: 128 });
-export type PreflightFinding = { level: "error" | "warning"; code: string; message: string; location: string; field?: string };
-export type PreflightCoverage = { id: string; label: string; status: "checked" | "manual" | "not_checked"; detail: string };
-export type PreflightReport = { schema: "submission-preflight/v1"; name: string; format: "docx" | "pptx" | "pdf"; bytes: number; sha256: string; scope: "local-initial" | "server-deep"; status: "issues_found" | "no_issues_in_checked_scope" | "incomplete"; findings: PreflightFinding[]; coverage: PreflightCoverage[]; termsHash: string; cleanup?: { completed: true; reason: "temporary-upload" } };
-export type PreflightWorkerRequest = { id: string; buffer: ArrayBuffer; name: string; terms: string[] };
-export type PreflightWorkerResponse = { id: string; phase: string } | { id: string; result: PreflightReport } | { id: string; error: string };
-
-const normalized = (value: string) => value.normalize("NFKC").replace(/\p{Cf}/gu, "").toLowerCase().replace(/\s+/gu, " ").trim();
-export function normalizeIdentityTerms(input: string[]): string[] {
-  if (!Array.isArray(input) || input.some(value => typeof value !== "string")) throw new Error("身份词必须是文字列表。");
-  const terms = [...new Set(input.map(normalized).filter(Boolean))];
-  if (terms.length > PREFLIGHT_LIMITS.terms || terms.some(term => term.length > 64) || new TextEncoder().encode(JSON.stringify(terms)).length > 4096) throw new Error("身份词最多 128 项，每项最多 64 个 UTF-16 单元，合计 JSON 文字最多 4 KiB。");
-  return terms;
-}
+export {
+  PREFLIGHT_LIMITS,
+  normalizeIdentityTerms,
+  rejectDuplicateJsonMembers,
+  type PreflightCoverage,
+  type PreflightFinding,
+  type PreflightReport,
+  type PreflightWorkerRequest,
+  type PreflightWorkerResponse,
+};
 class InspectionError extends Error {
   readonly code: string;
   readonly location: string;

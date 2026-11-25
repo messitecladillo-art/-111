@@ -16,6 +16,7 @@ from sqlalchemy import select
 
 from infrastructure.database.models import SurveyRelease, SurveyResponse, Version
 from multi_agent.agents.contracts import ToolResult
+from multi_agent.statistical_isa import StatisticalSandbox
 from shared.contracts import fingerprint
 
 TOOL_VERSION = 'survey-release-aggregates/v1'
@@ -153,16 +154,16 @@ class SurveyDataTools:
         cleaning = [{'rule': 'hidden_questions_excluded_from_denominator', 'affected_rows': 0,
                      'reason': '跳题未显示的题目不计入该题有效样本。'},
                     {'rule': 'open_text_not_disclosed', 'affected_rows': 0,
-                     'reason': '开放题原文不进入模型，仅统计作答人数，编码需人工完成。'}]
+                     'reason': '开放题原文已做隐私隔离，仅统计有效作答人数，文本归类需由研究团队人工完成。'}]
         for ref, release, design, responses, digest in datasets:
             findings.append({'ref': ref, 'rows': len(responses), 'variables': len(design['questions']),
                              'classification': release.classification, 'sha256': digest})
             if release.classification != 'actual':
-                limitations.append(f'{release.public_design["title"][:60]}：本地测试环境回收的合成数据，不代表实际调查。')
+                limitations.append(f'问卷“{release.public_design["title"][:60]}”当前为测试环境生成的合成数据，不代表实际调查结论。')
             if release.status == 'open':
-                limitations.append(f'{release.public_design["title"][:60]}：问卷仍在回收，结果对应同意时的 {len(responses)} 份快照。')
+                limitations.append(f'问卷“{release.public_design["title"][:60]}”仍在回收中，本次统计对应确认分析时锁定的 {len(responses)} 份答卷记录。')
             if len(responses) < 30:
-                limitations.append(f'{release.public_design["title"][:60]}：有效样本 {len(responses)} 份，少于 30，结论仅作描述。')
+                limitations.append(f'问卷“{release.public_design["title"][:60]}”当前有效样本为 {len(responses)} 份（少于 30 份），统计结果仅作描述性参考。')
             for question in design['questions']:
                 column = _column(question, responses)
                 stats.append({'ref': ref, **column})
@@ -171,7 +172,7 @@ class SurveyDataTools:
                                    'title': column['question'][:80],
                                    'categories': [f['label'] for f in column['frequencies']],
                                    'values': [f['count'] for f in column['frequencies']]})
-        limitations.append('本工具仅输出描述统计；差异检验、回归等推断分析须按研究假设在分析工作台执行并登记。')
+        limitations.append('当前汇总仅包含基础描述统计，差异检验与回归推断分析须按研究假设在分析工作台进一步执行并登记。')
         deliverable = {'data_status': 'analyzed' if any(f['rows'] for f in findings) else 'needs_data',
                        'input_artifact_refs': list(artifact_refs), 'schema_findings': findings,
                        'cleaning_log': cleaning, 'descriptive_statistics': stats[:500], 'tests': [],
@@ -179,5 +180,104 @@ class SurveyDataTools:
         return ToolResult(classification='actual', artifact_refs=list(artifact_refs),
                           data={'tool': TOOL_VERSION, 'deliverable': deliverable})
 
+    def create_sandbox(self, *, artifact_refs):
+        datasets = self._datasets(list(artifact_refs))
+        if not datasets:
+            raise DataToolError('dataset_not_found')
+        ref, release, design, responses, digest = datasets[0]
+        return StatisticalSandbox(
+            questions=deepcopy(design.get('questions', [])),
+            raw_responses=responses,
+            dataset_ref=ref,
+            dataset_sha256=digest,
+            classification=release.classification,
+        )
+
+    def autonomous_tools(self, *, artifact_refs):
+        sandbox = self.create_sandbox(artifact_refs=artifact_refs)
+        tools = {'load_dataset': self.load_dataset, 'analyze_dataset': self.analyze_dataset}
+        tools.update(sandbox.tool_registry())
+        return sandbox, tools
+
     def tools(self):
         return {'load_dataset': self.load_dataset, 'analyze_dataset': self.analyze_dataset}
+
+
+def build_inline_sandbox(*, title: str, questions: list[dict], rows: list[dict], classification: str = 'actual', ref: str | None = None):
+    """Build a fenced StatisticalSandbox from anonymized coded inline questionnaire rows."""
+    clean_questions = [q for q in questions if isinstance(q, dict) and q.get('id') and q.get('variable')]
+    clean_rows = []
+    text_ids = {q['id'] for q in clean_questions if q.get('type') == 'text'}
+    for idx, row in enumerate(rows[:2000]):
+        raw_ans = row.get('answers') if isinstance(row, dict) else {}
+        raw_vis = row.get('visibility') if isinstance(row, dict) else {}
+        if not isinstance(raw_ans, dict):
+            raw_ans = {}
+        if not isinstance(raw_vis, dict):
+            raw_vis = {}
+        sanitized_ans = {k: v for k, v in raw_ans.items() if k not in text_ids}
+        clean_rows.append(SimpleNamespace(id=f'row-{idx}', answers=sanitized_ans, visibility=dict(raw_vis)))
+    digest = fingerprint({
+        'title': title,
+        'classification': classification,
+        'questions': [q.get('variable') for q in clean_questions],
+        'rows': [[r.answers, r.visibility] for r in clean_rows],
+    })
+    return StatisticalSandbox(
+        questions=clean_questions,
+        raw_responses=clean_rows,
+        dataset_ref=ref or f'inline-dataset:{digest[:12]}',
+        dataset_sha256=digest,
+        classification=classification,
+    )
+
+
+def build_falsification_reviewer_tools(*, sandbox: StatisticalSandbox | None, claimed_snapshot_ids: list[str] | None = None):
+    """Provide read-only provenance & subgroup falsification tools to ReviewerAgent."""
+    known_receipts = {r['snapshot_id']: r for r in (sandbox.receipts if sandbox else [])}
+
+    def verify_evidence_hashes(snapshot_ids: list[str] | None = None):
+        targets = list(snapshot_ids or claimed_snapshot_ids or known_receipts.keys())
+        verified = []
+        missing = []
+        for sid in targets:
+            rec = known_receipts.get(sid)
+            if rec is None:
+                missing.append(sid)
+                continue
+            expected_body = {
+                'operator': rec['operator'],
+                'params': rec['params'],
+                'dataset_sha256': rec['dataset_sha256'],
+                'working_view_sha256': rec['working_view_sha256'],
+                'n_effective': rec['n_effective'],
+                'metrics': rec['metrics'],
+                'diagnostics': rec['diagnostics'],
+                'headers': rec['table']['headers'],
+                'rows': rec['table']['rows'],
+            }
+            if fingerprint(expected_body) != rec['result_hash']:
+                missing.append(sid)
+            else:
+                verified.append(sid)
+        return ToolResult(
+            classification='actual',
+            evidence_refs=verified,
+            data={
+                'verifiedSnapshots': verified,
+                'missingOrInvalid': missing,
+                'auditVerified': bool(verified) and not missing,
+                'diagnostics': ['HASH_AUDIT_PASSED'] if (verified and not missing) else ['HASH_AUDIT_GAP'],
+                'summary': f'已完成 {len(verified)} 项统计结果一致性核验（缺失或异常 {len(missing)} 项）。',
+            },
+        )
+
+    def challenge_subgroup_robustness(outcome: str, predictor: str, moderators: list[str]):
+        if sandbox is None:
+            return ToolResult(classification='proposed', data={'summary': '当前未挂载分组数据环境，暂无法执行分人群稳健性检验。', 'diagnostics': ['NO_SANDBOX']})
+        return sandbox.scan_subgroup_heterogeneity(outcome=outcome, predictor=predictor, moderators=moderators)
+
+    return {
+        'verify_evidence_hashes': verify_evidence_hashes,
+        'challenge_subgroup_robustness': challenge_subgroup_robustness,
+    }

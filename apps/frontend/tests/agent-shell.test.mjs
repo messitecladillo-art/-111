@@ -6,7 +6,11 @@ import { exhibitKey, traceExhibits } from '../lib/agent/provenance.ts';
 import { COMMANDS, lookupTurn, matchCommands, mentionedRooms, route } from '../lib/agent/router.ts';
 import { ROOMS, isRoomId } from '../lib/agent/rooms.ts';
 import { createEditorContent } from '../lib/editor-model.ts';
+import { analyzeKano } from '../lib/kano.ts';
 import { exampleQuestionnaire } from '../lib/questionnaire.ts';
+import { blankStoryCard, buildStoryboard } from '../lib/report-storyboard.ts';
+import { stratifiedMean } from '../lib/sampling-estimators.ts';
+import { classAdjust } from '../lib/sampling-weights.ts';
 
 const empty = { design: null, dataset: null, report: null, resultPending: false };
 const ctx = (view = empty, room = 'overview', traces = []) => ({ room, light: illuminate(view), traces });
@@ -116,7 +120,7 @@ test('knowledge answers are quoted from reviewed entries, and loose matches are 
   const entry = { id: 'design-effect', name: '设计效应', englishName: 'design effect', definition: '实际设计下的方差与简单随机抽样方差之比。', formula: { tex: '\\mathrm{DEFF}=\\frac{a}{b}' }, sources: [{ title: '统计手册' }], review: { status: 'reviewed' } };
   const answer = lookupTurn('设计效应', [{ entry, match: 'name', ambiguous: false }], true);
   assert.deepEqual(answer.cards[0], { kind: 'entry', id: 'design-effect', name: '设计效应', english: 'design effect', definition: entry.definition, formula: entry.formula.tex, sources: ['统计手册'], reviewed: true });
-  assert.match(text(lookupTurn('无此词', [], true)), /知识镜里没有「无此词」/);
+  assert.match(text(lookupTurn('无此词', [], true)), /知识镜里没有“无此词”/);
   assert.match(text(lookupTurn('随便说说', [{ entry, match: 'fuzzy', ambiguous: false }], false)), /听不懂/);
   const ambiguous = lookupTurn('效应', [{ entry, match: 'fuzzy', ambiguous: false }, { entry: { ...entry, id: 'x', name: '效应量' }, match: 'fuzzy', ambiguous: false }], true);
   assert.deepEqual(ambiguous.chips.map(c => c.action.text), ['查一下 设计效应', '查一下 效应量']);
@@ -199,14 +203,14 @@ test('an exhibit traces back through its result, scope, quality control and data
   assert.equal(trace.steps[0].detail, '分组均值比较 · 有效样本 400（共 432）');
   assert.equal(trace.steps[2].detail, '自「原始问卷」剔除 20 行（作答过快），剔除台账 SHA-256 0123456789abcdef…');
   assert.match(trace.steps[3].detail, /^用户提供数据 · 指纹 SHA-256 3fa13fa13fa1…$/);
-  assert.equal(trace.steps[4].text, `第 1 题「${asked.text.trim()}」`);
-  assert.deepEqual([trace.steps[5].text, trace.steps[5].detail], ['变量「不存在的列」', '没有对应到问卷设计里的题目']);
+  assert.equal(trace.steps[4].text, `第 1 题“${asked.text.trim()}”`);
+  assert.deepEqual([trace.steps[5].text, trace.steps[5].detail], ['变量“不存在的列”', '没有对应到问卷设计里的题目']);
   assert.equal(traceExhibits(content, null)[0].steps[4].detail, '问卷设计里还没有问卷，无法对应到题目');
   assert.equal(exhibitKey('图 1－1'), exhibitKey('图1.1'));
   // A sampling frame traces to the plan, keeping its recorded caveat.
   const caveat = '城区居民含拦截、配额或方便抽样阶段，不是概率样本，不报告严格的抽样误差';
   const planned = traceExhibits(reportWith([{ id: 'f', kind: 'table', text: '抽样框', evidenceId: 'f1', valueColumn: 1 }], [{ ...frame('f1', 300), warnings: [caveat] }]), design)[0];
-  assert.deepEqual(planned.steps.map(s => [s.kind, s.text]), [['result', '结果「居民抽样框」'], ['scope', '抽样说明'], ['source', '抽样设计']]);
+  assert.deepEqual(planned.steps.map(s => [s.kind, s.text]), [['result', '结果“居民抽样框”'], ['scope', '抽样说明'], ['source', '抽样设计']]);
   assert.equal(planned.steps[0].detail, '抽样设计 · 计划有效样本 300');
   assert.equal(planned.steps[1].detail, caveat);
 });
@@ -223,7 +227,7 @@ test('/来处 answers with the path of one exhibit, offers a choice among severa
   const two = traceExhibits(reportWith([chart, { id: 'b2', kind: 'table', text: '使用频次', evidenceId: 'r2', valueColumn: 1 }], [result('r1'), result('r2')]), design);
   assert.deepEqual(route('/来处', ctx(empty, 'overview', two)).turn.chips.map(c => c.action.text), ['回溯：图 1-1', '回溯：表 1-1']);
   assert.equal(route('/来处 使用频次', ctx(empty, 'overview', two)).turn.cards[0].reference, '表 1-1');
-  assert.match(text(route('/来处 图 9-9', ctx(empty, 'overview', two)).turn), /报告里没有「图 9-9」/);
+  assert.match(text(route('/来处 图 9-9', ctx(empty, 'overview', two)).turn), /报告里没有“图 9-9”/);
 });
 
 test('global agent dock shows on non-agent routes, hides on excluded routes, and parses one-shot handoff payloads', async () => {
@@ -241,4 +245,56 @@ test('global agent dock shows on non-agent routes, hides on excluded routes, and
   assert.equal(needsAgentShellHandoff(route('/问卷', ctx())), true);
   assert.equal(needsAgentShellHandoff(route('打开问卷设计', ctx())), true);
   assert.equal(needsAgentShellHandoff(route('/查 设计效应', ctx())), false);
+});
+
+test('router, storyboard, kano, and sampling helpers emit zero corner or lenticular brackets and no API Key leak', async () => {
+  const bracketRe = /[【】「」『』]/u;
+  const design = exampleQuestionnaire();
+  const chart = { id: 'b1', kind: 'chart', text: '各设施满意度', evidenceId: 'r1', valueColumn: 1 };
+  const traces = traceExhibits(reportWith([chart], [result('r1')]), design);
+
+  for (const turn of [
+    route('帮助', ctx()).turn,
+    route('/来处 图 9-9', ctx(empty, 'overview', traces)).turn,
+    lookupTurn('无此词', [], true),
+  ]) {
+    const out = text(turn);
+    assert.equal(bracketRe.test(out), false, `unexpected bracket in turn text: ${out}`);
+    assert.equal(/API Key/u.test(out), false, `unexpected API Key leak: ${out}`);
+  }
+
+  const sbContent = createEditorContent();
+  sbContent.report = [{ id: 's1', title: '实证发现', body: '样本 20 人均值 3.80 分。', source: '问卷统计' }];
+  const card = {
+    ...blankStoryCard('s1', 'card-1'),
+    title: '核心结果',
+    excerpt: '样本 20 人均值 3.80 分。',
+    limitation: '仅限本样本，不做因果推断。',
+    implication: '聚焦薄弱维度完善服务。',
+    locator: '第 1 节',
+    classification: 'simulated',
+  };
+  const slides = await buildStoryboard(sbContent, [card], 'replace');
+  assert.equal(bracketRe.test(`${slides[0].body}\n${slides[0].aside}`), false);
+
+  const kanoRefusal = analyzeKano(
+    { headers: ['F', 'D'], rows: [['1', '5']] },
+    [{ name: '响应效率', functionalCol: 9, dysfunctionalCol: 1 }],
+  );
+  assert.equal('refused' in kanoRefusal, true);
+  if ('refused' in kanoRefusal) {
+    assert.equal(bracketRe.test(kanoRefusal.detail), false, kanoRefusal.detail);
+  }
+
+  assert.throws(
+    () => stratifiedMean(
+      [{ name: '城区样本层', N: 0, n: 2, mean: 3.5, sd: 0.5 }, { name: '乡镇样本层', N: 100, n: 10, mean: 3.2, sd: 0.6 }],
+      { confidence: 0.95 },
+    ),
+    err => !bracketRe.test(err.message),
+  );
+  assert.throws(
+    () => classAdjust(['高频用户'], [false], [1]),
+    err => !bracketRe.test(err.message),
+  );
 });

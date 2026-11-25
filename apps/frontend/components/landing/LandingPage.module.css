@@ -536,3 +536,79 @@
   .landing *,.landing *::before,.landing *::after{animation:none!important;transition:none!important}
   .heroWindow{transform:none}
 }
+
+@media (forced-colors: active) {
+  .landing :is(a, button, [tabindex="0"], summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 3px;
+    box-shadow: none !important;
+  }
+
+  .foil,
+  .char,
+  .heroFoil,
+  .marqueeRow li,
+  .marqueeRow li[data-fill=true],
+  .bigNumber,
+  .tourNo,
+  .tourStep[data-active=true] .tourNo,
+  .eraGlyph,
+  .wordmark {
+    background: none !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    -webkit-text-fill-color: CanvasText !important;
+    -webkit-text-stroke: 0 !important;
+    color: CanvasText !important;
+  }
+
+  .buttonPrimary,
+  .buttonGhost,
+  .buttonSmall,
+  .badge,
+  .kicker,
+  .paperKicker,
+  .headerInner,
+  .heroWindow,
+  .tourWindow,
+  .tourInline,
+  .chainCard,
+  .chainKey,
+  .gates li,
+  .factGrid > div,
+  .caution,
+  .groupPills button,
+  .season,
+  .nextCard,
+  .timeline,
+  .caseCard,
+  .caseDialog,
+  .caseDialog figcaption button,
+  .principles li,
+  .ctaCards li,
+  .pause {
+    border: 1px solid ButtonText !important;
+    box-shadow: none !important;
+  }
+
+  .buttonPrimary,
+  .buttonSmall,
+  .groupPills button[aria-pressed=true],
+  .timeline li[data-state=current] .timelineState {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .numbers dl,
+  .numbers dl > div + div,
+  .tourStep,
+  .gates,
+  .timeline li + li,
+  .eras,
+  .eras li + li,
+  .paper blockquote {
+    border-color: CanvasText !important;
+  }
+}

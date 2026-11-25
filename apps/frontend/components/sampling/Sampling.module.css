@@ -235,3 +235,55 @@
 .railGroup + .railGroup { margin-top: 13px; }
 .railList button { min-height: 36px; }
 @media (min-width: 1081px) { .rail { max-height: calc(100dvh - 110px); top: 90px; } }
+
+@media (forced-colors: active) {
+  .workbench :is(button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .railList button,
+  .railSearch input,
+  .railSelect,
+  .choice button,
+  .ghost,
+  .primary,
+  .field :is(input, select, textarea) {
+    border: 1px solid ButtonText;
+  }
+  .rail,
+  .method,
+  .formulaBlock,
+  .calc,
+  .output,
+  .metric,
+  .statement,
+  .callout {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .editTable,
+  .editTable th,
+  .editTable td,
+  .resultTable,
+  .resultTable th,
+  .resultTable td,
+  .pageHead,
+  .chapterHead {
+    border-color: CanvasText !important;
+  }
+  .railMarker {
+    display: none !important;
+  }
+  .railList button[aria-current="true"],
+  .railList button[aria-pressed="true"],
+  .choice button[aria-pressed="true"],
+  .primary {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

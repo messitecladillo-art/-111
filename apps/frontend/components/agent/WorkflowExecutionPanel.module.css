@@ -129,3 +129,55 @@
 }
 @media (max-width: 600px) { .panel { padding: 16px; } }
 @media (prefers-reduced-motion: reduce) { .panel * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+
+@media (forced-colors: active) {
+  .panel,
+  .attention,
+  .authorization,
+  .json,
+  .review {
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .panel,
+  .status,
+  .panel select,
+  .primary,
+  .secondary,
+  .progressDot,
+  .authorization,
+  .json,
+  .review,
+  .review textarea {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+  }
+
+  .settings,
+  .limits,
+  .output,
+  .fields .fields,
+  .receipts,
+  .receipts li,
+  .attention {
+    border-color: CanvasText !important;
+  }
+
+  .primary,
+  .progress li[aria-current="step"] .progressDot,
+  .progress [data-done="true"] .progressDot {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .panel :is(button, select, summary, textarea, input, pre[tabindex]):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

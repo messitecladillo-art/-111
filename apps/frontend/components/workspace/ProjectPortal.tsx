@@ -1,9 +1,14 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import LifecycleWarRoom from '@/components/LifecycleWarRoom';
 import { useHostedSession } from '@/components/hosted/HostedSession';
 import styles from './ProjectPortal.module.css';
+
+const LifecycleWarRoom = dynamic(() => import('@/components/LifecycleWarRoom'), {
+  ssr: false,
+  loading: () => <p role="status">正在载入全周期研究进展看板</p>,
+});
 
 /**
  * 项目门户: where the hosted side of the workbench is reached. Projects and model services live in the account; the
@@ -18,7 +23,7 @@ export default function ProjectPortal() {
   return <section className="section" aria-labelledby="portal-title">
     <div className="section-heading">
       <div><span className="eyebrow">项目门户</span><h2 id="portal-title">项目、模型服务与生命周期</h2></div>
-      <p>托管项目在账号里保存问卷版本与模型提案；生命周期工具对照门户登记与本地 Agent 的真实进度。</p>
+      <p>托管项目在账号里保存问卷版本与模型提案；生命周期工具对照门户登记与本地工作台的真实研究进度。</p>
     </div>
     <div className={styles.cards}>
       <article className={styles.card}>
@@ -30,7 +35,7 @@ export default function ProjectPortal() {
       <article className={styles.card}>
         <span>模型</span>
         <h3>模型服务</h3>
-        <p>接入你自己的模型服务，用来起草问卷；API Key 只交给服务端保存。</p>
+        <p>接入你自己的模型服务用于起草问卷，访问密钥仅由服务端安全保存。</p>
         <Link className="ghost-button" href="/services">管理模型服务</Link>
       </article>
       <article className={styles.card} aria-busy={loading}>

@@ -30,7 +30,7 @@ export function toFlowNode(n: CanvasNode, x: NodeExtras, childStatus: Partial<Re
     measured: size,
     // An open frame sits behind its members; a collapsed one is a card and sits with the others.
     ...(group ? { style: size, zIndex: collapsed ? 0 : -1 } : size),
-    ariaLabel: group ? `编组「${n.title}」，${x.childCount} 个节点${collapsed ? '，已收起' : ''}` : `${n.title}，${def.title}${status !== 'idle' ? `，${STATUS_LABELS[status]}` : ''}`,
+    ariaLabel: group ? `编组“${n.title}”，${x.childCount} 个节点${collapsed ? '，已收起' : ''}` : `${n.title}，${def.title}${status !== 'idle' ? `，${STATUS_LABELS[status]}` : ''}`,
     data: { node: n, state: x.state, issues: x.issues, entering: x.entering, childCount: x.childCount, childStatus },
   };
   nodeCache.set(n, { ...x, flow });

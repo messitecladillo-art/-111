@@ -81,10 +81,10 @@ export type StratifiedResult = { N: number; n: number; mean: Estimate; total: Es
 function validateStrata(strata: StratumSummary[]) {
   if (strata.length < 2) throw Error('至少需要 2 层。');
   for (const s of strata) {
-    if (!(Number.isInteger(s.N) && s.N >= 1)) throw Error(`「${s.name}」的层规模 N_h 须为正整数。`);
-    if (!(Number.isInteger(s.n) && s.n >= 1 && s.n <= s.N)) throw Error(`「${s.name}」的样本量 n_h 须为 1 到 N_h 之间的整数。`);
-    if (s.n < 2 && s.n < s.N) throw Error(`「${s.name}」只有 1 个样本，无法估计层内方差；每层至少抽 2 个单位。`);
-    if (!Number.isFinite(s.mean) || !(s.sd >= 0)) throw Error(`「${s.name}」的样本均值与标准差须为有效数值。`);
+    if (!(Number.isInteger(s.N) && s.N >= 1)) throw Error(`“${s.name}”的层规模 N_h 须为正整数。`);
+    if (!(Number.isInteger(s.n) && s.n >= 1 && s.n <= s.N)) throw Error(`“${s.name}”的样本量 n_h 须为 1 到 N_h 之间的整数。`);
+    if (s.n < 2 && s.n < s.N) throw Error(`“${s.name}”只有 1 个样本，无法估计层内方差；每层至少抽 2 个单位。`);
+    if (!Number.isFinite(s.mean) || !(s.sd >= 0)) throw Error(`“${s.name}”的样本均值与标准差须为有效数值。`);
   }
 }
 /** Stratified mean with Satterthwaite degrees of freedom; strata given as sample summaries. */
@@ -93,7 +93,7 @@ export function stratifiedMean(strata: StratumSummary[], { confidence }: { confi
 }
 /** Stratified proportion: each stratum's p_h is turned into s_h² = n_h p_h(1 − p_h)/(n_h − 1). */
 export function stratifiedProportion(strata: { name: string; N: number; n: number; p: number }[], { confidence }: { confidence: number }): StratifiedResult {
-  for (const s of strata) if (!(s.p >= 0 && s.p <= 1)) throw Error(`「${s.name}」的样本比例须在 0 与 1 之间。`);
+  for (const s of strata) if (!(s.p >= 0 && s.p <= 1)) throw Error(`“${s.name}”的样本比例须在 0 与 1 之间。`);
   return stratifiedCore(strata.map(s => ({ name: s.name, N: s.N, n: s.n, mean: s.p, sd: s.n > 1 ? Math.sqrt(s.n * s.p * (1 - s.p) / (s.n - 1)) : 0 })), confidence, true);
 }
 function stratifiedCore(strata: StratumSummary[], confidence: number, proportion: boolean): StratifiedResult {
@@ -243,10 +243,10 @@ export function stratifiedRatio(rows: { stratum: string; x: number; y: number }[
   const N = sum(strata.map(s => s.N));
   const parts = strata.map(s => {
     const pairs = rows.filter(r => r.stratum === s.name);
-    if (pairs.length < 2) throw Error(`「${s.name}」少于 2 对样本。`);
-    if (!(Number.isInteger(s.N) && s.N >= pairs.length)) throw Error(`「${s.name}」的层规模须为不小于层样本量的整数。`);
+    if (pairs.length < 2) throw Error(`“${s.name}”少于 2 对样本。`);
+    if (!(Number.isInteger(s.N) && s.N >= pairs.length)) throw Error(`“${s.name}”的层规模须为不小于层样本量的整数。`);
     const summary = pairSummary(pairs);
-    if (summary.xbar === 0) throw Error(`「${s.name}」的 x 均值为 0。`);
+    if (summary.xbar === 0) throw Error(`“${s.name}”的 x 均值为 0。`);
     return { ...s, ...summary, n: pairs.length, W: s.N / N, f: pairs.length / s.N };
   });
   const Xbar = sum(parts.map(p => p.W * p.Xbar));
@@ -418,9 +418,9 @@ export function twoPhaseStratified(phase1: { name: string; count: number }[], ro
   const groups = groupBy(rows, r => r.stratum);
   const parts = phase1.map(p => {
     const ys = (groups.get(p.name) ?? []).map(r => r.y);
-    if (!(Number.isInteger(p.count) && p.count >= 1)) throw Error(`「${p.name}」第一相计数须为正整数。`);
-    if (ys.length < 2) throw Error(`「${p.name}」第二相至少需要 2 个样本值。`);
-    if (ys.length > p.count) throw Error(`「${p.name}」第二相样本不能多于第一相计数。`);
+    if (!(Number.isInteger(p.count) && p.count >= 1)) throw Error(`“${p.name}”第一相计数须为正整数。`);
+    if (ys.length < 2) throw Error(`“${p.name}”第二相至少需要 2 个样本值。`);
+    if (ys.length > p.count) throw Error(`“${p.name}”第二相样本不能多于第一相计数。`);
     return { name: p.name, n1h: p.count, nh: ys.length, w: p.count / n1, ybar: meanOf(ys), s2: varianceOf(ys) };
   });
   const value = sum(parts.map(p => p.w * p.ybar));

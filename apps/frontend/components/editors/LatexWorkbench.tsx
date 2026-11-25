@@ -36,8 +36,12 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
   const [diagnostics, setDiagnostics] = useState<LatexDiagnostic[]>([]), [preview, setPreview] = useState<Preview | null>(null);
   const [diagnosticKey, setDiagnosticKey] = useState('');
   const [hash, setHash] = useState<{ key: string; value: string } | null>(null);
-  const textarea = useRef<HTMLTextAreaElement>(null), abort = useRef<AbortController | null>(null), previewUrl = useRef<string | null>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null), regenerateButtonRef = useRef<HTMLButtonElement>(null), abort = useRef<AbortController | null>(null), previewUrl = useRef<string | null>(null);
   const alive = useRef(true), guard = useRef(createLatexCompileGuard());
+  const closeConfirmRegenerate = useCallback(() => {
+    setConfirmRegenerate(false);
+    window.requestAnimationFrame(() => { regenerateButtonRef.current?.focus(); });
+  }, []);
   const reportKey = latexReportKey(content);
   const input = useMemo(() => latexCompileInput(content), [content]);
   const inputKey = latexCompileKey(input), sourcePreview=useMemo(()=>previewLatexSource(input),[input]),source=sourcePreview.source,sourceError=sourcePreview.error;
@@ -49,9 +53,20 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
 
   useEffect(() => {
     let cancelled = false;
-    void latexSha256(reportKey).then(value => { if (!cancelled) setHash({ key: reportKey, value }); }).catch(() => { if (!cancelled) setError('无法计算报告指纹，请刷新后重试。'); });
+    void latexSha256(reportKey).then(value => { if (!cancelled) setHash({ key: reportKey, value }); }).catch(() => { if (!cancelled) setError('无法核对报告版本，请刷新后重试。'); });
     return () => { cancelled = true; };
   }, [reportKey]);
+  useEffect(() => {
+    if (!confirmRegenerate) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeConfirmRegenerate();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [confirmRegenerate, closeConfirmRegenerate]);
   useEffect(() => {
     const lifetime = guard.current;
     alive.current = true;
@@ -110,22 +125,22 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
   async function exportSource(){const target={projectId,inputKey};try{const receipt=await approvedLatexSource(input);if(!alive.current||current.current.projectId!==target.projectId||current.current.inputKey!==target.inputKey||receipt.inputKey!==target.inputKey)return;const images=await latexImages(content,input,browserSvgToPng);if(!alive.current||current.current.inputKey!==target.inputKey)return;await downloadSource(receipt.source,content.title,latexSourceFiles(input,images));}catch(error){if(alive.current)setError(error instanceof Error?error.message:'源码未能导出。');}}
   const cancel = () => { guard.current.cancel(); abort.current?.abort(); abort.current = null; setBusy(false); setNotice('已停止等待，可继续编辑。'); };
 
-  return <section className={styles.workbench} aria-label="LaTeX 排版工作台">
+  return <section className={styles.workbench} aria-label="学术排版工作台">
     <header className={styles.toolbar}>
-      <div><strong>LaTeX 排版</strong><span className={styles.subtitle}>正文与 PDF 对照</span></div>
+      <div><strong>学术排版稿</strong><span className={styles.subtitle}>正文源码与版面对照</span></div>
       <div className={styles.actions}>
-        {content.latex && <button type="button" disabled={disabled || !currentReportHash} onClick={() => setConfirmRegenerate(true)}>从报告重新生成</button>}
-        <button type="button" disabled={!content.latex||!!sourceError} onClick={() => void exportSource()}>导出 .tex</button>
+        {content.latex && <button ref={regenerateButtonRef} type="button" disabled={disabled || !currentReportHash} onClick={() => setConfirmRegenerate(true)}>从报告重新生成</button>}
+        <button type="button" disabled={!content.latex||!!sourceError} onClick={() => void exportSource()}>导出排版源码</button>
         {onSave && <button type="button" disabled={disabled} onClick={onSave}>保存版本</button>}
         {busy ? <button type="button" onClick={cancel}>停止等待</button> : <button type="button" className={styles.primary} disabled={!projectId || !content.latex||!!sourceError} onClick={() => void compile()}>编译 PDF <kbd>Ctrl ↵</kbd></button>}
       </div>
     </header>
-    {confirmRegenerate && <div className={styles.confirm} role="alertdialog" aria-label="重新生成 LaTeX 正文">
-      <div><strong>用当前报告替换 LaTeX 正文？</strong><p>替换后可通过上方“撤销”恢复。</p></div>
-      <button type="button" onClick={() => setConfirmRegenerate(false)}>取消</button><button type="button" disabled={disabled || !currentReportHash} onClick={() => initialize()}>替换正文</button>
+    {confirmRegenerate && <div className={styles.confirm} role="alertdialog" aria-modal="true" aria-label="重新生成排版正文">
+      <div><strong>用当前报告替换排版正文？</strong><p>替换后可通过上方“撤销”恢复。</p></div>
+      <button type="button" autoFocus onClick={closeConfirmRegenerate}>取消</button><button type="button" disabled={disabled || !currentReportHash} onClick={() => initialize()}>替换正文</button>
     </div>}
     <div className={styles.statusRow}>
-      <span data-stale={staleReport}>{!content.latex ? '建立正文后开始排版' : !currentReportHash ? '正在核对报告版本…' : staleReport ? '报告已更新 · LaTeX 正文待同步' : '报告版本已对齐'}</span>
+      <span data-stale={staleReport}>{!content.latex ? '建立正文后开始排版' : !currentReportHash ? '正在核对报告版本…' : staleReport ? '报告已更新 · 排版正文待同步' : '报告版本已对齐'}</span>
       {!projectId ? <Link href="/projects">进入项目后编译 PDF →</Link> : <span>{busy ? '正在编译…' : 'A4 · 三线表 1.5 / 0.75 / 1.5 pt'}</span>}
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
@@ -134,22 +149,22 @@ function LatexSession({ content, onChange, projectId, onSave, disabled = false }
     <div className={styles.panes}>
       <div className={styles.sourcePane}>
         <div className={styles.paneBar}><div className={styles.tabs} aria-label="源码视图">
-          <button type="button" aria-pressed={!sourceView} onClick={() => setSourceView(false)}>body.tex</button><button type="button" aria-pressed={sourceView} onClick={() => setSourceView(true)}>完整源码</button>
+          <button type="button" aria-pressed={!sourceView} onClick={() => setSourceView(false)}>正文源码</button><button type="button" aria-pressed={sourceView} onClick={() => setSourceView(true)}>完整源码</button>
         </div><span>{sourceView ? '模板 + 正文 · 只读' : '正文可编辑'}</span></div>
         {!content.latex ? <div className={styles.empty}>
-          <span className={styles.eyebrow}>SOURCE → PDF</span><h3>把研究写进版面</h3><p>从报告生成正文，再编写公式与三线表。</p>
+          <span className={styles.eyebrow}>正文源码 · 版面预览</span><h3>把研究写进版面</h3><p>从报告生成正文，再编写公式与三线表。</p>
           <div className={styles.actions}><button type="button" className={styles.primary} disabled={disabled || !currentReportHash} onClick={() => initialize()}>从报告生成</button><button type="button" disabled={disabled || !currentReportHash} onClick={() => initialize(true)}>新建空白正文</button></div>
         </div> : <>
           <div className={styles.insertBar}><button type="button" disabled={disabled || sourceView} onClick={() => insert('formula')}>＋ 公式</button><button type="button" disabled={disabled || sourceView} onClick={() => insert('table')}>＋ 三线表</button><span>模板管理纸张、字体与线宽</span></div>
-          <textarea ref={textarea} className={styles.code} aria-label="LaTeX 正文" hidden={sourceView} spellCheck={false} wrap="off" value={content.latex.body} readOnly={disabled} maxLength={LATEX_LIMITS.body} onChange={event => applyBody(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void compile(); } }} />
-          <textarea className={styles.code} aria-label="完整 LaTeX 源码" hidden={!sourceView} spellCheck={false} wrap="off" value={source} readOnly />
+          <textarea ref={textarea} className={styles.code} aria-label="排版正文源码" hidden={sourceView} spellCheck={false} wrap="off" value={content.latex.body} readOnly={disabled} maxLength={LATEX_LIMITS.body} onChange={event => applyBody(event.target.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void compile(); } }} />
+          <textarea className={styles.code} aria-label="完整排版源码" hidden={!sourceView} spellCheck={false} wrap="off" value={source} readOnly />
           <div className={styles.sourceFooter}><span>{content.latex.body.split(/\r\n|\r|\n/).length} 行</span><span>{content.latex.body.length.toLocaleString()} / 120,000 字符</span></div>
         </>}
       </div>
       <div className={styles.previewPane} aria-busy={busy}>
         <div className={styles.paneBar}><strong>PDF 预览</strong><span data-stale={preview && !currentPdf}>{preview ? currentPdf ? '当前源码' : '源码已变化 · 上次编译' : '等待编译'}</span>{preview && <a href={preview.url} download={`${filename(preview.title)}${currentPdf ? '' : '-上次编译'}.pdf`}>{currentPdf ? '下载 PDF' : '下载上次 PDF'}</a>}</div>
         {preview ? <PdfPreview key={preview.url} url={preview.url} /> : <div className={styles.previewEmpty}><div className={styles.paperIcon} aria-hidden="true"><i /><i /><i /><i /></div><h3>{busy ? '正在排版' : '编译后在这里查看'}</h3><p>{projectId ? '调整源码，再检查分页、公式和表格。' : '源码可先导出，进入项目后生成 PDF。'}</p></div>}
-        {preview && <div className={styles.sourceFooter}><span>XeLaTeX</span><span title={preview.sourceHash}>源码指纹 {preview.sourceHash.slice(0, 12)}</span></div>}
+        {preview && <div className={styles.sourceFooter}><span>中文学术排版</span><span title={preview.sourceHash}>源码校验码 {preview.sourceHash.slice(0, 12)}</span></div>}
       </div>
     </div>
     {diagnosticKey === inputKey && diagnostics.length > 0 && <div className={styles.diagnostics} aria-label="编译诊断"><strong>编译诊断</strong><ul>{diagnostics.map((item, index) => <li key={`${index}-${item.line}`} data-severity={item.severity}>{item.line ? <button type="button" onClick={() => goToLine(item.line!)}>第 {item.line} 行</button> : <span>编译环境</span>}<span>{item.message}</span></li>)}</ul></div>}

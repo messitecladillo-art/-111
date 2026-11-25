@@ -68,7 +68,7 @@ export function parseResultSnapshot(value: unknown): ResultSnapshot {
   if (sourceUrl && (!/^https:\/\/[^\s<>]+$/.test(sourceUrl)||/[\u0085\ufeff]/u.test(sourceUrl))) return fail();
   return { id:qualityText(x.id,80,true), title:qualityText(x.title,150,true), sourceName:qualityText(x.sourceName,240,true), sourceUrl,
     sourceHash:hash(x.sourceHash), resultHash:hash(x.resultHash), classification:x.classification as ResultSnapshot['classification'], method:qualityText(x.method,80,true), n,total,headers,rows,
-    metrics:list(x.metrics,40,v=>{const m=qualityRecord(v,['label','value']);return {label:qualityText(m.label,160,true),value:m.value===null?null:finite(m.value,-1e100,1e100)};}),
+    metrics:list(x.metrics,160,v=>{const m=qualityRecord(v,['label','value']);return {label:qualityText(m.label,160,true),value:m.value===null?null:finite(m.value,-1e100,1e100)};}),
     warnings:list(x.warnings,30,v=>qualityText(v,1000)),
     // Optional and last, so results registered before variables existed keep their fingerprints.
     ...(Object.hasOwn(x,'variables')?{variables:list(x.variables,4,v=>qualityText(v,160,true))}:{}),

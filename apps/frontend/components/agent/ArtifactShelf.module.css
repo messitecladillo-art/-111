@@ -167,3 +167,56 @@
   .launcher:hover .stackMark i:nth-child(1), .launcher:focus-visible .stackMark i:nth-child(1), .launcher[data-open="true"] .stackMark i:nth-child(1) { transform: rotate(6deg); }
   .launcher:hover .stackMark i:nth-child(2), .launcher:focus-visible .stackMark i:nth-child(2), .launcher[data-open="true"] .stackMark i:nth-child(2) { transform: rotate(-3deg); }
 }
+
+@media (forced-colors: active) {
+  .shelf :is(button, input, select):focus-visible,
+  .launcher:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+  .launcher,
+  .iconButton,
+  .search input,
+  .commandInput,
+  .kindFilters button,
+  .historyToggle,
+  .family,
+  .item,
+  .versionPicker select,
+  .importRow select,
+  .importRow button,
+  .captureButton,
+  .primaryButton,
+  .textButton {
+    border: 1px solid ButtonText;
+  }
+  .shelf,
+  .previewShell,
+  .imageViewer,
+  .empty {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none !important;
+  }
+  .header,
+  .filters,
+  .families,
+  .selection,
+  .importSection {
+    border-color: CanvasText;
+  }
+  .launcher[data-open="true"],
+  .kindFilters button[aria-pressed="true"],
+  .historyToggle[aria-pressed="true"],
+  .family[aria-pressed="true"],
+  .item[aria-selected="true"],
+  .item[aria-pressed="true"],
+  .primaryButton {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+}

@@ -492,9 +492,38 @@
   .workbench .case-card:hover, .workbench .qdia-cards article:hover, .wb-lift:hover { transform: none; }
 }
 @media (forced-colors: active) {
-  .workbench, .workbench-sidebar { background: Canvas; color: CanvasText; }
-  .wb-nav-link[aria-current="page"] { border: 1px solid Highlight; color: Highlight; }
-  .workbench :focus-visible { outline-color: Highlight; box-shadow: none; }
+  .workbench,
+  .workbench-sidebar,
+  .wb-command-dialog {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .workbench-sidebar::before {
+    display: none;
+  }
+  .workbench :is(.hero, .qdia-cards article, .case-card, .diagnose-form, .diagnosis-result, .rule-form, .rule-result, .workspace-shell, .closing-cta, .diagnose-modes, .wb-command-dialog, .wb-command-search, .wb-sidebar-search, .wb-search-toggle, .wb-theme-toggle, .wb-menu, .wb-top-cta, .wb-agent-entry, .wb-canvas-return, .case-source-options label, button, input, select, textarea) {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .workbench :is(table, th, td, .wb-brand, .wb-sidebar-footer, .wb-footer, .project-sidebar, .wb-command-footer) {
+    border-color: CanvasText;
+  }
+  .wb-nav-link[aria-current="page"],
+  .workbench .diagnose-modes button[aria-selected="true"],
+  .wb-command-list button[aria-selected="true"],
+  .workbench .case-source-options label[data-selected="true"],
+  .workbench .project-list-item.active,
+  .workbench :is(.primary-button, .gold-button, .wb-top-cta) {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border: 1px solid Highlight !important;
+  }
+  .workbench :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
 }
 
 /* Agent 诊断: readiness check and the literature-based topic lab share one section. */

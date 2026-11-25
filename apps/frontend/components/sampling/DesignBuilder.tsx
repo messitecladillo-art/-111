@@ -94,7 +94,7 @@ export default function DesignBuilder({ onReportInsert }: { onReportInsert?: (in
       {probability && inclusion === null && <Formula compact label="多阶段设计的入样概率与权数" tex={String.raw`\pi_i=\prod_{k=1}^{K}\pi_{i}^{(k)},\qquad w_i=\frac{1}{\pi_i}`} />}
     </section>; })}
     <button type="button" className={styles.ghost} disabled={groups.list.length >= 4} onClick={() => setGroups({ ...groups, list: [...groups.list, { id: crypto.randomUUID(), name: `群体${groups.list.length + 1}`, population: '', completes: '', tree: '', stages: [stage(crypto.randomUUID(), '', '', 'srs')] }] })}>＋ 添加调查群体</button>
-    <Statement title="抽样设计段落草稿" text={statement} footnote="依据上方填写生成。名单来源、抽取时的随机种子与抽取记录请放入附录。" action={onReportInsert && <button type="button" disabled={sending || !statement} title="把段落、各群体抽样框表和入样概率公式写入报告的「抽样设计」一节" onClick={() => void send()}>{sending ? '正在写入…' : '写入报告'}</button>} />
+    <Statement title="抽样设计段落草稿" text={statement} footnote="依据上方填写生成。名单来源、抽取时的随机种子与抽取记录请放入附录。" action={onReportInsert && <button type="button" disabled={sending || !statement} title="把段落、各群体抽样框表和入样概率公式写入报告的“抽样设计”一节" onClick={() => void send()}>{sending ? '正在写入…' : '写入报告'}</button>} />
     {sendError && <p className={styles.error} role="alert">{sendError}</p>}
     <Notes items={allProbability ? ['所有群体的各阶段都是概率抽样，可以按多阶段设计计算抽样误差（见“复杂样本估计”）。'] : ['含有拦截、配额或方便抽样阶段的群体不是概率样本：可以用前几阶段的随机抽取说明覆盖面，但不应报告严格的抽样误差。']} />
   </div>;

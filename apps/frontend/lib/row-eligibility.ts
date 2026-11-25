@@ -76,7 +76,7 @@ export function assessEligibility(
     closure.add(id);
     const item = byId.get(id);
     if (!item) { problems.add('所选题目或条件父题不存在，请重新核对问卷版本。'); continue; }
-    if (duplicateIds.has(id)) problems.add('所选题目或条件父题的 ID 不唯一，无法判定逐行资格。');
+    if (duplicateIds.has(id)) problems.add('所选题目或条件父题的编号不唯一，无法判定逐行资格。');
     if (item.question.condition) pending.push(item.question.condition.questionId);
   }
   if (!selected.size) problems.add('请先选择需要核验资格的题目。');
@@ -201,7 +201,7 @@ export function assessEligibility(
     else if (states.includes('unknown')) assessment.unknownRows++;
     else if (contradiction) {
       // Impossible for a structurally valid ancestor closure: keep the invariant fail-closed.
-      problems.add('内部资格一致性检查失败：应答行含有隐藏祖先作答，未允许分析。');
+      problems.add('内部资格一致性检查未通过，应答行含有隐藏祖先作答，未允许分析。');
       assessment.unknownRows++;
     } else {
       assessment.eligibleRows++; assessment.eligibleIndices.push(rowIndex);

@@ -40,3 +40,63 @@
 @container (max-width: 420px) { .shapes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .appearance { padding: 10px; } }
 @media (prefers-reduced-motion: reduce) { .shape { transition: none; } }
+
+@media (forced-colors: active) {
+  .appearance,
+  .agentBar,
+  .agentHud,
+  .empty,
+  .promptInput,
+  .controls select {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
+  }
+  .autoBtn,
+  .shape,
+  .upload,
+  .cancel {
+    background: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonBorder;
+    box-shadow: none;
+  }
+  .aiBtn:disabled,
+  .controls select:disabled,
+  .upload:disabled {
+    color: GrayText;
+    border-color: GrayText;
+    opacity: 1;
+  }
+  .agentBadge,
+  .aiBtn,
+  .autoBtn[aria-pressed="true"],
+  .shape[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+    box-shadow: none;
+  }
+  .outline,
+  .outlineDashed {
+    stroke: CanvasText;
+    opacity: 0.7;
+  }
+  .status button,
+  .empty button {
+    color: LinkText;
+  }
+  .shape:focus-visible,
+  .upload:focus-visible,
+  .cancel:focus-visible,
+  .autoBtn:focus-visible,
+  .aiBtn:focus-visible,
+  .promptInput:focus-visible,
+  .controls select:focus-visible,
+  .controls input:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}

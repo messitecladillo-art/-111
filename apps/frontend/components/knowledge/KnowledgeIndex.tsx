@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useKnowledge } from './KnowledgeProvider';
-import { DOMAINS } from './catalog';
+import { DOMAINS } from './domains';
 import KnowledgeEntryView from './KnowledgeEntryView';
 import styles from './Knowledge.module.css';
 

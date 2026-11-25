@@ -65,7 +65,7 @@ const value=(v:number|null|undefined)=>v===null||v===undefined?'未提供／未�
 function dataRecord(r:ResultSnapshot):string{
   const lines=[`结果：${r.title}（${r.id}）`,`数据类别：${classification[r.classification]}`,`登记来源：${r.sourceName}`,`来源链接：${r.sourceUrl||'未登记'}`,`数据来源 SHA-256：${r.sourceHash}`,`分析结果 SHA-256：${r.resultHash}`,`方法：${r.method}；有效样本 n=${r.n}；进入计算的记录=${r.total}。`];
   const receipt=r.receipt;
-  if(!receipt)lines.push('历史结果未登记计算凭据：具体剔除原因、参数及上游分母链不可追溯；不补写处理过程。');
+  if(!receipt)lines.push('该项历史结果未登记计算凭据，具体剔除原因、参数设定及上游分母链已不可追溯，此处不补写处理过程。');
   else{
     const s=receipt.sample;
     lines.push(`计算口径：${receipt.interpretation}`,`计算 ${s.calculationRows} → 有效 ${s.analysisRows}；剔除 ${s.excludedRows}。`,`原因计数：缺失 ${s.missingRows}；无效 ${s.invalidRows}；超量程 ${value(s.outOfRangeRows)}。原因可能重叠，不相加为剔除总量。`,`百分比分母：${basis[receipt.percentageBasis]}。`);
@@ -84,7 +84,7 @@ function dataRecord(r:ResultSnapshot):string{
 }
 function aiRecord(r:AiUsageRecord):string{
   const states={queued:'排队',running:'运行中',succeeded:'收到成功回执',failed:'收到失败回执',cancelled:'已取消',unknown:'调用结果未知，待对账'};
-  return [`调用 ${r.id}：${purposes[r.purpose]}`,`供应商 ${r.provider??'未登记'}；模型 ${r.model??'未登记'}；状态：${states[r.status]}。`,`请求时间：${r.requestedAt??'未登记'}；结束时间：${r.finishedAt??'未登记'}。`,`输入内容指纹：${r.inputHash??'未登记'}；输出内容指纹：${r.outputHash??'未登记'}。`,`实际回执用量：输入 ${value(r.usage.inputTokens)} tokens；输出 ${value(r.usage.outputTokens)} tokens；费用 ${value(r.usage.cost)}${r.usage.currency?` ${r.usage.currency}`:''}。`,...(r.status==='unknown'?['结果未知不等于失败或免费；本记录不触发重试。']:[])].join('\n');
+  return [`调用 ${r.id}：${purposes[r.purpose]}`,`供应商 ${r.provider??'未登记'}；模型 ${r.model??'未登记'}；当前状态为${states[r.status]}。`,`请求时间：${r.requestedAt??'未登记'}；结束时间：${r.finishedAt??'未登记'}。`,`输入内容指纹：${r.inputHash??'未登记'}；输出内容指纹：${r.outputHash??'未登记'}。`,`本次回执记录输入词元 ${value(r.usage.inputTokens)}，输出词元 ${value(r.usage.outputTokens)}，费用 ${value(r.usage.cost)}${r.usage.currency?` ${r.usage.currency}`:''}。`,...(r.status==='unknown'?['结果未知不等于失败或免费；本记录不触发重试。']:[])].join('\n');
 }
 function splitBody(text:string):string[]{
   const chunks:string[]=[];let part='';
@@ -143,10 +143,10 @@ export async function createEvidenceAppendixProposal(content:EditorContent,optio
   const base=JSON.stringify(content),snapshot=parseEditorContent(JSON.parse(base)),ledger=parseAiUsageLedger(options.aiLedger,options.projectId);
   if(snapshot.quality)await verifyResearchQuality(snapshot.quality);
   const results=snapshot.quality?.results??[],findings=snapshot.quality?.findings??[];
-  const data=['范围：以下仅转录已登记的数据来源、计算参数与汇总口径；来源指纹不等于原文件已经重新核验。未登记的过程与时间不补写。',...(results.length?results.map(dataRecord):['尚未登记分析结果，数据来源、处理过程与分母链待补充。'])].join('\n\n');
-  const ai=[ledger.coverage==='unavailable'?'记录覆盖：项目级 AI 使用凭据尚未接入本附录，无法判断是否使用过 AI；不能以此空记录声明未使用 AI。':ledger.scope?`记录覆盖：仅本人问卷提案最近 200 条，本次接入 ${ledger.records.length} 条；其他模块、队友及外部工具未覆盖。空记录不能声明未使用 AI。`:`记录覆盖：仅包含调用方提供且绑定当前项目的 ${ledger.records.length} 条脱敏凭据，完整覆盖尚未核验。`, '本附录不包含提示词、原始答卷或密钥；缺少的时间、用量与费用保持未登记。',...ledger.records.map(aiRecord)].join('\n\n');
+  const data=['本附录仅如实转录已登记的数据来源、计算参数与汇总口径，来源指纹不等同于原文件已经重新核验，未登记的过程与时间均不补写。',...(results.length?results.map(dataRecord):['尚未登记分析结果，数据来源、处理过程与分母链待补充。'])].join('\n\n');
+  const ai=[ledger.coverage==='unavailable'?'就记录覆盖范围而言，项目级 AI 使用凭据尚未接入本附录，无法判断是否使用过 AI，不能以此空记录声明未使用 AI。':ledger.scope?`就记录覆盖范围而言，当前仅本人问卷提案最近 200 条纳入统计，本次共接入 ${ledger.records.length} 条，其他模块、队友及外部工具未覆盖；空记录不能声明未使用 AI。`:`就记录覆盖范围而言，当前仅包含调用方提供且绑定当前项目的 ${ledger.records.length} 条脱敏凭据，完整覆盖尚未核验。`, '本附录不包含提示词、原始答卷或密钥；缺少的时间、用量与费用保持未登记。',...ledger.records.map(aiRecord)].join('\n\n');
   const refs=[];for(const finding of findings)refs.push(await referenceFor(snapshot,finding));
-  const claims=['范围：主张与已登记依据的版本对应，不自动判定事实真假。报告与 PPT 中的依据位置不等同于已经写入该项主张。',...(refs.length?refs.map(formatDefenseEvidenceReference):['尚未登记研究发现，主张与依据对照待补充。'])].join('\n\n');
+  const claims=['本附录核对研究主张与已登记依据的版本对应关系，不自动判定事实真假；报告与 PPT 中的依据位置不等同于已经写入该项主张。',...(refs.length?refs.map(formatDefenseEvidenceReference):['尚未登记研究发现，主张与依据对照待补充。'])].join('\n\n');
   const groups:Record<AppendixKind,string[]>={data:[],ai:[],claims:[]},sections:ReportSection[]=[];
   for(const [kind,text] of [['data',data],['ai',ai],['claims',claims]] as const){const generated=await sectionsFor(kind,text);sections.push(...generated);groups[kind]=generated.map(s=>s.id);}
   return {schema:'EvidenceAppendixProposal/v1',base,baseHash:await digestText(base),sections,groups,coverage:{resultCount:results.length,legacyReceiptCount:results.filter(r=>!r.receipt).length,findingCount:findings.length,ai:ledger.coverage,aiRecords:ledger.records.length,...(ledger.scope?{aiScope:ledger.scope}:{})}};

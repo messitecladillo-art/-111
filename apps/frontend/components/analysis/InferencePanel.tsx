@@ -26,7 +26,7 @@ export default function InferencePanel({ inference }: { inference: Inference }) 
     <header className={styles.head}><span className={styles.eyebrow}>推断检验</span><strong>{primary.name}</strong></header>
     <div className={styles.report}><code>{primary.line}</code><button type="button" onClick={() => void copy()} aria-live="polite">{copied ? '已复制' : '复制报告句'}</button></div>
     <p className={styles.reading} data-tone={primary.p === null ? 'none' : primary.p < ALPHA ? 'support' : 'insufficient'}>{reading(primary.p)}</p>
-    {effect && effect.value !== null && <dl className={styles.effect}><div><dt>{effect.name}</dt><dd>{formatStat(effect.value)}</dd></div>{effect.interval && <div><dt>95% 区间</dt><dd>[{formatStat(effect.interval.lower)}, {formatStat(effect.interval.upper)}]</dd></div>}</dl>}
+    {effect && effect.value !== null && <dl className={styles.effect}><div><dt>{effect.name}</dt><dd>{formatStat(effect.value)}</dd></div>{effect.interval && <div><dt>95% 区间</dt><dd>{formatStat(effect.interval.lower)} ～ {formatStat(effect.interval.upper)}</dd></div>}</dl>}
     {disagree && <p className={styles.alert} role="note">主要检验与稳健性对照在 .05 水平的结论不一致，请审慎解读，优先报告更保守的结果。</p>}
     {!!robustness.length && <div className={styles.robust}><h5>稳健性对照</h5><ul>{robustness.map(r => <li key={r.name}><span>{r.name}</span><code>{r.line}</code></li>)}</ul></div>}
     {!!comparisons?.length && <div className={styles.pairs}><h5>两两比较 · Welch t · Holm 校正</h5><div className={styles.scroll} tabIndex={0} aria-label="两两比较结果，可横向滚动"><table>

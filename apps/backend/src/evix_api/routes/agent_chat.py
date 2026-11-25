@@ -1,19 +1,47 @@
+import hashlib
+import json
 from fastapi import Depends, Request
+from fastapi.responses import Response
 from evix_api.requests import body
 from shared.contracts import uuid_string
 from multi_agent.agents.research_agent.services import agent_chat as domain
+from multi_agent.tool_registry import public_tool_catalog
 from application.services.agent_chat import AgentChatService
 from application.services.section_draft import SectionDraftService
 from multi_agent.agents.writing_agent.services import section_draft
 
 
+def _etag_matches(header_val: str | None, etag: str) -> bool:
+    if not header_val:
+        return False
+    target = etag.removeprefix("W/").strip()
+    for candidate in header_val.split(","):
+        token = candidate.strip()
+        if token == "*" or token.removeprefix("W/").strip() == target:
+            return True
+    return False
+
+
 def register_agent_chat(app, settings, db, session_user, lock_user, operation, owned_service, generator):
     service = AgentChatService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator)
     drafts = SectionDraftService(settings=settings, lock_user=lock_user, operation=operation, owned_service=owned_service, generator=generator)
+    catalog_bytes = json.dumps(public_tool_catalog(), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    catalog_etag = f'"sha256-{hashlib.sha256(catalog_bytes).hexdigest()[:24]}"'
+    catalog_headers = {
+        "Cache-Control": "public, max-age=300, must-revalidate",
+        "ETag": catalog_etag,
+        "Vary": "Accept-Encoding",
+    }
 
     def auth(request: Request, session=Depends(db)):
         user, _ = session_user(request, session)
         return user
+
+    @app.get('/api/agent/tools')
+    def tool_catalog(request: Request):
+        if _etag_matches(request.headers.get("if-none-match"), catalog_etag):
+            return Response(status_code=304, headers=catalog_headers)
+        return Response(content=catalog_bytes, media_type="application/json", headers=catalog_headers)
 
     @app.get('/api/agent/turns/{turn_id}')
     def receipt(turn_id: str, user=Depends(auth), session=Depends(db)):

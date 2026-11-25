@@ -179,26 +179,26 @@ export const RIGHT_VIEW_OPTIONS: ReadonlyArray<{ id: LiveFlowRightViewId; label:
   { id: 'design', label: '研究设计', group: 'plan' },
   { id: 'grounding', label: '文献与观察', group: 'plan' },
   { id: 'deep_research', label: '深度研究', group: 'plan' },
-  { id: 'search_persona', label: '搜索 Persona', group: 'persona' },
-  { id: 'build_persona', label: '构建 Persona', group: 'persona' },
+  { id: 'search_persona', label: '检索受访画像', group: 'persona' },
+  { id: 'build_persona', label: '构建受访画像', group: 'persona' },
   { id: 'interview_1', label: '访谈 1 · 甄别与基础', group: 'field' },
   { id: 'interview_2', label: '访谈 2 · 情境与量表', group: 'field' },
   { id: 'interview_3', label: '访谈 3 · 边界与开放题', group: 'field' },
   { id: 'discussion', label: '讨论 · 焦点圆桌', group: 'field' },
   { id: 'report', label: '报告 · 洞察与诊断', group: 'output' },
-  { id: 'stage_3d', label: '3D 舞台', group: 'output' },
+  { id: 'stage_3d', label: '空间舞台', group: 'output' },
 ];
 
 export const FLOW_CHECKLIST_STEPS: LiveFlowTodoItem[] = [
   { id: 'design_study', title: '生成研究设计与测量架构', viewId: 'design', toolName: 'designStudy', doneAtStep: 2 },
   { id: 'social_grounding', title: '国奖档案与前沿语料观察', viewId: 'grounding', toolName: 'socialGrounding', doneAtStep: 3 },
   { id: 'deep_research', title: '构念映射与保真度基线研究', viewId: 'deep_research', toolName: 'deepResearch', doneAtStep: 4 },
-  { id: 'search_personas', title: '检索配额分层与高风险锚点', viewId: 'search_persona', toolName: 'searchPersonas', doneAtStep: 5 },
-  { id: 'build_persona', title: '构建全套硅基受访人设', viewId: 'build_persona', toolName: 'buildPersona', doneAtStep: 6 },
-  { id: 'create_panel', title: '组建受访 Panel 与 3D 舞台定位', viewId: 'stage_3d', toolName: 'createPanel', doneAtStep: 7 },
-  { id: 'interview_1', title: '访谈 A：甄别过滤与高频特征', viewId: 'interview_1', toolName: 'interviewChat', doneAtStep: 8 },
-  { id: 'interview_2', title: '访谈 B：核心量表与情境压力测试', viewId: 'interview_2', toolName: 'interviewChat', doneAtStep: 9 },
-  { id: 'interview_3', title: '访谈 C：反向题校验与开放建议', viewId: 'interview_3', toolName: 'interviewChat', doneAtStep: 10 },
+  { id: 'search_personas', title: '检索配额分层与重点关注人群', viewId: 'search_persona', toolName: 'searchPersonas', doneAtStep: 5 },
+  { id: 'build_persona', title: '构建全套模拟受访画像', viewId: 'build_persona', toolName: 'buildPersona', doneAtStep: 6 },
+  { id: 'create_panel', title: '组建受访样本组与空间舞台定位', viewId: 'stage_3d', toolName: 'createPanel', doneAtStep: 7 },
+  { id: 'interview_1', title: '首轮访谈 · 甄别过滤与高频特征', viewId: 'interview_1', toolName: 'interviewChat', doneAtStep: 8 },
+  { id: 'interview_2', title: '次轮访谈 · 核心量表与情境压力测试', viewId: 'interview_2', toolName: 'interviewChat', doneAtStep: 9 },
+  { id: 'interview_3', title: '末轮访谈 · 反向题校验与开放建议', viewId: 'interview_3', toolName: 'interviewChat', doneAtStep: 10 },
   { id: 'discussion', title: '跨分层焦点小组圆桌讨论', viewId: 'discussion', toolName: 'discussionChat', doneAtStep: 11 },
   { id: 'generate_report', title: '生成结构化预测试与洞察报告', viewId: 'report', toolName: 'generateReport', doneAtStep: 12 },
 ];
@@ -367,7 +367,7 @@ export function buildAtypicaFlowBlueprint(input: {
     '访谈 2',
     '第二轮访谈 · 核心量表与情境压力测试',
     scenarioNames.length
-      ? `注入情境变量「${scenarioNames.join(' vs ')}」，检验跨情境态度敏感度与李克特分值分散度。`
+      ? `结合情境变量“${scenarioNames.join(' 与 ')}”，检验跨情境态度敏感度与李克特分值分散度。`
       : '测试核心构念量表的区分效度，识别直白凑数或直线作答风险。',
     rounds.r2,
     spotlight,
@@ -379,7 +379,7 @@ export function buildAtypicaFlowBlueprint(input: {
     'interview_3',
     '访谈 3',
     '第三轮访谈 · 反向题校验与语义困惑探针',
-    '逐题追踪反向计分一致性与开放文本槽位，捕捉双关表述与缺少“不适用”出口的题干。',
+    '逐题追踪反向计分一致性与开放回答，捕捉双关表述与缺少“不适用”出口的题干。',
     rounds.r3,
     spotlight,
     design,
@@ -405,10 +405,10 @@ export function buildAtypicaFlowBlueprint(input: {
     speakerType: 'moderator',
     alias: '证见 · 焦点主持人',
     roleBadge: '主持人开场',
-    content: `围绕《${studyTitle}》的测量设计（共 ${design.questions.length} 题${scenarioNames.length ? ` · 情境「${scenarioNames.join(' / ')}」` : ''}），请来自不同配额层的 ${cast.length} 位受访者先从「${anchorQ?.text.slice(0, 26) || '核心满意度题项'}」出发，谈谈第一反应以及最容易卡顿/失真的地方。`,
+    content: `围绕《${studyTitle}》的测量设计（共 ${design.questions.length} 题${scenarioNames.length ? ` · 情境“${scenarioNames.join(' / ')}”` : ''}），请来自不同配额层的 ${cast.length} 位受访者先从“${anchorQ?.text.slice(0, 26) || '核心满意度题项'}”出发，谈谈第一反应以及最容易卡顿或失真的地方。`,
     nextPersonaId: cast[0]?.persona.id,
     nextAlias: cast[0]?.profile.alias,
-    routingReason: `优先由「${cast[0]?.profile.archetype || '首轮画像'}」破冰定调，先暴露高频群体在无提示状态下的最直观作答心态。`,
+    routingReason: `优先由“${cast[0]?.profile.archetype || '首轮画像'}”破冰定调，先暴露高频群体在无提示状态下的最直观作答心态。`,
   });
 
   cast.forEach((entry, idx) => {
@@ -423,8 +423,8 @@ export function buildAtypicaFlowBlueprint(input: {
     const prevAlias = idx > 0 ? cast[idx - 1].profile.alias.split(' · ').pop() : '';
     const rawSpeech =
       idx === 0
-        ? `我先坦白讲，刚看到「**${renderedPrompt.slice(0, 24)}**」这题时，我直接选了「**${ansText}**」。${entry.profile.catchphrase}${ans?.unclear ? ` 另外这题我觉得：${ans.unclear}` : ''}`
-        : `听完${prevAlias}说的，我站**${entry.profile.archetype}**的日常视角反倒卡在选项边界上——刚刚这题我给了「**${ansText}**」，但其实**真实场景比选项窄得多**。${entry.profile.catchphrase}${ans?.unclear ? ` 吐槽一句：${ans.unclear}` : ''}`;
+        ? `我先坦白讲，刚看到“**${renderedPrompt.slice(0, 24)}**”这题时，我直接选了“**${ansText}**”。${entry.profile.catchphrase}${ans?.unclear ? ` 另外这题我觉得，${ans.unclear}` : ''}`
+        : `听完${prevAlias}说的，我站**${entry.profile.archetype}**的日常视角反倒卡在选项边界上——刚刚这题我给了“**${ansText}**”，但其实**真实场景比选项窄得多**。${entry.profile.catchphrase}${ans?.unclear ? ` 补充一句，${ans.unclear}` : ''}`;
     const deai = detectAiFlavor(rawSpeech);
     const next = cast[idx + 1];
 
@@ -440,7 +440,7 @@ export function buildAtypicaFlowBlueprint(input: {
       nextPersonaId: next?.persona.id,
       nextAlias: next?.profile.alias,
       routingReason: next
-        ? `由「${next.profile.archetype}」(${next.persona.code}) 接麦形成跨分层对照，检验同题干是否在不同背景间产生理解漂移。`
+        ? `由“${next.profile.archetype}”（${next.persona.code}）接麦形成跨分层对照，检验同题干是否在不同背景间产生理解漂移。`
         : undefined,
     });
   });
@@ -451,7 +451,7 @@ export function buildAtypicaFlowBlueprint(input: {
       speakerType: 'moderator',
       alias: '证见 · 焦点主持人',
       roleBadge: '主持人收束追问',
-      content: `三位先从各自体验拆出了「**题干边界不清**」与「**情境敏感差异**」。综合 ${run.responses.length} 条硅基样本轨迹（样本熵 ${fidelity.diversity.entropy === null ? '—' : fidelity.diversity.entropy.toFixed(2)}，直线作答率 ${formatPctOrDash(fidelity.forward.straightlining)}），当前发现 ${blockers} 处阻断问题与 ${warnings} 处建议修订项。你可在下方输入自定义问题，直接向本组继续追问。`,
+      content: `三位先从各自体验拆出了“**题干边界不清**”与“**情境敏感差异**”。综合 ${run.responses.length} 条模拟受访记录（样本熵 ${fidelity.diversity.entropy === null ? '—' : fidelity.diversity.entropy.toFixed(2)}，直线作答率 ${formatPctOrDash(fidelity.forward.straightlining)}），当前发现 ${blockers} 处阻断问题与 ${warnings} 处建议修订项。你可在下方输入自定义问题，直接向本组继续追问。`,
     });
   }
 
@@ -459,19 +459,19 @@ export function buildAtypicaFlowBlueprint(input: {
     {
       id: 1,
       platform: '国奖档案',
-      source: `正大杯知识底座 · ${CORPUS_RESERVE_SUMMARY.totalReports} 篇国奖`,
+      source: `市调大赛实证知识库 · ${CORPUS_RESERVE_SUMMARY.totalReports} 篇国奖`,
       title: '历届国奖问卷预测试与构念对齐基准',
       metric: `样本参考 ${CORPUS_RESERVE_SUMMARY.totalPages.toLocaleString()} 页语料`,
-      excerpt: '高评分报告均要求在正式大规模投放前完成小样本预测试，显式追踪跳题可达性与反向计分题一致性，避免因题项歧义拉低量表α信度。',
+      excerpt: '高评分报告均要求在正式大规模投放前完成小样本预测试，显式追踪跳题可达性与反向计分题一致性，避免因题项歧义拉低量表 α 信度。',
       cited: true,
     },
     {
       id: 2,
       platform: '量表库',
       source: `${CORPUS_RESERVE_SUMMARY.surveyCategories} 大行业问卷范式库`,
-      title: `目标总体「${population}」分层配额覆盖校验`,
-      metric: `${personas.length} 位硅基锚点 · ${attributes.length} 维属性`,
-      excerpt: `已按 ${attrSummary || '预设特征'} 最大余数法精确锁定配额；其中保真度风险上升画像共 ${fidelity.risk.elevated}/${fidelity.risk.total} 位，须防止大模型向均值趋同。`,
+      title: `目标总体“${population}”分层配额覆盖校验`,
+      metric: `${personas.length} 位受访样本 · ${attributes.length} 维属性`,
+      excerpt: `已按 ${attrSummary || '预设特征'} 最大余数法精确锁定配额；其中代表性偏差关注画像共 ${fidelity.risk.elevated}/${fidelity.risk.total} 位，须防止模拟作答向均值趋同。`,
       cited: true,
     },
     {
@@ -480,7 +480,7 @@ export function buildAtypicaFlowBlueprint(input: {
       source: '社会科学图灵测试与防替代准则',
       title: '模拟回答与真实调查样本隔离红线',
       metric: `多样熵 H=${fidelity.diversity.entropy === null ? '—' : fidelity.diversity.entropy.toFixed(2)} · 直线率 ${formatPctOrDash(fidelity.forward.straightlining)}`,
-      excerpt: '硅基受访者仅用于问卷表述排雷、情境敏感性试算与流程走查，绝不得直接充当真实样本写入最终推断统计表。',
+      excerpt: '模拟受访者仅用于问卷表述排雷、情境敏感性试算与流程走查，绝不得直接充当真实样本写入最终推断统计表。',
       cited: true,
     },
     {
@@ -496,38 +496,38 @@ export function buildAtypicaFlowBlueprint(input: {
 
   const designLines = [
     `## 一、研究核心张力与测度设计`,
-    `针对《${studyTitle}》，将抽象议题拆解为 ${design.questions.length} 道可量化与可追踪题项，聚焦「${population}」在${scenarioNames.length ? `「${scenarioNames.join(' / ')}」情境下的` : '日常真实行为情境下的'}态度阈值与卡顿痛点。`,
+    `针对《${studyTitle}》，将抽象议题拆解为 ${design.questions.length} 道可量化与可追踪题项，聚焦“${population}”在${scenarioNames.length ? `“${scenarioNames.join(' / ')}”情境下的` : '日常真实行为情境下的'}态度阈值与卡顿痛点。`,
     `## 二、分层配额策略（N = ${personas.length}）`,
-    attributes.map(a => `- **${a.label}**：${a.levels.map(l => `${l.label} (权重 ${l.weight})`).join(' · ')}`).join('\n'),
-    `## 三、分轮次硅基访谈路由`,
-    `- **第 1 轮（甄别与高频行为）**：测查 ${rounds.r1.map(q => `\`${q.variable || q.id}\``).join('、')}`,
-    `- **第 2 轮（核心量表与情境）**：测查 ${rounds.r2.map(q => `\`${q.variable || q.id}\``).join('、')}`,
-    `- **第 3 轮（反向一致与建议）**：测查 ${rounds.r3.map(q => `\`${q.variable || q.id}\``).join('、')}`,
+    attributes.map(a => `- **${a.label}**涵盖 ${a.levels.map(l => `${l.label}（权重 ${l.weight}）`).join(' · ')}`).join('\n'),
+    `## 三、分轮次预测试访谈安排`,
+    `- **第 1 轮（甄别与高频行为）**聚焦测查 ${rounds.r1.map(q => `\`${q.variable || q.id}\``).join('、')}`,
+    `- **第 2 轮（核心量表与情境）**聚焦测查 ${rounds.r2.map(q => `\`${q.variable || q.id}\``).join('、')}`,
+    `- **第 3 轮（反向一致与建议）**聚焦测查 ${rounds.r3.map(q => `\`${q.variable || q.id}\``).join('、')}`,
     `## 四、质量门禁与交付标准`,
-    `执行 Cramér's V 反向连续性、正反向题一致性、直线作答率及封闭题标准化信息熵检验，并在结尾生成可溯源 CSV 与预测试修订清单。`,
+    `执行 Cramér's V 反向连续性、正反向题一致性、直线作答率及封闭题标准化信息熵检验，并在结尾生成可溯源数据表与预测试修订清单。`,
   ];
 
   return {
     studyTitle,
     population,
-    panelName: `${population} · 全层级仿真队列`,
+    panelName: `${population} · 分层预测试样本组`,
     panelId: String(10000 + (hashSeed(tokenBase) % 89999)),
     timelineToken: shortToken(tokenBase),
     planCard: {
       title: `预测试方案 · 《${cleanPlanSubject}》`,
-      background: `围绕「${studyTitle}」（目标总体：${population}），当前问卷包含 ${design.questions.length} 道题项${scenarioNames.length ? `及 ${scenarioNames.length} 个对照情境（${scenarioNames.join('、')}）` : ''}。为避免直接投放产生高跳出与理解偏差，先以硅基样本队列执行全流程模拟推演。`,
+      background: `围绕“${studyTitle}”（面向${population}），当前问卷包含 ${design.questions.length} 道题项${scenarioNames.length ? `及 ${scenarioNames.length} 个对照情境（${scenarioNames.join('、')}）` : ''}。为避免直接投放产生高跳出与理解偏差，先通过分层预测试样本组开展全流程模拟试答。`,
       goals: [
-        '识别表述模糊、带诱导倾向或缺乏「不适用」出口的题项',
-        `沿「${attributes.map(a => a.label).join(' · ') || '核心特征'}」分层对比回答分布差异`,
-        '通过 1v1 深访实录与焦点圆桌定位真实消费/行为阻碍因子',
+        '识别表述模糊、带诱导倾向或缺乏“不适用”出口的题项',
+        `沿“${attributes.map(a => a.label).join(' · ') || '核心特征'}”分层对比回答分布差异`,
+        '通过一对一深访实录与焦点圆桌定位真实消费与行为阻碍因素',
       ],
-      targetPopulation: `${personas.length} 位全分层硅基受访者（${attributes.map(a => a.label).join('、') || '默认配额'}）`,
+      targetPopulation: `${personas.length} 位分层模拟受访者（${attributes.map(a => a.label).join('、') || '默认配额'}）`,
       methods: [
-        '1. 按最大余数法锁定配额，构建具象口癖与生活境况的 AI 受访人设',
-        '2. 执行 3 轮分主题 1v1 访谈与跨组焦点小组圆桌讨论',
+        '1. 按最大余数法锁定配额，构建贴合生活境况与语言习惯的受访画像',
+        '2. 开展 3 轮分主题一对一访谈与跨组焦点小组圆桌讨论',
         '3. 计算 Cramér V 与多样熵，输出可回溯至个体受访编码的预测试诊断报告',
       ],
-      deliverable: `结构化预测试诊断报告 · 全量模拟样本矩阵 (${run.responses.length} 条回答) · 3D 空间群像分布`,
+      deliverable: `结构化预测试诊断报告 · 全量模拟样本记录（${run.responses.length} 条回答） · 空间群像分布`,
     },
     clarificationOptions: [
       {
@@ -541,9 +541,9 @@ export function buildAtypicaFlowBlueprint(input: {
       },
       {
         id: 'mode',
-        prompt: '希望以何种节奏在右侧画布观摩实时推演?',
+        prompt: '希望以何种节奏在右侧画布观摩实时演练？',
         choices: [
-          { id: 'live', label: '1:1 实时逐阶段推演（同步联动 3D 舞台）' },
+          { id: 'live', label: '逐阶段实时演练（同步联动空间舞台）' },
           { id: 'fast', label: '疾速全流程贯通并直出诊断报告' },
         ],
       },
@@ -551,11 +551,11 @@ export function buildAtypicaFlowBlueprint(input: {
     todos: FLOW_CHECKLIST_STEPS,
     designMarkdown: designLines.join('\n\n'),
     groundingSources: [
-      { label: '正大杯国奖语料库', count: `${CORPUS_RESERVE_SUMMARY.totalReports} 篇` },
+      { label: '市调大赛国奖语料库', count: `${CORPUS_RESERVE_SUMMARY.totalReports} 篇` },
       { label: '标准问卷模板库', count: `${CORPUS_RESERVE_SUMMARY.surveyFiles} 份` },
-      { label: '高维硅基画像池', count: `${personas.length} 位` },
+      { label: '分层受访画像库', count: `${personas.length} 位` },
     ],
-    groundingSummary: `已结合 ${CORPUS_RESERVE_SUMMARY.totalReports} 篇竞赛规范案例与本问卷 ${design.questions.length} 道题结构，生成 3 类前置研究边界与 ${personas.length} 位配额受访锚点。`,
+    groundingSummary: `已结合 ${CORPUS_RESERVE_SUMMARY.totalReports} 篇竞赛规范案例与本问卷 ${design.questions.length} 道题结构，梳理 3 类前置研究边界与 ${personas.length} 位配额受访样本。`,
     groundingFindings: [
       {
         heading: '1. 问卷构造与跳题逻辑基线',
@@ -566,17 +566,17 @@ export function buildAtypicaFlowBlueprint(input: {
           },
           {
             text: findings.length
-              ? `预检已捕抓到 ${findings.length} 处需复核项（例如「${findings[0].message.slice(0, 32)}…」），应在正式抽样前完成语义微调。`
-              : '静态检查未发现阻断级缺失或循环跳转，可直接进入硅基受访者沉浸式试答与圆桌深挖。',
+              ? `预检已识别到 ${findings.length} 处需复核项（例如“${findings[0].message.slice(0, 32)}…”），应在正式抽样前完成语义微调。`
+              : '静态检查未发现阻断级缺失或循环跳转，可直接进入模拟受访者试答与圆桌深挖。',
             citeIds: [4],
           },
         ],
       },
       {
-        heading: '2. 硅基配额覆盖与防趋同机制',
+        heading: '2. 分层配额覆盖与防趋同机制',
         bullets: [
           {
-            text: `面板精确匹配 ${attributes.length} 个分层属性（${attrSummary || '预设模板'}），避免常见模型样本全部向“温和中立高学历”塌缩的单一视角偏差。`,
+            text: `面板精确匹配 ${attributes.length} 个分层属性（${attrSummary || '预设模板'}），避免常见模拟样本全部向“温和中立高学历”塌缩的单一视角偏差。`,
             citeIds: [2],
           },
           {
@@ -589,37 +589,37 @@ export function buildAtypicaFlowBlueprint(input: {
     evidenceCards,
     deepResearchSections: [
       {
-        title: '核心统计指标预设 · Backward Continuity (Cramér V)',
+        title: '核心统计指标预设 · 反向连续性检验',
         badge: fidelity.backward.verdict === 'pass' ? '通过基线' : '待关注',
-        body: fidelity.backward.attributes.map(a => `- **${a.label}**：最大关联 Cramér's V = **${a.v.toFixed(2)}**（对应题项 ${a.question || '暂无'}）`).join('\n'),
+        body: fidelity.backward.attributes.map(a => `- **${a.label}**最大关联 Cramér's V = **${a.v.toFixed(2)}**（对应题项 ${a.question || '暂无'}）`).join('\n'),
       },
       {
-        title: '量表作答稳健性 · Forward Continuity & Diversity',
+        title: '量表作答稳健性 · 前后一致性与回答离散度',
         badge: `多样熵 ${fidelity.diversity.entropy === null ? '—' : fidelity.diversity.entropy.toFixed(2)}`,
         body: `直线作答率 **${formatPctOrDash(fidelity.forward.straightlining)}** · 正反向一致性 **${formatPctOrDash(fidelity.forward.reversePairs)}** · 跳转违规次数 **${fidelity.forward.routingViolations}** · 完全重复答卷率 **${formatPctOrDash(fidelity.diversity.duplicateRate)}**。`,
       },
       {
-        title: '三维空间分布策略 · 3D 硅基舞台',
+        title: '三维空间分布策略 · 群像聚类舞台',
         badge: `${personas.length} 位在场`,
-        body: `全部 ${personas.length} 位受访者按黄金角螺线排布进驻 3D 舞台；选中任一受访者或按核心问题着色时，其脚底光环与站位弧线同步聚类刷新。`,
+        body: `全部 ${personas.length} 位受访者按黄金角螺线排布进入空间舞台；选中任一受访者或按核心问题着色时，其脚底光环与站位弧线同步聚类刷新。`,
       },
     ],
     enrichedPersonas,
     interviewRounds: { interview_1, interview_2, interview_3 },
     discussionArgs: {
       panelId: String(10000 + (hashSeed(tokenBase) % 89999)),
-      instruction: `背景：围绕《${studyTitle}》开展跨层级硅基焦点圆桌，邀请 ${cast.map(c => `${c.profile.alias} (${c.persona.code})`).join('、')} 互相回应刚才暴露的题干歧义与生活边界。已观测前置量化特征：有效作答 ${run.responses.filter(r => r.status === 'ok').length} 份，预估作答 ${minutes.low}–${minutes.high} 分钟。`,
+      instruction: `围绕《${studyTitle}》开展跨层级焦点圆桌讨论，邀请 ${cast.map(c => `${c.profile.alias}（${c.persona.code}）`).join('、')} 互相回应刚才暴露的题干歧义与生活边界。本轮已完成有效试答 ${run.responses.filter(r => r.status === 'ok').length} 份，预计真实作答耗时 ${minutes.low}–${minutes.high} 分钟。`,
       personaIds: cast.map(c => c.persona.code),
       timelineToken: shortToken(`${tokenBase}:disc`),
     },
-    discussionSummary: `已完成 ${cast.length} 位不同层级受访者的跨组交锋：从「${anchorQ?.variable || 'Q1'}」实际打分延伸到真实使用情境限制，识别出「选项缺少边界」与「口语预期不对称」两条具体改进线索。`,
+    discussionSummary: `已完成 ${cast.length} 位不同层级受访者的跨组交锋，从“${anchorQ?.variable || 'Q1'}”实际打分延伸到真实使用情境限制，识别出“选项缺少边界”与“口语预期不对称”两条具体改进线索。`,
     discussionTurns,
     report: {
-      kicker: '证见 · 硅基样本预测试报告',
+      kicker: '证见 · 问卷预测试诊断报告',
       title: studyTitle,
       subtitle: '从语义歧义排查到真实生活情境校准',
-      lead: `本轮围绕目标总体「${population}」，调用 ${personas.length} 位分层硅基受访者完成 ${run.responses.filter(r => r.status === 'ok').length} 份沉浸式试答与 4 席焦点小组交叉质询。所有结论均严格限制为“问卷预测试与流程演练”，已精准锚定至个体受访者编号与题干。`,
-      sourceNote: `信息来源说明：由 EVI-X 硅基样本矩阵（引擎：${run.engine === 'demo' ? '确定性演示推演' : run.settings.models.join(' / ') || '语言模型'}）生成。严格隔离于真实田野调查数据之外。`,
+      lead: `本轮围绕目标总体“${population}”，组织 ${personas.length} 位分层模拟受访者完成 ${run.responses.filter(r => r.status === 'ok').length} 份预测试试答与 4 席焦点小组交叉讨论。所有结论均严格限制为问卷预测试与流程演练，可逐条回溯至受访者编号与题干。`,
+      sourceNote: `本报告基于证见预测试模拟记录生成（推演方式为${run.engine === 'demo' ? '本地快速推演' : run.settings.models.join(' / ') || '已配置模型服务'}），所有模拟数据均严格隔离于真实田野调查样本之外。`,
       keyFindings: [
         {
           tag: blockers > 0 ? '阻断优先修正' : '结构可通行',
@@ -631,7 +631,7 @@ export function buildAtypicaFlowBlueprint(input: {
         {
           tag: '语义与认知负荷',
           title: warnings > 0 ? `定位 ${warnings} 处易引发歧义或困惑的表述` : '题干口语自然度表现均衡',
-          detail: findings.find(f => f.level !== 'blocker')?.message || `受访者对「${anchorQ?.variable || 'Q1'}」等核心题项均能给出明确落点，建议重点复核低频用户的“不适用”选项出口。`,
+          detail: findings.find(f => f.level !== 'blocker')?.message || `受访者对“${anchorQ?.variable || 'Q1'}”等核心题项均能给出明确落点，建议重点复核低频用户的“不适用”选项出口。`,
         },
         {
           tag: '样本区分度校准',
@@ -665,18 +665,18 @@ export function buildAtypicaFlowBlueprint(input: {
               return `核对 ${varLabel} — ${f.message}`;
             })
           : [
-              `复核题项 ${anchorQ?.variable || 'Q1'} 与反向题组边界：确认低频/无经历受访者是否需要「不适用 / 跳过」出口。`,
+              `复核题项 ${anchorQ?.variable || 'Q1'} 与反向题组边界，确认低频或无经历受访者是否需要补充“不适用”或“跳过”选项。`,
               `校验情境变量对量表均值的影响幅度，观察极值选择是否存在社会赞许性趋同。`,
             ]),
-        '导出本轮完整硅基 CSV 送入「数据分析」模块演练信效度检验脚本（标注为 simulated）。',
-        '进入真实预调查（Pilot n=30~50）对比真实受访者作答耗时与各维度方差分布。',
+        '导出本轮预测试记录至“数据分析”模块演练信效度检验流程（数据已自动标记为模拟来源）。',
+        '开展小规模真实预调查（建议 30–50 份），对比真实受访者作答耗时与各维度得分分布。',
       ],
       followupChips: [
         {
           id: 'revise',
           badge: '问卷防偏调优',
           title: '哪些题干最易引导受访者顺从打高分？',
-          prompt: `请大家直接挑刺：围绕《${studyTitle}》刚才讨论的题目，哪一句问法最容易让人不好意思选低分或直接敷衍勾选？怎么改成大白话？`,
+          prompt: `请大家直接挑刺，围绕《${studyTitle}》刚才讨论的题目，哪一句问法最容易让人不好意思选低分或直接敷衍勾选？怎么改成自然好懂的话？`,
         },
         {
           id: 'scenario',

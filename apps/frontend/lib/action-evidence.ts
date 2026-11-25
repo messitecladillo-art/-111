@@ -106,9 +106,9 @@ export function reviewActionEvidence(value: ActionEvidenceCard): {missing:string
   const warnings=[stage.boundary,'状态、版本标签和证据定位均由用户填写；系统未打开或核验来源，字段齐全也不代表真实、有效或通过质量门禁。'];
   const flagged=(pattern:RegExp)=>ACTION_FIELDS.filter(field=>field.id!=='owner'&&pattern.test(card[field.id])).map(field=>field.label);
   const metrics=flagged(/R[²2]|R\^2|\balpha\b|Cronbach|信度|效度|稳健|显著/i);
-  if(metrics.length)warnings.push(`【${metrics.join('、')}】有统计指标相关用语：请核查是否把指标当作代表性、实施或效果归因的证明。这里只提示位置，也可能命中否定句或引用。`);
+  if(metrics.length)warnings.push(`“${metrics.join('、')}”出现统计指标相关用语，请核查是否把指标当作代表性、实施或效果归因的证明。这里只提示位置，也可能命中否定句或引用。`);
   const action=flagged(/采纳|实施|试点|上线|落地|见效|因果|导致|证明/);
-  if(action.length)warnings.push(`【${action.join('、')}】有实施或归因相关用语：请逐句与自报状态和记录核对。关键词不能判断事件真假，可能命中计划、否定或引用，也不能穷尽风险。`);
+  if(action.length)warnings.push(`“${action.join('、')}”出现实施或归因相关用语，请逐句与自报状态和记录核对。关键词不能判断事件真假，可能命中计划、否定或引用，也不能穷尽风险。`);
   return {missing,warnings,status:missing.length?'incomplete':'needs_human_review',verified:false};
 }
 

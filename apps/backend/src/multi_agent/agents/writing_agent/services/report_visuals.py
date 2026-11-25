@@ -152,7 +152,7 @@ def _frame(value, style):
         if any(palette[key].upper() != color for key, color in expected.items()):
             raise ApiError()
         if value['status'] == 'approved' and (style is None or palette['id'] != style['paletteId'] or palette['version'] != style['version']):
-            raise ApiError(422, 'frame_palette_stale', '页框配色版本已变化，请预览并重新应用。')
+            raise ApiError(422, 'frame_palette_stale', '页框配色版本已更新，请预览后重新应用。')
     except (FrameError, ValueError, TypeError, KeyError, OverflowError, UnicodeError):
         raise ApiError() from None
 
@@ -162,7 +162,7 @@ def validate_report_visuals(content):
     if not isinstance(content, dict) or type(content.get('version')) is not int or content['version'] not in (1, 2, 3):
         raise ApiError()
     version = content['version']
-    visual_keys = ('visualStyle', 'figures', 'reportFrame', 'coverImage', 'frameImage', 'figurePalette')
+    visual_keys = ('visualStyle', 'figures', 'reportFrame', 'coverImage', 'frameImage', 'figurePalette', 'illustrations')
     if version != 3 and any(key in content for key in visual_keys):
         raise ApiError()
     style = _visual_style(content['visualStyle']) if 'visualStyle' in content else None
@@ -179,7 +179,7 @@ def validate_report_visuals(content):
     for figure in figures:
         result = by_result.get(figure['resultId'])
         if not result or result.get('resultHash') != figure['resultHash'] or _number(result.get('n'), 0, 5000, True) != figure['n']:
-            raise ApiError(422, 'figure_result_stale', '共享图形对应的结果版本已变化，请重新登记。')
+            raise ApiError(422, 'figure_result_stale', '共享图形对应的统计结果版本已更新，请重新登记。')
     by_figure = {f['id']: f for f in figures}
     for key, pieces_key in (('report', 'blocks'), ('slides', 'objects')):
         for item in _list(content.get(key, []), 100 if key == 'report' else 40):
@@ -210,4 +210,14 @@ def validate_report_visuals(content):
             raise ApiError()
         if not all(isinstance(palette[k], str) and re.fullmatch(r'#[0-9A-F]{6}', palette[k]) for k in ('primary', 'secondary', 'opposite')):
             raise ApiError()
+    if 'illustrations' in content:
+        from .page_art import SECTION_ILLUSTRATION_LIMITS, section_illustration_bytes
+        illustrations = _list(content['illustrations'], SECTION_ILLUSTRATION_LIMITS['count'])
+        seen_ids, seen_results = set(), set()
+        for item in illustrations:
+            section_illustration_bytes(item)
+            if item['id'] in seen_ids or item['resultId'] in seen_results or item['resultId'] not in by_result:
+                raise ApiError()
+            seen_ids.add(item['id'])
+            seen_results.add(item['resultId'])
     return content

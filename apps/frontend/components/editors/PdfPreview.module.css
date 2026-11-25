@@ -9,3 +9,10 @@
 .message { display: flex; min-height: 260px; height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--wb-muted); font-size: 13px; text-align: center; }
 .message p { margin: 0; }
 .limit { margin: 0; padding: 8px 12px; color: var(--wb-muted); font-size: 11px; border-bottom: 1px solid var(--wb-line); }
+@media (forced-colors: active) {
+  .preview :is(button, input, select):focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; box-shadow: none !important; }
+  .toolbar button, .fit { border: 1px solid ButtonText; }
+  .preview, .toolbar, .viewport, .message, .limit { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none !important; }
+  .preview, .canvas { border: 1px solid CanvasText; box-shadow: none !important; }
+  .toolbar button[aria-pressed="true"], .fit[aria-pressed="true"] { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
+}

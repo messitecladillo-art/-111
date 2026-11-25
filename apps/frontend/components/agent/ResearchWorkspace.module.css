@@ -49,3 +49,55 @@
 .simulationResult li span { display: block; }
 .simulationActions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media(max-width:680px) { .profileGrid { grid-template-columns:1fr; } .profile,.advisor,.result,.confirm,.candidates { margin-left:16px; margin-right:16px; } .options { padding-left:16px; padding-right:16px; } }
+
+
+@media (forced-colors: active) {
+  .workspace,
+  .profile,
+  .advisor,
+  .result,
+  .confirm,
+  .candidates,
+  .simulation,
+  .simulationResult li {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .profile,
+  .advisor,
+  .result,
+  .confirm,
+  .candidates,
+  .simulation,
+  .profileGrid input,
+  .confirm input,
+  .candidates button,
+  .confirm button,
+  .result button,
+  .simulationBody button {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid ButtonText;
+  }
+
+  .settings[open],
+  .candidates article,
+  .simulationResult li {
+    border-color: CanvasText !important;
+  }
+
+  .candidates button:active,
+  .confirm button:active,
+  .result button:active {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .workspace :is(button, input, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

@@ -28,6 +28,11 @@ import type { EditorContent } from '@/lib/editor-model';
 import { placeResult } from '@/lib/report-placement';
 import { appendRegisteredResult } from '@/lib/result-registration';
 import { figureInk } from '@/lib/figure-palette';
+import {
+  DIAGRAM_CATALOG,
+  DIAGRAM_INTENT_LABELS,
+  toDiagramGraphSpec,
+} from '@/lib/resource-library/diagram-catalog';
 import styles from './Studio.module.css';
 
 function toFlow(spec: DiagramGraphSpec): { nodes: Node[]; edges: Edge[] } {
@@ -114,7 +119,8 @@ export default function DrawDiagramStudio({
   const [newNodeLabel, setNewNodeLabel] = useState('');
   const [newNodeRole, setNewNodeRole] = useState<DiagramNodeRole>('process');
   const [selectedId, setSelectedId] = useState<string | null>(initialFlow.nodes[0]?.id ?? null);
-  const [status, setStatus] = useState('支持节点拖拽连线、自动排版与 .drawio XML 双向导出。');
+  const [status, setStatus] = useState('支持节点拖拽连线、智能自动排版与通用流程图源文件双向导入导出。');
+  const [targetSectionId, setTargetSectionId] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const onConnect = useCallback((params: Connection) => {
@@ -130,7 +136,7 @@ export default function DrawDiagramStudio({
     const flow = toFlow(found.spec);
     setNodes(flow.nodes);
     setEdges(flow.edges);
-    setStatus(`已载入「${found.name}」矢量模板。`);
+    setStatus(`已载入“${found.name}”矢量模板。`);
   };
 
   const runAutoLayout = (nextDir = direction) => {
@@ -139,7 +145,7 @@ export default function DrawDiagramStudio({
     setDirection(nextDir);
     setNodes(flow.nodes);
     setEdges(flow.edges);
-    setStatus(`已完成 Dagre 自动排版（${nextDir === 'LR' ? '横向从左到右' : '纵向分层演进'}）。`);
+    setStatus(`已完成智能布局自动排版（${nextDir === 'LR' ? '横向从左到右' : '纵向分层演进'}）。`);
   };
 
   const addCustomNode = () => {
@@ -168,7 +174,7 @@ export default function DrawDiagramStudio({
     setEdges(nextEdges);
     setSelectedId(id);
     setNewNodeLabel('');
-    setStatus(`已添加节点「${clean}」${selectedId ? '并自动连线' : ''}。`);
+    setStatus(`已添加节点“${clean}”${selectedId ? '并自动连线' : ''}。`);
   };
 
   const exportDrawio = () => {
@@ -179,7 +185,7 @@ export default function DrawDiagramStudio({
     a.download = `${title || 'evix-diagram'}.drawio`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setStatus('已导出标准 .drawio XML，可直接在 diagrams.net 打开继续精修。');
+    setStatus('已导出可编辑流程图源文件，可在常用绘图软件中打开继续精修。');
   };
 
   const importDrawio = async (file: File | undefined) => {
@@ -193,8 +199,21 @@ export default function DrawDiagramStudio({
       setTitle(file.name.replace(/\.(?:drawio|xml)$/iu, '') || '导入流程图');
       setStatus(`已从 ${file.name} 解析 ${spec.nodes.length} 个节点与 ${spec.edges.length} 条连线。`);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : '导入 .drawio 文件失败。');
+      setStatus(error instanceof Error ? error.message : '导入流程图源文件失败。');
     }
+  };
+
+  const applyCatalogDiagram = (catalogId: string) => {
+    const found = DIAGRAM_CATALOG.find(item => item.id === catalogId);
+    if (!found) return;
+    setPresetId(found.id);
+    setDirection(found.direction);
+    setTitle(found.title);
+    const flow = toFlow(toDiagramGraphSpec(found, content.title));
+    setNodes(flow.nodes);
+    setEdges(flow.edges);
+    setSelectedId(flow.nodes[0]?.id ?? null);
+    setStatus(`已载入资料库研究框架“${found.title}”（${found.nodes.length} 阶 · ${found.edges.length} 路径），可拖拽重排并导出可编辑源文件。`);
   };
 
   const insertIntoReport = async () => {
@@ -208,9 +227,12 @@ export default function DrawDiagramStudio({
       });
       const svg = diagramSnapshotSVG(snap, figureInk(content));
       onSaveArtifact?.(snap.title, svg);
-      const next = placeResult(appendRegisteredResult(content, { result: snap }), snap.id).content;
-      onUpdateReport(next, `已将本地矢量框架图「${snap.title}」插入报告“调查内容与研究框架”章节。`);
-      setStatus(`已嵌入报告「${snap.title}」，Word / LaTeX 与纸面预览同步生效。`);
+      const placed = placeResult(appendRegisteredResult(content, { result: snap }), snap.id, {
+        sectionId: targetSectionId || undefined,
+      });
+      const targetTitle = placed.content.report.find(s => s.id === placed.sectionId)?.title ?? '对应研究章节';
+      onUpdateReport(placed.content, `已将本地矢量框架图“${snap.title}”插入报告“${targetTitle}”章节。`);
+      setStatus(`已将“${snap.title}”嵌入报告“${targetTitle}”章节，纸面预览与导出文稿同步生效。`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '嵌入报告失败。');
     }
@@ -219,7 +241,7 @@ export default function DrawDiagramStudio({
   return (
     <div className={styles.studio}>
       <div className={styles.studioHeader}>
-        <h4>Draw.io 架构流程图</h4>
+        <h4>研究架构与流程图</h4>
         <span className={styles.monoTag}>{nodes.length} 节点 · {edges.length} 路径</span>
       </div>
 
@@ -227,7 +249,13 @@ export default function DrawDiagramStudio({
         <div className={styles.field}>
           <span>图题与预设模板</span>
           <div className={styles.row}>
-            <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="研究技术路线图标题" />
+            <input
+              className={styles.input}
+              aria-label="研究技术路线图标题"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="研究技术路线图标题"
+            />
           </div>
           <div className={styles.row}>
             {DIAGRAM_PRESETS.map(p => (
@@ -235,6 +263,29 @@ export default function DrawDiagramStudio({
                 {p.name.replace(/图$/u, '')}
               </button>
             ))}
+          </div>
+          <div className={styles.row}>
+            <select
+              className={styles.select}
+              aria-label={`从${DIAGRAM_CATALOG.length}套跨学科科研框架库载入`}
+              value={DIAGRAM_CATALOG.some(item => item.id === presetId) ? presetId : ''}
+              onChange={e => {
+                if (e.target.value) applyCatalogDiagram(e.target.value);
+              }}
+            >
+              <option value="">或从资料库 {DIAGRAM_CATALOG.length} 套跨学科研究框架载入…</option>
+              {DIAGRAM_INTENT_LABELS.filter(group => group.id !== 'all').map(group => {
+                const items = DIAGRAM_CATALOG.filter(d => d.intent === group.id);
+                if (!items.length) return null;
+                return (
+                  <optgroup key={group.id} label={`${group.label}（${items.length} 套）`}>
+                    {items.map(d => (
+                      <option key={d.id} value={d.id}>{d.title}</option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
           </div>
         </div>
 
@@ -254,23 +305,65 @@ export default function DrawDiagramStudio({
         </div>
 
         <div className={styles.row}>
-          <input className={styles.input} style={{ flex: 1, minWidth: 120 }} value={newNodeLabel} onChange={e => setNewNodeLabel(e.target.value)} placeholder="新增环节名（如：PSM 稳健性检验）" />
-          <select className={styles.select} style={{ width: 92 }} value={newNodeRole} onChange={e => setNewNodeRole(e.target.value as DiagramNodeRole)}>
+          <input
+            className={styles.input}
+            style={{ flex: 1, minWidth: 120 }}
+            aria-label="新增研究环节名称"
+            value={newNodeLabel}
+            onChange={e => setNewNodeLabel(e.target.value)}
+            placeholder="新增环节名称，如倾向得分匹配稳健性检验"
+          />
+          <select
+            className={styles.select}
+            style={{ width: 92 }}
+            aria-label="新增研究环节角色类型"
+            value={newNodeRole}
+            onChange={e => setNewNodeRole(e.target.value as DiagramNodeRole)}
+          >
             <option value="process">核心步骤</option>
             <option value="stage">研究阶段</option>
             <option value="method">统计方法</option>
             <option value="decision">质控/关键</option>
             <option value="output">结论产出</option>
           </select>
-          <button type="button" className={styles.btn} onClick={addCustomNode} disabled={!newNodeLabel.trim()}>+ 节点</button>
+          <button
+            type="button"
+            className={styles.btn}
+            aria-label="添加新增研究环节节点"
+            onClick={addCustomNode}
+            disabled={!newNodeLabel.trim()}
+          >
+            + 节点
+          </button>
         </div>
 
         <div className={styles.row}>
           <button type="button" className={styles.btn} onClick={() => runAutoLayout('TB')}>↓ 纵向排版</button>
           <button type="button" className={styles.btn} onClick={() => runAutoLayout('LR')}>→ 横向排版</button>
-          <button type="button" className={styles.btn} onClick={exportDrawio}>导出 .drawio</button>
-          <button type="button" className={styles.btn} onClick={() => fileRef.current?.click()}>导入 .drawio</button>
-          <input ref={fileRef} type="file" accept=".drawio,.xml" hidden onChange={e => { void importDrawio(e.target.files?.[0]); e.target.value = ''; }} />
+          <button type="button" className={styles.btn} onClick={exportDrawio}>导出流程图源文件</button>
+          <button type="button" className={styles.btn} onClick={() => fileRef.current?.click()}>导入流程图源文件</button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".drawio,.xml"
+            aria-label="选择要导入的流程图源文件"
+            hidden
+            onChange={e => { void importDrawio(e.target.files?.[0]); e.target.value = ''; }}
+          />
+        </div>
+
+        <div className={styles.row}>
+          <select
+            className={styles.select}
+            aria-label="选择框图写入目标章节"
+            value={targetSectionId}
+            onChange={e => setTargetSectionId(e.target.value)}
+          >
+            <option value="">🎯 自动匹配推荐章节（调查内容与研究框架）</option>
+            {content.report.map(sec => (
+              <option key={sec.id} value={sec.id}>{sec.title}</option>
+            ))}
+          </select>
         </div>
 
         <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={insertIntoReport}>
@@ -278,7 +371,7 @@ export default function DrawDiagramStudio({
         </button>
       </div>
 
-      <div className={styles.statusBar}>{status}</div>
+      <div className={styles.statusBar} role="status" aria-live="polite">{status}</div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type CSSProperties, type Ref } from 'react';
-import { CORPUS_RESERVE_SUMMARY } from '@/data/zhengda-empirical-anatomy';
+import { CORPUS_RESERVE_SUMMARY } from '@/data/corpus-reserve-summary';
 import { percent } from '@/lib/agent/glyphs';
 import { roomLight, type Illumination, type ProjectView } from '@/lib/agent/illumination';
 import { roomById, type RoomId } from '@/lib/agent/rooms';

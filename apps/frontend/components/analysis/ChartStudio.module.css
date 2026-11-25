@@ -112,3 +112,51 @@
 @keyframes breathe { from { opacity: .35; } to { opacity: 1; } }
 @media (max-width: 1240px) { .desk { grid-template-columns: 164px minmax(0,1fr) 224px; } .toolbar { gap: 14px; } .moduleSelect > select { max-width: 290px; } .paperStage { padding: 20px 12px; } .tree { padding-inline: 7px; } .family small { font-size: 9px; } }
 @media (prefers-reduced-motion: reduce) { .studio button,.chevron { transition: none; } .activity { animation: none; } }
+
+@media (forced-colors: active) {
+  .studio,
+  .previewPane,
+  .context,
+  .studio .notice {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .studio,
+  .paper,
+  .swatches,
+  .paletteStrip,
+  .studio button,
+  .studio .back,
+  .studio .paletteReserve button,
+  .studio .applyAll,
+  .studio .fields input,
+  .studio .fields select,
+  .studio .fields textarea {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+  .toolbar,
+  .context,
+  .studio .notice,
+  .tree,
+  .branches,
+  .branches button::before,
+  .previewHeading,
+  .dataScope,
+  .formatPane,
+  .formatSection {
+    border-color: CanvasText;
+  }
+  .studio .branches button[aria-pressed=true],
+  .studio .themeList button[aria-pressed=true],
+  .studio .paletteReserve button[aria-pressed=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  .studio :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}

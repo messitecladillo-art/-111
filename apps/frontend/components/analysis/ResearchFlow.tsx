@@ -94,18 +94,18 @@ function LegacyResearchFlow({candidates}:{candidates:EvidenceCandidate[]}){
       {candidate&&<details className={styles.payload}><summary>将保存哪些信息？查看完整汇总</summary><p>数据指纹、来源分类、研究问题、变量名、缺失设置、样本数与汇总数值。关联问卷时还包含问卷/解析/对应指纹，以及所选题目的 ID、变量、题型、构念、范围和反向设置。条件题还保存处理策略、资格范围、排除和逐题六类计数（含条件父题 ID）。不上传题干、选项文字、答卷行、行位置或原文件。汇总和构念名称仍可能敏感，尤其是小样本。</p><pre>{JSON.stringify(candidate.input,null,2)}</pre></details>}
       <label className={styles.check}><input type="checkbox" checked={consent} disabled={!candidate||busy||frozen} onChange={e=>setConsent(e.target.checked)}/><span>我已检查隐私，同意将上述汇总保存到当前系统，不上传原始答卷。</span></label>
       <button type="button" className={styles.primary} disabled={!candidate||!draft||!consent||busy||frozen||!scope} onClick={propose}>{busy?'正在处理…':'保存汇总并生成提案'}</button>
-    </div><div className={styles.preview}><span className={styles.eyebrow}>写入前预览 · 不自动修改报告</span>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p></>:<div className={styles.empty}><h4>计算后预览报告段落</h4><p>选择已计算的结果预览段落。数字由固定公式计算，不调用大模型或联网。</p></div>}</div></div>
+    </div><div className={styles.preview}><span className={styles.eyebrow}>写入前预览 · 不自动修改报告</span>{preview?<><h4>{preview.title}</h4><p>{preview.body}</p></>:<div className={styles.empty}><h4>计算后预览报告段落</h4><p>选择已计算的结果预览段落。数字由固定公式计算，全程本地确定性核验，不依赖外部网络。</p></div>}</div></div>
     <div className={styles.history}><aside><h4>已保存的执行记录 <small>{runs.length} / 80</small></h4>{!runs.length?<p>确认保存汇总后，记录可在刷新后恢复。未上传的答卷仍只在本页内存。</p>:runs.map(r=><button type="button" key={r.id} data-active={r.id===runId} onClick={()=>{setRunId(r.id);setApproval(false);}}><span>{r.input.classification==='simulated'?'模拟 · ':''}{r.proposal.title}</span><small>{labels[r.status]} · {new Date(r.createdAt).toLocaleString('zh-CN')}</small></button>)}</aside>
       <div className={styles.detail}>{run?<>
         <div className={styles.runHead}><h4>{labels[run.status]}</h4><span>{runTarget} · v{run.baseRevision}{run.acceptedRevision?` → v${run.acceptedRevision}`:''}</span></div>
         <p className={styles.muted}>本提案固定写入以上报告；上方目标选择仅用于生成新提案。</p>
         <p className={styles.muted}>{run.input.classification==='simulated'?'教学模拟数据':'用户导入数据'}</p>
         <details open><summary>将追加的独立章节 · 原有章节与 PPT 保持不变</summary><h4>{run.proposal.title}</h4><p className={styles.prose}>{run.proposal.body}</p><pre>{run.proposal.source}</pre></details>
-        <details><summary>证据指纹与实际事件</summary><pre>输入：{run.inputHash}{'\n'}提案：{run.proposalHash}</pre><ul>{run.events.map(e=><li key={e.type}>{({aggregate_saved:'汇总已保存',summary_checked:'汇总规则已检查',proposal_ready:'提案已生成',accepted:'用户已确认',cancelled:'用户已取消'} as Record<string,string>)[e.type]} · {new Date(e.at).toLocaleString('zh-CN')}</li>)}</ul></details>
+        <details><summary>证据指纹与实际事件</summary><pre>输入指纹为 {run.inputHash}{'\n'}提案指纹为 {run.proposalHash}</pre><ul>{run.events.map(e=><li key={e.type}>{({aggregate_saved:'汇总已保存',summary_checked:'汇总规则已检查',proposal_ready:'提案已生成',accepted:'用户已确认',cancelled:'用户已取消'} as Record<string,string>)[e.type]} · {new Date(e.at).toLocaleString('zh-CN')}</li>)}</ul></details>
         {run.status==='pending'&&<>{(!inputCurrent||stale)&&<p className={styles.warning}>{stale?'目标报告已变化，此提案不能覆盖新版本。请取消后基于最新报告重新生成。':'历史汇总，当前输入未复核。刷新或更改数据后，请重新导入同一文件并按原设置计算，匹配后才能确认写入。'}</p>}
-          <label className={styles.check}><input type="checkbox" checked={approval} disabled={!inputCurrent||stale||busy||frozen} onChange={e=>setApproval(e.target.checked)}/><span>已核对本次提案，同意追加到「{runTarget}」v{run.baseRevision}，并保留前后快照（占用 2 个命名版本）。</span></label>
+          <label className={styles.check}><input type="checkbox" checked={approval} disabled={!inputCurrent||stale||busy||frozen} onChange={e=>setApproval(e.target.checked)}/><span>已核对本次提案，同意追加到“{runTarget}”v{run.baseRevision}，并保留前后快照（占用 2 个命名版本）。</span></label>
           <div className={styles.actions}><button type="button" className={styles.primary} disabled={!approval||!inputCurrent||stale||busy||frozen} onClick={()=>decide('accept')}>确认写入新版本</button><button type="button" disabled={busy||frozen} onClick={()=>decide('cancel')}>取消此提案</button></div></>}
-        {run.status==='accepted'&&<p className={styles.notice}>版本回执：v{run.acceptedRevision}。<a href="#editor">前往报告编辑器</a>，从草稿库打开目标报告；已有未保存编辑不会被自动替换。</p>}
+        {run.status==='accepted'&&<p className={styles.notice}>已生成新版本 v{run.acceptedRevision}。<a href="#editor">前往报告编辑器</a>，从草稿库打开目标报告；已有未保存编辑不会被自动替换。</p>}
       </>:<div className={styles.empty}><h4>确认后保存新版本</h4><p>核对提案后再确认写入；取消会保留原稿。报告已被其他页面修改时，请基于新版本重新生成。</p></div>}</div></div>
   </section>;
 }

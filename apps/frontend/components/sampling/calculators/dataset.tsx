@@ -32,7 +32,7 @@ function useSource(dataset: DatasetValue | null, storageKey: string): { source: 
   [useWorkspace, dataset, parsed.value, paste.text]);
   const picker = <>
     {dataset && <Choice label="数据来源" value={mode} options={[['workspace', `数据分析：${dataset.name}`], ['paste', '在此粘贴 CSV']] as const} onChange={setMode} />}
-    {!useWorkspace && <Paste label="CSV 数据（第一行为表头）" value={paste.text} onChange={text => setPaste({ text })} rows={6} placeholder={'学校,班级,权数,满意度\n甲校,1班,32.5,4\n…'} hint={dataset ? undefined : '也可以先在「数据分析」中读取问卷数据，这里会自动使用同一份数据与缺失代码设置。'} />}
+    {!useWorkspace && <Paste label="CSV 数据（第一行为表头）" value={paste.text} onChange={text => setPaste({ text })} rows={6} placeholder={'学校,班级,权数,满意度\n甲校,1班,32.5,4\n…'} hint={dataset ? undefined : '也可以先在“数据分析”中读取问卷数据，这里会自动使用同一份数据与缺失代码设置。'} />}
   </>;
   return { source, picker, error: !useWorkspace && paste.text.trim() ? parsed.error : null };
 }
@@ -75,11 +75,11 @@ export function ComplexCalc({ dataset, raked }: { dataset: DatasetValue | null; 
   const main = result.value?.estimates.find((e): e is DesignEstimate => 'estimate' in e && e.method === 'linearization');
   const show = (v: number) => result.value?.proportion ? pct(v, 2) : fmt(v);
   const statement = main && result.value && table ? [
-    `对${s.domainColumn && s.domainValue ? `「${s.domainColumn}」为“${s.domainValue}”的子总体` : '全体样本'}，`,
-    `${s.stratum ? `以「${s.stratum}」分层（${result.value.summary.strata} 层），` : ''}${s.psu ? `以「${s.psu}」为初级抽样单元（共 ${result.value.summary.psus} 个），` : '以每条记录为抽样单元，'}`,
-    `${s.useRaked && rakedUsable ? `使用${raked!.label}，` : s.weight ? `使用「${s.weight}」作为权数，` : '不加权，'}`,
+    `对${s.domainColumn && s.domainValue ? `“${s.domainColumn}”为“${s.domainValue}”的子总体` : '全体样本'}，`,
+    `${s.stratum ? `以“${s.stratum}”分层（${result.value.summary.strata} 层），` : ''}${s.psu ? `以“${s.psu}”为初级抽样单元（共 ${result.value.summary.psus} 个），` : '以每条记录为抽样单元，'}`,
+    `${s.useRaked && rakedUsable ? `使用${raked!.label}，` : s.weight ? `使用“${s.weight}”作为权数，` : '不加权，'}`,
     `采用泰勒线性化方法估计方差（自由度 ${main.df}）。`,
-    `「${s.y}」${result.value.proportion ? `中“${s.category}”的加权比例` : result.value.statistic === 'total' ? '的加权总量' : '的加权均值'}为 ${show(main.estimate)}，标准误 ${show(main.se)}，${Math.round(conf * 100)}% 置信区间为 ${result.value.proportion && main.logitCi ? `[${pct(main.logitCi.lower, 2)}, ${pct(main.logitCi.upper, 2)}]（logit 变换）` : `[${show(main.ci.lower)}, ${show(main.ci.upper)}]`}`,
+    `“${s.y}”${result.value.proportion ? `中“${s.category}”的加权比例` : result.value.statistic === 'total' ? '的加权总量' : '的加权均值'}为 ${show(main.estimate)}，标准误 ${show(main.se)}，${Math.round(conf * 100)}% 置信区间为 ${result.value.proportion && main.logitCi ? `[${pct(main.logitCi.lower, 2)}, ${pct(main.logitCi.upper, 2)}]（logit 变换）` : `[${show(main.ci.lower)}, ${show(main.ci.upper)}]`}`,
     `${main.deff !== null ? `，设计效应为 ${fmt(main.deff, 3)}` : ''}。`,
   ].join('') : '';
   return <Calc title="复杂样本的估计与方差" intro="按权数、分层与初级单元计算加权估计及其标准误；子总体估计保留完整设计。各方法的结果应彼此接近，差异过大说明初级单元太少。"
@@ -99,7 +99,7 @@ export function ComplexCalc({ dataset, raked }: { dataset: DatasetValue | null; 
         <Confidence value={s.confidence} onChange={confidence => set({ ...s, confidence })} />
       </>}
     </>} error={sourceError ?? result.error}>
-    {!table && <p className={styles.callout}>请先在「数据分析」中读取数据，或在左侧粘贴 CSV。</p>}
+    {!table && <p className={styles.callout}>请先在“数据分析”中读取数据，或在左侧粘贴 CSV。</p>}
     {result.value && main && <>
       {source?.simulated && <p className={styles.callout} data-tone="warn">当前为教学模拟数据，结果只用于演示方法。</p>}
       <div className={styles.metrics}>
@@ -157,7 +157,7 @@ export function WeightingCalc({ dataset, shared, onWeights }: { dataset: Dataset
     if (!result.value) onWeights(null);
     else if (shared!.values !== result.value.weights || shared!.label !== label) onWeights({ key: source.key, values: result.value.weights, label });
   }, [linked, result.value, label, source, shared, onWeights]);
-  const statement = result.value && summary && table ? `以${s.source.trim() || '〔请填写目标分布的来源，如统计年鉴、普查年份〕'}中${controls.map(c => `「${c.column}」`).join('、')}的分布为目标，${s.method === 'post' ? '采用事后分层法调整权数' : `采用迭代比例拟合（raking）法调整权数，经 ${result.value.iterations} 次迭代${result.value.converged ? '收敛' : '仍未完全收敛'}`}${s.cap.trim() ? `，调整因子限制在 1/${s.cap.trim()} 至 ${s.cap.trim()} 倍之间` : ''}。调整后权数的最大值与最小值之比为 ${fmt(summary.ratio, 2)}，有效样本量为 ${fmt(summary.nEff, 0)}（权数造成的设计效应 ${fmt(summary.deff, 3)}）。加权使样本在上述变量上的结构与总体一致，但只能减少与这些变量相关的偏差${source?.simulated ? '；当前数据为教学模拟数据' : ''}。` : '';
+  const statement = result.value && summary && table ? `以${s.source.trim() || '〔请填写目标分布的来源，如统计年鉴、普查年份〕'}中${controls.map(c => `“${c.column}”`).join('、')}的分布为目标，${s.method === 'post' ? '采用事后分层法调整权数' : `采用迭代比例拟合（raking）法调整权数，经 ${result.value.iterations} 次迭代${result.value.converged ? '收敛' : '仍未完全收敛'}`}${s.cap.trim() ? `，调整因子限制在 1/${s.cap.trim()} 至 ${s.cap.trim()} 倍之间` : ''}。调整后权数的最大值与最小值之比为 ${fmt(summary.ratio, 2)}，有效样本量为 ${fmt(summary.nEff, 0)}（权数造成的设计效应 ${fmt(summary.deff, 3)}）。加权使样本在上述变量上的结构与总体一致，但只能减少与这些变量相关的偏差${source?.simulated ? '；当前数据为教学模拟数据' : ''}。` : '';
   const csv = () => { if (!table || !result.value) return ''; return tableCsv({ ...table, headers: [...table.headers, label], rows: table.rows.map((r, i) => [...r, String(result.value!.weights[i])]) }); };
   return <Calc title="权数调整：迭代校准与事后分层" intro="选择控制变量并填写总体中各类别的占比（来自统计年鉴、普查或学校名册），把样本结构调整到总体结构。目标占比默认等于样本占比，请改为可靠来源的数字。"
     inputs={<>
@@ -177,7 +177,7 @@ export function WeightingCalc({ dataset, shared, onWeights }: { dataset: Dataset
         <Field label="目标分布的来源" value={s.source} onChange={v => set({ ...s, source: v })} inputMode="text" placeholder="如：2024 年武汉市统计年鉴" wide />
       </>}
     </>} error={sourceError ?? result.error}>
-    {!table && <p className={styles.callout}>请先在「数据分析」中读取数据，或在左侧粘贴 CSV。</p>}
+    {!table && <p className={styles.callout}>请先在“数据分析”中读取数据，或在左侧粘贴 CSV。</p>}
     {table && !controls.length && <p className={styles.callout}>添加至少一个控制变量后开始计算。</p>}
     {result.value && summary && <>
       {source?.simulated && <p className={styles.callout} data-tone="warn">当前为教学模拟数据，权数只用于演示方法。</p>}

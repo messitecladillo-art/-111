@@ -1,14 +1,16 @@
 'use client';
 import { useId, useState } from 'react';
 import type { KnowledgeEntry } from '@/lib/knowledge/types';
-import { DOMAINS, KNOWLEDGE_ENTRIES } from './catalog';
-import { Formula, Tex } from '@/components/math/Tex';
+import { DOMAINS } from './domains';
+import { useKnowledge } from './KnowledgeProvider';
+import { FormulaLazy as Formula, TexLazy as Tex } from '@/components/math/TexLazy';
 import styles from './Knowledge.module.css';
 
 export default function KnowledgeEntryView({ entry, onRelated, favorite, onFavorite, onReference, notice = '', initialTab = 'understand', onTabChange }: {
   entry: KnowledgeEntry; onRelated: (id: string) => void; favorite: boolean; onFavorite: () => void;
   onReference?: () => void; notice?: string; initialTab?: string; onTabChange?: (tab:string)=>void;
 }) {
+  const knowledge = useKnowledge();
   const [tab, setTabValue] = useState(initialTab);
   const setTab = (value:string) => { setTabValue(value); onTabChange?.(value); };
   const instance = useId();
@@ -36,7 +38,7 @@ export default function KnowledgeEntryView({ entry, onRelated, favorite, onFavor
       {tab === 'source' && <><p>本条为依据下列资料整理的原创解释。</p>{entry.sources.map(source => <div className={styles.source} key={source.id}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a><p>{source.locator}</p><small>{source.scope}</small></div>)}<p className={styles.meta}>更新于 {entry.updatedAt} · 审阅 {entry.review.checkedAt}</p></>}
     </section>
     {!!entry.toolLinks?.length && <div className={styles.tools}>{entry.toolLinks.map(tool => <a key={tool.href} href={tool.href}>{tool.label} ↗</a>)}</div>}
-    {!!entry.relatedIds.length && <div className={styles.related}><h3>继续了解</h3>{entry.relatedIds.map(id => <button key={id} onClick={() => onRelated(id)}>{KNOWLEDGE_ENTRIES.find(related => related.id === id)?.name ?? id}</button>)}</div>}
+    {!!entry.relatedIds.length && <div className={styles.related}><h3>继续了解</h3>{entry.relatedIds.map(id => <button key={id} onClick={() => onRelated(id)}>{knowledge.entries.find(related => related.id === id)?.name ?? id}</button>)}</div>}
     <div className={styles.entryActions}><button onClick={onFavorite} aria-pressed={favorite}>{favorite ? '★ 已收藏' : '☆ 收藏'}</button>{onReference && <button onClick={onReference}>加入项目术语表</button>}</div>
     {notice && <p role="status" className={styles.notice}>{notice}</p>}
   </article>;

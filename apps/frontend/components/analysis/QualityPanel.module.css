@@ -42,3 +42,36 @@
 .preview summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 .preview table { margin-top: 8px; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+@media (forced-colors: active) {
+  .panel :is(button, input, select, summary):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .panel,
+  .panel select,
+  .panel input:not([type=checkbox]),
+  .rule,
+  .chips label,
+  .actions button {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .actions .primary,
+  .rule[data-on=true] legend,
+  .chips label[data-checked=true] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .report,
+  .report th,
+  .report td {
+    border-color: CanvasText !important;
+  }
+}

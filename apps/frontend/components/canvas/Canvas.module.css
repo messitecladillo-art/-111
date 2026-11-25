@@ -498,3 +498,104 @@
   .drawer { width: calc(100% - 32px); }
   .emptyActions { grid-template-columns: 1fr; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    --t-hover: 0ms;
+    --t-press-in: 0ms;
+    --t-press-out: 0ms;
+    --t-select: 0ms;
+    --t-reveal: 0ms;
+    --t-morph: 0ms;
+    --t-group: 0ms;
+    --t-layout: 0ms;
+    --t-focus: 0ms;
+    --t-pulse: 0ms;
+    --t-exit: 0ms;
+    --t-settle: 0ms;
+    --t-draw: 0ms;
+    --cv-lift: 0;
+  }
+  .canvas *,
+  .canvas *::before,
+  .canvas *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .node[data-status="running"] .nodeShell::after {
+    background: var(--cv-run);
+    opacity: .6;
+  }
+}
+
+@media (forced-colors: active) {
+  .canvas :focus-visible,
+  .flow :global(.react-flow__node:focus-visible) .nodeShell,
+  .flow :global(.react-flow__node:focus-visible) .group,
+  .field:focus-within .fileButton {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+
+  .minimap,
+  .nodeShell,
+  .nodeOpen,
+  .portLabel,
+  .group,
+  .groupToggle,
+  .edgeTag,
+  .floatBar,
+  .connectionEditor,
+  .popover,
+  .addButton,
+  .library,
+  .config,
+  .searchBox input,
+  .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .field select,
+  .field textarea,
+  .fileButton,
+  .checks,
+  .radioRow,
+  .reviewBox,
+  .primary,
+  .secondary,
+  .metrics span,
+  .tableWrap,
+  .facts li,
+  .chartFrame,
+  .drawerBar,
+  .drawerBody,
+  .connectHint,
+  .toast {
+    border: 1px solid ButtonText;
+    box-shadow: none;
+  }
+
+  .node[data-selected] .nodeShell,
+  .group[data-selected] {
+    outline: 2px solid Highlight;
+  }
+
+  .runButton,
+  .primary,
+  .addButton:not([data-open]),
+  .barButton[aria-pressed="true"],
+  .segmented button[aria-selected="true"],
+  .segmented button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+
+  .panelHead,
+  .libraryHint,
+  .result,
+  .adopt,
+  .table th,
+  .table td {
+    border-color: CanvasText !important;
+  }
+}

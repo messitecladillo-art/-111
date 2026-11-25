@@ -24,7 +24,7 @@ export default function AppendixHelper({ node, content, questionnaire, disabled 
   const results = content.quality?.results.length ?? 0;
   let body: React.ReactNode;
   if (node === 'appendix.questionnaire') body = <>
-    <p>{questionnaire ? `「${questionnaire.title || '未命名问卷'}」共 ${questionnaire.questions.length} 题。写入卷首语与全部题目、选项和跳答说明。` : '在「问卷设计」中完成问卷后，可在这里一键写入问卷全文。'}</p>
+    <p>{questionnaire ? `“${questionnaire.title || '未命名问卷'}”共 ${questionnaire.questions.length} 题。写入卷首语与全部题目、选项和跳答说明。` : '在“问卷设计”中完成问卷后，可在这里一键写入问卷全文。'}</p>
     <div className={styles.actions}><button type="button" className={styles.primary} disabled={disabled || !questionnaire?.questions.length} onClick={() => write(() => questionnaireAppendix(questionnaire!), '问卷全文')}>写入问卷全文</button></div>
   </>;
   else if (node === 'appendix.data') body = <>

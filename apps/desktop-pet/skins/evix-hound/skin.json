@@ -1,0 +1,28 @@
+{
+  "schema": "evix-pet-skin/v1",
+  "id": "evix-hound",
+  "name": "证见白犬 · EVI-X 默认皮肤",
+  "renderer": "vector-rig",
+  "copyrightNotice": "original-evix-mascot-asset",
+  "canvasSize": {
+    "width": 220,
+    "height": 240
+  },
+  "palette": {
+    "outline": "#18181B",
+    "fur": "#F8FAFC",
+    "furShadow": "#E2E8F0",
+    "muzzle": "#FFFFFF",
+    "nose": "#1E293B",
+    "collar": "#0F766E",
+    "tag": "#F59E0B",
+    "accent": "#10B981",
+    "alert": "#DC2626",
+    "glasses": "#18181B"
+  },
+  "features": {
+    "glasses": true,
+    "collar": true,
+    "boldComicInk": true
+  }
+}

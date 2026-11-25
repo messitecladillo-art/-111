@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { nodeDef, type EditorSection } from '@/lib/canvas/catalog';
 import type { CanvasNode, Issue } from '@/lib/canvas/graph';
-import type { DatasetValue, NodeState, NodeStatus, Output } from '@/lib/canvas/execute';
+import type { DatasetValue, NodeState, NodeStatus } from '@/lib/canvas/execute';
 import { isSiliconTable } from '@/lib/silicon/export';
 import { parseSurveyCsv, SURVEY_LIMITS, type Delimiter } from '@/lib/survey-analysis';
 import { WORKSPACE_MOTION } from '@/lib/workspace-motion';
@@ -56,13 +56,13 @@ export function nodeSummary(node: CanvasNode, state: NodeState | undefined, ctx:
     case 'question': case 'method': case 'note': case 'material':
       return [String(c.text || '').slice(0, 60) || '点击填写内容'];
     case 'questionnaire':
-      return ctx.design ? [`「${ctx.design.title || '未命名问卷'}」`, `${ctx.design.questions} 题${ctx.design.issues ? ` · ${ctx.design.issues} 项结构问题` : ''}`] : ['尚未读取问卷草稿', '打开「问卷设计」后自动同步'];
+      return ctx.design ? [`“${ctx.design.title || '未命名问卷'}”`, `${ctx.design.questions} 题${ctx.design.issues ? ` · ${ctx.design.issues} 项结构问题` : ''}`] : ['尚未读取问卷草稿', '打开“问卷设计”后自动同步'];
     case 'dataset': {
       if (out?.type === 'dataset') return [out.value.name, `${out.value.table.rows.length} 行 × ${out.value.table.headers.length} 列 · ${out.value.kind === 'simulated' ? '模拟数据' : '用户提供'}`];
-      if (c.source === 'file') { const f = ctx.files.get(node.id); return f ? [f.name, `${f.table.rows.length} 行 · 未运行`] : [c.fileName ? `需重新选择「${c.fileName}」` : '选择本地 CSV', '只在本机解析，不上传']; }
-      return ctx.workspaceDataset ? [`数据分析：${ctx.workspaceDataset.name}`, `${ctx.workspaceDataset.table.rows.length} 行 · ${ctx.workspaceDataset.kind === 'simulated' ? '模拟数据' : '用户提供'}`] : ['「数据分析」中尚未载入数据', '先在那里读取 CSV 或示例数据'];
+      if (c.source === 'file') { const f = ctx.files.get(node.id); return f ? [f.name, `${f.table.rows.length} 行 · 未运行`] : [c.fileName ? `需重新选择“${c.fileName}”` : '选择本地 CSV', '只在本机解析，不上传']; }
+      return ctx.workspaceDataset ? [`数据分析：${ctx.workspaceDataset.name}`, `${ctx.workspaceDataset.table.rows.length} 行 · ${ctx.workspaceDataset.kind === 'simulated' ? '模拟数据' : '用户提供'}`] : ['“数据分析”中尚未载入数据', '先在那里读取 CSV 或示例数据'];
     }
-    case 'filter': return [c.column ? `「${c.column}」= ${(c.values as string[]).join('、') || '未选类别'}` : '未选择筛选变量', out?.type === 'dataset' ? `保留 ${out.value.table.rows.length} 行` : ''];
+    case 'filter': return [c.column ? `“${c.column}”= ${(c.values as string[]).join('、') || '未选类别'}` : '未选择筛选变量', out?.type === 'dataset' ? `保留 ${out.value.table.rows.length} 行` : ''];
     case 'missing': return [c.codes ? `缺失代码：${c.codes}` : '未声明额外缺失代码', (c.complete as string[]).length ? `完整案例：${(c.complete as string[]).join('、')}` : ''];
     case 'alpha': return [(c.columns as string[]).length ? `${(c.columns as string[]).length} 个题项${c.construct ? ` · ${c.construct}` : ''}` : '未选择题项', out?.type === 'result' ? `α = ${fmt(out.value.result.metrics[0]?.value)} · n = ${out.value.result.n}` : ''];
     case 'chart': return [out?.type === 'chart' ? `${out.value.title}` : c.kind === 'auto' ? '自动选择图形' : String(c.kind), out?.type === 'chart' ? `n = ${out.value.snapshot.n}` : ''];
@@ -79,11 +79,6 @@ export function nodeSummary(node: CanvasNode, state: NodeState | undefined, ctx:
       }
       return [vars(c.x, c.y), ''];
   }
-}
-
-export function outputLabel(output: Output | null): string {
-  if (!output) return '';
-  return { dataset: '数据', result: '统计结果', chart: '图表', bundle: '汇集', facts: '事实清单', report: '证据段落' }[output.type];
 }
 
 /* ───────── local CSV for dataset nodes ───────── */

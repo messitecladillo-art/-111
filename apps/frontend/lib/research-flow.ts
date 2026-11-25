@@ -104,7 +104,7 @@ const f = (v: number) => v.toFixed(4).replace(/\.?0+$/,'');
 export function evidenceSection(raw: EvidenceInput, runId: string): ReportSection {
   const e = parseEvidence(raw), c = e.calculation;
   const simulated = e.classification === 'simulated';
-  const provenance = simulated ? '【教学模拟数据，不能作为实际调查结果】' : '【用户提供数据；来源、抽样与田野过程尚未独立核验】';
+  const provenance = simulated ? '【教学模拟数据，不能作为实际调查结果】' : '本节基于用户提供数据整理，数据来源、抽样方案与田野实施过程仍待作者独立核验。';
   const body = [provenance, `研究问题（用户填写，非计算结论）：${e.question}`, `变量：${e.variables.join('、')}。`, ...(e.version===3?[
     `原始记录 ${e.eligibility.totalRows} 行 → 所选题目共同符合显示条件 ${e.total} 行 → 本次分析有效样本 ${e.n} 行；符合条件但未进入本次计算 ${e.total-e.n} 行。`,
     routingSummary(e.eligibility),

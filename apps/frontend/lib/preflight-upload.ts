@@ -1,5 +1,8 @@
-import { normalizeIdentityTerms, type PreflightReport } from './submission-preflight.ts';
-import { rejectDuplicateMembers } from './questionnaire.ts';
+import {
+  normalizeIdentityTerms,
+  rejectDuplicateJsonMembers as rejectDuplicateMembers,
+  type PreflightReport,
+} from './submission-preflight-schema.ts';
 
 export const PREFLIGHT_FILE_BYTES = 20 * 1024 * 1024;
 const RECEIPT_BYTES = 2 * 1024 * 1024;
